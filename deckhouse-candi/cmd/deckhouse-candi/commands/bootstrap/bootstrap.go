@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"github.com/flant/logboek"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -19,6 +17,7 @@ import (
 	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/terraform"
+	"flant/deckhouse-candi/pkg/util/cache"
 )
 
 const banner = "" +
@@ -32,8 +31,8 @@ const banner = "" +
 ========================================================================================`
 
 func printBanner() {
-	_ = log.BootstrapProcess("Banner", func() error {
-		logboek.LogInfoLn(banner)
+	_ = log.Process("bootstrap", "Banner", func() error {
+		log.InfoLn(banner)
 		return nil
 	})
 }
@@ -55,6 +54,17 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
+		cachePath := metaConfig.CachePath()
+		if err = cache.Init(cachePath); err != nil {
+			// TODO: it's better to ask for confirmation here
+			return fmt.Errorf(
+				"Create cache %s:\n\tError: %v\n\n"+
+					"\tProbably that Kubernetes cluster was successfully bootstrapped.\n"+
+					"\tIf you want to continue, please delete the cache folder manually.",
+				cachePath, err,
+			)
+		}
+
 		var resourcesToCreate *config.Resources
 		if app.ResourcesPath != "" {
 			parsedResources, err := config.ParseResources(app.ResourcesPath)
@@ -73,11 +83,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var nodeIP string
 		var devicePath string
 		if metaConfig.ClusterType == config.CloudClusterType {
-			err = log.BootstrapProcess("Cloud infrastructure", func() error {
-				baseStateFilepath := filepath.Join(app.TerraformStateDir, fmt.Sprintf("%s-base-infra.tfstate", metaConfig.ClusterPrefix))
+			err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 					WithVariables(metaConfig.MarshalConfig()).
-					WithStatePath(baseStateFilepath).
 					WithAutoApprove(true)
 
 				baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
@@ -85,13 +93,13 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					return err
 				}
 
-				masterStateFilepath := filepath.Join(app.TerraformStateDir, fmt.Sprintf("%s-first-master.tfstate", metaConfig.ClusterPrefix))
+				masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
 				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
-					WithVariables(metaConfig.PrepareTerraformNodeGroupConfig("master", 0, "")).
-					WithStatePath(masterStateFilepath).
+					WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
+					WithName(masterNodeName).
 					WithAutoApprove(true)
 
-				masterOutputs, err := terraform.ApplyPipeline(masterRunner, "Node master-node-0", terraform.GetMasterNodeResult)
+				masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 				if err != nil {
 					return err
 				}
@@ -106,8 +114,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				devicePath = masterOutputs.KubeDataDevicePath
 
 				deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
-				stateSecretName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-				deckhouseInstallConfig.NodesTerraformState[stateSecretName] = masterOutputs.TerraformState
+				deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
 
 				return nil
 			})
@@ -132,7 +139,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		if err := commands.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
+		if err := commands.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
 			return err
 		}
 
@@ -144,12 +151,13 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err := commands.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 			return err
 		}
+
 		staticNodeGroups := metaConfig.GetStaticNodeGroups()
 		if err := commands.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
 			return err
 		}
 
-		err = log.BootstrapProcess("Waiting for additional Nodes", func() error {
+		err = log.Process("bootstrap", "Waiting for additional Nodes", func() error {
 			if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 				return err
 			}
@@ -165,7 +173,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		if resourcesToCreate != nil {
-			err = log.BootstrapProcess("Create Resources", func() error {
+			err = log.Process("bootstrap", "Create Resources", func() error {
 				return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
 			})
 			if err != nil {
@@ -173,6 +181,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
+		_ = log.Process("bootstrap", "Clean cache", func() error {
+			cache.Global().Clean()
+			log.Warning(`Next run of "deckhouse-candi bootstrap" will create a new Kubernetes cluster.\n`)
+			return nil
+		})
 		return nil
 	}
 
@@ -191,7 +204,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		err = runFunc(sshClient)
 
 		if err != nil {
-			logboek.LogErrorLn(err.Error())
+			log.ErrorLn(err.Error())
 			os.Exit(1)
 		}
 		return nil

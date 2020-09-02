@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flant/logboek"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"flant/deckhouse-candi/pkg/kubernetes/client"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/util/retry"
 )
 
@@ -39,12 +39,12 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 	return retry.StartLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15, func() error {
 		res, err := kubeCl.Dynamic().Resource(resourceSchema).Create(&doc, metav1.CreateOptions{})
 		if err == nil {
-			logboek.LogInfoF("NodeGroup %q created\n", res.GetName())
+			log.InfoF("NodeGroup %q created\n", res.GetName())
 			return nil
 		}
 
 		if errors.IsAlreadyExists(err) {
-			logboek.LogInfoF("Object %v, updating...", err)
+			log.InfoF("Object %v, updating ... ", err)
 			content, err := doc.MarshalJSON()
 			if err != nil {
 				return err
@@ -53,7 +53,7 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 			if err != nil {
 				return err
 			}
-			logboek.LogInfoLn("OK!")
+			log.InfoLn("OK!")
 		}
 		return nil
 	})
@@ -121,7 +121,7 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName stri
 		}
 
 		if len(readyNodes) >= desiredReadyNodes {
-			logboek.LogInfoLn(message)
+			log.InfoLn(message)
 			return nil
 		}
 

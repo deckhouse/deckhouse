@@ -3,11 +3,11 @@ package client
 import (
 	"fmt"
 
-	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/system/ssh/frontend"
 )
@@ -90,6 +90,6 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 		return "", fmt.Errorf("start kube proxy: %v", err)
 	}
 
-	logboek.LogInfoF("Proxy started on port %s\n", port)
+	log.InfoF("Proxy started on port %s\n", port)
 	return port, nil
 }

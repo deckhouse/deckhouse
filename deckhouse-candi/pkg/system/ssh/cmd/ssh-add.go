@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
 )
 
@@ -58,7 +59,7 @@ func (s *SshAdd) AddKeys(keys []string) error {
 		}
 		str := string(output)
 		if str != "" && str != "\n" {
-			fmt.Printf("ssh-add: %s\n", output)
+			log.InfoF("ssh-add: %s\n", output)
 		}
 	}
 
@@ -77,7 +78,7 @@ func (s *SshAdd) AddKeys(keys []string) error {
 
 		str := string(output)
 		if str != "" && str != "\n" {
-			fmt.Printf("ssh-add -l: %s\n", output)
+			log.InfoF("ssh-add -l: %s\n", output)
 		}
 	}
 

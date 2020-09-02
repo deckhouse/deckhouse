@@ -5,25 +5,18 @@ import (
 	"os"
 	"runtime/trace"
 
-	"github.com/flant/logboek"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands"
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands/bootstrap"
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/process"
 	"flant/deckhouse-candi/pkg/util/signal"
 )
 
 func main() {
 	defer EnableTrace()()
-
-	err := logboek.Init()
-	if err != nil {
-		panic(fmt.Errorf("can't start logging system: %w", err))
-	}
-	logboek.SetLevel(logboek.Info)
-	logboek.SetWidth(logboek.DefaultWidth)
 
 	// kill all started subprocesses on return from main or on signal
 	defer process.DefaultSession.Stop()
@@ -33,9 +26,12 @@ func main() {
 		})
 	}()
 
+	_ = os.Mkdir(app.TmpDirName, 0755)
+
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
-	kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
+	app.GlobalFlags(kpApp)
+	// kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
@@ -55,10 +51,12 @@ func main() {
 	// converge
 	commands.DefineConvergeCommand(kpApp)
 
+	// destroy
+	commands.DefineDestroyCommand(kpApp)
+
 	// plumbing commands:
 	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
 	{
-		commands.DefineRunDestroyAllTerraformCommand(terraformCmd)
 		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
 		commands.DefineTerraformCheckCommand(terraformCmd)
 	}
@@ -86,6 +84,10 @@ func main() {
 		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
 	}
 
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		log.InitLogger(app.LoggerType)
+		return nil
+	})
 	kpApp.Version("v0.1.0").Author("Flant")
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/flant/logboek"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
@@ -30,12 +29,12 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		clusterConfig, err := metaConfig.MarshalClusterConfigYAML()
+		clusterConfig, err := metaConfig.ClusterConfigYAML()
 		if err != nil {
 			return fmt.Errorf("marshal cluster config: %v", err)
 		}
 
-		providerClusterConfig, err := metaConfig.MarshalProviderClusterConfigYAML()
+		providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 		if err != nil {
 			return fmt.Errorf("marshal provider config: %v", err)
 		}
@@ -52,14 +51,11 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
 		}
 
-		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
-			return err
-		}
 		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
-		if err := commands.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MarshalMasterNodeGroupConfig()); err != nil {
+		if err := commands.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
 			return err
 		}
 		return nil
@@ -76,10 +72,9 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		err = logboek.LogProcess("⛵ ~ Bootstrap Phase: Install Deckhouse",
-			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
+		err = log.Process("bootstrap", "Install Deckhouse", func() error { return runFunc(sshClient) })
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			log.ErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
 		}
 		return nil
@@ -110,7 +105,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 		}
 
 		templateController := template.NewTemplateController("")
-		logboek.LogInfoF("Templates Dir: %q\n\n", templateController.TmpDir)
+		log.InfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
 		if err := commands.BootstrapMaster(sshClient, bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
 			return err
@@ -138,10 +133,9 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		err = logboek.LogProcess("⛵ ~ Bootstrap Phase: Execute bashible bundle",
-			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
+		err = log.Process("bootstrap", "Execute bashible bundle", func() error { return runFunc(sshClient) })
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			log.ErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
 		}
 		return nil
@@ -193,10 +187,9 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		err = logboek.LogProcess("⛵ ~ Bootstrap Phase: Create resources",
-			log.MainProcessOptions(), func() error { return runFunc(sshClient) })
+		err = log.Process("bootstrap", "Create resources", func() error { return runFunc(sshClient) })
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			log.ErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
 		}
 		return nil

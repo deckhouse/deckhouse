@@ -1,8 +1,9 @@
 package actions
 
 import (
-	"github.com/flant/logboek"
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	"flant/deckhouse-candi/pkg/log"
 )
 
 type ManifestTask struct {
@@ -13,7 +14,7 @@ type ManifestTask struct {
 }
 
 func (task *ManifestTask) Create() error {
-	logboek.LogInfoF("Manifest for %s\n", task.Name)
+	log.InfoF("Manifest for %s\n", task.Name)
 	manifest := task.Manifest()
 
 	err := task.CreateFunc(manifest)
@@ -21,13 +22,13 @@ func (task *ManifestTask) Create() error {
 		if !errors.IsAlreadyExists(err) {
 			return err
 		}
-		logboek.LogInfoF("%s already exists. Trying to update ... ", task.Name)
+		log.InfoF("%s already exists. Trying to update ... ", task.Name)
 		err = task.UpdateFunc(manifest)
 		if err != nil {
-			logboek.LogWarnLn("ERROR!")
+			log.ErrorLn("ERROR!")
 			return err
 		}
-		logboek.LogInfoLn("OK!")
+		log.InfoLn("OK!")
 	}
 	return nil
 }

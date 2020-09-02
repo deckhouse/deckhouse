@@ -2,12 +2,15 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
+
+	"flant/deckhouse-candi/pkg/log"
 )
 
 type MetaConfig struct {
@@ -17,39 +20,41 @@ type MetaConfig struct {
 	OriginalProviderName string `json:"-"`
 	ClusterPrefix        string `json:"-"`
 
-	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
-	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
+	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
+	StaticNodeGroupSpecs []StaticNodeGroupSpec  `json:"-"`
 
-	// FIXME DELETE!!!!
-	NodeIndex int `json:"nodeIndex"`
+	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
+	InitClusterConfig map[string]json.RawMessage `json:"-"`
 
-	ClusterConfig             map[string]json.RawMessage `json:"clusterConfiguration"`
-	ProviderClusterConfig     map[string]json.RawMessage `json:"providerClusterConfiguration"`
-	InitClusterConfig         map[string]json.RawMessage `json:"-"`
-	InitProviderClusterConfig map[string]json.RawMessage `json:"-"`
+	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare() {
+func (m *MetaConfig) Prepare() *MetaConfig {
 	_ = json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType)
+	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
 
-	if m.ClusterType == CloudClusterType {
-		_ = json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout)
-		m.Layout = strcase.ToKebab(m.Layout)
-
-		var cloud ClusterConfigCloudSpec
-		_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
-
-		var masterNodeGroup MasterNodeGroupSpec
-		_ = json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup)
-
-		m.ProviderName = strings.ToLower(cloud.Provider)
-		m.OriginalProviderName = cloud.Provider
-		m.ClusterPrefix = cloud.Prefix
-		m.MasterNodeGroupSpec = masterNodeGroup
+	if m.ClusterType != CloudClusterType {
+		return m
 	}
 
-	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
+	_ = json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout)
+	m.Layout = strcase.ToKebab(m.Layout)
+
+	var cloud ClusterConfigCloudSpec
+	_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
+	m.ProviderName = strings.ToLower(cloud.Provider)
+	m.OriginalProviderName = cloud.Provider
+	m.ClusterPrefix = cloud.Prefix
+
+	_ = json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &m.MasterNodeGroupSpec)
+	m.StaticNodeGroupSpecs = []StaticNodeGroupSpec{}
+	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
+	if ok {
+		_ = json.Unmarshal(nodeGroups, &m.StaticNodeGroupSpecs)
+	}
+	return m
 }
 
 // MergeDeckhouseConfig returns deckhouse config merged from different sources
@@ -64,7 +69,6 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 	}
 
 	baseDeckhouseConfig := map[string]interface{}{"deckhouse": deckhouseModuleConfig}
-
 	if len(configs) == 0 {
 		return mergemap.Merge(baseDeckhouseConfig, m.DeckhouseConfig.ConfigOverrides)
 	}
@@ -86,18 +90,26 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 }
 
 func (m *MetaConfig) GetStaticNodeGroups() []StaticNodeGroupSpec {
-	var staticNodeGroups []StaticNodeGroupSpec
-	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
-	if !ok {
-		return staticNodeGroups
-	}
-
-	_ = json.Unmarshal(nodeGroups, &staticNodeGroups)
-	return staticNodeGroups
+	return m.StaticNodeGroupSpecs
 }
 
-// MarshalMasterNodeGroupConfig prepares NodeGroup custom resource for master nodes
-func (m *MetaConfig) MarshalMasterNodeGroupConfig() map[string]interface{} {
+func (m *MetaConfig) FindStaticNodeGroup(nodeGroupName string) []byte {
+	for index, ng := range m.StaticNodeGroupSpecs {
+		if ng.Name == nodeGroupName {
+			var staticNodeGroups []json.RawMessage
+			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &staticNodeGroups)
+			if err != nil {
+				log.ErrorLn(err)
+				return nil
+			}
+			return staticNodeGroups[index]
+		}
+	}
+	return nil
+}
+
+// MasterNodeGroupManifest prepares NodeGroup custom resource for master nodes
+func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 	nodeType := "Hybrid"
 	if m.ClusterType == StaticClusterType {
 		nodeType = "Static"
@@ -129,8 +141,8 @@ func (m *MetaConfig) MarshalMasterNodeGroupConfig() map[string]interface{} {
 	}
 }
 
-// MarshalNodeGroupConfig prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
-func (m *MetaConfig) MarshalNodeGroupConfig(staticNodeGroup StaticNodeGroupSpec) map[string]interface{} {
+// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
+func (m *MetaConfig) NodeGroupManifest(staticNodeGroup StaticNodeGroupSpec) map[string]interface{} {
 	if staticNodeGroup.NodeTemplate == nil {
 		staticNodeGroup.NodeTemplate = make(map[string]interface{})
 	}
@@ -155,15 +167,15 @@ func (m *MetaConfig) MarshalConfig() []byte {
 	return data
 }
 
-func (m *MetaConfig) MarshalClusterConfigYAML() ([]byte, error) {
+func (m *MetaConfig) ClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.ClusterConfig)
 }
 
-func (m *MetaConfig) MarshalProviderClusterConfigYAML() ([]byte, error) {
+func (m *MetaConfig) ProviderClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.ProviderClusterConfig)
 }
 
-func (m *MetaConfig) MarshalConfigForKubeadmTemplates(nodeIP string) map[string]interface{} {
+func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) map[string]interface{} {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -183,7 +195,7 @@ func (m *MetaConfig) MarshalConfigForKubeadmTemplates(nodeIP string) map[string]
 	return result
 }
 
-func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP string) map[string]interface{} {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) map[string]interface{} {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -218,8 +230,8 @@ func (m *MetaConfig) MarshalConfigForBashibleBundleTemplate(bundle, nodeIP strin
 	}
 }
 
-// PrepareTerraformNodeGroupConfig returns values for terraform to order master node or static node
-func (m *MetaConfig) PrepareTerraformNodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
+// NodeGroupConfig returns values for terraform to order master node or static node
+func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]interface{}{
 		"clusterConfiguration":         m.ClusterConfig,
 		"providerClusterConfiguration": m.ProviderClusterConfig,
@@ -230,6 +242,40 @@ func (m *MetaConfig) PrepareTerraformNodeGroupConfig(nodeGroupName string, nodeI
 
 	data, _ := json.Marshal(result)
 	return data
+}
+
+func (m *MetaConfig) CachePath() string {
+	return fmt.Sprintf("%s-%s-terraform-state-cache", m.ClusterPrefix, m.ProviderName)
+}
+
+func (m *MetaConfig) DeepCopy() *MetaConfig {
+	out := MetaConfig{}
+
+	if m.ClusterConfig != nil {
+		config := make(map[string]json.RawMessage, len(m.ClusterConfig))
+		for k, v := range m.ClusterConfig {
+			config[k] = v
+		}
+		out.ClusterConfig = config
+	}
+
+	if m.InitClusterConfig != nil {
+		config := make(map[string]json.RawMessage, len(m.InitClusterConfig))
+		for k, v := range m.InitClusterConfig {
+			config[k] = v
+		}
+		out.InitClusterConfig = config
+	}
+
+	if m.ProviderClusterConfig != nil {
+		config := make(map[string]json.RawMessage, len(m.ProviderClusterConfig))
+		for k, v := range m.ProviderClusterConfig {
+			config[k] = v
+		}
+		out.ProviderClusterConfig = config
+	}
+
+	return m
 }
 
 func getDNSAddress(serviceCIDR string) string {

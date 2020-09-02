@@ -3,9 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
-	"github.com/flant/logboek"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
@@ -14,93 +12,9 @@ import (
 	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
-	"flant/deckhouse-candi/pkg/terraform"
 )
-
-func DefineRunDestroyAllTerraformCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("destroy-all", " Destroy all terraform environment.")
-	app.DefineSshFlags(cmd)
-	app.DefineTerraformFlags(cmd)
-	app.DefineSanityFlags(cmd)
-
-	runFunc := func(sshClient *ssh.SshClient) error {
-		err := app.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
-		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
-		if err != nil {
-			return err
-		}
-
-		metaConfig, err := config.ParseConfigFromCluster(kubeCl)
-		if err != nil {
-			return err
-		}
-
-		metaConfig.Prepare()
-
-		nodesState, err := converge.GetNodesStateFromCluster(kubeCl)
-		if err != nil {
-			return err
-		}
-
-		clusterState, err := converge.GetClusterStateFromCluster(kubeCl)
-		if err != nil {
-			return err
-		}
-
-		for nodeGroupName, nodeGroupStates := range nodesState {
-			step := "static-node"
-			if nodeGroupName == "master" {
-				step = "master-node"
-			}
-
-			for name, state := range nodeGroupStates {
-				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, step).
-					WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroupName, 0, "")).
-					WithState(state).
-					WithAutoApprove(app.SanityCheck)
-
-				err := terraform.DestroyPipeline(nodeRunner, fmt.Sprintf("Node %s", name))
-				if err != nil {
-					return err
-				}
-
-				nodeRunner.Close()
-			}
-		}
-
-		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
-			WithVariables(metaConfig.MarshalConfig()).
-			WithState(clusterState).
-			WithAutoApprove(app.SanityCheck)
-
-		defer baseRunner.Close()
-		return terraform.DestroyPipeline(baseRunner, "Kubernetes cluster")
-	}
-
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		if !app.SanityCheck {
-			logboek.LogWarnLn("NOTE: You will be asked for approve of every terraform destroy command.\n" +
-				"If you understand what you are doing, you can use flag --yes-i-am-sane-and-i-understand-what-i-am-doing to skip approvals\n")
-		}
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
-
-		err = runFunc(sshClient)
-		if err != nil {
-			logboek.LogErrorLn(err.Error())
-			os.Exit(1)
-		}
-		return nil
-	})
-	return cmd
-}
 
 func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
@@ -110,8 +24,6 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		logboek.SetLevel(logboek.Error)
-
 		exporter := commands.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
 		exporter.Start()
 		return nil
@@ -127,8 +39,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		logboek.SetLevel(logboek.Error)
-		logboek.LogInfoLn("Check started...\n")
+		log.InfoLn("Check started ...\n")
 
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
@@ -144,8 +55,6 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-
-		metaConfig.Prepare()
 
 		statistic, err := converge.CheckState(kubeCl, metaConfig)
 		if err != nil {

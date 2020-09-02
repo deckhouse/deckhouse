@@ -5,7 +5,7 @@ import (
 	"github.com/flant/logboek"
 )
 
-func MainProcessOptions() logboek.LogProcessOptions {
+func BootstrapOptions() logboek.LogProcessOptions {
 	return logboek.LogProcessOptions{
 		LevelLogProcessOptions: logboek.LevelLogProcessOptions{
 			Style: &logboek.Style{
@@ -15,7 +15,7 @@ func MainProcessOptions() logboek.LogProcessOptions {
 	}
 }
 
-func TaskOptions() logboek.LogProcessOptions {
+func CommonOptions() logboek.LogProcessOptions {
 	return logboek.LogProcessOptions{
 		LevelLogProcessOptions: logboek.LevelLogProcessOptions{
 			Style: &logboek.Style{
@@ -46,15 +46,11 @@ func BoldFailOptions() logboek.LogProcessFailOptions {
 	return logboek.LogProcessFailOptions{LevelLogProcessFailOptions: logboek.LevelLogProcessFailOptions{LevelLogProcessEndOptions: logboek.LevelLogProcessEndOptions{Style: boldStyle()}}}
 }
 
-func terraformStyle() *logboek.Style {
-	return &logboek.Style{
-		Attributes: []color.Attribute{color.FgGreen, color.Bold},
-	}
-}
-
 func TerraformOptions() logboek.LogProcessOptions {
 	return logboek.LogProcessOptions{LevelLogProcessOptions: logboek.LevelLogProcessOptions{
-		Style: terraformStyle(),
+		Style: &logboek.Style{
+			Attributes: []color.Attribute{color.FgGreen, color.Bold},
+		},
 	}}
 }
 
@@ -66,12 +62,4 @@ func ConvergeOptions() logboek.LogProcessOptions {
 			},
 		},
 	}
-}
-
-func TerraformStartOptions() logboek.LogProcessStartOptions {
-	return logboek.LogProcessStartOptions{LevelLogProcessStartOptions: logboek.LevelLogProcessStartOptions{Style: terraformStyle()}}
-}
-
-func TerraformTitle(message string) {
-	logboek.LogProcessStart(message, TerraformStartOptions())
 }

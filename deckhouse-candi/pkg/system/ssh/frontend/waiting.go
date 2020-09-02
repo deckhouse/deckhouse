@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flant/logboek"
-
 	"flant/deckhouse-candi/pkg/app"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh/session"
 	"flant/deckhouse-candi/pkg/util/retry"
 )
@@ -26,7 +25,7 @@ func (c *Check) AwaitAvailability() error {
 			return nil
 		}
 
-		logboek.LogInfoF(string(output))
+		log.InfoF(string(output))
 		return fmt.Errorf("host '%s' is not available", app.SshHost)
 	})
 }

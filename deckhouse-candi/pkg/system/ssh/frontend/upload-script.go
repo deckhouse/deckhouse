@@ -132,6 +132,6 @@ func bundleOutputHandler(lastStep *string) func(string) {
 			*lastStep = match[1]
 			return
 		}
-		logboek.LogInfoLn(l)
+		log.InfoLn(l)
 	}
 }

@@ -1,11 +1,11 @@
 package converge
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/flant/logboek"
 	"github.com/hashicorp/go-multierror"
 
 	"flant/deckhouse-candi/pkg/config"
@@ -16,24 +16,24 @@ import (
 
 const masterNodeGroupName = "master"
 
-func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, index int, providerName, layout, step, nodeGroupName, cloudConfig string, metaConfig *config.MetaConfig) error {
-	nodeName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, nodeGroupName, index)
-	nodeConfig := metaConfig.PrepareTerraformNodeGroupConfig(nodeGroupName, index, cloudConfig)
+func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string) error {
+	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
+	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
 
-	runner := terraform.NewRunner(providerName, layout, step).
+	runner := terraform.NewRunnerFromConfig(cfg, step).
 		WithVariables(nodeConfig).
-		WithStatePath("").
+		WithName(nodeName).
 		WithAutoApprove(true)
 
 	defer runner.Close()
 
-	outputs, err := terraform.ApplyPipeline(runner, fmt.Sprintf("Node %s", nodeName), terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		_ = runner.Destroy()
 		return err
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState)
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, cfg.FindStaticNodeGroup(nodeGroupName))
 	// If we failed to save state into cluster, node doesn't exist for us. Let's destroy it.
 	if err != nil {
 		_ = runner.Destroy()
@@ -42,18 +42,18 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, index int, provide
 	return nil
 }
 
-func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, index int, providerName, layout, cloudConfig string, metaConfig *config.MetaConfig) error {
-	nodeName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, masterNodeGroupName, index)
-	nodeConfig := metaConfig.PrepareTerraformNodeGroupConfig(masterNodeGroupName, index, cloudConfig)
+func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string) error {
+	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, masterNodeGroupName, index)
+	nodeConfig := cfg.NodeGroupConfig(masterNodeGroupName, index, cloudConfig)
 
-	runner := terraform.NewRunner(providerName, layout, "master-node").
+	runner := terraform.NewRunnerFromConfig(cfg, "master-node").
 		WithVariables(nodeConfig).
-		WithStatePath("").
+		WithName(nodeName).
 		WithAutoApprove(true)
 
 	defer runner.Close()
 
-	outputs, err := terraform.ApplyPipeline(runner, fmt.Sprintf("Node %s", nodeName), terraform.GetMasterNodeResult)
+	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		_ = runner.Destroy()
 		return err
@@ -73,9 +73,9 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 		return err
 	}
 
-	var nodesState map[string]map[string][]byte
+	var nodesState map[string]NodeGroupTerraformState
 	var err error
-	err = log.ConvergeProcess("Gather Nodes Terraform state", func() error {
+	err = log.Process("converge", "Gather Nodes Terraform state", func() error {
 		nodesState, err = GetNodesStateFromCluster(kubeCl)
 		if err != nil {
 			return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
@@ -108,7 +108,7 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 }
 
 func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) error {
-	return log.ConvergeProcess("Update Cluster Terraform state", func() error {
+	return log.Process("converge", "Update Cluster Terraform state", func() error {
 		clusterState, err := GetClusterStateFromCluster(kubeCl)
 		if err != nil {
 			return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
@@ -136,8 +136,8 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 }
 
 func createPreviouslyNotExistentNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, group config.StaticNodeGroupSpec) error {
-	return log.ConvergeProcess(fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
-		err := CreateNodeGroup(kubeCl, group.Name, metaConfig.MarshalNodeGroupConfig(group))
+	return log.Process("converge", fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
+		err := CreateNodeGroup(kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func createPreviouslyNotExistentNodeGroup(kubeCl *client.KubernetesClient, metaC
 		}
 
 		for i := 0; i < group.Replicas; i++ {
-			err = BootstrapAdditionalNode(kubeCl, i, metaConfig.ProviderName, metaConfig.Layout, "static-node", group.Name, nodeCloudConfig, metaConfig)
+			err = BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig)
 			if err != nil {
 				return err
 			}
@@ -178,7 +178,7 @@ func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.M
 	return &Controller{client: kubeCl, config: metaConfig}
 }
 
-func (c *Controller) Run(nodeGroupName string, nodeGroupState map[string][]byte) error {
+func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraformState) error {
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
 	step := GetStepByNodeGroupName(nodeGroupName)
 
@@ -192,11 +192,11 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState map[string][]byte)
 		Step:        step,
 		Replicas:    replicas,
 		CloudConfig: nodeCloudConfig,
-		State:       nodeGroupState,
+		State:       nodeGroupState.State,
 	}
 
-	if replicas > len(nodeGroupState) {
-		err := log.ConvergeProcess(fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
+	if replicas > len(nodeGroupState.State) {
+		err := log.Process("converge", fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
 			return c.addNewNodeGroup(&nodeGroup)
 		})
 		if err != nil {
@@ -206,8 +206,8 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState map[string][]byte)
 
 	var allErrs *multierror.Error
 	if replicas != 0 {
-		for name := range nodeGroupState {
-			err := log.ConvergeProcess(fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", name, nodeGroupName, replicas), func() error {
+		for name := range nodeGroupState.State {
+			err := log.Process("converge", fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", name, nodeGroupName, replicas), func() error {
 				return c.updateNode(&nodeGroup, name)
 			})
 			if err != nil {
@@ -220,9 +220,9 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState map[string][]byte)
 		return err
 	}
 
-	if replicas < len(nodeGroupState) {
-		err := log.ConvergeProcess(fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
-			return c.deleteRedundantNodes(&nodeGroup)
+	if replicas < len(nodeGroupState.State) {
+		err := log.Process("converge", fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
+			return c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings)
 		})
 		if err != nil {
 			return err
@@ -240,9 +240,9 @@ func (c *Controller) addNewNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 		if _, ok := nodeGroup.State[candidateName]; !ok {
 			var err error
 			if nodeGroup.Name == masterNodeGroupName {
-				err = BootstrapAdditionalMasterNode(c.client, index, c.config.ProviderName, c.config.Layout, nodeGroup.CloudConfig, c.config)
+				err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig)
 			} else {
-				err = BootstrapAdditionalNode(c.client, index, c.config.ProviderName, c.config.Layout, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, c.config)
+				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig)
 			}
 			if err != nil {
 				return err
@@ -256,22 +256,24 @@ func (c *Controller) addNewNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 
 func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {
 	state := nodeGroup.State[nodeName]
-	index := getIndexFromNodeName(nodeName)
-	if index == -1 {
-		logboek.LogWarnF("can't extract index from terraform state secret, skip %s\n", nodeName)
+	index, ok := getIndexFromNodeName(nodeName)
+	if !ok {
+		log.ErrorF("can't extract index from terraform state secret, skip %s\n", nodeName)
 		return nil
 	}
 
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step).
-		WithVariables(c.config.PrepareTerraformNodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
-		WithState(state)
+		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+		WithState(state).
+		WithName(nodeName)
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, fmt.Sprintf("Node %s", nodeName), terraform.OnlyState)
+	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
 
-	err = SaveNodeTerraformState(c.client, nodeName, nodeGroup.Name, outputs.TerraformState)
+	nodeGroupSettingsFromConfig := c.config.FindStaticNodeGroup(nodeGroup.Name)
+	err = SaveNodeTerraformState(c.client, nodeName, nodeGroup.Name, outputs.TerraformState, nodeGroupSettingsFromConfig)
 	if err != nil {
 		return err
 	}
@@ -279,7 +281,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 	return WaitForSingleNodeBecomeReady(c.client, nodeName)
 }
 
-func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions) error {
+func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, settings []byte) error {
 	deleteNodesNames := make(map[string][]byte)
 	count := len(nodeGroup.State)
 
@@ -293,37 +295,53 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions) erro
 		}
 	}
 
+	cfg := c.config
+	if settings != nil {
+		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
+		if err != nil {
+			log.ErrorLn(err)
+		} else {
+			cfg = c.config.DeepCopy().Prepare()
+			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
+		}
+	}
+
+	var allErrs *multierror.Error
 	for name, state := range deleteNodesNames {
-		index := getIndexFromNodeName(name)
-		if index == -1 {
-			logboek.LogWarnF("can't extract index from terraform state secret, skip %s\n", name)
+		index, ok := getIndexFromNodeName(name)
+		if !ok {
+			log.ErrorF("can't extract index from terraform state secret, skip %s\n", name)
 			continue
 		}
+
 		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step).
-			WithVariables(c.config.PrepareTerraformNodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 			WithState(state).
+			WithName(name).
 			WithAutoApprove(true)
 
-		if err := terraform.DestroyPipeline(nodeRunner, fmt.Sprintf("Node %s", name)); err != nil {
-			return err
+		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
+			continue
 		}
 
 		nodeRunner.Close()
 		err := DeleteTerraformState(c.client, fmt.Sprintf("d8-node-terraform-state-%s", name))
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
+			continue
 		}
 	}
-	return nil
+	return allErrs.ErrorOrNil()
 }
 
-func getIndexFromNodeName(name string) int64 {
+func getIndexFromNodeName(name string) (int64, bool) {
 	index, err := strconv.ParseInt(name[strings.LastIndex(name, "-")+1:], 10, 64)
 	if err != nil {
-		logboek.LogWarnLn(err)
-		return -1
+		log.ErrorLn(err)
+		return 0, false
 	}
-	return index
+	return index, true
 }
 
 func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName string) int {
@@ -349,7 +367,7 @@ func GetStepByNodeGroupName(nodeGroupName string) string {
 	return step
 }
 
-func sortNodeGroupsStateKeys(state map[string]map[string][]byte, sortedNodeGroupsFromConfig []string) []string {
+func sortNodeGroupsStateKeys(state map[string]NodeGroupTerraformState, sortedNodeGroupsFromConfig []string) []string {
 	nodeGroupsFromConfigSet := make(map[string]struct{}, len(sortedNodeGroupsFromConfig))
 	for _, key := range sortedNodeGroupsFromConfig {
 		nodeGroupsFromConfigSet[key] = struct{}{}

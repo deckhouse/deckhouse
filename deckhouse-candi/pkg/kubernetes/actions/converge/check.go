@@ -56,22 +56,22 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		WithAutoApprove(true)
 	defer baseRunner.Close()
 
-	return terraform.CheckPipeline(baseRunner)
+	return terraform.CheckPipeline(baseRunner, "Kubernetes cluster")
 }
 
 func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string) (bool, error) {
-	state := nodeGroup.State[nodeName]
-	index := getIndexFromNodeName(nodeName)
-	if index == -1 {
-		return false, fmt.Errorf("can't extract index from terraform state secret, skip %s\n", nodeName)
+	index, ok := getIndexFromNodeName(nodeName)
+	if !ok {
+		return false, fmt.Errorf("can't extract index from terraform state secret, skip %s", nodeName)
 	}
 
 	nodeRunner := terraform.NewRunnerFromConfig(metaConfig, nodeGroup.Step).
-		WithVariables(metaConfig.PrepareTerraformNodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
-		WithState(state)
+		WithVariables(metaConfig.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+		WithState(nodeGroup.State[nodeName]).
+		WithName(nodeName)
 	defer nodeRunner.Close()
 
-	return terraform.CheckPipeline(nodeRunner)
+	return terraform.CheckPipeline(nodeRunner, nodeName)
 }
 
 func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*Statistics, error) {
@@ -115,9 +115,9 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 		step := GetStepByNodeGroupName(nodeGroupName)
 
 		nodeGroupCheckResult := NodeGroupCheckResult{Name: nodeGroupName, Status: OKStatus}
-		if replicas > len(nodeGroupState) {
+		if replicas > len(nodeGroupState.State) {
 			nodeGroupCheckResult.Status = InsufficientStatus
-		} else if replicas < len(nodeGroupState) {
+		} else if replicas < len(nodeGroupState.State) {
 			nodeGroupCheckResult.Status = ExcessiveStatus
 		}
 
@@ -126,10 +126,10 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 			Name:     nodeGroupName,
 			Step:     step,
 			Replicas: replicas,
-			State:    nodeGroupState,
+			State:    nodeGroupState.State,
 		}
 
-		for name := range nodeGroupState {
+		for name := range nodeGroupState.State {
 			// track changed and ok
 			checkResult := NodeCheckResult{Group: nodeGroupName, Name: name, Status: OKStatus}
 			changed, err := checkNodeState(metaConfig, &nodeGroup, name)

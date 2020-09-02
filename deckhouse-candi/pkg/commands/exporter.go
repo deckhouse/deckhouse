@@ -7,12 +7,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
 
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
 	"flant/deckhouse-candi/pkg/kubernetes/client"
+	"flant/deckhouse-candi/pkg/log"
 )
 
 type ConvergeExporter struct {
@@ -96,10 +96,10 @@ func (c *ConvergeExporter) registerMetrics() {
 }
 
 func (c *ConvergeExporter) Start() {
-	log.Infoln("Start exporter")
-	log.Infoln("Address: ", app.ListenAddress)
-	log.Infoln("Metrics path: ", app.MetricsPath)
-	log.Infoln("Checks interval: ", app.CheckInterval)
+	log.InfoLn("Start exporter")
+	log.InfoLn("Address: ", app.ListenAddress)
+	log.InfoLn("Metrics path: ", app.MetricsPath)
+	log.InfoLn("Checks interval: ", app.CheckInterval)
 	c.registerMetrics()
 
 	stopCh := make(chan struct{})
@@ -118,7 +118,7 @@ func (c *ConvergeExporter) Start() {
 	})
 
 	if err := http.ListenAndServe(c.ListenAddress, nil); err != nil {
-		log.Errorf("Error starting HTTP server: %v\n", err)
+		log.ErrorF("Error starting HTTP server: %v\n", err)
 		stopCh <- struct{}{}
 		os.Exit(1)
 	}
@@ -133,7 +133,7 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 		case <-ticker.C:
 			c.getStatistic()
 		case <-stopCh:
-			log.Errorln("Stop exporter...")
+			log.ErrorLn("Stop exporter...")
 			return
 		}
 	}
@@ -145,10 +145,9 @@ func (c *ConvergeExporter) getStatistic() {
 		panic(err)
 	}
 
-	metaConfig.Prepare()
 	statistic, err := converge.CheckState(c.kubeCl, metaConfig)
 	if err != nil {
-		log.Errorln(err)
+		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 	}
 

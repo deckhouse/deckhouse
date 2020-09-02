@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flant/deckhouse-candi/pkg/log"
 	"fmt"
 	"time"
 
-	"github.com/flant/logboek"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -37,8 +37,8 @@ func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}
 		if pod.Status.Phase != corev1.PodRunning {
 			return fmt.Errorf(message)
 		}
-		logboek.LogInfoLn(message)
-		logboek.LogInfoLn("Running pod found! Checking logs...")
+		log.InfoLn(message)
+		log.InfoLn("Running pod found! Checking logs...")
 	}
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
@@ -78,13 +78,13 @@ func printLogsByLine(content []byte) {
 		}
 
 		if line.Level == "error" || (line.Output == "stderr" && line.Component != "tiller") {
-			logboek.LogWarnF("\t%s\n", line.Message)
+			log.ErrorF("\t%s\n", line.Message)
 			continue
 		}
 
 		// TODO use module.state label
 		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
-			logboek.LogInfoF("\tModule %q run successfully\n", line.Module)
+			log.InfoF("\tModule %q run successfully\n", line.Module)
 			continue
 		}
 	}

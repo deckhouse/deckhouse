@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/flant/logboek"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
@@ -32,7 +31,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
-		logboek.LogInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
 		return template.PrepareBashibleBundle(
 			templateController,
@@ -44,11 +43,9 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("📦 ~ Prepare Bashible Bundle",
-			log.MainProcessOptions(), func() error { return runFunc() })
-
+		err := log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			log.ErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
 		}
 		return nil
@@ -69,17 +66,15 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
-		logboek.LogInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
 		return template.PrepareKubeadmConfig(templateController, templateData)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := logboek.LogProcess("📦 ~ Prepare Kubeadm Config",
-			log.MainProcessOptions(), func() error { return runFunc() })
-
+		err := log.Process("bootstrap", "Prepare Kubeadm Config", runFunc)
 		if err != nil {
-			logboek.LogErrorF("\nCritical Error: %s\n", err)
+			log.ErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
 		}
 		return nil
