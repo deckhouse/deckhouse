@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -74,6 +75,29 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 			resourcesToCreate = parsedResources
 		}
+
+		var clusterUUID []byte
+		err = log.Process("bootstrap", "Cluster UUID", func() error {
+			if !cache.Global().InCache("uuid") {
+				genClusterUUID, err := uuid.NewRandom()
+				if err != nil {
+					return fmt.Errorf("can't create cluster UUID: %v", err)
+				}
+
+				clusterUUID = []byte(genClusterUUID.String())
+				cache.Global().Save("uuid", clusterUUID)
+				log.InfoF("Generated cluster UUID: %s\n", string(clusterUUID))
+			} else {
+				clusterUUID = cache.Global().Load("uuid")
+				log.InfoF("Cluster UUID from cache: %s\n", string(clusterUUID))
+			}
+			return nil
+		})
+		if err != nil {
+			return nil
+		}
+		cache.Global().AddToClean("uuid")
+		metaConfig.UUID = clusterUUID
 
 		deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
 		if err != nil {

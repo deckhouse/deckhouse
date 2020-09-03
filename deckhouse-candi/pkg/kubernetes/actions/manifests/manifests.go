@@ -338,3 +338,13 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 		map[string]string{},
 	)
 }
+
+func ClusterUUIDConfigMap(uuid []byte) *apiv1.ConfigMap {
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "d8-cluster-uuid",
+			Namespace: "kube-system",
+		},
+		Data: map[string]string{"cluster-uuid": string(uuid)},
+	}
+}

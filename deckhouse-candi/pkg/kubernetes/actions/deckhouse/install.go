@@ -26,6 +26,7 @@ type Config struct {
 	Bundle                string
 	ReleaseChannel        string
 	DevBranch             string
+	UUID                  []byte
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
 	TerraformState        []byte
@@ -196,6 +197,23 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 		})
 	}
 
+	if len(cfg.UUID) > 0 {
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `ConfigMap "d8-cluster-uuid"`,
+			Manifest: func() interface{} {
+				return manifests.ClusterUUIDConfigMap(cfg.UUID)
+			},
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Create(manifest.(*apiv1.ConfigMap))
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Update(manifest.(*apiv1.ConfigMap))
+				return err
+			},
+		})
+	}
+
 	tasks = append(tasks, actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() interface{} {
@@ -353,6 +371,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, erro
 	}
 
 	installConfig := Config{
+		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
 		DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
