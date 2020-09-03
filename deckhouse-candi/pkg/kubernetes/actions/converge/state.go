@@ -176,25 +176,16 @@ func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) er
 	})
 }
 
-func getSelector(nodeGroupName string) string {
-	return fmt.Sprintf("node.deckhouse.io/node-group=%s,node.deckhouse.io/terraform-state", nodeGroupName)
-}
-
-func GetNodeGroupSettingsFromTerraformState(kubeCl *client.KubernetesClient, nodeGroupName string) ([]byte, error) {
-	var extractedState []byte
-	err := retry.StartLoop("Get NodeGroups settings from Kubernetes cluster", 5, 5, func() error {
-		selector := getSelector(nodeGroupName)
-		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(metav1.ListOptions{LabelSelector: selector})
+func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
+	var clusterUUID string
+	err := retry.StartLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5, func() error {
+		uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get("d8-cluster-uuid", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
-		if len(nodeStateSecrets.Items) == 0 {
-			return fmt.Errorf("no nodes state found, but state was in the cluster when we started")
-		}
-
-		extractedState = nodeStateSecrets.Items[0].Data["node-group-settings.json"]
+		clusterUUID = uuidConfigMap.Data["cluster-uuid"]
 		return nil
 	})
-	return extractedState, err
+	return clusterUUID, err
 }

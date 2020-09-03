@@ -26,7 +26,7 @@ type Config struct {
 	Bundle                string
 	ReleaseChannel        string
 	DevBranch             string
-	UUID                  []byte
+	UUID                  string
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
 	TerraformState        []byte
