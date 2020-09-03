@@ -28,6 +28,7 @@
       severity: critical
     annotations:
       plk_protocol_version: "1"
+      plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       description: Prometheus failed to scrape {{ $value }}% of kubelets.
       summary: Prometheus failed to scrape
   - alert: K8SKubeletDown
@@ -39,6 +40,7 @@
       likelihood: certain
     annotations:
       plk_protocol_version: "1"
+      plk_group_for__target_down: "TargetDown,prometheus=deckhouse,job=kubelet"
       description: Prometheus failed to scrape {{ $value }}% of kubelets, or all Kubelets
         have disappeared from service discovery.
       summary: Many Kubelets cannot be scraped
