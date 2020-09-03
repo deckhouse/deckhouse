@@ -183,7 +183,7 @@ local function _increment_geohash(overall_key, geoip_latitude, geoip_longitude, 
   end
 end
 
--- fill_buffer() prepares statsd data metrics
+-- fill_buffer() prepares metrics
 local function fill_buffer()
   local start_time = now()
 
@@ -253,10 +253,12 @@ local function fill_buffer()
   local var_ingress_name = ngx.var.ingress_name == "" and "-" or ngx.var.ingress_name
   local var_service_name = ngx.var.service_name == "" and "-" or ngx.var.service_name
   local var_service_port = ngx.var.service_port == "" and "-" or ngx.var.service_port
+  local var_location_path = ngx.var.location_path == "" and "-" or ngx.var.location_path
+
 
   local overall_key = content_kind .. "#" .. var_namespace .. "#" .. var_server_name
-  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#"  .. var_server_name .. "#" .. ngx.var.location_path
-  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port  .. "#" .. var_server_name .. "#" .. ngx.var.location_path
+  local detail_key = content_kind .. "#" .. var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port .. "#"  .. var_server_name .. "#" .. var_location_path
+  local backend_key = var_namespace .. "#" .. var_ingress_name .. "#" .. var_service_name .. "#" .. var_service_port  .. "#" .. var_server_name .. "#" .. var_location_path
   -- requests
   local var_scheme = ngx.var.scheme
   local var_request_method = ngx.var.request_method
@@ -356,7 +358,7 @@ local function fill_buffer()
   end
 end
 
--- send() sends buffer data to statsd exporter via unixgram socket
+-- send() sends buffer data to protobuf exporter via tcp socket
 local function send(premature)
   if premature then
     return
@@ -393,7 +395,7 @@ local function send(premature)
 
   ok, err = sock:send(pbbuff:result())
   if not ok then
-    log(ERROR, format("error while sending statsd data via tcp socket: %s", tostring(err)))
+    log(ERROR, format("error while sending data via tcp socket: %s", tostring(err)))
   end
   sock:close()
 
@@ -405,11 +407,11 @@ end
 
 local _M = {}
 
--- init_worker() used at init_worker_by_lua_block stage to send buffer data to statsd-exporter
+-- init_worker() used at init_worker_by_lua_block stage to send buffer data to protobuf-exporter
 function _M.init_worker()
   local _, err = timer_every(1, send)
   if err then
-    log(ERROR, format("error while sending statsd data: %s", tostring(err)))
+    log(ERROR, format("error while sending data: %s", tostring(err)))
   end
 end
 
