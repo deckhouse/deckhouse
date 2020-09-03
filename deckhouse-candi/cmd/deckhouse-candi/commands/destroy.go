@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"flant/deckhouse-candi/pkg/kubernetes/actions/deckhouse"
 	"fmt"
 	"os"
 
@@ -35,6 +36,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSshFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 	app.DefineSanityFlags(cmd)
+	app.DefineSkipResourcesFlags(cmd)
 
 	runFunc := func(sshClient *ssh.SshClient) error {
 		err := app.AskBecomePassword()
@@ -52,6 +54,17 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var kubeCl *client.KubernetesClient
+		if !app.SkipResources {
+			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
+				return err
+			}
+			err = log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
+				return deleteEntities(kubeCl)
+			})
+			if err != nil {
+				return err
+			}
+		}
 
 		var metaConfig *config.MetaConfig
 		if cache.Global().InCache("cluster-config") && retry.AskForConfirmation("Do you want to continue with Cluster configuration from local cash") {
@@ -176,4 +189,62 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		return nil
 	})
 	return cmd
+}
+
+func deleteEntities(kubeCl *client.KubernetesClient) error {
+	err := deckhouse.DeleteDeckhouseDeployment(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteServices(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForServicesDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteStorageClasses(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePVC(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePV(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeletePods(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForPVCDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForPVDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteMachineDeployments(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForMachinesDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+	return nil
 }

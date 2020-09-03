@@ -311,18 +311,6 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 	})
 }
 
-func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
-	return log.Process("default", "Remove deckhouse", func() error {
-		log.InfoF("Delete Deployment/deckhouse\n")
-		err := kubeCl.AppsV1().Deployments("d8-system").Delete("deckhouse", &metav1.DeleteOptions{})
-		if err != nil {
-			log.InfoF("Error: %v\n", err)
-		}
-
-		return nil
-	})
-}
-
 func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) error {
 	task := actions.ManifestTask{
 

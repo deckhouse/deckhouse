@@ -19,15 +19,22 @@ var (
 var (
 	AppVersion = "dev"
 
-	ConfigPath  = ""
-	SanityCheck = false
-	LoggerType  = "pretty"
+	ConfigPath    = ""
+	SanityCheck   = false
+	LoggerType    = "pretty"
+	SkipResources = false
 )
 
 func GlobalFlags(cmd *kingpin.Application) {
 	cmd.Flag("logger-type", "Format output of an deckhouse-candi in different ways.").
 		Default("pretty").
 		EnumVar(&LoggerType, "pretty", "simple")
+}
+
+func DefineSkipResourcesFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("--skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
+		Default("false").
+		BoolVar(&SkipResources)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {

@@ -49,9 +49,9 @@ func (a *SshAgent) Start() error {
 
 	a.WithWaitHandler(func(err error) {
 		if err != nil {
-			fmt.Printf("Ssh-agent process exited, now stop. Wait error: %v", err)
+			fmt.Printf("Ssh-agent process exited, now stop. Wait error: %v\n", err)
 		} else {
-			fmt.Printf("Ssh-agent process exited, now stop.")
+			fmt.Printf("Ssh-agent process exited, now stop.\n")
 		}
 		go func() {
 			process.DefaultSession.Stop()
