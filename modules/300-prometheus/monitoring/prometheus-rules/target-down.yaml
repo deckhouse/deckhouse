@@ -43,9 +43,8 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_labels_as_annotations: "namespace,pod"
-      plk_grouped_by__target_down: "TargetDown,prometheus=deckhouse"
       description: |
-        Targets Down because of a sample limit exceeded.
+        Some targets are down because of a sample limit exceeded.
 
-        To find the targets you should go to the "Status/Targets" menu in Prometheus and search by the `sample limit exceeded` keyword.
+        To find the targets, you should go to the "Status/Targets" menu in Prometheus and search by the `sample limit exceeded` keyword.
       summary: Scrapes are exceding sample limit
