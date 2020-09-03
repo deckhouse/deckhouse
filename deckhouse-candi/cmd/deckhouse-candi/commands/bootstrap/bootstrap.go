@@ -45,6 +45,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 	app.DefineResourcesFlags(cmd)
+	app.DefineDropCacheFlags(cmd)
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
@@ -64,6 +65,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					"\tIf you want to continue, please delete the cache folder manually.",
 				cachePath, err,
 			)
+		}
+
+		if app.DropCache {
+			cache.RemoveEverythingFromCache(metaConfig.CachePath())
 		}
 
 		var resourcesToCreate *config.Resources

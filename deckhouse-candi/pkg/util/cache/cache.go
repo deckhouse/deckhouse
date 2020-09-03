@@ -162,6 +162,18 @@ func unmarshal(data []byte, v interface{}) error {
 	return gob.NewDecoder(b).Decode(v)
 }
 
+func RemoveEverythingFromCache(cacheDir string) {
+	cacheDir = filepath.Join(app.TerraformStateDir, encode(cacheDir))
+	dir, err := ioutil.ReadDir(cacheDir)
+	if err != nil {
+		log.ErrorLn(err)
+		return
+	}
+	for _, d := range dir {
+		_ = os.RemoveAll(filepath.Join([]string{cacheDir, d.Name()}...))
+	}
+}
+
 type DummyCache struct{}
 
 func (d *DummyCache) Save(n string, c []byte)                  {}

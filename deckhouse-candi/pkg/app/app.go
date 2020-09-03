@@ -21,6 +21,7 @@ var (
 
 	ConfigPath    = ""
 	SanityCheck   = false
+	DropCache     = false
 	LoggerType    = "pretty"
 	SkipResources = false
 )
@@ -44,9 +45,15 @@ func DefineConfigFlags(cmd *kingpin.CmdClause) {
 }
 
 func DefineSanityFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double check what you are doing here").
+	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double check what you are doing here.").
 		Default("false").
 		BoolVar(&SanityCheck)
+}
+
+func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
+		Default("false").
+		BoolVar(&DropCache)
 }
 
 var IsDebug = -1
