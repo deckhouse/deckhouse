@@ -119,7 +119,7 @@ func (r *Runner) Init() error {
 
 		log.InfoF("Cached Terraform state found: %s\n\n", r.statePath)
 		if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cash") {
-			return fmt.Errorf("terraform pipeline aborted")
+			return fmt.Errorf("Terraform pipeline aborted.\nIf you want to drop the cache and continue, please run deckhouse-candi with '--yes-i-want-to-drop-cache' flag.")
 		}
 	} else if r.statePath == "" {
 		tmpFile, err := ioutil.TempFile(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
