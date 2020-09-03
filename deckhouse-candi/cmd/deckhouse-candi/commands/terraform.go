@@ -56,6 +56,11 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+		if err != nil {
+			return err
+		}
+
 		statistic, err := converge.CheckState(kubeCl, metaConfig)
 		if err != nil {
 			return err

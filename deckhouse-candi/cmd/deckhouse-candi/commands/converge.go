@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"flant/deckhouse-candi/pkg/log"
 	"fmt"
 	"os"
 
@@ -11,6 +10,7 @@ import (
 	"flant/deckhouse-candi/pkg/commands"
 	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/converge"
+	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
 )
 
@@ -27,6 +27,11 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		metaConfig, err := config.ParseConfigFromCluster(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
 		if err != nil {
 			return err
 		}

@@ -29,7 +29,7 @@ type MetaConfig struct {
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration"`
 
-	UUID []byte `json:"clusterUUID,omitempty"`
+	UUID string `json:"clusterUUID,omitempty"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure

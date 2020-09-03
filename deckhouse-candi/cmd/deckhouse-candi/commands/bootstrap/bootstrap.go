@@ -76,7 +76,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			resourcesToCreate = parsedResources
 		}
 
-		var clusterUUID []byte
+		var clusterUUID string
 		err = log.Process("bootstrap", "Cluster UUID", func() error {
 			if !cache.Global().InCache("uuid") {
 				genClusterUUID, err := uuid.NewRandom()
@@ -84,12 +84,12 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					return fmt.Errorf("can't create cluster UUID: %v", err)
 				}
 
-				clusterUUID = []byte(genClusterUUID.String())
-				cache.Global().Save("uuid", clusterUUID)
-				log.InfoF("Generated cluster UUID: %s\n", string(clusterUUID))
+				clusterUUID = genClusterUUID.String()
+				cache.Global().Save("uuid", []byte(clusterUUID))
+				log.InfoF("Generated cluster UUID: %s\n", clusterUUID)
 			} else {
-				clusterUUID = cache.Global().Load("uuid")
-				log.InfoF("Cluster UUID from cache: %s\n", string(clusterUUID))
+				clusterUUID = string(cache.Global().Load("uuid"))
+				log.InfoF("Cluster UUID from cache: %s\n", clusterUUID)
 			}
 			return nil
 		})

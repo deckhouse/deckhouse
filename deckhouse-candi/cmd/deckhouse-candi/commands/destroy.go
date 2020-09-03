@@ -79,6 +79,12 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			if err != nil {
 				return err
 			}
+
+			metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+			if err != nil {
+				return err
+			}
+
 			err := cache.Global().SaveStruct("cluster-config", metaConfig)
 			if err != nil {
 				return err

@@ -145,6 +145,11 @@ func (c *ConvergeExporter) getStatistic() {
 		panic(err)
 	}
 
+	metaConfig.UUID, err = converge.GetClusterUUID(c.kubeCl)
+	if err != nil {
+		panic(err)
+	}
+
 	statistic, err := converge.CheckState(c.kubeCl, metaConfig)
 	if err != nil {
 		log.ErrorLn(err)
