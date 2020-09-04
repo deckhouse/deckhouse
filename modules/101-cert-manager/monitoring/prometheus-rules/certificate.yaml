@@ -1,7 +1,8 @@
 - name: kubernetes.certmanager.certificate
   rules:
   - alert: CertmanagerCertificateExpiredSoon
-    expr: certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600
+    expr: |
+      max by (name, exported_namespace) (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600)
     for: 1h
     labels:
       severity: warning
@@ -9,15 +10,16 @@
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
       description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
-      summary: Certificate expire soon
+      summary: Certificate will expire soon
 
   - alert: CertmanagerCertificateExpired
-    expr: certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 0
+    expr: |
+      max by (name, exported_namespace) (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 0)
     for: 1h
     labels:
       severity: warning
     annotations:
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expires
-      summary: Certificate expires
+      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
+      summary: Certificate expired
