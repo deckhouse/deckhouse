@@ -2,7 +2,7 @@ FROM golang:1.13-alpine3.11
 WORKDIR /src/
 COPY old_certs.patch /
 RUN apk add --no-cache make bash git mercurial patch rsync && \
-    wget https://github.com/kubernetes/kubernetes/archive/v1.16.10.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+    wget https://github.com/kubernetes/kubernetes/archive/v1.16.15.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
     patch -p0 < /old_certs.patch && \
     make all WHAT=cmd/kube-apiserver
 

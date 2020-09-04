@@ -1,0 +1,1072 @@
+diff --git a/cmd/kubeadm/app/apis/kubeadm/BUILD b/cmd/kubeadm/app/apis/kubeadm/BUILD
+index 5b96c168db801..94518768b1091 100644
+--- a/cmd/kubeadm/app/apis/kubeadm/BUILD
++++ b/cmd/kubeadm/app/apis/kubeadm/BUILD
+@@ -9,6 +9,7 @@ load(
+ go_library(
+     name = "go_default_library",
+     srcs = [
++        "apiendpoint.go",
+         "bootstraptokenhelpers.go",
+         "bootstraptokenstring.go",
+         "doc.go",
+@@ -54,6 +55,7 @@ filegroup(
+ go_test(
+     name = "go_default_test",
+     srcs = [
++        "apiendpoint_test.go",
+         "bootstraptokenhelpers_test.go",
+         "bootstraptokenstring_test.go",
+     ],
+diff --git a/cmd/kubeadm/app/apis/kubeadm/apiendpoint.go b/cmd/kubeadm/app/apis/kubeadm/apiendpoint.go
+new file mode 100644
+index 0000000000000..99492e1173690
+--- /dev/null
++++ b/cmd/kubeadm/app/apis/kubeadm/apiendpoint.go
+@@ -0,0 +1,44 @@
++/*
++Copyright 2020 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package kubeadm
++
++import (
++	"net"
++	"strconv"
++
++	"github.com/pkg/errors"
++)
++
++// APIEndpointFromString returns an APIEndpoint struct based on a "host:port" raw string.
++func APIEndpointFromString(apiEndpoint string) (APIEndpoint, error) {
++	apiEndpointHost, apiEndpointPortStr, err := net.SplitHostPort(apiEndpoint)
++	if err != nil {
++		return APIEndpoint{}, errors.Wrapf(err, "invalid advertise address endpoint: %s", apiEndpoint)
++	}
++	apiEndpointPort, err := net.LookupPort("tcp", apiEndpointPortStr)
++	if err != nil {
++		return APIEndpoint{}, errors.Wrapf(err, "invalid advertise address endpoint port: %s", apiEndpointPortStr)
++	}
++	return APIEndpoint{
++		AdvertiseAddress: apiEndpointHost,
++		BindPort:         int32(apiEndpointPort),
++	}, nil
++}
++
++func (endpoint *APIEndpoint) String() string {
++	return net.JoinHostPort(endpoint.AdvertiseAddress, strconv.FormatInt(int64(endpoint.BindPort), 10))
++}
+diff --git a/cmd/kubeadm/app/apis/kubeadm/apiendpoint_test.go b/cmd/kubeadm/app/apis/kubeadm/apiendpoint_test.go
+new file mode 100644
+index 0000000000000..c171caa512c1b
+--- /dev/null
++++ b/cmd/kubeadm/app/apis/kubeadm/apiendpoint_test.go
+@@ -0,0 +1,50 @@
++/*
++Copyright 2020 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package kubeadm
++
++import (
++	"reflect"
++	"testing"
++)
++
++func TestAPIEndpointFromString(t *testing.T) {
++	var tests = []struct {
++		apiEndpoint      string
++		expectedEndpoint APIEndpoint
++		expectedErr      bool
++	}{
++		{apiEndpoint: "1.2.3.4:1234", expectedEndpoint: APIEndpoint{AdvertiseAddress: "1.2.3.4", BindPort: 1234}},
++		{apiEndpoint: "1.2.3.4:-1", expectedErr: true},
++		{apiEndpoint: "1.2.::1234", expectedErr: true},
++		{apiEndpoint: "1.2.3.4:65536", expectedErr: true},
++		{apiEndpoint: "[::1]:1234", expectedEndpoint: APIEndpoint{AdvertiseAddress: "::1", BindPort: 1234}},
++		{apiEndpoint: "[::1]:-1", expectedErr: true},
++		{apiEndpoint: "[::1]:65536", expectedErr: true},
++		{apiEndpoint: "[::1:1234", expectedErr: true},
++	}
++	for _, rt := range tests {
++		t.Run(rt.apiEndpoint, func(t *testing.T) {
++			apiEndpoint, err := APIEndpointFromString(rt.apiEndpoint)
++			if (err != nil) != rt.expectedErr {
++				t.Errorf("expected error %v, got %v, error: %v", rt.expectedErr, err != nil, err)
++			}
++			if !reflect.DeepEqual(apiEndpoint, rt.expectedEndpoint) {
++				t.Errorf("expected API endpoint: %v; got: %v", rt.expectedEndpoint, apiEndpoint)
++			}
++		})
++	}
++}
+diff --git a/cmd/kubeadm/app/constants/BUILD b/cmd/kubeadm/app/constants/BUILD
+index 940745fc209e3..4d1d89f4d0946 100644
+--- a/cmd/kubeadm/app/constants/BUILD
++++ b/cmd/kubeadm/app/constants/BUILD
+@@ -18,6 +18,7 @@ go_library(
+         "//cmd/kubeadm/app/apis/kubeadm:go_default_library",
+         "//staging/src/k8s.io/api/core/v1:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/util/version:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/util/wait:go_default_library",
+         "//staging/src/k8s.io/cluster-bootstrap/token/api:go_default_library",
+         "//vendor/github.com/pkg/errors:go_default_library",
+         "//vendor/k8s.io/utils/net:go_default_library",
+diff --git a/cmd/kubeadm/app/constants/constants.go b/cmd/kubeadm/app/constants/constants.go
+index 47c2615c4a842..1139846febb6e 100644
+--- a/cmd/kubeadm/app/constants/constants.go
++++ b/cmd/kubeadm/app/constants/constants.go
+@@ -29,6 +29,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/util/version"
++	"k8s.io/apimachinery/pkg/util/wait"
+ 	bootstrapapi "k8s.io/cluster-bootstrap/token/api"
+ 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
+ 	utilnet "k8s.io/utils/net"
+@@ -370,6 +371,16 @@ const (
+ 	// May be overridden by a flag at startup.
+ 	KubeControllerManagerPort = 10257
+
++	// EtcdAdvertiseClientUrlsAnnotationKey is the annotation key on every etcd pod, describing the
++	// advertise client URLs
++	EtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
++	// KubeAPIServerAdvertiseAddressEndpointAnnotationKey is the annotation key on every apiserver pod,
++	// describing the API endpoint (advertise address and bind port of the api server)
++	KubeAPIServerAdvertiseAddressEndpointAnnotationKey = "kubeadm.kubernetes.io/kube-apiserver.advertise-address.endpoint"
++
++	// ControlPlaneTier is the value used in the tier label to identify control plane components
++	ControlPlaneTier = "control-plane"
++
+ 	// Mode* constants were copied from pkg/kubeapiserver/authorizer/modes
+ 	// to avoid kubeadm dependency on the internal module
+ 	// TODO: share Mode* constants in component config
+@@ -432,6 +443,15 @@ var (
+ 	// KubeadmCertsClusterRoleName sets the name for the ClusterRole that allows
+ 	// the bootstrap tokens to access the kubeadm-certs Secret during the join of a new control-plane
+ 	KubeadmCertsClusterRoleName = fmt.Sprintf("kubeadm:%s", KubeadmCertsSecret)
++
++	// StaticPodMirroringDefaultRetry is used a backoff strategy for
++	// waiting for static pods to be mirrored to the apiserver.
++	StaticPodMirroringDefaultRetry = wait.Backoff{
++		Steps:    30,
++		Duration: 1 * time.Second,
++		Factor:   1.0,
++		Jitter:   0.1,
++	}
+ )
+
+ // EtcdSupportedVersion returns officially supported version of etcd for a specific Kubernetes release
+diff --git a/cmd/kubeadm/app/phases/controlplane/manifests.go b/cmd/kubeadm/app/phases/controlplane/manifests.go
+index 12684833aeea4..f93c031f348f9 100644
+--- a/cmd/kubeadm/app/phases/controlplane/manifests.go
++++ b/cmd/kubeadm/app/phases/controlplane/manifests.go
+@@ -59,7 +59,8 @@ func GetStaticPodSpecs(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmap
+ 			LivenessProbe:   staticpodutil.LivenessProbe(staticpodutil.GetAPIServerProbeAddress(endpoint), "/healthz", int(endpoint.BindPort), v1.URISchemeHTTPS),
+ 			Resources:       staticpodutil.ComponentResources("250m"),
+ 			Env:             kubeadmutil.GetProxyEnvVars(),
+-		}, mounts.GetVolumes(kubeadmconstants.KubeAPIServer)),
++		}, mounts.GetVolumes(kubeadmconstants.KubeAPIServer),
++			map[string]string{kubeadmconstants.KubeAPIServerAdvertiseAddressEndpointAnnotationKey: endpoint.String()}),
+ 		kubeadmconstants.KubeControllerManager: staticpodutil.ComponentPod(v1.Container{
+ 			Name:            kubeadmconstants.KubeControllerManager,
+ 			Image:           images.GetKubernetesImage(kubeadmconstants.KubeControllerManager, cfg),
+@@ -69,7 +70,7 @@ func GetStaticPodSpecs(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmap
+ 			LivenessProbe:   staticpodutil.LivenessProbe(staticpodutil.GetControllerManagerProbeAddress(cfg), "/healthz", kubeadmconstants.KubeControllerManagerPort, v1.URISchemeHTTPS),
+ 			Resources:       staticpodutil.ComponentResources("200m"),
+ 			Env:             kubeadmutil.GetProxyEnvVars(),
+-		}, mounts.GetVolumes(kubeadmconstants.KubeControllerManager)),
++		}, mounts.GetVolumes(kubeadmconstants.KubeControllerManager), nil),
+ 		kubeadmconstants.KubeScheduler: staticpodutil.ComponentPod(v1.Container{
+ 			Name:            kubeadmconstants.KubeScheduler,
+ 			Image:           images.GetKubernetesImage(kubeadmconstants.KubeScheduler, cfg),
+@@ -79,7 +80,7 @@ func GetStaticPodSpecs(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmap
+ 			LivenessProbe:   staticpodutil.LivenessProbe(staticpodutil.GetSchedulerProbeAddress(cfg), "/healthz", kubeadmconstants.KubeSchedulerPort, v1.URISchemeHTTPS),
+ 			Resources:       staticpodutil.ComponentResources("100m"),
+ 			Env:             kubeadmutil.GetProxyEnvVars(),
+-		}, mounts.GetVolumes(kubeadmconstants.KubeScheduler)),
++		}, mounts.GetVolumes(kubeadmconstants.KubeScheduler), nil),
+ 	}
+ 	return staticPodSpecs
+ }
+diff --git a/cmd/kubeadm/app/phases/etcd/local.go b/cmd/kubeadm/app/phases/etcd/local.go
+index 3dffd842f5455..ecf553f5ec1f7 100644
+--- a/cmd/kubeadm/app/phases/etcd/local.go
++++ b/cmd/kubeadm/app/phases/etcd/local.go
+@@ -176,19 +176,25 @@ func GetEtcdPodSpec(cfg *kubeadmapi.ClusterConfiguration, endpoint *kubeadmapi.A
+ 		etcdVolumeName:  staticpodutil.NewVolume(etcdVolumeName, cfg.Etcd.Local.DataDir, &pathType),
+ 		certsVolumeName: staticpodutil.NewVolume(certsVolumeName, cfg.CertificatesDir+"/etcd", &pathType),
+ 	}
+-	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(&cfg.Etcd)
+-	return staticpodutil.ComponentPod(v1.Container{
+-		Name:            kubeadmconstants.Etcd,
+-		Command:         getEtcdCommand(cfg, endpoint, nodeName, initialCluster),
+-		Image:           images.GetEtcdImage(cfg),
+-		ImagePullPolicy: v1.PullIfNotPresent,
+-		// Mount the etcd datadir path read-write so etcd can store data in a more persistent manner
+-		VolumeMounts: []v1.VolumeMount{
+-			staticpodutil.NewVolumeMount(etcdVolumeName, cfg.Etcd.Local.DataDir, false),
+-			staticpodutil.NewVolumeMount(certsVolumeName, cfg.CertificatesDir+"/etcd", false),
++	// probeHostname returns the correct localhost IP address family based on the endpoint AdvertiseAddress
++	probeHostname, probePort, probeScheme := staticpodutil.GetEtcdProbeEndpoint(&cfg.Etcd, utilsnet.IsIPv6String(endpoint.AdvertiseAddress))
++	return staticpodutil.ComponentPod(
++		v1.Container{
++			Name:            kubeadmconstants.Etcd,
++			Command:         getEtcdCommand(cfg, endpoint, nodeName, initialCluster),
++			Image:           images.GetEtcdImage(cfg),
++			ImagePullPolicy: v1.PullIfNotPresent,
++			// Mount the etcd datadir path read-write so etcd can store data in a more persistent manner
++			VolumeMounts: []v1.VolumeMount{
++				staticpodutil.NewVolumeMount(etcdVolumeName, cfg.Etcd.Local.DataDir, false),
++				staticpodutil.NewVolumeMount(certsVolumeName, cfg.CertificatesDir+"/etcd", false),
++			},
++			LivenessProbe: staticpodutil.LivenessProbe(probeHostname, "/health", probePort, probeScheme),
+ 		},
+-		LivenessProbe: staticpodutil.LivenessProbe(probeHostname, "/health", probePort, probeScheme),
+-	}, etcdMounts)
++		etcdMounts,
++		// etcd will listen on the advertise address of the API server, in a different port (2379)
++		map[string]string{kubeadmconstants.EtcdAdvertiseClientUrlsAnnotationKey: etcdutil.GetClientURL(endpoint)},
++	)
+ }
+
+ // getEtcdCommand builds the right etcd command from the given config object
+diff --git a/cmd/kubeadm/app/util/config/BUILD b/cmd/kubeadm/app/util/config/BUILD
+index 584d183956fce..7897d15669094 100644
+--- a/cmd/kubeadm/app/util/config/BUILD
++++ b/cmd/kubeadm/app/util/config/BUILD
+@@ -31,8 +31,10 @@ go_library(
+         "//staging/src/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/runtime:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/runtime/schema:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/util/errors:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/util/net:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/util/version:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/util/wait:go_default_library",
+         "//staging/src/k8s.io/client-go/kubernetes:go_default_library",
+         "//staging/src/k8s.io/client-go/tools/clientcmd:go_default_library",
+         "//staging/src/k8s.io/client-go/util/cert:go_default_library",
+@@ -59,14 +61,18 @@ go_test(
+         "//cmd/kubeadm/app/apis/kubeadm/v1beta2:go_default_library",
+         "//cmd/kubeadm/app/constants:go_default_library",
+         "//cmd/kubeadm/app/util:go_default_library",
+-        "//cmd/kubeadm/app/util/apiclient:go_default_library",
++        "//cmd/kubeadm/test/resources:go_default_library",
+         "//staging/src/k8s.io/api/core/v1:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/api/errors:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/runtime:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/runtime/schema:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/util/version:go_default_library",
+-        "//staging/src/k8s.io/client-go/kubernetes:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/util/wait:go_default_library",
+         "//staging/src/k8s.io/client-go/kubernetes/fake:go_default_library",
++        "//staging/src/k8s.io/client-go/testing:go_default_library",
+         "//vendor/github.com/lithammer/dedent:go_default_library",
++        "//vendor/github.com/pkg/errors:go_default_library",
+         "//vendor/github.com/pmezard/go-difflib/difflib:go_default_library",
+         "//vendor/sigs.k8s.io/yaml:go_default_library",
+     ],
+diff --git a/cmd/kubeadm/app/util/config/cluster.go b/cmd/kubeadm/app/util/config/cluster.go
+index 528973fa267a8..c0a3eafefd390 100644
+--- a/cmd/kubeadm/app/util/config/cluster.go
++++ b/cmd/kubeadm/app/util/config/cluster.go
+@@ -28,7 +28,9 @@ import (
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
++	errorsutil "k8s.io/apimachinery/pkg/util/errors"
+ 	"k8s.io/apimachinery/pkg/util/version"
++	"k8s.io/apimachinery/pkg/util/wait"
+ 	clientset "k8s.io/client-go/kubernetes"
+ 	"k8s.io/client-go/tools/clientcmd"
+ 	certutil "k8s.io/client-go/util/cert"
+@@ -90,8 +92,8 @@ func getInitConfigurationFromCluster(kubeconfigDir string, client clientset.Inte
+ 		if err := getNodeRegistration(kubeconfigDir, client, &initcfg.NodeRegistration); err != nil {
+ 			return nil, errors.Wrap(err, "failed to get node registration")
+ 		}
+-		// gets the APIEndpoint for the current node from then ClusterStatus in the kubeadm-config ConfigMap
+-		if err := getAPIEndpoint(configMap.Data, initcfg.NodeRegistration.Name, &initcfg.LocalAPIEndpoint); err != nil {
++		// gets the APIEndpoint for the current node
++		if err := getAPIEndpoint(client, initcfg.NodeRegistration.Name, &initcfg.LocalAPIEndpoint); err != nil {
+ 			return nil, errors.Wrap(err, "failed to getAPIEndpoint")
+ 		}
+ 	} else {
+@@ -174,23 +176,82 @@ func getNodeNameFromKubeletConfig(kubeconfigDir string) (string, error) {
+ 	return strings.TrimPrefix(cert.Subject.CommonName, constants.NodesUserPrefix), nil
+ }
+
+-// getAPIEndpoint returns the APIEndpoint for the current node
+-func getAPIEndpoint(data map[string]string, nodeName string, apiEndpoint *kubeadmapi.APIEndpoint) error {
+-	// gets the ClusterStatus from kubeadm-config
+-	clusterStatus, err := UnmarshalClusterStatus(data)
++func getAPIEndpoint(client clientset.Interface, nodeName string, apiEndpoint *kubeadmapi.APIEndpoint) error {
++	return getAPIEndpointWithBackoff(client, nodeName, apiEndpoint, constants.StaticPodMirroringDefaultRetry)
++}
++
++func getAPIEndpointWithBackoff(client clientset.Interface, nodeName string, apiEndpoint *kubeadmapi.APIEndpoint, backoff wait.Backoff) error {
++	var err error
++	var errs []error
++
++	if err = getAPIEndpointFromPodAnnotation(client, nodeName, apiEndpoint, backoff); err == nil {
++		return nil
++	}
++	errs = append(errs, errors.WithMessagef(err, "could not retrieve API endpoints for node %q using pod annotations", nodeName))
++
++	// NB: this is a fallback when there is no annotation found in the API server pod that contains
++	//     the API endpoint, and so we fallback to reading the ClusterStatus struct present in the
++	//     kubeadm-config ConfigMap. This can happen for example, when performing the first
++	//     `kubeadm upgrade apply` and `kubeadm upgrade node` cycle on the whole cluster. This logic
++	//     will be removed when the cluster status struct is removed from the kubeadm-config ConfigMap.
++	if err = getAPIEndpointFromClusterStatus(client, nodeName, apiEndpoint); err == nil {
++		return nil
++	}
++	errs = append(errs, errors.WithMessagef(err, "could not retrieve API endpoints for node %q using cluster status", nodeName))
++
++	return errorsutil.NewAggregate(errs)
++}
++
++func getAPIEndpointFromPodAnnotation(client clientset.Interface, nodeName string, apiEndpoint *kubeadmapi.APIEndpoint, backoff wait.Backoff) error {
++	var rawAPIEndpoint string
++	var lastErr error
++	// Let's tolerate some unexpected transient failures from the API server or load balancers. Also, if
++	// static pods were not yet mirrored into the API server we want to wait for this propagation.
++	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
++		rawAPIEndpoint, lastErr = getRawAPIEndpointFromPodAnnotationWithoutRetry(client, nodeName)
++		return lastErr == nil, nil
++	})
+ 	if err != nil {
+ 		return err
+ 	}
++	parsedAPIEndpoint, err := kubeadmapi.APIEndpointFromString(rawAPIEndpoint)
++	if err != nil {
++		return errors.Wrapf(err, "could not parse API endpoint for node %q", nodeName)
++	}
++	*apiEndpoint = parsedAPIEndpoint
++	return nil
++}
+
+-	// gets the APIEndpoint for the current machine from the ClusterStatus
+-	e, ok := clusterStatus.APIEndpoints[nodeName]
+-	if !ok {
+-		return errors.New("failed to get APIEndpoint information for this node")
++func getRawAPIEndpointFromPodAnnotationWithoutRetry(client clientset.Interface, nodeName string) (string, error) {
++	podList, err := client.CoreV1().Pods(metav1.NamespaceSystem).List(
++		metav1.ListOptions{
++			FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
++			LabelSelector: fmt.Sprintf("component=%s,tier=%s", constants.KubeAPIServer, constants.ControlPlaneTier),
++		},
++	)
++	if err != nil {
++		return "", errors.Wrap(err, "could not retrieve list of pods to determine api server endpoints")
++	}
++	if len(podList.Items) != 1 {
++		return "", errors.Errorf("API server pod for node name %q has %d entries, only one was expected", nodeName, len(podList.Items))
++	}
++	if apiServerEndpoint, ok := podList.Items[0].Annotations[constants.KubeAPIServerAdvertiseAddressEndpointAnnotationKey]; ok {
++		return apiServerEndpoint, nil
+ 	}
++	return "", errors.Errorf("API server pod for node name %q hasn't got a %q annotation, cannot retrieve API endpoint", nodeName, constants.KubeAPIServerAdvertiseAddressEndpointAnnotationKey)
++}
+
+-	apiEndpoint.AdvertiseAddress = e.AdvertiseAddress
+-	apiEndpoint.BindPort = e.BindPort
+-	return nil
++// TODO: remove after 1.20, when the ClusterStatus struct is removed from the kubeadm-config ConfigMap.
++func getAPIEndpointFromClusterStatus(client clientset.Interface, nodeName string, apiEndpoint *kubeadmapi.APIEndpoint) error {
++	clusterStatus, err := GetClusterStatus(client)
++	if err != nil {
++		return errors.Wrap(err, "could not retrieve cluster status")
++	}
++	if statusAPIEndpoint, ok := clusterStatus.APIEndpoints[nodeName]; ok {
++		*apiEndpoint = statusAPIEndpoint
++		return nil
++	}
++	return errors.Errorf("could not find node %s in the cluster status", nodeName)
+ }
+
+ // getComponentConfigs gets the component configs from the corresponding config maps
+diff --git a/cmd/kubeadm/app/util/etcd/BUILD b/cmd/kubeadm/app/util/etcd/BUILD
+index 962513303ebfa..b60da896b670a 100644
+--- a/cmd/kubeadm/app/util/etcd/BUILD
++++ b/cmd/kubeadm/app/util/etcd/BUILD
+@@ -9,6 +9,7 @@ go_library(
+         "//cmd/kubeadm/app/apis/kubeadm:go_default_library",
+         "//cmd/kubeadm/app/constants:go_default_library",
+         "//cmd/kubeadm/app/util/config:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
+         "//staging/src/k8s.io/apimachinery/pkg/util/wait:go_default_library",
+         "//staging/src/k8s.io/client-go/kubernetes:go_default_library",
+         "//vendor/github.com/pkg/errors:go_default_library",
+@@ -26,6 +27,13 @@ go_test(
+     deps = [
+         "//cmd/kubeadm/app/apis/kubeadm:go_default_library",
+         "//cmd/kubeadm/app/constants:go_default_library",
++        "//cmd/kubeadm/test/resources:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/api/errors:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/runtime:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/util/wait:go_default_library",
++        "//staging/src/k8s.io/client-go/kubernetes/fake:go_default_library",
++        "//staging/src/k8s.io/client-go/testing:go_default_library",
++        "//vendor/github.com/pkg/errors:go_default_library",
+     ],
+ )
+
+diff --git a/cmd/kubeadm/app/util/etcd/etcd.go b/cmd/kubeadm/app/util/etcd/etcd.go
+index 85336f545ada8..43dc7422c8e94 100644
+--- a/cmd/kubeadm/app/util/etcd/etcd.go
++++ b/cmd/kubeadm/app/util/etcd/etcd.go
+@@ -19,6 +19,7 @@ package etcd
+ import (
+ 	"context"
+ 	"crypto/tls"
++	"fmt"
+ 	"net"
+ 	"net/url"
+ 	"path/filepath"
+@@ -30,6 +31,7 @@ import (
+ 	"go.etcd.io/etcd/clientv3"
+ 	"go.etcd.io/etcd/pkg/transport"
+ 	"google.golang.org/grpc"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	clientset "k8s.io/client-go/kubernetes"
+ 	"k8s.io/klog"
+@@ -86,24 +88,17 @@ func New(endpoints []string, ca, cert, key string) (*Client, error) {
+ 	return &client, nil
+ }
+
+-// NewFromCluster creates an etcd client for the etcd endpoints defined in the ClusterStatus value stored in
+-// the kubeadm-config ConfigMap in kube-system namespace.
+-// Once created, the client synchronizes client's endpoints with the known endpoints from the etcd membership API (reality check).
++// NewFromCluster creates an etcd client for the etcd endpoints present in etcd member list. In order to compose this information,
++// it will first discover at least one etcd endpoint to connect to. Once created, the client synchronizes client's endpoints with
++// the known endpoints from the etcd membership API, since it is the authoritative source of truth for the list of available members.
+ func NewFromCluster(client clientset.Interface, certificatesDir string) (*Client, error) {
+-	// etcd is listening the API server advertise address on each control-plane node
+-	// so it is necessary to get the list of endpoints from kubeadm cluster status before connecting
++	// Discover at least one etcd endpoint to connect to by inspecting the existing etcd pods
+
+-	// Gets the cluster status
+-	clusterStatus, err := config.GetClusterStatus(client)
++	// Get the list of etcd endpoints
++	endpoints, err := getEtcdEndpoints(client)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-
+-	// Get the list of etcd endpoints from cluster status
+-	endpoints := []string{}
+-	for _, e := range clusterStatus.APIEndpoints {
+-		endpoints = append(endpoints, GetClientURLByIP(e.AdvertiseAddress))
+-	}
+ 	klog.V(1).Infof("etcd endpoints read from pods: %s", strings.Join(endpoints, ","))
+
+ 	// Creates an etcd client
+@@ -127,6 +122,83 @@ func NewFromCluster(client clientset.Interface, certificatesDir string) (*Client
+ 	return etcdClient, nil
+ }
+
++// getEtcdEndpoints returns the list of etcd endpoints.
++func getEtcdEndpoints(client clientset.Interface) ([]string, error) {
++	return getEtcdEndpointsWithBackoff(client, constants.StaticPodMirroringDefaultRetry)
++}
++
++func getEtcdEndpointsWithBackoff(client clientset.Interface, backoff wait.Backoff) ([]string, error) {
++	etcdEndpoints, err := getRawEtcdEndpointsFromPodAnnotation(client, backoff)
++	if err != nil {
++		// NB: this is a fallback when there is no annotation found in the etcd pods that contains
++		//     the client URL, and so we fallback to reading the ClusterStatus struct present in the
++		//     kubeadm-config ConfigMap. This can happen for example, when performing the first
++		//     `kubeadm upgrade apply`. This logic will be removed when the cluster status struct
++		//     is removed from the kubeadm-config ConfigMap.
++		return getRawEtcdEndpointsFromClusterStatus(client)
++	}
++	return etcdEndpoints, nil
++}
++
++// getRawEtcdEndpointsFromPodAnnotation returns the list of endpoints as reported on etcd's pod annotations using the given backoff
++func getRawEtcdEndpointsFromPodAnnotation(client clientset.Interface, backoff wait.Backoff) ([]string, error) {
++	etcdEndpoints := []string{}
++	var lastErr error
++	// Let's tolerate some unexpected transient failures from the API server or load balancers. Also, if
++	// static pods were not yet mirrored into the API server we want to wait for this propagation.
++	err := wait.ExponentialBackoff(backoff, func() (bool, error) {
++		if etcdEndpoints, lastErr = getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client); lastErr != nil {
++			return false, nil
++		}
++		// If the list of etcd endpoints is empty we want to retry: this can happen if joining a secondary
++		// control plane while the primary control plane didn't mirror its static pods yet.
++		return len(etcdEndpoints) > 0, nil
++	})
++	if err != nil {
++		if lastErr != nil {
++			return []string{}, errors.Wrap(lastErr, "could not retrieve the list of etcd endpoints")
++		}
++		return []string{}, errors.Wrap(err, "could not retrieve the list of etcd endpoints")
++	}
++	return etcdEndpoints, nil
++}
++
++func getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client clientset.Interface) ([]string, error) {
++	klog.V(3).Infof("retrieving etcd endpoints from %q annotation in etcd Pods", constants.EtcdAdvertiseClientUrlsAnnotationKey)
++	podList, err := client.CoreV1().Pods(metav1.NamespaceSystem).List(
++		context.TODO(),
++		metav1.ListOptions{
++			LabelSelector: fmt.Sprintf("component=%s,tier=%s", constants.Etcd, constants.ControlPlaneTier),
++		},
++	)
++	if err != nil {
++		return []string{}, err
++	}
++	etcdEndpoints := []string{}
++	for _, pod := range podList.Items {
++		etcdEndpoint, ok := pod.ObjectMeta.Annotations[constants.EtcdAdvertiseClientUrlsAnnotationKey]
++		if !ok {
++			return []string{}, errors.Errorf("etcd Pod %q is missing the %q annotation; cannot infer etcd advertise client URL", pod.ObjectMeta.Name, constants.EtcdAdvertiseClientUrlsAnnotationKey)
++		}
++		etcdEndpoints = append(etcdEndpoints, etcdEndpoint)
++	}
++	return etcdEndpoints, nil
++}
++
++// TODO: remove after 1.20, when the ClusterStatus struct is removed from the kubeadm-config ConfigMap.
++func getRawEtcdEndpointsFromClusterStatus(client clientset.Interface) ([]string, error) {
++	klog.V(3).Info("retrieving etcd endpoints from the cluster status")
++	clusterStatus, err := config.GetClusterStatus(client)
++	if err != nil {
++		return []string{}, err
++	}
++	etcdEndpoints := []string{}
++	for _, e := range clusterStatus.APIEndpoints {
++		etcdEndpoints = append(etcdEndpoints, GetClientURLByIP(e.AdvertiseAddress))
++	}
++	return etcdEndpoints, nil
++}
++
+ // dialTimeout is the timeout for failing to establish a connection.
+ // It is set to >20 seconds as times shorter than that will cause TLS connections to fail
+ // on heavily loaded arm64 CPUs (issue #64649)
+diff --git a/cmd/kubeadm/app/util/etcd/etcd_test.go b/cmd/kubeadm/app/util/etcd/etcd_test.go
+index 31221d757d05a..34b7d0b3fc022 100644
+--- a/cmd/kubeadm/app/util/etcd/etcd_test.go
++++ b/cmd/kubeadm/app/util/etcd/etcd_test.go
+@@ -18,11 +18,19 @@ package etcd
+
+ import (
+ 	"fmt"
++	"reflect"
+ 	"strconv"
+ 	"testing"
+
++	"github.com/pkg/errors"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/util/wait"
++	clientsetfake "k8s.io/client-go/kubernetes/fake"
++	clienttesting "k8s.io/client-go/testing"
+ 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
+ 	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
++	testresources "k8s.io/kubernetes/cmd/kubeadm/test/resources"
+ )
+
+ func TestCheckConfigurationIsHA(t *testing.T) {
+@@ -153,3 +161,217 @@ func TestGetClientURLByIP(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestGetEtcdEndpointsWithBackoff(t *testing.T) {
++	var tests = []struct {
++		name              string
++		pods              []testresources.FakeStaticPod
++		configMap         *testresources.FakeConfigMap
++		expectedEndpoints []string
++		expectedErr       bool
++	}{
++		{
++			name:              "no pod annotations; no ClusterStatus",
++			expectedEndpoints: []string{},
++		},
++		{
++			name: "ipv4 endpoint in pod annotation; no ClusterStatus; port is preserved",
++			pods: []testresources.FakeStaticPod{
++				{
++					Component: constants.Etcd,
++					Annotations: map[string]string{
++						constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.4:1234",
++					},
++				},
++			},
++			expectedEndpoints: []string{"https://1.2.3.4:1234"},
++		},
++		{
++			name:              "no pod annotations; ClusterStatus with valid ipv4 endpoint; port is inferred",
++			configMap:         testresources.ClusterStatusWithAPIEndpoint("cp-0", kubeadmapi.APIEndpoint{AdvertiseAddress: "1.2.3.4", BindPort: 1234}),
++			expectedEndpoints: []string{"https://1.2.3.4:2379"},
++		},
++	}
++	for _, rt := range tests {
++		t.Run(rt.name, func(t *testing.T) {
++			client := clientsetfake.NewSimpleClientset()
++			for _, pod := range rt.pods {
++				if err := pod.Create(client); err != nil {
++					t.Errorf("error setting up test creating pod for node %q", pod.NodeName)
++				}
++			}
++			if rt.configMap != nil {
++				if err := rt.configMap.Create(client); err != nil {
++					t.Error("could not create ConfigMap")
++				}
++			}
++			endpoints, err := getEtcdEndpointsWithBackoff(client, wait.Backoff{Duration: 0, Jitter: 0, Steps: 1})
++			if err != nil && !rt.expectedErr {
++				t.Errorf("got error %q; was expecting no errors", err)
++				return
++			} else if err == nil && rt.expectedErr {
++				t.Error("got no error; was expecting an error")
++				return
++			} else if err != nil && rt.expectedErr {
++				return
++			}
++
++			if !reflect.DeepEqual(endpoints, rt.expectedEndpoints) {
++				t.Errorf("expected etcd endpoints: %v; got: %v", rt.expectedEndpoints, endpoints)
++			}
++		})
++	}
++}
++
++func TestGetRawEtcdEndpointsFromPodAnnotation(t *testing.T) {
++	var tests = []struct {
++		name              string
++		pods              []testresources.FakeStaticPod
++		clientSetup       func(*clientsetfake.Clientset)
++		expectedEndpoints []string
++		expectedErr       bool
++	}{
++		{
++			name: "exactly one pod with annotation",
++			pods: []testresources.FakeStaticPod{
++				{
++					NodeName:    "cp-0",
++					Component:   constants.Etcd,
++					Annotations: map[string]string{constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.4:2379"},
++				},
++			},
++			expectedEndpoints: []string{"https://1.2.3.4:2379"},
++		},
++		{
++			name:        "no pods with annotation",
++			expectedErr: true,
++		},
++		{
++			name: "exactly one pod with annotation; all requests fail",
++			pods: []testresources.FakeStaticPod{
++				{
++					NodeName:    "cp-0",
++					Component:   constants.Etcd,
++					Annotations: map[string]string{constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.4:2379"},
++				},
++			},
++			clientSetup: func(clientset *clientsetfake.Clientset) {
++				clientset.PrependReactor("list", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
++					return true, nil, apierrors.NewInternalError(errors.New("API server down"))
++				})
++			},
++			expectedErr: true,
++		},
++	}
++	for _, rt := range tests {
++		t.Run(rt.name, func(t *testing.T) {
++			client := clientsetfake.NewSimpleClientset()
++			for i, pod := range rt.pods {
++				if err := pod.CreateWithPodSuffix(client, strconv.Itoa(i)); err != nil {
++					t.Errorf("error setting up test creating pod for node %q", pod.NodeName)
++				}
++			}
++			if rt.clientSetup != nil {
++				rt.clientSetup(client)
++			}
++			endpoints, err := getRawEtcdEndpointsFromPodAnnotation(client, wait.Backoff{Duration: 0, Jitter: 0, Steps: 1})
++			if err != nil && !rt.expectedErr {
++				t.Errorf("got error %v, but wasn't expecting any error", err)
++				return
++			} else if err == nil && rt.expectedErr {
++				t.Error("didn't get any error; but was expecting an error")
++				return
++			} else if err != nil && rt.expectedErr {
++				return
++			}
++			if !reflect.DeepEqual(endpoints, rt.expectedEndpoints) {
++				t.Errorf("expected etcd endpoints: %v; got: %v", rt.expectedEndpoints, endpoints)
++			}
++		})
++	}
++}
++
++func TestGetRawEtcdEndpointsFromPodAnnotationWithoutRetry(t *testing.T) {
++	var tests = []struct {
++		name              string
++		pods              []testresources.FakeStaticPod
++		clientSetup       func(*clientsetfake.Clientset)
++		expectedEndpoints []string
++		expectedErr       bool
++	}{
++		{
++			name:              "no pods",
++			expectedEndpoints: []string{},
++		},
++		{
++			name: "exactly one pod with annotation",
++			pods: []testresources.FakeStaticPod{
++				{
++					NodeName:    "cp-0",
++					Component:   constants.Etcd,
++					Annotations: map[string]string{constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.4:2379"},
++				},
++			},
++			expectedEndpoints: []string{"https://1.2.3.4:2379"},
++		},
++		{
++			name: "two pods with annotation",
++			pods: []testresources.FakeStaticPod{
++				{
++					NodeName:    "cp-0",
++					Component:   constants.Etcd,
++					Annotations: map[string]string{constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.4:2379"},
++				},
++				{
++					NodeName:    "cp-1",
++					Component:   constants.Etcd,
++					Annotations: map[string]string{constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.5:2379"},
++				},
++			},
++			expectedEndpoints: []string{"https://1.2.3.4:2379", "https://1.2.3.5:2379"},
++		},
++		{
++			name: "exactly one pod with annotation; request fails",
++			pods: []testresources.FakeStaticPod{
++				{
++					NodeName:    "cp-0",
++					Component:   constants.Etcd,
++					Annotations: map[string]string{constants.EtcdAdvertiseClientUrlsAnnotationKey: "https://1.2.3.4:2379"},
++				},
++			},
++			clientSetup: func(clientset *clientsetfake.Clientset) {
++				clientset.PrependReactor("list", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
++					return true, nil, apierrors.NewInternalError(errors.New("API server down"))
++				})
++			},
++			expectedErr: true,
++		},
++	}
++	for _, rt := range tests {
++		t.Run(rt.name, func(t *testing.T) {
++			client := clientsetfake.NewSimpleClientset()
++			for _, pod := range rt.pods {
++				if err := pod.Create(client); err != nil {
++					t.Errorf("error setting up test creating pod for node %q", pod.NodeName)
++					return
++				}
++			}
++			if rt.clientSetup != nil {
++				rt.clientSetup(client)
++			}
++			endpoints, err := getRawEtcdEndpointsFromPodAnnotationWithoutRetry(client)
++			if err != nil && !rt.expectedErr {
++				t.Errorf("got error %v, but wasn't expecting any error", err)
++				return
++			} else if err == nil && rt.expectedErr {
++				t.Error("didn't get any error; but was expecting an error")
++				return
++			} else if err != nil && rt.expectedErr {
++				return
++			}
++			if !reflect.DeepEqual(endpoints, rt.expectedEndpoints) {
++				t.Errorf("expected etcd endpoints: %v; got: %v", rt.expectedEndpoints, endpoints)
++			}
++		})
++	}
++}
+diff --git a/cmd/kubeadm/app/util/staticpod/utils.go b/cmd/kubeadm/app/util/staticpod/utils.go
+index e661558a8a045..1ab1ed171b9a2 100644
+--- a/cmd/kubeadm/app/util/staticpod/utils.go
++++ b/cmd/kubeadm/app/util/staticpod/utils.go
+@@ -45,8 +45,8 @@ const (
+ 	kubeSchedulerAddressArg = "address"
+ )
+
+-// ComponentPod returns a Pod object from the container and volume specifications
+-func ComponentPod(container v1.Container, volumes map[string]v1.Volume) v1.Pod {
++// ComponentPod returns a Pod object from the container, volume and annotations specifications
++func ComponentPod(container v1.Container, volumes map[string]v1.Volume, annotations map[string]string) v1.Pod {
+ 	return v1.Pod{
+ 		TypeMeta: metav1.TypeMeta{
+ 			APIVersion: "v1",
+@@ -57,7 +57,8 @@ func ComponentPod(container v1.Container, volumes map[string]v1.Volume) v1.Pod {
+ 			Namespace: metav1.NamespaceSystem,
+ 			// The component and tier labels are useful for quickly identifying the control plane Pods when doing a .List()
+ 			// against Pods in the kube-system namespace. Can for example be used together with the WaitForPodsWithLabel function
+-			Labels: map[string]string{"component": container.Name, "tier": "control-plane"},
++			Labels:      map[string]string{"component": container.Name, "tier": kubeadmconstants.ControlPlaneTier},
++			Annotations: annotations,
+ 		},
+ 		Spec: v1.PodSpec{
+ 			Containers:        []v1.Container{container},
+diff --git a/cmd/kubeadm/app/util/staticpod/utils_test.go b/cmd/kubeadm/app/util/staticpod/utils_test.go
+index ac6a1f757a383..967845cdb6c6e 100644
+--- a/cmd/kubeadm/app/util/staticpod/utils_test.go
++++ b/cmd/kubeadm/app/util/staticpod/utils_test.go
+@@ -234,7 +234,7 @@ func TestComponentPod(t *testing.T) {
+ 	for _, rt := range tests {
+ 		t.Run(rt.name, func(t *testing.T) {
+ 			c := v1.Container{Name: rt.name}
+-			actual := ComponentPod(c, map[string]v1.Volume{})
++			actual := ComponentPod(c, map[string]v1.Volume{}, nil)
+ 			if !reflect.DeepEqual(rt.expected, actual) {
+ 				t.Errorf(
+ 					"failed componentPod:\n\texpected: %v\n\t  actual: %v",
+diff --git a/cmd/kubeadm/test/BUILD b/cmd/kubeadm/test/BUILD
+index 1a16c484c5977..584937d82834e 100644
+--- a/cmd/kubeadm/test/BUILD
++++ b/cmd/kubeadm/test/BUILD
+@@ -33,6 +33,7 @@ filegroup(
+         ":package-srcs",
+         "//cmd/kubeadm/test/cmd:all-srcs",
+         "//cmd/kubeadm/test/kubeconfig:all-srcs",
++        "//cmd/kubeadm/test/resources:all-srcs",
+     ],
+     tags = ["automanaged"],
+ )
+diff --git a/cmd/kubeadm/test/resources/BUILD b/cmd/kubeadm/test/resources/BUILD
+new file mode 100644
+index 0000000000000..20a7ec198a533
+--- /dev/null
++++ b/cmd/kubeadm/test/resources/BUILD
+@@ -0,0 +1,35 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "cluster_status.go",
++        "configmap.go",
++        "pods.go",
++    ],
++    importpath = "k8s.io/kubernetes/cmd/kubeadm/test/resources",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//cmd/kubeadm/app/apis/kubeadm:go_default_library",
++        "//cmd/kubeadm/app/constants:go_default_library",
++        "//cmd/kubeadm/app/util/apiclient:go_default_library",
++        "//cmd/kubeadm/app/util/staticpod:go_default_library",
++        "//staging/src/k8s.io/api/core/v1:go_default_library",
++        "//staging/src/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
++        "//staging/src/k8s.io/client-go/kubernetes:go_default_library",
++    ],
++)
++
++filegroup(
++    name = "package-srcs",
++    srcs = glob(["**"]),
++    tags = ["automanaged"],
++    visibility = ["//visibility:private"],
++)
++
++filegroup(
++    name = "all-srcs",
++    srcs = [":package-srcs"],
++    tags = ["automanaged"],
++    visibility = ["//visibility:public"],
++)
+diff --git a/cmd/kubeadm/test/resources/cluster_status.go b/cmd/kubeadm/test/resources/cluster_status.go
+new file mode 100644
+index 0000000000000..7534358c12ac3
+--- /dev/null
++++ b/cmd/kubeadm/test/resources/cluster_status.go
+@@ -0,0 +1,41 @@
++/*
++Copyright 2020 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package resources
++
++import (
++	"encoding/json"
++
++	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
++	"k8s.io/kubernetes/cmd/kubeadm/app/constants"
++)
++
++// ClusterStatusWithAPIEndpoint returns a FakeConfigMap containing a
++// cluster status with the provided endpoint for nodeName as a single
++// entry
++func ClusterStatusWithAPIEndpoint(nodeName string, endpoint kubeadmapi.APIEndpoint) *FakeConfigMap {
++	marshaledClusterStatus, _ := json.Marshal(kubeadmapi.ClusterStatus{
++		APIEndpoints: map[string]kubeadmapi.APIEndpoint{
++			nodeName: endpoint,
++		},
++	})
++	return &FakeConfigMap{
++		Name: constants.KubeadmConfigConfigMap,
++		Data: map[string]string{
++			constants.ClusterStatusConfigMapKey: string(marshaledClusterStatus),
++		},
++	}
++}
+diff --git a/cmd/kubeadm/test/resources/configmap.go b/cmd/kubeadm/test/resources/configmap.go
+new file mode 100644
+index 0000000000000..15a7a8f9ed85c
+--- /dev/null
++++ b/cmd/kubeadm/test/resources/configmap.go
+@@ -0,0 +1,41 @@
++/*
++Copyright 2020 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package resources
++
++import (
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	clientset "k8s.io/client-go/kubernetes"
++	"k8s.io/kubernetes/cmd/kubeadm/app/util/apiclient"
++)
++
++// FakeConfigMap represents a fake config map
++type FakeConfigMap struct {
++	Name string
++	Data map[string]string
++}
++
++// Create creates a fake configmap using the provided client
++func (c *FakeConfigMap) Create(client clientset.Interface) error {
++	return apiclient.CreateOrUpdateConfigMap(client, &v1.ConfigMap{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:      c.Name,
++			Namespace: metav1.NamespaceSystem,
++		},
++		Data: c.Data,
++	})
++}
+diff --git a/cmd/kubeadm/test/resources/pods.go b/cmd/kubeadm/test/resources/pods.go
+new file mode 100644
+index 0000000000000..d154bfb5711ec
+--- /dev/null
++++ b/cmd/kubeadm/test/resources/pods.go
+@@ -0,0 +1,66 @@
++/*
++Copyright 2020 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package resources
++
++import (
++	"context"
++	"fmt"
++
++	v1 "k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	clientset "k8s.io/client-go/kubernetes"
++	staticpodutil "k8s.io/kubernetes/cmd/kubeadm/app/util/staticpod"
++)
++
++// FakeStaticPod represents a fake static pod
++type FakeStaticPod struct {
++	NodeName    string
++	Component   string
++	Annotations map[string]string
++}
++
++// Pod returns a pod structure representing the fake static pod with a
++// given suffix
++func (p *FakeStaticPod) Pod(suffix string) *v1.Pod {
++	pod := staticpodutil.ComponentPod(
++		v1.Container{
++			Name:  p.Component,
++			Image: fmt.Sprintf("%s-image:tag", p.Component),
++		},
++		map[string]v1.Volume{},
++		p.Annotations,
++	)
++	if len(suffix) > 0 {
++		pod.ObjectMeta.Name = fmt.Sprintf("%s-%s-%s", p.Component, p.NodeName, suffix)
++	} else {
++		pod.ObjectMeta.Name = fmt.Sprintf("%s-%s", p.Component, p.NodeName)
++	}
++	pod.Spec.NodeName = p.NodeName
++	return &pod
++}
++
++// Create creates a fake static pod using the provided client
++func (p *FakeStaticPod) Create(client clientset.Interface) error {
++	return p.CreateWithPodSuffix(client, "")
++}
++
++// CreateWithPodSuffix creates a fake static pod using the provided
++// client and suffix
++func (p *FakeStaticPod) CreateWithPodSuffix(client clientset.Interface, suffix string) error {
++	_, err := client.CoreV1().Pods(metav1.NamespaceSystem).Create(context.TODO(), p.Pod(suffix), metav1.CreateOptions{})
++	return err
++}

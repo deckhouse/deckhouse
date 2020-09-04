@@ -3,11 +3,11 @@ kubernetes_version="1.14.10-0"
 {{ else if eq .kubernetesVersion "1.15" }}
 kubernetes_version="1.15.12-0"
 {{ else if eq .kubernetesVersion "1.16" }}
-kubernetes_version="1.16.11-1"
+kubernetes_version="1.16.15-0"
 {{ else if eq .kubernetesVersion "1.17" }}
-kubernetes_version="1.17.7-1"
+kubernetes_version="1.17.11-0"
 {{ else if eq .kubernetesVersion "1.18" }}
-kubernetes_version="1.18.4-1"
+kubernetes_version="1.18.8-0"
 {{ else }}
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}

@@ -1,0 +1,206 @@
+diff --git a/cmd/kubeadm/app/phases/controlplane/manifests.go b/cmd/kubeadm/app/phases/controlplane/manifests.go
+index d39c4762ea88b..c7ebddf004083 100644
+--- a/cmd/kubeadm/app/phases/controlplane/manifests.go
++++ b/cmd/kubeadm/app/phases/controlplane/manifests.go
+@@ -193,20 +193,52 @@ func getAPIServerCommand(cfg *kubeadmapi.ClusterConfiguration, localAPIEndpoint
+ }
+
+ // getAuthzModes gets the authorization-related parameters to the api server
+-// Node,RBAC should be fixed in this order at the beginning
+-// AlwaysAllow and AlwaysDeny is ignored as they are only for testing
++// Node,RBAC is the default mode if nothing is passed to kubeadm. User provided modes override
++// the default.
+ func getAuthzModes(authzModeExtraArgs string) string {
+-	modes := []string{
++	defaultMode := []string{
+ 		kubeadmconstants.ModeNode,
+ 		kubeadmconstants.ModeRBAC,
+ 	}
+-	if strings.Contains(authzModeExtraArgs, kubeadmconstants.ModeABAC) {
+-		modes = append(modes, kubeadmconstants.ModeABAC)
++
++	if len(authzModeExtraArgs) > 0 {
++		mode := []string{}
++		for _, requested := range strings.Split(authzModeExtraArgs, ",") {
++			if isValidAuthzMode(requested) {
++				mode = append(mode, requested)
++			} else {
++				klog.Warningf("ignoring unknown kube-apiserver authorization-mode %q", requested)
++			}
++		}
++
++		// only return the user provided mode if at least one was valid
++		if len(mode) > 0 {
++			klog.Warningf("the default kube-apiserver authorization-mode is %q; using %q",
++				strings.Join(defaultMode, ","),
++				strings.Join(mode, ","),
++			)
++			return strings.Join(mode, ",")
++		}
++	}
++	return strings.Join(defaultMode, ",")
++}
++
++func isValidAuthzMode(authzMode string) bool {
++	allModes := []string{
++		kubeadmconstants.ModeNode,
++		kubeadmconstants.ModeRBAC,
++		kubeadmconstants.ModeWebhook,
++		kubeadmconstants.ModeABAC,
++		kubeadmconstants.ModeAlwaysAllow,
++		kubeadmconstants.ModeAlwaysDeny,
+ 	}
+-	if strings.Contains(authzModeExtraArgs, kubeadmconstants.ModeWebhook) {
+-		modes = append(modes, kubeadmconstants.ModeWebhook)
++
++	for _, mode := range allModes {
++		if authzMode == mode {
++			return true
++		}
+ 	}
+-	return strings.Join(modes, ",")
++	return false
+ }
+
+ // calcNodeCidrSize determines the size of the subnets used on each node, based
+diff --git a/cmd/kubeadm/app/phases/controlplane/manifests_test.go b/cmd/kubeadm/app/phases/controlplane/manifests_test.go
+index 6fbc1a8813927..91ad841c4da6f 100644
+--- a/cmd/kubeadm/app/phases/controlplane/manifests_test.go
++++ b/cmd/kubeadm/app/phases/controlplane/manifests_test.go
+@@ -440,7 +440,7 @@ func TestGetAPIServerCommand(t *testing.T) {
+ 				"--requestheader-extra-headers-prefix=X-Remote-Extra-",
+ 				"--requestheader-client-ca-file=" + testCertsDir + "/front-proxy-ca.crt",
+ 				"--requestheader-allowed-names=front-proxy-client",
+-				"--authorization-mode=Node,RBAC,ABAC",
++				"--authorization-mode=ABAC",
+ 				"--advertise-address=1.2.3.4",
+ 				fmt.Sprintf("--etcd-servers=https://127.0.0.1:%d", kubeadmconstants.EtcdListenClientPort),
+ 				"--etcd-cafile=" + testCertsDir + "/etcd/ca.crt",
+@@ -500,7 +500,11 @@ func TestGetAPIServerCommand(t *testing.T) {
+ 				APIServer: kubeadmapi.APIServer{
+ 					ControlPlaneComponent: kubeadmapi.ControlPlaneComponent{
+ 						ExtraArgs: map[string]string{
+-							"authorization-mode": kubeadmconstants.ModeWebhook,
++							"authorization-mode": strings.Join([]string{
++								kubeadmconstants.ModeNode,
++								kubeadmconstants.ModeRBAC,
++								kubeadmconstants.ModeWebhook,
++							}, ","),
+ 						},
+ 					},
+ 				},
+@@ -950,62 +954,82 @@ func TestGetAuthzModes(t *testing.T) {
+ 			expected: "Node,RBAC",
+ 		},
+ 		{
+-			name:     "add missing Node",
+-			authMode: []string{kubeadmconstants.ModeRBAC},
++			name:     "default non empty",
++			authMode: []string{kubeadmconstants.ModeNode, kubeadmconstants.ModeRBAC},
+ 			expected: "Node,RBAC",
+ 		},
+ 		{
+-			name:     "add missing RBAC",
+-			authMode: []string{kubeadmconstants.ModeNode},
++			name:     "single unspecified returning default",
++			authMode: []string{"FooAuthzMode"},
+ 			expected: "Node,RBAC",
+ 		},
+ 		{
+-			name:     "add defaults to ABAC",
+-			authMode: []string{kubeadmconstants.ModeABAC},
+-			expected: "Node,RBAC,ABAC",
++			name:     "multiple ignored",
++			authMode: []string{kubeadmconstants.ModeNode, "foo", kubeadmconstants.ModeRBAC, "bar"},
++			expected: "Node,RBAC",
+ 		},
+ 		{
+-			name:     "add defaults to RBAC+Webhook",
+-			authMode: []string{kubeadmconstants.ModeRBAC, kubeadmconstants.ModeWebhook},
+-			expected: "Node,RBAC,Webhook",
++			name:     "single mode",
++			authMode: []string{kubeadmconstants.ModeAlwaysDeny},
++			expected: "AlwaysDeny",
+ 		},
+ 		{
+-			name:     "add default to Webhook",
+-			authMode: []string{kubeadmconstants.ModeWebhook},
+-			expected: "Node,RBAC,Webhook",
++			name:     "multiple special order",
++			authMode: []string{kubeadmconstants.ModeNode, kubeadmconstants.ModeWebhook, kubeadmconstants.ModeRBAC, kubeadmconstants.ModeABAC},
++			expected: "Node,Webhook,RBAC,ABAC",
+ 		},
++	}
++
++	for _, rt := range tests {
++		t.Run(rt.name, func(t *testing.T) {
++			actual := getAuthzModes(strings.Join(rt.authMode, ","))
++			if actual != rt.expected {
++				t.Errorf("failed getAuthzModes:\nexpected:\n%v\nsaw:\n%v", rt.expected, actual)
++			}
++		})
++	}
++}
++
++func TestIsValidAuthzMode(t *testing.T) {
++	var tests = []struct {
++		mode  string
++		valid bool
++	}{
+ 		{
+-			name:     "AlwaysAllow ignored",
+-			authMode: []string{kubeadmconstants.ModeAlwaysAllow},
+-			expected: "Node,RBAC",
++			mode:  "Node",
++			valid: true,
+ 		},
+ 		{
+-			name:     "AlwaysDeny ignored",
+-			authMode: []string{kubeadmconstants.ModeAlwaysDeny},
+-			expected: "Node,RBAC",
++			mode:  "RBAC",
++			valid: true,
+ 		},
+ 		{
+-			name:     "Unspecified ignored",
+-			authMode: []string{"FooAuthzMode"},
+-			expected: "Node,RBAC",
++			mode:  "ABAC",
++			valid: true,
+ 		},
+ 		{
+-			name:     "Multiple ignored",
+-			authMode: []string{kubeadmconstants.ModeAlwaysAllow, kubeadmconstants.ModeAlwaysDeny, "foo"},
+-			expected: "Node,RBAC",
++			mode:  "AlwaysAllow",
++			valid: true,
+ 		},
+ 		{
+-			name:     "all",
+-			authMode: []string{kubeadmconstants.ModeNode, kubeadmconstants.ModeRBAC, kubeadmconstants.ModeWebhook, kubeadmconstants.ModeABAC},
+-			expected: "Node,RBAC,ABAC,Webhook",
++			mode:  "Webhook",
++			valid: true,
++		},
++		{
++			mode:  "AlwaysDeny",
++			valid: true,
++		},
++		{
++			mode:  "Foo",
++			valid: false,
+ 		},
+ 	}
+
+ 	for _, rt := range tests {
+-		t.Run(rt.name, func(t *testing.T) {
+-			actual := getAuthzModes(strings.Join(rt.authMode, ","))
+-			if actual != rt.expected {
+-				t.Errorf("failed getAuthzParameters:\nexpected:\n%v\nsaw:\n%v", rt.expected, actual)
++		t.Run(rt.mode, func(t *testing.T) {
++			isValid := isValidAuthzMode(rt.mode)
++			if isValid != rt.valid {
++				t.Errorf("failed isValidAuthzMode:\nexpected:\n%v\nsaw:\n%v", rt.valid, isValid)
+ 			}
+ 		})
+ 	}
