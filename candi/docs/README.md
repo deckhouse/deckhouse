@@ -47,7 +47,7 @@ deckhouse:
 
 Для валидации и проставления значений по умолчанию используются спецификации OpenAPI.
 
-| Kind                           | OpenAPI path       | Description        | 
+| Kind                           | Description        |  OpenAPI path       | 
 | ------------------------------ | ------------------ | ------------------ |
 | ClusterConfiguration           | Основная часть конфигурации кластера Kubernetes | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/cluster_configuration.yaml) |
 | InitConfiguration              | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
@@ -120,7 +120,7 @@ Bundle представляет собой tar-архив со всеми нео
 #### Создание дополнительных master-узлов и статических узлов
 При создании дополнительных узлов deckhouse-candi взаимодействует с API Kubernetes. 
 * Создает необходимые NodeGroup объекты
-* Дожидается появления Secret'ов, содержащих cloud-init для создания узлов в этой группе
+* Дожидается появления Secret'ов, содержащих cloud-config для создания узлов в этой группе
 * Запускает соответствующий terraform (master-node  или static-node)
 * При успешном выполнении сохраняет state в кластер Kubernetes
 

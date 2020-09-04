@@ -30,7 +30,7 @@ permalink: /guides/node-manager.html
 - Получить скрипт для установки и настройки моды: `kubectl -n d8-cloud-instance-manager  get secret manual-bootstrap-for-nodes-o json | jq '.data."adopt.sh"' -r`
 - Зайти на новую ноду по ssh и выполнить команду из секрета: `echo <base64> | base64 -d | bash`
 
-### Как вывести ноду из под управления node-manager?
+### Как вывести ноду из-под управления node-manager?
 
 - Остановить сервис и таймер bashible: `systemctl stop bashible.timer bashible.service`
 - Удалить скрипты bashible: `rm -rf /var/lib/bashible`
@@ -42,7 +42,7 @@ kubectl label node <node_name> node.deckhouse.io/group-
 
 ### Как понять, что что-то пошло не так?
 
-Модуль `node-manager` создает на каждой ноде сервис `bashible` и его логи можно посмотреть: `journalctl -fu bashible`.
+Модуль `node-manager` создает на каждой ноде сервис `bashible`, и его логи можно посмотреть при помощи: `journalctl -fu bashible`.
 
 ### Как посмотреть, что в данный момент выполняется на ноде при ее создании?
 
@@ -93,3 +93,10 @@ Status:
 Подробно о всех параметрах можно прочитать в [документации модуля](https://github.com/deckhouse/deckhouse/tree/master/modules/040-node-manager/docs#nodegroup-custom-resource)
 
 В случае изменения параметра `instancePrefix` в конфигурации deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит.
+
+
+## Как перекатить эфемерные машины в облаке с новой конфигурацией?
+
+При изменении конфигурации Deckhouse (как в модуле node-manager, так и в любом из облачных провайдеров) виртуальные машины не будут перезаказаны. Перекат происходит только после изменения `InstanceClass` или `NodeGroup` объектов.
+
+Для того, чтобы форсированно перекатить все Machines, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `kubectl annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
