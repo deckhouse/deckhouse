@@ -212,7 +212,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		_ = log.Process("bootstrap", "Clean cache", func() error {
 			cache.Global().Clean()
-			log.Warning(`Next run of "deckhouse-candi bootstrap" will create a new Kubernetes cluster.\n`)
+			log.Warning("Next run of \"deckhouse-candi bootstrap\" will create a new Kubernetes cluster.\n")
 			return nil
 		})
 		return nil
