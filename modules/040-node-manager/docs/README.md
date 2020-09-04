@@ -214,9 +214,3 @@ spec:
   disruptions:
     approvalMode: Manual
 ```
-
-## Как мне перекатить машины с новой конфигурацией?
-
-При изменении конфигурации Deckhouse (как в этом модуле, так и в любом из облачных провайдеров) виртуальные машины не будут перезаказаны. Перекат происходит только после изменения `InstanceClass` или `NodeGroup` объектов.
-
-Для того, чтобы форсированно перекатить все Machines, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `kubectl annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
