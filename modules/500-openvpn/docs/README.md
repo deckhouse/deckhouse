@@ -56,13 +56,13 @@ data:
     * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск будет перезаказан, а все данные удалены.
     * Если указать `false` — будет форсироваться использование emptyDir'а.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
-    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) **(если включен модуль user-authn, параметры externalAuthentication настраиваются автоматически)**.
         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
     * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
         * Используется если не включен параметр `externalAuthentication`.
     * `allowedUserGroups` — массив групп, пользователям которых позволен доступ в панель администрирования openvpn.
-        * Используется если включен параметр `externalAuthentication` и модуль `user-authn`.
+        * Используется если включен модуль `user-authn` или параметр `externalAuthentication`.
     * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить аутентификацию для доступа в openvpn.
 * `externalHost` — IP или домен по которому клиенты подключаются к OpenVPN серверу.
   * По-умолчанию — используются данные из сервиса с именем `openvpn-external`.

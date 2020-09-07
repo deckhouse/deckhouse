@@ -46,13 +46,13 @@ search: prometheus
     * По-умолчанию `1095`.
     * Если указать `0`, то longterm Prometheus не будет запущен в кластере.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
-    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+    * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) **(если включен модуль user-authn, параметры externalAuthentication настраиваются автоматически)**.
         * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
         * `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
     * `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
         * Используется если не включен параметр `externalAuthentication`.
     * `allowedUserGroups` — массив групп, пользователям которых позволен доступ в grafana и prometheus.
-        * Используется если включен параметр `externalAuthentication` и модуль `user-authn`.
+        * Используется если включен модуль `user-authn` или параметр `externalAuthentication`.
     * `whitelistSourceRanges` — массив CIDR, которым разрешено проходить авторизацию в grafana и prometheus.
     * `satisfyAny` — разрешает пройти только одну из аутентификаций. В комбинации с опцией whitelistSourceRanges позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.
 * `grafana` - настройки для инсталляции Grafana.
