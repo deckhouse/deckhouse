@@ -15,7 +15,7 @@ EOF
 
 function __on_startup() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
-  if semver::gt "$cluster_version" "1.15" ; then
+  if semver::gt "$cluster_version" "1.16" ; then
     return 0
   fi
 

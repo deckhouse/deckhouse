@@ -40,6 +40,9 @@
   {{- if hasKey .Values.controlPlaneManager.apiserver "certSANs" }}
     {{ $_ := set $tpl_context.apiserver "certSANs" .Values.controlPlaneManager.apiserver.certSANs }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "enableDeprecatedAPIs" }}
+    {{ $_ := set $tpl_context.apiserver "enableDeprecatedAPIs" .Values.controlPlaneManager.apiserver.enableDeprecatedAPIs }}
+  {{- end }}
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
