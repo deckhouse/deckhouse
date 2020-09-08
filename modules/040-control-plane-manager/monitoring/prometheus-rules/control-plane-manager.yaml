@@ -1,0 +1,54 @@
+- name: d8.control-plane-manager.availability
+  rules:
+  - alert: D8ControlPlaneManagerUnavailable
+    expr: |
+      count(ALERTS{alertname=~"D8ControlPlaneManagerPodNotRunning", alertstate="firing"}) > 0
+      OR
+      count(ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", namespace="kube-system", daemonset="d8-control-plane-manager", alertstate="firing"}) > 0
+    labels:
+      tier: cluster
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      plk_group_for__control_plane_manager_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace=kube-system,prometheus=deckhouse,daemonset=d8-control-plane-manager"
+      summary: Control plane manager is out of service
+      description: |
+        Control plane manager is out of service. What exactly is wrong can be found in linked alerts.
+
+- name: d8.control-plane-manager.malfunctioning
+  rules:
+  - alert: D8ControlPlaneManagerPodNotRunning
+    expr: |
+      max by (node) (
+        kube_node_role{role="master"}
+        unless
+        kube_node_role{role="master"}
+        * on(node) group_left() (
+          (kube_pod_status_ready{condition="true"} == 1)
+          * on (pod, namespace) group_right()
+          kube_controller_pod{
+            controller_type="DaemonSet",
+            namespace="kube-system",
+            controller_name="d8-control-plane-manager"
+          }
+        )
+      )
+    labels:
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__d8_control_plane_manager_malfunctioning: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Controller Pod not running on Node {{ $labels.node }}
+      description: |-
+        Pod `d8-control-plane-manager` fails or not scheduled on Node {{ $labels.node }}
+
+        Consider checking state of the `kube-system/d8-control-plane-manager` DaemonSet and its Pods:
+        `kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager`

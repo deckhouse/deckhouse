@@ -60,7 +60,7 @@ title: Модуль control-plane-manager
 Модуль по-умолчанию **включен**. Выключить можно стандартным способом:
 
 ```yaml
-controlPlaneManager: "false"
+controlPlaneManagerEnabled: "false"
 ```
 
 ### Параметры модуля
