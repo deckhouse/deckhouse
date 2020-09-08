@@ -38,6 +38,9 @@ apiServer:
   {{- else }}
     bind-address: "0.0.0.0"
   {{- end }}
+  {{- if .apiserver.enableDeprecatedAPIs }}
+    runtime-config: apps/v1beta1=true,apps/v1beta2=true,extensions/v1beta1/deployments=true,extensions/v1beta1/statefulsets=true,extensions/v1beta1/daemonsets=true,extensions/v1beta1/replicasets=true,extensions/v1beta1/networkpolicies=true,extensions/v1beta1/podsecuritypolicies=true
+  {{- end }}
   {{- if .apiserver.oidcCA }}
     oidc-ca-file: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
   {{- end }}
