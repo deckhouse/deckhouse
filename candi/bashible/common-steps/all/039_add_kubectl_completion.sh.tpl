@@ -5,3 +5,6 @@ sed -i 's/\#force_color_prompt=yes/force_color_prompt=yes/' /root/.bashrc
 sed -i 's/01;32m/01;31m/' /root/.bashrc
 
 kubectl completion bash >/etc/bash_completion.d/kubectl
+
+completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bash_completion ; fi"
+grep -qF -- "$completion" /root/.bashrc || echo "$completion" >> /root/.bashrc
