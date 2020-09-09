@@ -12,10 +12,16 @@ function __config__() {
       group: main
       keepFullObjectsInMemory: false
       labelSelector:
+        matchLabels:
+          prometheus: main
         matchExpressions:
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
+      namespace:
+        labelSelector:
+          matchLabels:
+            heritage: deckhouse
       jqFilter: .metadata.name
     - name: pod_monitors
       apiVersion: monitoring.coreos.com/v1
@@ -23,10 +29,16 @@ function __config__() {
       group: main
       keepFullObjectsInMemory: false
       labelSelector:
+        matchLabels:
+          prometheus: main
         matchExpressions:
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
+      namespace:
+        labelSelector:
+          matchLabels:
+            heritage: deckhouse
       jqFilter: .metadata.name
     - name: rules
       apiVersion: monitoring.coreos.com/v1
@@ -34,10 +46,17 @@ function __config__() {
       group: main
       keepFullObjectsInMemory: false
       labelSelector:
+        matchLabels:
+          prometheus: main
+          component: rules
         matchExpressions:
         - key: heritage
           operator: NotIn
           values: ["deckhouse"]
+      namespace:
+        labelSelector:
+          matchLabels:
+            heritage: deckhouse
       jqFilter: .metadata.name
     - name: custom_services
       apiVersion: v1
