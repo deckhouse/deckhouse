@@ -10,9 +10,6 @@ spec:
   podMetricsEndpoints:
   # HTTP target with samples limited to 1000
   - relabelings:
-    - sourceLabels: [__meta_kubernetes_pod_annotationpresent_prometheus_deckhouse_io_tls,__meta_kubernetes_pod_container_port_name]
-      regex: ^(;|;http-metrics)$
-      action: keep
 {{ include "keep_targets_for_schema" (list "pod" "http") | indent 4 }}
 {{ include "endpoint_by_container_port_name" "http" | indent 4 }}
 {{ include "base_relabeling" "pod" | indent 4 }}
