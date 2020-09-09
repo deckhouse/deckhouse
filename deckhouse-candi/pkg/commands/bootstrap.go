@@ -152,7 +152,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
 			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
-		if err := availabilityCheck.AwaitAvailability(); err != nil {
+		if err := availabilityCheck.WithDelaySeconds(3).AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master available: %v", err)
 		}
 		return nil
@@ -188,7 +188,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Start Kubernetes API proxy", func() error {
-		if err := sshClient.Check().AwaitAvailability(); err != nil {
+		if err := sshClient.Check().WithDelaySeconds(3).AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master available: %v", err)
 		}
 		return retry.StartLoop("Kubernetes API proxy", 45, 20, func() error {
