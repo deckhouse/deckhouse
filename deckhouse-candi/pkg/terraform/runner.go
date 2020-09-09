@@ -220,9 +220,12 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 		fmt.Sprintf("-state=%s", r.statePath),
 	}
 	args = append(args, output)
-	result, err := exec.Command("terraform", args...).CombinedOutput()
+	result, err := exec.Command("terraform", args...).Output()
 	if err != nil {
-		return nil, fmt.Errorf("can't get terraform output for %q\n%s\n%w", output, string(result), err)
+		if ee, ok := err.(*exec.ExitError); ok {
+			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+		}
+		return nil, fmt.Errorf("can't get terraform output for %q\n%v", output, err)
 	}
 
 	r.stateCache.AddToClean(r.name)
@@ -270,7 +273,10 @@ func (r *Runner) Close() {
 
 func execTerraform(args ...string) (int, error) {
 	cmd := exec.Command("terraform", args...)
-	stdout, _ := cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return 1, fmt.Errorf("can't open stdout pipe: %v", err)
+	}
 
 	var errBuf bytes.Buffer
 	cmd.Stderr = &errBuf
@@ -278,7 +284,7 @@ func execTerraform(args ...string) (int, error) {
 
 	cmd.Env = append(cmd.Env, "TF_IN_AUTOMATION=yes")
 
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		log.ErrorF("%s\n%v\n", errBuf.String(), err)
 		return cmd.ProcessState.ExitCode(), err
