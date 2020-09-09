@@ -133,7 +133,8 @@ function main() {
         >&2 echo "ERROR: Can't get annotation 'update.node.deckhouse.io/approved' from our Node."
         exit 1
       fi
-      echo "Steps are waiting for approval to start:"
+      echo "Steps are waiting for approval to start."
+      echo "Note: Deckhouse is performing a rolling update. If you want to force an update, use the following command."
       echo "kubectl annotate node $(hostname -s) update.node.deckhouse.io/approved="
       echo "Retry in 10sec..."
       sleep 10
