@@ -243,14 +243,10 @@ func deleteEntities(kubeCl *client.KubernetesClient) error {
 		return err
 	}
 
-	err = deckhouse.DeleteMachineDeployments(kubeCl)
+	err = deckhouse.DeleteMachinesIfResourcesExist(kubeCl)
 	if err != nil {
 		return err
 	}
 
-	err = deckhouse.WaitForMachinesDeletion(kubeCl)
-	if err != nil {
-		return err
-	}
 	return nil
 }

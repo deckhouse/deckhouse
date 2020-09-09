@@ -33,7 +33,7 @@ func GlobalFlags(cmd *kingpin.Application) {
 }
 
 func DefineSkipResourcesFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("--skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
+	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
 		Default("false").
 		BoolVar(&SkipResources)
 }

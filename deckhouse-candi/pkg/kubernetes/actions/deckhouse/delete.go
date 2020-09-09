@@ -247,3 +247,47 @@ func WaitForPVCDeletion(kubeCl *client.KubernetesClient) error {
 		return nil
 	})
 }
+
+func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
+	gv := schema.GroupVersion{
+		Group:   "machine.sapcloud.io",
+		Version: "v1alpha1",
+	}
+
+	var resourcesList *metav1.APIResourceList
+	var err error
+	err = retry.StartLoop("Get Kubernetes cluster resources for group/version", 25, 5, func() error {
+		resourcesList, err = kubeCl.Discovery().ServerResourcesForGroupVersion(gv.String())
+		return err
+	})
+
+	var desiredResources int
+	for _, resource := range resourcesList.APIResources {
+		if resource.Kind == "Machine" {
+			desiredResources++
+			continue
+		}
+
+		if resource.Kind == "MachineDeployment" {
+			desiredResources++
+			continue
+		}
+	}
+
+	if desiredResources < 2 {
+		log.Warning("Can't find machine.sapcloud.io/v1alpha1 kind=Machine kind=MachineDeployment in the cluster. Skip their deletion.\n")
+		return nil
+	}
+
+	err = DeleteMachineDeployments(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = WaitForMachinesDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
