@@ -3,6 +3,7 @@ package frontend
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/log"
@@ -12,13 +13,20 @@ import (
 
 type Check struct {
 	Session *session.Session
+	delay   time.Duration
 }
 
 func NewCheck(sess *session.Session) *Check {
 	return &Check{Session: sess}
 }
 
+func (c *Check) WithDelaySeconds(seconds int) *Check {
+	c.delay = time.Duration(seconds) * time.Second
+	return c
+}
+
 func (c *Check) AwaitAvailability() error {
+	<-time.After(c.delay)
 	return retry.StartLoop("Waiting for SSH connection", 35, 5, func() error {
 		output, err := c.ExpectAvailable()
 		if err == nil {
