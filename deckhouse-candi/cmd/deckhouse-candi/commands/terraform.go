@@ -46,6 +46,10 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		if err := app.AskBecomePassword(); err != nil {
+			return err
+		}
+
 		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err

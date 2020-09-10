@@ -284,6 +284,30 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.ProviderClusterConfig = config
 	}
 
+	if m.ClusterType != "" {
+		out.ClusterType = m.ClusterType
+	}
+
+	if m.ClusterPrefix != "" {
+		out.ClusterPrefix = m.ClusterPrefix
+	}
+
+	if m.Layout != "" {
+		out.Layout = m.Layout
+	}
+
+	if m.ProviderName != "" {
+		out.ProviderName = m.ProviderName
+	}
+
+	if m.OriginalProviderName != "" {
+		out.OriginalProviderName = m.OriginalProviderName
+	}
+
+	if m.UUID != "" {
+		out.UUID = m.UUID
+	}
+
 	return m
 }
 

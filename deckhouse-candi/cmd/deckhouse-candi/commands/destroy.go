@@ -39,12 +39,8 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSkipResourcesFlags(cmd)
 
 	runFunc := func(sshClient *ssh.SshClient) error {
-		err := app.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
-		if err = cache.Init(sshClient.Check().String()); err != nil {
+		var err error
+		if err := cache.Init(sshClient.Check().String()); err != nil {
 			return fmt.Errorf(
 				"Create cache:\n\tError: %v\n\n"+
 					"\tProbably that Kubernetes cluster was already deleted.\n"+
@@ -182,8 +178,12 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				"If you understand what you are doing, you can use flag " +
 				"--yes-i-am-sane-and-i-understand-what-i-am-doing to skip approvals.\n\n")
 		}
+
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
+			return err
+		}
+		if err := app.AskBecomePassword(); err != nil {
 			return err
 		}
 

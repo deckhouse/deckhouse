@@ -41,9 +41,10 @@ func DeletePods(kubeCl *client.KubernetesClient) error {
 		for _, pod := range pods.Items {
 			err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{})
 			if err != nil {
-				return err
+				log.ErrorLn(err.Error())
+			} else {
+				log.InfoF("%s/%s\n", pod.Namespace, pod.Name)
 			}
-			log.InfoF("%s/%s\n", pod.Namespace, pod.Name)
 		}
 
 		return nil
