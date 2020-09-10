@@ -120,8 +120,7 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
-			WithState(clusterState).
-			WithAutoApprove(true)
+			WithState(clusterState)
 
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.OnlyState)
 		if err != nil {
