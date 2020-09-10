@@ -1,18 +1,23 @@
 - name: node-local-dns
   rules:
-  - alert: NodeLocalDnsNotScheduledOnNode
+  - alert: D8NodeLocalDnsNotScheduledOnNode
     expr: |
       max by (node) (kube_node_info)
       unless
       max by (node) (up{job="node-local-dns"})
-    for: 1h
+    for: 15m
     labels:
-      likelihood: certain
-      impact: marginal
+      severity_level: "7"
+      d8_module: node-local-dns
+      d8_component: node-local-dns
     annotations:
       plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_incident_initial_status: "todo"
+      plk_pending_until_firing_for: "5m"
       summary: node-local-dns Pod cannot schedule on Node {{ $labels.node }}
       description: |
         node-local-dns Pod cannot schedule on Node {{ $labels.node }}.
 
-        Consider checking state of the kube-system/node-local-dns DaemonSet.
+        Consider checking state of the d8-system/node-local-dns DaemonSet.
+        `kubectl -n d8-system get daemonset,pod --selector=app=node-local-dns`
