@@ -56,6 +56,8 @@ function patch_max_used() {
 }
 
 function __main__() {
+  previous_effective_version="$(values::get controlPlaneManager.internal.effectiveKubernetesVersion)"
+
   config_version="$(values::get --required global.clusterConfiguration.kubernetesVersion)"
   readarray -t -d $'\n' control_plane_versions < <(context::jq -r '.snapshots.control_plane_versions[].filterResult')
   max_used_control_plane_version="$(context::get snapshots.max_used_control_plane_version.0.filterResult)"
@@ -107,6 +109,17 @@ function __main__() {
 
   if semver::ge "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)" "$max_used_control_plane_version"; then
     patch_max_used "$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)"
+  fi
+
+  current_effective_version="$(values::get --required controlPlaneManager.internal.effectiveKubernetesVersion)"
+  if [ ! -z "$previous_effective_version" ] && [ "$previous_effective_version" != "$current_effective_version" ]; then
+    # clean kubectl cache on version change
+    if [ -d ~/.kube/http-cache ] ; then
+      rm -rf ~/.kube/http-cache
+    fi
+    if [ -d ~/.kube/cache ] ; then
+      rm -rf ~/.kube/cache
+    fi
   fi
 }
 
