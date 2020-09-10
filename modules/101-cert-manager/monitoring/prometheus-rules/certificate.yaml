@@ -9,7 +9,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
-      plk_labels_as_annotations: pod,instance
       description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
       summary: Certificate will expire soon
 
@@ -22,6 +21,5 @@
     annotations:
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
-      plk_labels_as_annotations: pod,instance
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
       summary: Certificate expired
