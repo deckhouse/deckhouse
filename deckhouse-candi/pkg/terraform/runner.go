@@ -150,6 +150,8 @@ func (r *Runner) Apply() error {
 				return fmt.Errorf("terraform apply aborted")
 			}
 		}
+		defer r.stateCache.SaveByPath(r.name, r.statePath)
+
 		args := []string{
 			"apply",
 			"-input=false",

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+	"sigs.k8s.io/yaml"
 
 	"flant/deckhouse-candi/pkg/app"
 	"flant/deckhouse-candi/pkg/config"
@@ -86,19 +87,20 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause) *kingpin.CmdClause {
 func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var parseCmd *kingpin.CmdClause
 	if parentCmd == nil {
-		parseCmd = kpApp.Command("parse-cluster-configuration", "Parse configuration for bootstrap and konverge.")
+		parseCmd = kpApp.Command("parse-cluster-configuration", "Parse configuration and print it.")
 	} else {
-		parseCmd = parentCmd.Command("cluster-configuration", "Parse configuration for bootstrap and konverge.")
+		parseCmd = parentCmd.Command("cluster-configuration", "Parse configuration and print it.")
 	}
 
-	var ParseInputFile string
+	var parseInputFile string
 	parseCmd.Flag("file", "input file name with yaml documents").
 		Short('f').
-		StringVar(&ParseInputFile)
-	var ParseOutput string
+		StringVar(&parseInputFile)
+
+	parseOutput := "json"
 	parseCmd.Flag("output", "output format json or yaml").
 		Short('o').
-		StringVar(&ParseOutput)
+		EnumVar(&parseOutput, "yaml", "json")
 	parseCmd.Action(func(c *kingpin.ParseContext) error {
 		var err error
 		var metaConfig *config.MetaConfig
@@ -106,7 +108,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1
 		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
-		if ParseInputFile == "" {
+		if parseInputFile == "" {
 			data, err := ioutil.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
@@ -116,14 +118,22 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(ParseInputFile)
+			metaConfig, err = config.ParseConfig(parseInputFile)
 			if err != nil {
 				return err
 			}
 		}
 
-		output := metaConfig.MarshalConfig()
-		fmt.Println(string(output))
+		var output []byte
+		switch parseOutput {
+		case "yaml":
+			output, _ = yaml.Marshal(metaConfig)
+		case "json":
+			output = metaConfig.MarshalConfig()
+		default:
+			return fmt.Errorf("unknown output type: %s", parseOutput)
+		}
+		fmt.Print(string(output))
 		return nil
 	})
 

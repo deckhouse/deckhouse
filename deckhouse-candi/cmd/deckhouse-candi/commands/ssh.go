@@ -111,14 +111,14 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		BoolVar(&Sudo)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := app.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return nil
+		}
+
+		err = app.AskBecomePassword()
+		if err != nil {
+			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptPath)
@@ -157,14 +157,14 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		StringVar(&ScriptName)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := app.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return nil
+		}
+
+		err = app.AskBecomePassword()
+		if err != nil {
+			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptName).Sudo()

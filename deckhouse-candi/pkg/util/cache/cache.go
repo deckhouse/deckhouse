@@ -29,6 +29,7 @@ type Cache interface {
 	LoadStruct(string, interface{}) error
 	SaveStruct(string, interface{}) error
 	ObjectPath(string) string
+	GetDir() string
 }
 
 type StateCache struct {
@@ -137,6 +138,10 @@ func (s *StateCache) ObjectPath(name string) string {
 	return filepath.Join(s.dir, fmt.Sprintf("%s.tfstate", name))
 }
 
+func (s *StateCache) GetDir() string {
+	return s.dir
+}
+
 func Init(dir string) error {
 	return initCache(filepath.Join(app.TerraformStateDir, encode(dir)))
 }
@@ -186,3 +191,4 @@ func (d *DummyCache) Load(n string) []byte                     { return nil }
 func (d *DummyCache) LoadStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) SaveStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) ObjectPath(n string) string               { return "" }
+func (d *DummyCache) GetDir() string                           { return "" }

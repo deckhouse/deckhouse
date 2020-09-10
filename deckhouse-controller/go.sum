@@ -171,6 +171,8 @@ github.com/flant/addon-operator v1.0.0-beta.6.0.20200814152246-8570d2963321/go.m
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200828133223-8069d30b8a83/go.mod h1:7HVJYyp7UZ2kAHQ0rBlEcxUdbka4OZeZTgA47IIjaEo=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200901144947-733cc1df759e/go.mod h1:7HVJYyp7UZ2kAHQ0rBlEcxUdbka4OZeZTgA47IIjaEo=
 github.com/flant/addon-operator v1.0.0-beta.6.0.20200903062009-a191fce50545/go.mod h1:7HVJYyp7UZ2kAHQ0rBlEcxUdbka4OZeZTgA47IIjaEo=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200903110707-96173c9d9321 h1:nDxZADTtm7l7meB8FYiG6TewikIwhEO4RTeY8pZGo4s=
+github.com/flant/addon-operator v1.0.0-beta.6.0.20200903110707-96173c9d9321/go.mod h1:JgtW+4f1BDiAu91HnY82EnFA1sjnVpsyXOyyNkqzayQ=
 github.com/flant/libjq-go v1.6.1-0.20200401092614-198670408da1/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWDDKFlwgETsT1OiXD1gZtRHcNxAs1lc=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
@@ -181,6 +183,8 @@ github.com/flant/shell-operator v1.0.0-beta.11.0.20200814110804-eb5e60516b10/go.
 github.com/flant/shell-operator v1.0.0-beta.11.0.20200814111719-6b5dd3944bfc h1:m9n6iD+6fyarKGqN2aSTwykowpd/LVdnVA4tCQiOPz0=
 github.com/flant/shell-operator v1.0.0-beta.11.0.20200814111719-6b5dd3944bfc/go.mod h1:+a3IijbQpjr8zBudwk4Y4GkS1Hx+xUjaKr9Mx/H6Nsw=
 github.com/flant/shell-operator v1.0.0-beta.12/go.mod h1:+a3IijbQpjr8zBudwk4Y4GkS1Hx+xUjaKr9Mx/H6Nsw=
+github.com/flant/shell-operator v1.0.0-beta.12.0.20200903102652-4e8b8ad0bb3e h1:kjPh6PcytSkq5eDnvA9ZOcSlaS+G/4Le8dQOXk1I+3Y=
+github.com/flant/shell-operator v1.0.0-beta.12.0.20200903102652-4e8b8ad0bb3e/go.mod h1:+a3IijbQpjr8zBudwk4Y4GkS1Hx+xUjaKr9Mx/H6Nsw=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622/go.mod h1:D90+MBHVc9Sk1lJAbEVgws0eYEurY4mv2TDso3Nxh3w=

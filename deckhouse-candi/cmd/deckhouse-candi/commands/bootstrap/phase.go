@@ -3,6 +3,9 @@ package bootstrap
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -14,6 +17,8 @@ import (
 	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/system/ssh"
 	"flant/deckhouse-candi/pkg/template"
+	"flant/deckhouse-candi/pkg/terraform"
+	"flant/deckhouse-candi/pkg/util/cache"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -188,6 +193,114 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 		}
 
 		err = log.Process("bootstrap", "Create resources", func() error { return runFunc(sshClient) })
+		if err != nil {
+			log.ErrorF("\nCritical Error: %s\n", err)
+			os.Exit(1)
+		}
+		return nil
+	})
+
+	return cmd
+}
+
+func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("abort", "Delete every node, which was created during bootstrap process.")
+	app.DefineConfigFlags(cmd)
+	app.DefineSanityFlags(cmd)
+
+	runFunc := func() error {
+		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		if err != nil {
+			return err
+		}
+
+		cachePath := metaConfig.CachePath()
+		if err = cache.Init(cachePath); err != nil {
+			// TODO: it's better to ask for confirmation here
+			return fmt.Errorf(
+				"Create cache %s:\n\tError: %v\n\n"+
+					"\tProbably that Kubernetes cluster was successfully bootstrapped.\n"+
+					"\tUse \"dekchouse-candi destroy\" command to delete the cluster.",
+				cachePath, err,
+			)
+		}
+
+		if !cache.Global().InCache("uuid") {
+			return fmt.Errorf("No UUID found in cached. Pheraps, the cluster was already bootstrapped.")
+		}
+
+		metaConfig.UUID = string(cache.Global().Load("uuid"))
+		log.InfoF("Cluster UUID from cache: %s\n", metaConfig.UUID)
+
+		masterGroupRegexp := fmt.Sprintf("^%s-master-([0-9]+)$", metaConfig.ClusterPrefix)
+		r, _ := regexp.Compile(masterGroupRegexp)
+
+		nodesToDelete := make(map[string][]byte)
+		if err := filepath.Walk(cache.Global().GetDir(), func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+
+			if strings.HasPrefix(info.Name(), "base-infrastructure") || strings.HasPrefix(info.Name(), "uuid") {
+				return nil
+			}
+
+			name := strings.TrimSuffix(info.Name(), ".tfstate")
+			if !r.Match([]byte(name)) {
+				return fmt.Errorf(
+					"Static nodes state are found in cache\n\t%s\n\t"+
+						"It looks like you already have the Kuberenetes cluster."+
+						"Please use \"deckhouse-candi destroy\" command to delete the cluster or "+
+						"\"deckhouse-candi converge\" command to delete unwanted static nodes.",
+					cache.Global().ObjectPath(name),
+				)
+			}
+			nodesToDelete[name] = cache.Global().Load(name)
+			return nil
+		}); err != nil {
+			return fmt.Errorf("can't iterate the cache: %v", err)
+		}
+
+		for nodeName, state := range nodesToDelete {
+			err := log.Process("terraform", fmt.Sprintf("Destroy Node %s", nodeName), func() error {
+				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
+					WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
+					WithName(nodeName).
+					WithState(state).
+					WithAutoApprove(app.SanityCheck)
+				cache.Global().AddToClean(nodeName)
+				return masterRunner.Destroy()
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		err = log.Process("terraform", "Destroy base-infrastructure", func() error {
+			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+				WithVariables(metaConfig.MarshalConfig()).
+				WithState(cache.Global().Load("base-infrastructure")).
+				WithAutoApprove(app.SanityCheck)
+			cache.Global().AddToClean("base-infrastructure")
+			return baseRunner.Destroy()
+		})
+		if err != nil {
+			return err
+		}
+
+		cache.Global().AddToClean("uuid")
+		cache.Global().Clean()
+		return nil
+	}
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		if !app.SanityCheck {
+			log.Warning("You will be asked for approve multiple times.\n" +
+				"If you understand what you are doing, you can use flag " +
+				"--yes-i-am-sane-and-i-understand-what-i-am-doing to skip approvals.\n\n")
+		}
+
+		err := log.Process("bootstrap", "Abort", func() error { return runFunc() })
 		if err != nil {
 			log.ErrorF("\nCritical Error: %s\n", err)
 			os.Exit(1)
