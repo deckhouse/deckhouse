@@ -24,7 +24,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 			data: bashibleData,
 		},
 		{
-			from: filepath.Join(candiDir, "cloud-providers", metaConfig.ProviderName, "common-steps"),
+			from: filepath.Join(candiDir, "cloud-providers", metaConfig.ProviderName, "bashible", "common-steps"),
 			to:   bootstrapDir,
 			data: bashibleData,
 		},

@@ -47,7 +47,7 @@ nodeManager:
           keyName: mykeyname
           instances:
             iamProfileName: myiamprofilename
-            securityGroupIDs:
+            additionalSecurityGroups:
               __ConstantChoices__:
               - __EmptyItem__
               - ["mysecgroupid1", "mysecgroupid2"]

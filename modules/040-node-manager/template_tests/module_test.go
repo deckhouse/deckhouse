@@ -55,7 +55,7 @@ internal:
       keyName: mykeyname
       instances:
         iamProfileName: myiamprofilename
-        securityGroupIDs: ["mysecgroupid1", "mysecgroupid2"]
+        additionalSecurityGroups: ["mysecgroupid1", "mysecgroupid2"]
         extraTags: ["extratag1", "extratag2"]
       internal:
         zoneToSubnetIdMap:

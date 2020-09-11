@@ -537,4 +537,11 @@ ansible:
       dest: /bin
       mode: +x
 
+  - name: "Install terraform provider aws"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-aws/2.70.0/terraform-provider-aws_2.70.0_linux_amd64.zip
+      remote_src: yes
+      dest: /bin
+      mode: +x
+
   - raw: rm -rf /var/cache/apk/*

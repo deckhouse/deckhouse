@@ -7,6 +7,9 @@ else
   resolvConfPath="/etc/resolv.conf"
 fi
 
+# This folder doesn't have time to create before we stop freshly, unconfigured kubelet during bootstrap (step 034_install_kubelet_and_his_friends.sh).
+mkdir -p /var/lib/kubelet
+
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration

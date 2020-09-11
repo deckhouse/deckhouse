@@ -56,16 +56,15 @@ const moduleValues = `
     zoneToSubnetIdMap:
       zonea: aaa
       zoneb: bbb
-  providerAccessKeyId: myprovacckeyid
-  providerSecretAccessKey: myprovsecretaccesskey
-  zones: ["zonea", "zoneb"]
-  region: myregion
-  instances:
-    iamProfileName: myiamprofile
-    securityGroupIDs: ["id1", "id2"]
-    extraTags: ["tag1", "tag2"]
-  loadBalancerSecurityGroupID: mylbsecgroupid
-  keyName: mykeyname
+    providerAccessKeyId: myprovacckeyid
+    providerSecretAccessKey: myprovsecretaccesskey
+    zones: ["zonea", "zoneb"]
+    region: myregion
+    instances:
+      iamProfileName: myiamprofile
+      additionalSecurityGroups: ["id1", "id2"]
+    loadBalancerSecurityGroup: mylbsecgroupid
+    keyName: mykeyname
 `
 
 var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
@@ -124,14 +123,13 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedAWSJSON := `{
   "instances":{
-    "extraTags":["tag1","tag2"],
     "iamProfileName":"myiamprofile",
-    "securityGroupIDs":["id1","id2"]},
+    "additionalSecurityGroups":["id1","id2"]},
     "internal":{
       "zoneToSubnetIdMap":{"zonea":"aaa","zoneb":"bbb"}
      },
     "keyName":"mykeyname",
-    "loadBalancerSecurityGroupID":"mylbsecgroupid",
+    "loadBalancerSecurityGroup":"mylbsecgroupid",
     "providerAccessKeyId":"myprovacckeyid",
     "providerSecretAccessKey":"myprovsecretaccesskey",
     "region":"myregion"
