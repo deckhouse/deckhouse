@@ -2,6 +2,19 @@
 
 set -Eeo pipefail
 
+function annotate_node() {
+  attempt=0
+  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(hostname -s) --overwrite ${@}; do
+    attempt=$(( attempt + 1 ))
+    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries."
+      exit 1
+    fi
+    >&2 echo "Failed to annotate node $(hostname -s) with annotation ${@} ... retry in 10 seconds."
+    sleep 10
+  done
+}
+
 function get_secret() {
   secret="$1"
   max_retries="$2"
@@ -76,6 +89,7 @@ function main() {
 {{ if eq .runType "Normal" }}
   if [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
+    annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     exit 0
   fi
   rm -f $CONFIGURATION_CHECKSUM_FILE
@@ -164,16 +178,7 @@ function main() {
   done
 
 {{ if eq .runType "Normal" }}
-  attempt=0
-  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(hostname -s) --overwrite node.deckhouse.io/configuration-checksum="${CONFIGURATION_CHECKSUM}"; do
-    attempt=$(( attempt + 1 ))
-    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM} after ${MAX_RETRIES} retries."
-      exit 1
-    fi
-    >&2 echo "Failed to annotate node $(hostname -s) with annotation node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM} ... retry in 10 seconds."
-    sleep 10
-  done
+  annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
 
   echo "$CONFIGURATION_CHECKSUM" > $CONFIGURATION_CHECKSUM_FILE
   rm -f /var/lib/bashible/first_run
