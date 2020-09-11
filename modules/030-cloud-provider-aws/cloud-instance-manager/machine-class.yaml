@@ -19,28 +19,25 @@ spec:
 {{- end }}
   networkInterfaces:
   - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
-    associatePublicIPAddress: true
     deleteOnTermination: true
     securityGroupIDs:
+{{- $security_groups := list }}
 {{- if .Values.nodeManager.internal.cloudProvider.aws.instances }}
-  {{- if .Values.nodeManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
-    {{- range .Values.nodeManager.internal.cloudProvider.aws.instances.securityGroupIDs }}
-    - {{ . | quote }}
-    {{- end }}
+  {{- if .Values.nodeManager.internal.cloudProvider.aws.instances.additionalSecurityGroups }}
+    {{- $security_groups = concat $security_groups .Values.nodeManager.internal.cloudProvider.aws.instances.additionalSecurityGroups }}
   {{- end }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.additionalSecurityGroups }}
+  {{- $security_groups = concat $security_groups .nodeGroup.instanceClass.additionalSecurityGroups }}
+{{- end }}
+{{- range $security_groups | uniq }}
+    - {{ . | quote }}
 {{- end }}
   useMachineNameAsNodeName: true
   tags:
     # This is mandatory as the safety controller uses this tag to identify VMs created by by this controller.
     kubernetes.io/cluster/{{ .Values.global.discovery.clusterUUID }}: "1"
     kubernetes.io/role/{{ .Values.global.discovery.clusterUUID }}: "1"
-{{- if .Values.nodeManager.internal.cloudProvider.aws.instances }}
-  {{- if .Values.nodeManager.internal.cloudProvider.aws.instances.extraTags }}
-    {{- range $k, $v := .Values.nodeManager.internal.cloudProvider.aws.instances.extraTags }}
-    {{ $k }}: {{ $v | quote }}
-    {{- end }}
-  {{- end }}
-{{- end }}
   blockDevices:
   - ebs:
       volumeSize: {{ .nodeGroup.instanceClass.diskSizeGb | default 20 }}

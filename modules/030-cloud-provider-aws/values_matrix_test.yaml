@@ -33,16 +33,15 @@ cloudProviderAws:
     zoneToSubnetIdMap:
       zonea: aaa
       zoneb: bbb
-  providerAccessKeyId: myprovacckeyid
-  providerSecretAccessKey: myprovsecretaccesskey
-  zones: ["zonea", "zoneb"]
-  region: myregion
-  instances:
-    iamProfileName: myiamprofile
-    securityGroupIDs:
-      __ConstantChoices__:
-      - __EmptyItem__
-      - ["id1", "id2"]
-    extraTags: ["tag1", "tag2"]
-  loadBalancerSecurityGroupID: mylbsecgroupid
-  keyName: mykeyname
+    providerAccessKeyId: myprovacckeyid
+    providerSecretAccessKey: myprovsecretaccesskey
+    zones: ["zonea", "zoneb"]
+    region: myregion
+    instances:
+      iamProfileName: myiamprofile
+      additionalSecurityGroups:
+        __ConstantChoices__:
+        - __EmptyItem__
+        - ["id1", "id2"]
+    loadBalancerSecurityGroup: mylbsecgroupid
+    keyName: mykeyname

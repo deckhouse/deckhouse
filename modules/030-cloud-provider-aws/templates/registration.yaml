@@ -9,21 +9,20 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "aws" | quote }}
-  zones: {{ .Values.cloudProviderAws.zones | toJson | b64enc | quote }}
+  zones: {{ .Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
   machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
 
   # AWS
   {{- $awsValues := dict }}
-  {{- $_ := set $awsValues "providerAccessKeyId" .Values.cloudProviderAws.providerAccessKeyId }}
-  {{- $_ := set $awsValues "providerSecretAccessKey" .Values.cloudProviderAws.providerSecretAccessKey }}
-  {{- $_ := set $awsValues "region" .Values.cloudProviderAws.region }}
+  {{- $_ := set $awsValues "providerAccessKeyId" .Values.cloudProviderAws.internal.providerAccessKeyId }}
+  {{- $_ := set $awsValues "providerSecretAccessKey" .Values.cloudProviderAws.internal.providerSecretAccessKey }}
+  {{- $_ := set $awsValues "region" .Values.cloudProviderAws.internal.region }}
   {{- $_ := set $awsValues "instances" dict }}
-  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.instances.iamProfileName }}
-  {{- $_ := set $awsValues.instances "securityGroupIDs" .Values.cloudProviderAws.instances.securityGroupIDs }}
-  {{- $_ := set $awsValues.instances "extraTags" .Values.cloudProviderAws.instances.extraTags }}
+  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.internal.instances.iamProfileName }}
+  {{- $_ := set $awsValues.instances "additionalSecurityGroups" .Values.cloudProviderAws.internal.instances.additionalSecurityGroups }}
   {{- $_ := set $awsValues "internal" dict }}
   {{- $_ := set $awsValues.internal "zoneToSubnetIdMap" .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
-  {{- $_ := set $awsValues "loadBalancerSecurityGroupID" .Values.cloudProviderAws.loadBalancerSecurityGroupID }}
-  {{- $_ := set $awsValues "keyName" .Values.cloudProviderAws.keyName }}
+  {{- $_ := set $awsValues "loadBalancerSecurityGroup" .Values.cloudProviderAws.internal.loadBalancerSecurityGroup }}
+  {{- $_ := set $awsValues "keyName" .Values.cloudProviderAws.internal.keyName }}
   aws: {{ $awsValues | toJson | b64enc | quote }}
