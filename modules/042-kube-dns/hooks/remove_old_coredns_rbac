@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 15
+EOF
+}
+
+function __main__() {
+  kubernetes::delete_if_exists "" clusterrole/system:coredns
+  kubernetes::delete_if_exists "" clusterrolebinding/system:coredns
+  kubernetes::delete_if_exists "kube-system" serviceaccount/coredns
+}
+
+hook::run "$@"

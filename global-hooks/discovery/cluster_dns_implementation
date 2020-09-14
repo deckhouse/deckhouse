@@ -9,6 +9,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: kube_dns_deployment
+      group: main
       keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
@@ -23,12 +24,18 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::kube_dns_deployment::synchronization() {
-  values::set global.discovery.clusterDNSImplementation "$(context::get objects.0.filterResult)"
-}
+function __main__() {
+  if values::array_has global.enabledModules "kube-dns" ; then
+    values::set global.discovery.clusterDNSImplementation "coredns"
+    return 0
+  fi
 
-function __on_kubernetes::kube_dns_deployment::added_or_modified() {
-  values::set global.discovery.clusterDNSImplementation "$(context::get filterResult)"
+  if ! context::has snapshots.kube_dns_deployment.0; then
+    >&2 echo "ERROR: can't determine cluster DNS implementation"
+    return 1
+  fi
+
+  values::set global.discovery.clusterDNSImplementation "$(context::get snapshots.kube_dns_deployment.0.filterResult)"
 }
 
 hook::run "$@"

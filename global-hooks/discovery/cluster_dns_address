@@ -14,7 +14,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       nameSelector:
-        matchNames: [kube-dns]
+        matchNames: [kube-dns, d8-kube-dns]
       jqFilter: '.spec.clusterIP'
       executeHookOnEvent: ["Added", "Modified"]
 EOF

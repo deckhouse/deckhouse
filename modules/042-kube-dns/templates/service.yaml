@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | indent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: {{ .Values.global.discovery.clusterDNSAddress }}
+  selector:
+    k8s-app: kube-dns
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    protocol: TCP

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  # Disable module if dns-controller enabled in a cluster (it means that cluster is deployed by kops)
+  if kubectl -n kube-system get deployment dns-controller >/dev/null 2>&1 ; then
+    echo "false" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  fi
+}
+
+enabled::run "$@"

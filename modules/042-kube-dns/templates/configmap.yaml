@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | indent 2 }}
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+        ready
+{{- if .Values.kubeDns.hosts }}
+        hosts {
+  {{- range .Values.kubeDns.hosts }}
+          {{ .ip | required "if kubeDns.hosts is specified, \"ip is required\"" }} {{ .domain | required "if kubeDns.hosts is specified, \"domain is required\"" }}
+  {{- end }}
+          fallthrough
+        }
+{{- end }}
+        kubernetes {{ .Values.kubeDns.clusterDomain | required ".Values.kubeDns.clusterDomain is required" }} in-addr.arpa ip6.arpa {
+          pods insecure
+          fallthrough in-addr.arpa ip6.arpa
+          ttl 30
+        }
+        prometheus 127.0.0.1:9153
+        forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }}
+        cache 30
+        loop
+        reload
+        loadbalance
+  {{- if .Values.kubeDns.enableLogs }}
+        log
+  {{- end }}
+    }
