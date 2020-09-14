@@ -65,6 +65,7 @@ func main() {
 	renderCmd := kpApp.Command("render", "Parse, validate and render bundles and configs.")
 	{
 		commands.DefineCommandParseClusterConfiguration(kpApp, renderCmd)
+		commands.DefineCommandParseCloudDiscoveryData(kpApp, renderCmd)
 		commands.DefineRenderBashibleBundle(renderCmd)
 		commands.DefineRenderKubeadmConfig(renderCmd)
 	}

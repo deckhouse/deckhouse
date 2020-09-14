@@ -81,4 +81,5 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 
 	// deckhouse-candi parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
 	candiapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
+	candiapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand)
 }

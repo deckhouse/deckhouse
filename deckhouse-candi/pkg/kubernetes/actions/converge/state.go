@@ -2,7 +2,6 @@ package converge
 
 import (
 	"encoding/json"
-	"flant/deckhouse-candi/pkg/log"
 	"fmt"
 
 	"github.com/hashicorp/go-multierror"
@@ -14,6 +13,8 @@ import (
 	"flant/deckhouse-candi/pkg/kubernetes/actions"
 	"flant/deckhouse-candi/pkg/kubernetes/actions/manifests"
 	"flant/deckhouse-candi/pkg/kubernetes/client"
+	"flant/deckhouse-candi/pkg/log"
+	"flant/deckhouse-candi/pkg/terraform"
 	"flant/deckhouse-candi/pkg/util/retry"
 )
 
@@ -152,11 +153,11 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	})
 }
 
-func SaveClusterTerraformState(kubeCl *client.KubernetesClient, tfState []byte) error {
-	return retry.StartLoop("Save Cluster Terraform state", 45, 10, func() error {
+func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
+	err := retry.StartLoop("Save Cluster Terraform state", 45, 10, func() error {
 		task := actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithTerraformState(tfState) },
+			Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
 				return err
@@ -167,6 +168,27 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, tfState []byte) 
 			},
 		}
 		return task.Create()
+	})
+	if err != nil {
+		return err
+	}
+
+	patch, err := json.Marshal(map[string]interface{}{
+		"data": map[string]interface{}{
+			"cloud-provider-discovery-data.json": outputs.CloudDiscovery,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return retry.StartLoop("Update cloud discovery data", 45, 10, func() error {
+		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
+			"d8-provider-cluster-configuration",
+			types.MergePatchType,
+			patch,
+		)
+		return err
 	})
 }
 

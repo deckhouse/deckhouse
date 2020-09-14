@@ -1,5 +1,7 @@
 output "cloud_discovery_data" {
   value = {
+    "apiVersion" = "deckhouse.io/v1alpha1"
+    "kind" = "OpenStackCloudDiscoveryData"
     "internalNetworkNames" = [openstack_networking_network_v2.internal.name]
     "externalNetworkNames" = [data.openstack_networking_network_v2.external.name]
     "podNetworkMode" = local.network_security ? "DirectRoutingWithPortSecurityEnabled" : "DirectRouting"
