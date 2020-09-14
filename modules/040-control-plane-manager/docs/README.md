@@ -90,7 +90,7 @@ controlPlaneManagerEnabled: "false"
       * **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
     * `sourceRanges` — список CIDR, которым разрешен доступ к API.
       * Облачный провайдер может не поддерживать данную опцию и игнорировать её.
-  * `auditPolicyEnabled` — bool, включение [аудита событий](audit-log.md) с конфигурацией из `Secret` (audit-policy в ns kube-system)
+  * `auditPolicyEnabled` — bool, включение [аудита событий](audit-log.html) с конфигурацией из `Secret` (audit-policy в ns kube-system)
 * `etcd` — параметры `etcd`.
   * `externalMembersNames` – массив имен внешних etcd member'ов (эти member'ы не будут удалятся).
 

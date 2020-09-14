@@ -1,8 +1,8 @@
 ---
-title: Cloud provider - Yandex
-sidebar: candi
-hide_sidebar: false
+title: Cloud provider - AWS
 ---
+
+## Поддерживаемые схемы размещения
 
 Схема размещения описывается объектом `AWSClusterConfiguration`. Его поля:
 
@@ -16,7 +16,7 @@ hide_sidebar: false
   * `region` — имя AWS региона, в котором будут заказываться instances.
 * `masterNodeGroup` — спеки для описания NG мастера.
   * `replicas` — сколько мастер-узлов создать.
-  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](/modules/030-cloud-provider-aws/docs/README.md#awsinstanceclass-custom-resource). Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](/modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource). Допустимые параметры:
     * `instanceType`
     * `ami`
     * `additionalSecurityGroups`
@@ -25,7 +25,7 @@ hide_sidebar: false
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — количество нод.
-  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](/modules/030-cloud-provider-aws/docs/README.md#awsinstanceclass-custom-resource). Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](/modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource). Допустимые параметры:
     * `instanceType`
     * `ami`
     * `additionalSecurityGroups`
@@ -40,8 +40,6 @@ hide_sidebar: false
   * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
   * Необязательный, но рекомендованный параметр. По-умолчанию — соответствует целому диапазону адресов VPC.
 * `sshPublicKey` — публичный ключ для доступа на ноды.
-
-## Поддерживаемые схемы размещения
 
 ### Standard
 
@@ -256,7 +254,7 @@ sshPublicKey: ...
 
 ### Настройка IAM через cli
 
-Сохранить [спецификацию выше](#JSON-спецификация Policy) в файл:
+Сохранить [спецификацию выше](#json-спецификация-policy) в файл:
 ```
 cat > policy.json << EOF
 <JSON-спецификация Policy>

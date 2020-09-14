@@ -16,7 +16,7 @@ title: "Модуль cloud-provider-aws"
 
 ### Параметры
 
-Модуль настраивается автоматически на основании [выбранной схемы размещения](/candi/cloud-providers/aws/README.md). Предусмотрены только параметры в отдельных [AWSInstanceClass](AWSInstanceClass custom resource).
+Модуль настраивается автоматически на основании [выбранной схемы размещения](/candi/cloud-providers/aws/). Предусмотрены только параметры в отдельных [AWSInstanceClass](#awsinstanceclass-custom-resource).
 
 ### AWSInstanceClass custom resource
 

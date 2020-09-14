@@ -20,4 +20,4 @@ security groups указываются в AWSClusterConfiguration. Для мас
 
 ## Установка дополнительных security groups на эфемерных нодах
 Необходимо прописать параметр `additionalSecurityGroups` для всех AWSInstanceClass в кластере, которым нужны дополнительные
-security groups. Смотри [параметры модуля cloud-provider-aws](README.md).
+security groups. Смотри [параметры модуля cloud-provider-aws](/modules/030-cloud-provider-aws/).

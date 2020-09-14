@@ -1,4 +1,7 @@
-# Включение аудита событий
+---
+title: Включение аудита событий
+---
+
 Если вам требуется вести учёт операций в кластере или отдебажить неожиданное поведение - для всего этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/), настраиваемый через указание соответствующих [Audit Policy](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy). 
 
 На данный момент модуль использует фиксированные параметры ротации логов:
