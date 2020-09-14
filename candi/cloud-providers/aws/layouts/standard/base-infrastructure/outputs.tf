@@ -1,5 +1,7 @@
 output "cloud_discovery_data" {
   value = {
+    "apiVersion" = "deckhouse.io/v1alpha1"
+    "kind" = "AWSCloudDiscoveryData"
     "keyName" = local.prefix
     "instances" = {
       "iamProfileName": "${local.prefix}-node"

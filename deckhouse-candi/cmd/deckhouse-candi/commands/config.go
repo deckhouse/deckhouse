@@ -91,16 +91,8 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 	} else {
 		parseCmd = parentCmd.Command("cluster-configuration", "Parse configuration and print it.")
 	}
+	app.DefineInputOutputRenderFlags(parseCmd)
 
-	var parseInputFile string
-	parseCmd.Flag("file", "input file name with yaml documents").
-		Short('f').
-		StringVar(&parseInputFile)
-
-	parseOutput := "json"
-	parseCmd.Flag("output", "output format json or yaml").
-		Short('o').
-		EnumVar(&parseOutput, "yaml", "json")
 	parseCmd.Action(func(c *kingpin.ParseContext) error {
 		var err error
 		var metaConfig *config.MetaConfig
@@ -108,7 +100,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1
 		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
-		if parseInputFile == "" {
+		if app.ParseInputFile == "" {
 			data, err := ioutil.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
@@ -118,20 +110,61 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(parseInputFile)
+			metaConfig, err = config.ParseConfig(app.ParseInputFile)
 			if err != nil {
 				return err
 			}
 		}
 
 		var output []byte
-		switch parseOutput {
+		switch app.ParseOutput {
 		case "yaml":
 			output, _ = yaml.Marshal(metaConfig)
 		case "json":
 			output = metaConfig.MarshalConfig()
 		default:
-			return fmt.Errorf("unknown output type: %s", parseOutput)
+			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
+		}
+		fmt.Print(string(output))
+		return nil
+	})
+
+	return parseCmd
+}
+
+func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause) *kingpin.CmdClause {
+	var parseCmd *kingpin.CmdClause
+	if parentCmd == nil {
+		parseCmd = kpApp.Command("parse-cloud-discovery-data", "Parse cloud discovery data and print it.")
+	} else {
+		parseCmd = parentCmd.Command("cloud-discovery-data", "Parse cloud discovery data and print it.")
+	}
+	app.DefineInputOutputRenderFlags(parseCmd)
+
+	parseCmd.Action(func(c *kingpin.ParseContext) error {
+		var err error
+		var data []byte
+
+		if app.ParseInputFile == "" {
+			data, err = ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return fmt.Errorf("read cloud-discovery-data from stdin: %v", err)
+			}
+		} else {
+			data, err = ioutil.ReadFile(app.ParseInputFile)
+			if err != nil {
+				return fmt.Errorf("loading input file: %v", err)
+			}
+		}
+
+		var output []byte
+		switch app.ParseOutput {
+		case "yaml":
+			output, _ = yaml.JSONToYAML(data)
+		case "json":
+			output = data
+		default:
+			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
 		}
 		fmt.Print(string(output))
 		return nil

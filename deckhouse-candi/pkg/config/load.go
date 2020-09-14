@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
 
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
@@ -17,13 +21,31 @@ type SchemaStore struct {
 	cache map[SchemaIndex]*spec.Schema
 }
 
+var once sync.Once
+
+var store *SchemaStore
+
 func NewSchemaStore() *SchemaStore {
-	store := SchemaStore{make(map[SchemaIndex]*spec.Schema)}
-	return &store
+	once.Do(func() {
+		store = &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
+		err := filepath.Walk(candiDir, func(path string, info os.FileInfo, err error) error {
+			if strings.HasSuffix(path, providerSchemaFilenameSuffix) || info.Name() == "cloud_discovery_data.yaml" {
+				uploadError := store.UploadByPath(path)
+				if uploadError != nil {
+					return uploadError
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+	})
+	return store
 }
 
-func (s *SchemaStore) Get(index SchemaIndex) *spec.Schema {
-	return s.cache[index]
+func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
+	return s.cache[*index]
 }
 
 func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
@@ -34,15 +56,20 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 		return nil, fmt.Errorf("json unmarshal: %v", err)
 	}
 
+	err = s.ValidateWithIndex(&index, doc)
+	return &index, err
+}
+
+func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	if !index.IsValid() {
-		return nil, fmt.Errorf("invalid index: %v", index)
+		return fmt.Errorf("invalid index: %v", index)
 	}
 
 	isValid, err := openAPIValidate(doc, s.Get(index))
 	if !isValid {
-		return nil, fmt.Errorf("document validation failed:\n\n%s\n\n%w", string(*doc), err)
+		return fmt.Errorf("document validation failed:\n\n%s\n\n%w", string(*doc), err)
 	}
-	return &index, nil
+	return nil
 }
 
 func (s *SchemaStore) UploadByPath(path string) error {

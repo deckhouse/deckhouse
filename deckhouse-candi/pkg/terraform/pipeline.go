@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"flant/deckhouse-candi/pkg/config"
 	"flant/deckhouse-candi/pkg/log"
 )
 
@@ -83,6 +84,12 @@ func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetTerraformOutput("cloud_discovery_data")
 	if err != nil {
 		return nil, err
+	}
+
+	schemaStore := config.NewSchemaStore()
+	_, err = schemaStore.Validate(&cloudDiscovery)
+	if err != nil {
+		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)
 	}
 
 	tfState, err := r.getState()

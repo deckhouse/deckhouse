@@ -1,0 +1,6 @@
+kind: YandexCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: true

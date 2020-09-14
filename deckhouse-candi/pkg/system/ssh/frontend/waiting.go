@@ -50,9 +50,9 @@ func (c *Check) String() string {
 	if c.Session.BastionHost != "" {
 		builder.WriteString("-J ")
 		if c.Session.BastionUser != "" {
-			builder.WriteString(fmt.Sprintf("%s@%s", c.Session.User, c.Session.Host))
+			builder.WriteString(fmt.Sprintf("%s@%s", c.Session.BastionUser, c.Session.BastionHost))
 		} else {
-			builder.WriteString(c.Session.Host)
+			builder.WriteString(c.Session.BastionHost)
 		}
 		if c.Session.BastionPort != "" {
 			builder.WriteString(fmt.Sprintf(":%s", c.Session.BastionPort))

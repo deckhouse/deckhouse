@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -26,7 +24,7 @@ const (
 func ParseConfig(path string) (*MetaConfig, error) {
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("loading schema file: %v", err)
+		return nil, fmt.Errorf("loading config file: %v", err)
 	}
 
 	return ParseConfigFromData(string(fileContent))
@@ -63,21 +61,28 @@ func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) 
 
 func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	metaConfig := MetaConfig{}
+	schemaStore := NewSchemaStore()
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	var clusterConfigData map[string]json.RawMessage
-	if err := yaml.Unmarshal(clusterConfig.Data["cluster-configuration.yaml"], &clusterConfigData); err != nil {
+	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
+	_, err = schemaStore.Validate(&clusterConfigData)
+	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.ClusterConfig = clusterConfigData
+	var parsedClusterConfig map[string]json.RawMessage
+	if err := yaml.Unmarshal(clusterConfigData, &parsedClusterConfig); err != nil {
+		return nil, err
+	}
+
+	metaConfig.ClusterConfig = parsedClusterConfig
 
 	var clusterType string
-	if err := json.Unmarshal(clusterConfigData["clusterType"], &clusterType); err != nil {
+	if err := json.Unmarshal(parsedClusterConfig["clusterType"], &clusterType); err != nil {
 		return nil, err
 	}
 
@@ -87,12 +92,18 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 			return nil, err
 		}
 
-		var providerClusterConfigData map[string]json.RawMessage
-		if err := yaml.Unmarshal(providerClusterConfig.Data["cloud-provider-cluster-configuration.yaml"], &providerClusterConfigData); err != nil {
+		providerClusterConfigData := providerClusterConfig.Data["cloud-provider-cluster-configuration.yaml"]
+		_, err = schemaStore.Validate(&providerClusterConfigData)
+		if err != nil {
 			return nil, err
 		}
 
-		metaConfig.ProviderClusterConfig = providerClusterConfigData
+		var parsedProviderClusterConfig map[string]json.RawMessage
+		if err := yaml.Unmarshal(providerClusterConfigData, &parsedProviderClusterConfig); err != nil {
+			return nil, err
+		}
+
+		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
 	}
 
 	metaConfig.Prepare()
@@ -101,18 +112,6 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 
 func ParseConfigFromData(configData string) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
-
-	if err := filepath.Walk(candiDir, func(path string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(path, providerSchemaFilenameSuffix) {
-			uploadError := schemaStore.UploadByPath(path)
-			if uploadError != nil {
-				return uploadError
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("parse config: %v", err)
-	}
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := regexp.MustCompile(`(?:^|\s*\n)---\s*`).Split(bigFileTmp, -1)

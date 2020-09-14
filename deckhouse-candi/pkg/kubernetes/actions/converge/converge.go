@@ -122,12 +122,12 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 			WithVariables(metaConfig.MarshalConfig()).
 			WithState(clusterState)
 
-		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.OnlyState)
+		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
 			return err
 		}
 
-		if err := SaveClusterTerraformState(kubeCl, outputs.TerraformState); err != nil {
+		if err := SaveClusterTerraformState(kubeCl, outputs); err != nil {
 			return err
 		}
 		return nil
