@@ -99,7 +99,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['candi/**/*.md', 'deckhouse-candi/**/*.md','deckhouse-controller/**/*.md']
+  includePaths: ['candi/**/docs', 'deckhouse-candi/**/*.md','deckhouse-controller/**/*.md']
 - add: /modules
   to: /srv/jekyll-data/modules
   owner: jekyll

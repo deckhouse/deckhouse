@@ -1,15 +1,15 @@
 ---
 title: Cloud provider - Yandex
-sidebar: candi
-hide_sidebar: false
 ---
+
+## Поддерживаемые схемы размещения
 
 Схема размещения описывается объектом `YandexClusterConfiguration`. Его поля:
 
 * `layout` — архитектура расположения ресурсов в облаке.
   * Варианты — `Standard`, `WithoutNAT` или `WithNATInstance` (описание ниже).
 * `withNATInstance` — настройки для layout'а `WithNATInstance`.
-  * `natInstanceExternalAddress` — внешний [зарезервированный белый IP адрес](#Резервирование-белого-IP-адреса) или адрес из `externalSubnetID` при указании опции.
+  * `natInstanceExternalAddress` — внешний [зарезервированный белый IP адрес](#резервирование-белого-ip-адреса) или адрес из `externalSubnetID` при указании опции.
   * `internalSubnetID` — ID подсети для внутреннего интерфейса
   * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
 * `provider` — параметры подключения к API Yandex.Cloud.
@@ -18,25 +18,25 @@ hide_sidebar: false
   * `serviceAccountJSON` — JSON, выдаваемый [yc iam key create](#права)
 * `masterNodeGroup` — спеки для описания NG мастера.
   * `replicas` — сколько мастер-узлов создать.
-  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/docs/README.md#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`. Допустимые параметры:
     * `cores`
     * `memory`
     * `imageID`
     * `externalIPAddresses` — список внешних адресов. Количество элементов массива должно соответствовать `replicas`.
-      * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#Резервирование-белого-IP-адреса) или константу `Auto`.
+      * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
     * `zones` — узлы будут создаваться только в перечисленных зонах.
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
-  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/docs/README.md#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`. Допустимые параметры:
     * `cores`
     * `memory`
     * `imageID`
     * `coreFraction`
     * `externalIPAddresses` — список внешних адресов. Количество элементов массива должно соответствовать `replicas`.
-      * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#Резервирование-белого-IP-адреса) или константу `Auto`.
+      * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
     * `zones` — узлы будут создаваться только в перечисленных зонах.

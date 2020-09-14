@@ -24,8 +24,12 @@ entries:
         url: /candi/control-plane-kubeadm/
       - title: Cloud providers
         subfolderitems:
+          - title: AWS
+            url: /candi/cloud-providers/aws/
           - title: Openstack
             url: /candi/cloud-providers/openstack/
+          - title: Yandex
+            url: /candi/cloud-providers/yandex/
       - title: Deckhouse-controller development
         url: /candi/deckhouse-controller.html
   - title: Модули
