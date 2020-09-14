@@ -11,27 +11,28 @@ function __config__() {
   cat << EOF
     configVersion: v1
     kubernetes:
-    - name: kube_api_ep
+    - name: master_nodes
+      group: main
       keepFullObjectsInMemory: false
       apiVersion: v1
-      kind: Endpoints
-      namespace:
-        nameSelector:
-          matchNames: [default]
-      nameSelector:
-        matchNames: [kubernetes]
-      jqFilter: '{"clusterMasterCount": (.subsets[].addresses | length), "isHA": (.subsets[].addresses | length > 1)}'
+      kind: Node
+      labelSelector:
+        matchLabels:
+          node-role.kubernetes.io/master: ""
+      jqFilter: .metadata.name
 EOF
 }
 
-function __on_kubernetes::kube_api_ep::synchronization() {
-  values::set global.discovery.clusterMasterCount "$(context::get objects.0.filterResult.clusterMasterCount)"
-  values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get objects.0.filterResult.isHA)"
-}
+function __main__() {
+  master_nodes="$(context::jq -r '.snapshots.master_nodes | length')"
 
-function __on_kubernetes::kube_api_ep::added_or_modified() {
-  values::set global.discovery.clusterMasterCount "$(context::get filterResult.clusterMasterCount)"
-  values::set global.discovery.clusterControlPlaneIsHighlyAvailable "$(context::get filterResult.isHA)"
+  values::set global.discovery.clusterMasterCount "$master_nodes"
+
+  if [[ "$master_nodes" > 1 ]]; then
+    values::set global.discovery.clusterControlPlaneIsHighlyAvailable "true"
+  else
+    values::set global.discovery.clusterControlPlaneIsHighlyAvailable "false"
+  fi
 }
 
 hook::run $@
