@@ -15,5 +15,6 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     kubernetesVersion: 1.15.5
+    clusterType: Manual
     clusterDNSImplementation:
       __ConstantChoices__: ["kube-dns", "coredns"]

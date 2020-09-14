@@ -1,0 +1,5 @@
+kubeDns:
+  enableLogs: false
+  internal:
+    replicas: 2
+    enablePodAntiAffinity: false

@@ -17,7 +17,7 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       nameSelector:
-        matchNames: [coredns]
+        matchNames: [coredns, d8-kube-dns]
       jqFilter: |
         .data.Corefile | match("\\\\s+kubernetes\\\\s+(\\\\S+?)\\\\.?\\\\s+in-addr.arpa\\\\s+ip6.arpa\\\\s+\\\\{") | .captures[0].string
 

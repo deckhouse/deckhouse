@@ -1,0 +1,21 @@
+global:
+  discovery:
+    kubernetesVersion: 1.15.6
+    clusterDNSAddress: 192.168.0.10
+  modulesImages:
+    registry: registry.flant.com
+    tags:
+      common:
+        kubeRbacProxy: hashstring
+      kubeDns:
+        coredns: tag
+kubeDns:
+  clusterDomain: example.cluster.local
+  enableLogs:
+    __ContantChoices__: [false, true]
+  internal:
+    replicas: 2
+    specificNodeType:
+      __ContantChoices__: ["kube-dns", __EmptyItem__]
+    enablePodAntiAffinity:
+      __ContantChoices__: [false, true]

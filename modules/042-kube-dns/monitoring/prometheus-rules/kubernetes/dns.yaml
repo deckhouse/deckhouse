@@ -1,0 +1,17 @@
+- name: d8-kube-dns.coredns
+  rules:
+  - alert: KubernetesCoreDNSHasCriticalErrors
+    expr: sum by (pod) (coredns_panic_count_total{job="kube-dns"}) > 0
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: kube-dns
+      d8_component: kube-dns
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "5m"
+      description: |-
+        CoreDNS pod {{$labels.pod}} has at least one critical error.
+        To debug the problem, look into container logs: `kubectl -n kube-system logs {{$labels.pod}}`
+      summary: CoreDNS has critical errors.

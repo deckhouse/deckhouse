@@ -14,13 +14,12 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/cluster_dns ::", func() {
+var _ = Describe("Global hooks :: discovery/cluster_dns_implementation ::", func() {
 	const (
 		coreDnsDeployment = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: kube-dns
   name: coredns
@@ -46,7 +45,6 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     k8s-app: kube-dns
   name: kube-dns
@@ -59,7 +57,6 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         k8s-app: kube-dns
     spec:
@@ -69,10 +66,21 @@ spec:
         resources: {}
 `
 	)
+	f := HookExecutionConfigInit(`{"global":{"enabledModules":[],"discovery": {}}}`, `{}`)
 
-	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
+	Context("Cluster with kube-dns", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(kubeDnsDeployment))
+			f.RunHook()
+		})
 
-	Context("Discover cluster dns", func() {
+		It("global.discovery.clusterDNSImplementation must be 'kube-dns'", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("kube-dns"))
+		})
+	})
+
+	Context("Cluster with coredns", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(coreDnsDeployment))
 			f.RunHook()
@@ -82,17 +90,18 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("coredns"))
 		})
+	})
 
-		Context("Cluster dns changed to kube-dns", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(kubeDnsDeployment))
-				f.RunHook()
-			})
+	Context("KubeDNS module enabled with kube-dns deployment", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(kubeDnsDeployment))
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["kube-dns"]`))
+			f.RunHook()
+		})
 
-			It("global.discovery.clusterDNSImplementation must be 'kube-dns'", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("kube-dns"))
-			})
+		It("global.discovery.clusterDNSImplementation must be 'coredns'", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("coredns"))
 		})
 	})
 })

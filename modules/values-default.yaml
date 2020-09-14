@@ -21,6 +21,7 @@ nodeManagerEnabled: true
 terraformManagerEnabled: true
 controlPlaneManagerEnabled: true
 kubeProxyEnabled: true
+kubeDnsEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true
 controlPlaneConfiguratorEnabled: true

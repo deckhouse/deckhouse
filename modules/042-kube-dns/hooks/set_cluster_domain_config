@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 5
+EOF
+}
+
+function __main__() {
+  if values::has --config kubeDns.clusterDomain; then
+    return 0
+  fi
+
+  if ! current_domain="$(values::get --required global.discovery.clusterDomain)"; then
+    >&2 "ERROR: discovery.clusterDomain is not set, cannot proceed with migration"
+    return 1
+  fi
+
+  if [[ -z "$current_domain" ]]; then
+    >&2 "ERROR: discovery.clusterDomain is set, but empty, cannot proceed with migration"
+    return 1
+  fi
+
+  values::set --config kubeDns.clusterDomain "$current_domain"
+}
+
+hook::run "$@"
