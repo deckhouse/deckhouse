@@ -3,3 +3,4 @@ controlPlaneManager:
   apiserver:
     authn: {}
     authz: {}
+    auditPolicyEnabled: false
