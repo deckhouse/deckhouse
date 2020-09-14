@@ -505,12 +505,47 @@ ansible:
         CGO_ENABLED: "0"
 
 ---
+artifact: terraform-provider-yandex
+fromImage: base-for-go
+git:
+  - url: https://github.com/flant/terraform-provider-yandex
+    add: /
+    to: /terraform-provider-yandex
+    commit: 850383b92ed92e15cbb15770eab85de4bc3e5775
+    stageDependencies:
+      install:
+        - "**/*"
+ansible:
+  beforeInstall:
+    - apk:
+        name:
+        - git
+        - ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - command: go mod download
+      args:
+        chdir: /terraform-provider-yandex
+
+  setup:
+    - command: go build -o terraform-provider-yandex
+      args:
+        chdir: /terraform-provider-yandex
+      environment:
+        CGO_ENABLED: "0"
+---
 image: dev/install
 fromImage: dev
 import:
 - artifact: deckhouse-candi
   add: /deckhouse-candi/deckhouse-candi
   to: /usr/bin/deckhouse-candi
+  before: setup
+- artifact: terraform-provider-yandex
+  add: /terraform-provider-yandex/terraform-provider-yandex
+  to: /bin/terraform-provider-yandex
   before: setup
 ansible:
   beforeInstall:

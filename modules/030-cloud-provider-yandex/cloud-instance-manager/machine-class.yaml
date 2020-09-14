@@ -24,8 +24,10 @@ spec:
 {{- else}}
   - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName }}
 {{- end }}
-{{- if .nodeGroup.instanceClass.assignPublicIPAddress }}
-    assignPublicIPAddress: true
+{{- if hasKey .nodeGroup.instanceClass "assignPublicIPAddress" }}
+    assignPublicIPAddress: {{ .nodeGroup.instanceClass.assignPublicIPAddress }}
+{{- else }}
+    assignPublicIPAddress: {{ .Values.nodeManager.internal.cloudProvider.yandex.shouldAssignPublicIPAddress }}
 {{- end }}
 {{- range .nodeGroup.instanceClass.additionalSubnets }}
   - subnetID: {{ . | quote }}
@@ -44,7 +46,7 @@ spec:
   {{- end }}
 {{- end }}
   metadata:
-    ssh-keys: "{{ .Values.nodeManager.internal.cloudProvider.yandex.sshUser }}:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
+    ssh-keys: "user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
   secretRef:
     namespace: d8-cloud-instance-manager
     name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

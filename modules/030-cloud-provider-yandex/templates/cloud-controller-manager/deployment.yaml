@@ -78,12 +78,12 @@ spec:
                   name: cloud-controller-manager
                   key: service-acount-json
             - name: YANDEX_CLOUD_DEFAULT_LB_LISTENER_SUBNET_ID
-              value: {{ .Values.cloudProviderYandex.defaultLbListenerSubnetId | quote }}
+              value: {{ .Values.cloudProviderYandex.internal.defaultLbListenerSubnetId | quote }}
             - name: YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID
-              value: {{ .Values.cloudProviderYandex.defaultLbTargetGroupNetworkId | quote }}
+              value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.defaultLbTargetGroupNetworkId | quote }}
             - name: YANDEX_CLOUD_INTERNAL_NETWORK_IDS
-              value: {{ join "," .Values.cloudProviderYandex.internalNetworkIDs | quote }}
+              value: {{ join "," .Values.cloudProviderYandex.internal.providerDiscoveryData.internalNetworkIDs | quote }}
             - name: YANDEX_CLOUD_EXTERNAL_NETWORK_IDS
-              value: {{ join "," .Values.cloudProviderYandex.externalNetworkIDs | quote }}
+              value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
             - name: YANDEX_CLOUD_ROUTE_TABLE_ID
-              value: {{ .Values.cloudProviderYandex.routeTableID | required ".Values.cloudProviderYandex.routeTableID is required" | quote }}
+              value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}

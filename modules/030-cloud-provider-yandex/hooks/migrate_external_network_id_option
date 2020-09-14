@@ -1,0 +1,21 @@
+#!/bin/bash
+
+### Migration 03.09.2020: remove after releasing deckhouse with this commit
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  if external_network_ids="$(values::get --required --config cloudProviderYandex.externalNetworkIDs)"; then
+    values::set --config cloudProviderYandex.additionalExternalNetworkIDs "$external_network_ids"
+    values::unset --config cloudProviderYandex.externalNetworkIDs
+  fi
+}
+
+hook::run "$@"

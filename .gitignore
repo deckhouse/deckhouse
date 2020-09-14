@@ -38,3 +38,4 @@ venv/
 kcov-report
 
 *-tfstate/
+.terraform/

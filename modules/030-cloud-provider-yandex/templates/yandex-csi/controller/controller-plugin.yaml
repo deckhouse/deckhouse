@@ -62,7 +62,7 @@ spec:
         args:
         - "--address=$(MY_POD_IP):12302"
         - "--endpoint=unix:/csi/csi.sock"
-        - "--folder-id={{ .Values.cloudProviderYandex.folderID }}"
+        - "--folder-id={{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}"
         ports:
           - name: healthz
             containerPort: 12302

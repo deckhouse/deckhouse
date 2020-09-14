@@ -50,22 +50,23 @@ const globalValues = `
 `
 
 const moduleValues = `
-    zones: ["zonea", "zoneb"]
-    zoneToSubnetIdMap:
-      zonea: aaa
-      zoneb: bbb
-    defaultLbTargetGroupNetworkId: deftarggroupnetid
-    internalNetworkIDs: ["id1", "id2"]
-    externalNetworkIDs: ["id1", "id2"]
-    routeTableID: testest
-    sshKey: mysshkey
-    sshUser: mysshuser
-    serviceAccountJSON: '{"my": "json"}'
-    dns:
-      nameservers: ["1.1.1.1", "2.2.2.2"]
-      search: ["example.com"]
-    region: myreg
-    folderID: myfoldid
+  internal:
+    providerDiscoveryData:
+      zones: ["zonea", "zoneb"]
+      zoneToSubnetIdMap:
+        zonea: aaa
+        zoneb: bbb
+      defaultLbTargetGroupNetworkId: deftarggroupnetid
+      internalNetworkIDs: ["id1", "id2"]
+      shouldAssignPublicIPAddress: true
+      routeTableID: testest
+      region: myreg
+    providerClusterConfiguration:
+      sshPublicKey: mysshkey
+      provider:
+        serviceAccountJSON:
+          my: json
+        folderID: myfoldid
 `
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
@@ -124,23 +125,16 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
           "folderID": "myfoldid",
-          "dns": {
-            "nameservers": [
-              "1.1.1.1",
-              "2.2.2.2"
-            ],
-            "search": [
-              "example.com"
-            ]
-          },
           "region": "myreg",
-          "serviceAccountJSON": "{\"my\": \"json\"}",
+          "serviceAccountJSON": {
+            "my": "json"
+          },
           "sshKey": "mysshkey",
-          "sshUser": "mysshuser",
           "zoneToSubnetIdMap": {
             "zonea": "aaa",
             "zoneb": "bbb"
-          }
+          },
+          "shouldAssignPublicIPAddress": true
         }`
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.yandex").String())
 			Expect(err).ShouldNot(HaveOccurred())
