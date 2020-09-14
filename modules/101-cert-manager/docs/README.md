@@ -24,6 +24,7 @@ title: "Модуль cert-manager"
 *  `route53AccessKeyID` — Access Key ID пользователя с необходимыми правами [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/) для управления доменными записями домена
 *  `route53SecretAccessKey` — Secret Access Key пользователя с необходимыми правами для управления доменными записями домена
 *  `digitalOceanCredentials` — Access Token от Digital Ocean API, который можно создать в разделе `API`
+*  `cloudDNSServiceAccount` — Service Account для [Google Cloud](#Как-заказать-wildcard-сертификат-с-DNS-в-Google?) из того-же проекта с ролью Администратора DNS
 
 ### Пример конфига
 
@@ -219,7 +220,49 @@ spec:
          - "*.domain.com"
    ```
 
-### Как заказать selfsigned сертификат?
+### Как заказать wildcard-сертификат с DNS в Google?
+
+1. Создаем сервис-аккаунт с необходимой ролью.
+
+   * Заходим на страницу управления политиками: https://console.cloud.google.com/iam-admin/serviceaccounts. 
+   * Выбираем нужный проект. 
+   * Создаем сервис-аккаунт с желаемым названием, например `dns01-solver`.
+   * Заходим в созданный сервис-аккаунт.
+   * Создаём ключ по кнопке "Добавить ключ".
+   * Будет скачан `.json`-файл с данными ключа имени.
+   * Закодируем полученный файл в строку **base64**:
+       ```bash
+       base64 project-209317-556c656b81c4.json
+       ```
+
+2. Сохраняеем полученную **base64**-строку в параметр модуля `cloudDNSServiceAccount`.
+
+   После чего, Deckhouse автоматически создаст ClusterIssuer и Secret для cloudDNS в namespace `d8-cert-manager`.
+
+3. Создаем Certificate с валидацией через cloudDNS:
+
+   ```yaml
+   apiVersion: certmanager.k8s.io/v1alpha1
+   kind: Certificate
+   metadata:
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     secretName: tls-wildcard
+     issuerRef:
+       name: clouddns
+       kind: ClusterIssuer
+     dnsNames:
+     - "*.domain.com"
+     acme:
+       config:
+       - dns01:
+           provider: clouddns
+         domains:
+         - "*.domain.com"
+   ```
+
+### Как заказать selfsigned-сертификат?
 
 Все еще проще, чем с LE. Просто меняем `letsencrypt` на `selfsigned`:
 
@@ -312,6 +355,7 @@ default            example-com                     13m
 **Важно!** Если перешли с аннотации на Certificate, то нужно удалить Certificate который был создан по аннотации, иначе, по обоим Certificate будет обновляться один Secret (это может привести к попаданию на лимиты Let’s Encrypt).
 
 ```yaml
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
