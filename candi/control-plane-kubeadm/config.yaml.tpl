@@ -23,6 +23,13 @@ apiServer:
     mountPath: "/etc/kubernetes/deckhouse/extra-files"
     readOnly: true
     pathType: DirectoryOrCreate
+{{- if .apiserver.auditPolicy }}
+  - name: "kube-audit-log"
+    hostPath: "/var/log/kube-audit"
+    mountPath: "/var/log/kube-audit"
+    readOnly: false
+    pathType: DirectoryOrCreate
+{{- end }}
   extraArgs:
 {{- if hasKey . "apiserver" }}
   {{- if hasKey .apiserver "etcdServers" }}
@@ -54,6 +61,15 @@ apiServer:
     authorization-mode: Node,Webhook,RBAC
     authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
   {{- end -}}
+  {{- if .apiserver.auditPolicy }}
+    audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
+    audit-log-path: /var/log/kube-audit/audit.log
+    audit-log-format: json
+    audit-log-truncate-enabled: "true"
+    audit-log-maxage: "7"
+    audit-log-maxsize: "100"
+    audit-log-maxbackup: "10"
+  {{- end }}
   {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}

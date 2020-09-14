@@ -44,6 +44,9 @@
     {{ $_ := set $tpl_context.apiserver "enableDeprecatedAPIs" .Values.controlPlaneManager.apiserver.enableDeprecatedAPIs }}
   {{- end }}
 {{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
+  {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
+{{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- define "control_plane_config" }}
@@ -58,6 +61,9 @@ extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
   {{- if $tpl_context.apiserver.webhookCA }}
 extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- end }}
+  {{- if $tpl_context.apiserver.auditPolicy }}
+extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
 {{- end }}
 ---

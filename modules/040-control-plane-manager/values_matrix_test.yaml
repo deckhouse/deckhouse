@@ -51,6 +51,8 @@ controlPlaneManager:
             - [192.168.0.0/24]
             - __EmptyItem__
         - __EmptyItem__
+    - auditPolicyEnabled:
+        __ConstantChoices__: [true, false, __EmptyItem__]
     - __EmptyItem__
   internal:
     pkiChecksum: test

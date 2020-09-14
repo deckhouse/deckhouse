@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+    kubernetes:
+    - name: kube_audit_policy_secret
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [audit-policy]
+      jqFilter: '.data."audit-policy.yaml"'
+EOF
+}
+
+function __main__() {
+  if [ $(values::get controlPlaneManager.apiserver.auditPolicyEnabled) != "true" ]; then
+    values::unset controlPlaneManager.internal.auditPolicy
+    return 0
+  fi
+
+  if context::has snapshots.kube_audit_policy_secret.0 ; then
+    values::set controlPlaneManager.internal.auditPolicy "$(context::get snapshots.kube_audit_policy_secret.0.filterResult)"
+  else
+    values::unset controlPlaneManager.internal.auditPolicy
+  fi
+}
+
+hook::run "$@"
