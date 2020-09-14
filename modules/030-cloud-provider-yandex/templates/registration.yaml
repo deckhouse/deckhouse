@@ -9,21 +9,16 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "yandex" | quote }}
-  zones: {{ .Values.cloudProviderYandex.zones | toJson | b64enc | quote }}
+  zones: {{ .Values.cloudProviderYandex.internal.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
   machineClassKind: {{ b64enc "YandexMachineClass" | quote }}
 
   # Yandex
   {{- $yandexValues := dict }}
-  {{- $_ := set $yandexValues "serviceAccountJSON" .Values.cloudProviderYandex.serviceAccountJSON }}
-  {{- $_ := set $yandexValues "region" .Values.cloudProviderYandex.region }}
-  {{- $_ := set $yandexValues "folderID" .Values.cloudProviderYandex.folderID }}
-  {{- $_ := set $yandexValues "sshKey" .Values.cloudProviderYandex.sshKey }}
-  {{- $_ := set $yandexValues "sshUser" .Values.cloudProviderYandex.sshUser }}
-  {{- if .Values.cloudProviderYandex.dns }}
-    {{- $_ := set $yandexValues "dns" dict }}
-    {{- $_ := set $yandexValues.dns "nameservers" .Values.cloudProviderYandex.dns.nameservers }}
-    {{- $_ := set $yandexValues.dns "search" .Values.cloudProviderYandex.dns.search }}
-  {{- end }}
-  {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.zoneToSubnetIdMap }}
+  {{- $_ := set $yandexValues "serviceAccountJSON" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.serviceAccountJSON) }}
+  {{- $_ := set $yandexValues "region" .Values.cloudProviderYandex.internal.providerDiscoveryData.region }}
+  {{- $_ := set $yandexValues "folderID" .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}
+  {{- $_ := set $yandexValues "sshKey" .Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey }}
+  {{- $_ := set $yandexValues "shouldAssignPublicIPAddress" .Values.cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress }}
+  {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
   yandex: {{ $yandexValues | toJson | b64enc | quote }}

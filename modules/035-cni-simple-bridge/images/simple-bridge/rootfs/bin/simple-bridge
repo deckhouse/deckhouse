@@ -8,11 +8,27 @@ trap sigterm SIGTERM
 while true; do
   node_object="$(curl --max-time 5 -s -S -f --resolve "kubernetes.default:443:$KUBERNETES_SERVICE_HOST" -s "https://kubernetes.default/api/v1/nodes/$NODE_NAME" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)")"
 
+  first_internal_ip=$(jq -re '.status.addresses[] | select(.type == "InternalIP") | .address' <<< "$node_object")
+  if [ -z "$first_internal_ip" ]; then
+    >&2 echo "ERROR: Node $(hostname) doesn't have InternalIP in .status.addresses"
+    exit 1
+  fi
+
   if ! echo "$node_object" | jq -e '[.status.conditions[] | select(.type == "NetworkUnavailable")][0] | .status == "False"' >/dev/null 2>&1; then
     echo '"NetworkUnavailable" status is not "False" yet, retrying...'
     sleep 5
     continue
   fi
+
+  internal_cidr="$(ip -j a show | jq -er --arg first_internal_ip "$first_internal_ip" \
+      'map(select(.addr_info[] | .local == $first_internal_ip))[0] | .addr_info[] | select(.family == "inet") | "\(.local)/\(.prefixlen)"')"
+  if [[ -z "$internal_cidr" ]]; then
+    echo "Cannot determine CIDR of an internal network"
+    exit 1
+  fi
+
+  gw=$(python3 -c 'import ipaddress, itertools, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
+  ip route replace "$POD_SUBNET" via "$gw"
 
   podcidr="$(echo "$node_object" | jq .spec.podCIDR -r)"
 

@@ -29,31 +29,20 @@ global:
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 
 cloudProviderYandex:
-  __ConstantChoices__:
-  - zones: ["zonea", "zoneb"] # maximum
-    zoneToSubnetIdMap:
-      zonea: aaa
-      zoneb: bbb
-    defaultLbTargetGroupNetworkId: deftarggroupnetid
-    internalNetworkIDs: ["id1", "id2"]
-    externalNetworkIDs: ["id1", "id2"]
-    sshKey: mysshkey
-    sshUser: mysshuser
-    serviceAccountJSON: '{"my": "json"}'
-    dns:
-      nameservers: ["1.1.1.1", "2.2.2.2"]
-      search: ["example.com"]
+  internal:
+    providerDiscoveryData:
+      zones: ["zonea", "zoneb"]
+      zoneToSubnetIdMap:
+        zonea: aaa
+        zoneb: bbb
+      defaultLbTargetGroupNetworkId: deftarggroupnetid
+      internalNetworkIDs: ["id1", "id2"]
+      shouldAssignPublicIPAddress: true
+    routeTableID: testest
     region: myreg
-    folderID: myfoldid
-    routeTableID: test
-  - zones: ["zonea", "zoneb"]
-    zoneToSubnetIdMap:
-      zonea: aaa
-      zoneb: bbb
-    defaultLbTargetGroupNetworkId: deftarggroupnetid
-    sshKey: mysshkey
-    sshUser: mysshuser
-    serviceAccountJSON: '{"my": "json"}'
-    region: myreg
-    folderID: myfoldid
-    routeTableID: test
+    providerClusterConfiguration:
+      sshPublicKey: mysshkey
+      provider:
+        serviceAccountJSON:
+          my: json
+        folderID: myfoldid

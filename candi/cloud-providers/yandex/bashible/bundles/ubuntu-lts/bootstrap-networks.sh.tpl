@@ -1,8 +1,5 @@
 #!/bin/bash
 
-{{- if hasKey .nodeGroup "instanceClass" }}
-  {{- if .nodeGroup.instanceClass.additionalSubnets }}
-
 shopt -s extglob
 
 ip_addr_show_output=$(ip -json addr show)
@@ -26,8 +23,6 @@ network:
       dhcp4-overrides:
         use-hostname: false
         use-routes: false
-        use-dns: false
-        use-ntp: false
       match:
         macaddress: $mac
 EOF
@@ -37,6 +32,3 @@ netplan generate
 netplan apply
 
 shopt -u extglob
-
-  {{- end }}
-{{- end }}

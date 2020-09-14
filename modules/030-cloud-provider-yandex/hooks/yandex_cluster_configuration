@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    kubernetes:
+    - name: provider_cluster_configuration
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-provider-cluster-configuration]
+      jqFilter: |
+        .data."cloud-provider-cluster-configuration.yaml" //= "" | .data."cloud-provider-discovery-data.json" //= "" |
+        {
+          "provider_cluster_configuration": (.data."cloud-provider-cluster-configuration.yaml" | @base64d),
+          "provider_discovery_data": (.data."cloud-provider-discovery-data.json" | @base64d)
+        }
+EOF
+}
+
+function __main__() {
+  snapshot="$(context::get snapshots.provider_cluster_configuration.0.filterResult)"
+
+  provider_cluster_configuration_yaml="$(echo "$snapshot" | jq -r .provider_cluster_configuration)"
+  provider_cluster_configuration="$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq -re '.providerClusterConfiguration')"
+
+  # TODO: once discovery data validation is ready, validate via "deckhouse-controller helper"
+  provider_discovery_data="$(echo "$snapshot" | jq -r '
+    if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={} end | .provider_discovery_data
+  ')"
+
+  values::set cloudProviderYandex.internal.providerClusterConfiguration "$provider_cluster_configuration"
+  values::set cloudProviderYandex.internal.providerDiscoveryData "$provider_discovery_data"
+}
+
+hook::run "$@"
