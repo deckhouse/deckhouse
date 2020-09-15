@@ -64,8 +64,7 @@ const moduleValues = `
     providerClusterConfiguration:
       sshPublicKey: mysshkey
       provider:
-        serviceAccountJSON:
-          my: json
+        serviceAccountJSON: '{"my": "json"}'
         folderID: myfoldid
 `
 
@@ -126,9 +125,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			expectedProviderRegistrationJSON := `{
           "folderID": "myfoldid",
           "region": "myreg",
-          "serviceAccountJSON": {
-            "my": "json"
-          },
+          "serviceAccountJSON": "{\"my\": \"json\"}",
           "sshKey": "mysshkey",
           "zoneToSubnetIdMap": {
             "zonea": "aaa",
