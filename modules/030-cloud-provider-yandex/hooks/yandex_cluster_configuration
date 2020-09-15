@@ -32,10 +32,8 @@ function __main__() {
   provider_cluster_configuration_yaml="$(echo "$snapshot" | jq -r .provider_cluster_configuration)"
   provider_cluster_configuration="$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq -re '.providerClusterConfiguration')"
 
-  # TODO: once discovery data validation is ready, validate via "deckhouse-controller helper"
-  provider_discovery_data="$(echo "$snapshot" | jq -r '
-    if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={} end | .provider_discovery_data
-  ')"
+  provider_discovery_data_json="$(echo "$snapshot" | jq -r .provider_discovery_data)"
+  provider_discovery_data="$(echo "$provider_discovery_data_json" | deckhouse-controller helper cloud-discovery-data)"
 
   values::set cloudProviderYandex.internal.providerClusterConfiguration "$provider_cluster_configuration"
   values::set cloudProviderYandex.internal.providerDiscoveryData "$provider_discovery_data"

@@ -3,4 +3,42 @@ apiVersions:
 - apiVersion: deckhouse.io/v1alpha1
   openAPISpec:
     type: object
-    additionalProperties: true
+    additionalProperties: false
+    required: [apiVersion, kind, region, routeTableID, defaultLbTargetGroupNetworkId, internalNetworkIDs, zones, zoneToSubnetIdMap, shouldAssignPublicIPAddress]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [YandexCloudDiscoveryData]
+      region:
+        type: string
+        minLength: 1
+      routeTableID:
+        type: string
+        minLength: 1
+      defaultLbTargetGroupNetworkId:
+        type: string
+        minLength: 1
+      internalNetworkIDs:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      zoneToSubnetIdMap:
+        type: object
+        additionalProperties:
+          type: string
+          minLength: 1
+      shouldAssignPublicIPAddress:
+        type: boolean

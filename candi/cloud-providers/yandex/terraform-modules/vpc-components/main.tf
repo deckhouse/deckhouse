@@ -47,7 +47,7 @@ resource "yandex_vpc_subnet" "kube_b" {
   zone           = "ru-central1-b"
 
   dynamic "dhcp_options" {
-    for_each = (var.dhcp_domain_name != null) || (var.dhcp_domain_name_servers != null) || ? [1] : []
+    for_each = (var.dhcp_domain_name != null) || (var.dhcp_domain_name_servers != null) ? [1] : []
     content {
       domain_name = var.dhcp_domain_name
       domain_name_servers = var.dhcp_domain_name_servers
