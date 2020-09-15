@@ -11,7 +11,6 @@ EOF
 
 function __main__() {
   kubernetes::delete_if_exists::non_cascading kube-system deployment/coredns
-  kubernetes::delete_if_exists kube-system configmap/coredns
   kubernetes::delete_if_exists kube-system service/kube-dns
 }
 
