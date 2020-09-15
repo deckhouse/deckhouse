@@ -15,7 +15,7 @@ data:
 
   # Yandex
   {{- $yandexValues := dict }}
-  {{- $_ := set $yandexValues "serviceAccountJSON" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.serviceAccountJSON) }}
+  {{- $_ := set $yandexValues "serviceAccountJSON" .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.serviceAccountJSON }}
   {{- $_ := set $yandexValues "region" .Values.cloudProviderYandex.internal.providerDiscoveryData.region }}
   {{- $_ := set $yandexValues "folderID" .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}
   {{- $_ := set $yandexValues "sshKey" .Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey }}

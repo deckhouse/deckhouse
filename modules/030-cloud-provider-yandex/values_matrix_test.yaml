@@ -43,6 +43,5 @@ cloudProviderYandex:
     providerClusterConfiguration:
       sshPublicKey: mysshkey
       provider:
-        serviceAccountJSON:
-          my: json
+        serviceAccountJSON: '{"my": "json"}'
         folderID: myfoldid
