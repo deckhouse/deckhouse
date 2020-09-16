@@ -27,8 +27,10 @@ while true; do
     exit 1
   fi
 
-  gw=$(python3 -c 'import ipaddress, itertools, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
-  ip route replace "$POD_SUBNET" via "$gw"
+  if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
+    gw=$(python3 -c 'import ipaddress, itertools, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
+    ip route replace "$POD_SUBNET" via "$gw"
+  fi
 
   podcidr="$(echo "$node_object" | jq .spec.podCIDR -r)"
 

@@ -36,6 +36,10 @@ spec:
         securityContext:
           privileged: true
         env:
+        {{- if hasKey .Values.global "clusterConfiguration" }}
+        - name: ROUTE_POD_NETWORK_TO_GW
+          value: "{{ if eq .Values.global.clusterConfiguration.cloud.provider "Yandex" }}true{{ else }}false{{ end }}"
+        {{- end }}
         - name: POD_SUBNET
           value: {{ .Values.global.discovery.podSubnet | quote }}
         - name: NODE_NAME
