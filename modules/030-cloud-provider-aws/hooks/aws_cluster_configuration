@@ -26,52 +26,27 @@ function __config__() {
 EOF
 }
 
-function set_values_from_provider_cluster_configuration() {
-  error="false"
-  provider='{}'
-  provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
-  if [[ "$provider_cluster_configuration_yaml" != "null" ]]; then
-    provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfiguration.provider | . //= {}')
-  fi
-
-  provider_discovery_data=$(echo "$1" | jq -r '
-    if (.provider_discovery_data=="" or .provider_discovery_data==null) then .provider_discovery_data={
-      "instances": {}
-    } end | .provider_discovery_data')
-
-  values::set cloudProviderAws.internal "$provider_discovery_data"
-
-  if i="$(jq -ner --argjson provider "$provider" '$provider.region')"
-  then values::set cloudProviderAws.internal.region "$i"
-  else
-    echo >&2 "ERROR: region is not configured in kube-system/d8-provider-cluster-configuration Secret"
-    error="true"
-  fi
-
-  if i="$(jq -ner --argjson provider "$provider" '$provider.providerAccessKeyId')"
-  then values::set cloudProviderAws.internal.providerAccessKeyId "$i"
-  else
-    echo >&2 "ERROR: providerAccessKeyId is not configured in kube-system/d8-provider-cluster-configuration Secret"
-    error="true"
-  fi
-
-  if i="$(jq -ner --argjson provider "$provider" '$provider.providerSecretAccessKey')"
-  then values::set cloudProviderAws.internal.providerSecretAccessKey "$i"
-  else
-    echo >&2 "ERROR: providerSecretAccessKey is not configured in kube-system/d8-provider-cluster-configuration Secret"
-    error="true"
-  fi
-
-  if [[ "$error" == "true" ]]; then
-    return 1
-  fi
-}
-
 function __main__() {
   if context::has snapshots.provider_cluster_configuration.0; then
-    set_values_from_provider_cluster_configuration "$(context::get snapshots.provider_cluster_configuration.0.filterResult)"
+    provider="$(
+      context::get snapshots.provider_cluster_configuration.0.filterResult.provider_cluster_configuration | \
+      deckhouse-controller helper cluster-configuration | \
+      jq '.providerClusterConfiguration.provider'
+    )"
+
+    provider_discovery_data="$(
+      context::get snapshots.provider_cluster_configuration.0.filterResult.provider_discovery_data | \
+      deckhouse-controller helper cloud-discovery-data | \
+      jq 'del(.kind) | del(.apiVersion)'
+    )"
+
+    values::set cloudProviderAws.internal "$provider_discovery_data"
+    values::set cloudProviderAws.internal.region "$(jq -ner --argjson provider "$provider" '$provider.region')"
+    values::set cloudProviderAws.internal.providerAccessKeyId "$(jq -ner --argjson provider "$provider" '$provider.providerAccessKeyId')"
+    values::set cloudProviderAws.internal.providerSecretAccessKey "$(jq -ner --argjson provider "$provider" '$provider.providerSecretAccessKey')"
   else
-    set_values_from_provider_cluster_configuration "{}"
+    >&2 echo "ERROR: Can't find Secret d8-provider-cluster-configuration in Namespace kube-system"
+    exit 1
   fi
 }
 
