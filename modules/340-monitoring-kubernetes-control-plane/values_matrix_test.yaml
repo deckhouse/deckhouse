@@ -9,8 +9,11 @@ global:
     tags:
       monitoringKubernetesControlPlane:
         proxy: tagstring
+        kubeSchedulerFaceSlapper: tagstring
   discovery:
     clusterVersion: 1.15.4
+    d8SpecificNodeCountByRole:
+      master: 42
 
 monitoringKubernetesControlPlane:
   internal:
