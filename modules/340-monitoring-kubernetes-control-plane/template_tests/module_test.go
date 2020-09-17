@@ -22,8 +22,11 @@ const globalValues = `
     tags:
       monitoringKubernetesControlPlane:
         proxy: tagstring
+        kubeSchedulerFaceSlapper: tagstring
   discovery:
     clusterVersion: 1.15.4
+    d8SpecificNodeCountByRole:
+      master: 42
 `
 
 var _ = Describe("Module :: monitoring-kubernetes-control-plane :: helm template ::", func() {
