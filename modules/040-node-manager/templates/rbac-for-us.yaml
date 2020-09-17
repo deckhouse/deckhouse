@@ -1,11 +1,3 @@
-{{- define "machine_controller_manager_enabled" }}
-  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-    {{- if eq  $ng.nodeType "Cloud" }}
-      1
-    {{- end }}
-  {{- end }}
-{{- end }}
-
 {{- if include "machine_controller_manager_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---
