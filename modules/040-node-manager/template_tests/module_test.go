@@ -80,6 +80,7 @@ internal:
       zones:
       - zonea
       - zoneb
+  machineControllerManagerEnabled: true
 `
 
 const nodeManagerGCP = `
@@ -119,6 +120,7 @@ internal:
       zones:
       - zonea
       - zoneb
+  machineControllerManagerEnabled: true
 `
 
 const nodeManagerOpenstack = `
@@ -169,6 +171,7 @@ internal:
       zones:
       - zonea
       - zoneb
+  machineControllerManagerEnabled: true
 `
 
 const nodeManagerVsphere = `
@@ -216,6 +219,7 @@ internal:
       zones:
       - zonea
       - zoneb
+  machineControllerManagerEnabled: true
 `
 
 const nodeManagerYandex = `
@@ -270,6 +274,7 @@ internal:
       zones:
       - zonea
       - zoneb
+  machineControllerManagerEnabled: true
 `
 
 const nodeManagerStatic = `

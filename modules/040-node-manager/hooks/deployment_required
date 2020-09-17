@@ -1,0 +1,63 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node_group
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isCloud": (.spec.nodeType == "Cloud")
+        }
+    - name: machine_deployment
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineDeployment
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: .metadata.name
+    - name: machine_set
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: MachineSet
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: .metadata.name
+    - name: machine
+      apiVersion: machine.sapcloud.io/v1alpha1
+      kind: Machine
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: .metadata.name
+
+EOF
+}
+
+
+function __main__() {
+  if context::jq -er '[.snapshots.node_group[] | select(.filterResult.isCloud)] + .snapshots.machine + .snapshots.machine_deployment + .snapshots.machine_set | length > 0' > /dev/null ; then
+    values::set nodeManager.internal.machineControllerManagerEnabled "true"
+  else
+    values::unset nodeManager.internal.machineControllerManagerEnabled
+  fi
+}
+
+hook::run "$@"

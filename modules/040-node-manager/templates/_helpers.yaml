@@ -1,0 +1,5 @@
+{{- define "machine_controller_manager_enabled" }}
+  {{- if and (hasKey .Values.nodeManager.internal "machineControllerManagerEnabled") .Values.nodeManager.internal.machineControllerManagerEnabled }}
+    not empty string
+  {{- end }}
+{{- end }}
