@@ -560,7 +560,7 @@ ansible:
 
   - name: "Install terraform"
     unarchive:
-      src: https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
@@ -574,7 +574,7 @@ ansible:
 
   - name: "Install terraform provider aws"
     unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-aws/2.70.0/terraform-provider-aws_2.70.0_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform-provider-aws/3.6.0/terraform-provider-aws_3.6.0_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
