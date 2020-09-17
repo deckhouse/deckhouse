@@ -11,7 +11,9 @@ EOF
 
 function __main__() {
   for i in $(seq 1 120); do
-    if kubectl -n kube-system get pod -l k8s-app=kube-dns -o json  | jq -e '.items[].status.conditions | all(.[] ; .status == "True")' >/dev/null; then
+    if kubectl -n kube-system get pod -l k8s-app=kube-dns -o json | jq -e '[
+      .items[].metadata | select(.name|startswith("coredns"))
+    ] | length == 0' >/dev/null; then
       kubernetes::delete_if_exists "" clusterrole/system:coredns
       kubernetes::delete_if_exists "" clusterrolebinding/system:coredns
       kubernetes::delete_if_exists kube-system serviceaccount/coredns
@@ -19,12 +21,12 @@ function __main__() {
       return 0
     fi
 
-    echo "Waiting until all CoreDNS Pods are Ready..."
+    echo "Waiting until all CoreDNS Pods are terminated..."
     sleep 1
   done
 
   if [[ $i -ge 120 ]] ; then
-    >&2 echo "Timeout waiting until all CoreDNS Pods are Ready"
+    >&2 echo "Timeout waiting until all CoreDNS Pods are terminated"
     return 1
   fi
 }

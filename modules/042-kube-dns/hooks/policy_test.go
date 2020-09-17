@@ -34,9 +34,6 @@ kubeDns:
   internal:
     replicas: 2
     enablePodAntiAffinity: false
-global:
-  discovery:
-    clusterDNSImplementation: "coredns"
 `
 		initConfigValuesString = `{}`
 		stateMaster            = `

@@ -14,7 +14,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/cluster_dns_implementation ::", func() {
+var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: cluster_dns_implementation ::", func() {
 	const (
 		coreDnsDeployment = `
 apiVersion: apps/v1
@@ -66,7 +66,10 @@ spec:
         resources: {}
 `
 	)
-	f := HookExecutionConfigInit(`{"global":{"enabledModules":[],"discovery": {}}}`, `{}`)
+	f := HookExecutionConfigInit(
+		`{"monitoringKubernetes":{"internal":{}},"global":{"enabledModules":[]}}`,
+		`{}`,
+	)
 
 	Context("Cluster with kube-dns", func() {
 		BeforeEach(func() {
@@ -74,9 +77,9 @@ spec:
 			f.RunHook()
 		})
 
-		It("global.discovery.clusterDNSImplementation must be 'kube-dns'", func() {
+		It("monitoringKubernetes.internal.clusterDNSImplementation must be 'kube-dns'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("kube-dns"))
+			Expect(f.ValuesGet("monitoringKubernetes.internal.clusterDNSImplementation").String()).To(Equal("kube-dns"))
 		})
 	})
 
@@ -86,9 +89,9 @@ spec:
 			f.RunHook()
 		})
 
-		It("global.discovery.clusterDNSImplementation must be 'coredns'", func() {
+		It("monitoringKubernetes.internal.clusterDNSImplementation must be 'coredns'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("coredns"))
+			Expect(f.ValuesGet("monitoringKubernetes.internal.clusterDNSImplementation").String()).To(Equal("coredns"))
 		})
 	})
 
@@ -99,9 +102,9 @@ spec:
 			f.RunHook()
 		})
 
-		It("global.discovery.clusterDNSImplementation must be 'coredns'", func() {
+		It("monitoringKubernetes.internal.clusterDNSImplementation must be 'coredns'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.clusterDNSImplementation").String()).To(Equal("coredns"))
+			Expect(f.ValuesGet("monitoringKubernetes.internal.clusterDNSImplementation").String()).To(Equal("coredns"))
 		})
 	})
 })

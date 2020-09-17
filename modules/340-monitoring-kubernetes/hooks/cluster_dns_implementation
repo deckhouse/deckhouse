@@ -7,9 +7,11 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    beforeHelm: 10
     kubernetes:
     - name: kube_dns_deployment
       group: main
+      queue: /modules/$(module::name::kebab_case)
       keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
@@ -26,7 +28,7 @@ EOF
 
 function __main__() {
   if values::array_has global.enabledModules "kube-dns" ; then
-    values::set global.discovery.clusterDNSImplementation "coredns"
+    values::set monitoringKubernetes.internal.clusterDNSImplementation "coredns"
     return 0
   fi
 
@@ -35,7 +37,7 @@ function __main__() {
     return 1
   fi
 
-  values::set global.discovery.clusterDNSImplementation "$(context::get snapshots.kube_dns_deployment.0.filterResult)"
+  values::set monitoringKubernetes.internal.clusterDNSImplementation "$(context::get snapshots.kube_dns_deployment.0.filterResult)"
 }
 
 hook::run "$@"
