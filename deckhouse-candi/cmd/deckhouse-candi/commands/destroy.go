@@ -34,6 +34,7 @@ func getClientOnce(sshClient *ssh.SshClient, kubeCl *client.KubernetesClient) (*
 func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
 	app.DefineSshFlags(cmd)
+	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 	app.DefineSanityFlags(cmd)
 	app.DefineSkipResourcesFlags(cmd)
