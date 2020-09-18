@@ -16,6 +16,7 @@ import (
 func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("ssh-connection", "Test connection via ssh.")
 	app.DefineSshFlags(cmd)
+	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshCl, err := ssh.NewClientFromFlags().Start()
@@ -43,6 +44,7 @@ func DefineTestScpCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	var Direction string
 	cmd := parent.Command("scp", "Test scp file operations.")
 	app.DefineSshFlags(cmd)
+	app.DefineBecomeFlags(cmd)
 	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
 	cmd.Flag("dst", "destination path").Short('d').StringVar(&DstPath)
 	cmd.Flag("data", "data to test uploadbytes method").StringVar(&Data)
