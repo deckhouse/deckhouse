@@ -136,6 +136,9 @@ spec:
               - key: "node-role.deckhouse.io/{{ .Values.kubeDns.internal.specificNodeType }}"
                 operator: "Exists"
             - matchExpressions:
+              - key: "node-role.flant.com/{{ .Values.kubeDns.internal.specificNodeType }}"
+                operator: "Exists"
+            - matchExpressions:
               - key: "node-role.kubernetes.io/{{ .Values.kubeDns.internal.specificNodeType }}"
                 operator: "Exists"
 {{- else }}
