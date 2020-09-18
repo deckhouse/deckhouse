@@ -3,7 +3,7 @@ fromImage: {{ .ModuleName }}/base-terraform-manager
 import:
 - artifact: terraform-provider-yandex
   add: /terraform-provider-yandex/terraform-provider-yandex
-  to: /bin/terraform-provider-yandex
+  to: /usr/local/share/terraform/plugins/flant.com/terraform-plugins/yandex/0.43.0/linux_amd64/terraform-provider-yandex
   before: install
 ansible:
   install:

@@ -37,8 +37,6 @@ cloudProviderYandex: |
 
 Все опции идут в `.spec`.
 
-* `platformID` — тип платформы instances. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
-  * Формат — строка.
 * `cores` — количество ядер у создаваемых инстансов.
   * Формат — integer.
 * `coreFraction` - базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
@@ -49,9 +47,16 @@ cloudProviderYandex: |
   * Формат — integer.
 * `gpus` — количество графических адаптеров у создаваемых инстансов.
   * Формат — integer.
+  * По-умолчанию `0`.
+  * Опциональный параметр.
+* `platformID` — тип платформы instances. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
+  * Формат — строка.
+  * По-умолчанию `standard-v2`.
+  * Опциональный параметр.
 * `imageID` — идентификатор образа, который будет установлен в заказанные instance'ы.
   * Формат — строка.
-  * Найти нужный образ можно с помощью команды: `yc compute image list --folder-id standard-images | grep ubuntu-1804-lts`
+  * По-умолчанию образ из masterInstanceClass из providerClusterConfiguration.
+  * Опциональный параметр.
 * `preemptible` — Заказывать ли preemptible instance.
   * Формат — bool.
   * По-умолчанию `false`.
@@ -93,10 +98,8 @@ kind: YandexInstanceClass
 metadata:
   name: test
 spec:
-  platformID: standard-v2
   cores: 4
   memory: 8192
-  imageID: fd8rc75pn12fe3u2dnmb
 ```
 
 ### Storage

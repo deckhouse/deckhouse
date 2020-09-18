@@ -7,7 +7,7 @@ metadata:
 spec:
   regionID: {{ .Values.nodeManager.internal.cloudProvider.yandex.region }}
   zoneID: {{ .zoneName }}
-  platformID: {{ .nodeGroup.instanceClass.platformID }}
+  platformID: {{ .nodeGroup.instanceClass.platformID | default "standard-v2" }}
   resourcesSpec:
     cores: {{ .nodeGroup.instanceClass.cores }}
     coreFraction: {{ .nodeGroup.instanceClass.coreFraction | default 100 }}
@@ -17,7 +17,7 @@ spec:
     autoDelete: true
     typeID: {{ .nodeGroup.instanceClass.diskType }}
     size: {{ mul (.nodeGroup.instanceClass.diskSizeGB | default 50) 1024 1024 1024 }}
-    imageID: {{ .nodeGroup.instanceClass.imageID }}
+    imageID: {{ .nodeGroup.instanceClass.imageID | default .Values.nodeManager.internal.cloudProvider.yandex.instanceClassDefaults.imageID }}
   networkInterfaceSpecs:
 {{- if .nodeGroup.instanceClass.mainSubnet }}
   - subnetID: {{ .nodeGroup.instanceClass.mainSubnet }}
