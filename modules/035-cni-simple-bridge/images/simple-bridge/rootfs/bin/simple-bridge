@@ -5,6 +5,12 @@ function sigterm() {
 }
 trap sigterm SIGTERM
 
+function ensure_pod_network_route() {
+  if ! ip -json ro show | jq -e --arg dst_subnet "$1" --arg gw "$2" 'any(.[]; .dst == $dst_subnet and .gateway == $gw)' >/dev/null; then
+    ip route replace "$1" via "$2"
+  fi
+}
+
 while true; do
   node_object="$(curl --max-time 5 -s -S -f --resolve "kubernetes.default:443:$KUBERNETES_SERVICE_HOST" -s "https://kubernetes.default/api/v1/nodes/$NODE_NAME" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)")"
 
@@ -25,11 +31,6 @@ while true; do
   if [[ -z "$internal_cidr" ]]; then
     echo "Cannot determine CIDR of an internal network"
     exit 1
-  fi
-
-  if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
-    gw=$(python3 -c 'import ipaddress, itertools, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
-    ip route replace "$POD_SUBNET" via "$gw"
   fi
 
   podcidr="$(echo "$node_object" | jq .spec.podCIDR -r)"
@@ -78,7 +79,21 @@ while true; do
   ]
 }
 END
-    sleep 3600
+
+    if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
+      SECONDS=0
+      gw=$(python3 -c 'import ipaddress, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
+      while true; do
+        ensure_pod_network_route "$POD_SUBNET" "$gw"
+        sleep 10
+
+        if (( SECONDS >= 3600 )); then
+          break
+        fi
+      done
+    else
+      sleep 3600
+    fi
   else
     echo "Waiting for .spec.podCIDR to be assigned to $NODE_NAME"
     sleep 10
