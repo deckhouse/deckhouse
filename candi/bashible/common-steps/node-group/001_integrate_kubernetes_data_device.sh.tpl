@@ -36,8 +36,6 @@ else
 fi
 
 mkdir -p /mnt/kubernetes-data
-mkdir -p /var/lib/etcd
-mkdir -p /etc/kubernetes
 
 if ! file -s $DATA_DEVICE | grep -q ext4; then
   mkfs.ext4 -L kubernetes-data $DATA_DEVICE
@@ -46,8 +44,6 @@ fi
 if grep -qv kubernetes-data /etc/fstab; then
   cat >> /etc/fstab << EOF
 LABEL=kubernetes-data           /mnt/kubernetes-data     ext4   defaults,discard        0 0
-/mnt/kubernetes-data/var-lib-etcd       /var/lib/etcd   none    bind    0 0
-/mnt/kubernetes-data/etc-kubernetes     /etc/kubernetes none    bind    0 0
 EOF
 fi
 
@@ -58,7 +54,17 @@ fi
 mkdir -p /mnt/kubernetes-data/var-lib-etcd
 mkdir -p /mnt/kubernetes-data/etc-kubernetes
 
-mount -a
+# if there is kubernetes dir with regular files then we can't delete it
+# if there aren't files then we can delete dir to prevent symlink creation problems
+if [[ "$(find /etc/kubernetes/ -type f | wc -l)" == "0" ]]; then
+  rm -rf /etc/kubernetes
+  ln -s /mnt/kubernetes-data/etc-kubernetes /etc/kubernetes
+fi
+
+if [[ "$(find /var/lib/etcd/ -type f | wc -l)" == "0" ]]; then
+  rm -rf /var/lib/etcd
+  ln -s /mnt/kubernetes-data/var-lib-etcd /var/lib/etcd
+fi
 
 touch /var/lib/bashible/kubernetes-data-device-installed
   {{- end  }}
