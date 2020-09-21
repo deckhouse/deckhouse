@@ -40,7 +40,9 @@ fi
 
 version_pattern="$(echo "$desired_version" | sed -r 's/([0-9\.-]+)-([^0-9]+)$/^linux-[a-z0-9\.-]+(\1|\1-\2)$/')"
 
-packages="$(dpkg --get-selections | grep -E '^linux-.*\s(install|hold)$' | awk '{print $1}' | grep -Ev "$version_pattern" | grep -Ev '^linux-base$' || true)"
+packages="$(
+  dpkg --get-selections | grep -E '^linux-.*\s(install|hold)$' | awk '{print $1}' | grep -Ev "$version_pattern" | grep -Ev 'linux-[^0-9]+$' || true
+)"
 if [ -n "$packages" ]; then
   bb-apt-remove $packages
 fi
