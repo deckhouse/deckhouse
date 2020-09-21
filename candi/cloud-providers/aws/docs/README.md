@@ -172,6 +172,8 @@ sshPublicKey: ...
                 "ec2:DescribeTags",
                 "ec2:DescribeVolumes",
                 "ec2:DescribeVpcAttribute",
+                "ec2:DescribeVpcClassicLink",
+                "ec2:DescribeVpcClassicLinkDnsSupport",
                 "ec2:DescribeVpcs",
                 "ec2:DetachInternetGateway",
                 "ec2:DetachVolume",
