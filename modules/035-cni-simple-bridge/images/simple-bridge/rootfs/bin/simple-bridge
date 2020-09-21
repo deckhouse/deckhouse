@@ -85,7 +85,7 @@ END
       gw=$(python3 -c 'import ipaddress, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
       while true; do
         ensure_pod_network_route "$POD_SUBNET" "$gw"
-        sleep 10
+        sleep 1
 
         if (( SECONDS >= 3600 )); then
           break
