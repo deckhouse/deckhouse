@@ -4,8 +4,10 @@ output "cloud_discovery_data" {
     "kind" = "AWSCloudDiscoveryData"
     "keyName" = local.prefix
     "instances" = {
-      "iamProfileName": "${local.prefix}-node"
+      "ami": var.providerClusterConfiguration.masterNodeGroup.instanceClass.ami
       "additionalSecurityGroups": module.security-groups.additional_security_groups
+      "associatePublicIPAddress": false
+      "iamProfileName": "${local.prefix}-node"
     }
     "loadBalancerSecurityGroup" = module.security-groups.load_balancer_security_group
     "zones" = data.aws_availability_zones.available.names

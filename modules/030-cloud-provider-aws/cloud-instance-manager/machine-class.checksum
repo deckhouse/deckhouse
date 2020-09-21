@@ -1,5 +1,7 @@
 {{- $options := dict -}}
-{{- $_ := set $options "ami" .nodeGroup.instanceClass.ami -}}
+{{- if hasKey .nodeGroup.instanceClass "ami" -}}
+  {{- $_ := set $options "ami" .nodeGroup.instanceClass.ami -}}
+{{- end -}}
 {{- $_ := set $options "instanceType" .nodeGroup.instanceClass.instanceType -}}
 {{- if hasKey .nodeGroup.instanceClass "spot" -}}
   {{- $_ := set $options "spot" .nodeGroup.instanceClass.spot -}}

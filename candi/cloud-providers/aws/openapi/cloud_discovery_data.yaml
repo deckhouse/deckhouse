@@ -15,13 +15,18 @@ apiVersions:
       instances:
         type: object
         additionalProperties: false
-        required: [additionalSecurityGroups,iamProfileName]
+        required: [ami,additionalSecurityGroups,associatePublicIPAddress,iamProfileName]
         properties:
+          ami:
+            type: string
+            pattern: '^ami-[a-z0-9]+$'
           additionalSecurityGroups:
             type: array
             items:
               type: string
               pattern: '^sg-[a-z0-9]+$'
+          associatePublicIPAddress:
+            type: boolean
           iamProfileName:
             type: string
             minLength: 1
