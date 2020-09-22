@@ -29,7 +29,22 @@ data:
         loop
         reload
         loadbalance
-  {{- if .Values.kubeDns.enableLogs }}
+{{- if .Values.kubeDns.enableLogs }}
         log
-  {{- end }}
+{{- end }}
     }
+{{- if .Values.kubeDns.stubZones }}
+  {{- range $zone := .Values.kubeDns.stubZones }}
+    {{- if not (and $zone.zone $zone.upstreamNameservers) }}
+{{ fail "zone and upstreamNameservers parameters must be specified for a stub zone" }}
+    {{- end }}
+    {{ $zone.zone }} {
+        errors
+        cache 30
+        loop
+        reload
+        loadbalance
+        forward . {{ $zone.upstreamNameservers | join " " }}
+    }
+  {{- end }}
+{{- end }}

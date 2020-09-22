@@ -23,6 +23,10 @@ title: "Модуль kube-dns"
 * `hosts` — статически список хостов в стиле `/etc/hosts`.
   * Формат — список ассоциативных массивов с ключами `domain` и `ip`.
   * Опциональный параметр.
+* `stubZones` — список дополнительных зон для обслуживания CoreDNS.
+  * `zone` — зона CoreDNS.
+      * Пример: `consul.local:53`
+  * `upstreamNameservers` — список IP-адресов рекурсивных DNS-серверов, которые CoreDNS будет использовать для резолва доменов в этой зоне.
 * `enableLogs` - позволяет включить логирование в CoreDNS:
   * Формат - true или false
   * По-умолчанию, false
@@ -40,4 +44,9 @@ kubeDns: |
     ip: 192.168.0.1
   - domain: two.another.example.com
     ip: 10.10.0.128
+  stubZones:
+  - zone: consul.local:53
+    upstreamNameservers:
+    - 10.150.0.1
+  enableLogs: true
 ```

@@ -11,11 +11,19 @@ global:
         coredns: tag
 kubeDns:
   clusterDomain: example.cluster.local
+  stubZones:
+    __ConstantChoices__:
+    - []
+    -
+      - zone: domain:53
+        upstreamNameservers: [8.8.8.8]
+      - zone: domain.next:53
+        upstreamNameservers: [8.8.8.8, 8.8.4.4]
   enableLogs:
-    __ContantChoices__: [false, true]
+    __ConstantChoices__: [false, true]
   internal:
     replicas: 2
     specificNodeType:
-      __ContantChoices__: ["kube-dns", __EmptyItem__]
+      __ConstantChoices__: ["kube-dns", __EmptyItem__]
     enablePodAntiAffinity:
-      __ContantChoices__: [false, true]
+      __ConstantChoices__: [false, true]
