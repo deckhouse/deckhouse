@@ -1,11 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"runtime/trace"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"k8s.io/klog"
 
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands"
 	"flant/deckhouse-candi/cmd/deckhouse-candi/commands/bootstrap"
@@ -31,6 +34,14 @@ func main() {
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp)
+
+	// Mute Shell-Operator logs
+	logrus.SetLevel(logrus.PanicLevel)
+
+	if app.IsDebug {
+		klog.InitFlags(nil)
+		_ = flag.CommandLine.Parse([]string{"-v=10"})
+	}
 	// kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	// print version

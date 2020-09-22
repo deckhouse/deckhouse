@@ -55,6 +55,28 @@ func CreateResources(kubeCl *client.KubernetesClient, resources *config.Resource
 	return nil
 }
 
+func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, name string) (bool, error) {
+	lists, err := kubeCl.APIResourceList(gvk.GroupVersion().String())
+	if err != nil && len(lists) == 0 {
+		// apiVersion is defined and there is a ServerResourcesForGroupVersion error
+		return false, err
+	}
+
+	namespaced := false
+	for _, list := range lists {
+		for _, resource := range list.APIResources {
+			if len(resource.Verbs) == 0 {
+				continue
+			}
+			if resource.Name == name {
+				namespaced = resource.Namespaced
+				break
+			}
+		}
+	}
+	return namespaced, nil
+}
+
 func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Resources, gvk schema.GroupVersionKind) error {
 	return retry.StartLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5, func() error {
 		gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
@@ -62,14 +84,26 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 			return fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
 		}
 
+		namespaced, err := isNamespaced(kubeCl, gvk, gvr.Resource)
+		if err != nil {
+			return fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
+		}
+
 		item := resources.Items[gvk]
 		for _, doc := range item.Items {
 			docCopy := doc.DeepCopy()
+			namespace := docCopy.GetNamespace()
+			if namespace == metav1.NamespaceNone && namespaced {
+				namespace = metav1.NamespaceDefault
+			}
+
 			manifestTask := actions.ManifestTask{
 				Name:     getUnstructuredName(docCopy),
 				Manifest: func() interface{} { return nil },
 				CreateFunc: func(manifest interface{}) error {
-					_, err := kubeCl.Dynamic().Resource(gvr).Create(docCopy, metav1.CreateOptions{})
+					_, err := kubeCl.Dynamic().Resource(gvr).
+						Namespace(namespace).
+						Create(docCopy, metav1.CreateOptions{})
 					return err
 				},
 				UpdateFunc: func(manifest interface{}) error {
@@ -78,7 +112,9 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 						return err
 					}
 					// using patch here because of https://github.com/kubernetes/kubernetes/issues/70674
-					_, err = kubeCl.Dynamic().Resource(gvr).Patch(docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+					_, err = kubeCl.Dynamic().Resource(gvr).
+						Namespace(namespace).
+						Patch(docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 					return err
 				},
 			}

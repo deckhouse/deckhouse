@@ -24,7 +24,14 @@ var (
 	DropCache     = false
 	LoggerType    = "pretty"
 	SkipResources = false
+	IsDebug       = false
 )
+
+func init() {
+	if os.Getenv("CANDI_DEBUG") == "yes" {
+		IsDebug = true
+	}
+}
 
 func GlobalFlags(cmd *kingpin.Application) {
 	cmd.Flag("logger-type", "Format output of an deckhouse-candi in different ways.").
@@ -56,17 +63,8 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&DropCache)
 }
 
-var IsDebug = -1
-
 func Debugf(format string, a ...interface{}) {
-	if IsDebug == -1 {
-		if os.Getenv("DEBUG") == "yes" {
-			IsDebug = 1
-		} else {
-			IsDebug = 0
-		}
-	}
-	if IsDebug == 1 {
+	if IsDebug {
 		fmt.Printf(format, a...)
 	}
 }
