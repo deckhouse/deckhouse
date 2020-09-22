@@ -19,6 +19,7 @@ type MetaConfig struct {
 	ProviderName         string `json:"-"`
 	OriginalProviderName string `json:"-"`
 	ClusterPrefix        string `json:"-"`
+	ClusterDNSAddress    string `json:"-"`
 
 	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
 	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
@@ -46,6 +47,7 @@ func (m *MetaConfig) Prepare() *MetaConfig {
 
 	var cloud ClusterConfigCloudSpec
 	_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
+
 	m.ProviderName = strings.ToLower(cloud.Provider)
 	m.OriginalProviderName = cloud.Provider
 	m.ClusterPrefix = cloud.Prefix
@@ -56,6 +58,11 @@ func (m *MetaConfig) Prepare() *MetaConfig {
 	if ok {
 		_ = json.Unmarshal(nodeGroups, &m.StaticNodeGroupSpecs)
 	}
+
+	var serviceSubnet string
+	_ = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet)
+	m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+
 	return m
 }
 
@@ -208,7 +215,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) map[
 
 	clusterBootstrap := map[string]interface{}{
 		"clusterDomain":     data["clusterDomain"],
-		"clusterDNSAddress": getDNSAddress(data["serviceSubnetCIDR"].(string)),
+		"clusterDNSAddress": m.ClusterDNSAddress,
 	}
 
 	if nodeIP != "" {

@@ -27,6 +27,7 @@ type Config struct {
 	ReleaseChannel        string
 	DevBranch             string
 	UUID                  string
+	KubeDNSAddress        string
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
 	TerraformState        []byte
@@ -214,6 +215,23 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 		})
 	}
 
+	if cfg.KubeDNSAddress != "" {
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `Service "kube-dns"`,
+			Manifest: func() interface{} {
+				return manifests.KubeDNSService(cfg.KubeDNSAddress)
+			},
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Services("kube-system").Create(manifest.(*apiv1.Service))
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Services("kube-system").Update(manifest.(*apiv1.Service))
+				return err
+			},
+		})
+	}
+
 	tasks = append(tasks, actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() interface{} {
@@ -367,6 +385,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, erro
 		Bundle:                metaConfig.DeckhouseConfig.Bundle,
 		LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
 		DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
+		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
 		ClusterConfig:         clusterConfig,
 		ProviderClusterConfig: providerClusterConfig,
 	}
