@@ -27,7 +27,7 @@ metadata:
   namespace: {{ $crd.namespace }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
 spec:
-  minAvailable: 0
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}
   selector:
     matchLabels:
       app: dex-authenticator
