@@ -4,7 +4,7 @@ set -Eeo pipefail
 
 function annotate_node() {
   attempt=0
-  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(hostname -s) --overwrite ${@}; do
+  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries."
