@@ -1,0 +1,87 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: etcd_pods
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          component: etcd
+          tier: control-plane
+      fieldSelector:
+        matchExpressions:
+        - field: "status.phase"
+          operator: Equals
+          value: Running
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "peerUrls": [ .spec.containers[] | select(.name == "etcd") |
+                        .command + .args | .[] | select(. | startswith("--listen-peer-urls")) |
+                        sub(".*="; "") | split(",")[] | . ]
+        }
+EOF
+}
+
+function etcdctl() {
+  kubectl -n kube-system exec ${1} -- etcdctl \
+    --ca-file /etc/kubernetes/pki/etcd/ca.crt \
+    --cert-file /etc/kubernetes/pki/etcd/ca.crt \
+    --key-file /etc/kubernetes/pki/etcd/ca.key \
+    --endpoints https://127.0.0.1:2379/ \
+    ${2}
+}
+
+function etcdctl_member_list() {
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    echo "b410bef5e1dffd88: name=main-master-0 peerURLs=https://localhost:2380"
+    return 0
+  fi
+  etcdctl ${1} "member list"
+}
+
+function etcdctl_member_update() {
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    values::set controlPlaneManager.internal.testEtcdMemberUpdated "true"
+    return 0
+  fi
+  etcdctl ${1} "member update ${2} ${3}"
+}
+
+function __main__() {
+  if ! master_nodes="$(values::get --required global.discovery.clusterMasterCount 2>/dev/null)"; then
+    return 0
+  fi
+  if [[ $master_nodes -gt "1" ]]; then
+    return 0
+  fi
+  if ! etcd_pod="$(context::get --required snapshots.etcd_pods.0.filterResult 2>/dev/null)"; then
+    return 0
+  fi
+  if ! peer_url=$(jq -r '.peerUrls[0]' <<< ${etcd_pod}); then
+    return 0
+  fi
+  etcd_pod_name=$(jq -r '.name' <<< ${etcd_pod})
+  etcd_member_list=$(etcdctl_member_list ${etcd_pod_name})
+  if [ $(echo "${etcd_member_list}" | wc -l) != 1 ]; then
+    return 0
+  fi
+  if echo "${etcd_member_list}" | grep -o "peerURLs=[^ ]*" | grep "${peer_url}" >/dev/null; then
+    return 0
+  fi
+  etcd_member_id=$(echo "${etcd_member_list}" | grep -o "^[a-z0-9]\+")
+  etcdctl_member_update ${etcd_pod_name} ${etcd_member_id} ${peer_url}
+}
+
+hook::run "$@"
