@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"flant/deckhouse-candi/pkg/log"
@@ -20,13 +22,13 @@ func (task *ManifestTask) Create() error {
 	err := task.CreateFunc(manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return err
+			return fmt.Errorf("create resource: %v", err)
 		}
 		log.InfoF("%s already exists. Trying to update ... ", task.Name)
 		err = task.UpdateFunc(manifest)
 		if err != nil {
 			log.ErrorLn("ERROR!")
-			return err
+			return fmt.Errorf("update resource: %v", err)
 		}
 		log.InfoLn("OK!")
 	}

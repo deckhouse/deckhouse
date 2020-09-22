@@ -64,7 +64,7 @@ func (a *Agent) AddKeys() error {
 		}
 	}
 
-	if app.IsDebug == 1 {
+	if app.IsDebug {
 		app.Debugf("list added keys\n")
 		listCmd := cmd.NewSshAdd(a.Session).ListCmd()
 

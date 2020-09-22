@@ -63,7 +63,7 @@ func (s *SshAdd) AddKeys(keys []string) error {
 		}
 	}
 
-	if app.IsDebug == 1 {
+	if app.IsDebug {
 		app.Debugf("list added keys\n")
 		env := []string{
 			s.Session.AuthSockEnv(),

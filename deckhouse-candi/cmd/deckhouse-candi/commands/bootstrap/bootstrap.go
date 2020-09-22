@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/deckhouse-candi/pkg/app"
@@ -46,9 +45,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineTerraformFlags(cmd)
 	app.DefineResourcesFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
-
-	// Mute Shell-Operator logs
-	logrus.SetLevel(logrus.PanicLevel)
 
 	runFunc := func(sshClient *ssh.SshClient) error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)

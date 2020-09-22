@@ -139,7 +139,7 @@ func (t *Tunnel) ConsumeLines(r io.Reader, fn func(l string)) {
 			fn(text)
 		}
 
-		if app.IsDebug == 1 && text != "" {
+		if app.IsDebug && text != "" {
 			fmt.Printf("%s: %s\n", t.String(), text)
 		}
 	}

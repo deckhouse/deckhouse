@@ -300,7 +300,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 			}
 
 			// TODO logboek
-			if app.IsDebug == 1 {
+			if app.IsDebug {
 				os.Stdout.Write(buf[:n])
 			}
 			if e.Live {
@@ -341,7 +341,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 			n, err := stderrReadPipe.Read(buf)
 
 			// TODO logboek
-			if e.Live || app.IsDebug == 1 {
+			if e.Live || app.IsDebug {
 				os.Stderr.Write(buf[:n])
 			}
 			if e.StderrBuffer != nil {
@@ -380,7 +380,7 @@ func (e *Executor) ConsumeLines(r io.Reader, fn func(l string)) {
 			fn(text)
 		}
 
-		if app.IsDebug == 1 && text != "" {
+		if app.IsDebug && text != "" {
 			fmt.Printf("%s: %s\n", e.cmd.Args[0], text)
 		}
 	}
