@@ -29,7 +29,6 @@ spec:
           type: object
           required:
           - instanceType
-          - ami
           properties:
             instanceType:
               description: Instance type of AWS instance.

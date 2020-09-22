@@ -19,8 +19,10 @@ data:
   {{- $_ := set $awsValues "providerSecretAccessKey" .Values.cloudProviderAws.internal.providerSecretAccessKey }}
   {{- $_ := set $awsValues "region" .Values.cloudProviderAws.internal.region }}
   {{- $_ := set $awsValues "instances" dict }}
-  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.internal.instances.iamProfileName }}
+  {{- $_ := set $awsValues.instances "ami" .Values.cloudProviderAws.internal.instances.ami }}
   {{- $_ := set $awsValues.instances "additionalSecurityGroups" .Values.cloudProviderAws.internal.instances.additionalSecurityGroups }}
+  {{- $_ := set $awsValues.instances "associatePublicIPAddress" .Values.cloudProviderAws.internal.instances.associatePublicIPAddress }}
+  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.internal.instances.iamProfileName }}
   {{- $_ := set $awsValues "internal" dict }}
   {{- $_ := set $awsValues.internal "zoneToSubnetIdMap" .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
   {{- $_ := set $awsValues "loadBalancerSecurityGroup" .Values.cloudProviderAws.internal.loadBalancerSecurityGroup }}

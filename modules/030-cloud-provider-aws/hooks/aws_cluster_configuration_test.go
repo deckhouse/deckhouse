@@ -39,7 +39,9 @@ cloudProviderAws:
     "additionalSecurityGroups": [
       "sg-zzz",
       "sg-qqq"
-    ]
+    ],
+    "ami": "ami-aaabbbccc",
+    "associatePublicIPAddress": true
   },
   "zones": ["zz-zzz-1z", "xx-xxx-1x", "cc-ccc-1c"],
   "zoneToSubnetIdMap": {
@@ -164,7 +166,7 @@ data:
 			Expect(b.ValuesGet("cloudProviderAws.internal.zoneToSubnetIdMap").String()).To(MatchJSON(`{"zzz":"xxx"}`))
 			Expect(b.ValuesGet("cloudProviderAws.internal.loadBalancerSecurityGroup").String()).To(Equal("sg-lbzzz"))
 			Expect(b.ValuesGet("cloudProviderAws.internal.keyName").String()).To(Equal("kzzz"))
-			Expect(b.ValuesGet("cloudProviderAws.internal.instances").String()).To(MatchJSON(`{"iamProfileName":"zzz-node","additionalSecurityGroups":["sg-zzz","sg-qqq"]}`))
+			Expect(b.ValuesGet("cloudProviderAws.internal.instances").String()).To(MatchJSON(`{"ami":"ami-aaabbbccc","associatePublicIPAddress": true,"iamProfileName":"zzz-node","additionalSecurityGroups":["sg-zzz","sg-qqq"]}`))
 		})
 	})
 

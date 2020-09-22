@@ -61,6 +61,8 @@ const moduleValues = `
     zones: ["zonea", "zoneb"]
     region: myregion
     instances:
+      ami: ami-aaabbbccc
+      associatePublicIPAddress: true
       iamProfileName: myiamprofile
       additionalSecurityGroups: ["id1", "id2"]
     loadBalancerSecurityGroup: mylbsecgroupid
@@ -123,6 +125,8 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedAWSJSON := `{
   "instances":{
+    "ami": "ami-aaabbbccc",
+    "associatePublicIPAddress": true,
     "iamProfileName":"myiamprofile",
     "additionalSecurityGroups":["id1","id2"]},
     "internal":{
