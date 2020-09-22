@@ -12,6 +12,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 
 	"flant/deckhouse-candi/pkg/log"
@@ -360,5 +361,36 @@ func ClusterUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 			Namespace: "kube-system",
 		},
 		Data: map[string]string{"cluster-uuid": uuid},
+	}
+}
+
+func KubeDNSService(ipAddress string) *apiv1.Service {
+	return &apiv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-dns",
+			Namespace: metav1.NamespaceSystem,
+			Labels: map[string]string{
+				"k8s-app": "kube-dns",
+			},
+		},
+		Spec: apiv1.ServiceSpec{
+			ClusterIP: ipAddress,
+			Ports: []apiv1.ServicePort{
+				{
+					Name:       "dns",
+					Port:       53,
+					Protocol:   "UDP",
+					TargetPort: intstr.FromInt(53),
+				},
+				{
+					Name:       "dns-tcp",
+					Port:       53,
+					TargetPort: intstr.FromInt(53),
+				},
+			},
+			Selector: map[string]string{
+				"k8s-app": "kube-dns",
+			},
+		},
 	}
 }
