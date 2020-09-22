@@ -9,7 +9,7 @@ metadata:
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: DaemonSet
+    kind: Deployment
     name: controller
   updatePolicy:
     updateMode: "Auto"
