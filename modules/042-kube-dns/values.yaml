@@ -1,5 +1,6 @@
 kubeDns:
   enableLogs: false
+  stubZones: []
   internal:
     replicas: 2
     enablePodAntiAffinity: false
