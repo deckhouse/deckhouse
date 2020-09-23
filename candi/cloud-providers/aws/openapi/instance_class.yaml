@@ -53,3 +53,8 @@ spec:
               description: Instance disk size in gigabytes.
               example: 20
               type: integer
+            additionalTags:
+              description: extra AWS tags for instances in addition to AWSClusterConfiguration.tags.
+              type: object
+              additionalProperties:
+                type: string

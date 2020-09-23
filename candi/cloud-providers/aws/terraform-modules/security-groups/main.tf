@@ -9,10 +9,10 @@ resource "aws_security_group" "node" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(var.tags, {
     "kubernetes.io/cluster/${var.cluster_uuid}" = "shared"
     "kubernetes.io/cluster/${var.prefix}" = "shared"
-  }
+  })
 }
 
 resource "aws_security_group_rule" "lb-to-node" {
@@ -34,7 +34,7 @@ resource "aws_security_group_rule" "node-to-node" {
 }
 
 resource "aws_security_group_rule" "to-node-icmp" {
-  type            = "ingress"
+  type = "ingress"
   from_port = -1
   to_port = -1
   protocol = "icmp"
@@ -43,8 +43,9 @@ resource "aws_security_group_rule" "to-node-icmp" {
 }
 
 resource "aws_security_group" "loadbalancer" {
-  name        = "${var.prefix}-loadbalancer"
-  vpc_id      = var.vpc_id
+  name = "${var.prefix}-loadbalancer"
+  vpc_id = var.vpc_id
+  tags = var.tags
 }
 
 resource "aws_security_group_rule" "allow-all-incoming-traffic-to-loadbalancer" {
@@ -68,6 +69,7 @@ resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {
 resource "aws_security_group" "ssh-accessible" {
   name        = "${var.prefix}-ssh-accessible"
   vpc_id      = var.vpc_id
+  tags        = var.tags
 }
 
 resource "aws_security_group_rule" "allow-ssh-for-everyone" {

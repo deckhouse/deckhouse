@@ -21,9 +21,9 @@ locals {
 resource "aws_ebs_volume" "kubernetes_data" {
   size            = 150 # To achieve io rate burst limit 450iops, average io rate for etcd is 300iops
   type            = "gp2"
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.prefix}-kubernetes-data-${var.node_index}"
-  }
+  })
   availability_zone = local.zone
 }
 
@@ -57,11 +57,11 @@ resource "aws_instance" "master" {
     volume_type = var.root_volume_type
   }
 
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"
     "kubernetes.io/cluster/${var.cluster_uuid}" = "shared"
     "kubernetes.io/cluster/${var.prefix}" = "shared"
-  }
+  })
 
   lifecycle {
     ignore_changes = [
@@ -73,9 +73,9 @@ resource "aws_instance" "master" {
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
   vpc = true
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"
-  }
+  })
 }
 
 resource "aws_eip_association" "eip" {

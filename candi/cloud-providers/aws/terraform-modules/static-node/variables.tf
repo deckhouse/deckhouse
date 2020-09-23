@@ -39,6 +39,10 @@ variable "zones" {
   type = list(string)
 }
 
+variable "tags" {
+  type = map(string)
+}
+
 locals {
   zones = sort(distinct(var.zones))
 }

@@ -44,6 +44,7 @@ function __main__() {
     values::set cloudProviderAws.internal.region "$(jq -ner --argjson provider "$provider" '$provider.region')"
     values::set cloudProviderAws.internal.providerAccessKeyId "$(jq -ner --argjson provider "$provider" '$provider.providerAccessKeyId')"
     values::set cloudProviderAws.internal.providerSecretAccessKey "$(jq -ner --argjson provider "$provider" '$provider.providerSecretAccessKey')"
+    values::set cloudProviderAws.internal.tags "$(jq -ner --argjson provider "$provider" '$provider.tags // {}')"
   else
     >&2 echo "ERROR: Can't find Secret d8-provider-cluster-configuration in Namespace kube-system"
     exit 1

@@ -4,9 +4,9 @@ resource "aws_vpc" "kube" {
   cidr_block = var.cidr_block
   enable_dns_hostnames = true
 
-  tags = {
+  tags = merge(var.tags, {
     Name = var.prefix
-  }
+  })
 }
 
 data "aws_vpc" "kube" {

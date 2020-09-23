@@ -37,6 +37,14 @@ spec:
     # This is mandatory as the safety controller uses this tag to identify VMs created by by this controller.
     kubernetes.io/cluster/{{ .Values.global.discovery.clusterUUID }}: "1"
     kubernetes.io/role/{{ .Values.global.discovery.clusterUUID }}: "1"
+{{ $effectiveAdditionalTags := .Values.nodeManager.internal.cloudProvider.aws.tags }}
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" }}
+  {{-  $effectiveAdditionalTags = merge .nodeGroup.instanceClass.additionalTags $effectiveAdditionalTags }}
+{{- end }}
+{{- range $k, $v := $effectiveAdditionalTags }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+
   blockDevices:
   - ebs:
       volumeSize: {{ .nodeGroup.instanceClass.diskSizeGb | default 20 }}

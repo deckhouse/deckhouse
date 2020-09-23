@@ -52,3 +52,5 @@ cloudProviderAws:
         - ["id1", "id2"]
     loadBalancerSecurityGroup: mylbsecgroupid
     keyName: mykeyname
+    tags:
+      aaa: aaa

@@ -43,6 +43,9 @@ title: "Модуль cloud-provider-aws"
 * `additionalSecurityGroups` — дополнительный список security groups, которые будут добавлены на заказанные instances с данными InstanceClass.
     * Формат — массив строк.
     * Опциональный параметр.
+* `additionalTags` — дополнительные теги, которые будут присвоены созданным инстансам в AWS.
+    * Формат — словарь.
+    * Опциональный параметр.
 
 #### Пример AWSInstanceClass
 

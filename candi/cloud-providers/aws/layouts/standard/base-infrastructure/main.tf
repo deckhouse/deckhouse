@@ -3,6 +3,7 @@ module "vpc" {
   prefix = local.prefix
   existing_vpc_id = local.existing_vpc_id
   cidr_block = local.vpc_network_cidr
+  tags = local.tags
 }
 
 module "security-groups" {
@@ -10,6 +11,7 @@ module "security-groups" {
   prefix = local.prefix
   cluster_uuid = var.clusterUUID
   vpc_id = module.vpc.id
+  tags = local.tags
 }
 
 data "aws_availability_zones" "available" {}
@@ -26,11 +28,11 @@ resource "aws_subnet" "kube_public" {
   vpc_id                  = module.vpc.id
   map_public_ip_on_launch = true
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${local.prefix}-public-${count.index}"
     "kubernetes.io/cluster/${var.clusterUUID}" = "shared"
     "kubernetes.io/cluster/${local.prefix}" = "shared"
-  }
+  })
 }
 
 resource "aws_subnet" "kube_internal" {
@@ -40,54 +42,54 @@ resource "aws_subnet" "kube_internal" {
   vpc_id                  = module.vpc.id
   map_public_ip_on_launch = false
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${local.prefix}-internal-${count.index}"
     "kubernetes.io/cluster/${var.clusterUUID}" = "shared"
     "kubernetes.io/cluster/${local.prefix}" = "shared"
-  }
+  })
 }
 
 resource "aws_eip" "natgw" {
   vpc = true
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${local.prefix}-natgw"
-  }
+  })
 }
 
 resource "aws_internet_gateway" "kube" {
   vpc_id = module.vpc.id
 
-  tags = {
+  tags = merge(local.tags, {
     Name = local.prefix
-  }
+  })
 }
 
 resource "aws_nat_gateway" "kube" {
   subnet_id = aws_subnet.kube_public[0].id
   allocation_id = aws_eip.natgw.id
 
-  tags = {
+  tags = merge(local.tags, {
     Name = local.prefix
-  }
+  })
 }
 
 resource "aws_route_table" "kube_internal" {
   vpc_id = module.vpc.id
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${local.prefix}-internal"
     "kubernetes.io/cluster/${var.clusterUUID}" = "shared"
     "kubernetes.io/cluster/${local.prefix}" = "shared"
-  }
+  })
 }
 
 resource "aws_route_table" "kube_public" {
   vpc_id = module.vpc.id
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${local.prefix}-public"
-  }
+  })
 }
 
 resource "aws_route" "internet_access_internal" {
@@ -131,6 +133,8 @@ resource "aws_iam_role" "node" {
     ]
   }
   EOF
+
+  tags = local.tags
 }
 
 resource "aws_iam_role_policy" "node" {
@@ -165,7 +169,7 @@ resource "aws_key_pair" "ssh" {
   key_name = local.prefix
   public_key = var.providerClusterConfiguration.sshPublicKey
 
-  tags = {
+  tags = merge(local.tags, {
     Cluster = local.prefix
-  }
+  })
 }

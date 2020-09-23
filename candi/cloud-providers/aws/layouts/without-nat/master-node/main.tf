@@ -10,4 +10,5 @@ module "master-node" {
   additional_security_groups = local.additional_security_groups
   cloud_config = var.cloudConfig
   zones = local.zones
+  tags = local.tags
 }
