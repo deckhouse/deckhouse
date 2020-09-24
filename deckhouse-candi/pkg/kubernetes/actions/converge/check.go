@@ -94,7 +94,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 	nodesState, err := GetNodesStateFromCluster(kubeCl)
 	if err != nil {
 		allErrs = multierror.Append(allErrs, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err))
-		return nil, allErrs.ErrorOrNil()
+		return &statistics, allErrs.ErrorOrNil()
 	}
 
 	var nodeGroupsWithStateInCluster []string
