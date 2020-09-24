@@ -18,6 +18,7 @@ title: Cloud provider - Yandex
   * `serviceAccountJSON` — JSON, выдаваемый [yc iam key create](#права)
 * `masterNodeGroup` — спеки для описания NG мастера.
   * `replicas` — сколько мастер-узлов создать.
+  * `zones` — узлы будут создаваться только в перечисленных зонах.
   * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`. Допустимые параметры:
     * `cores`
     * `memory`
@@ -26,10 +27,10 @@ title: Cloud provider - Yandex
       * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
-    * `zones` — узлы будут создаваться только в перечисленных зонах.
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
+  * `zones` — узлы будут создаваться только в перечисленных зонах.
   * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`. Допустимые параметры:
     * `cores`
     * `memory`
@@ -39,7 +40,6 @@ title: Cloud provider - Yandex
       * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
-    * `zones` — узлы будут создаваться только в перечисленных зонах.
 * `nodeNetworkCIDR` — данная подсеть будет разделена на **три** равных части и использована для создания подсетей в трёх зонах Yandex.Cloud.
 * `existingNetworkID` — существующей VPC Network.
 * `dhcpOptions` — список DHCP опций, которые будут установлены на все подсети.
@@ -65,6 +65,9 @@ provider:
     {"test": "test"}
 masterNodeGroup:
   replicas: 1
+  zones:
+  - ru-central1-a
+  - ru-central1-b
   instanceClass:
     cores: 4
     memory: 8192
@@ -73,12 +76,11 @@ masterNodeGroup:
     - "198.51.100.5"
     - "Auto"
     externalSubnetID: tewt243tewsdf
-    zones:
-    - ru-central1-a
-    - ru-central1-b
 nodeGroups:
 - name: khm
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
@@ -88,8 +90,6 @@ nodeGroups:
     - "198.51.100.5"
     - "Auto"
     externalSubnetID: tewt243tewsdf
-    zones:
-    - ru-central1-a
 sshKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: tewt243tewsdf

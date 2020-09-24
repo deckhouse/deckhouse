@@ -18,6 +18,7 @@ variable "cloudConfig" {
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
+  mng = var.providerClusterConfiguration.masterNodeGroup
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
   cores = local.master_instance_class.cores
   memory = local.master_instance_class.memory / 1024
