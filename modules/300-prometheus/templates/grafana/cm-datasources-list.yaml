@@ -13,6 +13,10 @@ data:
         orgId: 1
       - name: trickster-longterm
         orgId: 1
+{{- if eq (int .Values.prometheus.longtermRetentionDays) 0 }}
+      - name: longterm
+        orgId: 1
+{{- end }}
 {{- if (include "helm_lib_ha_enabled" .) }}
       - name: main-0
         orgId: 1
@@ -29,6 +33,7 @@ data:
        isDefault: true
        jsonData:
          timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+{{- if ne (int .Values.prometheus.longtermRetentionDays) 0 }}
      - name: longterm
        type: prometheus
        access: direct
@@ -37,6 +42,7 @@ data:
        version: 1
        jsonData:
          timeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
+{{- end }}
 {{- if (include "helm_lib_ha_enabled" .) }}
      - name: main-uncached-0
        type: prometheus
