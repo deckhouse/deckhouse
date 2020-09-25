@@ -2,14 +2,14 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
@@ -20,36 +20,36 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: terraform-manager
+  name: terraform-state-exporter
 subjects:
 - kind: ServiceAccount
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:terraform-manager:rbac-proxy
-{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-manager")) | indent 2 }}
+  name: d8:terraform-manager:terraform-state-exporter:rbac-proxy
+{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:rbac-proxy
 subjects:
 - kind: ServiceAccount
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: d8:terraform-manager
+  name: d8:terraform-manager:terraform-state-exporter
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
@@ -60,14 +60,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: d8:terraform-manager
+  name: d8:terraform-manager:terraform-state-exporter
   namespace: kube-system
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: d8:terraform-manager
+  name: d8:terraform-manager:terraform-state-exporter
 subjects:
 - kind: ServiceAccount
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
