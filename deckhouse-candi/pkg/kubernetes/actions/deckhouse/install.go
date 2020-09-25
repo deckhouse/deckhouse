@@ -3,6 +3,7 @@ package deckhouse
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/iancoleman/strcase"
@@ -223,6 +224,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			},
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Services("kube-system").Create(manifest.(*apiv1.Service))
+				if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
+					log.InfoLn("Service for DNS already exists. Skip!")
+					return nil
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
