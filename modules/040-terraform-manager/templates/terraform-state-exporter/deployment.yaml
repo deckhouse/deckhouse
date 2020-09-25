@@ -3,14 +3,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-manager")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: terraform-manager
+    name: terraform-state-exporter
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -18,20 +18,20 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-manager")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "terraform-state-exporter")) | indent 2 }}
 spec:
 {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}
-      app: terraform-manager
+      app: terraform-state-exporter
   template:
     metadata:
       labels:
         module: {{ $.Chart.Name }}
-        app: terraform-manager
+        app: terraform-state-exporter
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
@@ -39,9 +39,9 @@ spec:
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "terraform-manager")) | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: terraform-manager
+      serviceAccountName: terraform-state-exporter
       containers:
-      - name: terraform-manager
+      - name: exporter
         args:
         - "terraform"
         - "converge-exporter"

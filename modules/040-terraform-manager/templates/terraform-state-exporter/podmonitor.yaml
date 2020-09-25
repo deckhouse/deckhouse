@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: terraform-manager
+  name: terraform-state-exporter
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
@@ -25,7 +25,7 @@ spec:
       action: labeldrop
   selector:
     matchLabels:
-      app: terraform-manager
+      app: terraform-state-exporter
   namespaceSelector:
     matchNames:
     - d8-system

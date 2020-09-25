@@ -260,6 +260,7 @@ func objectRBACPlacementRole(kind string, m types.Module, object storage.StoreOb
 		)
 		localPrefix := strings.Join(parts, ":")
 		globalPrefix := fmt.Sprintf("%s:%s", m.Name, strings.Join(parts, ":"))
+		systemPrefix := fmt.Sprintf("d8:%s", globalPrefix)
 
 		if strings.HasPrefix(objectName, localPrefix) {
 			if namespace != m.Namespace {
@@ -268,7 +269,7 @@ func objectRBACPlacementRole(kind string, m types.Module, object storage.StoreOb
 					object.Identity(),
 					namespace,
 					"%s with prefix %q should be deployed in namespace %q",
-					kind, globalPrefix, m.Namespace,
+					kind, localPrefix, m.Namespace,
 				)
 			}
 		} else if strings.HasPrefix(objectName, globalPrefix) {
@@ -279,6 +280,16 @@ func objectRBACPlacementRole(kind string, m types.Module, object storage.StoreOb
 					namespace,
 					"%s with prefix %q should be deployed in namespace \"d8-system\" or \"d8-monitoring\"",
 					kind, globalPrefix,
+				)
+			}
+		} else if strings.HasPrefix(objectName, systemPrefix) {
+			if !isSystemNamespace(namespace) {
+				return errors.NewLintRuleError(
+					"MANIFEST053",
+					object.Identity(),
+					namespace,
+					"%s with prefix %q should be deployed in namespace \"default\" or \"kube-system\"",
+					kind, systemPrefix,
 				)
 			}
 		} else {

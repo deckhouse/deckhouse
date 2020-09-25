@@ -1,0 +1,243 @@
+- name: d8.terraform-manager.terraform-state-exporter.availability
+  rules:
+
+  - alert: D8TerraformStateExporterTargetDown
+    expr: max by (job) (up{job="terraform-state-exporter"} == 0)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      plk_ignore_labels: "job"
+      description: >
+        To get more details:
+
+        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter`
+        or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+      summary: Prometheus can't scrape terraform-state-exporter
+
+  - alert: D8TerraformStateExporterTargetAbsent
+    expr: absent(up{job="terraform-state-exporter"}) == 1
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_ignore_labels: "job"
+      plk_grouped_by__main: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      description: >
+        To get more details:
+
+        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter`
+        or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+      summary: Prometheus has no `terraform-state-exporter` target
+
+  - alert: D8TerraformStateExporterPodIsNotReady
+    expr: |
+      min by (pod) (
+        kube_controller_pod{namespace="d8-system", controller_type="Deployment", controller_name="terraform-state-exporter"}
+        * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-system"}
+      ) != 1
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_labels_as_annotations: "pod"
+      plk_grouped_by__main: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Pod terraform-state-exporter is not Ready
+      description: |
+        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+
+        Pease, check:
+        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
+        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+
+  - alert: D8TerraformStateExporterPodIsNotRunning
+    expr: |
+      max by (namespace, pod, phase) (
+        kube_controller_pod{namespace="d8-system", controller_type="Deployment", controller_name="terraform-state-exporter"}
+        * on (pod) group_right() kube_pod_status_phase{namespace="d8-system",phase!="Running"}
+        > 0
+      )
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterUnavailable,tier=cluster,prometheus=deckhouse"
+      summary: Pod terraform-state-exporter is not Running
+      description: |
+        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+
+        Pease, check:
+        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
+        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+
+  - alert: D8TerraformStateExporterUnavailable
+    expr: count(ALERTS{alertname=~"D8TerraformStateExporterTargetDown|D8TerraformStateExporterTargetAbsent|D8TerraformStateExporterPodIsNotRunning|D8TerraformStateExporterPodIsNotReady", alertstate="firing"})
+    labels:
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      summary: Terraform-state-exporter is not working
+      description: |
+        Terraform-state-exporter is not working. To reach the problem, check grouped alerts.
+
+- name: d8.terraform-manager.terraform-state-exporter.checks
+  rules:
+
+  - alert: D8TerraformStateExporterHasErrors
+    expr: |
+      increase(candi_converge_exporter_errors{job="terraform-state-exporter"}[5m]) == 3
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Errors occurred while terraform-state-exporter working.
+
+        Check pods logs to get more details: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+      summary: Terraform-state-exporter has errors
+
+  - alert: D8TerraformStateExporterClusterStateChanged
+    expr: |
+      max by(job) (candi_converge_cluster_status{status="changed", job="terraform-state-exporter"} == 1)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Real Kubernetes cluster state and Terraform state differ.
+
+        It's important to make them equal.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-state-exporter cluster state changed
+
+  - alert: D8TerraformStateExporterNodeStateChanged
+    expr: |
+      max by(node_group, name) (candi_converge_node_status{status="changed", job="terraform-state-exporter"} == 1)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Real Node "{{ $labels.name }}" state and Terraform state differ.
+
+        It's important to make them equal.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-state-exporter node state changed
+
+  - alert: D8TerraformStateExporterClusterStateError
+    expr: |
+      max by(job) (candi_converge_cluster_status{status="error", job="terraform-state-exporter"} == 1)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
+
+        Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-state-exporter cluster state error
+
+  - alert: D8TerraformStateExporterNodeStateError
+    expr: |
+      max by(node_group, name) (candi_converge_node_status{status="error", job="terraform-state-exporter"} == 1)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Terraform-state-exporter can't check difference between Node "{{ $labels.name }}" state and Terraform state.
+
+        Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-state-exporter node state error
+
+  - alert: D8TerraformStateExporterNodeGroupHasProblemWithReplicas
+    expr: |
+      max by(name, status) (candi_converge_node_group_status{status!="ok", job="terraform-state-exporter"} == 1)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        NodeGroup "{{ $labels.name }}" has {{ $labels.status }} amount of replicas.
+
+        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+      summary: Terraform-state-exporter node state error
+
+  - alert: D8TerraformStateExporterChecksFailed
+    expr: count(ALERTS{alertname=~"D8TerraformStateExporterHasErrors|D8TerraformStateExporterClusterStateChanged|D8TerraformStateExporterNodeStateChanged||D8TerraformStateExporterClusterStateError|D8TerraformStateExporterNodeStateError|D8TerraformStateExporterNodeGroupHasProblemWithReplicas", alertstate="firing"})
+    labels:
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      description: |
+        Terraform-state-exporter found the difference between real Kubernetes cluster state and Terraform state.
+
+        To reach the problem, check grouped alerts.
+      summary: Terraform-state-exporter found the difference between real Kubernetes cluster state and Terraform state.
