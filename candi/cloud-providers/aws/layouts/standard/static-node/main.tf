@@ -9,4 +9,5 @@ module "static-node" {
   root_volume_type = local.root_volume_type
   additional_security_groups = local.additional_security_groups
   cloud_config = var.cloudConfig
+  zones = local.zones
 }
