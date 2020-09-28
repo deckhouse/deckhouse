@@ -12,6 +12,7 @@ import (
 	"flant/deckhouse-candi/pkg/kubernetes/client"
 	"flant/deckhouse-candi/pkg/log"
 	"flant/deckhouse-candi/pkg/terraform"
+	"flant/deckhouse-candi/pkg/util/retry"
 )
 
 const masterNodeGroupName = "master"
@@ -78,12 +79,19 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 	err = log.Process("converge", "Gather Nodes Terraform state", func() error {
 		nodesState, err = GetNodesStateFromCluster(kubeCl)
 		if err != nil {
-			return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
+			return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+
+	if len(nodesState) == 0 {
+		if !retry.AskForConfirmation("Cluster has no nodes created by Terraform. Do you want to continue and create nodes") {
+			log.InfoLn("Aborted")
+			return nil
+		}
 	}
 
 	var nodeGroupsWithStateInCluster []string
