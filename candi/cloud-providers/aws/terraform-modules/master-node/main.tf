@@ -3,13 +3,28 @@ locals {
   az_count = length(data.aws_availability_zones.available.names)
 }
 
+data "aws_subnet" "kube" {
+  count = local.az_count
+  tags = {
+    Name = "${var.prefix}-${var.associate_public_ip_address ? "public" : "internal" }-${count.index}"
+  }
+}
+
+locals {
+  zone_to_subnet_id_map = {
+    for subnet in data.aws_subnet.kube:
+      subnet.availability_zone => subnet.id
+  }
+  zone = element(local.zones, var.node_index)
+}
+
 resource "aws_ebs_volume" "kubernetes_data" {
   size            = 150 # To achieve io rate burst limit 450iops, average io rate for etcd is 300iops
   type            = "gp2"
   tags = {
     Name = "${var.prefix}-kubernetes-data-${var.node_index}"
   }
-  availability_zone = data.aws_availability_zones.available.names[var.node_index % local.az_count]
+  availability_zone = local.zone
 }
 
 resource "aws_volume_attachment" "kubernetes_data" {
@@ -17,12 +32,6 @@ resource "aws_volume_attachment" "kubernetes_data" {
   skip_destroy = true
   volume_id   = aws_ebs_volume.kubernetes_data.id
   instance_id = aws_instance.master.id
-}
-
-data "aws_subnet" "kube" {
-  tags = {
-    Name = "${var.prefix}-${var.associate_public_ip_address ? "public" : "internal" }-${var.node_index % local.az_count}"
-  }
 }
 
 data "aws_security_group" "ssh-accessible" {
@@ -37,7 +46,7 @@ resource "aws_instance" "master" {
   ami             = var.node_group.instanceClass.ami
   instance_type   = var.node_group.instanceClass.instanceType
   key_name        = var.prefix
-  subnet_id       = data.aws_subnet.kube.id
+  subnet_id       = local.zone_to_subnet_id_map[local.zone]
   vpc_security_group_ids = concat([data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id], var.additional_security_groups)
   source_dest_check = false
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)

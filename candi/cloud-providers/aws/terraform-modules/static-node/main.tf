@@ -4,9 +4,17 @@ locals {
 }
 
 data "aws_subnet" "kube" {
+  count = local.az_count
   tags = {
-    Name = "${var.prefix}-${var.associate_public_ip_address ? "public" : "internal" }-${var.node_index % local.az_count}"
+    Name = "${var.prefix}-${var.associate_public_ip_address ? "public" : "internal" }-${count.index}"
   }
+}
+locals {
+  zone_to_subnet_id_map = {
+    for subnet in data.aws_subnet.kube:
+       subnet.availability_zone => subnet.id
+  }
+  zone = element(local.zones, var.node_index)
 }
 
 data "aws_security_group" "ssh-accessible" {
@@ -21,7 +29,7 @@ resource "aws_instance" "node" {
   ami             = var.node_group.instanceClass.ami
   instance_type   = var.node_group.instanceClass.instanceType
   key_name        = var.prefix
-  subnet_id       = data.aws_subnet.kube.id
+  subnet_id       = local.zone_to_subnet_id_map[local.zone]
   vpc_security_group_ids = concat([data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id], var.additional_security_groups)
   source_dest_check = false
   associate_public_ip_address = var.associate_public_ip_address

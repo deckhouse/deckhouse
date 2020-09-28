@@ -34,3 +34,11 @@ variable "additional_security_groups" {
   type = list(string)
   default = []
 }
+
+variable "zones" {
+  type = list(string)
+}
+
+locals {
+  zones = sort(distinct(var.zones))
+}

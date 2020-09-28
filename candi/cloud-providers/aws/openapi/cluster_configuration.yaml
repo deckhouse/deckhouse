@@ -38,6 +38,10 @@ apiVersions:
                 description: Instance disk size in gigabytes.
                 example: 20
                 type: integer
+          zones:
+            type: array
+            items:
+              type: string
       nodeGroups:
         type: array
         items:
@@ -91,6 +95,10 @@ apiVersions:
                   description: Instance disk size in gigabytes.
                   example: 20
                   type: integer
+            zones:
+              type: array
+              items:
+                type: string
       layout:
         type: string
       standard:

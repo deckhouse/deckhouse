@@ -23,6 +23,8 @@ variable "clusterUUID" {
   type = string
 }
 
+data "aws_availability_zones" "available" {}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   node_groups = lookup(var.providerClusterConfiguration, "nodeGroups", [])
@@ -30,4 +32,5 @@ locals {
   root_volume_size = lookup(local.node_group.instanceClass, "diskSizeGb", 20)
   root_volume_type = lookup(local.node_group.instanceClass, "diskType", "gp2")
   additional_security_groups = lookup(local.node_group.instanceClass, "additionalSecurityGroups", [])
+  zones = lookup(local.node_group, "zones", data.aws_availability_zones.available.names)
 }
