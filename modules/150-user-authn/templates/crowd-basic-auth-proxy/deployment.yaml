@@ -58,10 +58,15 @@ spec:
         args:
         - --listen=$(POD_IP):7332
         - --cert-path=/etc/certs
+        - --api-server-url=https://kubernetes.default
         - --crowd-application-login={{ $crowd_config.clientID }}
         - --crowd-application-password={{ $crowd_config.clientSecret }}
         - --crowd-base-url={{ $crowd_config.baseURL }}
-        - --api-server-url=https://kubernetes.default
+  {{- if $crowd_config.groups }}
+    {{- range $group := $crowd_config.groups }}
+        - --crowd-allowed-group={{ $group }}
+    {{- end }}
+  {{- end }}
         ports:
         - containerPort: 7332
         env:
