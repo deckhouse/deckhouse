@@ -321,8 +321,8 @@ git:
     setup:
     - "**/*.go"
     - go-build.sh
-- add: /deckhouse-candi
-  to: /deckhouse-candi
+- add: /candictl
+  to: /candictl
   excludePaths:
   - development
   stageDependencies:
@@ -377,11 +377,11 @@ ansible:
       chdir: /deckhouse-controller
 
 ---
-artifact: deckhouse-candi
+artifact: candictl
 fromImage: base-for-go
 git:
-  - add: /deckhouse-candi
-    to: /deckhouse-candi
+  - add: /candictl
+    to: /candictl
     stageDependencies:
       install:
         - go.mod
@@ -399,12 +399,12 @@ ansible:
   install:
     - shell: go mod download
       args:
-        chdir: /deckhouse-candi
+        chdir: /candictl
 
   setup:
-    - command: /deckhouse-candi/go-build.sh
+    - command: /candictl/go-build.sh
       args:
-        chdir: /deckhouse-candi
+        chdir: /candictl
 
 ---
 artifact: jq
@@ -539,9 +539,9 @@ ansible:
 image: dev/install
 fromImage: dev
 import:
-- artifact: deckhouse-candi
-  add: /deckhouse-candi/deckhouse-candi
-  to: /usr/bin/deckhouse-candi
+- artifact: candictl
+  add: /candictl/candictl
+  to: /usr/bin/candictl
   before: setup
 - artifact: terraform-provider-yandex
   add: /terraform-provider-yandex/terraform-provider-yandex
@@ -550,9 +550,9 @@ import:
 ansible:
   beforeInstall:
 
-  - name: "Add deckhouse-candi completion"
+  - name: "Add candictl completion"
     shell: |
-      echo 'eval "$(deckhouse-candi --completion-script-bash)"' >> /root/.bashrc
+      echo 'eval "$(candictl --completion-script-bash)"' >> /root/.bashrc
 
   - name: "Install dependencies"
     apk:

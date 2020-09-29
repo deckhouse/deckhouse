@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"flant/deckhouse-candi/pkg/config"
+	"flant/candictl/pkg/config"
 
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/values_store"

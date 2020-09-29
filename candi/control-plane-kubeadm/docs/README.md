@@ -11,9 +11,9 @@ Go-шаблоны для подготовки конфигурации kubeadm.
 
 ### Как скомпилировать control-plane-kubeadm?
 
-Скомпилировать control-plane-kubeadm можно воспользовавшись утилитой deckhouse-candi.
+Скомпилировать control-plane-kubeadm можно воспользовавшись утилитой candictl.
 ```bash
-deckhouse-candi render kubeadm-config --config=/config.yaml
+candictl render kubeadm-config --config=/config.yaml
 ```
 
 Пример `config.yaml`:

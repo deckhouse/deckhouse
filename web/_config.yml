@@ -55,7 +55,7 @@ defaults:
     values:
       sidebar: candi
   - scope:
-      path: "deckhouse-candi"
+      path: "candictl"
       type: "pages"
     values:
       sidebar: candi

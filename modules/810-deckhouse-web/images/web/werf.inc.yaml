@@ -85,7 +85,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['docs','candi/**/docs', 'deckhouse-candi/**/*.md','deckhouse-controller/**/*.md']
+  includePaths: ['docs','candi/**/docs', 'candictl/**/*.md','deckhouse-controller/**/*.md']
   excludePaths: ['_not_actual/']
 - add: /modules
   to: /srv/jekyll-data/modules

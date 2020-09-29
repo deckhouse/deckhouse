@@ -144,7 +144,7 @@
         Real Kubernetes cluster state and Terraform state differ.
 
         It's important to make them equal.
-        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+        To converge state of Kubernetes cluster use `candictl converge` command.
       summary: Terraform-state-exporter cluster state changed
 
   - alert: D8TerraformStateExporterNodeStateChanged
@@ -164,7 +164,7 @@
         Real Node "{{ $labels.name }}" state and Terraform state differ.
 
         It's important to make them equal.
-        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+        To converge state of Kubernetes cluster use `candictl converge` command.
       summary: Terraform-state-exporter node state changed
 
   - alert: D8TerraformStateExporterClusterStateError
@@ -184,7 +184,7 @@
         Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
 
         Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
-        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+        To converge state of Kubernetes cluster use `candictl converge` command.
       summary: Terraform-state-exporter cluster state error
 
   - alert: D8TerraformStateExporterNodeStateError
@@ -204,7 +204,7 @@
         Terraform-state-exporter can't check difference between Node "{{ $labels.name }}" state and Terraform state.
 
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
-        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+        To converge state of Kubernetes cluster use `candictl converge` command.
       summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterNodeGroupHasProblemWithReplicas
@@ -223,7 +223,7 @@
       description: |
         NodeGroup "{{ $labels.name }}" has {{ $labels.status }} amount of replicas.
 
-        To converge state of Kubernetes cluster use `deckhouse-candi converge` command.
+        To converge state of Kubernetes cluster use `candictl converge` command.
       summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterChecksFailed

@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse
 go 1.13
 
 require (
-	flant/deckhouse-candi v0.0.0 // use non-existent version for replace
+	flant/candictl v0.0.0 // use non-existent version for replace
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-beta.6.0.20200903110707-96173c9d9321 // branch: master
@@ -35,7 +35,7 @@ require (
 
 //replace github.com/flant/addon-operator => ../addon-operator
 
-replace flant/deckhouse-candi => ./deckhouse-candi
+replace flant/candictl => ./candictl
 
 // TODO remove when https://github.com/helm/helm/pull/8371 will be merged and released.
 //replace helm.sh/helm/v3 => github.com/diafour/helm/v3 v3.2.5-0.20200630114452-b734742e3342 // branch: fix_tpl_performance_3_2_4

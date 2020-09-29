@@ -1,9 +1,9 @@
 ---
-artifact: deckhouse-candi
+artifact: candictl
 from: golang:1.13-alpine3.11
 git:
-- add: /deckhouse-candi
-  to: /deckhouse-candi
+- add: /candictl
+  to: /candictl
   stageDependencies:
     install:
     - go.mod
@@ -21,21 +21,21 @@ ansible:
   install:
   - shell: go mod download
     args:
-      chdir: /deckhouse-candi
+      chdir: /candictl
 
   setup:
-  - command: /deckhouse-candi/go-build.sh
+  - command: /candictl/go-build.sh
     args:
-      chdir: /deckhouse-candi
+      chdir: /candictl
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: alpine:3.11
 docker:
-  ENTRYPOINT: ["deckhouse-candi"]
+  ENTRYPOINT: ["candictl"]
 import:
-- artifact: deckhouse-candi
-  add: /deckhouse-candi/deckhouse-candi
-  to: /usr/bin/deckhouse-candi
+- artifact: candictl
+  add: /candictl/candictl
+  to: /usr/bin/candictl
   before: setup
 git:
 - add: /

@@ -199,7 +199,7 @@ Deckhouse устанавливает только включённые [моду
 
 ### Разворачивание кластера и установка Deckhouse:
 
-Разворачивание кластера производится при помощи [специального приложения]({{ site.baseurl }}/candi/deckhouse-candi.html) `deckhouse-candi` (или installer).
+Разворачивание кластера производится при помощи [специального приложения]({{ site.baseurl }}/candi/candictl.html) `candictl` (или installer).
 Installer принимает на вход единственный YAML-файл, в котором описана конфигурация для развертывания кластера.
 
 {% raw %}
@@ -234,7 +234,7 @@ deckhouse:
 
 Пример команды запуска установки кластера:
 ```bash
-deckhouse-candi bootstrap \
+candictl bootstrap \
   --ssh-user=ubuntu \
   --ssh-agent-private-keys=~/.ssh/tfadm-id-rsa \
   --ssh-bastion-user=y.gagarin \
@@ -247,11 +247,11 @@ deckhouse-candi bootstrap \
 
 #### Варианты установки Deckhouse:
 Сейчас Deckhouse поддерживает 4 варианта установки:
-* **Установка в baremetal-кластера** - deckhouse-candi подключается к подготовленному серверу по SSH, устанавливает зависимости, последнее ядро linux, docker и control-plane, после чего устанавливает Deckhouse. 
+* **Установка в baremetal-кластера** - candictl подключается к подготовленному серверу по SSH, устанавливает зависимости, последнее ядро linux, docker и control-plane, после чего устанавливает Deckhouse. 
    * В конфигурации необходимо указать `InitConfiguration` и `ClusterConfiguration` с `clusterType: Static`
    * Выбрать bundle - `Default`
 
-* **Установка в облако** - deckhouse-candi при помощи Terraform в облаке создает виртуальную машину, после чего подключается к ней по SSH и выполняет те же действия, что и для baremetal-кластера.
+* **Установка в облако** - candictl при помощи Terraform в облаке создает виртуальную машину, после чего подключается к ней по SSH и выполняет те же действия, что и для baremetal-кластера.
    * В конфигурации необходимо указать `InitConfiguration` и `ClusterConfiguration` с `clusterType: Cloud`
    * Так же конфигурации необходимо указать секции, специфичные для вашего облачного провайдера (дл OpenStack это будут `OpenStackInitConfiguration` и `OpenStackClusterConfiguration`)
    * Выбрать bundle - `Default`
@@ -260,7 +260,7 @@ deckhouse-candi bootstrap \
    * В конфигурации необходимо указать - TODO
    * Выбрать bundle - `Managed`
 
-* _Coming_Soon_: **Установка в уже существующий кластер** - deckhouse-candi подключается к уже работающему Kubernetes-кластеру и устанавливает Deckhouse. 
+* _Coming_Soon_: **Установка в уже существующий кластер** - candictl подключается к уже работающему Kubernetes-кластеру и устанавливает Deckhouse. 
    * В конфигурации необходимо указать - TODO
    * Выбрать bundle - `Minimal`
 

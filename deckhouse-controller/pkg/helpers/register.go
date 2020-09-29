@@ -3,7 +3,7 @@ package helpers
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	candiapp "flant/deckhouse-candi/cmd/deckhouse-candi/commands"
+	candiapp "flant/candictl/cmd/candictl/commands"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
 
@@ -79,7 +79,7 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		})
 	}
 
-	// deckhouse-candi parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
+	// candictl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
 	candiapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
 	candiapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand)
 }

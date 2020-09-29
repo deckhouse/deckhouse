@@ -151,7 +151,7 @@ title: "Модуль monitoring-kubernetes-control-plane"
     * `authenticationMethod` — как аутентифицироваться.
       * Варианты:
         * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
-        * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [deckhouse-candi]({{ site.baseurl }}/candi/deckhouse-candi.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
+        * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [candictl]({{ site.baseurl }}/candi/candictl.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
       * Обязательный пераметр если в системе нет секрета `kube-system/d8-pki`.
     * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр. Секрет должен содержать два ключа:
       * `client.crt` — сертификат.
@@ -171,7 +171,7 @@ title: "Модуль monitoring-kubernetes-control-plane"
       * Варианты:
         * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
         * `HostPathCertificate` — использовать сертификат и ключ, которые уже лежат на ФС ноды.
-        * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [deckhouse-candi]({{ site.baseurl }}/candi/deckhouse-candi.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
+        * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [candictl]({{ site.baseurl }}/candi/candictl.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
       * По-умолчанию — `HostPathCertificate`.
     * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр если `authenticationMethod` == `Certificate`. Секрет должен содержать два ключа:
       * `client.crt` — сертификат.
@@ -206,7 +206,7 @@ title: "Модуль monitoring-kubernetes-control-plane"
       * `authenticationMethod` — как аутентифицироваться.
         * Варианты:
           * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
-          * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [deckhouse-candi]({{ site.baseurl }}/candi/deckhouse-candi.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
+          * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [candictl]({{ site.baseurl }}/candi/candictl.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
         * Обязательный пераметр если в системе нет секрета `kube-system/d8-pki`.
       * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр. Секрет должен содержать два ключа:
         * `client.crt` — сертификат.
@@ -223,7 +223,7 @@ title: "Модуль monitoring-kubernetes-control-plane"
         * Варианты:
           * `Certificate` — указать кастомный сертификат. См. `certificateSecret` ниже.
           * `HostPathCertificate` — использовать сертификат и ключ, которые уже лежат на ФС ноды.
-          * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [deckhouse-candi]({{ site.baseurl }}/candi/deckhouse-candi.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
+          * _D8PKI_ — использовать сертификаты из секрета `kube-system/d8-pki`, который генерируется при бутстрапе кластера средствами [candictl]({{ site.baseurl }}/candi/candictl.html). Данный вариант не предназначен для ручного использования, только для автонастройки.
         * Обязательный параметр если в системе нет секрета `kube-system/d8-pki`.
       * `certificateSecret` — имя секрета в namespace `d8-system`, где лежит кастомный сертификат. Обязательный параметр если `authenticationMethod` == `Certificate`. Секрет должен содержать два ключа:
         * `client.crt` — сертификат.

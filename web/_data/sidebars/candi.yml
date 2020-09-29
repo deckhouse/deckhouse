@@ -7,7 +7,7 @@ entries:
       - title: Описание
         url: /candi/
       - title: Deckhouse CandI
-        url: /candi/deckhouse-candi.html
+        url: /candi/candictl.html
       - title: Фреймфорк bashible
         url: /candi/bashible/
       - title: Control Plane Kubeadm
