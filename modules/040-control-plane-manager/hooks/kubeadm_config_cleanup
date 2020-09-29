@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: cm_kubeadm_config
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kubeadm-config]
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.cm_kubeadm_config.0 ; then
+    >&2 echo "CM kubeadm-config found, deleting."
+    kubernetes::delete_if_exists "kube-system" "configmap/kubeadm-config"
+  fi
+}
+
+hook::run "$@"
