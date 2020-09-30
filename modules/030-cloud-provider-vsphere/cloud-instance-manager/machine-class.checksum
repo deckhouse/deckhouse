@@ -11,6 +11,9 @@
   {{- $_ := set $options "additionalNetworks" .nodeGroup.instanceClass.additionalNetworks -}}
 {{- end -}}
 {{- $_ := set $options "datastore" .nodeGroup.instanceClass.datastore -}}
+{{- if hasKey .nodeGroup.instanceClass "disableTimesync" -}}
+  {{- $_ := set $options "disableTimesync" .nodeGroup.instanceClass.disableTimesync -}}
+{{- end -}}
 {{- if hasKey .nodeGroup.instanceClass "runtimeOptions" }}
   {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
     {{- $_ := set $options "runtimeOptions.nestedHardwareVirtualization" .nodeGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization -}}

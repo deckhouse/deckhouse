@@ -24,6 +24,11 @@ spec:
 {{- if or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes }}
   resourcePool: {{ or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes | quote }}
 {{- end }}
+{{- if hasKey .nodeGroup.instanceClass "disableTimesync" }}
+  disableTimesync: {{ .nodeGroup.instanceClass.disableTimesync }}
+{{- else }}
+  disableTimesync: true
+{{- end }}
   clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
   nodeRoleTag: {{ .nodeGroup.name }}-{{ .zoneName }}
   sshKeys:

@@ -67,6 +67,11 @@ spec:
               description: Path to a datastore in which VirtualMachines will be cloned. Relative to the datacenter.
               example: lun-1201
               type: string
+            disableTimesync:
+              description: >
+                Disable time synchronization in Guest VM.
+                Note: this won't disable any NTP daemons running on the guest OS, it only disables time synchronization from ESXi.
+              type: boolean
             resourcePool:
               description: Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
               example: rp-2012

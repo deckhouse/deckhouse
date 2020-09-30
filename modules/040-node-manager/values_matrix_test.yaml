@@ -209,6 +209,7 @@ nodeManager:
             region: myreg
             sshKeys: [key1, key2] # optional
             vmFolderPath: dev/test
+            disableTimesync: false
           - host: myhost.qqq # minimum
             username: myname
             password: pAsSwOrd
