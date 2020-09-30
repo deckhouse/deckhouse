@@ -30,7 +30,7 @@ ansible:
 git:
 - url: https://{{ env "REPO_MCM_USER" }}:{{ env "REPO_MCM_TOKEN" }}@fox.flant.com/sys/deckhouse-mcm.git
   to: /src/
-  tag: 0.27.0-flant.16
+  tag: v0.34.0-flant.3
   stageDependencies:
     install:
     - '**/*'

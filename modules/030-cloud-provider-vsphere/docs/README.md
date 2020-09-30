@@ -34,12 +34,15 @@ title: "Модуль cloud-provider-vsphere"
 * `regionTagCategory`— имя **категории** тэгов, использующихся для идентификации региона (vSphere Datacenter).
     * Формат — string.
     * Опциональный параметр. По-умолчанию `k8s-region`.
-* `zoneTagCategory`: имя **категории** тэгов, использующихся для идентификации зоны (vSphere Cluster).
+* `zoneTagCategory` — имя **категории** тэгов, использующихся для идентификации зоны (vSphere Cluster).
     * Формат — string.
     * Опциональный параметр. По-умолчанию `k8s-zone`.
-* `defaultDatastore`: имя vSphere Datastore, который будет использоваться в качестве default StorageClass.
+* `defaultDatastore` — имя vSphere Datastore, который будет использоваться в качестве default StorageClass.
     * Формат — string.
     * Опциональный параметр. По-умолчанию будет использован лексикографически первый Datastore.
+* `disableTimesync` — отключить ли синхронизацию времени со стороны vSphere. **Внимание!** это не отключит NTP демоны в гостевой ОС, а лишь отключит "подруливание" временем со стороны ESXi.
+    * Формат — bool.
+    * Опциональный параметр. По-умолчанию `true`.
 * `region` — тэг, прикреплённый к vSphere Datacenter, в котором будут происходить все операции: заказ VirtualMachines, размещение их дисков на datastore, подключение к network.
 * `sshKeys` — список public SSH ключей в plain-text формате.
     * Формат — массив строк.
