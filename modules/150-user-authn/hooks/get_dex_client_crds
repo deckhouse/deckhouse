@@ -9,6 +9,7 @@ function __config__() {
    - name: client
      group: main
      keepFullObjectsInMemory: false
+     queue: /modules/$(module::name::kebab_case)
      apiVersion: deckhouse.io/v1alpha1
      kind: DexClient
      jqFilter: |
