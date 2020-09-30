@@ -25,5 +25,12 @@ if ! bb-yum-package? $docker_package; then
   bb-deckhouse-get-disruptive-update-approval
 fi
 
-bb-yum-install $docker_package $docker_cli_package
+# RHEL 7 hack — docker-ce package requires container-selinux >= 2.9 but it doesn't exist in rhel repos.
+container_selinux_package="container-selinux-2.119.2-1.911c772.el7_8"
+. /etc/os-release
+if [[ "${ID}" == "rhel" ]] && ! bb-yum-package? "$container_selinux_package"; then
+  yum install -y "http://mirror.centos.org/centos/7/extras/x86_64/Packages/$container_selinux_package.noarch.rpm"
+fi
+
+bb-yum-install $container_selinux_package $docker_package $docker_cli_package
 {{- end }}
