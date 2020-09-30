@@ -21,6 +21,14 @@ apiVersions:
         properties:
           replicas:
             type: integer
+          zones:
+            type: array
+            items:
+              enum:
+              - ru-central1-a
+              - ru-central1-b
+              - ru-central1-c
+            uniqueItems: true
           instanceClass:
             type: object
             additionalProperties: false
@@ -43,14 +51,6 @@ apiVersions:
                   pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
               externalSubnetID:
                 type: string
-              zones:
-                type: array
-                items:
-                  enum:
-                  - ru-central1-a
-                  - ru-central1-b
-                  - ru-central1-c
-                uniqueItems: true
       nodeGroups:
         type: array
         items:
@@ -61,6 +61,14 @@ apiVersions:
               type: string
             replicas:
               type: integer
+            zones:
+              type: array
+              items:
+                enum:
+                - ru-central1-a
+                - ru-central1-b
+                - ru-central1-c
+              uniqueItems: true
             nodeTemplate:
               properties:
                 labels:
@@ -104,14 +112,6 @@ apiVersions:
                     pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
                 externalSubnetID:
                   type: string
-                zones:
-                  type: array
-                  items:
-                    enum:
-                    - ru-central1-a
-                    - ru-central1-b
-                    - ru-central1-c
-                  uniqueItems: true
       existingNetworkID:
         type: string
       nodeNetworkCIDR:

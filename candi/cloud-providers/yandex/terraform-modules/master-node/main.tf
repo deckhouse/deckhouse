@@ -16,7 +16,7 @@ locals {
     "ru-central1-b" = data.yandex_vpc_subnet.kube_b
     "ru-central1-c" = data.yandex_vpc_subnet.kube_c
   }
-  configured_zones = lookup(local.master_instance_class, "zones", [])
+  configured_zones = lookup(local.mng, "zones", [])
   subnets = length(local.configured_zones) > 0 ? [for z in local.configured_zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
   internal_subnet = element(local.subnets, var.nodeIndex)
 
