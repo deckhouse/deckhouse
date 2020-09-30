@@ -177,4 +177,10 @@ userAuthn:
             applicationDomain: test.example.com
             applicationIngressCertificateSecretName: test-tls
             applicationIngressClassName: not-nginx
+            nodeSelector:
+              testnode: ""
+            tolerations:
+              - key: foo
+                operator: Equal
+                value: bar
           allowAccessToKubernetes: null

@@ -42,7 +42,13 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     - 192.168.0.0/24
     allowedGroups:
     - everyone
-    - admins`)
+    - admins
+    nodeSelector:
+      testnode: ""
+    tolerations:
+    - key: foo
+      operator: Equal
+      value: bar`)
 			hec.ValuesSet("userAuthn.idTokenTTL", "20m")
 			hec.HelmRender()
 		})
@@ -74,6 +80,12 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"testnode": ""}`))
+			Expect(deployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+- key: foo
+  operator: Equal
+  value: "bar"
+`))
 
 			var oauth2proxyArgs []string
 			for _, result := range deployment.Field("spec.template.spec.containers.0.args").Array() {

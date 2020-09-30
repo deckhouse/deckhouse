@@ -60,8 +60,18 @@ spec:
       annotations:
         checksum/config: {{ $crd.credentials | toYaml | b64enc | sha256sum }}
     spec:
+{{- if $crd.spec.nodeSelector }}
+      nodeSelector:
+{{ $crd.spec.nodeSelector | toYaml | indent 8 }}
+{{- else }}
 {{- include "helm_lib_node_selector" (tuple $context "system") | indent 6 }}
+{{- end }}
+{{- if $crd.spec.tolerations }}
+      tolerations:
+{{ $crd.spec.tolerations | toYaml | indent 8 }}
+{{- else }}
 {{- include "helm_lib_tolerations" (tuple $context "system") | indent 6 }}
+{{- end }}
 {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | indent 6 }}
       imagePullSecrets:

@@ -48,6 +48,12 @@ spec:
   applicationDomain: test
   sendAuthorizationHeader: false
   applicationIngressClassName: "nginx"
+  nodeSelector:
+    testnode: ""
+  tolerations:
+  - key: foo
+    operator: Equal
+    value: bar
 `))
 			f.RunHook()
 		})
@@ -63,7 +69,18 @@ spec:
   "spec": {
     "applicationDomain": "test",
     "applicationIngressClassName": "nginx",
-    "sendAuthorizationHeader": false
+    "sendAuthorizationHeader": false,
+    "nodeSelector":
+      {
+        "testnode": ""
+      },
+    "tolerations": [
+      {
+        "key": "foo",
+        "operator": "Equal",
+        "value": "bar"
+      }
+    ]
   },
   "allowAccessToKubernetes": "",
   "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
