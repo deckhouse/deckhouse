@@ -121,6 +121,22 @@ spec:
       kind: D8TestInstanceClass
       name: improper
 `
+		stateNGWrongZones = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: improper
+spec:
+  nodeType: Cloud
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones:
+    - xxx
+`
+
 		stateICProper = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -149,7 +165,7 @@ metadata:
   name: d8-node-manager-cloud-provider
   namespace: kube-system
 data:
-  zones: WyJub3ZhIl0= # ["nova"]
+  zones: WyJhIiwiYiIsImMiXQ== # ["a","b","c"]
 `
 		machineDeployments = `
 ---
@@ -157,7 +173,7 @@ apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
   annotations:
-    zone: aaa
+    zone: a
   labels:
     heritage: deckhouse
   name: proper1-aaa
@@ -167,7 +183,7 @@ apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
   annotations:
-    zone: bbb
+    zone: b
   labels:
     heritage: deckhouse
   name: proper2-bbb
@@ -188,7 +204,7 @@ metadata:
 
 		It("Hook must not fail; zones must be correct", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances.zones").String()).To(MatchJSON(`["aaa","bbb","nova"]`))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances.zones").String()).To(MatchJSON(`["a","b","c"]`))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.cloudInstances.zones").String()).To(MatchJSON(`["a","b"]`))
 		})
 	})
@@ -340,7 +356,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
 				    "instanceClass": null,
@@ -410,7 +428,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
 				    "instanceClass": null,
@@ -472,7 +492,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
 				    "instanceClass": null,
@@ -527,7 +549,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
                     "nodeType": "Cloud",
@@ -600,7 +624,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
                     "nodeType": "Cloud",
@@ -658,7 +684,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
                     "nodeType": "Cloud",
@@ -698,6 +726,66 @@ metadata:
 		})
 	})
 
+	Context("Two proper pairs of NG+IC and a NG with wrong zones", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateNGWrongZones + stateICProper + stateCloudProviderSecret))
+			f.RunHook()
+		})
+
+		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			expectedJSON := `
+				[
+				  {
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper1"
+				      },
+				      "zones": [
+				        "a",
+						"b",
+						"c"
+				      ]
+				    },
+                    "nodeType": "Cloud",
+				    "name": "proper1",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+				  },
+				  {
+				    "cloudInstances": {
+				      "classReference": {
+				        "kind": "D8TestInstanceClass",
+				        "name": "proper2"
+				      },
+				      "zones": [
+				        "a",
+				        "b"
+				      ]
+				    },
+                    "nodeType": "Cloud",
+				    "name": "proper2",
+				    "manualRolloutID": "",
+                    "kubernetesVersion": "1.15",
+				    "instanceClass": null,
+                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+				  }
+				]
+			`
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
+
+			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: unknown zones.`))
+
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("unknown zones."))
+		})
+	})
+
 	Context("Two proper pairs of NG+IC and a NG with wrong ref name but stored earlier", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateNGWrongRefName + stateICProper + stateCloudProviderSecret))
@@ -731,7 +819,9 @@ metadata:
 				        "name": "proper1"
 				      },
 				      "zones": [
-				        "nova"
+				        "a",
+						"b",
+						"c"
 				      ]
 				    },
                     "nodeType": "Cloud",
