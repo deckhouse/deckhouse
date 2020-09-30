@@ -5,7 +5,7 @@ If you see this alert, it's probably because someone uses stale kubeconfig on ci
 
 To find who it is and where stale kubeconfig is located, you need to search in a kube-apiserver logs.
 ```
-kubectl -n kube-system logs -l component=kube-apiserver | grep "Certificate expires in one week"
+kubectl -n kube-system logs -l component=kube-apiserver --tail=-1 --timestamps | grep "expire"
 ```
   {{- else }}
 You need to use `kubeadm` to check control plane certificates.
@@ -88,6 +88,7 @@ It will be better for you to enable `control-plane-manager` module to be able to
       severity_level: "6"
     annotations:
       plk_protocol_version: "1"
+      plk_markup_format: "markdown"
       plk_incident_initial_status: "todo"
       description: |
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 7 days) on node {{`{{$labels.node}}`}}.
@@ -99,6 +100,7 @@ It will be better for you to enable `control-plane-manager` module to be able to
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
+      plk_markup_format: "markdown"
       plk_incident_initial_status: "todo"
       description: |
         Some clients connect to {{`{{$labels.component}}`}} with certificate which expiring soon (less than 1 day) on node {{`{{$labels.component}}`}}.
