@@ -35,6 +35,7 @@
     labels:
       severity_level: "{{ if lt $value 0.5 }}9{{ else if lt $value 0.7 }}8{{ else }}7{{ end }}"
     annotations:
+      plk_enable_event_severity_change: "true"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       plk_labels_as_annotations: "instance"

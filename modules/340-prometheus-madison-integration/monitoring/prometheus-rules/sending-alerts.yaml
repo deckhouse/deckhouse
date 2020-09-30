@@ -28,6 +28,7 @@
         d8_module: prometheus-madison-integration
         d8_component: madison-proxy
       annotations:
+        plk_enable_event_severity_change: "true"
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
         plk_pending_until_firing_for: "10m"
