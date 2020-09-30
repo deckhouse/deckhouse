@@ -60,6 +60,7 @@ resource "yandex_compute_instance" "static" {
   lifecycle {
     ignore_changes = [
       metadata,
+      secondary_disk,
     ]
   }
 
