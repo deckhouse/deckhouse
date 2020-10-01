@@ -16,3 +16,13 @@ spec:
   - name: dns-tcp
     port: 53
     protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | indent 2 }}
+spec:
+  type: ExternalName
+  externalName: kube-dns.kube-system.svc.cluster.local

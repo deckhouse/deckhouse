@@ -6,7 +6,8 @@ function __config__() {
   cat << EOF
     configVersion: v1
     kubernetes:
-    - name: kube_dns_svc
+    - name: kube_dns_svc_d8
+      group: main
       keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
@@ -14,18 +15,31 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       nameSelector:
-        matchNames: [kube-dns, d8-kube-dns]
+        matchNames: [d8-kube-dns]
       jqFilter: '.spec.clusterIP'
-      executeHookOnEvent: ["Added", "Modified"]
+    - name: kube_dns_svc_orig
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Service
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-dns]
+      jqFilter: '.spec.clusterIP'
 EOF
 }
 
-function __on_kubernetes::kube_dns_svc::synchronization() {
-  values::set global.discovery.clusterDNSAddress "$(context::get objects.0.filterResult)"
-}
-
-function __on_kubernetes::kube_dns_svc::added_or_modified() {
-  values::set global.discovery.clusterDNSAddress "$(context::get filterResult)"
+function __main__() {
+  if context::has snapshots.kube_dns_svc_d8.0 && [[ "$(context::get snapshots.kube_dns_svc_d8.0.filterResult)" != "None" ]]; then
+    values::set global.discovery.clusterDNSAddress "$(context::get snapshots.kube_dns_svc_d8.0.filterResult)"
+  elif context::has snapshots.kube_dns_svc_orig.0 && [[ "$(context::get snapshots.kube_dns_svc_orig.0.filterResult)" != "None" ]]; then
+    values::set global.discovery.clusterDNSAddress "$(context::get snapshots.kube_dns_svc_orig.0.filterResult)"
+  else
+    >&2 echo "ERROR: can't find a single kube-dns service"
+    return 1
+  fi
 }
 
 hook::run "$@"

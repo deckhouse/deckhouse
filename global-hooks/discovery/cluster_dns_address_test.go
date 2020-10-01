@@ -25,7 +25,7 @@ var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
 apiVersion: v1
 kind: Service
 metadata:
-  name: kube-dns
+  name: d8-kube-dns
   namespace: kube-system
 spec:
   clusterIP: 192.168.0.10
@@ -34,7 +34,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kube-dns
+  name: d8-kube-dns
   namespace: kube-system
 spec:
   clusterIP: 192.168.0.42
