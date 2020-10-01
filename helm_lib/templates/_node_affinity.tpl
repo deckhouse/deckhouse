@@ -39,13 +39,13 @@ nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
-  node-role.flant.com/{{$context.Chart.Name}}: ""
+  node-role.deckhouse.io/{{$context.Chart.Name}}: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
-  node-role.flant.com/{{$strategy}}: ""
+  node-role.deckhouse.io/{{$strategy}}: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
 nodeSelector:
-  node-role.flant.com/system: ""
+  node-role.deckhouse.io/system: ""
     {{- end }}
 
   {{- else if or (eq $strategy "frontend") (eq $strategy "system") }}
@@ -54,10 +54,10 @@ nodeSelector:
 {{ $module_values.nodeSelector | toYaml | indent 2 }}
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $camel_chart_name | int) 0 }}
 nodeSelector:
-  node-role.flant.com/{{$context.Chart.Name}}: ""
+  node-role.deckhouse.io/{{$context.Chart.Name}}: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole $strategy | int) 0 }}
 nodeSelector:
-  node-role.flant.com/{{$strategy}}: ""
+  node-role.deckhouse.io/{{$strategy}}: ""
     {{- end }}
 
   {{- else if eq $strategy "master" }}
@@ -66,10 +66,10 @@ nodeSelector:
   node-role.kubernetes.io/master: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
 nodeSelector:
-  node-role.flant.com/master: ""
+  node-role.deckhouse.io/master: ""
     {{- else if gt (index $context.Values.global.discovery.d8SpecificNodeCountByRole "system" | int) 0 }}
 nodeSelector:
-  node-role.flant.com/system: ""
+  node-role.deckhouse.io/system: ""
     {{- end }}
 
   {{- end }}
@@ -99,10 +99,19 @@ tolerations:
 - key: dedicated.flant.com
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: {{ $context.Chart.Name | quote }}
 - key: dedicated.flant.com
   operator: Equal
   value: "monitoring"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "monitoring"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 {{- if $tolerateNodeProblems }}
@@ -119,7 +128,13 @@ tolerations:
 - key: dedicated.flant.com
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: {{ $context.Chart.Name | quote }}
 - key: dedicated.flant.com
+  operator: Equal
+  value: "frontend"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "frontend"
 {{- if $tolerateNodeProblems }}
@@ -136,7 +151,13 @@ tolerations:
 - key: dedicated.flant.com
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: {{ $context.Chart.Name | quote }}
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 {{- if $tolerateNodeProblems }}

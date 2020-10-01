@@ -141,10 +141,10 @@ data:
   * Пример: `1h`
 * `highAvailability` — ручное управление режимом отказоустойчивости.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/vsphere-csi-driver":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
+    * Если ничего не указано — будет использоваться значение `{"node-role.deckhouse.io/vsphere-csi-driver":""}` или `{"node-role.deckhouse.io/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет настроено значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"vsphere-csi-driver"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
+    * Если ничего не указано — будет настроено значение `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"vsphere-csi-driver"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 * `ingressClass` — класс ingress контроллера, который используется для dex и kubeconfig-generator.
   * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.

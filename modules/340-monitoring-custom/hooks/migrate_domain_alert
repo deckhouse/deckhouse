@@ -1,0 +1,86 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: deployments
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: apps/v1
+      kind: Deployment
+      keepFullObjectsInMemory: false
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+      jqFilter: &filter |
+        if
+        (
+          [
+            .spec.template.spec.nodeSelector | . //= [] | keys | .[] |
+            select(. | startswith("node-role.flant.com")) | split("/")[1] |
+            select(. | test("^(frontend|system)$"))
+          ] +
+          [
+            .spec.template.spec.affinity.nodeAffinity |
+            .requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms? + .preferredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms? |
+            select(length > 0) | .[] | .matchExpressions | select(length > 0) | .[] |
+            select(.key | startswith("node-role.flant.com")) | .key | split("/")[1] |
+            select(. | test("^(frontend|system)$"))
+          ] +
+          [
+            .spec.template.spec.tolerations | . //= [] | .[] | select(.key=="dedicated.flant.com" and (.value | test("^(frontend|system)$")))
+          ]
+          | length > 0
+        )
+        then
+        {
+          "name": "migrate_domain_resources",
+          "group": "/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_resources",
+          "set": 1,
+          "labels":
+          {
+            "name": .metadata.name,
+            "controller": .kind,
+            "namespace": .metadata.namespace
+          }
+        }
+        else null end
+    - name: daemonsets
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: apps/v1
+      kind: DaemonSet
+      keepFullObjectsInMemory: false
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+      jqFilter: *filter
+    - name: statefulsets
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: apps/v1
+      kind: StatefulSet
+      keepFullObjectsInMemory: false
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+      jqFilter: *filter
+EOF
+}
+
+function __main__() {
+  context::jq -rc '.snapshots.statefulsets + .snapshots.daemonsets + .snapshots.deployments | .[] | select(.filterResult != null) | .filterResult' >> $METRICS_PATH
+  # Used to hack metrics deletion
+  echo "{\"name\": \"migrate_domain_resources\", \"group\": \"/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_resources\", \"set\": 0, \"labels\":{\"name\": \"none\",\"controller\": \"none\",\"namespace\": \"none\"}}" >> $METRICS_PATH
+}
+
+hook::run $@

@@ -74,9 +74,9 @@ dynatrace: |
   hostGroups:
   - name: system
     nodeSelector:
-      node-role.flant.com/system: ""
+      node-role.deckhouse.io/system: ""
     tolerations:
-    - key: dedicated.flant.com
+    - key: dedicated.deckhouse.io
       operator: Equal
       value: system
   - name: production
