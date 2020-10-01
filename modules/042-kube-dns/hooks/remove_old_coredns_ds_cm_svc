@@ -6,12 +6,30 @@ function __config__() {
   cat << EOF
     configVersion: v1
     beforeHelm: 10
+    kubernetes:
+    - name: kube_dns_svc
+      group: main
+      keepFullObjectsInMemory: false
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      apiVersion: v1
+      kind: Service
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-dns]
+      jqFilter: '.spec.type == "ClusterIP"'
 EOF
 }
 
 function __main__() {
   kubernetes::delete_if_exists::non_cascading kube-system deployment/coredns
-  kubernetes::delete_if_exists kube-system service/kube-dns
+
+  # we'll recreate a kube-dns Service with "type: ExternalName" to support legacy code in client applications
+  if context::is_true 'snapshots.kube_dns_svc.0.filterResult'; then
+    kubernetes::delete_if_exists kube-system service/kube-dns
+  fi
 }
 
 hook::run "$@"
