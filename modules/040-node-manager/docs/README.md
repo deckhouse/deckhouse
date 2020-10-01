@@ -5,7 +5,7 @@ title: "Модуль node-manager"
 ## Функции модуля
 
 1. **NodeGroup** — управление несколькими узлами как связанной группой:
-    * Возможность определить label, annotation или taint, которые проставляются всем узлам группы,
+    * Возможность определить label, annotation или [taint](#правила-выделения-нод-под-специфические-нагрузки) , которые проставляются всем узлам группы,
     * <u>*Coming soon*</u>: Мониторинг группы как группы (группировка узлов на графиках по группам, группировка алертов
       о недоступности узлов, алерты о недоступности N узлов или N% узлов из группы),
 2. **Chaos monkey** — инструмент систематического прерывания работы узлов для верификации отказоустойчивости
@@ -214,3 +214,17 @@ spec:
   disruptions:
     approvalMode: Manual
 ```
+
+#### Правила выделения нод под специфические нагрузки
+
+> Во всех случаях использование `dedicated.deckhouse.io` в ключе или его части не рекомендуется, данный ключ зарезервирован для использования внутри **Deckhouse**.
+
+##### Для решений данной задачи существуют два механизма:
+1. Установка меток в `NodeGroup` `spec.nodeTemplate.labels`, для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
+
+    > указывает какие именно ноды будут выбраны пранировщиком для запуска целевого приложения     
+1. Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints`, с дальнейшим снятием их в `Pod` [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
+
+     > заведомо ограничивает исполнение каких попало приложений на этих нодах
+
+Подробности описаны [в нашей статье на Habr](https://habr.com/ru/company/flant/blog/432748/).

@@ -1,7 +1,7 @@
 /*
 
 User-stories:
-1. There are nodes in cluster with annotation like 'node-role.flant.com/xxx', hook must group, count them and store to `global.discovery.d8SpecificNodeCountByRole`.
+1. There are nodes in cluster with annotation like 'node-role.deckhouse.io/xxx', hook must group, count them and store to `global.discovery.d8SpecificNodeCountByRole`.
 
 */
 
@@ -32,7 +32,7 @@ kind: Node
 metadata:
   name: master
   labels:
-    node-role.flant.com/frontend: ""
+    node-role.deckhouse.io/frontend: ""
     node-role.kubernetes.io/master: ""
 ---
 apiVersion: v1
@@ -40,8 +40,7 @@ kind: Node
 metadata:
   name: front-1
   labels:
-    node-role.flant.com/frontend: ""
-    node-role.deckhouse.io/frontendbyd8: ""
+    node-role.deckhouse.io/frontend: ""
     node-role.kubernetes.io/frontendbykubernetes: ""
 ---
 apiVersion: v1
@@ -56,7 +55,6 @@ kind: Node
 metadata:
   name: system
   labels:
-    node-role.flant.com/system: ""
     node-role.deckhouse.io/system: ""
     node-role.kubernetes.io/systembykubernetes: ""
 `
@@ -66,7 +64,7 @@ kind: Node
 metadata:
   name: master
   labels:
-    node-role.flant.com/master: ""
+    node-role.deckhouse.io/master: ""
     node-role.kubernetes.io/master: ""
 ---
 apiVersion: v1
@@ -74,8 +72,8 @@ kind: Node
 metadata:
   name: front-1
   labels:
-    node-role.flant.com/frontend: ""
-    node-role.flant.com/system: ""
+    node-role.deckhouse.io/frontend: ""
+    node-role.deckhouse.io/system: ""
 ---
 apiVersion: v1
 kind: Node
@@ -90,8 +88,6 @@ kind: Node
 metadata:
   name: system
   labels:
-    node-role.flant.com/system: ""
-    node-role.deckhouse.io/system: ""
     node-role.kubernetes.io/systembykubernetes: ""
 `
 	)

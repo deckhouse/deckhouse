@@ -139,12 +139,18 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/system\":\"\"}"))
+			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "cert-manager"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -191,12 +197,18 @@ podAntiAffinity:
     topologyKey: kubernetes.io/hostname
 `))
 			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/system\":\"\"}"))
+			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "cert-manager"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -237,19 +249,25 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeFalse())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/system\":\"\"}"))
+			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "cert-manager"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -278,7 +296,7 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
-			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/master\":\"\"}"))
+			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
@@ -296,12 +314,18 @@ podAntiAffinity:
     topologyKey: kubernetes.io/hostname
 `))
 			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.flant.com/system\":\"\"}"))
+			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "cert-manager"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))

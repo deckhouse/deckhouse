@@ -14,10 +14,10 @@ title: "Модуль cert-manager"
 ### Параметры
 
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role.flant.com/cert-manager":""}` или `{"node-role.flant.com/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
+    * Если ничего не указано — будет использоваться значение `{"node-role.deckhouse.io/cert-manager":""}` или `{"node-role.deckhouse.io/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.flant.com","operator":"Equal","value":"cert-manager"},{"key":"dedicated.flant.com","operator":"Equal","value":"system"}]`.
+    * Если ничего не указано — будет использовано значение `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}]`.
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 *  `cloudflareGlobalAPIKey` — Cloudflare Global API key для управления DNS записями (Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат, находятся под управлением `cert-manager` у DNS провайдера Cloudflare. Проверка происходит добавлением специальных TXT записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/))
 *  `cloudflareEmail` — Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare

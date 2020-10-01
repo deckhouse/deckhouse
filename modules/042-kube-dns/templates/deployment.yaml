@@ -40,10 +40,19 @@ spec:
       - key: dedicated.flant.com
         operator: Equal
         value: kube-dns
+      - key: dedicated.deckhouse.io
+        operator: Equal
+        value: kube-dns
       - key: dedicated.flant.com
         operator: Equal
         value: system
+      - key: dedicated.deckhouse.io
+        operator: Equal
+        value: system
       - key: dedicated.flant.com
+        operator: Equal
+        value: master
+      - key: dedicated.deckhouse.io
         operator: Equal
         value: master
       containers:

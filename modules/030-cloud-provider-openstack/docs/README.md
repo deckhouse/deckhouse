@@ -110,10 +110,10 @@ spec:
   ingressClass: nginx
   inlet: LoadBalancer
   nodeSelector:
-    node-role.flant.com/frontend: ""
+    node-role.deckhouse.io/frontend: ""
   tolerations:
   - effect: NoExecute
-    key: dedicated.flant.com
+    key: dedicated.deckhouse.io
     operator: Equal
     value: frontend
 ```

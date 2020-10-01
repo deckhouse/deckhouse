@@ -129,12 +129,18 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(metricsScraper.Exists()).To(BeTrue())
-			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(metricsScraper.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -143,12 +149,18 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 			Expect(metricsScraper.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -177,12 +189,18 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(metricsScraper.Exists()).To(BeTrue())
-			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(metricsScraper.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -202,12 +220,18 @@ podAntiAffinity:
     topologyKey: kubernetes.io/hostname
 `))
 			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -248,12 +272,18 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(metricsScraper.Exists()).To(BeTrue())
-			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(metricsScraper.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -262,12 +292,18 @@ podAntiAffinity:
 			Expect(metricsScraper.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -296,12 +332,18 @@ podAntiAffinity:
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(metricsScraper.Exists()).To(BeTrue())
-			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(metricsScraper.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(metricsScraper.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
@@ -321,12 +363,18 @@ podAntiAffinity:
     topologyKey: kubernetes.io/hostname
 `))
 			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.flant.com/system": ""}`))
+			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "dashboard"
+- key: dedicated.deckhouse.io
+  operator: Equal
+  value: "dashboard"
 - key: dedicated.flant.com
+  operator: Equal
+  value: "system"
+- key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
 `))
