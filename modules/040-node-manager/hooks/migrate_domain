@@ -1,0 +1,45 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    kubernetes:
+    - name: nodegroups
+      group: main
+      keepFullObjectsInMemory: false
+      executeHookOnEvent: [Added, Modified]
+      executeHookOnSynchronization: false
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "missing_labels":
+            [
+              .spec.nodeTemplate.labels // {} | keys as \$keys | \$keys[] |
+              select(startswith("node-role.flant.com/")) |
+              split("/")[1] | select(. | test("(frontend|system)")) | "node-role.deckhouse.io/\(.)" |
+              select(. | IN(\$keys[]) | not)
+            ]
+        }
+EOF
+}
+
+function __main__() {
+  for i in $(context::jq -r '.snapshots.nodegroups | keys[]'); do
+    if context::jq -er --argjson i "$i" '.snapshots.nodegroups[$i].filterResult.missing_labels | length > 0' > /dev/null; then
+      ng_name="$(context::jq -r --argjson i "$i" '.snapshots.nodegroups[$i].filterResult.name')"
+      patch_set=". "
+      for j in $(context::jq -r --argjson i "$i" '.snapshots.nodegroups[$i].filterResult.missing_labels | keys[]'); do
+        label="$(context::jq -r --argjson i "$i" --argjson j "$j" '.snapshots.nodegroups[$i].filterResult.missing_labels[$j]')"
+        patch_set="$patch_set | .spec.nodeTemplate.labels += {\"$label\":\"\"}"
+      done
+      kubernetes::patch_jq "" "nodegroup/$ng_name" "$patch_set"
+    fi
+  done
+}
+
+hook::run $@
