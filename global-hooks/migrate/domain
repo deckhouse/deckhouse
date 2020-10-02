@@ -8,7 +8,7 @@ function __config__() {
     kubernetes:
     - name: nodes
       group: main
-      keepFullObjectsInMemory: true
+      keepFullObjectsInMemory: false
       executeHookOnEvent: [Added, Modified]
       apiVersion: v1
       kind: Node
@@ -18,23 +18,6 @@ function __config__() {
           "missing_labels":
             [
               .metadata.labels // {} | keys as \$keys | \$keys[] |
-              select(startswith("node-role.flant.com/")) |
-              split("/")[1] | select(. | test("(frontend|system)")) | "node-role.deckhouse.io/\(.)" |
-              select(. | IN(\$keys[]) | not)
-            ]
-        }
-    - name: ngs
-      group: main
-      keepFullObjectsInMemory: true
-      executeHookOnEvent: [Added, Modified]
-      apiVersion: deckhouse.io/v1alpha1
-      kind: NodeGroup
-      jqFilter: |
-        {
-          "name": .metadata.name,
-          "missing_labels":
-            [
-              .spec.nodeTemplate.labels // {} | keys as \$keys | \$keys[] |
               select(startswith("node-role.flant.com/")) |
               split("/")[1] | select(. | test("(frontend|system)")) | "node-role.deckhouse.io/\(.)" |
               select(. | IN(\$keys[]) | not)
@@ -53,17 +36,6 @@ function __main__() {
         patch_set="$patch_set | .metadata.labels += {\"$label\":\"\"}"
       done
       kubernetes::patch_jq "" "node/$node_name" "$patch_set"
-    fi
-  done
-  for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
-    if context::jq -er --argjson i "$i" '.snapshots.ngs[$i].filterResult.missing_labels | length > 0' > /dev/null; then
-      ng_name="$(context::jq -r --argjson i "$i" '.snapshots.ngs[$i].filterResult.name')"
-      patch_set=". "
-      for j in $(context::jq -r --argjson i "$i" '.snapshots.ngs[$i].filterResult.missing_labels | keys[]'); do
-        label="$(context::jq -r --argjson i "$i" --argjson j "$j" '.snapshots.ngs[$i].filterResult.missing_labels[$j]')"
-        patch_set="$patch_set | .spec.nodeTemplate.labels += {\"$label\":\"\"}"
-      done
-      kubernetes::patch_jq "" "nodegroup/$ng_name" "$patch_set"
     fi
   done
 }
