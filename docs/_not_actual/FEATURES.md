@@ -4,7 +4,7 @@ permalink: features.html
 ---
 
 ## Что работает сразу
-- [Тюнинг]({{ site.baseurl }}/modules/700-sysctl-tuner/) системных параметров, в том числе:
+- [Тюнинг](/candi/bashible/common-steps/node-group/041_configure_sysctl_tuner.sh.tpl) системных параметров, в том числе:
    - отключение Transparent Huge Pages (THP);
    - тюнинг сетевого стека;
    - увеличение лимитов PID, inotify, файлов, соединений, и т.п. ...
@@ -119,6 +119,5 @@ Statusmap (второй блок сверху на всех досках, кро
 | 500-openvpn                     | [Пока нет](https://github.com/deckhouse/deckhouse/issues/518) |
 | 600-ping-exporter               | DaemonSet |
 | 600-secret-copier               | Не требуется |
-| 700-sysctl-tuner                | DaemonSet |
 | 800-systemd-slices-cleaner      | DaemonSet |
 | 999-helm                        | Не требуется |
