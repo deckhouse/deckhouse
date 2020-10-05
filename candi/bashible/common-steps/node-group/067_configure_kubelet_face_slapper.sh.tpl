@@ -1,7 +1,7 @@
 bb-sync-file /var/lib/bashible/kubelet-face-slapper.sh - << 'EOF'
 #!/bin/bash
 
-if journalctl -n 20 -u kubelet -q | grep -q "use of closed network connection" ; then
+if journalctl -n 20 -u kubelet -q | grep -q "127.0.0.1:6445: use of closed network connection" ; then
   echo "Kubelet is unconscious. Slap!"
   systemctl restart kubelet
 else
