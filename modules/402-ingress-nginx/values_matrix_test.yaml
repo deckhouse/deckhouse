@@ -64,3 +64,4 @@ ingressNginx:
               controllerVersion: "0.25"
               inlet: LoadBalancer
               loadBalancer: {}
+              loadBalancerWithProxyProtocol: {}

@@ -1,6 +1,15 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-  {{- if eq $crd.spec.inlet "LoadBalancer" }}
+  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
+    {{ $annotations := "" }}
+    {{ $sourceRanges := "" }}
+    {{- if eq $crd.spec.inlet "LoadBalancer" }}
+      {{ $annotations = $crd.spec.loadBalancer.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancer.sourceRanges  }}
+    {{- else if eq $crd.spec.inlet "LoadBalancerWithProxyProtocol" }}
+      {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
+    {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -8,18 +17,18 @@ metadata:
   name: {{ $crd.name }}-load-balancer
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | indent 2 }}
-    {{- if $crd.spec.loadBalancer.annotations }}
+    {{- if $annotations }}
   annotations:
-      {{- range $key, $value := $crd.spec.loadBalancer.annotations }}
+      {{- range $key, $value := $annotations }}
     {{ $key }}: {{ $value | quote }}
       {{- end }}
     {{- end }}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
-    {{- if $crd.spec.loadBalancer.sourceRanges }}
+    {{- if $sourceRanges }}
   loadBalancerSourceRanges:
-{{ $crd.spec.loadBalancer.sourceRanges | toYaml | indent 4 }}
+{{ $sourceRanges | toYaml | indent 4 }}
     {{- end }}
   ports:
   - name: http
