@@ -29,10 +29,11 @@ ingressNginxEnabled: "false"
     * **Важно!** Если указать значение "nginx", то дополнительно будут обрабатываться ingress ресурсы без аннотации `kubernetes.io/ingress.class`.
 * `inlet` — способ поступления трафика из внешнего мира.
     * `LoadBalancer` — устанавливается ingress controller и заказывается сервис с типом LoadBalancer.
+    * `LoadBalancerWithProxyProtocol` — устанавливается ingress controller и заказывается сервис с типом LoadBalancer. Ingress controller использует proxy-protocol для получения настоящего ip-адреса клиента.
     * `HostPort` — устанавливается ingress controller, который доступен на портах нод через hostPort.
     * `HostPortWithProxyProtocol` — устанавливается ingress controller, который доступен на портах нод через hostPort и использует proxy-protocol для получения настоящего адреса клиента.
         * **Внимание!** При использовании этого inlet вы должны быть уверены, что запросы к ingress'у направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
-
+    
 **Необязательные параметры:**
 * `controllerVersion` — версия ingress-nginx контроллера;
     * По-умолчанию берется версия из настроек модуля.
@@ -54,6 +55,12 @@ ingressNginxEnabled: "false"
     * `realIPHeader` — заголовок, из которого будет получен настоящий IP-адрес клиента.
         * По-умолчанию `X-Forwarded-For`.
         * Опция работает только при включении `behindL7Proxy`.
+
+* `loadBalancerWithProxyProtocol` — секция настроек для inlet'а `LoadBalancerWithProxyProtocol`:
+    * `annotations` — аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+        * **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
+    * `sourceRanges` — список CIDR, которым разрешен доступ на балансировщик.
+        * Облачный провайдер может не поддерживать данную опцию и игнорировать её. 
 
 * `hostPort` — секция настроек для inlet'а `HostPort`:
     * `httpPort` — порт для небезопасного подключения по HTTP.
@@ -212,6 +219,21 @@ spec:
     sourceRanges:
     - 192.168.0.0/24
 ```
+
+#### Openstack
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: main-lbwpp
+spec:
+  inlet: LoadBalancerWithProxyProtocol
+  ingressClass: nginx
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.org/proxy-protocol: "true"
+```
+
 {% endraw %}
 
 Статистика

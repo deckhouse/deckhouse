@@ -71,6 +71,7 @@ spec:
   },
   "hostPortWithProxyProtocol": {},
   "hostPort": {},
+  "loadBalancerWithProxyProtocol": {},
   "acceptRequestsFrom": [
     "~127.0.0.1",
     "~192.168.0.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])"
@@ -113,6 +114,14 @@ spec:
   hostPortWithProxyProtocol:
     httpPort: 80
     httpsPort: 443
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: test-3
+spec:
+  ingressClass: test
+  inlet: LoadBalancerWithProxyProtocol
 `))
 			f.RunHook()
 		})
@@ -120,7 +129,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(HaveLen(2))
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(HaveLen(3))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()).To(Equal("test"))
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec").String()).To(MatchJSON(`{
@@ -136,6 +145,7 @@ spec:
   "vpa": {"cpu": {}, "memory": {}}
 },
 "loadBalancer": {},
+"loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {},
 "hostPort": {}
 }`))
@@ -154,7 +164,27 @@ spec:
   "vpa": {"cpu": {"max": "100m"}, "memory": {"max": "200Mi"}, "mode": "Auto"}
 },
 "loadBalancer": {},
+"loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {"httpPort": 80, "httpsPort": 443},
+"hostPort": {}
+}`))
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.name").String()).To(Equal("test-3"))
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.spec").String()).To(MatchJSON(`{
+"config": {},
+"ingressClass": "test",
+"controllerVersion": "0.25",
+"inlet": "LoadBalancerWithProxyProtocol",
+"hstsOptions": {},
+"geoIP2": {},
+"resourcesRequests": {
+  "mode": "VPA",
+  "static": {},
+  "vpa": {"cpu": {}, "memory": {}}
+},
+"loadBalancer": {},
+"loadBalancerWithProxyProtocol": {},
+"hostPortWithProxyProtocol": {},
 "hostPort": {}
 }`))
 		})

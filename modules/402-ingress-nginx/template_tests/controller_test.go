@@ -30,14 +30,13 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	})
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {
-			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLStest", `
+			for _, ingressName := range []string{"test", "test-lbwpp", "test-next"} {
+				hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS"+ingressName, `
 certificate: teststring
 key: teststring
 `)
-			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLStest-next", `
-certificate: teststring
-key: teststring
-`)
+			}
+
 			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", `
 - name: test
   spec:
@@ -67,6 +66,29 @@ key: teststring
       sourceRanges:
       - 1.1.1.1
       - 2.2.2.2
+- name: test-lbwpp
+  spec:
+    config:
+      load-balance: ewma
+    ingressClass: nginx
+    controllerVersion: "0.26"
+    inlet: LoadBalancerWithProxyProtocol
+    hstsOptions: {}
+    loadBalancer: {}
+    geoIP2: {}
+    resourcesRequests:
+      mode: Static
+      static: {}
+      vpa:
+        cpu: {}
+        memory: {}
+    loadBalancerWithProxyProtocol:
+      annotations:
+        my: annotation
+        second: true
+      sourceRanges:
+      - 1.1.1.1
+      - 2.2.2.2
 - name: test-next
   spec:
     config: {}
@@ -75,6 +97,7 @@ key: teststring
     inlet: "HostPortWithProxyProtocol"
     hstsOptions: {}
     loadBalancer: {}
+    loadBalancerWithProxyProtocol: {}
     geoIP2:
       maxmindLicenseKey: 12345
       maxmindEditionIDs: ["GeoIPTest", "GeoIPTest2"]
@@ -92,6 +115,7 @@ key: teststring
 			hec.HelmRender()
 		})
 		It("Should add desired objects", func() {
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
@@ -108,6 +132,22 @@ key: teststring
 			Expect(configMapData.Get("hsts").Raw).To(Equal(`"true"`))
 			Expect(configMapData.Get("hsts-max-age").Raw).To(Equal(`"123456789123456789"`))
 
+			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
+			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
+
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-custom-headers").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "test-lbwpp-ingress-nginx-auth-tls").Exists()).To(BeTrue())
+
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-lbwpp-load-balancer").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-lbwpp-load-balancer").Field("metadata.annotations")).To(MatchJSON(`{"my":"annotation", "second": "true"}`))
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-lbwpp-load-balancer").Field("spec.loadBalancerSourceRanges")).To(MatchJSON(`["1.1.1.1","2.2.2.2"]`))
+
+			configMapData = hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Field("data")
+
+			// Use the Raw property to check is value quoted correctly
+			Expect(configMapData.Get("use-proxy-protocol").Raw).To(Equal(`"true"`))
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
