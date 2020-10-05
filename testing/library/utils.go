@@ -23,10 +23,22 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 
 		testsValues        map[string]interface{}
 		moduleValues       map[string]interface{}
+		globalValues       map[string]interface{}
 		moduleImagesValues map[string]map[string]map[string]map[string]map[string]string
 		userDefinedValues  map[string]interface{}
 		finalValues        = new(map[string]interface{})
 	)
+
+	// 0. Get values from values-default.yaml
+	globalValuesRaw, err := ioutil.ReadFile(filepath.Join("/deckhouse", "modules", "values-default.yaml"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	err = yaml.Unmarshal(globalValuesRaw, &globalValues)
+	if err != nil {
+		return nil, err
+	}
 
 	// 1. Get values from modules/[module_name]/template_tests/values.yaml
 	testsValuesRaw, err := ioutil.ReadFile(filepath.Join(modulePath, "template_tests", "values.yaml"))
@@ -99,7 +111,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 		return nil, err
 	}
 
-	err = mergeValues(finalValues, moduleValues, testsValues, moduleImagesValues, userDefinedValues)
+	err = mergeValues(finalValues, moduleValues, testsValues, globalValues, moduleImagesValues, userDefinedValues)
 	if err != nil {
 		return nil, err
 	}

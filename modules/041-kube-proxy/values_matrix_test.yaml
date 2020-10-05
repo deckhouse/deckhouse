@@ -4,6 +4,8 @@ kubeProxy:
 global:
   discovery:
     kubernetesVersion: 1.15.6
+  modules:
+    placement: {}
   modulesImages:
     registry: registry.flant.com
     tags:

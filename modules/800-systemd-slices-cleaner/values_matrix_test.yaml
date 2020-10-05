@@ -1,5 +1,12 @@
 global:
   enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+        - "test-1"
+        - "test-2/master"
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

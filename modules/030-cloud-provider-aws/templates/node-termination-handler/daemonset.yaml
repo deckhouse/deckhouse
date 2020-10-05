@@ -24,10 +24,9 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       serviceAccountName: node-termination-handler
       hostNetwork: true
-      tolerations:
-      - operator: Exists
       containers:
       - name: node-termination-handler
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/node-termination-handler:{{ .Values.global.modulesImages.tags.cloudProviderAws.nodeTerminationHandler }}

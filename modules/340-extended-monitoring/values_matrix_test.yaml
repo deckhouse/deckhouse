@@ -14,6 +14,14 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     clusterVersion: 1.15.5
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
+
 extendedMonitoring:
   imageAvailability:
     exporterEnabled:

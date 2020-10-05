@@ -1,30 +1,28 @@
-{{- define "helm_lib_internal_check_node_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "master")) }}
+{{- define "helm_lib_internal_check_node_selector_strategy" -}}
+  {{ if not (has . (list "frontend" "monitoring" "system" "master" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
 {{- end }}
 
+{{- define "helm_lib_internal_check_tolerations_strategy" -}}
+  {{ if not (has . (list "frontend" "monitoring" "system" "every-node" "wildcard" )) }}
+    {{- fail (printf "unknown strategy \"%v\"" .) }}
+  {{- end }}
+  {{- . -}}
+{{- end }}
 
 {{- define "helm_lib_internal_node_problems_tolerations" }}
 - key: node.kubernetes.io/not-ready
-  operator: "Exists"
-  effect: "NoExecute"
 - key: node.kubernetes.io/out-of-disk
-  operator: "Exists"
-  effect: "NoExecute"
 - key: node.kubernetes.io/memory-pressure
-  operator: "Exists"
-  effect: "NoExecute"
 - key: node.kubernetes.io/disk-pressure
-  operator: "Exists"
-  effect: "NoExecute"
 {{- end }}
 
 
 {{- define "helm_lib_node_selector" }}
   {{- $context := index . 0 }}
-  {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
+  {{- $strategy := index . 1 | include "helm_lib_internal_check_node_selector_strategy" }}
   {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
     {{- $module_values = include "helm_lib_module_values" $context | fromYaml }}
@@ -75,10 +73,9 @@ nodeSelector:
   {{- end }}
 {{- end }}
 
-
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}
-  {{- $strategy := index . 1 | include "helm_lib_internal_check_node_strategy" }}
+  {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }}
   {{- $module_values := dict }}
   {{- if lt (len .) 3 }}
     {{- $module_values = include "helm_lib_module_values" $context | fromYaml }}
@@ -90,11 +87,10 @@ nodeSelector:
     {{ $tolerateNodeProblems = index . 3 }}
   {{- end }}
 
-  {{- if eq $strategy "monitoring" }}
-    {{- if $module_values.tolerations }}
+  {{- if $module_values.tolerations }}
 tolerations:
 {{ $module_values.tolerations | toYaml }}
-    {{- else }}
+  {{- else if eq $strategy "monitoring" }}
 tolerations:
 - key: dedicated.flant.com
   operator: Equal
@@ -114,16 +110,10 @@ tolerations:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-{{- if $tolerateNodeProblems }}
-{{ include "helm_lib_internal_node_problems_tolerations" . }}
-{{- end }}
+    {{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
-
   {{- else if eq $strategy "frontend" }}
-    {{- if $module_values.tolerations }}
-tolerations:
-{{ $module_values.tolerations | toYaml }}
-    {{- else }}
 tolerations:
 - key: dedicated.flant.com
   operator: Equal
@@ -137,16 +127,10 @@ tolerations:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "frontend"
-{{- if $tolerateNodeProblems }}
-{{ include "helm_lib_internal_node_problems_tolerations" . }}
-{{- end }}
+    {{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
-
   {{- else if eq $strategy "system" }}
-    {{- if $module_values.tolerations }}
-tolerations:
-{{ $module_values.tolerations | toYaml }}
-    {{- else }}
 tolerations:
 - key: dedicated.flant.com
   operator: Equal
@@ -160,12 +144,31 @@ tolerations:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-{{- if $tolerateNodeProblems }}
-{{ include "helm_lib_internal_node_problems_tolerations" . }}
-{{- end }}
+    {{- if $tolerateNodeProblems }}
+{{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
-
-  {{- else if eq $strategy "master" }}
+  {{- else if eq $strategy "every-node" }}
+tolerations:
+- key: node-role.kubernetes.io/master
+- key: dedicated.deckhouse.io
+- key: dedicated
+- key: node.deckhouse.io/uninitialized
+  operator: "Exists"
+  effect: "NoSchedule"
+    {{- if $context.Values.global.clusterConfiguration }}
+      {{- if ne $context.Values.global.clusterConfiguration.clusterType "Static" }}
+- key: node.deckhouse.io/csi-not-bootstrapped
+  operator: "Exists"
+  effect: "NoSchedule"
+      {{- end }}
+    {{- end }}
+{{ include "helm_lib_internal_node_problems_tolerations" $context }}
+    {{- if $context.Values.global.modules.placement.customTolerationKeys }}
+      {{- range $key := $context.Values.global.modules.placement.customTolerationKeys }}
+- key: {{ $key | quote }}
+      {{- end }}
+    {{- end }}
+  {{- else if eq $strategy "wildcard" }}
 tolerations:
 - operator: Exists
   {{- end }}

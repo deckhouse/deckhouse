@@ -93,5 +93,5 @@ spec:
       hostPID: true
       hostIPC: true
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-      tolerations:
-      - operator: Exists
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+

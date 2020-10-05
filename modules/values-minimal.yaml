@@ -3,6 +3,7 @@ global:
   modulesImages: {}
   modules:
     ingressClass: nginx
+    placement: {}
     https:
       mode: CertManager
       certManager:

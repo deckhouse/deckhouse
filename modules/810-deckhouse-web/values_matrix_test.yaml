@@ -8,6 +8,12 @@ global:
         web: imagehash
   modules:
     publicDomainTemplate: "%s.example.com"
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+        - "test-1"
+        - "test-2/master"
     https:
       __ConstantChoices__:
         - certManager:

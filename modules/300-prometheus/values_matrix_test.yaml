@@ -31,7 +31,12 @@ global:
       - mode: CustomCertificate
         customCertificate:
           secretName: plainstring
-
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
 
 prometheus:
   auth:

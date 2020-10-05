@@ -27,6 +27,7 @@ modulesImages:
       metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
+  placement: {}
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.15.4
@@ -48,6 +49,7 @@ modulesImages:
       metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
+  placement: {}
 discovery:
   clusterControlPlaneIsHighlyAvailable: true
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -70,6 +72,7 @@ modulesImages:
       metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
+  placement: {}
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.15.4
@@ -91,6 +94,7 @@ modulesImages:
       metricsScraper: tagstring
 modules:
   publicDomainTemplate: "%s.example.com"
+  placement: {}
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.15.4

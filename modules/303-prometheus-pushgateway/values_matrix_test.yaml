@@ -11,6 +11,13 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     kubernetesVersion: 1.15.5
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
 
 prometheusPushgateway:
   instances:

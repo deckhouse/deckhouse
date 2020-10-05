@@ -31,7 +31,11 @@ global:
       - mode: CustomCertificate
         customCertificate:
           secretName: plainstring
-
+    placement:
+      __ConstantChoices__:
+      - {}
+      - tolerations:
+          - operator: Exists
 verticalPodAutoscaler:
   internal:
     CACert: string

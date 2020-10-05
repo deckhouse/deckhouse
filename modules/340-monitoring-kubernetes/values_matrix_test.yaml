@@ -16,6 +16,12 @@ global:
       system: 1
     kubernetesVersion: 1.15.5
     clusterType: Manual
+  modules:
+    placement:
+      __ConstantChoices__:
+        - {}
+        - tolerations:
+            - operator: Exists
 
 monitoringKubernetes:
   internal:

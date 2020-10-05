@@ -45,8 +45,7 @@ spec:
       - name: deckhouse-registry
       hostNetwork: true
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-      tolerations:
-      - operator: Exists
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       containers:
       - name: node-driver-registerar
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/node-registrar:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.nodeRegistrar }}

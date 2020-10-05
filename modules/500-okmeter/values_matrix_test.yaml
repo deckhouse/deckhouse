@@ -11,6 +11,12 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     kubernetesVersion: 1.15.5
-
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
 okmeter:
   apiKey: 5ff9z2a3-9127-1sh4-2192-06a3fc6e13e3

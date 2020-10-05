@@ -20,9 +20,8 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       hostNetwork: true
-      tolerations:
-      - operator: Exists
       serviceAccountName: {{ .Chart.Name }}
       containers:
       - name: kube-flannel

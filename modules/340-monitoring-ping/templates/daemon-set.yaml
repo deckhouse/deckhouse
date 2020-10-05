@@ -39,10 +39,9 @@ spec:
         name: monitoring-ping
     spec:
       terminationGracePeriodSeconds: 0
-      tolerations:
-      - operator: "Exists"
       hostNetwork: true
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       serviceAccountName: monitoring-ping
       containers:
       - image: {{ .Values.global.modulesImages.registry }}/monitoring-ping/monitoring-ping:{{ .Values.global.modulesImages.tags.monitoringPing.monitoringPing }}
