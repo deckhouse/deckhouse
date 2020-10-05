@@ -5,6 +5,6 @@ metadata:
   name: deckhouse-registry
   namespace: d8-cert-manager
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
-type: kubernetes.io/dockercfg
+type: kubernetes.io/dockerconfigjson
 data:
-  .dockercfg: {{ $.Values.global.modulesImages.registryDockercfg }}
+  .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}

@@ -46,7 +46,7 @@ function __main__() {
 
   registry=$(values::get global.modulesImages.registry)
 
-  credentials=$(cat /etc/registrysecret/.dockercfg | jq -r 'to_entries[] | .value | "--username=" + .username + " --password=" + .password')
+  credentials=$(cat /etc/registrysecret/.dockerconfigjson | jq -r '.auths | to_entries[] | .value | "--username=" + .username + " --password=" + .password')
   current_digest=$(reg digest $credentials "${registry}:${current_release_channel_tag}")
 
   result_tag=$current_release_channel_tag

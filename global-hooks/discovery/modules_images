@@ -27,7 +27,7 @@ function __config__() {
           matchNames: [d8-system]
       nameSelector:
         matchNames: [deckhouse-registry]
-      jqFilter: '.data.".dockercfg"'
+      jqFilter: '.data.".dockerconfigjson"'
 EOF
 }
 
