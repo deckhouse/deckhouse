@@ -197,6 +197,16 @@ function __main__() {
         continue
       fi
 
+      # check #3 — are zones valid
+      if [ "$default_zones" != "[]" ]; then
+        if jq --argjson default_zones "$default_zones" -e '.cloudInstances.zones as $zones | ($zones | length) > 0 and ($default_zones | contains($zones) | not) ' <<< "$ng"; then
+          error_message="unknown zones."
+          >&2 echo "ERROR: Bad NodeGroup $ng_name: $error_message"
+          _set_ng_error_status "${ng_name}" "${error_message}"
+          continue
+        fi
+      fi
+
       ng_instance_class="$(jq --arg name $ng_instance_class_name '.[$name]' <<< "$instance_classes")"
       ng="$(jq \
         --argjson instance_class "${ng_instance_class}" \
