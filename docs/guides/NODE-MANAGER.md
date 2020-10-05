@@ -30,6 +30,15 @@ permalink: /guides/node-manager.html
 - Получить скрипт для установки и настройки моды: `kubectl -n d8-cloud-instance-manager  get secret manual-bootstrap-for-nodes-o json | jq '.data."adopt.sh"' -r`
 - Зайти на новую ноду по ssh и выполнить команду из секрета: `echo <base64> | base64 -d | bash`
 
+### Как изменить node-group у статичного узла?
+
+Чтобы перенести существующий статичный узел из одной node-group в другую, необходимо изменить у узла лейбл группы: 
+```shell script
+kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
+```
+
+Изменения не будут применены мгновенно. Обновлением состояния объектов NodeGroup заничается один из хуков deckhouse, который подписывается на изменения нод.
+ 
 ### Как вывести ноду из-под управления node-manager?
 
 - Остановить сервис и таймер bashible: `systemctl stop bashible.timer bashible.service`
