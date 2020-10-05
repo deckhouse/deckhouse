@@ -25,5 +25,12 @@ global:
         __ConstantChoices__: ["OpenStack"]
     clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
     kubernetesVersion: 1.15.4
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
 
 terraformManager: {}

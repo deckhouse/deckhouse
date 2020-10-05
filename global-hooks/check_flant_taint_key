@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+EOF
+}
+
+function __main__() {
+  if kubectl get nodes -A -o json | jq -rec '[
+    .items[].spec | (.taints // [])[] | select(.key == "dedicated.flant.com")
+  ] | length == 0' >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if ! values::has --config global.modules ; then
+    values::set --config global.modules '{}'
+  fi
+
+  if ! values::has --config global.modules.placement ; then
+    values::set --config global.modules.placement '{}'
+  fi
+
+  if ! values::has --config global.modules.placement.customTolerationKeys ; then
+    values::set --config global.modules.placement.customTolerationKeys '["dedicated.flant.com"]'
+    return 0
+  fi
+
+  values::set --config global.modules.placement.customTolerationKeys "$(
+    values::get --config global.modules.placement.customTolerationKeys \
+    | jq -rc 'if [.[] | select(. == "dedicated.flant.com")] | length == 0 then . + ["dedicated.flant.com"] else . end')"
+}
+
+hook::run "$@"

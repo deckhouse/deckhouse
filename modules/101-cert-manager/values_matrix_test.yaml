@@ -15,6 +15,12 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     kubernetesVersion: 1.15.5
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - tolerations:
+          - operator: Exists
 
 certManager:
   internal:

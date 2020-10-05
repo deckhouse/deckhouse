@@ -2,6 +2,7 @@ global:
   enabledModules: ["cert-manager"]
   modules:
     publicDomainTemplate: "%s.example.com"
+    placement: {}
     https:
       __ConstantChoices__:
         - certManager:

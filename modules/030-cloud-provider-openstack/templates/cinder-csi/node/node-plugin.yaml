@@ -28,10 +28,9 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       serviceAccountName: cinder-csi-node
       hostNetwork: true
-      tolerations:
-      - operator: Exists
       containers:
         - name: node-driver-registrar
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/csi-node-driver-registrar:{{ .Values.global.modulesImages.tags.cloudProviderOpenstack.csiNodeDriverRegistrar }}

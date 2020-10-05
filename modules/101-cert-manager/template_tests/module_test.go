@@ -16,6 +16,8 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
+modules:
+  placement: {}
 modulesImages:
   registry: registry.flant.com
   registryDockercfg: cfg
@@ -37,6 +39,8 @@ discovery:
 
 const globalValuesHa = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
+modules:
+  placement: {}
 modulesImages:
   registry: registry.flant.com
   registryDockercfg: cfg
@@ -59,6 +63,8 @@ discovery:
 
 const globalValuesManaged = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
+modules:
+  placement: {}
 modulesImages:
   registry: registry.flant.com
   registryDockercfg: cfg
@@ -79,6 +85,8 @@ discovery:
 
 const globalValuesManagedHa = `
 highAvailability: true
+modules:
+  placement: {}
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
   registry: registry.flant.com
@@ -133,7 +141,18 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 
 			Expect(cainjector.Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
+			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+- key: node-role.kubernetes.io/master
+- key: dedicated.deckhouse.io
+- key: dedicated
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+`))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeFalse())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
@@ -180,7 +199,18 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
+			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+- key: node-role.kubernetes.io/master
+- key: dedicated.deckhouse.io
+- key: dedicated
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+`))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(5))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate
@@ -250,7 +280,18 @@ podAntiAffinity:
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
+			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+- key: node-role.kubernetes.io/master
+- key: dedicated.deckhouse.io
+- key: dedicated
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+`))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeFalse())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
@@ -297,7 +338,18 @@ podAntiAffinity:
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(cainjector.Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
-			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchJSON("[{\"operator\":\"Exists\"}]"))
+			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+- key: node-role.kubernetes.io/master
+- key: dedicated.deckhouse.io
+- key: dedicated
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+`))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(3))
 			Expect(cainjector.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate

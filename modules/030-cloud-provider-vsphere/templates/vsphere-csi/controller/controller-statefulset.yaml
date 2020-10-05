@@ -36,7 +36,7 @@ spec:
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: vsphere-csi-controller

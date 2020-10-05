@@ -22,6 +22,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       priorityClassName: system-node-critical
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       initContainers:
       - name: api-proxy-check
         image: {{ .Values.global.modulesImages.registry }}/kube-proxy/api-proxy-check:{{ index .Values.global.modulesImages.tags.kubeProxy.apiProxyCheck }}
@@ -68,7 +69,3 @@ spec:
       - name: lib-modules
         hostPath:
           path: /lib/modules
-      tolerations:
-      - operator: Exists
-      nodeSelector:
-        beta.kubernetes.io/os: linux

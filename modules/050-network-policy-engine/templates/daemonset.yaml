@@ -64,8 +64,7 @@ spec:
           mountPath: /lib/modules
           readOnly: true
       hostNetwork: true
-      tolerations:
-      - operator: Exists
+{{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
       volumes:
       - name: lib-modules
         hostPath:

@@ -47,11 +47,11 @@ spec:
     spec:
       hostPID: true
       hostNetwork: true
-{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
       containers:
       - name: face-slapper
         image: {{ .Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/kube-scheduler-face-slapper:{{ .Values.global.modulesImages.tags.monitoringKubernetesControlPlane.kubeSchedulerFaceSlapper }}

@@ -40,8 +40,7 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: okmeter
       hostNetwork: true
-      tolerations:
-      - operator: Exists
+{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       containers:
       - name: okagent

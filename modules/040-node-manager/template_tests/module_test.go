@@ -22,6 +22,8 @@ func Test(t *testing.T) {
 
 const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd"]
+modules:
+  placement: {}
 modulesImages:
   registry: registry.flant.com
   registryDockercfg: cfg

@@ -14,6 +14,12 @@ global:
     clusterVersion: 1.15.4
     d8SpecificNodeCountByRole:
       master: 42
+  modules:
+    placement:
+      __ConstantChoices__:
+        - {}
+        - tolerations:
+            - operator: Exists
 
 monitoringKubernetesControlPlane:
   internal:
