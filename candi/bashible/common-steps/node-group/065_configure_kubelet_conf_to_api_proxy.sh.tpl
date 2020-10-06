@@ -10,8 +10,8 @@ kubelet_certificate_path="/var/lib/kubelet/pki/kubelet-client-current.pem"
 kubelet_kubeconfig_user=$(kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.users[].name' -r)
 
 # Reconfigure kubelet if it doesn't use kubernetes-api-proxy
-if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.clusters[].cluster.server' -r | grep 'https://kubernetes:6445' -q ; then
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set clusters.kubernetes.server https://kubernetes:6445
+if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.clusters[].cluster.server' -r | grep 'https://127.0.0.1:6445' -q ; then
+  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set clusters.kubernetes.server https://127.0.0.1:6445
   bb-flag-set kubelet-need-restart
 fi
 
