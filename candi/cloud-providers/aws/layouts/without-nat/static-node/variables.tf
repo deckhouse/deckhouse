@@ -33,4 +33,5 @@ locals {
   root_volume_type = lookup(local.node_group.instanceClass, "diskType", "gp2")
   additional_security_groups = lookup(local.node_group.instanceClass, "additionalSecurityGroups", [])
   zones = lookup(local.node_group, "zones", data.aws_availability_zones.available.names)
+  tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.node_group, "additionalTags", {}))
 }

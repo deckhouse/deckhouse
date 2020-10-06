@@ -41,6 +41,9 @@ apiVersions:
           zones:
             type: array
             items:
+          additionalTags:
+            type: object
+            additionalProperties:
               type: string
       nodeGroups:
         type: array
@@ -98,6 +101,9 @@ apiVersions:
             zones:
               type: array
               items:
+            additionalTags:
+              type: object
+              additionalProperties:
                 type: string
       layout:
         type: string
@@ -124,6 +130,10 @@ apiVersions:
         type: string
       sshPublicKey:
         type: string
+      tags:
+        type: object
+        additionalProperties:
+          type: string
       provider:
         type: object
         additionalProperties: false

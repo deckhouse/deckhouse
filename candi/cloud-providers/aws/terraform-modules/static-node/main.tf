@@ -41,11 +41,11 @@ resource "aws_instance" "node" {
     volume_type = var.root_volume_type
   }
 
-  tags = {
+  tags = merge(var.tags, {
     Name = "${var.prefix}-${var.node_group.name}-${var.node_index}"
     "kubernetes.io/cluster/${var.cluster_uuid}" = "shared"
     "kubernetes.io/cluster/${var.prefix}" = "shared"
-  }
+  })
 
   lifecycle {
     ignore_changes = [

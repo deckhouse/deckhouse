@@ -15,6 +15,9 @@
 {{- if hasKey .nodeGroup.instanceClass "iops" -}}
   {{ $_ := set $options "iops" .nodeGroup.instanceClass.iops -}}
 {{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" -}}
+  {{ $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
+{{- end -}}
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}

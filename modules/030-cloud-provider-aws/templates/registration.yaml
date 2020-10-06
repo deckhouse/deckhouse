@@ -27,4 +27,5 @@ data:
   {{- $_ := set $awsValues.internal "zoneToSubnetIdMap" .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
   {{- $_ := set $awsValues "loadBalancerSecurityGroup" .Values.cloudProviderAws.internal.loadBalancerSecurityGroup }}
   {{- $_ := set $awsValues "keyName" .Values.cloudProviderAws.internal.keyName }}
+  {{- $_ := set $awsValues "tags" .Values.cloudProviderAws.internal.tags }}
   aws: {{ $awsValues | toJson | b64enc | quote }}

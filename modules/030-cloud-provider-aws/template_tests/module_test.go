@@ -69,6 +69,8 @@ const moduleValues = `
       additionalSecurityGroups: ["id1", "id2"]
     loadBalancerSecurityGroup: mylbsecgroupid
     keyName: mykeyname
+    tags:
+      aaa: aaa
 `
 
 var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
@@ -138,7 +140,10 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
     "loadBalancerSecurityGroup":"mylbsecgroupid",
     "providerAccessKeyId":"myprovacckeyid",
     "providerSecretAccessKey":"myprovsecretaccesskey",
-    "region":"myregion"
+    "region":"myregion",
+    "tags":{
+      "aaa": "aaa"
+    }
 }`
 			dataAWS, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.aws").String())
 			Expect(err).ShouldNot(HaveOccurred())

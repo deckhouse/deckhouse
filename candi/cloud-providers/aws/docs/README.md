@@ -23,6 +23,7 @@ title: Cloud provider - AWS
     * `diskType`
     * `diskSizeGb`
   * `zones` — ограниченный набор зон, в которых разрешено создавать мастер-ноды. Опциональный параметр.
+  * `additionalTags` — дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — количество нод.
@@ -33,6 +34,7 @@ title: Cloud provider - AWS
     * `diskType`
     * `diskSizeGb`
   * `zones` — ограниченный набор зон, в которых разрешено создавать ноды. Опциональный параметр.
+  * `additionalTags` — дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
 * `vpcNetworkCIDR` — подсеть, которая будет указана в созданном VPC.
   * обязательный параметр если не указан параметр для развёртывания в уже созданном VPC `existingVPCID` (см. ниже).
 * `existingVPCID` — ID существующего VPC, в котором будет развёрнута схема.
@@ -42,6 +44,7 @@ title: Cloud provider - AWS
   * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
   * Необязательный, но рекомендованный параметр. По-умолчанию — соответствует целому диапазону адресов VPC.
 * `sshPublicKey` — публичный ключ для доступа на ноды.
+* `tags` — теги, которые будут присвоены всем созданным ресурсам.
 
 ### Standard
 
@@ -74,8 +77,12 @@ nodeGroups:
     instanceClass:
       instanceType: t2.medium
       ami: ami-03818140b4ac9ae2b
+    additionalTags:
+      backup: me
 nodeNetworkCIDR: "10.222.0.0/16"
 sshPublicKey: ...
+tags:
+  team: torpedo
 ```
 
 ### WithoutNAT
@@ -107,8 +114,12 @@ nodeGroups:
     instanceClass:
       instanceType: t2.medium
       ami: ami-03818140b4ac9ae2b
+    additionalTags:
+      backup: me
 nodeNetworkCIDR: "10.222.0.0/16"
 sshPublicKey: ...
+tags:
+  team: torpedo
 ```
 
 ## Рекомендуемая настройка IAM
@@ -234,6 +245,7 @@ sshPublicKey: ...
                 "iam:PassRole",
                 "iam:PutRolePolicy",
                 "iam:RemoveRoleFromInstanceProfile",
+                "iam:TagRole",
                 "kms:DescribeKey",
                 "sts:GetCallerIdentity"
             ],
@@ -251,6 +263,7 @@ sshPublicKey: ...
 * Задать имя, например `D8CloudProviderAWS`
 * `Create Policy`
 * Создать IAM User
+* Задать имя, например `d8-candi`
 * Выбрать `Programmatic access`
 * Выбрать вкладку `Attach existing policies directly` и нажать `Create Policy`
 * Найти `D8CloudProviderAWS` и поставить галку

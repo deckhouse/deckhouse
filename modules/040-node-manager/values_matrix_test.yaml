@@ -58,11 +58,12 @@ nodeManager:
               __ConstantChoices__:
               - __EmptyItem__
               - ["mysecgroupid1", "mysecgroupid2"]
-            extraTags: ["extratag1", "extratag2"]
           internal:
             zoneToSubnetIdMap:
               zonea: mysubnetida
               zoneb: mysubnetidb
+          tags:
+            aaa: aaa
       nodeGroups:
         __ConstantChoices__:
         - []
@@ -73,6 +74,8 @@ nodeManager:
               diskType: gp2
               iops: 42
               instanceType: t2.medium
+              tags:
+                bbb: bbb
             nodeType: Cloud
             kubernetesVersion: "1.16"
             cloudInstances:
