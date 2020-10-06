@@ -132,6 +132,7 @@ rules:
    - ""
    resources:
    - nodes
+   - nodes/status
    verbs:
    - delete
    - deletecollection
