@@ -63,16 +63,17 @@ spec:
         - "--endpoint=unix:/csi/csi.sock"
         env:
         - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: "/etc/csi-cloud-credentials/credentials.json"
+          value: "/etc/credentials.json"
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
-        - name: csi-cloud-credentials
+        - mountPath: /etc/credentials.json
+          name: cloud-credentials
           readOnly: true
-          mountPath: "/etc/csi-cloud-credentials"
+          subPath: credentials.json
       volumes:
-        - name: socket-dir
-          emptyDir: {}
-        - name: csi-cloud-credentials
-          secret:
-            secretName: csi-cloud-credentials
+      - name: socket-dir
+        emptyDir: {}
+      - name: cloud-credentials
+        secret:
+          secretName: cloud-credentials

@@ -8,9 +8,9 @@ metadata:
 spec:
   group: deckhouse.io
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
+  - name: v1alpha1
+    served: true
+    storage: true
   scope: Cluster
   names:
     plural: gcpinstanceclasses
@@ -29,7 +29,6 @@ spec:
           type: object
           required:
           - machineType
-          - image
           properties:
             machineType:
               description: Machine type of GCP instance.
@@ -53,3 +52,13 @@ spec:
               description: Instance disk size in gigabytes.
               example: 20
               type: integer
+            disableExternalIP:
+              description: Defines whether to disable external ip for instance or not. True means that istance is created without external ip
+              type: boolean
+            additionalNetworkTags:
+              type: array
+              items:
+                type: string
+            additionalLabels:
+              additionalProperties:
+                type: string

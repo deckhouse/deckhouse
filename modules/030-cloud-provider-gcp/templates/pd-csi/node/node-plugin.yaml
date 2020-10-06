@@ -58,6 +58,9 @@ spec:
         args:
         - "--v=5"
         - "--endpoint=unix:/csi/csi.sock"
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/etc/credentials.json"
         volumeMounts:
         - name: kubelet-dir
           mountPath: /var/lib/kubelet
@@ -75,6 +78,10 @@ spec:
           mountPath: /run/udev
         - name: sys
           mountPath: /sys
+        - mountPath: /etc/credentials.json
+          name: cloud-credentials
+          readOnly: true
+          subPath: credentials.json
       volumes:
       - name: registration-dir
         hostPath:
@@ -109,4 +116,7 @@ spec:
         hostPath:
           path: /sys
           type: Directory
+      - name: cloud-credentials
+        secret:
+          secretName: cloud-credentials
 {{- end }}

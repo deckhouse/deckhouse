@@ -1,2 +1,3 @@
 cloudProviderGcp:
-  disableExternalIP: true
+  internal:
+    disableExternalIP: true

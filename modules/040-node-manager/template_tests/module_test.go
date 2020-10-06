@@ -95,13 +95,18 @@ internal:
     type: gcp
     machineClassKind: GCPMachineClass
     gcp:
+      region: region
+      sshKey: privatekey
       networkName: mynetwork
-      subnetworkName: mysubnet
-      region: myreg
-      extraInstanceTags: [aaa,bbb] #optional
-      sshKey: mysshkey
-      serviceAccountKey: '{"my":"key"}'
+      subnetworkName: mysubnetwork
       disableExternalIP: true
+      image: image
+      diskSizeGb: 20
+      diskType: type
+      networkTags: ["tag1", "tag2"]
+      labels:
+        test: test
+      serviceAccountJSON: '{"client_email":"client_email"}'
   nodeGroups:
   - name: worker
     instanceClass: # maximum filled

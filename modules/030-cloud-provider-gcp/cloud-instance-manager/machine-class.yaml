@@ -12,11 +12,11 @@ spec:
   disks:
   - autoDelete: true
     boot: true
-    sizeGb: {{ .nodeGroup.instanceClass.diskSizeGb | default 20 }}
-    type: {{ .nodeGroup.instanceClass.diskType | default "pd-standard" | quote }}
-    image: {{ .nodeGroup.instanceClass.image | quote }}
+    sizeGb: {{ if hasKey .nodeGroup.instanceClass "diskSizeGb" }}{{ .nodeGroup.instanceClass.diskSizeGb }}{{ else }}{{ .Values.nodeManager.internal.cloudProvider.gcp.diskSizeGb }}{{ end }}
+    type: {{ if hasKey .nodeGroup.instanceClass "diskType" }}{{ .nodeGroup.instanceClass.diskSizeGb | quote }}{{ else }}{{ .Values.nodeManager.internal.cloudProvider.gcp.diskType | quote }}{{ end }}
+    image: {{ if hasKey .nodeGroup.instanceClass "image" }}{{ .nodeGroup.instanceClass.diskSizeGb | quote }}{{ else }}{{ .Values.nodeManager.internal.cloudProvider.gcp.image | quote }}{{ end }}
   serviceAccounts:
-  - email: {{ index (.Values.nodeManager.internal.cloudProvider.gcp.serviceAccountKey | fromJson) "client_email" | quote }}
+  - email: {{ index (.Values.nodeManager.internal.cloudProvider.gcp.serviceAccountJSON | fromJson) "client_email" | quote }}
     scopes:
     - "https://www.googleapis.com/auth/cloud-platform"
   networkInterfaces:
@@ -27,15 +27,30 @@ spec:
     automaticRestart: true
     onHostMaintenance: MIGRATE
     preemptible: {{ .nodeGroup.instanceClass.preemptible | default false }}
+{{- $labels := .Values.nodeManager.internal.cloudProvider.gcp.labels }}
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
+{{- $labels :=  mergeOverwrite $labels .nodeGroup.instanceClass.additionalLabels }}
+{{- end }}
+{{- if gt (len $labels) 0 }}
+  labels:
+  {{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+  {{- end }}
+{{- end }}
   metadata:
   - key: ssh-keys
-    value: "{{ .Values.nodeManager.internal.cloudProvider.gcp.sshUser }}:{{ .Values.nodeManager.internal.cloudProvider.gcp.sshKey }}"
+    value: "user:{{ .Values.nodeManager.internal.cloudProvider.gcp.sshKey }}"
   tags:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
   - kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}
   - kubernetes-io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}
-{{- if hasKey .Values.nodeManager.internal.cloudProvider.gcp "extraInstanceTags" }}
-  {{- range .Values.nodeManager.internal.cloudProvider.gcp.extraInstanceTags }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.gcp "networkTags" }}
+  {{- range .Values.nodeManager.internal.cloudProvider.gcp.networkTags }}
+  - {{ . | quote }}
+  {{- end }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalNetworkTags" }}
+  {{- range .nodeGroup.instanceClass.additionalNetworkTags }}
   - {{ . | quote }}
   {{- end }}
 {{- end }}

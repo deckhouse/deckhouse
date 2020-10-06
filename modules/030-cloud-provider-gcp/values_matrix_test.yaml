@@ -1,4 +1,8 @@
 global:
+  clusterConfiguration:
+    cloud:
+      prefix: prefix
+    clusterType: "Cloud"
   enabledModules:
     __ConstantChoices__:
       - ["vertical-pod-autoscaler-crd"]
@@ -34,22 +38,64 @@ global:
           - "test-2/master"
 
 cloudProviderGcp:
-  serviceAccountKey: mysvcacckey
-  networkName:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - mynetname
-  zones: ["zonea", "zoneb"]
-  region: myregion
-  subnetworkName: mysubnetname
-  sshKey: mysshkey
-  sshUser: mysshuser
-  extraInstanceTags:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - ["tag1","tag2"]
-  disableExternalIP:
-    __ConstantChoices__:
-    - __EmptyItem__
-    - true
-    - false
+  internal:
+    disableExternalIP:
+      __ConstantChoices__:
+      - __EmptyItem__
+      - true
+      - false
+    providerClusterConfiguration:
+        sshKey: publickey
+        subnetworkCIDR: 10.0.0.0/24
+        labels:
+          kube: test
+        layout: Standard
+        masterNodeGroup:
+          instanceClass:
+            additionalLabels:
+                kube-node: test
+            additionalNetworkTags:
+              __ConstantChoices__:
+              - __EmptyItem__
+              - ["tag1","tag2"]
+            disableExternalIP: false
+            diskSizeGb: 20
+            image: image
+            machineType: n1-standard-4
+          replicas: 1
+          zones: ["zonea", "zoneb"]
+        peeredVPCs:
+        - default
+        provider:
+          region: europe-west4
+          serviceAccountJSON: |-
+            {
+              "type": "service_account",
+              "project_id": "project_id",
+              "private_key_id": "private_key_id",
+              "private_key": "private_key",
+              "client_email": "client_email",
+              "client_id": "client_id",
+              "auth_uri": "auth_uri",
+              "token_uri": "token_uri",
+              "auth_provider_x509_cert_url": "auth_provider_x509_cert_url",
+              "client_x509_cert_url": "client_x509_cert_url"
+            }
+    providerDiscoveryData:
+      disableExternalIP: true
+      instances:
+        diskSizeGb: 50
+        diskType: disk-type
+        image: image
+        networkTags:
+        - ["tag1", "tag2"]
+        labels:
+          test: test
+      kind: GCPCloudDiscoveryData
+      networkName:
+        __ConstantChoices__:
+        - __EmptyItem__
+        - mynetname
+      subnetworkName: example
+      zones:
+      - example

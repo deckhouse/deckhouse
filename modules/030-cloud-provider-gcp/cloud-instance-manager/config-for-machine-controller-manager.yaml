@@ -1,1 +1,1 @@
-serviceAccountJSON: {{ .Values.nodeManager.internal.cloudProvider.gcp.serviceAccountKey | b64enc }}
+serviceAccountJSON: {{ .Values.nodeManager.internal.cloudProvider.gcp.serviceAccountJSON | b64enc }}

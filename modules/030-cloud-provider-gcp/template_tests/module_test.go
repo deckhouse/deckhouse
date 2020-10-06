@@ -25,6 +25,10 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+  clusterConfiguration:
+    cloud:
+      prefix: myprefix
+    clusterType: "Cloud"
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
@@ -51,15 +55,25 @@ const globalValues = `
 `
 
 const moduleValues = `
-  serviceAccountKey: mysvcacckey
-  networkName: mynetname
-  zones: ["zonea", "zoneb"]
-  region: myregion
-  subnetworkName: mysubnetname
-  sshKey: mysshkey
-  sshUser: mysshuser
-  extraInstanceTags: ["tag1","tag2"]
-  disableExternalIP: true
+  internal:
+    providerClusterConfiguration:
+      sshKey: mysshkey
+      subnetworkCIDR: 10.0.0.0/24
+      provider:
+        region: myregion
+        serviceAccountJSON: mysvcacckey
+    providerDiscoveryData:
+      disableExternalIP: true
+      instances:
+        diskSizeGb: 50
+        diskType: disk-type
+        image: image
+        networkTags: ["tag1", "tag2"]
+        labels:
+          test: test
+      networkName: mynetname
+      subnetworkName: mysubnetname
+      zones: ["zonea", "zoneb"]
 `
 
 var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
@@ -103,7 +117,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			pdCSIResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:controller:external-resizer")
 			pdCSISnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:pd-csi:controller:external-snapshotter")
 			pdCSISnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:controller:external-snapshotter")
-			pdCSICredentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "csi-cloud-credentials")
+			pdCSICredentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "cloud-credentials")
 			pdCSIStandardNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-not-replicated")
 			pdCSIStandardReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-replicated")
 			pdCSISSDNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-not-replicated")
@@ -119,15 +133,20 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
           "disableExternalIP": true,
-          "extraInstanceTags": [
+          "diskSizeGb": 50,
+          "diskType": "disk-type",
+          "image": "image",
+          "labels": {
+            "test": "test"
+          },
+          "networkName": "mynetname",
+          "networkTags": [
             "tag1",
             "tag2"
           ],
-          "networkName": "mynetname",
           "region": "myregion",
-          "serviceAccountKey": "mysvcacckey",
+          "serviceAccountJSON": "mysvcacckey",
           "sshKey": "mysshkey",
-          "sshUser": "mysshuser",
           "subnetworkName": "mysubnetname"
         }`
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.gcp").String())

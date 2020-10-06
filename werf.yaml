@@ -579,4 +579,11 @@ ansible:
       dest: /bin
       mode: +x
 
+  - name: "Install terraform provider google"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-google/3.40.0/terraform-provider-google_3.40.0_linux_amd64.zip
+      remote_src: yes
+      dest: /bin
+      mode: +x
+
   - raw: rm -rf /var/cache/apk/*
