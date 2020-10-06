@@ -30,7 +30,6 @@ spec:
           required:
           - cores
           - memory
-          - imageID
           properties:
             cores:
               description: Amount of CPU cores to provision on a Yandex Compute Instance.

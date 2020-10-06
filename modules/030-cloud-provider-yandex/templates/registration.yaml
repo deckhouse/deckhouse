@@ -9,7 +9,7 @@ type: Opaque
 data:
   # obligatory
   type: {{ b64enc "yandex" | quote }}
-  zones: {{ .Values.cloudProviderYandex.internal.zones | toJson | b64enc | quote }}
+  zones: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
   machineClassKind: {{ b64enc "YandexMachineClass" | quote }}
 
@@ -23,4 +23,6 @@ data:
   {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
   {{- $_ := set $yandexValues "labels" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.labels | default dict) }}
 
+  {{- $_ := set $yandexValues "instanceClassDefaults" dict }}
+  {{- $_ := set $yandexValues.instanceClassDefaults "imageID" .Values.cloudProviderYandex.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.imageID }}
   yandex: {{ $yandexValues | toJson | b64enc | quote }}

@@ -65,6 +65,9 @@ const moduleValues = `
       region: myreg
     providerClusterConfiguration:
       sshPublicKey: mysshkey
+      masterNodeGroup:
+        instanceClass:
+          imageID: test
       provider:
         serviceAccountJSON: '{"my": "json"}'
         folderID: myfoldid
@@ -136,7 +139,10 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
             "zoneb": "bbb"
           },
           "shouldAssignPublicIPAddress": true,
-          "labels": {"test": "test"}
+          "labels": {"test": "test"},
+		  "instanceClassDefaults": {
+			  "imageID": "test"
+		  }
         }`
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.yandex").String())
 			Expect(err).ShouldNot(HaveOccurred())

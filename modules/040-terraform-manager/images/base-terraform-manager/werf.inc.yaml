@@ -46,7 +46,7 @@ ansible:
   install:
   - name: "Install terraform"
     unarchive:
-      src: https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x

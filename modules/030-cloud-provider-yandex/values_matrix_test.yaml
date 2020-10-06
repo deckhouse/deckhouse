@@ -48,6 +48,9 @@ cloudProviderYandex:
     region: myreg
     providerClusterConfiguration:
       sshPublicKey: mysshkey
+      masterNodeGroup:
+        instanceClass:
+          imageID: test
       provider:
         serviceAccountJSON: '{"my": "json"}'
         folderID: myfoldid
