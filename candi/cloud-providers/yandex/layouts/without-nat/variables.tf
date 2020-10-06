@@ -24,4 +24,6 @@ locals {
   dhcp_options = lookup(var.providerClusterConfiguration, "dhcpOptions", null)
   dhcp_domain_name = local.dhcp_options != null ? lookup(local.dhcp_options, "domainName", null) : null
   dhcp_domain_name_servers = local.dhcp_options != null ? lookup(local.dhcp_options, "domainNameServers", null) : null
+
+  labels = lookup(var.providerClusterConfiguration, "labels", {})
 }

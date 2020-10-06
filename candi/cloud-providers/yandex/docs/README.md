@@ -27,6 +27,7 @@ title: Cloud provider - Yandex
       * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
+    * `additionalLabels` — дополнительные лейблы, с которыми будут создаваться статические узлы.
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
@@ -40,12 +41,14 @@ title: Cloud provider - Yandex
       * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по-умолчанию.
+    * `additionalLabels` — дополнительные лейблы, с которыми будут создаваться статические узлы.
 * `nodeNetworkCIDR` — данная подсеть будет разделена на **три** равных части и использована для создания подсетей в трёх зонах Yandex.Cloud.
 * `existingNetworkID` — существующей VPC Network.
 * `dhcpOptions` — список DHCP опций, которые будут установлены на все подсети. [Возможные проблемы](#Проблемы-dhcpOptions-и-пути-их-решения) при использовании.
   * `domainName` — search домен.
   * `domainNameServers` — список адресов рекурсивных DNS.
 * `sshKey` — публичный ключ для доступа на ноды.
+* `labels` — лейблы, проставляемые на ресурсы, создаваемые в Yandex.Cloud.
 
 ### Standard
 
@@ -76,6 +79,8 @@ masterNodeGroup:
     - "198.51.100.5"
     - "Auto"
     externalSubnetID: tewt243tewsdf
+    additionalLabels:
+      takes: priority
 nodeGroups:
 - name: khm
   replicas: 1
@@ -90,6 +95,10 @@ nodeGroups:
     - "198.51.100.5"
     - "Auto"
     externalSubnetID: tewt243tewsdf
+    additionalLabels:
+      toy: example
+labels:
+  billing: prod
 sshKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: tewt243tewsdf

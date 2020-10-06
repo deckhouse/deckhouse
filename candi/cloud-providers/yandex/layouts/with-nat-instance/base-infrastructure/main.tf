@@ -1,6 +1,8 @@
 resource "yandex_vpc_network" "kube" {
   count = local.existing_network_id != "" ? 0 : 1
   name = local.prefix
+
+  labels = local.labels
 }
 
 locals {
@@ -20,4 +22,5 @@ module "vpc_components" {
   nat_instance_internal_subnet_id = local.nat_instance_internal_subnet_id
   nat_instance_external_subnet_id = local.nat_instance_external_subnet_id
   nat_instance_ssh_key = var.providerClusterConfiguration.sshPublicKey
+  labels = local.labels
 }

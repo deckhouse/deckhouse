@@ -48,6 +48,9 @@ spec:
               description: Image ID to use while provisioning Yandex Compute Instances.
               example: fd8nb7ecsbvj76dfaa8b
               type: string
+            preemptible:
+              description: Should a provisioned Yandex Compute Instance be preemtible.
+              type: boolean
             diskType:
               description: Instance disk type.
               example: "network-ssd"
@@ -75,7 +78,7 @@ spec:
               type: array
               items:
                 type: string
-            labels:
+            additionalLabels:
               type: object
               additionalProperties:
                 type: string

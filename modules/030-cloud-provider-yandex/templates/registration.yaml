@@ -21,4 +21,6 @@ data:
   {{- $_ := set $yandexValues "sshKey" .Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey }}
   {{- $_ := set $yandexValues "shouldAssignPublicIPAddress" .Values.cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress }}
   {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
+  {{- $_ := set $yandexValues "labels" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.labels | default dict) }}
+
   yandex: {{ $yandexValues | toJson | b64enc | quote }}

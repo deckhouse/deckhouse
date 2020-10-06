@@ -44,3 +44,7 @@ variable "nat_instance_ssh_key" {
   type = string
   default = ""
 }
+
+variable "labels" {
+  type = map
+}

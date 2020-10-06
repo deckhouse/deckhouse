@@ -51,3 +51,5 @@ cloudProviderYandex:
       provider:
         serviceAccountJSON: '{"my": "json"}'
         folderID: myfoldid
+      labels:
+        test: test
