@@ -68,6 +68,8 @@ const moduleValues = `
       provider:
         serviceAccountJSON: '{"my": "json"}'
         folderID: myfoldid
+      labels:
+        test: test
 `
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
@@ -133,7 +135,8 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
             "zonea": "aaa",
             "zoneb": "bbb"
           },
-          "shouldAssignPublicIPAddress": true
+          "shouldAssignPublicIPAddress": true,
+          "labels": {"test": "test"}
         }`
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.yandex").String())
 			Expect(err).ShouldNot(HaveOccurred())

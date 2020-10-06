@@ -263,7 +263,7 @@ internal:
       assignPublicIPAddress: true #optional
       mainSubnet: mymainsubnet
       additionalSubnets: [aaa, bbb]
-      labels: # optional
+      additionalLabels: # optional
         my: label
     nodeType: Cloud
     kubernetesVersion: "1.15"
@@ -828,7 +828,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			It("should render correctly", func() {
 				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
 				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("f6d76633ca65e16841d11fbdb5838633f1a9dca126d503d479ad38ba1d67efdb"))
+				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d0de381052e706a0e28a9b2cfde60ed2e29854900549ef253d1283d1673a6625"))
 			})
 		})
 
@@ -917,13 +917,13 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("74795e5fe09827e6c1b0a44968e667aa93a9c1ee34e9c6f0bb6994dbdb2bb2fd"))
+			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e8f505559b08cf2de57171d574feae2b258c66d9adf83808fc173e70cb006c47"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("74795e5fe09827e6c1b0a44968e667aa93a9c1ee34e9c6f0bb6994dbdb2bb2fd"))
+			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e8f505559b08cf2de57171d574feae2b258c66d9adf83808fc173e70cb006c47"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())

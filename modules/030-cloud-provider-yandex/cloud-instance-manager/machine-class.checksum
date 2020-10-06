@@ -25,8 +25,8 @@
 {{- if hasKey .nodeGroup.instanceClass "preemptible" -}}
   {{- $_ := set $options "preemptible" .nodeGroup.instanceClass.preemptible -}}
 {{- end -}}
-{{- if hasKey .nodeGroup.instanceClass "labels" -}}
-  {{- $_ := set $options "labels" .nodeGroup.instanceClass.labels -}}
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" -}}
+  {{- $_ := set $options "additionalLabels" .nodeGroup.instanceClass.additionalLabels -}}
 {{- end -}}
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}

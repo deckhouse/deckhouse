@@ -30,6 +30,8 @@ resource "yandex_compute_disk" "kubernetes_data" {
   size = 10
   zone = local.internal_subnet.zone
   type = "network-ssd"
+
+  labels = local.additional_labels
 }
 
 resource "yandex_compute_instance" "master" {
@@ -42,6 +44,8 @@ resource "yandex_compute_instance" "master" {
     cores  = local.cores
     memory = local.memory
   }
+
+  labels = local.additional_labels
 
   boot_disk {
     initialize_params {

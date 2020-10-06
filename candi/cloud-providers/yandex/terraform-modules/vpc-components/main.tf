@@ -15,6 +15,8 @@ resource "yandex_vpc_route_table" "kube" {
       static_route,
     ]
   }
+
+  labels = var.labels
 }
 
 resource "yandex_vpc_subnet" "kube_a" {
@@ -37,6 +39,8 @@ resource "yandex_vpc_subnet" "kube_a" {
       v4_cidr_blocks,
     ]
   }
+
+  labels = var.labels
 }
 
 resource "yandex_vpc_subnet" "kube_b" {
@@ -59,6 +63,8 @@ resource "yandex_vpc_subnet" "kube_b" {
       v4_cidr_blocks,
     ]
   }
+
+  labels = var.labels
 }
 
 resource "yandex_vpc_subnet" "kube_c" {
@@ -81,4 +87,6 @@ resource "yandex_vpc_subnet" "kube_c" {
       v4_cidr_blocks,
     ]
   }
+
+  labels = var.labels
 }

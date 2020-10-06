@@ -14,4 +14,6 @@ module "vpc_components" {
   node_network_cidr = local.node_network_cidr
   dhcp_domain_name = local.dhcp_domain_name
   dhcp_domain_name_servers = local.dhcp_domain_name_servers
+
+  labels = local.labels
 }

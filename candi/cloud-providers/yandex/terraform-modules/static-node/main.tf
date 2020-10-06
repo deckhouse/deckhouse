@@ -35,6 +35,8 @@ resource "yandex_compute_instance" "static" {
     memory = local.memory
   }
 
+  labels = local.additional_labels
+
   boot_disk {
     initialize_params {
       type = "network-ssd"

@@ -40,10 +40,12 @@ spec:
   # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
     kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}: "1"
     kubernetes-io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
-{{- if hasKey .nodeGroup.instanceClass "labels" }}
-  {{- range $k, $v := .nodeGroup.instanceClass.labels }}
+{{- $effectiveLabels := .Values.nodeManager.internal.cloudProvider.yandex.labels }}
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
+  {{- $effectiveLabels = merge .nodeGroup.instanceClass.additionalLabels $effectiveLabels }}
+{{- end }}
+{{- range $k, $v := $effectiveLabels }}
     {{ $k }}: {{ $v }}
-  {{- end }}
 {{- end }}
   metadata:
     ssh-keys: "user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
