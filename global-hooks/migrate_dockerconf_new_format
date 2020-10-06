@@ -1,0 +1,30 @@
+#!/bin/bash
+### Migration 29.09.2020: Remove after release with this MR
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 15
+EOF
+}
+
+function __on_startup() {
+
+  secrets=$(kubectl get secrets -A \
+    -l heritage=deckhouse \
+    --field-selector type=kubernetes.io/dockercfg \
+    -o json | jq -r '
+    .items[] |
+    .data.".dockerconfigjson" = (.data.".dockercfg" | @base64d | {"auth": . | fromjson} | @base64)
+    | .type = "kubernetes.io/dockerconfigjson"
+    | del(.data.".dockercfg")
+    | del(.metadata.creationTimestamp)
+    | del(.metadata.resourceVersion)
+    | del(.metadata.selfLink)
+    | del(.metadata.uid)')
+
+  kubernetes::replace_or_create_json <<< $secrets
+}
+
+hook::run $@

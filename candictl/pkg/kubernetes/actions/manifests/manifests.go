@@ -223,7 +223,7 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 func DeckhouseRegistrySecret(dockerCfg string) *apiv1.Secret {
 	data, _ := base64.StdEncoding.DecodeString(dockerCfg)
 	return &apiv1.Secret{
-		Type: apiv1.SecretTypeDockercfg,
+		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: deckhouseRegistrySecretName,
 			Labels: map[string]string{
@@ -231,7 +231,7 @@ func DeckhouseRegistrySecret(dockerCfg string) *apiv1.Secret {
 			},
 		},
 		Data: map[string][]byte{
-			apiv1.DockerConfigKey: data,
+			apiv1.DockerConfigJsonKey: data,
 		},
 	}
 }
