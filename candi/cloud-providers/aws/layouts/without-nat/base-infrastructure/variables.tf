@@ -4,6 +4,16 @@ variable "clusterConfiguration" {
 
 variable "providerClusterConfiguration" {
   type = any
+
+  validation {
+    condition = contains(keys(var.providerClusterConfiguration), "vpcNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.vpcNetworkCIDR,0,0) == var.providerClusterConfiguration.vpcNetworkCIDR : true
+    error_message = "Invalid vpcNetworkCIDR in AWSClusterConfiguration."
+  }
+
+  validation {
+    condition = contains(keys(var.providerClusterConfiguration), "nodeNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.nodeNetworkCIDR,0,0) == var.providerClusterConfiguration.nodeNetworkCIDR : true
+    error_message = "Invalid nodeNetworkCIDR in AWSClusterConfiguration."
+  }
 }
 
 variable "clusterUUID" {
