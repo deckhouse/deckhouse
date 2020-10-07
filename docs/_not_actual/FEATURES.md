@@ -11,7 +11,7 @@ permalink: features.html
 - Kubernetes [Dashboard]({{ site.baseurl }}/modules/500-dashboard/);
 - [Nginx Ingress Controller]({{ site.baseurl }}/modules/400-nginx-ingress/);
 - [Автокопирование секретов]({{ site.baseurl }}/modules/600-secret-copier/) при создании `namespace`;
-- [Очистка]({{ site.baseurl }}/modules/800-systemd-slices-cleaner/) systemd-слайсов в Ubuntu 16 на нодах, помеченных лейблом `systemd-slices-cleaner.antiopa.flant.com/enabled=true`;
+- [Очистка](/candi/bashible/common-steps/node-group/042_configure_systemd_slices_cleaner.sh.tpl) systemd-слайсов в Ubuntu 16 на нодах;
 - Настраивается [cert-manager]({{ site.baseurl }}/modules/101-cert-manager/) и создаются его CRD;
 - **[v1.11+]** Создаются [PriorityClass]({{ site.baseurl }}/modules/010-priority-class/). **Но!** Чтобы заработал учет приоритетов при шедулинге, необходимо еще [расставить]({{ site.baseurl }}/modules/010-priority-class/) `priorityClassName` контроллерам подов;
 - [Prometheus и Grafana]({{ site.baseurl }}/modules/300-prometheus) — ключевой компонент мониторинга кластера. Если он включен, то также сразу работают:
@@ -119,5 +119,4 @@ Statusmap (второй блок сверху на всех досках, кро
 | 500-openvpn                     | [Пока нет](https://github.com/deckhouse/deckhouse/issues/518) |
 | 600-ping-exporter               | DaemonSet |
 | 600-secret-copier               | Не требуется |
-| 800-systemd-slices-cleaner      | DaemonSet |
 | 999-helm                        | Не требуется |

@@ -34,5 +34,4 @@ deschedulerEnabled: true
 ingressNginxEnabled: true
 dashboardEnabled: true
 secretCopierEnabled: true
-systemdSlicesCleanerEnabled: true
 helmEnabled: true
