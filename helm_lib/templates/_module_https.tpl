@@ -72,6 +72,26 @@ certManager:
   {{- $https_values.certManager.clusterIssuerName -}}
 {{- end -}}
 
+{{- /* Usage: {{ if (include "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" .) }} */ -}}
+{{- define "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" -}}
+  {{- $context := . -}}
+  {{- if has (include "helm_lib_module_https_cert_manager_cluster_issuer_name" $context) (list "route53" "cloudflare" "digitalocean" "clouddns") }}
+    "not empty string"
+  {{- end -}}
+{{- end -}}
+
+{{- /* Usage: {{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | indent 4 }} */ -}}
+{{- define "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" -}}
+  {{- $context := . -}}
+  {{- if (include "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" $context) }}
+- dns01:
+    provider: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" $context }}
+  {{- else }}
+- http01:
+    ingressClass: {{ include "helm_lib_module_ingress_class" $context | quote }}
+  {{- end }}
+{{- end -}}
+
 {{- /* Usage: {{ if (include "helm_lib_module_https_ingress_tls_enabled" .) }} */ -}}
 {{- define "helm_lib_module_https_ingress_tls_enabled" -}}
   {{- $context := . -}}

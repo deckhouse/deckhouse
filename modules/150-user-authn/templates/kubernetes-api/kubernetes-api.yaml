@@ -1,7 +1,7 @@
 {{- define "cluster_issuer_required_dns_challenge" }}
   {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
     {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
-      {{- if (has (include "helm_lib_module_https_cert_manager_cluster_issuer_name" .) (list "route53" "cloudflare" "digitalocean")) }}
+      {{- if (include "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" .) }}
       not empty string
       {{- end }}
     {{- end }}
