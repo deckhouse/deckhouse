@@ -104,9 +104,13 @@ data:
     {{- end }}
   {{- end }}
 
-  {{- if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
   use-proxy-protocol: "true"
   proxy-real-ip-cidr: "0.0.0.0/0"
+  {{- end }}
+
+  {{- if eq $crd.spec.inlet "LoadBalancerWithProxyProtocol" }}
+  use-proxy-protocol: "true"
   {{- end }}
 
   {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
