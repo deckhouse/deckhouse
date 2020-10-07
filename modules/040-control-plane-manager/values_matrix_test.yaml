@@ -14,7 +14,7 @@ global:
       __ConstantChoices__: ["Cloud", "Static"]
   modulesImages:
     registry: registry.flant.com
-    registryDockercfg: eyJyZWdpc3RyeS5mbGFudC5jb20iOiB7CiAgInVzZXJuYW1lIjogIm9hdXRoMiIsCiAgInBhc3N3b3JkIjogInBhc3N3b3JkIiwKICAiYXV0aCI6ICJhdXRoIiwKICAiZW1haWwiOiAiZmxhbnQtZ2ctMjU2QGZsYW50LmNvbSIKIH0KfQo=
+    registryDockercfg: eyJhdXRocyI6eyJyZWdpc3RyeS5mbGFudC5jb20iOnsidXNlcm5hbWUiOiAib2F1dGgyIiwgInBhc3N3b3JkIjogInBhc3N3b3JkIiwgImF1dGgiOiAiYXV0aCIsICJlbWFpbCI6ICJmbGFudC1nZy0yNTZAZmxhbnQuY29tIn19fQo=
     tags:
       controlPlaneManager:
         controlPlaneManager: tagstring

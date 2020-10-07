@@ -16,7 +16,7 @@ function __on_startup() {
     --field-selector type=kubernetes.io/dockercfg \
     -o json | jq -r '
     .items[] |
-    .data.".dockerconfigjson" = (.data.".dockercfg" | @base64d | {"auth": . | fromjson} | @base64)
+    .data.".dockerconfigjson" = (.data.".dockercfg" | @base64d | {"auths": . | fromjson} | @base64)
     | .type = "kubernetes.io/dockerconfigjson"
     | del(.data.".dockercfg")
     | del(.metadata.creationTimestamp)
