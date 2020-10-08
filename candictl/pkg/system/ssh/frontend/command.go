@@ -22,7 +22,7 @@ type Command struct {
 	Args []string
 	Env  []string
 
-	SshArgs []string
+	SSHArgs []string
 
 	onCommandStart func()
 
@@ -38,7 +38,7 @@ func NewCommand(sess *session.Session, name string, arg ...string) *Command {
 }
 
 func (c *Command) WithSSHArgs(args ...string) *Command {
-	c.SshArgs = args
+	c.SSHArgs = args
 	return c
 }
 
@@ -51,12 +51,12 @@ func (c *Command) Sudo() *Command {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`, cmdLine)
 
-	args := append(c.SshArgs, []string{
+	args := append(c.SSHArgs, []string{
 		"-t", // allocate tty to auto kill remote process when ssh process is killed
 		"-t", // need to force tty allocation because of stdin is pipe!
 	}...)
 
-	c.cmd = cmd.NewSsh(c.Session).
+	c.cmd = cmd.NewSSH(c.Session).
 		WithArgs(args...).
 		WithCommand(sudoCmdLine).Cmd()
 
@@ -73,8 +73,8 @@ func (c *Command) Sudo() *Command {
 		if pattern == "SudoPassword" {
 			if !passSent {
 				// send pass through stdin
-				app.Debugf("Send become pass to cmd\n")
-				c.Executor.Stdin.Write([]byte(app.BecomePass + "\n"))
+				log.DebugF("Send become pass to cmd\n")
+				_, _ = c.Executor.Stdin.Write([]byte(app.BecomePass + "\n"))
 				passSent = true
 			} else {
 				// Second prompt is error!
@@ -84,7 +84,7 @@ func (c *Command) Sudo() *Command {
 			return "reset"
 		}
 		if pattern == "SUDO-SUCCESS" {
-			app.Debugf("Got SUCCESS\n")
+			log.DebugF("Got SUCCESS\n")
 			if c.onCommandStart != nil {
 				c.onCommandStart()
 			}
@@ -96,8 +96,8 @@ func (c *Command) Sudo() *Command {
 }
 
 func (c *Command) Cmd() *Command {
-	c.cmd = cmd.NewSsh(c.Session).
-		WithArgs(c.SshArgs...).
+	c.cmd = cmd.NewSSH(c.Session).
+		WithArgs(c.SSHArgs...).
 		WithCommand(c.Name, c.Args...).Cmd()
 
 	c.Executor = process.NewDefaultExecutor(c.cmd)
@@ -106,11 +106,11 @@ func (c *Command) Cmd() *Command {
 
 func (c *Command) Output() ([]byte, []byte, error) {
 	if c.Session == nil {
-		return nil, nil, fmt.Errorf("execute command %s: sshClient is undefined", c.Name)
+		return nil, nil, fmt.Errorf("execute command %s: SSH client is undefined", c.Name)
 	}
 
-	c.cmd = cmd.NewSsh(c.Session).
-		WithArgs(c.SshArgs...).
+	c.cmd = cmd.NewSSH(c.Session).
+		WithArgs(c.SSHArgs...).
 		WithCommand(c.Name, c.Args...).Cmd()
 
 	output, err := c.cmd.Output()
@@ -125,13 +125,12 @@ func (c *Command) CombinedOutput() ([]byte, error) {
 		return nil, fmt.Errorf("execute command %s: sshClient is undefined", c.Name)
 	}
 
-	c.cmd = cmd.NewSsh(c.Session).
+	c.cmd = cmd.NewSSH(c.Session).
 		//	//WithArgs().
 		WithCommand(c.Name, c.Args...).Cmd()
 
 	output, err := c.cmd.CombinedOutput()
 	if err != nil {
-		//fmt.Printf("%s: %s\n", c.Name, output)
 		return output, fmt.Errorf("execute command '%s': %v", c.Name, err)
 	}
 	return output, nil

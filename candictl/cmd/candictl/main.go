@@ -4,9 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime/trace"
 
+	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/klog"
 
@@ -15,21 +18,24 @@ import (
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/util/signal"
+	"flant/candictl/pkg/util/tomb"
 )
 
 func main() {
-	defer EnableTrace()()
+	_ = os.Mkdir(app.TmpDirName, 0755)
+
+	exitCode := 0
+	traceCancel := EnableTrace()
 
 	// kill all started subprocesses on return from main or on signal
-	defer process.DefaultSession.Stop()
-	go func() {
-		signal.WaitForProcessInterruption(func() {
-			process.DefaultSession.Stop()
-		})
-	}()
+	tomb.RegisterOnShutdown(
+		traceCancel,
+		process.DefaultSession.Stop,
+		cleanTMPDir,
+		restoreTerminal(),
+	)
 
-	_ = os.Mkdir(app.TmpDirName, 0755)
+	go tomb.WaitForProcessInterruption()
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
@@ -73,19 +79,32 @@ func main() {
 		commands.DefineTerraformCheckCommand(terraformCmd)
 	}
 
-	renderCmd := kpApp.Command("render", "Parse, validate and render bundles and configs.")
+	configCmd := kpApp.Command("config", "Load, edit and save various candictl configurations.")
 	{
-		commands.DefineCommandParseClusterConfiguration(kpApp, renderCmd)
-		commands.DefineCommandParseCloudDiscoveryData(kpApp, renderCmd)
-		commands.DefineRenderBashibleBundle(renderCmd)
-		commands.DefineRenderKubeadmConfig(renderCmd)
+		parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
+		{
+			commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
+			commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
+		}
+
+		renderCmd := configCmd.Command("render", "Render transitional configurations.")
+		{
+			commands.DefineRenderBashibleBundle(renderCmd)
+			commands.DefineRenderKubeadmConfig(renderCmd)
+		}
+
+		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+		{
+			commands.DefineEditClusterConfigurationCommand(editCmd)
+			commands.DefineEditProviderClusterConfigurationCommand(editCmd)
+		}
 	}
 
 	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap process.")
 	{
-		commands.DefineTestSshConnectionCommand(testCmd)
+		commands.DefineTestSSHConnectionCommand(testCmd)
 		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
-		commands.DefineTestScpCommand(testCmd)
+		commands.DefineTestSCPCommand(testCmd)
 		commands.DefineTestUploadExecCommand(testCmd)
 		commands.DefineTestBundle(testCmd)
 	}
@@ -101,12 +120,34 @@ func main() {
 		log.InitLogger(app.LoggerType)
 		return nil
 	})
+
 	kpApp.Version("v0.1.0").Author("Flant")
-	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
+
+	waitCh := make(chan struct{}, 1)
+	go func() {
+		_, err := kpApp.Parse(os.Args[1:])
+		if err != nil {
+			_, err = fmt.Fprint(os.Stderr, color.New(color.FgRed).Sprintf("\n%v\n", err))
+			if err != nil {
+				panic(err)
+			}
+			exitCode = 1
+		}
+		waitCh <- struct{}{}
+	}()
+
+	select {
+	case <-tomb.StopCh():
+	case <-waitCh:
+		tomb.Shutdown()
+	}
+
+	tomb.WaitShutdown()
+	os.Exit(exitCode)
 }
 
 func EnableTrace() func() {
-	fName := os.Getenv("CANDI_TRACE")
+	fName := os.Getenv("CANDICTL_TRACE")
 	if fName == "" || fName == "0" || fName == "no" {
 		return func() {}
 	}
@@ -143,4 +184,32 @@ func EnableTrace() func() {
 			fn()
 		}
 	}
+}
+
+func restoreTerminal() func() {
+	fd := int(os.Stdin.Fd())
+	if !terminal.IsTerminal(fd) {
+		return func() {}
+	}
+
+	state, err := terminal.GetState(fd)
+	if err != nil {
+		panic(err)
+	}
+
+	return func() { _ = terminal.Restore(fd, state) }
+}
+
+func cleanTMPDir() {
+	_ = filepath.Walk(app.TmpDirName, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			if path != app.TmpDirName {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		_ = os.Remove(path)
+		return nil
+	})
 }

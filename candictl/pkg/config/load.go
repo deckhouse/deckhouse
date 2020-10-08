@@ -62,12 +62,15 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	if !index.IsValid() {
-		return fmt.Errorf("invalid index: %v", index)
+		return fmt.Errorf(
+			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
+			index.Version, index.Kind, string(*doc),
+		)
 	}
 
 	isValid, err := openAPIValidate(doc, s.Get(index))
 	if !isValid {
-		return fmt.Errorf("document validation failed:\n\n%s\n\n%w", string(*doc), err)
+		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
 	return nil
 }
@@ -75,7 +78,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 func (s *SchemaStore) UploadByPath(path string) error {
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("loading schema file: %v", err)
+		return fmt.Errorf("Loading schema file: %v", err)
 	}
 
 	return s.upload(fileContent)

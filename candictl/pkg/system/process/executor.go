@@ -9,6 +9,7 @@ import (
 	"os/exec"
 
 	"flant/candictl/pkg/app"
+	"flant/candictl/pkg/log"
 )
 
 // exec.Cmd executor
@@ -199,7 +200,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 	// stderr goes to console (commented because ssh writes only "Connection closed" messages to stderr)
 	// e.Cmd.Stderr = os.Stderr
 	// connect console's stdin
-	//e.Cmd.Stdin = os.Stdin
+	// e.Cmd.Stdin = os.Stdin
 
 	// setup stdout stream handlers
 	if e.Live && e.StdoutBuffer == nil && e.StdoutHandler == nil && len(e.Matchers) == 0 {
@@ -278,7 +279,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 				for _, matcher := range e.Matchers {
 					m = matcher.Analyze(buf[:n])
 					if matcher.IsMatched() {
-						app.Debugf("Trigger matcher '%s'\n", matcher.Pattern)
+						log.DebugF("Trigger matcher '%s'\n", matcher.Pattern)
 						// matcher is triggered
 						if e.MatchHandler != nil {
 							res := e.MatchHandler(matcher.Pattern)
@@ -310,7 +311,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 				e.StdoutBuffer.Write(buf[m:n])
 			}
 			if e.StdoutHandler != nil {
-				stdoutHandlerWritePipe.Write(buf[m:n])
+				_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
 			}
 
 			if err == io.EOF {
@@ -324,7 +325,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 			return
 		}
 		e.ConsumeLines(stdoutHandlerReadPipe, e.StdoutHandler)
-		app.Debugf("stop line consumer for '%s'\n", e.cmd.Args[0])
+		log.DebugF("stop line consumer for '%s'\n", e.cmd.Args[0])
 	}()
 
 	// Start reading from stderr of a command.
@@ -348,7 +349,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 				e.StderrBuffer.Write(buf[:n])
 			}
 			if e.StderrHandler != nil {
-				stderrHandlerWritePipe.Write(buf[:n])
+				_, _ = stderrHandlerWritePipe.Write(buf[:n])
 			}
 
 			if err == io.EOF {
@@ -362,7 +363,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 			return
 		}
 		e.ConsumeLines(stderrHandlerReadPipe, e.StderrHandler)
-		app.Debugf("stop sdterr line consumer for '%s'\n", e.cmd.Args[0])
+		log.DebugF("stop sdterr line consumer for '%s'\n", e.cmd.Args[0])
 	}()
 
 	return nil
@@ -380,15 +381,15 @@ func (e *Executor) ConsumeLines(r io.Reader, fn func(l string)) {
 			fn(text)
 		}
 
-		if app.IsDebug && text != "" {
-			fmt.Printf("%s: %s\n", e.cmd.Args[0], text)
+		if text != "" {
+			log.DebugF("%s: %s\n", e.cmd.Args[0], text)
 		}
 	}
 }
 
 func (e *Executor) Start() error {
 	// setup stream handlers
-	app.Debugf("executor: start '%s'\n", e.cmd.String())
+	log.DebugF("executor: start '%s'\n", e.cmd.String())
 	err := e.SetupStreamHandlers()
 	if err != nil {
 		return err
@@ -401,7 +402,7 @@ func (e *Executor) Start() error {
 
 	e.ProcessWait()
 
-	app.Debugf("Register stoppable: '%s'\n", e.cmd.String())
+	log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
 	e.Session.RegisterStoppable(e)
 
 	return nil
@@ -429,14 +430,14 @@ func (e *Executor) ProcessWait() {
 			case err := <-waitErrCh:
 				if e.stop {
 					// Ignore error if Stop() was called.
-					//close(e.waitCh)
+					// close(e.waitCh)
 					return
 				}
 				e.waitError = err
 				if e.WaitHandler != nil {
 					e.WaitHandler(e.waitError)
 				}
-				//close(e.waitCh)
+				// close(e.waitCh)
 				return
 			case <-e.stopCh:
 				e.stop = true
@@ -453,28 +454,30 @@ func (e *Executor) ProcessWait() {
 
 func (e *Executor) Stop() {
 	if e.stop {
-		app.Debugf("Stop '%s': already stopped\n", e.cmd.String())
+		log.DebugF("Stop '%s': already stopped\n", e.cmd.String())
 		return
 	}
 	if !e.started {
-		app.Debugf("Stop '%s': not started yet\n", e.cmd.String())
+		log.DebugF("Stop '%s': not started yet\n", e.cmd.String())
 		return
 	}
 	if e.cmd == nil {
-		app.Debugf("Possible BUG: Call Executor.Stop with Cmd==nil\n")
+		log.DebugF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
 		return
 	}
 
-	app.Debugf("Stop '%s'\n", e.cmd.String())
+	log.DebugF("Stop '%s'\n", e.cmd.String())
 	if e.stopCh != nil {
 		close(e.stopCh)
 	}
 	<-e.waitCh
+
+	log.DebugF("Stopped '%s': %d\n", e.cmd.String(), e.cmd.ProcessState.ExitCode())
 }
 
 // Run executes a command and blocks until it is finished or stopped.
 func (e *Executor) Run() error {
-	app.Debugf("executor: run '%s'\n", e.cmd.String())
+	log.DebugF("executor: run '%s'\n", e.cmd.String())
 
 	err := e.Start()
 	if err != nil {

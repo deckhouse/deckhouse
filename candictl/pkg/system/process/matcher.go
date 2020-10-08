@@ -38,10 +38,6 @@ func (m *ByteSequenceMatcher) WaitNonMatched() *ByteSequenceMatcher {
 // return index (0 or more) of a first byte after pattern and \r, \n
 // This behaviour is used to write bytes to Reader only after match is found.
 func (m *ByteSequenceMatcher) Analyze(buf []byte) (n int) {
-	if m.matchFound {
-		return 0
-	}
-
 	for i, b := range buf {
 		// ignore \r and \n
 		if b == '\r' || b == '\n' {
@@ -49,6 +45,11 @@ func (m *ByteSequenceMatcher) Analyze(buf []byte) (n int) {
 			m.state = 0
 			continue
 		}
+
+		if m.matchFound {
+			return i
+		}
+
 		if m.patternFound {
 			m.matchFound = true
 			return i

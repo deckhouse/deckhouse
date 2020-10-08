@@ -104,7 +104,7 @@ func cleanupParseError(filename string, err error) error {
 	location := tokens[1]
 	// The remaining tokens make up a stacktrace-like chain, ending with the relevant error
 	errMsg := tokens[len(tokens)-1]
-	return fmt.Errorf("parse error at (%s): %s", string(location), errMsg)
+	return fmt.Errorf("parse error at (%s): %s", location, errMsg)
 }
 
 func cleanupExecError(filename string, err error) error {
@@ -124,7 +124,7 @@ func cleanupExecError(filename string, err error) error {
 
 	parts := warnRegex.FindStringSubmatch(tokens[2])
 	if len(parts) >= 2 {
-		return fmt.Errorf("execution error at (%s): %s", string(location), parts[1])
+		return fmt.Errorf("execution error at (%s): %s", location, parts[1])
 	}
 
 	return err

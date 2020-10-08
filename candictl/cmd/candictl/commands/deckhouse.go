@@ -12,12 +12,13 @@ import (
 	"flant/candictl/pkg/kubernetes/actions/deckhouse"
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 )
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("remove-deployment", "Delete deckhouse deployment.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	sh_app.DefineKubeClientFlags(cmd)
 
@@ -27,7 +28,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		err = app.AskBecomePassword()
+		err = operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -58,7 +59,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("create-deployment", "Install deckhouse after terraform is applied successful.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	sh_app.DefineKubeClientFlags(cmd)
@@ -73,7 +74,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		err = app.AskBecomePassword()
+		err = operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -111,6 +112,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			if err != nil {
 				return err
 			}
+
 			fmt.Println(string(out))
 			return nil
 		}

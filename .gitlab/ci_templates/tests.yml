@@ -132,3 +132,21 @@
     - "Build Website"
     - "Build Modules Images"
   interruptible: true
+
+.Candictl Tests template:
+  stage: testing
+  script:
+    - pwd
+    - type multiwerf && source <(multiwerf use 1.1 alpha)
+    - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
+    - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"

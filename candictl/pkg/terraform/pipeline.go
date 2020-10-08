@@ -61,7 +61,7 @@ func CheckPipeline(r *Runner, name string) (bool, error) {
 		return nil
 	}
 	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.step, name), pipelineFunc)
-	return r.changesInPlan, err
+	return isChange, err
 }
 
 func DestroyPipeline(r *Runner, name string) error {

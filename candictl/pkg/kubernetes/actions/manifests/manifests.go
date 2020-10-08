@@ -315,15 +315,16 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 }
 
 func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Secret {
-	return generateSecret(
-		"d8-provider-cluster-configuration",
-		"kube-system",
-		map[string][]byte{
-			"cloud-provider-cluster-configuration.yaml": configData,
-			"cloud-provider-discovery-data.json":        discoveryData,
-		},
-		nil,
-	)
+	data := make(map[string][]byte)
+	if configData != nil {
+		data["cloud-provider-cluster-configuration.yaml"] = configData
+	}
+
+	if discoveryData != nil {
+		data["cloud-provider-discovery-data.json"] = discoveryData
+	}
+
+	return generateSecret("d8-provider-cluster-configuration", "kube-system", data, nil)
 }
 
 func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {

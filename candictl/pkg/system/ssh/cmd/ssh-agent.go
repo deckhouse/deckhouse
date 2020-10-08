@@ -5,16 +5,17 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"syscall"
 	"time"
 
-	"flant/candictl/pkg/app"
+	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/process"
 	"flant/candictl/pkg/system/ssh/session"
 )
 
-var SshAgentPath = "ssh-agent"
+const SSHAgentPath = "ssh-agent"
 
-type SshAgent struct {
+type SSHAgent struct {
 	*process.Executor
 
 	Session *session.Session
@@ -25,23 +26,21 @@ type SshAgent struct {
 	AuthSock string
 }
 
-var SshAgentAuthSockRe = regexp.MustCompile(`SSH_AUTH_SOCK=(.*?);`)
-
-func NewSshAgent(sess *session.Session) *SshAgent {
-	return &SshAgent{Session: sess}
-}
+var SSHAgentAuthSockRe = regexp.MustCompile(`SSH_AUTH_SOCK=(.*?);`)
 
 // Start runs ssh-agent as a subprocess, gets SSH_AUTH_SOCK path and
-func (a *SshAgent) Start() error {
-	a.agentCmd = exec.Command(SshAgentPath, "-D")
+func (a *SSHAgent) Start() error {
+	a.agentCmd = exec.Command(SSHAgentPath, "-D")
 	a.agentCmd.Env = os.Environ()
 	a.agentCmd.Dir = "/"
+	a.agentCmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	a.Executor = process.NewDefaultExecutor(a.agentCmd)
-	a.EnableLive()
+	// a.EnableLive()
 	a.WithStdoutHandler(func(l string) {
-		app.Debugf("ssh agent: got '%s'\n", l)
-		m := SshAgentAuthSockRe.FindStringSubmatch(l)
+		log.DebugF("ssh agent: got '%s'\n", l)
+
+		m := SSHAgentAuthSockRe.FindStringSubmatch(l)
 		if len(m) == 2 && m[1] != "" {
 			a.AuthSock = m[1]
 		}
@@ -49,14 +48,11 @@ func (a *SshAgent) Start() error {
 
 	a.WithWaitHandler(func(err error) {
 		if err != nil {
-			fmt.Printf("Ssh-agent process exited, now stop. Wait error: %v\n", err)
+			log.ErrorF("SSH-agent process exited, now stop. Wait error: %v\n", err)
+			return
 		} else {
-			fmt.Printf("Ssh-agent process exited, now stop.\n")
+			log.InfoF("SSH-agent process exited, now stop.\n")
 		}
-		go func() {
-			process.DefaultSession.Stop()
-			os.Exit(12)
-		}()
 	})
 
 	err := a.Executor.Start()
@@ -73,7 +69,7 @@ func (a *SshAgent) Start() error {
 	for {
 		<-t.C
 		if a.AuthSock != "" {
-			app.Debugf("ssh-agent: SSH_AUTH_SOCK=%s\n", a.AuthSock)
+			log.DebugF("ssh-agent: SSH_AUTH_SOCK=%s\n", a.AuthSock)
 			success = true
 			break
 		}

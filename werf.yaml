@@ -330,7 +330,7 @@ git:
     - go.mod
     - go.sum
     setup:
-    - "pkg/**/*.go"
+    - "**/*.go"
 - add: /
   to: /
   includePaths:
@@ -388,7 +388,7 @@ git:
         - go.sum
       setup:
         - "**/*.go"
-        - go-build.sh
+        - hack/build.sh
 ansible:
   beforeInstall:
     - apk:
@@ -402,10 +402,26 @@ ansible:
         chdir: /candictl
 
   setup:
-    - command: /candictl/go-build.sh
+    - command: ./build.sh
       args:
-        chdir: /candictl
+        chdir: /candictl/hack
+---
+image: candictl-tests
+fromImage: base-for-go
+git:
+- add: /candictl
+  to: /candictl
+ansible:
+  beforeInstall:
+    - apk:
+        name: git,ca-certificates,curl,bash
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
 
+  install:
+  - shell: |
+      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+        | sh -s -- -b $(go env GOPATH)/bin v1.31.0
 ---
 artifact: jq
 from: alpine:3.11
@@ -540,7 +556,7 @@ image: dev/install
 fromImage: dev
 import:
 - artifact: candictl
-  add: /candictl/candictl
+  add: /candictl/hack/candictl
   to: /usr/bin/candictl
   before: setup
 - artifact: terraform-provider-yandex

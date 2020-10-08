@@ -17,7 +17,7 @@ import (
 
 type KubernetesClient struct {
 	sh_kube.KubernetesClient
-	SshClient *ssh.SshClient
+	SSHClient *ssh.SSHClient
 	KubeProxy *frontend.KubeProxy
 }
 
@@ -29,8 +29,8 @@ func NewFakeKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{KubernetesClient: sh_kube.NewFakeKubernetesClient()}
 }
 
-func (k *KubernetesClient) WithSSHClient(client *ssh.SshClient) *KubernetesClient {
-	k.SshClient = client
+func (k *KubernetesClient) WithSSHClient(client *ssh.SSHClient) *KubernetesClient {
+	k.SSHClient = client
 	return k
 }
 
@@ -40,14 +40,14 @@ func (k *KubernetesClient) Init(configSrc string) error {
 
 	switch configSrc {
 	case "SSH":
-		if app.SshHost == "" {
+		if app.SSHHost == "" {
 			return fmt.Errorf("no ssh-host to connect to kubernetes via ssh tunnel")
 		}
 		startProxy = true
 	case "KUBECONFIG":
 	default:
 		// auto detect
-		if app.SshHost != "" {
+		if app.SSHHost != "" {
 			startProxy = true
 		}
 	}
@@ -77,14 +77,14 @@ func (k *KubernetesClient) Init(configSrc string) error {
 }
 
 func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
-	if k.SshClient == nil {
-		k.SshClient, err = ssh.NewClientFromFlags().Start()
+	if k.SSHClient == nil {
+		k.SSHClient, err = ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return "", err
 		}
 	}
 
-	k.KubeProxy = k.SshClient.KubeProxy()
+	k.KubeProxy = k.SSHClient.KubeProxy()
 	port, err = k.KubeProxy.Start()
 	if err != nil {
 		return "", fmt.Errorf("start kube proxy: %v", err)

@@ -10,7 +10,7 @@ import (
 	"flant/candictl/pkg/system/ssh/session"
 )
 
-type Scp struct {
+type SCP struct {
 	*process.Executor
 
 	Session *session.Session
@@ -24,56 +24,52 @@ type Scp struct {
 	Recursive bool
 }
 
-func NewScp(sess *session.Session) *Scp {
-	return &Scp{Session: sess}
+func NewSCP(sess *session.Session) *SCP {
+	return &SCP{Session: sess}
 }
 
-func (s *Scp) WithRemoteDst(path string) *Scp {
+func (s *SCP) WithRemoteDst(path string) *SCP {
 	s.RemoteDst = true
 	s.Dst = path
 	return s
 }
-func (s *Scp) WithDst(path string) *Scp {
+func (s *SCP) WithDst(path string) *SCP {
 	s.RemoteDst = false
 	s.Dst = path
 	return s
 }
-func (s *Scp) WithRemoteSrc(path string) *Scp {
+func (s *SCP) WithRemoteSrc(path string) *SCP {
 	s.RemoteSrc = true
 	s.Src = path
 	return s
 }
-func (s *Scp) WithSrc(path string) *Scp {
+func (s *SCP) WithSrc(path string) *SCP {
 	s.RemoteSrc = false
 	s.Src = path
 	return s
 }
 
-func (s *Scp) WithRecursive(recursive bool) *Scp {
+func (s *SCP) WithRecursive(recursive bool) *SCP {
 	s.Recursive = recursive
 	return s
 }
 
-func (s *Scp) WithPreserve(preserve bool) *Scp {
+func (s *SCP) WithPreserve(preserve bool) *SCP {
 	s.Preserve = preserve
 	return s
 }
 
-func (s *Scp) Scp() *Scp {
-	//env := append(os.Environ(), s.Env...)
+func (s *SCP) SCP() *SCP {
+	// env := append(os.Environ(), s.Env...)
 	env := append(os.Environ(), s.Session.AuthSockEnv())
 
 	args := []string{
 		// ssh args for bastion here
 		"-C", // compression
-		"-o",
-		"ControlMaster=auto",
-		"-o",
-		"ControlPersist=600s",
-		"-o",
-		"StrictHostKeyChecking=accept-new",
-		"-o",
-		"UserKnownHostsFile=.ssh_known_hosts",
+		"-o", "ControlMaster=auto",
+		"-o", "ControlPersist=600s",
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "UserKnownHostsFile=.ssh_known_hosts",
 	}
 
 	if s.Session.ExtraArgs != "" {
@@ -93,10 +89,8 @@ func (s *Scp) Scp() *Scp {
 			bastion = bastion + " -p" + s.Session.BastionPort
 		}
 		args = append(args, []string{
-			"-o",
-			fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p", bastion), // note that single quotes is not needed here
-			"-o",
-			"ExitOnForwardFailure=yes",
+			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p", bastion), // note that single quotes is not needed here
+			"-o", "ExitOnForwardFailure=yes",
 		}...)
 	}
 
@@ -122,7 +116,7 @@ func (s *Scp) Scp() *Scp {
 		srcPath = s.Session.RemoteAddress() + ":" + srcPath
 	}
 
-	//create dest path
+	// create dest path
 	dstPath := s.Dst
 	if dstPath == "" {
 		dstPath = "."

@@ -7,6 +7,8 @@ var (
 
 	ParseInputFile = ""
 	ParseOutput    = "json"
+
+	Editor = ""
 )
 
 func DefineRenderConfigFlags(cmd *kingpin.CmdClause) {
@@ -14,12 +16,17 @@ func DefineRenderConfigFlags(cmd *kingpin.CmdClause) {
 		StringVar(&RenderBashibleBundleDir)
 }
 
+func DefineEditorConfigFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("editor", "Your favourite editor.").
+		StringVar(&Editor)
+}
+
 func DefineInputOutputRenderFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("file", "input file name with yaml documents").
+	cmd.Flag("file", "Input file name with YAML-documents.").
 		Short('f').
 		StringVar(&ParseInputFile)
 
-	cmd.Flag("output", "output format json or yaml").
+	cmd.Flag("output", "Output format (JSON or YAML).").
 		Short('o').
 		EnumVar(&ParseOutput, "yaml", "json")
 }

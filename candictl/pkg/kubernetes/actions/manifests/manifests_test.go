@@ -12,7 +12,7 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 	depl1 := DeckhouseDeployment("registry.example.com/deckhouse:master", "debug", "default", true)
 
 	depl2 := DeckhouseDeployment("registry.example.com/deckhouse:master", "debug", "default", true)
-	//depl2 := generateDeckhouseDeployment2("registry.example.com/deckhouse:master", "debug", "default", true)
+	// depl2 := generateDeckhouseDeployment2("registry.example.com/deckhouse:master", "debug", "default", true)
 
 	depl1Yaml, err := yaml.Marshal(depl1)
 	if err != nil {

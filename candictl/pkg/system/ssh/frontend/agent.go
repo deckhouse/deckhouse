@@ -13,7 +13,7 @@ import (
 type Agent struct {
 	Session *session.Session
 
-	Agent *cmd.SshAgent
+	Agent *cmd.SSHAgent
 }
 
 func NewAgent(sess *session.Session) *Agent {
@@ -22,24 +22,24 @@ func NewAgent(sess *session.Session) *Agent {
 
 func (a *Agent) Start() error {
 	if len(a.Session.PrivateKeys) == 0 {
-		a.Agent = &cmd.SshAgent{
+		a.Agent = &cmd.SSHAgent{
 			Session:  a.Session,
 			AuthSock: os.Getenv("SSH_AUTH_SOCK"),
 		}
 		return nil
 	}
 
-	a.Agent = &cmd.SshAgent{
+	a.Agent = &cmd.SSHAgent{
 		Session: a.Session,
 	}
 
-	app.Debugf("agent: start ssh-agent\n")
+	log.DebugF("agent: start ssh-agent\n")
 	err := a.Agent.Start()
 	if err != nil {
 		return fmt.Errorf("start ssh-agent: %v", err)
 	}
 
-	app.Debugf("agent: run ssh-add for keys\n")
+	log.DebugF("agent: run ssh-add for keys\n")
 	err = a.AddKeys()
 	if err != nil {
 		return fmt.Errorf("add keys: %v", err)
@@ -51,10 +51,14 @@ func (a *Agent) Start() error {
 // TODO replace with x/crypto/ssh/agent ?
 func (a *Agent) AddKeys() error {
 	for _, k := range a.Session.PrivateKeys {
-		app.Debugf("add key %s\n", k)
-		sshAdd := cmd.NewSshAdd(a.Session).KeyCmd(k)
+		log.DebugF("add key %s\n", k)
+		sshAdd := cmd.NewSSHAdd(a.Session).KeyCmd(k)
 		output, err := sshAdd.CombinedOutput()
 		if err != nil {
+			werr := "signal: interrupt"
+			if err.Error() == werr {
+				return fmt.Errorf("process stopped")
+			}
 			return fmt.Errorf("ssh-add: %s %v", string(output), err)
 		}
 
@@ -65,8 +69,8 @@ func (a *Agent) AddKeys() error {
 	}
 
 	if app.IsDebug {
-		app.Debugf("list added keys\n")
-		listCmd := cmd.NewSshAdd(a.Session).ListCmd()
+		log.DebugF("list added keys\n")
+		listCmd := cmd.NewSSHAdd(a.Session).ListCmd()
 
 		output, err := listCmd.CombinedOutput()
 		if err != nil {

@@ -10,12 +10,13 @@ import (
 
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 )
 
-func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("ssh-connection", "Test connection via ssh.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -37,35 +38,37 @@ func DefineTestSshConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClaus
 	return cmd
 }
 
-func DefineTestScpCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	var SrcPath string
 	var DstPath string
 	var Data string
 	var Direction string
+
 	cmd := parent.Command("scp", "Test scp file operations.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
+
 	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
 	cmd.Flag("dst", "destination path").Short('d').StringVar(&DstPath)
 	cmd.Flag("data", "data to test uploadbytes method").StringVar(&Data)
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		app.Debugf("scp: start ssh-agent\n")
+		log.DebugF("scp: start ssh-agent\n")
 		sshCl, err := ssh.NewClientFromFlags().Start()
 
 		if err != nil {
 			return err
 		}
 
-		app.Debugf("scp: start\n")
+		log.DebugF("scp: start\n")
 
 		success := false
 		if Direction == "up" {
 			if Data != "" {
-				fmt.Printf("upload bytes to '%s' on remote\n", DstPath)
+				log.InfoF("upload bytes to '%s' on remote\n", DstPath)
 				err = sshCl.File().UploadBytes([]byte(Data), DstPath)
 			} else {
-				fmt.Printf("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
+				log.InfoF("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
 				err = sshCl.File().Upload(SrcPath, DstPath)
 			}
 			if err != nil {
@@ -74,15 +77,15 @@ func DefineTestScpCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			success = true
 		} else {
 			if DstPath == "stdout" {
-				fmt.Printf("download bytes from remote '%s'\n", SrcPath)
+				log.InfoF("download bytes from remote '%s'\n", SrcPath)
 				data, err := sshCl.File().DownloadBytes(SrcPath)
 				if err != nil {
 					return err
 				}
-				fmt.Println(string(data))
+				log.InfoLn(string(data))
 				success = true
 			} else {
-				fmt.Printf("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
+				log.InfoF("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
 				err = sshCl.File().Download(SrcPath, DstPath)
 				if err != nil {
 					return err
@@ -92,7 +95,7 @@ func DefineTestScpCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		if !success {
-			fmt.Printf("unrecognized flags\n")
+			log.InfoLn("unrecognized flags")
 		}
 
 		return nil
@@ -105,7 +108,7 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
 	cmd := parent.Command("upload-exec", "Test scp upload and ssh run uploaded script.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("script", "source path").
 		StringVar(&ScriptPath)
@@ -118,7 +121,7 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		}
 
-		err = app.AskBecomePassword()
+		err = operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -149,7 +152,7 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	var BundleDir string
 
 	cmd := parent.Command("bashible-bundle", "Test upload and execute a bundle.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("bundle-dir", "path of a bundle root directory").
 		Short('d').
@@ -164,7 +167,7 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		}
 
-		err = app.AskBecomePassword()
+		err = operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}

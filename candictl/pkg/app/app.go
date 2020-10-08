@@ -1,20 +1,15 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-const (
-	AppName = "candictl"
-)
+const AppName = "candictl"
 
-var (
-	TmpDirName = filepath.Join(os.TempDir(), "candictl")
-)
+var TmpDirName = filepath.Join(os.TempDir(), "candictl")
 
 var (
 	AppVersion = "dev"
@@ -28,15 +23,15 @@ var (
 )
 
 func init() {
-	if os.Getenv("CANDI_DEBUG") == "yes" {
+	if os.Getenv("CANDICTL_DEBUG") == "yes" {
 		IsDebug = true
 	}
 }
 
 func GlobalFlags(cmd *kingpin.Application) {
-	cmd.Flag("logger-type", "Format output of an candictl in different ways.").
+	cmd.Flag("logger-type", "Format output of a candictl in different ways.").
 		Default("pretty").
-		EnumVar(&LoggerType, "pretty", "simple")
+		EnumVar(&LoggerType, "pretty", "simple", "json")
 }
 
 func DefineSkipResourcesFlags(cmd *kingpin.CmdClause) {
@@ -61,10 +56,4 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
 		Default("false").
 		BoolVar(&DropCache)
-}
-
-func Debugf(format string, a ...interface{}) {
-	if IsDebug {
-		fmt.Printf(format, a...)
-	}
 }

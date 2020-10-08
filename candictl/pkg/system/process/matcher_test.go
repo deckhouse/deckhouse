@@ -110,7 +110,6 @@ func Test_Match_NoWait(t *testing.T) {
 	}
 
 	r = m.Analyze([]byte("ESS"))
-
 	if r != 3 {
 		t.Errorf("Should return len buf when match is not triggered: expect 3, got %d", r)
 	}

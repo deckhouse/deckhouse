@@ -1,22 +1,15 @@
 package frontend
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"os"
 	"regexp"
-	"strings"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
-
-	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/ssh/session"
 )
 
-var LocalApiPort = 22322
+var LocalAPIPort = 22322
 
 type KubeProxy struct {
 	Session *session.Session
@@ -28,10 +21,16 @@ type KubeProxy struct {
 	tunnel *Tunnel
 
 	stop bool
+	port string
 }
 
 func NewKubeProxy(sess *session.Session) *KubeProxy {
-	return &KubeProxy{Session: sess}
+	return &KubeProxy{Session: sess, port: "0"}
+}
+
+func (k *KubeProxy) ProxyCMD() *Command {
+	command := fmt.Sprintf("kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
+	return NewCommand(k.Session, command).Sudo()
 }
 
 func (k *KubeProxy) Start() (port string, err error) {
@@ -42,7 +41,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 		}
 	}()
 
-	k.proxy = NewCommand(k.Session, `kubectl proxy --port=0`).Sudo().WithSSHArgs("-o", "ServerAliveCountMax=3")
+	k.proxy = k.ProxyCMD()
 
 	port = ""
 	portReady := make(chan struct{}, 1)
@@ -53,9 +52,11 @@ func (k *KubeProxy) Start() (port string, err error) {
 		if len(m) == 2 && m[1] != "" {
 			port = m[1]
 			log.InfoF("Got proxy port = %s\n", port)
+			k.port = port
 			portReady <- struct{}{}
 		}
 	})
+
 	onStart := make(chan struct{}, 1)
 	k.proxy.OnCommandStart(func() {
 		onStart <- struct{}{}
@@ -65,7 +66,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 		waitCh <- err
 	})
 
-	app.Debugf("Start proxy process\n")
+	log.DebugF("Start proxy process\n")
 	err = k.proxy.Start()
 	if err != nil {
 		return "", fmt.Errorf("start kubectl proxy: %v", err)
@@ -87,7 +88,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 		}
 	}
 
-	localPort := LocalApiPort
+	localPort := LocalAPIPort
 	maxRetries := 12
 	retry := 0
 	var lastError error
@@ -95,7 +96,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 
 	for {
 		// try to start tunnel from localPort to proxy port
-		tunnelAddress := fmt.Sprintf("%d:localhost:%s", localPort, port)
+		tunnelAddress := fmt.Sprintf("%d:localhost:%s", localPort, k.port)
 		tun = NewTunnel(k.Session, "L", tunnelAddress)
 		// TODO if local port is busy, increase port and start again
 		err := tun.Up()
@@ -108,7 +109,6 @@ func (k *KubeProxy) Start() (port string, err error) {
 				tun = nil
 				break
 			}
-			//return "",
 		} else {
 			break
 		}
@@ -125,6 +125,26 @@ func (k *KubeProxy) Start() (port string, err error) {
 		err := k.tunnel.HealthMonitor()
 		if err != nil {
 			log.ErrorLn(err)
+		}
+	}()
+
+	go func() {
+		for !k.stop {
+			proxyErr := <-waitCh
+			log.DebugF("Kubectl proxy crushed: %v\n", proxyErr)
+
+			k.proxy = k.ProxyCMD()
+			k.proxy.WithWaitHandler(func(err error) {
+				waitCh <- err
+			})
+
+			err = k.proxy.Start()
+			if err != nil {
+				log.DebugF("Start kubectl proxy: %v\n", err)
+				return
+			}
+
+			log.DebugF("Kubectl proxy restarted\n")
 		}
 	}()
 	return fmt.Sprintf("%d", localPort), nil
@@ -150,43 +170,4 @@ func (k *KubeProxy) Restart() error {
 	k.Stop()
 	_, err := k.Start()
 	return err
-}
-
-// ScanPasswordOrLines is a split function for a Scanner that returns each line of
-// text, stripped of any trailing end-of-line marker or if colon is occurred.
-func ScanPasswordOrLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	//fmt.Printf("scan got %d bytes\n", len(data))
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, ':'); i >= 0 {
-		if strings.Contains(string(data), "assword") {
-			// We have a password prompt.
-			return i + 1, append(data[0:i], ':'), nil
-		}
-	}
-	if i := bytes.IndexByte(data, '\n'); i >= 0 {
-		return bufio.ScanLines(data, atEOF)
-	}
-	// If we're at EOF, we have a final, non-terminated line. Return it.
-	if atEOF {
-		return len(data), data, nil
-	}
-	// Request more data.
-	return 0, nil, nil
-}
-
-// ReadPassword prints prompt and read password from terminal without echoing symbols.
-func ReadPassword(prompt string) (result string, err error) {
-	fmt.Print(prompt)
-	var data []byte
-	if terminal.IsTerminal(int(os.Stdin.Fd())) {
-		data, err = terminal.ReadPassword(int(os.Stdin.Fd()))
-		result = string(data)
-		// need to print a newline?
-		//fmt.Println()
-	} else {
-		return "", fmt.Errorf("stdin is not a terminal, error reading password")
-	}
-	return result, err
 }

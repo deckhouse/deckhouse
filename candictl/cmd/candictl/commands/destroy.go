@@ -2,30 +2,34 @@ package commands
 
 import (
 	"encoding/json"
-	"flant/candictl/pkg/kubernetes/actions/deckhouse"
 	"fmt"
-	"os"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/commands"
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/converge"
+	"flant/candictl/pkg/kubernetes/actions/deckhouse"
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 	"flant/candictl/pkg/terraform"
 	"flant/candictl/pkg/util/cache"
 	"flant/candictl/pkg/util/retry"
+	"flant/candictl/pkg/util/tomb"
 )
 
-func getClientOnce(sshClient *ssh.SshClient, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
+func getClientOnce(sshClient *ssh.SSHClient, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
 	var err error
 	if kubeCl == nil {
-		kubeCl, err = commands.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err = operations.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return nil, err
+		}
+
+		if info := deckhouse.GetClusterInfo(kubeCl); info != "" {
+			_ = log.Process("common", "Cluster Info", func() error { log.InfoF(info); return nil })
 		}
 	}
 	return kubeCl, err
@@ -33,13 +37,13 @@ func getClientOnce(sshClient *ssh.SshClient, kubeCl *client.KubernetesClient) (*
 
 func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 	app.DefineSanityFlags(cmd)
 	app.DefineSkipResourcesFlags(cmd)
 
-	runFunc := func(sshClient *ssh.SshClient) error {
+	runFunc := func(sshClient *ssh.SSHClient) error {
 		var err error
 		if err := cache.Init(sshClient.Check().String()); err != nil {
 			return fmt.Errorf(
@@ -124,6 +128,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 		cache.Global().AddToClean("cluster-state")
 
+		// Stop proxy because we have already gotten all info from kubernetes-api
+		if kubeCl != nil {
+			kubeCl.KubeProxy.Stop()
+		}
+
 		for nodeGroupName, nodeGroupStates := range nodesState {
 			cfg := metaConfig.DeepCopy().Prepare()
 			if nodeGroupStates.Settings != nil {
@@ -141,10 +150,16 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 
 			for name, state := range nodeGroupStates.State {
+				if !cache.Global().InCache(name) {
+					cache.Global().Save(name, state)
+				}
+
 				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, step).
 					WithVariables(metaConfig.NodeGroupConfig(nodeGroupName, 0, "")).
-					WithState(state).
+					WithStatePath(cache.Global().ObjectPath(name)).
 					WithAutoApprove(app.SanityCheck)
+
+				tomb.RegisterOnShutdown(nodeRunner.Stop)
 
 				err := terraform.DestroyPipeline(nodeRunner, name)
 				if err != nil {
@@ -153,17 +168,18 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 					// We need to skip error there, because we don't modify data in cache
 					// even if node had been already deleted
 				}
-
-				nodeRunner.Close()
 			}
+		}
+
+		if !cache.Global().InCache("base-infrastructure") {
+			cache.Global().Save("base-infrastructure", clusterState)
 		}
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
-			WithState(clusterState).
+			WithStatePath(cache.Global().ObjectPath("base-infrastructure")).
 			WithAutoApprove(app.SanityCheck)
-
-		defer baseRunner.Close()
+		tomb.RegisterOnShutdown(baseRunner.Stop)
 
 		if err = terraform.DestroyPipeline(baseRunner, "Kubernetes cluster"); err != nil {
 			return err
@@ -184,16 +200,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		if err := app.AskBecomePassword(); err != nil {
+		if err := operations.AskBecomePassword(); err != nil {
 			return err
 		}
 
-		err = runFunc(sshClient)
-		if err != nil {
-			log.ErrorLn(err.Error())
-			os.Exit(1)
-		}
-		return nil
+		return runFunc(sshClient)
 	})
 	return cmd
 }

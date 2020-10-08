@@ -6,52 +6,51 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-const DefaultSshAgentPrivateKeys = "~/.ssh/id_rsa"
+const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
 
 var (
-	SshAgentPrivateKeys = make([]string, 0)
-	SshPrivateKeys      = make([]string, 0)
-	SshBastionHost      = ""
-	SshBastionPort      = ""
-	SshBastionUser      = os.Getenv("USER")
-	SshUser             = os.Getenv("USER")
-	SshHost             = ""
-	SshPort             = ""
-	SshExtraArgs        = ""
+	SSHAgentPrivateKeys = make([]string, 0)
+	SSHPrivateKeys      = make([]string, 0)
+	SSHBastionHost      = ""
+	SSHBastionPort      = ""
+	SSHBastionUser      = os.Getenv("USER")
+	SSHUser             = os.Getenv("USER")
+	SSHHost             = ""
+	SSHPort             = ""
+	SSHExtraArgs        = ""
 
 	AskBecomePass = false
 	BecomePass    = ""
 )
 
-func DefineSshFlags(cmd *kingpin.CmdClause) {
+func DefineSSHFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
-		StringsVar(&SshAgentPrivateKeys)
+		StringsVar(&SSHAgentPrivateKeys)
 	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
-		StringVar(&SshBastionHost)
+		StringVar(&SSHBastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
-		StringVar(&SshBastionPort)
+		StringVar(&SSHBastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
-		Default(SshBastionUser).
-		StringVar(&SshBastionUser)
+		Default(SSHBastionUser).
+		StringVar(&SSHBastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").
-		Default(SshUser).
-		StringVar(&SshUser)
+		Default(SSHUser).
+		StringVar(&SSHUser)
 	cmd.Flag("ssh-host", "SSH destination host").
-		StringVar(&SshHost)
+		StringVar(&SSHHost)
 	cmd.Flag("ssh-port", "SSH destination port").
-		StringVar(&SshPort)
+		StringVar(&SSHPort)
 	cmd.Flag("ssh-extra-args", "extra args for ssh commands (-vvv)").
-		StringVar(&SshExtraArgs)
+		StringVar(&SSHExtraArgs)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
-		if len(SshAgentPrivateKeys) == 0 {
-			SshAgentPrivateKeys = append(SshAgentPrivateKeys, DefaultSshAgentPrivateKeys)
+		if len(SSHAgentPrivateKeys) == 0 {
+			SSHAgentPrivateKeys = append(SSHAgentPrivateKeys, DefaultSSHAgentPrivateKeys)
 		}
-		SshPrivateKeys, err = ParseSSHPrivateKeyPaths(SshAgentPrivateKeys)
+		SSHPrivateKeys, err = ParseSSHPrivateKeyPaths(SSHAgentPrivateKeys)
 		if err != nil {
 			return fmt.Errorf("ssh private keys: %v", err)
 		}
@@ -91,22 +90,4 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("ask-become-pass", "Ask for sudo password before the installation process.").
 		Short('K').
 		BoolVar(&AskBecomePass)
-}
-
-func AskBecomePassword() (err error) {
-	if !AskBecomePass {
-		return nil
-	}
-	var data []byte
-	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
-		return fmt.Errorf("stdin is not a terminal, error reading password")
-	}
-	fmt.Print("[sudo] Password: ")
-	data, err = terminal.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Println()
-	if err != nil {
-		return fmt.Errorf("read password: %v", err)
-	}
-	BecomePass = string(data)
-	return nil
 }

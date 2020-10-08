@@ -8,6 +8,7 @@ import (
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/terraform"
+	"flant/candictl/pkg/util/tomb"
 )
 
 const (
@@ -54,7 +55,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		WithVariables(metaConfig.MarshalConfig()).
 		WithState(clusterState).
 		WithAutoApprove(true)
-	defer baseRunner.Close()
+	tomb.RegisterOnShutdown(baseRunner.Stop)
 
 	return terraform.CheckPipeline(baseRunner, "Kubernetes cluster")
 }
@@ -69,7 +70,7 @@ func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOpti
 		WithVariables(metaConfig.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithState(nodeGroup.State[nodeName]).
 		WithName(nodeName)
-	defer nodeRunner.Close()
+	tomb.RegisterOnShutdown(nodeRunner.Stop)
 
 	return terraform.CheckPipeline(nodeRunner, nodeName)
 }

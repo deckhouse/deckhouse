@@ -81,23 +81,21 @@ func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error)
 }
 
 func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte) error {
-	return retry.StartLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10, func() error {
-		task := actions.ManifestTask{
-			Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-			Manifest: func() interface{} {
-				return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
-			},
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
-				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
-				return err
-			},
-		}
-		return task.Create()
-	})
+	task := actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+			return err
+		},
+	}
+	return retry.StartLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10, task.Create)
 }
 
 func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
@@ -107,42 +105,43 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
 	}
-	return retry.StartLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10, func() error {
-		tasks := []actions.ManifestTask{
-			{
-				Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-				Manifest: getTerraformStateManifest,
-				CreateFunc: func(manifest interface{}) error {
-					_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
-					return err
-				},
-				UpdateFunc: func(manifest interface{}) error {
-					_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
-					return err
-				},
-			},
-			{
-				Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
-				Manifest: getDevicePathManifest,
-				CreateFunc: func(manifest interface{}) error {
-					_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
-					return err
-				},
-				UpdateFunc: func(manifest interface{}) error {
-					data, err := json.Marshal(manifest.(*apiv1.Secret))
-					if err != nil {
-						return err
-					}
-					_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
-						"d8-masters-kubernetes-data-device-path",
-						types.MergePatchType,
-						data,
-					)
-					return err
-				},
-			},
-		}
 
+	tasks := []actions.ManifestTask{
+		{
+			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+			Manifest: getTerraformStateManifest,
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+				return err
+			},
+		},
+		{
+			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
+			Manifest: getDevicePathManifest,
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				data, err := json.Marshal(manifest.(*apiv1.Secret))
+				if err != nil {
+					return err
+				}
+				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
+					"d8-masters-kubernetes-data-device-path",
+					types.MergePatchType,
+					data,
+				)
+				return err
+			},
+		},
+	}
+
+	return retry.StartLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10, func() error {
 		var allErrs *multierror.Error
 		for _, task := range tasks {
 			if err := task.Create(); err != nil {
@@ -154,21 +153,20 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 }
 
 func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
-	err := retry.StartLoop("Save Cluster Terraform state", 45, 10, func() error {
-		task := actions.ManifestTask{
-			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
-				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
-				return err
-			},
-		}
-		return task.Create()
-	})
+	task := actions.ManifestTask{
+		Name:     `Secret "d8-cluster-terraform-state"`,
+		Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+			return err
+		},
+	}
+
+	err := retry.StartLoop("Save Cluster Terraform state", 45, 10, task.Create)
 	if err != nil {
 		return err
 	}

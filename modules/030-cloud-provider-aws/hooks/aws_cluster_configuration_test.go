@@ -99,8 +99,6 @@ kind: AWSClusterConfiguration
 vpcNetworkCIDR: 1.1.1.1.1.1/16
 `
 
-
-
 		stateB = fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
@@ -180,7 +178,7 @@ data:
 		It("All values should be gathered from discovered data", func() {
 			Expect(c).To(Not(ExecuteSuccessfully()))
 
-			Expect(c.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: validate cloud_discovery_data: document validation failed:`))
+			Expect(c.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: validate cloud_discovery_data: Document validation failed:`))
 			Expect(c.Session.Err).Should(gbytes.Say(`instances.additionalSecurityGroups in body should match`))
 			Expect(c.Session.Err).Should(gbytes.Say(`instances.iamProfileName in body is required`))
 			Expect(c.Session.Err).Should(gbytes.Say(`.keyName in body is required`))
@@ -200,7 +198,7 @@ data:
 		It("All values should be gathered from discovered data", func() {
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
-			Expect(d.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: document validation failed`))
+			Expect(d.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: Document validation failed`))
 			Expect(d.Session.Err).Should(gbytes.Say(`.layout in body is required`))
 			Expect(d.Session.Err).Should(gbytes.Say(`.standard in body is required`))
 			Expect(d.Session.Err).Should(gbytes.Say(`vpcNetworkCIDR in body should match`))

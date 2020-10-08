@@ -10,7 +10,7 @@ import (
 	"flant/candictl/pkg/system/ssh/session"
 )
 
-type Ssh struct {
+type SSH struct {
 	*process.Executor
 	Session     *session.Session
 	Args        []string
@@ -19,28 +19,28 @@ type Ssh struct {
 	CommandArgs []string
 }
 
-func NewSsh(sess *session.Session) *Ssh {
-	return &Ssh{Session: sess}
+func NewSSH(sess *session.Session) *SSH {
+	return &SSH{Session: sess}
 }
 
-func (s *Ssh) WithEnv(env ...string) *Ssh {
+func (s *SSH) WithEnv(env ...string) *SSH {
 	s.Env = env
 	return s
 }
 
-func (s *Ssh) WithArgs(args ...string) *Ssh {
+func (s *SSH) WithArgs(args ...string) *SSH {
 	s.Args = args
 	return s
 }
 
-func (s *Ssh) WithCommand(name string, arg ...string) *Ssh {
+func (s *SSH) WithCommand(name string, arg ...string) *SSH {
 	s.CommandName = name
 	s.CommandArgs = arg
 	return s
 }
 
 // TODO move connection settings from ExecuteCmd
-func (s *Ssh) Cmd() *exec.Cmd {
+func (s *SSH) Cmd() *exec.Cmd {
 	env := append(os.Environ(), s.Env...)
 	env = append(env, s.Session.AuthSockEnv())
 
@@ -54,16 +54,11 @@ func (s *Ssh) Cmd() *exec.Cmd {
 	args := []string{
 		// ssh args for bastion here
 		"-C", // compression
-		"-o",
-		"ControlMaster=auto",
-		"-o",
-		"ControlPersist=600s",
-		"-o",
-		"StrictHostKeyChecking=accept-new",
-		"-o",
-		"UserKnownHostsFile=.ssh_known_hosts",
-		"-o",
-		"ServerAliveInterval=15",
+		"-o", "ControlMaster=auto",
+		"-o", "ControlPersist=600s",
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "UserKnownHostsFile=.ssh_known_hosts",
+		"-o", "ServerAliveInterval=15",
 	}
 
 	if s.Session.ExtraArgs != "" {
@@ -91,10 +86,8 @@ func (s *Ssh) Cmd() *exec.Cmd {
 			bastion = bastion + " -p" + s.Session.BastionPort
 		}
 		args = append(args, []string{
-			"-o",
-			fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p", bastion), // note that single quotes is not needed here
-			"-o",
-			"ExitOnForwardFailure=yes",
+			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p", bastion), // note that single quotes is not needed here
+			"-o", "ExitOnForwardFailure=yes",
 		}...)
 	}
 
@@ -117,7 +110,7 @@ func (s *Ssh) Cmd() *exec.Cmd {
 	if s.CommandName != "" {
 		// Add command and arguments
 		args = append(args, "--")
-		//args = append(args, cmd.Path)
+		// args = append(args, cmd.Path)
 		args = append(args, s.CommandName)
 		args = append(args, s.CommandArgs...)
 	}
