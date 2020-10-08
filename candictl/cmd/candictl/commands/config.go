@@ -44,12 +44,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
-		if err != nil {
-			log.ErrorF("\nCritical Error: %s\n", err)
-			os.Exit(1)
-		}
-		return nil
+		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
 	})
 
 	return cmd
@@ -73,12 +68,7 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		err := log.Process("bootstrap", "Prepare Kubeadm Config", runFunc)
-		if err != nil {
-			log.ErrorF("\nCritical Error: %s\n", err)
-			os.Exit(1)
-		}
-		return nil
+		return log.Process("bootstrap", "Prepare Kubeadm Config", runFunc)
 	})
 
 	return cmd
@@ -125,6 +115,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 		default:
 			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
 		}
+
 		fmt.Print(string(output))
 		return nil
 	})
@@ -172,6 +163,7 @@ func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd 
 		default:
 			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
 		}
+
 		fmt.Print(string(output))
 		return nil
 	})

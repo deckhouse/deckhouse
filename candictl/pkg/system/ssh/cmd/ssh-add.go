@@ -10,53 +10,54 @@ import (
 	"flant/candictl/pkg/system/ssh/session"
 )
 
-var SshAddPath = "ssh-add"
+const SSHAddPath = "ssh-add"
 
-type SshAdd struct {
+type SSHAdd struct {
 	Session *session.Session
 }
 
-func NewSshAdd(sess *session.Session) *SshAdd {
-	return &SshAdd{Session: sess}
+func NewSSHAdd(sess *session.Session) *SSHAdd {
+	return &SSHAdd{Session: sess}
 }
 
-func (s *SshAdd) KeyCmd(keyPath string) *exec.Cmd {
+func (s *SSHAdd) KeyCmd(keyPath string) *exec.Cmd {
 	args := []string{
 		keyPath,
 	}
 	env := []string{
 		s.Session.AuthSockEnv(),
 	}
-	cmd := exec.Command(SshAddPath, args...)
+	cmd := exec.Command(SSHAddPath, args...)
 	cmd.Env = append(os.Environ(), env...)
 	return cmd
 }
 
-func (s *SshAdd) ListCmd() *exec.Cmd {
+func (s *SSHAdd) ListCmd() *exec.Cmd {
 	env := []string{
 		s.Session.AuthSockEnv(),
 	}
-	cmd := exec.Command(SshAddPath, "-l")
+	cmd := exec.Command(SSHAddPath, "-l")
 	cmd.Env = append(os.Environ(), env...)
 	return cmd
 }
 
-func (s *SshAdd) AddKeys(keys []string) error {
+func (s *SSHAdd) AddKeys(keys []string) error {
 	for _, k := range keys {
-		app.Debugf("add key %s\n", k)
+		log.DebugF("add key %s\n", k)
 		args := []string{
 			k,
 		}
 		env := []string{
 			s.Session.AuthSockEnv(),
 		}
-		cmd := exec.Command(SshAddPath, args...)
+		cmd := exec.Command(SSHAddPath, args...)
 		cmd.Env = append(os.Environ(), env...)
 
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("ssh-add: %s %v", string(output), err)
 		}
+
 		str := string(output)
 		if str != "" && str != "\n" {
 			log.InfoF("ssh-add: %s\n", output)
@@ -64,11 +65,11 @@ func (s *SshAdd) AddKeys(keys []string) error {
 	}
 
 	if app.IsDebug {
-		app.Debugf("list added keys\n")
+		log.DebugF("list added keys\n")
 		env := []string{
 			s.Session.AuthSockEnv(),
 		}
-		cmd := exec.Command(SshAddPath, "-l")
+		cmd := exec.Command(SSHAddPath, "-l")
 		cmd.Env = append(os.Environ(), env...)
 
 		output, err := cmd.CombinedOutput()

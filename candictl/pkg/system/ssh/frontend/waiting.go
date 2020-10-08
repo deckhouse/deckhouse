@@ -34,41 +34,24 @@ func (c *Check) AwaitAvailability() error {
 		}
 
 		log.InfoF(string(output))
-		return fmt.Errorf("host '%s' is not available", app.SshHost)
+		return fmt.Errorf("host '%s' is not available", app.SSHHost)
 	})
 }
 
 func (c *Check) ExpectAvailable() ([]byte, error) {
 	cmd := NewCommand(c.Session, "echo SUCCESS").Cmd()
-	return cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return output, err
+	}
+
+	if strings.Contains(string(output), "SUCCESS") {
+		return nil, nil
+	}
+
+	return output, fmt.Errorf("SSH command otput should contain \"SUCCESS\", error: %v", err)
 }
 
 func (c *Check) String() string {
-	builder := strings.Builder{}
-	builder.WriteString("ssh ")
-
-	if c.Session.BastionHost != "" {
-		builder.WriteString("-J ")
-		if c.Session.BastionUser != "" {
-			builder.WriteString(fmt.Sprintf("%s@%s", c.Session.BastionUser, c.Session.BastionHost))
-		} else {
-			builder.WriteString(c.Session.BastionHost)
-		}
-		if c.Session.BastionPort != "" {
-			builder.WriteString(fmt.Sprintf(":%s", c.Session.BastionPort))
-		}
-		builder.WriteString(" ")
-	}
-
-	if c.Session.User != "" {
-		builder.WriteString(fmt.Sprintf("%s@%s", c.Session.User, c.Session.Host))
-	} else {
-		builder.WriteString(c.Session.Host)
-	}
-
-	if c.Session.Port != "" {
-		builder.WriteString(fmt.Sprintf(":%s", c.Session.Port))
-	}
-
-	return builder.String()
+	return c.Session.String()
 }

@@ -3,7 +3,7 @@ package process
 import (
 	"sync"
 
-	"flant/candictl/pkg/app"
+	"flant/candictl/pkg/log"
 )
 
 var DefaultSession *Session
@@ -43,7 +43,7 @@ func (s *Session) Stop() {
 			s.Stop()
 		}(stopable)
 	}
-	app.Debugf("Wait while %d processes stops\n", count)
+	log.DebugF("Wait while %d processes stops\n", count)
 	wg.Wait()
 }
 

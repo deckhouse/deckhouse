@@ -10,7 +10,7 @@ git:
     - go.sum
     setup:
     - "**/*.go"
-    - go-build.sh
+    - hack/build.sh
 ansible:
   beforeInstall:
   - apk:
@@ -24,9 +24,9 @@ ansible:
       chdir: /candictl
 
   setup:
-  - command: /candictl/go-build.sh
+  - command: /candictl/hack/build.sh
     args:
-      chdir: /candictl
+      chdir: /candictl/hack
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: alpine:3.11
@@ -34,7 +34,7 @@ docker:
   ENTRYPOINT: ["candictl"]
 import:
 - artifact: candictl
-  add: /candictl/candictl
+  add: /candictl/hack/candictl
   to: /usr/bin/candictl
   before: setup
 git:

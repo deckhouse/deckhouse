@@ -57,10 +57,11 @@ func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}
 				return fmt.Errorf("Request failed. Probably pod doesn't exist anymore.")
 			}
 
+			printLogsByLine(result)
+
+			<-time.After(time.Second)
 			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
-
-			printLogsByLine(result)
 		}
 	}
 }

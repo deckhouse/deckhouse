@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/config"
@@ -29,7 +30,7 @@ type Interface interface {
 	Init() error
 	Apply() error
 	Destroy() error
-	Close()
+	Stop()
 	GetTerraformOutput(string) ([]byte, error)
 	getState() ([]byte, error)
 }
@@ -48,6 +49,9 @@ type Runner struct {
 	changesInPlan bool
 
 	stateCache cache.Cache
+
+	cmd     *exec.Cmd
+	stopped bool
 }
 
 var (
@@ -74,6 +78,11 @@ func (r *Runner) WithName(name string) *Runner {
 	return r
 }
 
+func (r *Runner) WithStatePath(statePath string) *Runner {
+	r.statePath = statePath
+	return r
+}
+
 func (r *Runner) WithState(stateData []byte) *Runner {
 	tmpFile, err := ioutil.TempFile(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
 	if err != nil {
@@ -81,7 +90,7 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 		return r
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), stateData, 0755)
+	err = ioutil.WriteFile(tmpFile.Name(), stateData, 0600)
 	if err != nil {
 		log.ErrorF("can't write terraform state for runner %s: %s\n", r.step, err)
 		return r
@@ -98,7 +107,7 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 		return r
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), variablesData, 0755)
+	err = ioutil.WriteFile(tmpFile.Name(), variablesData, 0600)
 	if err != nil {
 		log.ErrorF("can't write terraform variables for runner %s: %s\n", r.step, err)
 		return r
@@ -114,20 +123,22 @@ func (r *Runner) WithAutoApprove(autoApprove bool) *Runner {
 }
 
 func (r *Runner) Init() error {
+	if r.stopped {
+		return fmt.Errorf("runner is stopped")
+	}
+
 	if r.statePath == "" && r.stateCache.InCache(r.name) {
 		r.statePath = r.stateCache.ObjectPath(r.name)
 
-		log.InfoF("Cached Terraform state found: %s\n\n", r.statePath)
+		log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
 		if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cash") {
 			return fmt.Errorf("Terraform pipeline aborted.\nIf you want to drop the cache and continue, please run candictl with '--yes-i-want-to-drop-cache' flag.")
 		}
 	} else if r.statePath == "" {
-		tmpFile, err := ioutil.TempFile(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
-		if err != nil {
-			return fmt.Errorf("can't save terraform variables for runner %s: %s", r.step, err)
-		}
-		r.statePath = tmpFile.Name()
+		// Save state directly in the cache to prevent state loss
+		r.statePath = r.stateCache.ObjectPath(r.name)
 	}
+
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
@@ -138,19 +149,22 @@ func (r *Runner) Init() error {
 			r.workingDir,
 		}
 
-		_, err := execTerraform(args...)
+		_, err := r.execTerraform(args...)
 		return err
 	})
 }
 
 func (r *Runner) Apply() error {
+	if r.stopped {
+		return fmt.Errorf("runner is stopped")
+	}
+
 	return log.Process("default", "terraform apply ...", func() error {
 		if !r.autoApprove && r.changesInPlan {
 			if !retry.AskForConfirmation("Do you want to CHANGE objects state in the cloud") {
 				return fmt.Errorf("terraform apply aborted")
 			}
 		}
-		defer r.stateCache.SaveByPath(r.name, r.statePath)
 
 		args := []string{
 			"apply",
@@ -170,17 +184,20 @@ func (r *Runner) Apply() error {
 			)
 		}
 
-		_, err := execTerraform(args...)
+		_, err := r.execTerraform(args...)
 		if err != nil {
 			return err
 		}
 
-		r.stateCache.SaveByPath(r.name, r.statePath)
 		return nil
 	})
 }
 
 func (r *Runner) Plan() error {
+	if r.stopped {
+		return fmt.Errorf("runner is stopped")
+	}
+
 	return log.Process("default", "terraform plan ...", func() error {
 		tmpFile, err := ioutil.TempFile(app.TmpDirName, r.step+deckhousePlanSuffix)
 		if err != nil {
@@ -199,7 +216,7 @@ func (r *Runner) Plan() error {
 
 		args = append(args, r.workingDir)
 
-		exitCode, err := execTerraform(args...)
+		exitCode, err := r.execTerraform(args...)
 		if exitCode == terraformHasChangesExitCode {
 			r.changesInPlan = true
 		} else if err != nil {
@@ -212,6 +229,10 @@ func (r *Runner) Plan() error {
 }
 
 func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
+	if r.stopped {
+		return nil, fmt.Errorf("runner is stopped")
+	}
+
 	if r.statePath == "" {
 		return nil, fmt.Errorf("no state found, try to run terraform apply first")
 	}
@@ -246,6 +267,7 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
+	r.stopped = true
 	return log.Process("default", "terraform destroy ...", func() error {
 		args := []string{
 			"destroy",
@@ -256,7 +278,7 @@ func (r *Runner) Destroy() error {
 		}
 		args = append(args, r.workingDir)
 
-		if _, err := execTerraform(args...); err != nil {
+		if _, err := r.execTerraform(args...); err != nil {
 			return err
 		}
 
@@ -269,40 +291,53 @@ func (r *Runner) getState() ([]byte, error) {
 	return ioutil.ReadFile(r.statePath)
 }
 
-func (r *Runner) Close() {
-	_ = os.Remove(r.variablesPath)
+func (r *Runner) Stop() {
+	r.stopped = true
+	for r.cmd != nil {
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
-func execTerraform(args ...string) (int, error) {
-	cmd := exec.Command("terraform", args...)
-	stdout, err := cmd.StdoutPipe()
+func (r *Runner) execTerraform(args ...string) (int, error) {
+	r.cmd = exec.Command("terraform", args...)
+
+	stdout, err := r.cmd.StdoutPipe()
 	if err != nil {
 		return 1, fmt.Errorf("can't open stdout pipe: %v", err)
 	}
 
 	var errBuf bytes.Buffer
-	cmd.Stderr = &errBuf
-	cmd.Stdin = os.Stdin
+	r.cmd.Stderr = &errBuf
+	r.cmd.Stdin = os.Stdin
 
-	cmd.Env = append(cmd.Env, "TF_IN_AUTOMATION=yes")
+	r.cmd.Env = append(r.cmd.Env, "TF_IN_AUTOMATION=yes")
 
-	err = cmd.Start()
+	log.DebugF(r.cmd.String() + "\n")
+	err = r.cmd.Start()
 	if err != nil {
 		log.ErrorF("%s\n%v\n", errBuf.String(), err)
-		return cmd.ProcessState.ExitCode(), err
+		return r.cmd.ProcessState.ExitCode(), err
 	}
 
-	r := bufio.NewScanner(stdout)
-	for r.Scan() {
-		log.InfoLn(r.Text())
+	waitCh := make(chan error)
+	go func() {
+		waitCh <- r.cmd.Wait()
+	}()
+
+	s := bufio.NewScanner(stdout)
+	for s.Scan() {
+		log.InfoLn(s.Text())
 	}
 
-	err = cmd.Wait()
-	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
+	err = <-waitCh
+	log.InfoF("Terraform runner \"%s\" process exited.\n", r.step)
+
+	exitCode := r.cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != terraformHasChangesExitCode {
 		log.ErrorLn(err)
 		err = fmt.Errorf(errBuf.String())
 	}
+	r.cmd = nil
 	return exitCode, err
 }
 
@@ -337,7 +372,7 @@ func (r *FakeRunner) GetTerraformOutput(output string) ([]byte, error) {
 
 func (r *FakeRunner) Destroy() error { return nil }
 
-func (r *FakeRunner) Close() {}
+func (r *FakeRunner) Stop() {}
 
 func (r *FakeRunner) getState() ([]byte, error) {
 	return []byte(r.State), nil

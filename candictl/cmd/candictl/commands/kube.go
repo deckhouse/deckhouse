@@ -13,12 +13,13 @@ import (
 	"flant/candictl/pkg/kubernetes/actions/deckhouse"
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 )
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("kubernetes-api-connection", "Test connection to kubernetes api via ssh or directly.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	sh_app.DefineKubeClientFlags(cmd)
 
@@ -28,8 +29,8 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			return err
 		}
 
-		//app.AskBecomePass = true
-		err = app.AskBecomePassword()
+		// app.AskBecomePass = true
+		err = operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -43,10 +44,9 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 
 		list, err := kubeCl.CoreV1().Namespaces().List(v1.ListOptions{})
 		if err != nil {
-			//return fmt.Errorf("list namespaces: %v", err)
-			fmt.Printf("list namespaces: %v", err)
+			log.InfoF("list namespaces: %v", err)
 			if kubeCl.KubeProxy != nil {
-				fmt.Printf("Press Ctrl+C to close proxy connection.")
+				log.InfoLn("Press Ctrl+C to close proxy connection.")
 				ch := make(chan struct{})
 				<-ch
 			}
@@ -54,12 +54,12 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 		}
 
 		if len(list.Items) > 0 {
-			fmt.Printf("Namespaces:\n")
+			log.InfoLn("Namespaces:")
 			for _, ns := range list.Items {
-				fmt.Printf("  ns/%s\n", ns.Name)
+				log.InfoF("  ns/%s\n", ns.Name)
 			}
 		} else {
-			fmt.Printf("No namespaces.\n")
+			log.InfoLn("No namespaces.")
 		}
 
 		TestCommandDelay()
@@ -71,7 +71,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 
 func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("deployment-ready", "Wait while deployment is ready.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	sh_app.DefineKubeClientFlags(cmd)
 
@@ -89,7 +89,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return err
 		}
 
-		err = app.AskBecomePassword()
+		err = operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}

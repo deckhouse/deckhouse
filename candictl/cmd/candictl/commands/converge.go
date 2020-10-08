@@ -2,28 +2,32 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/commands"
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/converge"
+	"flant/candictl/pkg/kubernetes/actions/deckhouse"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 )
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 
-	runFunc := func(sshClient *ssh.SshClient) error {
-		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
+	runFunc := func(sshClient *ssh.SSHClient) error {
+		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
+		}
+
+		if info := deckhouse.GetClusterInfo(kubeCl); info != "" {
+			_ = log.Process("common", "Cluster Info", func() error { log.InfoF(info); return nil })
 		}
 
 		metaConfig, err := config.ParseConfigFromCluster(kubeCl)
@@ -49,16 +53,11 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		if err := app.AskBecomePassword(); err != nil {
+		if err := operations.AskBecomePassword(); err != nil {
 			return err
 		}
 
-		err = runFunc(sshClient)
-		if err != nil {
-			log.ErrorLn(err.Error())
-			os.Exit(1)
-		}
-		return nil
+		return runFunc(sshClient)
 	})
 	return cmd
 }

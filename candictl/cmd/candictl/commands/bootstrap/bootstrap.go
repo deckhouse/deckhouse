@@ -3,21 +3,21 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/google/uuid"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/commands"
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/converge"
 	"flant/candictl/pkg/kubernetes/actions/deckhouse"
 	"flant/candictl/pkg/kubernetes/actions/resources"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 	"flant/candictl/pkg/terraform"
 	"flant/candictl/pkg/util/cache"
+	"flant/candictl/pkg/util/tomb"
 )
 
 const banner = "" +
@@ -39,18 +39,32 @@ func printBanner() {
 
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 	app.DefineResourcesFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 
-	runFunc := func(sshClient *ssh.SshClient) error {
+	runFunc := func() error {
+		masterAddressesForSSH := make(map[string]string)
+
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
 		if err != nil {
 			return err
 		}
+
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
+		}
+
+		err = operations.AskBecomePassword()
+		if err != nil {
+			return err
+		}
+
+		printBanner()
 
 		cachePath := metaConfig.CachePath()
 		if err = cache.Init(cachePath); err != nil {
@@ -112,6 +126,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 					WithVariables(metaConfig.MarshalConfig()).
 					WithAutoApprove(true)
+				tomb.RegisterOnShutdown(baseRunner.Stop)
 
 				baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 				if err != nil {
@@ -123,6 +138,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
 					WithName(masterNodeName).
 					WithAutoApprove(true)
+				tomb.RegisterOnShutdown(masterRunner.Stop)
 
 				masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 				if err != nil {
@@ -132,7 +148,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 				deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
-				app.SshHost = masterOutputs.MasterIPForSSH
+				app.SSHHost = masterOutputs.MasterIPForSSH
 				sshClient.Settings.Host = masterOutputs.MasterIPForSSH
 
 				nodeIP = masterOutputs.NodeInternalIP
@@ -141,6 +157,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 				deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
 
+				masterAddressesForSSH[masterNodeName] = app.SSHHost
 				return nil
 			})
 			if err != nil {
@@ -154,17 +171,17 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			nodeIP = static.NodeIP
 		}
 
-		if err := commands.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+		if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 			return err
 		}
-		if err := commands.RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
+		if err := operations.RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
 			return err
 		}
-		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
-		if err := commands.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
+		if err := operations.InstallDeckhouse(kubeCl, deckhouseInstallConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
 			return err
 		}
 
@@ -173,12 +190,12 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return nil
 		}
 
-		if err := commands.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+		if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 			return err
 		}
 
 		staticNodeGroups := metaConfig.GetStaticNodeGroups()
-		if err := commands.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
+		if err := operations.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
 			return err
 		}
 
@@ -206,33 +223,28 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
-		_ = log.Process("bootstrap", "Clean cache", func() error {
+		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().Clean()
 			log.Warning("Next run of \"candictl bootstrap\" will create a new Kubernetes cluster.\n")
 			return nil
 		})
+
+		if len(masterAddressesForSSH) > 0 {
+			_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
+				for nodeName, address := range masterAddressesForSSH {
+					fakeSession := sshClient.Settings.Copy()
+					fakeSession.Host = address
+					log.InfoF("%s | %s\n", nodeName, fakeSession.String())
+				}
+				return nil
+			})
+		}
+
 		return nil
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
-
-		err = app.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
-		printBanner()
-		err = runFunc(sshClient)
-
-		if err != nil {
-			log.ErrorLn(err.Error())
-			os.Exit(1)
-		}
-		return nil
+		return runFunc()
 	})
 
 	return cmd

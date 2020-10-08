@@ -7,9 +7,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"flant/candictl/pkg/kubernetes/client"
+	"flant/candictl/pkg/log"
 )
 
 func TestDeckhouseInstall(t *testing.T) {
+	log.InitLogger("simple")
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
@@ -47,7 +49,7 @@ func TestDeckhouseInstall(t *testing.T) {
 					return err
 				}
 
-				dockercfg := s.Data[".dockercfg"]
+				dockercfg := s.Data[".dockerconfigjson"]
 				if string(dockercfg) != "anything" {
 					return fmt.Errorf(".dockercfg data: %s", dockercfg)
 				}

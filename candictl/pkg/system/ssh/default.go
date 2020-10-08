@@ -5,17 +5,17 @@ import (
 	"flant/candictl/pkg/system/ssh/session"
 )
 
-func NewClientFromFlags() *SshClient {
-	return &SshClient{
+func NewClientFromFlags() *SSHClient {
+	return &SSHClient{
 		Settings: &session.Session{
-			PrivateKeys: app.SshPrivateKeys,
-			Host:        app.SshHost,
-			User:        app.SshUser,
-			Port:        app.SshPort,
-			BastionHost: app.SshBastionHost,
-			BastionPort: app.SshBastionPort,
-			BastionUser: app.SshBastionUser,
-			ExtraArgs:   app.SshExtraArgs,
+			PrivateKeys: app.SSHPrivateKeys,
+			Host:        app.SSHHost,
+			User:        app.SSHUser,
+			Port:        app.SSHPort,
+			BastionHost: app.SSHBastionHost,
+			BastionPort: app.SSHBastionPort,
+			BastionUser: app.SSHBastionUser,
+			ExtraArgs:   app.SSHExtraArgs,
 		},
 	}
 }

@@ -3,7 +3,6 @@ module flant/candictl
 go 1.13
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig/v3 v3.1.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect

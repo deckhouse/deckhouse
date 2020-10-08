@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 
-	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/ssh/cmd"
 	"flant/candictl/pkg/system/ssh/session"
@@ -36,18 +35,16 @@ func NewTunnel(sess *session.Session, ttype string, address string) *Tunnel {
 
 func (t *Tunnel) Up() error {
 	if t.Session == nil {
-		return fmt.Errorf("up tunnel '%s': sshClient is undefined", t.String())
+		return fmt.Errorf("up tunnel '%s': SSH client is undefined", t.String())
 	}
 
-	t.sshCmd = cmd.NewSsh(t.Session).
+	t.sshCmd = cmd.NewSSH(t.Session).
 		WithArgs(
-			//"-f", // start in background - good for scripts, but here we need to do cmd.Process.Kill()
-			"-o",
-			"ExitOnForwardFailure=yes", // wait for connection establish before
-			//"-N",                       // no command
-			//"-n", // no stdin
-			fmt.Sprintf("-%s", t.Type),
-			t.Address,
+			// "-f", // start in background - good for scripts, but here we need to do cmd.Process.Kill()
+			"-o", "ExitOnForwardFailure=yes", // wait for connection establish before
+			// "-N",                       // no command
+			// "-n", // no stdin
+			fmt.Sprintf("-%s", t.Type), t.Address,
 		).
 		WithCommand("echo", "SUCCESS", "&&", "cat").
 		Cmd()
@@ -72,13 +69,13 @@ func (t *Tunnel) Up() error {
 
 	tunnelReadyCh := make(chan struct{}, 1)
 	go func() {
-		//defer wg.Done()
+		// defer wg.Done()
 		t.ConsumeLines(stdoutReadPipe, func(l string) {
 			if l == "SUCCESS" {
 				tunnelReadyCh <- struct{}{}
 			}
 		})
-		app.Debugf("stop line consumer for '%s'", t.String())
+		log.DebugF("stop line consumer for '%s'", t.String())
 	}()
 
 	go func() {
@@ -102,7 +99,7 @@ func (t *Tunnel) HealthMonitor() error {
 				log.ErrorF("Tunnel stopped with an error: %v. ", err)
 				log.InfoLn("Restarting a tunnel ...")
 			}
-			err = retry.StartSilentLoop("tunnel", 5, 5, t.Up)
+			err = retry.StartSilentLoop("tunnel", 10, 5, t.Up)
 			if err != nil {
 				return err
 			}
@@ -137,10 +134,6 @@ func (t *Tunnel) ConsumeLines(r io.Reader, fn func(l string)) {
 
 		if fn != nil {
 			fn(text)
-		}
-
-		if app.IsDebug && text != "" {
-			fmt.Printf("%s: %s\n", t.String(), text)
 		}
 	}
 }

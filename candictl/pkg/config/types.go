@@ -14,6 +14,10 @@ func (i *SchemaIndex) IsValid() bool {
 	return i.Kind != "" && i.Version != ""
 }
 
+func (i *SchemaIndex) String() bool {
+	return i.Kind != "" && i.Version != ""
+}
+
 type OpenAPISchema struct {
 	Kind     string                 `json:"kind"`
 	Versions []OpenAPISchemaVersion `json:"apiVersions"`

@@ -1,4 +1,4 @@
-package commands
+package operations
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/converge"
@@ -17,7 +18,7 @@ import (
 	"flant/candictl/pkg/util/retry"
 )
 
-func BootstrapMaster(sshClient *ssh.SshClient, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func BootstrapMaster(sshClient *ssh.SSHClient, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
 		if err := template.PrepareBootstrap(controller, nodeIP, bundleName, metaConfig); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
@@ -57,7 +58,7 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 	})
 }
 
-func ExecuteBashibleBundle(sshClient *ssh.SshClient, tmpDir string) error {
+func ExecuteBashibleBundle(sshClient *ssh.SSHClient, tmpDir string) error {
 	return log.Process("bootstrap", "Execute Bashible Bundle", func() error {
 		bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
 		parentDir := tmpDir + "/var/lib"
@@ -74,7 +75,7 @@ func ExecuteBashibleBundle(sshClient *ssh.SshClient, tmpDir string) error {
 	})
 }
 
-func RunBashiblePipeline(sshClient *ssh.SshClient, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeIP, devicePath string) error {
 	bundleName, err := DetermineBundleName(sshClient)
 	if err != nil {
 		return err
@@ -86,14 +87,11 @@ func RunBashiblePipeline(sshClient *ssh.SshClient, cfg *config.MetaConfig, nodeI
 		rawOut, _ := bashibleCmd.CombinedOutput()
 		out := strings.TrimSuffix(string(rawOut), "\n")
 
-		switch out {
-		case "Can't acquire lockfile /var/lock/bashible.":
-			fallthrough
-		case "Configuration is in sync, nothing to do.":
+		if strings.Contains(out, "Can't acquire lockfile /var/lock/bashible.") || strings.Contains(out, "Configuration is in sync, nothing to do.") {
 			log.InfoLn("Bashible is already installed and healthy!")
 			log.InfoF("\t%s\n", out)
 			bashibleUpToDate = true
-		default:
+		} else {
 			log.InfoLn("Bashible is not ready! Let's try to install it ...")
 			log.InfoF("\tReason: %s\n", out)
 		}
@@ -124,7 +122,7 @@ func RunBashiblePipeline(sshClient *ssh.SshClient, cfg *config.MetaConfig, nodeI
 	return nil
 }
 
-func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
+func DetermineBundleName(sshClient *ssh.SSHClient) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
 		// run detect bundle type
@@ -145,7 +143,7 @@ func DetermineBundleName(sshClient *ssh.SshClient) (string, error) {
 	return bundleName, err
 }
 
-func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
+func WaitForSSHConnectionOnMaster(sshClient *ssh.SSHClient) error {
 	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
 		_ = log.Process("default", "Connection string", func() error {
@@ -161,12 +159,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.SshClient) error {
 
 func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config, nodeGroupConfig map[string]interface{}) error {
 	return log.Process("bootstrap", "Install Deckhouse", func() error {
-		err := deckhouse.WaitForKubernetesAPI(kubeCl)
-		if err != nil {
-			return fmt.Errorf("deckhouse wait api: %v", err)
-		}
-
-		err = deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
@@ -185,29 +178,42 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 	})
 }
 
-func StartKubernetesAPIProxy(sshClient *ssh.SshClient) (*client.KubernetesClient, error) {
+func StartKubernetesAPIProxy(sshClient *ssh.SSHClient) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Start Kubernetes API proxy", func() error {
 		if err := sshClient.Check().WithDelaySeconds(3).AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master available: %v", err)
 		}
-		return retry.StartLoop("Kubernetes API proxy", 45, 20, func() error {
+		err := retry.StartLoop("Kubernetes API proxy", 45, 20, func() error {
 			kubeCl = client.NewKubernetesClient().WithSSHClient(sshClient)
 			if err := kubeCl.Init(""); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
+
+		<-time.After(time.Second) // tick to prevent first probable fail
+
+		err = deckhouse.WaitForKubernetesAPI(kubeCl)
+		if err != nil {
+			return fmt.Errorf("wait kubernetes api: %v", err)
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("start kubernetes proxy: %v", err)
 	}
+
 	return kubeCl, nil
 }
 
 const rebootExitCode = 255
 
-func RebootMaster(sshClient *ssh.SshClient) error {
+func RebootMaster(sshClient *ssh.SSHClient) error {
 	return log.Process("bootstrap", "Reboot Master️", func() error {
 		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().WithSSHArgs("-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
@@ -255,7 +261,7 @@ func BootstrapStaticNodes(kubeCl *client.KubernetesClient, metaConfig *config.Me
 	return nil
 }
 
-func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, replicas int) error {
+func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, replicas int) error {
 	return log.Process("bootstrap", "Create master NodeGroup", func() error {
 		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, "master")
 		if err != nil {
@@ -263,10 +269,11 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 		}
 
 		for i := 1; i < replicas; i++ {
-			err = converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig)
+			outputs, err := converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig)
 			if err != nil {
 				return err
 			}
+			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
 		}
 
 		return nil

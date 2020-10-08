@@ -37,6 +37,11 @@ Matrix Tests:
   tags:
     - werf-distributed
 
+Candictl Tests:
+  extends: .Candictl Tests template
+  tags:
+    - werf-distributed
+
 Hooks Configuration Tests:
   extends: .Hooks Configuration Tests template
   tags:

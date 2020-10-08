@@ -8,7 +8,6 @@ import (
 
 	uuid "gopkg.in/satori/go.uuid.v1"
 
-	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/ssh/cmd"
 	"flant/candictl/pkg/system/ssh/session"
@@ -27,13 +26,13 @@ func (f *File) Upload(srcPath string, remotePath string) error {
 	if err != nil {
 		return err
 	}
-	scp := cmd.NewScp(f.Session)
+	scp := cmd.NewSCP(f.Session)
 	if fType == "DIR" {
 		scp.WithRecursive(true)
 	}
 	scp.WithSrc(srcPath).
 		WithRemoteDst(remotePath).
-		Scp().
+		SCP().
 		CaptureStdout(nil).
 		CaptureStderr(nil)
 	err = scp.Run()
@@ -57,15 +56,15 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		}
 	}()
 
-	err = ioutil.WriteFile(srcPath, data, 0644)
+	err = ioutil.WriteFile(srcPath, data, 0600)
 	if err != nil {
 		return fmt.Errorf("write data to tmp file: %v", err)
 	}
 
-	scp := cmd.NewScp(f.Session).
+	scp := cmd.NewSCP(f.Session).
 		WithSrc(srcPath).
 		WithRemoteDst(remotePath).
-		Scp().
+		SCP().
 		CaptureStderr(nil).
 		CaptureStdout(nil)
 	err = scp.Run()
@@ -80,11 +79,11 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 }
 
 func (f *File) Download(remotePath string, dstPath string) error {
-	scp := cmd.NewScp(f.Session)
+	scp := cmd.NewSCP(f.Session)
 	scp.WithRecursive(true)
-	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Scp()
-	app.Debugf("run scp: %s\n", scpCmd.Cmd().String())
-	//app.Debugf("run scp: %#v\n", scpCmd)
+	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP()
+	log.DebugF("run scp: %s\n", scpCmd.Cmd().String())
+
 	stdout, err := scpCmd.Cmd().CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("download file '%s': %v", remotePath, err)
@@ -105,14 +104,14 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 	defer func() {
 		err := os.Remove(dstPath)
 		if err != nil {
-			fmt.Printf("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
+			log.InfoF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
 		}
 	}()
 
-	scp := cmd.NewScp(f.Session)
-	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).Scp()
-	app.Debugf("run scp: %s\n", scpCmd.Cmd().String())
-	//app.Debugf("run scp: %#v\n", scpCmd)
+	scp := cmd.NewSCP(f.Session)
+	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP()
+	log.DebugF("run scp: %s\n", scpCmd.Cmd().String())
+
 	stdout, err := scpCmd.Cmd().CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("download file '%s': %v", remotePath, err)

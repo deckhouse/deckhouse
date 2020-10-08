@@ -30,11 +30,12 @@ type Cache interface {
 	SaveStruct(string, interface{}) error
 	ObjectPath(string) string
 	GetDir() string
+	Teardown()
 }
 
 type StateCache struct {
 	dir          string
-	stateToClean []string
+	stateToClear []string
 }
 
 var globalCache Cache = &DummyCache{}
@@ -66,7 +67,7 @@ func NewStateCache(dir string) (*StateCache, error) {
 }
 
 func (s *StateCache) Save(name string, content []byte) {
-	if err := ioutil.WriteFile(s.ObjectPath(name), content, 0755); err != nil {
+	if err := ioutil.WriteFile(s.ObjectPath(name), content, 0600); err != nil {
 		log.ErrorF("Can't save terraform state in cache: %v", err)
 	}
 }
@@ -90,11 +91,11 @@ func (s *StateCache) InCache(name string) bool {
 }
 
 func (s *StateCache) AddToClean(name string) {
-	s.stateToClean = append(s.stateToClean, s.ObjectPath(name))
+	s.stateToClear = append(s.stateToClear, s.ObjectPath(name))
 }
 
 func (s *StateCache) Clean() {
-	for _, state := range s.stateToClean {
+	for _, state := range s.stateToClear {
 		_ = os.Remove(state)
 	}
 	_, err := os.Create(filepath.Join(s.dir, ".tombstone"))
@@ -140,6 +141,10 @@ func (s *StateCache) ObjectPath(name string) string {
 
 func (s *StateCache) GetDir() string {
 	return s.dir
+}
+
+func (s *StateCache) Teardown() {
+	_ = os.RemoveAll(s.dir)
 }
 
 func Init(dir string) error {
@@ -192,3 +197,4 @@ func (d *DummyCache) LoadStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) SaveStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) ObjectPath(n string) string               { return "" }
 func (d *DummyCache) GetDir() string                           { return "" }
+func (d *DummyCache) Teardown()                                {}

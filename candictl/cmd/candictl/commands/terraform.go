@@ -9,10 +9,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/commands"
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/converge"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 )
 
@@ -20,11 +20,11 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
 	sh_app.DefineKubeClientFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		exporter := commands.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
+		exporter := operations.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
 		exporter.Start()
 		return nil
 	})
@@ -35,7 +35,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
 	sh_app.DefineKubeClientFlags(cmd)
 	app.DefineOutputFlag(cmd)
-	app.DefineSshFlags(cmd)
+	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -46,11 +46,11 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if err := app.AskBecomePassword(); err != nil {
+		if err := operations.AskBecomePassword(); err != nil {
 			return err
 		}
 
-		kubeCl, err := commands.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err
 		}
@@ -86,7 +86,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return fmt.Errorf("Unknown output format %s", app.OutputFormat)
 		}
 
-		fmt.Println(string(data))
+		fmt.Print(string(data))
 		return nil
 	})
 	return cmd

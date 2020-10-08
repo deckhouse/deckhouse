@@ -69,8 +69,8 @@ func (p *DeploymentInformer) CreateSharedInformer() (err error) {
 			options.LabelSelector = labelSelector.String()
 		}
 	}
-	//p.ListOptions = metav1.ListOptions{}
-	//tweakListOptions(&p.ListOptions)
+	// p.ListOptions = metav1.ListOptions{}
+	// tweakListOptions(&p.ListOptions)
 
 	// create informer with add, update, delete callbacks
 	informer := infappsv1.NewFilteredDeploymentInformer(p.KubeClient, p.Namespace, resyncPeriod, indexers, tweakListOptions)

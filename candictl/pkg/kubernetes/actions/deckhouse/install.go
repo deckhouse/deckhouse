@@ -299,8 +299,9 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 			informer.Run()
 		}()
 
-		waitTimer := time.NewTicker(11 * time.Minute)
+		waitTimer := time.NewTicker(10 * time.Minute)
 		defer waitTimer.Stop()
+
 		checkTimer := time.NewTicker(5 * time.Second)
 		defer checkTimer.Stop()
 
@@ -308,8 +309,8 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 		defer func() { stopLogsChan <- struct{}{} }()
 
 		go func() {
-			for i := 1; i < 60; i++ {
-				time.Sleep(15 * time.Second)
+			for {
+				time.Sleep(5 * time.Second)
 				err = PrintDeckhouseLogs(kubeCl, &stopLogsChan)
 				if err != nil {
 					log.InfoLn(err.Error())
@@ -324,7 +325,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 			case <-checkTimer.C:
 				continue
 			case <-waitTimer.C:
-				waitErr = fmt.Errorf("timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors")
+				waitErr = fmt.Errorf("Timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors.")
 			case <-ready:
 				log.InfoF("Deckhouse deployment is ready\n")
 			}
@@ -351,9 +352,7 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 		},
 	}
 
-	return log.Process("default", "Create Deployment", func() error {
-		return task.Create()
-	})
+	return log.Process("default", "Create Deployment", task.Create)
 }
 
 func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {

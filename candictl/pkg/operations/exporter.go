@@ -1,8 +1,9 @@
-package commands
+package operations
 
 import (
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -106,9 +107,9 @@ func (c *ConvergeExporter) Start() {
 	go c.convergeLoop(stopCh)
 
 	http.Handle(c.MetricsPath, promhttp.Handler())
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
+		_, _ = w.Write([]byte(`<html>
              <head><title>CandI Converge Exporter</title></head>
              <body>
              <h1>CandI Converge Exporter</h1>
@@ -131,6 +132,7 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
+			cleanTMPDir()
 			c.getStatistic()
 		case <-stopCh:
 			log.ErrorLn("Stop exporter...")
@@ -183,4 +185,18 @@ func (c *ConvergeExporter) getStatistic() {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
 		}
 	}
+}
+
+func cleanTMPDir() {
+	_ = filepath.Walk(app.TmpDirName, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			if path != app.TmpDirName {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		_ = os.Remove(path)
+		return nil
+	})
 }

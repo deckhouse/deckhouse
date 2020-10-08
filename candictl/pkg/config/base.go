@@ -34,7 +34,7 @@ func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	var metaConfig *MetaConfig
 	var err error
 	err = log.Process("common", "Get Cluster configuration", func() error {
-		return retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 45, 10, func() error {
+		return retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 10, 5, func() error {
 			metaConfig, err = parseConfigFromCluster(kubeCl)
 			return err
 		})
@@ -59,10 +59,7 @@ func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) 
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
-	metaConfig := MetaConfig{}
-	schemaStore := NewSchemaStore()
-
+func GetClusterConfigData(kubeCl *client.KubernetesClient, schemaStore *SchemaStore) ([]byte, error) {
 	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -70,6 +67,18 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 
 	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
 	_, err = schemaStore.Validate(&clusterConfigData)
+	if err != nil {
+		return nil, err
+	}
+
+	return clusterConfigData, nil
+}
+
+func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+	metaConfig := MetaConfig{}
+	schemaStore := NewSchemaStore()
+
+	clusterConfigData, err := GetClusterConfigData(kubeCl, schemaStore)
 	if err != nil {
 		return nil, err
 	}
