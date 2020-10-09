@@ -8,6 +8,7 @@ variable "providerClusterConfiguration" {
     condition = cidrsubnet(var.providerClusterConfiguration.nodeNetworkCIDR, 0, 0) == var.providerClusterConfiguration.nodeNetworkCIDR
     error_message = "Invalid nodeNetworkCIDR in YandexClusterConfiguration."
   }
+}
 
 variable "nodeIndex" {
   type = number
