@@ -22,4 +22,6 @@ locals {
   external_network_name = var.providerClusterConfiguration.simple.externalNetworkName
   external_network_dhcp = lookup(var.providerClusterConfiguration.simple, "externalNetworkDHCP", true)
   pod_network_mode = lookup(var.providerClusterConfiguration.simple, "podNetworkMode", "VXLAN")
+  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  tags = lookup(var.providerClusterConfiguration, "tags", {})
 }

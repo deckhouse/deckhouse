@@ -130,6 +130,50 @@ internal:
   machineControllerManagerEnabled: true
 `
 
+const faultyNodeManagerOpenstack = `
+internal:
+  bashibleChecksumMigration: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: openstack
+    machineClassKind: OpenStackMachineClass
+    openstack:
+      podNetworkMode: DirectRoutingWithPortSecurityEnabled
+      connection:
+        authURL: https://mycloud.qqq/3/
+        caCert: mycacert
+        domainName: Default
+        password: pPaAsS
+        region: myreg
+        tenantName: mytname
+        username: myuname
+      instances:
+        securityGroups: [groupa, groupb]
+        sshKeyPairName: mysshkey
+        mainNetwork: shared
+      internalSubnet: "10.0.0.1/24"
+      internalNetworkNames: [mynetwork, mynetwork2]
+      externalNetworkNames: [shared]
+  nodeGroups:
+  - name: worker
+    instanceClass:
+      flavorName: m1.large
+    nodeType: Cloud
+    kubernetesVersion: "1.15"
+    cloudInstances:
+      classReference:
+        kind: OpenStackInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 2
+      zones:
+      - zonea
+      - zoneb
+  machineControllerManagerEnabled: true
+`
+
 const nodeManagerOpenstack = `
 internal:
   bashibleChecksumMigration: {}
@@ -152,9 +196,15 @@ internal:
       instances:
         securityGroups: [groupa, groupb]
         sshKeyPairName: mysshkey
+        mainNetwork: shared
+        additionalNetworks: [mynetwork]
+        imageName: centos
       internalSubnet: "10.0.0.1/24"
       internalNetworkNames: [mynetwork, mynetwork2]
       externalNetworkNames: [shared]
+      tags:
+        yyy: zzz
+        aaa: xxx
   nodeGroups:
   - name: worker
     instanceClass:
@@ -164,9 +214,6 @@ internal:
       additionalNetworks:
       - mynetwork
       - mynetwork2
-      additionalSecurityGroups:
-      - ic-groupa
-      - ic-groupb
     nodeType: Cloud
     kubernetesVersion: "1.15"
     cloudInstances:
@@ -178,6 +225,25 @@ internal:
       zones:
       - zonea
       - zoneb
+  - name: simple
+    instanceClass:
+      flavorName: m1.xlarge
+      additionalSecurityGroups:
+      - ic-groupa
+      - ic-groupb
+      additionalTags:
+        aaa: bbb
+        ccc: ddd
+    nodeType: Cloud
+    kubernetesVersion: "1.15"
+    cloudInstances:
+      classReference:
+        kind: OpenStackInstanceClass
+        name: simple
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
   machineControllerManagerEnabled: true
 `
 
@@ -561,6 +627,18 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	})
 
 	Context("Openstack", func() {
+		Describe("Openstack faulty config", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", faultyNodeManagerOpenstack)
+				f.HelmRender()
+			})
+
+			It("Test should fail", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+				Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
+			})
+		})
+
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
@@ -610,8 +688,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			machineClassB := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineClassSecretB := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "worker-6bdb5b0d")
 			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+			simpleMachineClassA := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "simple-02320933")
+			simpleMachineClassSecretA := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "simple-02320933")
+			simpleMachineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-simple-02320933")
 
-			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB)).To(Succeed())
+			Expect(verifyClusterAutoscalerDeploymentArgs(clusterAutoscalerDeploy, machineDeploymentA, machineDeploymentB, simpleMachineDeploymentA)).To(Succeed())
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
@@ -660,8 +741,16 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 [{name: shared}, {name: mynetwork, podNetwork: true}, {name: mynetwork2, podNetwork: true}]
 `))
 			Expect(machineClassA.Field("spec.securityGroups").String()).To(MatchYAML(`
-[groupa, groupb, ic-groupa, ic-groupb]
+[groupa, groupb]
 `))
+			Expect(machineClassA.Field("spec.tags").String()).To(MatchYAML(`
+kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab: "1"
+kubernetes.io-role-deckhouse-worker-zonea: "1"
+yyy: zzz
+aaa: xxx
+`))
+			Expect(machineClassA.Field("spec.flavorName").String()).To(MatchYAML(`m1.large`))
+			Expect(machineClassA.Field("spec.imageName").String()).To(MatchYAML(`ubuntu-18-04-cloud-amd64`))
 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
@@ -673,6 +762,27 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
 			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
+
+			Expect(simpleMachineClassA.Exists()).To(BeTrue())
+			Expect(simpleMachineClassA.Field("spec.networks").String()).To(MatchYAML(`
+[{name: shared}, {name: mynetwork, podNetwork: true}]
+`))
+			Expect(simpleMachineClassA.Field("spec.securityGroups").String()).To(MatchYAML(`
+[groupa, groupb, ic-groupa, ic-groupb]
+`))
+			Expect(simpleMachineClassA.Field("spec.tags").String()).To(MatchYAML(`
+kubernetes.io-cluster-deckhouse-f49dd1c3-a63a-4565-a06c-625e35587eab: "1"
+kubernetes.io-role-deckhouse-simple-zonea: "1"
+yyy: zzz
+aaa: bbb
+ccc: ddd
+`))
+			Expect(simpleMachineClassA.Field("spec.flavorName").String()).To(MatchYAML(`m1.xlarge`))
+			Expect(simpleMachineClassA.Field("spec.imageName").String()).To(MatchYAML(`centos`))
+			Expect(simpleMachineClassSecretA.Exists()).To(BeTrue())
+			Expect(simpleMachineDeploymentA.Exists()).To(BeTrue())
+			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
+			Expect(simpleMachineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("ce97cc47b065dba5aac19c0019bdbbab1dad1b5160a991106ac42a55ee8f33ba"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-bundle-centos-7-1.14"].Exists()).To(BeTrue())

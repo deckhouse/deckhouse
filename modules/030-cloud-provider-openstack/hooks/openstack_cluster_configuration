@@ -29,9 +29,12 @@ EOF
 function set_values_from_provider_cluster_configuration_yaml() {
   values::unset cloudProviderOpenstack.internal.connection
   provider='{}'
+  tags='{}'
   provider_cluster_configuration_yaml=$(echo "$1" | jq -r .provider_cluster_configuration)
   if [[ "$provider_cluster_configuration_yaml" != "null" ]]; then
-    provider=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfiguration.provider | . //= {}')
+    provider_cluster_configuration=$(echo "$provider_cluster_configuration_yaml" | deckhouse-controller helper cluster-configuration | jq '.providerClusterConfiguration')
+    provider=$(echo "$provider_cluster_configuration" | jq '.provider | . //= {}')
+    tags=$(echo "$provider_cluster_configuration" | jq '.tags | . //= {}')
   fi
 
   provider_discovery_data=$(echo "$1" | jq -r '
@@ -51,20 +54,20 @@ function set_values_from_provider_cluster_configuration_yaml() {
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.externalNetworkNames //= $data.externalNetworkNames | .externalNetworkNames + .additionalExternalNetworkNames | . //= [] | unique')
   values::set cloudProviderOpenstack.internal.externalNetworkNames "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.instances.securityGroups //= $data.instances.securityGroups | .instances.securityGroups | . //= [] | unique')
-  values::set cloudProviderOpenstack.internal.instances.securityGroups "$i"
-
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" '.zones //= $data.zones | .zones | . //= [] | unique')
   values::set cloudProviderOpenstack.internal.zones "$i"
 
-  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .instances.sshKeyPairName == null then $data.instances.sshKeyPairName else .instances.sshKeyPairName end')
-  values::set cloudProviderOpenstack.internal.instances.sshKeyPairName "$i"
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.instances == null or .instances == {}) then $data.instances else .instances end | . //= {}')
+  values::set cloudProviderOpenstack.internal.instances "$i"
 
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if .podNetworkMode == null then $data.podNetworkMode else .podNetworkMode end')
   values::set cloudProviderOpenstack.internal.podNetworkMode "$i"
 
   i=$(echo "$cloudProviderOpenstack" | jq -r --argjson data "$provider_discovery_data" 'if (.loadBalancer == null or .loadBalancer == {}) then $data.loadBalancer else .loadBalancer end | . //= {}')
   values::set cloudProviderOpenstack.internal.loadBalancer "$i"
+
+  i=$(echo "$cloudProviderOpenstack" | jq -r --argjson tags "$tags" '.tags //= $tags | .tags')
+  values::set cloudProviderOpenstack.internal.tags "$i"
 }
 
 function __main__() {

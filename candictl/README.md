@@ -90,8 +90,9 @@ masterNodeGroup:
   instanceClass:
     flavorName: m1.large
     imageName: ubuntu-18-04-cloud-amd64
-    kubernetesDataVolumeType: "__DEFAULT__"
     rootDiskSize: 20
+  volumeTypeMap:
+    nova: "__DEFAULT__"
 provider:
   authURL: https://cloud.example.com/v3/
   domainName: Default

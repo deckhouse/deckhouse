@@ -1,10 +1,13 @@
 locals {
-  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
-  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
-  flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
   network_security = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled"
-  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
+  security_group_names = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])
   external_network_floating_ip = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "masterWithExternalFloatingIP", true)
+  volume_type_map = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  zone = element(keys(local.volume_type_map), var.nodeIndex)
+  volume_type = local.volume_type_map[local.zone]
+  flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
+  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
 module "master" {
@@ -12,12 +15,16 @@ module "master" {
   prefix = local.prefix
   node_index = var.nodeIndex
   cloud_config = var.cloudConfig
-  root_disk_size = local.root_disk_size
-  image_name = local.image_name
   flavor_name = local.flavor_name
+  root_disk_size = local.root_disk_size
+  additional_tags = local.additional_tags
+  image_name = local.image_name
   keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
   network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
   floating_ip_network = local.external_network_floating_ip ? local.external_network_name : ""
+  tags = local.tags
+  zone = local.zone
+  volume_type = local.volume_type
 }
 
 module "kubernetes_data" {
@@ -25,7 +32,8 @@ module "kubernetes_data" {
   prefix = local.prefix
   node_index = var.nodeIndex
   master_id = module.master.id
-  volume_type = var.providerClusterConfiguration.masterNodeGroup.instanceClass.kubernetesDataVolumeType
+  volume_type = local.volume_type
+  tags = local.tags
 }
 
 module "security_groups" {
@@ -62,6 +70,7 @@ resource "openstack_networking_port_v2" "master_internal_without_security" {
   count = local.network_security ? 0 : 1
   network_id = data.openstack_networking_network_v2.internal.id
   admin_state_up = "true"
+  security_group_ids = module.security_groups.security_group_ids
   fixed_ip {
     subnet_id = data.openstack_networking_subnet_v2.internal.id
   }

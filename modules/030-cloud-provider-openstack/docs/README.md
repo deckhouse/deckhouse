@@ -49,10 +49,17 @@ cloudProviderOpenstack: |
 Все опции идут в `.spec`.
 
 * `flavorName` — тип заказываемых server'ов
+    * Получить список всех доступных flavor'ов можно с помощью команды: `openstack flavor list`
+    * Обязательный параметр.
+    * Формат — строкa.
 * `imageName` — имя образа.
     * **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`.
-    * Увидеть список всех доступных образов можно найти командой: `openstack image list`
-* `rootDiskSize` — если параметр присутствует, OpenStack server будет создан на Cinder volume с указанным размером и стандартным для кластера типом.
+    * Получить список всех доступных образов можно с помощью команды: `openstack image list`
+    * Опциональный параметр.
+    * Формат — строкa.
+    * По-умолчанию будет установлено значение либо из OpenStackCloudDiscoveryData, либо из настроек `instances.imageName`.
+* `rootDiskSize` — если параметр не указан, то для инстанса используется локальный диск с размером указанным в flavor.
+  Если параметр присутствует, то OpenStack server будет создан на Cinder volume с указанным размером и стандартным для кластера типом.
     * Опциональный параметр.
     * Формат — integer. В гигабайтах.
     > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по-умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска
@@ -63,6 +70,9 @@ cloudProviderOpenstack: |
         ```
 
 * `mainNetwork` — путь до network, которая будет подключена к виртуальной машине, как основная сеть (шлюз по-умолчанию).
+    * Опциональный параметр.
+    * Формат — строкa.
+    * По-умолчанию будет установлено значение из OpenStackCloudDiscoveryData.
 * `additionalNetworks` - список сетей, которые будут подключены к инстансу.
     * Опциональный параметр.
     * Формат — массив строк.
@@ -72,7 +82,9 @@ cloudProviderOpenstack: |
       - enp6t4snovl2ko4p15em
       - enp34dkcinm1nr5999lu
       ```
+    * По-умолчанию будет установлено значение из OpenStackCloudDiscoveryData.
 * `additionalSecurityGroups` — Список `securityGroups`, которые необходимо прикрепить к instances `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud провайдера. Используется для задания firewall правил по отношению к заказываемым instances.
+    > SecurityGroups могут не поддерживаться облачным провайдером
     * Опциональный параметр.
     * Формат — массив строк.
     * Пример:
@@ -80,6 +92,14 @@ cloudProviderOpenstack: |
       ```yaml
       - sec_group_1
       - sec_group_2
+      ```
+* `additionalTags` — Словарь тегов, которые необходимо прикрепить к instances `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud провайдера.
+    * Опциональный параметр.
+    * Формат — ключ-значение.
+    * Пример:
+      ```yaml
+      project: cms-production
+      severity: critical
       ```
 
 ##### Пример OpenStackInstanceClass
@@ -91,12 +111,10 @@ metadata:
   name: test
 spec:
   flavorName: m1.large
-  imageName: ubuntu-18-04-cloud-amd64
-  mainNetwork: kube
 ```
 
 #### LoadBalancer
-**Внимание!!! На данный момент в OpenStack при заказе loadbalancer не определяется правильный клиентский IP.**
+**Внимание!!! Для корректного определения клиентского IP необходимо использовать LoadBalancer с поддержкой Proxy Protocol.**
 
 ##### Пример IngressNginxController
 
@@ -106,9 +124,11 @@ kind: IngressNginxController
 metadata:
   name: main
 spec:
-  controllerVersion: "0.26"
   ingressClass: nginx
-  inlet: LoadBalancer
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.org/proxy-protocol: "true"
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   tolerations:

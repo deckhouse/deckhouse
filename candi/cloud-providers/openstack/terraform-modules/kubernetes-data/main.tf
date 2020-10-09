@@ -3,6 +3,7 @@ resource "openstack_blockstorage_volume_v2" "kubernetes_data" {
   description = "volume for etcd and kubernetes certs"
   size = 10
   volume_type = var.volume_type
+  metadata = var.tags
 }
 
 resource "openstack_compute_volume_attach_v2" "kubernetes_data" {

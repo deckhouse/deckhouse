@@ -54,16 +54,7 @@ data:
     {{ cat "No key region in deckhouse configmap" $internal.connection.region | fail }}
   {{- end }}
   {{- if hasKey $internal "instances" }}
-    {{- $instances := dict }}
-    {{- if hasKey $internal.instances "sshKeyPairName" }}
-      {{- $_ := set $instances "sshKeyPairName" $internal.instances.sshKeyPairName }}
-    {{- end }}
-    {{- if hasKey $internal.instances "securityGroups" }}
-      {{- $_ := set $instances "securityGroups" $internal.instances.securityGroups }}
-    {{- end }}
-    {{- if gt (len $instances) 0 }}
-      {{- $_ := set $openstackValues "instances" $instances }}
-    {{- end }}
+    {{- $_ := set $openstackValues "instances" $internal.instances }}
   {{- end }}
   {{- if hasKey $internal "externalNetworkNames" }}
     {{- $_ := set $openstackValues "externalNetworkNames" $internal.externalNetworkNames }}

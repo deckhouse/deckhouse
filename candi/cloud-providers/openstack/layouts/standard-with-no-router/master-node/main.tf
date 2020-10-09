@@ -1,8 +1,11 @@
 locals {
-  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
-  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
+  volume_type_map = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  zone = element(keys(local.volume_type_map), var.nodeIndex)
+  volume_type = local.volume_type_map[local.zone]
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  security_group_names = concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", []))
+  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
 module "network_security_info" {
@@ -16,12 +19,16 @@ module "master" {
   prefix = local.prefix
   node_index = var.nodeIndex
   cloud_config = var.cloudConfig
-  root_disk_size = local.root_disk_size
-  image_name = local.image_name
   flavor_name = local.flavor_name
+  root_disk_size = local.root_disk_size
+  additional_tags = local.additional_tags
+  image_name = local.image_name
   keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
   network_port_ids = local.network_security ? list(openstack_networking_port_v2.master_external_with_security[0].id, openstack_networking_port_v2.master_internal_with_security[0].id) : list(openstack_networking_port_v2.master_external_without_security[0].id, openstack_networking_port_v2.master_internal_without_security[0].id)
   config_drive = !local.external_network_dhcp
+  tags = local.tags
+  zone = local.zone
+  volume_type = local.volume_type
 }
 
 module "kubernetes_data" {
@@ -29,7 +36,8 @@ module "kubernetes_data" {
   prefix = local.prefix
   node_index = var.nodeIndex
   master_id = module.master.id
-  volume_type = var.providerClusterConfiguration.masterNodeGroup.instanceClass.kubernetesDataVolumeType
+  volume_type = local.volume_type
+  tags = local.tags
 }
 
 module "security_groups" {

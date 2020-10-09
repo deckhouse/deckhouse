@@ -1,35 +1,20 @@
 locals {
-  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
-  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  security_group_names = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])
+  volume_type_map = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  zone = element(keys(local.volume_type_map), var.nodeIndex)
+  volume_type = local.volume_type_map[local.zone]
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  network_security = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled"
-  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
-}
-
-module "master" {
-  source = "../../../terraform-modules/master"
-  prefix = local.prefix
-  node_index = var.nodeIndex
-  cloud_config = var.cloudConfig
-  root_disk_size = local.root_disk_size
-  image_name = local.image_name
-  flavor_name = local.flavor_name
-  keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
-  network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_external_with_security[0].id : openstack_networking_port_v2.master_external_without_security[0].id)
-  config_drive = !local.external_network_dhcp
-}
-
-module "kubernetes_data" {
-  source = "../../../terraform-modules/kubernetes-data"
-  prefix = local.prefix
-  node_index = var.nodeIndex
-  master_id = module.master.id
-  volume_type = var.providerClusterConfiguration.masterNodeGroup.instanceClass.kubernetesDataVolumeType
+  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
 module "security_groups" {
   source = "../../../terraform-modules/security-groups"
   security_group_names = local.security_group_names
+}
+
+data "openstack_images_image_v2" "master" {
+  name = local.image_name
 }
 
 data "openstack_compute_keypair_v2" "ssh" {
@@ -40,21 +25,58 @@ data "openstack_networking_network_v2" "external" {
   name = local.external_network_name
 }
 
-resource "openstack_networking_port_v2" "master_external_with_security" {
-  count = local.network_security ? 1 : 0
-  network_id = data.openstack_networking_network_v2.external.id
-  admin_state_up = "true"
-  security_group_ids = module.security_groups.security_group_ids
+module "kubernetes_data" {
+  source = "../../../terraform-modules/kubernetes-data"
+  prefix = local.prefix
+  node_index = var.nodeIndex
+  master_id = openstack_compute_instance_v2.master.id
+  volume_type = local.volume_type
+  tags = local.tags
+}
 
-  allowed_address_pairs {
-    ip_address = local.pod_subnet_cidr
+locals {
+  metadata_tags = merge(local.tags, local.additional_tags)
+}
+
+resource "openstack_blockstorage_volume_v2" "master" {
+  count = local.root_disk_size == "" ? 0 : 1
+  name = join("-", [local.prefix, "master-root-volume", var.nodeIndex])
+  size = local.root_disk_size
+  image_id = data.openstack_images_image_v2.master.id
+  metadata = local.metadata_tags
+  volume_type = local.volume_type
+}
+
+resource "openstack_compute_instance_v2" "master" {
+  name = join("-", [local.prefix, "master", var.nodeIndex])
+  image_name = data.openstack_images_image_v2.master.name
+  flavor_name = local.flavor_name
+  key_pair = data.openstack_compute_keypair_v2.ssh.name
+  config_drive = !local.external_network_dhcp
+  user_data = var.cloudConfig == "" ? null : base64decode(var.cloudConfig)
+  availability_zone = local.zone
+  security_groups = local.security_group_names
+
+  network {
+    name = local.external_network_name
   }
-}
 
-resource "openstack_networking_port_v2" "master_external_without_security" {
-  count = local.network_security ? 0 : 1
-  network_id = data.openstack_networking_network_v2.external.id
-  admin_state_up = "true"
-  security_group_ids = module.security_groups.security_group_ids
-}
+  dynamic "block_device" {
+    for_each = local.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v2.master[0])
+    content {
+      uuid = block_device.value["id"]
+      boot_index = 0
+      source_type = "volume"
+      destination_type = "volume"
+      delete_on_termination = true
+    }
+  }
 
+  lifecycle {
+    ignore_changes = [
+      user_data,
+    ]
+  }
+
+  metadata = local.metadata_tags
+}

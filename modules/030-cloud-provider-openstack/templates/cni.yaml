@@ -7,4 +7,8 @@ metadata:
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 data:
   cni: {{ b64enc "flannel" | quote }}
+  {{- if eq .Values.cloudProviderOpenstack.internal.podNetworkMode "VXLAN" }}
+  flannel: {{ b64enc "{\"podNetworkMode\":\"vxlan\"}" | quote }}
+  {{- else }}
   flannel: {{ b64enc "{\"podNetworkMode\":\"host-gw\"}" | quote }}
+  {{- end }}

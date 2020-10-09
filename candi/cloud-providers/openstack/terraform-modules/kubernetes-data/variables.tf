@@ -13,3 +13,7 @@ variable "master_id" {
 variable "volume_type" {
   type = string
 }
+
+variable "tags" {
+  type = map(string)
+}

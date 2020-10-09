@@ -8,16 +8,32 @@ spec:
   region: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.region | quote }}
   availabilityZone: {{ .zoneName }}
   flavorName: {{ .nodeGroup.instanceClass.flavorName }}
+  {{- if hasKey .nodeGroup.instanceClass "imageName" }}
   imageName: {{ .nodeGroup.instanceClass.imageName }}
+  {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "imageName" }}
+  imageName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.imageName }}
+  {{- else }}
+    {{ cat "No imageName provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
+  {{- end }}
   networks:
   {{- $networks := list }}
   {{- if hasKey .nodeGroup.instanceClass "additionalNetworks" }}
     {{- range $additionalNetwork := .nodeGroup.instanceClass.additionalNetworks }}
       {{- $networks = append $networks $additionalNetwork }}
     {{- end }}
+  {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "additionalNetworks" }}
+    {{- range $additionalNetwork := .Values.nodeManager.internal.cloudProvider.openstack.instances.additionalNetworks }}
+      {{- $networks = append $networks $additionalNetwork }}
+    {{- end }}
   {{- end }}
-  {{- $networks = prepend $networks .nodeGroup.instanceClass.mainNetwork }}
-  {{- range $networks }}
+  {{- if hasKey .nodeGroup.instanceClass "mainNetwork" }}
+    {{- $networks = prepend $networks .nodeGroup.instanceClass.mainNetwork }}
+  {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "mainNetwork" }}
+    {{- $networks = prepend $networks .Values.nodeManager.internal.cloudProvider.openstack.instances.mainNetwork }}
+  {{- else}}
+    {{ cat "No mainNetwork provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
+  {{- end }}
+  {{- range $networks | uniq }}
   - name: {{ . | quote }}
     {{- if has . $.Values.nodeManager.internal.cloudProvider.openstack.internalNetworkNames }}
       {{- if eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled" }}
@@ -30,12 +46,16 @@ spec:
   {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
   keyName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.sshKeyPairName }}
   {{- end }}
-  {{- if or (hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups") (hasKey .nodeGroup.instanceClass "additionalSecurityGroups") }}
+  {{- $securityGroups := list }}
+  {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups" }}
+    {{- $securityGroups = concat $securityGroups .Values.nodeManager.internal.cloudProvider.openstack.instances.securityGroups }}
+  {{- end }}
+  {{- if hasKey .nodeGroup.instanceClass "additionalSecurityGroups" }}
+    {{- $securityGroups = concat $securityGroups .nodeGroup.instanceClass.additionalSecurityGroups }}
+  {{- end }}
+  {{- if gt (len $securityGroups) 0 }}
   securityGroups:
-    {{- range .Values.nodeManager.internal.cloudProvider.openstack.instances.securityGroups }}
-  - {{ . }}
-    {{- end }}
-    {{- range .nodeGroup.instanceClass.additionalSecurityGroups }}
+    {{- range $securityGroups | uniq }}
   - {{ . }}
     {{- end }}
   {{- end }}
@@ -44,6 +64,13 @@ spec:
   rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
 {{- end }}
   tags:
+{{ $tags := .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" }}
+  {{- $tags = merge .nodeGroup.instanceClass.additionalTags $tags }}
+{{- end }}
+{{- range $k, $v := $tags }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
     # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
     kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
     kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"

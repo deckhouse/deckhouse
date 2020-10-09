@@ -3,4 +3,142 @@ apiVersions:
 - apiVersion: deckhouse.io/v1alpha1
   openAPISpec:
     type: object
-    additionalProperties: true
+    additionalProperties: false
+    required: [apiVersion, kind, layout, internalNetworkNames, podNetworkMode, instances, zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [OpenStackCloudDiscoveryData]
+      layout:
+        type: string
+        enum: [Standard, StandardWithNoRouter, Simple, SimpleWithInternalNetwork]
+      internalNetworkNames:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      externalNetworkNames:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      podNetworkMode:
+        type: string
+        enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      instances:
+        type: object
+      loadBalancer:
+        type: object
+        required: [subnetID, floatingNetworkID]
+        additionalProperties: false
+        properties:
+          subnetID:
+            type: string
+            minLength: 1
+          floatingNetworkID:
+            type: string
+            minLength: 1
+    oneOf:
+    - required: [externalNetworkNames, loadBalancer]
+      properties:
+        layout:
+          enum: [Standard]
+          type: string
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork, securityGroups]
+          additionalProperties: false
+          properties:
+            sshKeyPairName:
+              type: string
+              minLength: 1
+            imageName:
+              type: string
+              minLength: 1
+            mainNetwork:
+              type: string
+              minLength: 1
+            securityGroups:
+              type: array
+              items:
+                type: string
+    - required: [externalNetworkNames]
+      properties:
+        layout:
+          enum: [StandardWithNoRouter]
+          type: string
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork, additionalNetworks, securityGroups]
+          additionalProperties: false
+          properties:
+            sshKeyPairName:
+              type: string
+              minLength: 1
+            imageName:
+              type: string
+              minLength: 1
+            mainNetwork:
+              type: string
+              minLength: 1
+            additionalNetworks:
+              type: array
+              items:
+                type: string
+                minLength: 1
+              minItems: 1
+              uniqueItems: true
+            securityGroups:
+              type: array
+              items:
+                type: string
+    - properties:
+        layout:
+          enum: [Simple]
+          type: string
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork]
+          additionalProperties: false
+          properties:
+            sshKeyPairName:
+              type: string
+              minLength: 1
+            imageName:
+              type: string
+              minLength: 1
+            mainNetwork:
+              type: string
+              minLength: 1
+    - properties:
+        layout:
+          enum: [SimpleWithInternalNetwork]
+          type: string
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork]
+          additionalProperties: false
+          properties:
+            sshKeyPairName:
+              type: string
+              minLength: 1
+            imageName:
+              type: string
+              minLength: 1
+            mainNetwork:
+              type: string
+              minLength: 1
