@@ -11,7 +11,7 @@ import (
 	_ "github.com/flant/addon-operator/sdk/registry"
 )
 
-var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
+var _ = Describe("Global hooks :: discovery/cluster_configuration ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -61,11 +61,11 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateBClusterConfiguration))
 	)
 
-	Context("Cluster has a d8-cluster-configuration Secret", func() {
-		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
+	Context("Cluster has a d8-cluster-configuration Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateA))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateA, 1))
 			f.RunHook()
 		})
 
@@ -85,7 +85,7 @@ data:
 
 		Context("d8-cluster-configuration Secret has changed", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateB))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateB, 1))
 				f.RunHook()
 			})
 
@@ -106,7 +106,7 @@ data:
 
 		Context("d8-cluster-configuration Secret got deleted", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 1))
 				f.RunHook()
 			})
 
@@ -122,7 +122,7 @@ data:
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 1))
 			f.RunHook()
 		})
 
