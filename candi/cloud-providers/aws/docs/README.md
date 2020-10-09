@@ -50,6 +50,10 @@ title: Cloud provider - AWS
 
 В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway. Исключение — master, который опционально может получить публичный IP.
 
+> Если используется master без белого IP и bastion находится в другой VPC, то в процессе установки после создания base-infrastructure
+> необходимо будет вручную настроить peering между VPC с bastion'ом и VPC кластера. Чтобы избежать этой проблемы,
+> рекомендуется использовать существующую VPC bastion'a, а не создавать новую.
+
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSkzOWvLzAwB4hmIk4CP1-mj2QIxCyJg2VJvijFfdttjnV0quLpw7x87KtTC5v2I9xF5gVKpTK-aqyz/pub?w=812&h=655)
 <!--- Исходник: https://docs.google.com/drawings/d/1kln-DJGFldcr6gayVtFYn_3S50HFIO1PLTc1pC_b3L0/edit --->
 
