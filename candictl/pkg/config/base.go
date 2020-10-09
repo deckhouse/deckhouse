@@ -59,7 +59,10 @@ func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) 
 	return metaConfig, nil
 }
 
-func GetClusterConfigData(kubeCl *client.KubernetesClient, schemaStore *SchemaStore) ([]byte, error) {
+func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+	metaConfig := MetaConfig{}
+	schemaStore := NewSchemaStore()
+
 	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -67,18 +70,6 @@ func GetClusterConfigData(kubeCl *client.KubernetesClient, schemaStore *SchemaSt
 
 	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
 	_, err = schemaStore.Validate(&clusterConfigData)
-	if err != nil {
-		return nil, err
-	}
-
-	return clusterConfigData, nil
-}
-
-func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
-	metaConfig := MetaConfig{}
-	schemaStore := NewSchemaStore()
-
-	clusterConfigData, err := GetClusterConfigData(kubeCl, schemaStore)
 	if err != nil {
 		return nil, err
 	}
