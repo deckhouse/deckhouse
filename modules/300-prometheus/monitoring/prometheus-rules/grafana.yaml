@@ -19,13 +19,18 @@
       plk_labels_as_annotations: "pod"
       summary: Grafana под находится в состоянии НЕ Ready
 
-  - alert: D8GrafanaPodIsNotRunning
+  - alert: D8GrafanaDeploymentReplicasUnavailable
     expr: |
-      max by (namespace, pod, phase) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
-        * on (pod) group_right() kube_pod_status_phase{namespace="d8-monitoring",phase!="Running"}
-        > 0
-      )
+      absent(
+        max by (namespace) (
+          kube_controller_replicas{controller_name="grafana",controller_type="Deployment"}
+        )
+        <=
+        count by (namespace) (
+          kube_controller_pod{controller_name="grafana",controller_type="Deployment"}
+          * on(pod) group_right() kube_pod_status_phase{namespace="d8-monitoring", phase="Running"} == 1
+        )
+      ) == 1
     labels:
       severity_level: "6"
       tier: cluster
@@ -37,10 +42,14 @@
       plk_pending_until_firing_for: "5m"
       plk_grouped_by__d8_grafana_unavailable: "D8GrafanaUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "phase"
-      summary: Под grafana находится в состоянии НЕ Running
+      summary: Один или более подов grafana находятся в состоянии НЕ Running
       description: |-
-        Под {{$labels.pod}} находится в состоянии {{$labels.phase}}. Для проверки статуса пода необходимо выполнить:
-        1. `kubectl -n d8-monitoring get pods {{$labels.pod}} -o json | jq .status`
+        Количество реплик grafana меньше заданного.
+        Деплоймент находится в состоянии MinimumReplicasUnavailable.
+        Для проверки статуса деплоймента необходимо выполнить:
+        1. `kubectl -n d8-monitoring get deployment grafana -o json | jq .status`
+        Для проверки статуса подов необходимо выполнить:
+        1. `kubectl -n d8-monitoring get pods -l app=grafana -o json | jq '.items[] | {(.metadata.name):.status}'`
 
   - alert: D8GrafanaTargetDown
     expr: max by (job) (up{job="grafana", namespace="d8-monitoring"} == 0)
@@ -84,7 +93,7 @@
 
   - alert: D8GrafanaUnavailable
     expr: |
-      count(ALERTS{alertname=~"D8GrafanaPodIsNotReady|D8GrafanaPodIsNotRunning|D8GrafanaTargetAbsent|D8GrafanaTargetDown", alertstate="firing"}) > 0
+      count(ALERTS{alertname=~"D8GrafanaPodIsNotReady|D8GrafanaDeploymentReplicasUnavailable|D8GrafanaTargetAbsent|D8GrafanaTargetDown", alertstate="firing"}) > 0
       OR
       count(ALERTS{alertname=~"KubernetesDeploymentReplicasUnavailable", namespace="d8-monitoring", deployment="grafana", alertstate="firing"}) > 0
       OR
