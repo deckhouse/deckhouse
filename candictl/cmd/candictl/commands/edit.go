@@ -2,15 +2,13 @@ package commands
 
 import (
 	"encoding/json"
-	"fmt"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/yaml"
 
 	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/manifests"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/operations"
@@ -27,8 +25,6 @@ func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.C
 	app.DefineEditorConfigFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		schemaStore := config.NewSchemaStore()
-
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
@@ -43,15 +39,11 @@ func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		configData, err := config.GetClusterConfigData(kubeCl, schemaStore)
+		clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-cluster-configuration", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
-
-		configData, err = yaml.JSONToYAML(configData)
-		if err != nil {
-			return err
-		}
+		configData := clusterConfig.Data["cluster-configuration.yaml"]
 
 		modifiedData, err := operations.Edit(configData)
 		if err != nil {
@@ -103,19 +95,12 @@ func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause) *k
 			return err
 		}
 
-		metaConfig, err := config.ParseConfigFromCluster(kubeCl)
+		providerClusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get("d8-provider-cluster-configuration", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
-		if metaConfig.ClusterType != config.CloudClusterType {
-			return fmt.Errorf("It is not possible to edit provider cluster configuration for Static cluster type.")
-		}
-
-		providerConfigData, err := metaConfig.ProviderClusterConfigYAML()
-		if err != nil {
-			return err
-		}
+		providerConfigData := providerClusterConfig.Data["cloud-provider-cluster-configuration.yaml"]
 
 		modifiedData, err := operations.Edit(providerConfigData)
 		if err != nil {
