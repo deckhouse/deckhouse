@@ -214,7 +214,7 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 	var contexts context.GeneratedBindingContexts
 	var err error
 	if !hec.IsKubeStateInited {
-		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig, newKubeState)
+		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig)
 		if err != nil {
 			panic(err)
 		}
@@ -227,9 +227,8 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 			globalHook.WithGoHook(hec.GoHook)
 
 			var yamlConfigBytes []byte
-			var goConfig *sdk.HookConfig
 
-			goConfig = hec.GoHook.Config()
+			goConfig := hec.GoHook.Config()
 			if goConfig.YamlConfig != "" {
 				yamlConfigBytes = []byte(goConfig.YamlConfig)
 			}
@@ -239,12 +238,10 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 				if err != nil {
 					panic(fmt.Errorf("fail load hook YAML config: %v", err))
 				}
-			} else {
-				if goConfig != nil {
-					err := globalHook.WithGoConfig(goConfig)
-					if err != nil {
-						panic(fmt.Errorf("fail load hook golang config: %v", err))
-					}
+			} else if goConfig != nil {
+				err := globalHook.WithGoConfig(goConfig)
+				if err != nil {
+					panic(fmt.Errorf("fail load hook golang config: %v", err))
 				}
 			}
 
@@ -257,7 +254,7 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 			}
 		}
 
-		contexts, err = hec.BindingContextController.Run()
+		contexts, err = hec.BindingContextController.Run(newKubeState)
 		if err != nil {
 			panic(err)
 		}

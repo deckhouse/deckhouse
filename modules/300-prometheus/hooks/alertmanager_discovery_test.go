@@ -88,7 +88,7 @@ spec:
 
 	Context("Cluster has non-special services", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNonSpecialServices))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNonSpecialServices, 0))
 			f.RunHook()
 		})
 
@@ -101,7 +101,7 @@ spec:
 
 	Context("Cluster has special service", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNonSpecialServices + stateSpecialServicesAlpha))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNonSpecialServices+stateSpecialServicesAlpha, 1))
 			f.RunHook()
 		})
 
@@ -112,7 +112,7 @@ spec:
 
 		Context("Two more special services added", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateNonSpecialServices + stateSpecialServicesAlpha + stateSpecialServicesBeta))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNonSpecialServices+stateSpecialServicesAlpha+stateSpecialServicesBeta, 2))
 				f.RunHook()
 			})
 
