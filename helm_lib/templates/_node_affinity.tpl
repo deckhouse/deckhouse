@@ -150,8 +150,6 @@ tolerations:
   {{- else if eq $strategy "every-node" }}
 tolerations:
 - key: node-role.kubernetes.io/master
-- key: dedicated.deckhouse.io
-- key: dedicated
 - key: node.deckhouse.io/uninitialized
   operator: "Exists"
   effect: "NoSchedule"
@@ -162,10 +160,15 @@ tolerations:
   effect: "NoSchedule"
       {{- end }}
     {{- end }}
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
 {{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- if $context.Values.global.modules.placement.customTolerationKeys }}
       {{- range $key := $context.Values.global.modules.placement.customTolerationKeys }}
 - key: {{ $key | quote }}
+  operator: "Exists"
       {{- end }}
     {{- end }}
   {{- else if eq $strategy "wildcard" }}

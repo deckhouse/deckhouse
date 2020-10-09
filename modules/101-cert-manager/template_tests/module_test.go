@@ -143,10 +143,12 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- key: dedicated.deckhouse.io
-- key: dedicated
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: dedicated.deckhouse.io
+  operator: Exists
+- key: dedicated
   operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -201,10 +203,12 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- key: dedicated.deckhouse.io
-- key: dedicated
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: dedicated.deckhouse.io
+  operator: Exists
+- key: dedicated
   operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -282,10 +286,12 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- key: dedicated.deckhouse.io
-- key: dedicated
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: dedicated.deckhouse.io
+  operator: Exists
+- key: dedicated
   operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
@@ -340,10 +346,12 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- key: dedicated.deckhouse.io
-- key: dedicated
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: dedicated.deckhouse.io
+  operator: Exists
+- key: dedicated
   operator: Exists
 - key: node.kubernetes.io/not-ready
 - key: node.kubernetes.io/out-of-disk
