@@ -1,9 +1,12 @@
 locals {
   data_1 = {
+    "layout" = var.providerClusterConfiguration.layout
     "internalNetworkNames" = [data.openstack_networking_network_v2.internal.name]
     "podNetworkMode" = local.pod_network_mode
     "instances" = {
       "sshKeyPairName" = module.keypair.ssh_name
+      "imageName" = local.image_name
+      "mainNetwork" = data.openstack_networking_network_v2.internal.name
     }
     "zones" = data.openstack_compute_availability_zones_v2.zones.names
   }

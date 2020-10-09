@@ -33,6 +33,7 @@ resource "openstack_blockstorage_volume_v2" "volume" {
   name = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
   size = local.root_disk_size
   image_id = data.openstack_images_image_v2.image.id
+  metadata = local.metadata_tags
 }
 
 resource "openstack_compute_instance_v2" "node" {
@@ -42,6 +43,7 @@ resource "openstack_compute_instance_v2" "node" {
   key_pair = local.prefix
   config_drive = local.config_drive
   user_data = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
+  availability_zone = local.zones == null ? null : element(local.zones, var.nodeIndex)
 
   dynamic "network" {
     for_each = openstack_networking_port_v2.port
@@ -67,6 +69,8 @@ resource "openstack_compute_instance_v2" "node" {
       user_data,
     ]
   }
+
+  metadata = local.metadata_tags
 }
 
 resource "openstack_compute_floatingip_v2" "floating_ip" {

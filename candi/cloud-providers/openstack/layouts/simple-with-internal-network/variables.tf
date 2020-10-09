@@ -22,4 +22,6 @@ locals {
   internal_subnet_name = var.providerClusterConfiguration.simpleWithInternalNetwork.internalSubnetName
   external_network_name = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "externalNetworkName", "")
   pod_network_mode = lookup(var.providerClusterConfiguration.simpleWithInternalNetwork, "podNetworkMode", "DirectRoutingWithPortSecurityEnabled")
+  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  tags = lookup(var.providerClusterConfiguration, "tags", {})
 }

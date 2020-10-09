@@ -71,8 +71,10 @@ const moduleValues = `
       - myextnetname2
     podNetworkMode: "VXLAN"
     instances:
-      sshKeyPairName: mysshkeypairname
+      imageName: ubuntu
+      mainNetwork: kube
       securityGroups: ["aaa","bbb"]
+      sshKeyPairName: mysshkeypairname
     zones: ["zonea", "zoneb"]
     loadBalancer:
       subnetID: my-subnet-id
@@ -170,6 +172,8 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
           "internalNetworkNames": ["myintnetname", "myintnetname2"],
           "externalNetworkNames": ["myextnetname", "myextnetname2"],
           "instances": {
+            "imageName": "ubuntu",
+            "mainNetwork": "kube",
             "securityGroups": [
               "aaa",
               "bbb"

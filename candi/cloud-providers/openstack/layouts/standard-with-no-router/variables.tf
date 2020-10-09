@@ -4,6 +4,10 @@ variable "clusterConfiguration" {
 
 variable "providerClusterConfiguration" {
   type = any
+  validation {
+    condition = cidrsubnet(var.providerClusterConfiguration.standardWithNoRouter.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.standardWithNoRouter.internalNetworkCIDR
+    error_message = "Invalid internalNetworkCIDR in OpenStackClusterConfiguration."
+  }
 }
 
 variable "nodeIndex" {
@@ -22,5 +26,7 @@ locals {
   internal_network_cidr = var.providerClusterConfiguration.standardWithNoRouter.internalNetworkCIDR
   external_network_name = var.providerClusterConfiguration.standardWithNoRouter.externalNetworkName
   external_network_dhcp = lookup(var.providerClusterConfiguration.standardWithNoRouter, "externalNetworkDHCP", true)
-  network_security = var.providerClusterConfiguration.standardWithNoRouter.internalNetworkSecurity
+  network_security = lookup(var.providerClusterConfiguration.standardWithNoRouter, "internalNetworkSecurity", true)
+  image_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  tags = lookup(var.providerClusterConfiguration, "tags", {})
 }

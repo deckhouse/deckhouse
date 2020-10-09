@@ -50,6 +50,9 @@ cloudProviderOpenstack:
   internalSubnet: "10.0.201.0/16"
   loadBalancer:
     subnetID: overrideSubnetID
+  tags:
+    aaa: bbb
+    ccc: ddd
 `
 	initValuesStringC = `
 global:
@@ -84,6 +87,9 @@ cloudProviderOpenstack:
     "external"
   ],
   "instances": {
+    "imageName": "ubuntu",
+    "mainNetwork": "kube",
+    "sshKeyPairName": "my-key",
     "securityGroups": [
       "default",
       "ssh-and-ping",
@@ -107,6 +113,9 @@ cloudProviderOpenstack:
     "external"
   ],
   "instances": {
+    "imageName": "ubuntu",
+    "mainNetwork": "kube",
+    "sshKeyPairName": "my-key",
     "securityGroups": [
       "default",
       "ssh-and-ping",
@@ -142,7 +151,11 @@ masterNodeGroup:
   instanceClass:
     flavorName: m1.large
     imageName: ubuntu-18-04-cloud-amd64
-    kubernetesDataVolumeType: ceph-ssd
+  volumeTypeMap:
+    nova: ceph-ssd
+tags:
+  project: default
+  env: production
 `
 		stateAWithoutLoadbalancers = fmt.Sprintf(`
 apiVersion: v1
@@ -204,12 +217,23 @@ data: {}
 ["zone1", "zone2"]
 `))
 			Expect(f.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRoutingWithPortSecurityEnabled"))
-			Expect(f.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[default, security_group_1, ssh-and-ping]
+			Expect(f.ValuesGet(internal + "instances").String()).To(MatchYAML(`
+"imageName": "ubuntu"
+"mainNetwork": "kube"
+"sshKeyPairName": "my-key"
+"securityGroups": [
+  "default",
+  "ssh-and-ping",
+  "security_group_1"
+]
 `))
 			Expect(f.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
 subnetID: "subnetID"
 floatingNetworkID: "floatingNetworkID"
+`))
+			Expect(f.ValuesGet(internal + "tags").String()).To(MatchYAML(`
+project: default
+env: production
 `))
 		})
 	})
@@ -242,6 +266,9 @@ instances:
 zones: []
 loadBalancer:
   subnetID: overrideSubnetID
+tags:
+  aaa: bbb
+  ccc: ddd
 `))
 		})
 	})
@@ -275,6 +302,10 @@ loadBalancer:
 			Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
 subnetID: overrideSubnetID
 `))
+			Expect(b.ValuesGet(internal + "tags").String()).To(MatchYAML(`
+aaa: bbb
+ccc: ddd
+`))
 		})
 
 		Context("Cluster has cloudProviderOpenstack and discovery data", func() {
@@ -303,11 +334,18 @@ subnetID: overrideSubnetID
 ["zone1", "zone2"]
 `))
 				Expect(b.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
-				Expect(b.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[security_group_1, security_group_2]
+				Expect(b.ValuesGet(internal + "instances").String()).To(MatchYAML(`
+securityGroups:
+- security_group_1
+- security_group_2
+sshKeyPairName: my-ssh-keypair
 `))
 				Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
 subnetID: overrideSubnetID
+`))
+				Expect(b.ValuesGet(internal + "tags").String()).To(MatchYAML(`
+aaa: bbb
+ccc: ddd
 `))
 			})
 		})
@@ -342,6 +380,10 @@ subnetID: overrideSubnetID
 			Expect(b.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`
 subnetID: overrideSubnetID
 `))
+			Expect(b.ValuesGet(internal + "tags").String()).To(MatchYAML(`
+aaa: bbb
+ccc: ddd
+`))
 		})
 	})
 
@@ -372,10 +414,17 @@ subnetID: overrideSubnetID
 ["zone1", "zone2"]
 `))
 			Expect(c.ValuesGet(internal + "podNetworkMode").String()).To(Equal("DirectRouting"))
-			Expect(c.ValuesGet(internal + "instances.securityGroups").String()).To(MatchYAML(`
-[security_group_1, security_group_2]
+			Expect(c.ValuesGet(internal + "instances").String()).To(MatchYAML(`
+securityGroups:
+- security_group_1
+- security_group_2
+sshKeyPairName: my-ssh-keypair
 `))
 			Expect(c.ValuesGet(internal + "loadBalancer").String()).To(MatchYAML(`{}`))
+			Expect(c.ValuesGet(internal + "tags").String()).To(MatchYAML(`
+project: default
+env: production
+`))
 		})
 	})
 })

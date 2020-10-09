@@ -70,4 +70,10 @@ cloudProviderOpenstack:
     instances:
       sshKeyPairName: mysshkeypairname
       securityGroups: ["aaa","bbb"]
+      mainNetwork: "aaa"
+      imageName: "bbb"
+      additionalTags: ["aaa", "bbb"]
     zones: ["zonea", "zoneb"]
+    tags:
+      aaa: bbb
+      ccc: ddd

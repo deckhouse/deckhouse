@@ -1,12 +1,18 @@
+locals {
+  metadata_tags = merge(var.tags, var.additional_tags)
+}
+
 data "openstack_images_image_v2" "master" {
   name = var.image_name
 }
 
 resource "openstack_blockstorage_volume_v2" "master" {
   count = var.root_disk_size == "" ? 0 : 1
-  name = join("-", [var.prefix, "master-root-volume"])
+  name = join("-", [var.prefix, "master-root-volume", var.node_index])
   size = var.root_disk_size
   image_id = data.openstack_images_image_v2.master.id
+  metadata = local.metadata_tags
+  volume_type = var.volume_type
 }
 
 resource "openstack_compute_instance_v2" "master" {
@@ -15,7 +21,8 @@ resource "openstack_compute_instance_v2" "master" {
   flavor_name = var.flavor_name
   key_pair = var.keypair_ssh_name
   config_drive = var.config_drive
-  user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
+  user_data = var.cloud_config == "" ? null : base64decode(var.cloud_config)
+  availability_zone = var.zone
 
   dynamic "network" {
     for_each = var.network_port_ids
@@ -41,6 +48,8 @@ resource "openstack_compute_instance_v2" "master" {
       user_data,
     ]
   }
+
+  metadata = local.metadata_tags
 }
 
 resource "openstack_compute_floatingip_v2" "master" {

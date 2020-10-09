@@ -14,18 +14,21 @@ apiVersions:
         enum: [OpenStackClusterConfiguration]
       sshPublicKey:
         type: string
+      tags:
+        type: object
+        additionalProperties:
+          type: string
       masterNodeGroup:
-        required: [replicas, instanceClass]
+        additionalProperties: false
+        required: [replicas, instanceClass, volumeTypeMap]
         properties:
           replicas:
             type: integer
           instanceClass:
             type: object
-            required: [flavorName, imageName, kubernetesDataVolumeType]
+            required: [flavorName, imageName]
             additionalProperties: false
             properties:
-              kubernetesDataVolumeType:
-                type: string
               flavorName:
                 type: string
               imageName:
@@ -36,9 +39,21 @@ apiVersions:
                 type: array
                 items:
                   type: string
+                uniqueItems: true
+              additionalTags:
+                type: object
+                additionalProperties:
+                  type: string
+          volumeTypeMap:
+            type: object
+            minProperties: 1
+            additionalProperties:
+              type: string
+              minLength: 1
       nodeGroups:
         type: array
         items:
+          additionalProperties: false
           type: object
           required: [name, replicas, instanceClass]
           properties:
@@ -100,6 +115,16 @@ apiVersions:
                   type: array
                   items:
                     type: string
+                additionalTags:
+                  type: object
+                  additionalProperties:
+                    type: string
+            zones:
+              type: array
+              items:
+                type: string
+              minItems: 1
+              uniqueItems: true
       layout:
         type: string
       standard:
@@ -148,7 +173,7 @@ apiVersions:
             default: true
           podNetworkMode:
             type: string
-            enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+            enum: [VXLAN, DirectRouting]
             default: VXLAN
       simpleWithInternalNetwork:
         type: object

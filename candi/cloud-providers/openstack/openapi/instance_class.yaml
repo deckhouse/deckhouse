@@ -29,8 +29,6 @@ spec:
           type: object
           required:
           - flavorName
-          - imageName
-          - mainNetwork
           properties:
             flavorName:
               description: Flavor of OpenStack servers.
@@ -63,4 +61,9 @@ spec:
               - "security-group-2"
               type: array
               items:
+                type: string
+            additionalTags:
+              description: Tags that will be attached to VM's
+              type: object
+              additionalProperties:
                 type: string

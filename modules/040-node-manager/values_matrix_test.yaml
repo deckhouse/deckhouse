@@ -138,6 +138,7 @@ nodeManager:
             instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
+              mainNetwork: kube
             nodeType: Cloud
             kubernetesVersion: "1.15"
             cloudInstances:

@@ -583,7 +583,7 @@ ansible:
 
   - name: "Install terraform provider openstack"
     unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-openstack/1.26.0/terraform-provider-openstack_1.26.0_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform-provider-openstack/1.31.0/terraform-provider-openstack_1.31.0_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
