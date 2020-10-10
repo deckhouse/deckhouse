@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime/trace"
 
 	"github.com/fatih/color"
@@ -18,6 +17,7 @@ import (
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/process"
+	"flant/candictl/pkg/util"
 	"flant/candictl/pkg/util/tomb"
 )
 
@@ -27,11 +27,10 @@ func main() {
 	exitCode := 0
 	traceCancel := EnableTrace()
 
-	// kill all started subprocesses on return from main or on signal
 	tomb.RegisterOnShutdown(
 		traceCancel,
 		process.DefaultSession.Stop,
-		cleanTMPDir,
+		util.ClearTMPDir,
 		restoreTerminal(),
 	)
 
@@ -43,20 +42,20 @@ func main() {
 
 	// Mute Shell-Operator logs
 	logrus.SetLevel(logrus.PanicLevel)
-
 	if app.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		logrus.SetLevel(logrus.DebugLevel)
 		klog.InitFlags(nil)
 		_ = flag.CommandLine.Parse([]string{"-v=10"})
 	}
 	// kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
 
-	// print version
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
 		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
 		return nil
 	})
 
-	// bootstrap
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
 	{
@@ -66,13 +65,10 @@ func main() {
 		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
 	}
 
-	// converge
 	commands.DefineConvergeCommand(kpApp)
 
-	// destroy
 	commands.DefineDestroyCommand(kpApp)
 
-	// plumbing commands:
 	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
 	{
 		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
@@ -198,18 +194,4 @@ func restoreTerminal() func() {
 	}
 
 	return func() { _ = terminal.Restore(fd, state) }
-}
-
-func cleanTMPDir() {
-	_ = filepath.Walk(app.TmpDirName, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			if path != app.TmpDirName {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		_ = os.Remove(path)
-		return nil
-	})
 }
