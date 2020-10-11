@@ -144,12 +144,16 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 func (c *ConvergeExporter) getStatistic() {
 	metaConfig, err := config.ParseConfigInCluster(c.kubeCl)
 	if err != nil {
-		panic(err)
+		log.ErrorLn(err)
+		c.CounterMetrics["errors"].WithLabelValues().Inc()
+		return
 	}
 
 	metaConfig.UUID, err = converge.GetClusterUUID(c.kubeCl)
 	if err != nil {
-		panic(err)
+		log.ErrorLn(err)
+		c.CounterMetrics["errors"].WithLabelValues().Inc()
+		return
 	}
 
 	statistic, err := converge.CheckState(c.kubeCl, metaConfig)
