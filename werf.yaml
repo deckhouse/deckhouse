@@ -519,38 +519,6 @@ ansible:
         chdir: /helm
       environment:
         CGO_ENABLED: "0"
-
----
-artifact: terraform-provider-yandex
-fromImage: base-for-go
-git:
-  - url: https://github.com/flant/terraform-provider-yandex
-    add: /
-    to: /terraform-provider-yandex
-    tag: v0.43.0-flant.1
-    stageDependencies:
-      install:
-        - "**/*"
-ansible:
-  beforeInstall:
-    - apk:
-        name:
-        - git
-        - ca-certificates
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
-
-  install:
-    - command: go mod download
-      args:
-        chdir: /terraform-provider-yandex
-
-  setup:
-    - command: go build -o terraform-provider-yandex
-      args:
-        chdir: /terraform-provider-yandex
-      environment:
-        CGO_ENABLED: "0"
 ---
 image: dev/install
 fromImage: dev
@@ -558,10 +526,6 @@ import:
 - artifact: candictl
   add: /candictl/hack/candictl
   to: /usr/bin/candictl
-  before: setup
-- artifact: terraform-provider-yandex
-  add: /terraform-provider-yandex/terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/flant.com/terraform-plugins/yandex/0.43.0/linux_amd64/terraform-provider-yandex
   before: setup
 ansible:
   beforeInstall:
@@ -576,30 +540,64 @@ ansible:
 
   - name: "Install terraform"
     unarchive:
-      src: https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform/{{ env "TF_VERSION" }}/terraform_{{ env "TF_VERSION" }}_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
 
-  - name: "Install terraform provider openstack"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-openstack/1.31.0/terraform-provider-openstack_1.31.0_linux_amd64.zip
-      remote_src: yes
-      dest: /bin
-      mode: +x
+  - name: "Configure terraform cli"
+    copy:
+      dest: "/root/.terraformrc"
+      content: |
+        provider_installation {
+          filesystem_mirror {
+            path    = "/usr/local/share/terraform/plugins"
+            include = ["*/*/*"]
+          }
+        }
 
+  - name: "Create a directory for terraform provider aws"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
+      state: directory
   - name: "Install terraform provider aws"
     unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-aws/3.6.0/terraform-provider-aws_3.6.0_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform-provider-aws/{{ env "TF_AWS_VERSION" }}/terraform-provider-aws_{{ env "TF_AWS_VERSION" }}_linux_amd64.zip
       remote_src: yes
-      dest: /bin
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
       mode: +x
 
+  - name: "Create a directory for terraform provider google"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
+      state: directory
   - name: "Install terraform provider google"
     unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-google/3.40.0/terraform-provider-google_3.40.0_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform-provider-google/{{ env "TF_GCP_VERSION" }}/terraform-provider-google_{{ env "TF_GCP_VERSION" }}_linux_amd64.zip
       remote_src: yes
-      dest: /bin
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
+      mode: +x
+
+  - name: "Create a directory for terraform provider openstack"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
+      state: directory
+  - name: "Install terraform provider openstack"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-openstack/{{ env "TF_OPENSTACK_VERSION" }}/terraform-provider-openstack_{{ env "TF_OPENSTACK_VERSION" }}_linux_amd64.zip
+      remote_src: yes
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_OPENSTACK_NAMESPACE" }}/{{ env "TF_OPENSTACK_TYPE" }}/{{ env "TF_OPENSTACK_VERSION" }}/linux_amd64
+      mode: +x
+
+  - name: "Create a directory for terraform provider yandex"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
+      state: directory
+  - name: "Install terraform provider yandex"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-yandex/{{ env "TF_YANDEX_VERSION" }}/terraform-provider-yandex_{{ env "TF_YANDEX_VERSION" }}_linux_amd64.zip
+      remote_src: yes
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
       mode: +x
 
   - raw: rm -rf /var/cache/apk/*

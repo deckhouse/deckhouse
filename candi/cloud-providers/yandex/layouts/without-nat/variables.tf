@@ -20,6 +20,10 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   existing_network_id = lookup(var.providerClusterConfiguration, "existingNetworkID", "")

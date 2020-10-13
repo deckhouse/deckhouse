@@ -14,3 +14,7 @@ variable "cloudConfig" {
   type = string
   default = ""
 }
+
+variable "clusterUUID" {
+  type = string
+}

@@ -24,6 +24,10 @@ variable "nodeGroupName" {
   type = string
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   prefix                       = var.clusterConfiguration.cloud.prefix
   node_groups                  = lookup(var.providerClusterConfiguration, "nodeGroups", [])

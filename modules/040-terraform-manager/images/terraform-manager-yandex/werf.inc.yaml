@@ -1,44 +1,18 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
-import:
-- artifact: terraform-provider-yandex
-  add: /terraform-provider-yandex/terraform-provider-yandex
-  to: /usr/local/share/terraform/plugins/flant.com/terraform-plugins/yandex/0.43.0/linux_amd64/terraform-provider-yandex
-  before: install
 ansible:
   install:
+  - name: "Create a directory for terraform provider yandex"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
+      state: directory
+  - name: "Install terraform provider yandex"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-yandex/{{ env "TF_YANDEX_VERSION" }}/terraform-provider-yandex_{{ env "TF_YANDEX_VERSION" }}_linux_amd64.zip
+      remote_src: yes
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_YANDEX_NAMESPACE" }}/{{ env "TF_YANDEX_TYPE" }}/{{ env "TF_YANDEX_VERSION" }}/linux_amd64
+      mode: +x
   - apk:
       name: ca-certificates
       update_cache: yes
   - command: rm -rf /var/cache/apk/*
----
-artifact: terraform-provider-yandex
-from: golang:1.15.2-alpine3.12
-git:
-  - url: https://github.com/flant/terraform-provider-yandex
-    add: /
-    to: /terraform-provider-yandex
-    tag: v0.43.0-flant.1
-    stageDependencies:
-      install:
-        - "**/*"
-ansible:
-  beforeInstall:
-    - apk:
-        name:
-        - git
-        - ca-certificates
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
-
-  install:
-    - command: go mod download
-      args:
-        chdir: /terraform-provider-yandex
-
-  setup:
-    - command: go build -o terraform-provider-yandex
-      args:
-        chdir: /terraform-provider-yandex
-      environment:
-        CGO_ENABLED: "0"

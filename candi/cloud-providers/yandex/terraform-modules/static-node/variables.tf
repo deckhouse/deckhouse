@@ -19,6 +19,10 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   ng = [for i in var.providerClusterConfiguration.nodeGroups: i if i.name == var.nodeGroupName][0]
