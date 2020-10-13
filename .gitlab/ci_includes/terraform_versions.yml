@@ -1,0 +1,14 @@
+variables:
+  TF_VERSION: 0.13.4
+  TF_AWS_NAMESPACE: hashicorp
+  TF_AWS_TYPE: aws
+  TF_AWS_VERSION: 3.6.0
+  TF_GCP_NAMESPACE: hashicorp
+  TF_GCP_TYPE: google
+  TF_GCP_VERSION: 3.40.0
+  TF_OPENSTACK_NAMESPACE: terraform-provider-openstack
+  TF_OPENSTACK_TYPE: openstack
+  TF_OPENSTACK_VERSION: 1.32.0
+  TF_YANDEX_NAMESPACE: yandex-cloud
+  TF_YANDEX_TYPE: yandex
+  TF_YANDEX_VERSION: 0.45.1

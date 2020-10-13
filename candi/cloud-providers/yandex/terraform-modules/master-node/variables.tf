@@ -16,6 +16,10 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   mng = var.providerClusterConfiguration.masterNodeGroup

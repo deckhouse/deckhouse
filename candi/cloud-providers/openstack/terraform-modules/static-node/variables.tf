@@ -18,6 +18,10 @@ variable "cloudConfig" {
   type = string
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   pod_subnet_cidr = var.clusterConfiguration.podSubnetCIDR

@@ -46,8 +46,19 @@ ansible:
   install:
   - name: "Install terraform"
     unarchive:
-      src: https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform/{{ env "TF_VERSION" }}/terraform_{{ env "TF_VERSION" }}_linux_amd64.zip
       remote_src: yes
       dest: /bin
       mode: +x
   - command: rm -rf /var/cache/apk/*
+  setup:
+  - name: "Configure terraform cli"
+    copy:
+      dest: "/root/.terraformrc"
+      content: |
+        provider_installation {
+          filesystem_mirror {
+            path    = "/usr/local/share/terraform/plugins"
+            include = ["*/*/*"]
+          }
+        }

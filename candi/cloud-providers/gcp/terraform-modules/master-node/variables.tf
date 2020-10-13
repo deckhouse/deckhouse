@@ -20,6 +20,10 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   prefix                       = var.clusterConfiguration.cloud.prefix
   machine_type                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.machineType

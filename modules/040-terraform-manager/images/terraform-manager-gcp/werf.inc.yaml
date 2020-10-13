@@ -2,11 +2,15 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
 ansible:
   install:
+  - name: "Create a directory for terraform provider google"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
+      state: directory
   - name: "Install terraform provider google"
     unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-google/3.40.0/terraform-provider-google_3.40.0_linux_amd64.zip
+      src: https://releases.hashicorp.com/terraform-provider-google/{{ env "TF_GCP_VERSION" }}/terraform-provider-google_{{ env "TF_GCP_VERSION" }}_linux_amd64.zip
       remote_src: yes
-      dest: /bin
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
       mode: +x
   - apk:
       name: ca-certificates

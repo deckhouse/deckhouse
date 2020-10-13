@@ -13,3 +13,7 @@ variable "nodeIndex" {
 variable "cloudConfig" {
   type = string
 }
+
+variable "clusterUUID" {
+  type = string
+}
