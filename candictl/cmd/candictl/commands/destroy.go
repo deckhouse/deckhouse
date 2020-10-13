@@ -68,7 +68,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var metaConfig *config.MetaConfig
-		if cache.Global().InCache("cluster-config") && retry.AskForConfirmation("Do you want to continue with Cluster configuration from local cash") {
+		if cache.Global().InCache("cluster-config") && retry.AskForConfirmation("Do you want to continue with Cluster configuration from local cache") {
 			if err := cache.Global().LoadStruct("cluster-config", &metaConfig); err != nil {
 				return err
 			}
@@ -94,7 +94,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		cache.Global().AddToClean("cluster-config")
 
 		var nodesState map[string]converge.NodeGroupTerraformState
-		if cache.Global().InCache("nodes-state") && retry.AskForConfirmation("Do you want to continue with Nodes state from local cash") {
+		if cache.Global().InCache("nodes-state") && retry.AskForConfirmation("Do you want to continue with Nodes state from local cache") {
 			if err := cache.Global().LoadStruct("nodes-state", &nodesState); err != nil {
 				return err
 			}
@@ -114,7 +114,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		cache.Global().AddToClean("nodes-state")
 
 		var clusterState []byte
-		if cache.Global().InCache("cluster-state") && retry.AskForConfirmation("Do you want to continue with Cluster state from local cash") {
+		if cache.Global().InCache("cluster-state") && retry.AskForConfirmation("Do you want to continue with Cluster state from local cache") {
 			clusterState = cache.Global().Load("cluster-state")
 		} else {
 			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {

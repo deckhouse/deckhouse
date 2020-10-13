@@ -131,7 +131,7 @@ func (r *Runner) Init() error {
 		r.statePath = r.stateCache.ObjectPath(r.name)
 
 		log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
-		if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cash") {
+		if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cache") {
 			return fmt.Errorf("Terraform pipeline aborted.\nIf you want to drop the cache and continue, please run candictl with '--yes-i-want-to-drop-cache' flag.")
 		}
 	} else if r.statePath == "" {
