@@ -42,8 +42,14 @@ bb-yum-install() {
     then
         bb-yum-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
+
+        for PACKAGE in ${PACKAGES_TO_INSTALL[@]}; do
+            PACKAGE_NAME="$(sed -E -e 's/[-.0-9]+$//' <<< $PACKAGE)"
+            bb-yum-versionlock-delete $PACKAGE_NAME
+        done
+
         yum install $BB_YUM_INSTALL_EXTRA_ARGS -y ${PACKAGES_TO_INSTALL[@]}
-        bb-yum-versionlock ${PACKAGES_TO_INSTALL[@]}
+        bb-yum-versionlock-add ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_YUM_UNHANDLED_PACKAGES_STORE"
         NEED_FIRE=true
@@ -54,8 +60,7 @@ bb-yum-install() {
 }
 
 bb-yum-remove() {
-    for PACKAGE in "$@"
-    do
+    for PACKAGE in "$@"; do
         if bb-yum-package? "$PACKAGE"
         then
             bb-yum-update
@@ -66,14 +71,20 @@ bb-yum-remove() {
     done
 }
 
-bb-yum-versionlock() {
-    for PACKAGE in "$@"
-    do
-        if ! bb-yum-package? "$PACKAGE"
-        then
-            bb-log-info "Locking package version of '$PACKAGE'"
-            yum versionlock "$PACKAGE"
-            bb-exit-on-error "Failed to lock package vetsion of '$PACKAGE'"
+bb-yum-versionlock-add() {
+    for PACKAGE in "$@"; do
+        bb-log-info "Locking package version of '$PACKAGE'"
+        yum versionlock add "$PACKAGE"
+        bb-exit-on-error "Failed to lock package version of '$PACKAGE'"
+    done
+}
+
+bb-yum-versionlock-delete() {
+    for PACKAGE in "$@"; do
+        if yum versionlock list | grep -q "^[0-9]:$PACKAGE"; then
+            bb-log-info "Unlocking package version of '$PACKAGE'"
+            yum versionlock delete "$PACKAGE"
+            bb-exit-on-error "Failed to unlock package version of '$PACKAGE'"
         fi
     done
 }
