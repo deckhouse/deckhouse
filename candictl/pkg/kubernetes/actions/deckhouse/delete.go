@@ -249,18 +249,16 @@ func WaitForPVCDeletion(kubeCl *client.KubernetesClient) error {
 	})
 }
 
-func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
+func checkMachinesAPI(kubeCl *client.KubernetesClient) error {
 	gv := schema.GroupVersion{
 		Group:   "machine.sapcloud.io",
 		Version: "v1alpha1",
 	}
 
-	var resourcesList *metav1.APIResourceList
-	var err error
-	err = retry.StartLoop("Get Kubernetes cluster resources for group/version", 25, 5, func() error {
-		resourcesList, err = kubeCl.Discovery().ServerResourcesForGroupVersion(gv.String())
+	resourcesList, err := kubeCl.Discovery().ServerResourcesForGroupVersion(gv.String())
+	if err != nil {
 		return err
-	})
+	}
 
 	var desiredResources int
 	for _, resource := range resourcesList.APIResources {
@@ -276,8 +274,22 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 	}
 
 	if desiredResources < 2 {
-		log.Warning("Can't find machine.sapcloud.io/v1alpha1 kind=Machine kind=MachineDeployment in the cluster. Skip their deletion.\n")
-		return nil
+		return fmt.Errorf("%d of 2 resources found in the cluster", desiredResources)
+	}
+
+	return nil
+}
+
+func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
+	err := retry.StartLoop("Get Kubernetes cluster resources for group/version", 5, 5, func() error {
+		return checkMachinesAPI(kubeCl)
+	})
+
+	if err != nil {
+		log.Warning(fmt.Sprintf("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v", err))
+		if !retry.AskForConfirmation("Machines weren't deleted from the cluster. Do you want to continue") {
+			return nil
+		}
 	}
 
 	err = DeleteMachineDeployments(kubeCl)
@@ -285,10 +297,5 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 		return err
 	}
 
-	err = WaitForMachinesDeletion(kubeCl)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return WaitForMachinesDeletion(kubeCl)
 }
