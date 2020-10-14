@@ -27,6 +27,7 @@ EOF
 }
 
 function __main__() {
+  changed=0
   for i in $(context::jq -r '.snapshots.nodes | keys[]'); do
     if context::jq -er --argjson i "$i" '.snapshots.nodes[$i].filterResult.missing_labels | length > 0' > /dev/null; then
       node_name="$(context::jq -r --argjson i "$i" '.snapshots.nodes[$i].filterResult.name')"
@@ -36,8 +37,12 @@ function __main__() {
         patch_set="$patch_set | .metadata.labels += {\"$label\":\"\"}"
       done
       kubernetes::patch_jq "" "node/$node_name" "$patch_set"
+      changed=1
     fi
   done
+  if [ ! -v D8_IS_TESTS_ENVIRONMENT ] && [ $changed -eq 1 ]; then
+    kill 1
+  fi
 }
 
 hook::run $@
