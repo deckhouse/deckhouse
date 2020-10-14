@@ -10,14 +10,14 @@ rules:
   resourceNames:
   - bashible-bashbooster
 
-{{- range $bundle := list "ubuntu-lts" "ubuntu-18.04" "centos-7" }}
+{{- range $bundle := list "ubuntu-lts" "centos-7" }}
   {{- range $kubernetes_version := list "1.14" "1.15" "1.16" "1.17" "1.18" }}
   - bashible-bundle-{{ $bundle }}-{{ $kubernetes_version }}
   {{- end }}
 {{- end }}
 
 {{- range $.Values.nodeManager.internal.nodeGroups }}
-  {{- range $bundle := list "ubuntu-lts" "ubuntu-18.04" "centos-7" }}
+  {{- range $bundle := list "ubuntu-lts" "centos-7" }}
     {{- range $.Values.nodeManager.internal.nodeGroups }}
   - bashible-{{ .name }}-{{ $bundle }}
   - bashible-bundle-{{ $bundle }}-{{ .name }}

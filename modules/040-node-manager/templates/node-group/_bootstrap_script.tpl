@@ -110,13 +110,9 @@ function detect_bundle() {
 {{ tpl ($context.Files.Get "candi/bashible/detect_bundle.sh") $context | indent 2 }}
 }
 
-  {{ range $bundle := list "ubuntu-lts" "ubuntu-18.04" "centos-7" }}
+  {{- range $bundle := list "ubuntu-lts" "centos-7" }}
 function basic_bootstrap_{{ $bundle }} {
-{{- if eq $bundle "ubuntu-18.04" }}
-{{ tpl ($context.Files.Get (printf "candi/bashible/bundles/%s/bootstrap.sh.tpl" "ubuntu-lts")) $context | indent 2 }}
-{{- else }}
 {{ tpl ($context.Files.Get (printf "candi/bashible/bundles/%s/bootstrap.sh.tpl" $bundle)) $context | indent 2 }}
-{{- end }}
 }
   {{ end }}
 
