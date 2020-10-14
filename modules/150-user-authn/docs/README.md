@@ -104,7 +104,7 @@ data:
       * По-умолчанию `false`.
     * `getUserInfo` — запрашивать ли дополнительные данные об успешно подключенном пользователе, подробнее о механизме можно прочитать [здесь](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo));
       * По-умолчанию `false`.
-    * `scopes` — список [полей](https://github.com/dexidp/dex/blob/master/Documentation/custom-scopes-claims-clients.md) для включения в ответ при запросе токена;
+    * `scopes` — список [полей](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md#scopes) для включения в ответ при запросе токена;
       * По-умолчанию `["openid", "profile", "email", "groups", "offline_access"]`
     * `userIDKey` — [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения ID пользователя;
       * По-умолчанию `sub`.
