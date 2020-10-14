@@ -33,5 +33,6 @@ nodeLocalDnsEnabled: true
 deschedulerEnabled: true
 ingressNginxEnabled: true
 dashboardEnabled: true
+deckhouseWebEnabled: true
 secretCopierEnabled: true
 helmEnabled: true
