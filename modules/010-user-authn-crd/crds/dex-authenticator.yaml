@@ -36,6 +36,7 @@ spec:
               type: string
               description: 'Public domain that points to your application. Must be specified without HTTP scheme.'
               example: 'my-app.domain.com'
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
             sendAuthorizationHeader:
               type: boolean
               description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
