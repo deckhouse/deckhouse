@@ -30,6 +30,14 @@ function discover_device_path() {
   echo "/dev/$device_name"
 }
 
+if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
+  return 0
+fi
+
+if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
+  return 0
+fi
+
 if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
   if ! grep "/dev" /var/lib/bashible/kubernetes_data_device_path >/dev/null; then
     cloud_disk_name="$(cat /var/lib/bashible/kubernetes_data_device_path)"
