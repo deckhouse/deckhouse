@@ -33,7 +33,7 @@ function __config__() {
             select(. | test("^(frontend|system)$"))
           ] +
           [
-            .spec.template.spec.tolerations | . //= [] | .[] | select(.key=="dedicated.flant.com" and (.value | test("^(frontend|system)$")))
+            .spec.template.spec.tolerations | . //= [] | .[] | select(.key=="dedicated.flant.com" and (.value // empty | test("^(frontend|system)$")))
           ]
           | length > 0
         )

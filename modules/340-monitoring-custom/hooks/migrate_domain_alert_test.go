@@ -28,6 +28,9 @@ spec:
                 operator: In
                 values:
                 - ""
+      tolerations:
+      - key: dedicated.flant.com
+        operator: Exists
 `
 		stateStetefulSetWithOldLabel = `
 ---
