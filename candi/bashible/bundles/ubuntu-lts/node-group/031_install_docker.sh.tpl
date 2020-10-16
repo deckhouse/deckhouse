@@ -17,10 +17,16 @@ post-install() {
 {{- end }}
 }
 
+# TODO: remove ASAP, provide proper migration from "docker.io" to "docker-ce"
+if bb-apt-package? docker.io ; then
+  bb-log-warning 'Skipping "docker-ce" installation, since "docker.io" is already installed'
+  exit 0
+fi
+
 if bb-is-ubuntu-version? 18.04 ; then
-  package="docker.io=18.09.7-0ubuntu1~18.04.4"
+  package="docker-ce=5:18.09.7~3-0~ubuntu-bionic"
 elif bb-is-ubuntu-version? 16.04 ; then
-  package="docker.io=18.09.7-0ubuntu1~16.04.5"
+  package="docker-ce=5:18.09.7~3-0~ubuntu-xenial"
 else
   bb-log-error "Unsupported Ubuntu version"
   exit 1
@@ -34,17 +40,9 @@ if ! bb-apt-package? $package; then
   bb-deckhouse-get-disruptive-update-approval
 fi
 
-if bb-apt-package? docker-ce; then
-  bb-apt-remove docker-ce
+if bb-apt-package? docker.io; then
+  bb-apt-remove docker.io
   bb-flag-set there-was-docker-installed
-fi
-
-if bb-apt-package? docker-ce-cli; then
-  bb-apt-remove docker-ce-cli
-fi
-
-if bb-apt-package? containerd.io; then
-  bb-apt-remove containerd.io
 fi
 
 bb-apt-install $package
