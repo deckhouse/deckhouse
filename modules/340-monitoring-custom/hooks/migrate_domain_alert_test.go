@@ -28,8 +28,41 @@ spec:
                 operator: In
                 values:
                 - ""
+`
+		stateStetefulSetWithProperNodeSelector = `
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: application
+  namespace: default
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-role.flant.com: postgresnode
+      tolerations:
+      - operator: Exists
+        value: system
+`
+		stateStetefulSetWithProperTollerations = `
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: application
+  namespace: default
+spec:
+  template:
+    spec:
       tolerations:
       - key: dedicated.flant.com
+        operator: Exists
+      - key: dedicated.flant.com
+        value: system
+        operator: Exists
+      - key: dedicated.deckhouse.io
+        value: system
         operator: Exists
 `
 		stateStetefulSetWithOldLabel = `
@@ -223,9 +256,35 @@ spec:
 
 	// StatefulSet
 
-	Context("Cluster with proper StatefulSet", func() {
+	Context("Cluster containing StatefulSet with proper label", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateStetefulSetWithProperLabel))
+			f.RunHook()
+		})
+
+		It("Hook must not fail, no metrics should be selected", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster containing StatefulSet with proper node selector", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateStetefulSetWithProperNodeSelector))
+			f.RunHook()
+		})
+
+		It("Hook must not fail, no metrics should be selected", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster containing StatefulSet with proper tolerations", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateStetefulSetWithProperTollerations))
 			f.RunHook()
 		})
 

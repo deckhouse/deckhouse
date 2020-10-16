@@ -21,19 +21,20 @@ function __config__() {
         if
         (
           [
-            .spec.template.spec.nodeSelector | . //= [] | keys | .[] |
+            .spec.template.spec.nodeSelector // {} | keys[] |
             select(. | startswith("node-role.flant.com")) | split("/")[1] |
-            select(. | test("^(frontend|system)$"))
+            select(. // empty | test("^(frontend|system)$"))
           ] +
           [
-            .spec.template.spec.affinity.nodeAffinity |
-            .requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms? + .preferredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms? |
-            select(length > 0) | .[] | .matchExpressions | select(length > 0) | .[] |
+            (.spec.template.spec.affinity.nodeAffinity | .. | .matchExpressions? // []) | .[] |
             select(.key | startswith("node-role.flant.com")) | .key | split("/")[1] |
-            select(. | test("^(frontend|system)$"))
+            select(. // empty | test("^(frontend|system)$"))
           ] +
           [
-            .spec.template.spec.tolerations | . //= [] | .[] | select(.key=="dedicated.flant.com" and (.value // empty | test("^(frontend|system)$")))
+            (.spec.template.spec.tolerations // []) as \$tolerations | \$tolerations[] |
+            select(.key=="dedicated.flant.com" and (.value // empty | test("^(frontend|system)$"))) | .value as \$value |
+            if (map(select(\$tolerations[] | .key == "dedicated.deckhouse.io" and .value==\$value)) | length == 0)
+            then . else empty end
           ]
           | length > 0
         )
