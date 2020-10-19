@@ -59,6 +59,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
 				return err
 			}
+
 			err = log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
 				return deleteEntities(kubeCl)
 			})
