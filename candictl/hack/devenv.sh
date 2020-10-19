@@ -7,7 +7,7 @@ docker pull registry.flant.com/sys/antiopa/dev/install:master
 
 echo -e "\n#2 Run Docker Container\n==="
 id=$(docker ps -aqf "name=candictl-dev")
-if [[ byName == "" ]]; then
+if [[ "x$id" == "x" ]]; then
   id=$(docker run \
      --name "candictl-dev" \
      --detach \

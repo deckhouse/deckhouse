@@ -3,8 +3,8 @@ package deckhouse
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
-	"flant/candictl/pkg/log"
 	"fmt"
 	"time"
 
@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"flant/candictl/pkg/kubernetes/client"
+	"flant/candictl/pkg/log"
 )
 
 type logLine struct {
@@ -22,7 +23,7 @@ type logLine struct {
 	Component string `json:"operator.component,omitempty"`
 }
 
-func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}) error {
+func PrintDeckhouseLogs(ctx context.Context, kubeCl *client.KubernetesClient, stopChan chan struct{}) error {
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
 		return fmt.Errorf("Waiting for an API")
@@ -43,14 +44,12 @@ func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
 
-	timer := time.NewTicker(3 * time.Second)
-	defer timer.Stop()
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
-		case <-*stopChan:
-			return nil
-		case <-timer.C:
+		case <-ticker.C:
 			request := kubeCl.CoreV1().Pods("d8-system").GetLogs(pods.Items[0].Name, &logOptions)
 			result, err := request.DoRaw()
 			if err != nil {
@@ -62,6 +61,10 @@ func PrintDeckhouseLogs(kubeCl *client.KubernetesClient, stopChan *chan struct{}
 			<-time.After(time.Second)
 			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
+		case <-ctx.Done():
+			return nil
+		case <-stopChan:
+			return nil
 		}
 	}
 }
