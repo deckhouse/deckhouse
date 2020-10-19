@@ -53,7 +53,7 @@ if [[ $file =~ ^modules/.* ]]; then
   else
     tests="./modules/$module_name/... ./testing/matrix/..."
     #tests="./modules/$module_name/hooks/... ./modules/$module_name/template_tests/...  ./testing/matrix/..."
-    docker_args="-e MODULES_DIR=./modules/${module_name}"
+    docker_args="-e MODULES_DIR=/deckhouse/modules/${module_name}"
     echo "Run unit tests and matrix tests for module '${module_name}'"
   fi
 elif [[ $file == "modules" ]]; then
@@ -72,11 +72,11 @@ elif [[ $file =~ ^global-hooks/.* ]]; then
     else
       echo "Run all unit tests for global hook '${hook_name}'"
     fi
-  else
-    tests="./${file}/..."
-    echo "Run unit tests for all global hooks"
   fi
-elif [[ $file =~ ^./testing/matrix$ || $file =~ ^matrix$ ]]; then
+elif [[ $file == global-hooks ]]; then
+  tests="./global-hooks/..."
+  echo "Run unit tests for all global hooks"
+elif [[ $file =~ ^testing/matrix$ || $file =~ ^matrix$ ]]; then
   docker_args="-e MODULES_DIR=/deckhouse/modules -w /deckhouse"
   ginkgo_args="-v --slowSpecThreshold=30"
   tests="./testing/matrix/..."
@@ -96,9 +96,9 @@ if [[ -z "$(docker ps --filter "name=$CONTAINER_NAME" -q)" ]]; then
   # shellcheck disable=SC1090
   . "$(multiwerf use 1.1 stable --as-file)"
 
-  werf build tests
+  werf build tests --stages-storage=registry.flant.com/sys/antiopa/stages
   # shellcheck disable=SC2016
-  werf run tests \
+  werf run tests --stages-storage=registry.flant.com/sys/antiopa/stages \
     --docker-options="-v $(pwd):/deckhouse --name $CONTAINER_NAME --rm -d -e KCOV_DISABLED=yes -w /deckhouse -p 127.0.0.1:4284:4284" \
     -- \
     dumb-init -- bash -c 'touch /last-used; while [[ -z "$(find /last-used -mmin +60)" ]]; do sleep 60; done'
