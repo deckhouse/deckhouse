@@ -5,7 +5,7 @@ variables:
   TF_AWS_VERSION: 3.6.0
   TF_GCP_NAMESPACE: hashicorp
   TF_GCP_TYPE: google
-  TF_GCP_VERSION: 3.40.0
+  TF_GCP_VERSION: 3.43.0
   TF_OPENSTACK_NAMESPACE: terraform-provider-openstack
   TF_OPENSTACK_TYPE: openstack
   TF_OPENSTACK_VERSION: 1.32.0
