@@ -22,6 +22,7 @@ resource "google_compute_firewall" "intercommunication" {
     protocol = "all"
   }
 
-  target_tags = [var.prefix]
-  source_tags = [var.prefix]
+  target_tags   = [var.prefix]
+  source_tags   = [var.prefix]
+  source_ranges = [var.pod_subnet_cidr]
 }
