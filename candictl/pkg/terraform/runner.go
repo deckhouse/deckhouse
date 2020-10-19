@@ -24,16 +24,12 @@ const (
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
 
 	terraformHasChangesExitCode = 2
-)
 
-type Interface interface {
-	Init() error
-	Apply() error
-	Destroy() error
-	Stop()
-	GetTerraformOutput(string) ([]byte, error)
-	getState() ([]byte, error)
-}
+	terraformPipelineAbortedMessage = `
+Terraform pipeline aborted.
+If you want to drop the cache and continue, please run candictl with "--yes-i-want-to-drop-cache" flag.
+`
+)
 
 type Runner struct {
 	name       string
@@ -54,11 +50,6 @@ type Runner struct {
 	stopped bool
 }
 
-var (
-	_ Interface = &Runner{}
-	_ Interface = &FakeRunner{}
-)
-
 func NewRunner(provider, prefix, layout, step string) *Runner {
 	return &Runner{
 		prefix:     prefix,
@@ -71,6 +62,11 @@ func NewRunner(provider, prefix, layout, step string) *Runner {
 
 func NewRunnerFromConfig(cfg *config.MetaConfig, step string) *Runner {
 	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step)
+}
+
+func (r *Runner) WithCache(cache cache.Cache) *Runner {
+	r.stateCache = cache
+	return r
 }
 
 func (r *Runner) WithName(name string) *Runner {
@@ -127,16 +123,21 @@ func (r *Runner) Init() error {
 		return fmt.Errorf("runner is stopped")
 	}
 
-	if r.statePath == "" && r.stateCache.InCache(r.name) {
-		r.statePath = r.stateCache.ObjectPath(r.name)
-
-		log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
-		if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cache") {
-			return fmt.Errorf("Terraform pipeline aborted.\nIf you want to drop the cache and continue, please run candictl with '--yes-i-want-to-drop-cache' flag.")
-		}
-	} else if r.statePath == "" {
+	if r.statePath == "" {
 		// Save state directly in the cache to prevent state loss
 		r.statePath = r.stateCache.ObjectPath(r.name)
+
+		if r.stateCache.InCache(r.name) {
+			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
+			if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cache") {
+				return fmt.Errorf(terraformPipelineAbortedMessage)
+			}
+		}
+	}
+
+	// If statePath still empty, it means that something wrong with cache. Let's create file for the state in tmp directory.
+	if r.statePath == "" {
+		r.WithState(nil)
 	}
 
 	return log.Process("default", "terraform init ...", func() error {
@@ -343,37 +344,4 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 
 func buildTerraformPath(provider, layout, step string) string {
 	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
-}
-
-type fakeResult struct {
-	Data  []byte
-	Error error
-}
-
-type FakeRunner struct {
-	State         string
-	InitResult    fakeResult
-	ApplyResult   fakeResult
-	OutputResults map[string]fakeResult
-}
-
-func (r *FakeRunner) Init() error {
-	return r.InitResult.Error
-}
-
-func (r *FakeRunner) Apply() error {
-	return r.ApplyResult.Error
-}
-
-func (r *FakeRunner) GetTerraformOutput(output string) ([]byte, error) {
-	result := r.OutputResults[output]
-	return result.Data, result.Error
-}
-
-func (r *FakeRunner) Destroy() error { return nil }
-
-func (r *FakeRunner) Stop() {}
-
-func (r *FakeRunner) getState() ([]byte, error) {
-	return []byte(r.State), nil
 }

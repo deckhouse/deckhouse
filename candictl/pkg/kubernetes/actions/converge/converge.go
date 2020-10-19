@@ -24,7 +24,6 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
 
 	runner := terraform.NewRunnerFromConfig(cfg, step).
-		WithState(nil).
 		WithVariables(nodeConfig).
 		WithName(nodeName).
 		WithAutoApprove(true)
@@ -37,7 +36,6 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	}
 
 	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, cfg.FindStaticNodeGroup(nodeGroupName))
-	// If we failed to save state into cluster, node doesn't exist for us. Let's destroy it.
 	if err != nil {
 		return err
 	}
@@ -50,7 +48,6 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	nodeConfig := cfg.NodeGroupConfig(masterNodeGroupName, index, cloudConfig)
 
 	runner := terraform.NewRunnerFromConfig(cfg, "master-node").
-		WithState(nil).
 		WithVariables(nodeConfig).
 		WithName(nodeName).
 		WithAutoApprove(true)
@@ -63,7 +60,6 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	}
 
 	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
-	// If we failed to save state into cluster, node doesn't exist for us. Let's destroy it.
 	if err != nil {
 		return outputs, err
 	}
