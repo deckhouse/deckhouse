@@ -321,7 +321,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 func getDNSAddress(serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		panic("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		log.DebugF("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		return ""
 	}
 
 	inc := func(ip net.IP) {
