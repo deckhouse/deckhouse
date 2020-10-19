@@ -95,7 +95,8 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 
 	var bashibleUpToDate bool
 	_ = log.Process("bootstrap", "Check Bashible", func() error {
-		bashibleCmd := sshClient.Command("bash", "/var/lib/bashible/bashible.sh", "--local").Cmd().Sudo()
+		bashibleCmd := sshClient.Command("bash", "/var/lib/bashible/bashible.sh", "--local").
+			Cmd().Sudo().WithTimeout(3 * time.Second)
 		var output string
 
 		err = bashibleCmd.WithStdoutHandler(func(l string) { output += l + "\n" }).Run()
@@ -104,10 +105,13 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 		}
 
 		output = strings.TrimSuffix(output, "\n")
-		if strings.Contains(output, "Can't acquire lockfile /var/lock/bashible.") || strings.Contains(output, "Configuration is in sync, nothing to do.") {
+		switch {
+		case strings.Contains(output, "Can't acquire lockfile /var/lock/bashible."):
+			fallthrough
+		case strings.Contains(output, "Configuration is in sync, nothing to do."):
 			log.InfoF(bashibleInstalledMessage, output)
 			bashibleUpToDate = true
-		} else {
+		default:
 			log.InfoF(bashibleIsNotReadyMessage, output)
 		}
 		return nil
@@ -230,7 +234,8 @@ const rebootExitCode = 255
 
 func RebootMaster(sshClient *ssh.SSHClient) error {
 	return log.Process("bootstrap", "Reboot Master️", func() error {
-		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().WithSSHArgs("-o", "ServerAliveCountMax=2")
+		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().
+			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
 		if err := rebootCmd.Run(); err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
 				if ee.ExitCode() == rebootExitCode {

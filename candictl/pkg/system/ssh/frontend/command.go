@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
@@ -134,4 +135,9 @@ func (c *Command) CombinedOutput() ([]byte, error) {
 		return output, fmt.Errorf("execute command '%s': %v", c.Name, err)
 	}
 	return output, nil
+}
+
+func (c *Command) WithTimeout(timeout time.Duration) *Command {
+	c.Executor = c.Executor.WithTimeout(timeout)
+	return c
 }
