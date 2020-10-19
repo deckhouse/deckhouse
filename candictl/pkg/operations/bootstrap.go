@@ -79,12 +79,10 @@ func ExecuteBashibleBundle(sshClient *ssh.SSHClient, tmpDir string) error {
 }
 
 const (
-	bashibleInstalledMessage = `
-Bashible is already installed and healthy!
+	bashibleInstalledMessage = `Bashible is already installed and healthy!
 	%s
 `
-	bashibleIsNotReadyMessage = `
-Bashible is not ready! Let's try to install it ...
+	bashibleIsNotReadyMessage = `Bashible is not ready! Let's try to install it ...
 	Reason: %s
 `
 )
@@ -97,15 +95,20 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 
 	var bashibleUpToDate bool
 	_ = log.Process("bootstrap", "Check Bashible", func() error {
-		bashibleCmd := sshClient.Command("sudo", "/var/lib/bashible/bashible.sh").Sudo()
-		rawOut, _ := bashibleCmd.CombinedOutput()
-		out := strings.TrimSuffix(string(rawOut), "\n")
+		bashibleCmd := sshClient.Command("bash", "/var/lib/bashible/bashible.sh", "--local").Cmd().Sudo()
+		var output string
 
-		if strings.Contains(out, "Can't acquire lockfile /var/lock/bashible.") || strings.Contains(out, "Configuration is in sync, nothing to do.") {
-			log.InfoF(bashibleInstalledMessage, out)
+		err = bashibleCmd.WithStdoutHandler(func(l string) { output += l + "\n" }).Run()
+		if err != nil {
+			log.DebugF("%v\n", err)
+		}
+
+		output = strings.TrimSuffix(output, "\n")
+		if strings.Contains(output, "Can't acquire lockfile /var/lock/bashible.") || strings.Contains(output, "Configuration is in sync, nothing to do.") {
+			log.InfoF(bashibleInstalledMessage, output)
 			bashibleUpToDate = true
 		} else {
-			log.InfoF(bashibleIsNotReadyMessage, out)
+			log.InfoF(bashibleIsNotReadyMessage, output)
 		}
 		return nil
 	})
