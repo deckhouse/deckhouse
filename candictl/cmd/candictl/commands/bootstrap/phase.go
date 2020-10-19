@@ -66,19 +66,21 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
-		if err != nil {
-			return err
-		}
+		return log.Process("bootstrap", "Install Deckhouse", func() error {
+			kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+			if err != nil {
+				return err
+			}
 
-		if err := operations.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
-			return err
-		}
-		return nil
+			if err := operations.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
+				return err
+			}
+			return nil
+		})
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Install Deckhouse", func() error { return runFunc() })
+		return runFunc()
 	})
 
 	return cmd
@@ -97,44 +99,46 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
+		return log.Process("bootstrap", "Execute bashible bundle", func() error {
+			sshClient, err := ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
 
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
-		}
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 
-		if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
-			return err
-		}
-		bundleName, err := operations.DetermineBundleName(sshClient)
-		if err != nil {
-			return err
-		}
+			if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+				return err
+			}
+			bundleName, err := operations.DetermineBundleName(sshClient)
+			if err != nil {
+				return err
+			}
 
-		templateController := template.NewTemplateController("")
-		log.InfoF("Templates Dir: %q\n\n", templateController.TmpDir)
+			templateController := template.NewTemplateController("")
+			log.InfoF("Templates Dir: %q\n\n", templateController.TmpDir)
 
-		if err := operations.BootstrapMaster(sshClient, bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
-			return err
-		}
-		if err = operations.PrepareBashibleBundle(bundleName, app.InternalNodeIP, "", metaConfig, templateController); err != nil {
-			return err
-		}
-		if err := operations.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
-			return err
-		}
-		if err := operations.RebootMaster(sshClient); err != nil {
-			return err
-		}
-		return nil
+			if err := operations.BootstrapMaster(sshClient, bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
+				return err
+			}
+			if err = operations.PrepareBashibleBundle(bundleName, app.InternalNodeIP, "", metaConfig, templateController); err != nil {
+				return err
+			}
+			if err := operations.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
+				return err
+			}
+			if err := operations.RebootMaster(sshClient); err != nil {
+				return err
+			}
+			return nil
+		})
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Execute bashible bundle", func() error { return runFunc() })
+		return runFunc()
 	})
 
 	return cmd
@@ -147,16 +151,6 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineResourcesFlags(cmd)
 
 	runFunc := func() error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
-
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
 		var resourcesToCreate *config.Resources
 		if app.ResourcesPath != "" {
 			parsedResources, err := config.ParseResources(app.ResourcesPath)
@@ -171,19 +165,31 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
-		if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
-			return err
-		}
-		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
-		if err != nil {
-			return err
-		}
+		return log.Process("bootstrap", "Create resources", func() error {
+			sshClient, err := ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
+
+			if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+				return err
+			}
+			kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+			if err != nil {
+				return err
+			}
+
+			return resources.CreateResourcesLoop(kubeCl, resourcesToCreate)
+		})
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Create resources", func() error { return runFunc() })
+		return runFunc()
 	})
 
 	return cmd

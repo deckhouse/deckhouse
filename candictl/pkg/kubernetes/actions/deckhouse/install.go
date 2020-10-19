@@ -2,6 +2,7 @@ package deckhouse
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions"
@@ -193,7 +195,15 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(manifest.(*apiv1.Secret))
+				data, err := json.Marshal(manifest.(*apiv1.Secret))
+				if err != nil {
+					return err
+				}
+				_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
+					"d8-provider-cluster-configuration",
+					types.MergePatchType,
+					data,
+				)
 				return err
 			},
 		})
@@ -267,6 +277,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 	return log.Process("default", "Waiting for Deckhouse to become Ready", func() error {
 		// watch for deckhouse pods in namespace become Ready
 		ready := make(chan struct{}, 1)
+		stopLogsChan := make(chan struct{}, 1)
 
 		informer := client.NewDeploymentInformer(context.Background(), kubeCl)
 		informer.Namespace = "d8-system"
@@ -287,57 +298,45 @@ func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
 				// Naive simple ready indicator
 				status := obj.Status
 				if status.Replicas > 0 && status.Replicas == status.ReadyReplicas && status.UnavailableReplicas == 0 {
+					stopLogsChan <- struct{}{}
 					ready <- struct{}{}
 				}
 			case "Deleted":
-				waitErr = fmt.Errorf("deckhouse deployment was deleted while waiting for readiness")
+				waitErr = fmt.Errorf("Deckhouse deployment was deleted while waiting for readiness.")
+				stopLogsChan <- struct{}{}
 				ready <- struct{}{}
 			}
 		})
 
-		go func() {
-			informer.Run()
-		}()
+		go informer.Run()
 
-		waitTimer := time.NewTicker(10 * time.Minute)
-		defer waitTimer.Stop()
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
 
-		checkTimer := time.NewTicker(5 * time.Second)
-		defer checkTimer.Stop()
-
-		stopLogsChan := make(chan struct{})
-		defer func() { stopLogsChan <- struct{}{} }()
-
-		go func() {
-			for {
-				time.Sleep(5 * time.Second)
-				err = PrintDeckhouseLogs(kubeCl, &stopLogsChan)
-				if err != nil {
-					log.InfoLn(err.Error())
-					continue
-				}
-				return
-			}
-		}()
-
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
 		for {
 			select {
-			case <-checkTimer.C:
-				continue
-			case <-waitTimer.C:
-				waitErr = fmt.Errorf("Timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors.")
+			case <-ticker.C:
+				err = PrintDeckhouseLogs(ctx, kubeCl, stopLogsChan)
+				if err != nil {
+					log.InfoLn(err.Error())
+				}
+			case <-ctx.Done():
+				return fmt.Errorf("Timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors.")
 			case <-ready:
-				log.InfoF("Deckhouse deployment is ready\n")
+				if waitErr == nil {
+					log.InfoF("Deckhouse deployment is ready.\n")
+					return nil
+				}
+				return waitErr
 			}
-			break
 		}
-		return waitErr
 	})
 }
 
 func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) error {
 	task := actions.ManifestTask{
-
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() interface{} {
 			return manifests.DeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
