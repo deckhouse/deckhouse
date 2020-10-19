@@ -5,3 +5,7 @@ variable "prefix" {
 variable "network_self_link" {
   type = string
 }
+
+variable "pod_subnet_cidr" {
+  type = string
+}

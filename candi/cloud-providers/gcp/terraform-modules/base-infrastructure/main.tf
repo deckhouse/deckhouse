@@ -38,6 +38,7 @@ module "firewall" {
   source            = "../../../terraform-modules/firewall"
   prefix            = local.prefix
   network_self_link = google_compute_network.kube.self_link
+  pod_subnet_cidr   = local.pod_subnet_cidr
 }
 
 # network peering
