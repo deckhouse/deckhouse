@@ -38,6 +38,10 @@ func (m *MetaConfig) Prepare() *MetaConfig {
 	_ = json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType)
 	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
 
+	var serviceSubnet string
+	_ = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet)
+	m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+
 	if m.ClusterType != CloudClusterType {
 		return m
 	}
@@ -58,10 +62,6 @@ func (m *MetaConfig) Prepare() *MetaConfig {
 	if ok {
 		_ = json.Unmarshal(nodeGroups, &m.StaticNodeGroupSpecs)
 	}
-
-	var serviceSubnet string
-	_ = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet)
-	m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
 
 	return m
 }
@@ -321,7 +321,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 func getDNSAddress(serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		panic("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		log.DebugF("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		return ""
 	}
 
 	inc := func(ip net.IP) {
