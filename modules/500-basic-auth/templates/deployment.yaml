@@ -30,6 +30,8 @@ spec:
     metadata:
       labels:
         app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
@@ -66,9 +68,6 @@ spec:
         - name: htpasswd
           mountPath: /etc/nginx/htpasswd
           readOnly: true
-        env:
-        - name: KUBERNETES_DEPLOYED
-          value: {{ now | quote }}
       volumes:
       - name: nginx-config
         configMap:
