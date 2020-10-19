@@ -28,22 +28,30 @@ var (
 
 func DefineSSHFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
+		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
 		StringsVar(&SSHAgentPrivateKeys)
 	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
+		Envar(configEnvName("SSH_BASTION_HOST")).
 		StringVar(&SSHBastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
+		Envar(configEnvName("SSH_BASTION_PORT")).
 		StringVar(&SSHBastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
 		Default(SSHBastionUser).
+		Envar(configEnvName("SSH_BASTION_USER")).
 		StringVar(&SSHBastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").
+		Envar(configEnvName("SSH_USER")).
 		Default(SSHUser).
 		StringVar(&SSHUser)
 	cmd.Flag("ssh-host", "SSH destination host").
+		Envar(configEnvName("SSH_HOST")).
 		StringVar(&SSHHost)
 	cmd.Flag("ssh-port", "SSH destination port").
+		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)
 	cmd.Flag("ssh-extra-args", "extra args for ssh commands (-vvv)").
+		Envar(configEnvName("SSH_EXTRA_ARGS")).
 		StringVar(&SSHExtraArgs)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
@@ -88,6 +96,7 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 	// Ansible compatible
 	cmd.Flag("ask-become-pass", "Ask for sudo password before the installation process.").
+		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
 		BoolVar(&AskBecomePass)
 }

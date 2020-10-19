@@ -101,10 +101,7 @@ func WaitForProcessInterruption() {
 	}()
 
 	switch s {
-	case syscall.SIGINT:
-		fmt.Println(" <- Process was interrupted here")
-		fallthrough
-	case syscall.SIGTERM:
+	case syscall.SIGTERM, syscall.SIGINT:
 		callbacks.Cancel()
 		log.Warning(fmt.Sprintf("Graceful shutdown by \"%s\" signal ...\n", s.String()))
 		StopCh() <- struct{}{}

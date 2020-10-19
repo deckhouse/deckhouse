@@ -30,6 +30,7 @@ func init() {
 
 func GlobalFlags(cmd *kingpin.Application) {
 	cmd.Flag("logger-type", "Format output of a candictl in different ways.").
+		Envar(configEnvName("LOGGER_TYPE")).
 		Default("pretty").
 		EnumVar(&LoggerType, "pretty", "simple", "json")
 }
@@ -37,12 +38,14 @@ func GlobalFlags(cmd *kingpin.Application) {
 func DefineSkipResourcesFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
 		Default("false").
+		Envar(configEnvName("SKIP_RESOURCES")).
 		BoolVar(&SkipResources)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("config", "Config file path").
 		Required().
+		Envar(configEnvName("CONFIG")).
 		StringVar(&ConfigPath)
 }
 
@@ -56,4 +59,8 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
 		Default("false").
 		BoolVar(&DropCache)
+}
+
+func configEnvName(name string) string {
+	return "CANDICTL_CLI_" + name
 }

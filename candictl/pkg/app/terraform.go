@@ -13,5 +13,6 @@ var (
 
 func DefineTerraformFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("terraform-state-dir", "Directory to store terraform state.").
+		Envar(configEnvName("TF_STATE_DIR")).
 		StringVar(&TerraformStateDir)
 }
