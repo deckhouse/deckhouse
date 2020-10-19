@@ -73,3 +73,15 @@
  }
 
  func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
+diff --git a/go.mod b/go.mod
+index 4d001e2..544e3a9 100644
+--- a/go.mod
++++ b/go.mod
+@@ -69,6 +69,7 @@ require (
+ )
+
+ replace (
++	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+ 	k8s.io/api => k8s.io/api v0.0.0-20190805141119-fdd30b57c827
+ 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190805143126-cdb999c96590
+ 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
