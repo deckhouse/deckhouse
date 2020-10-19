@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/ssh"
 	"flant/candictl/pkg/template"
+	"flant/candictl/pkg/util/cache"
 	"flant/candictl/pkg/util/retry"
 )
 
@@ -75,6 +78,17 @@ func ExecuteBashibleBundle(sshClient *ssh.SSHClient, tmpDir string) error {
 	})
 }
 
+const (
+	bashibleInstalledMessage = `
+Bashible is already installed and healthy!
+	%s
+`
+	bashibleIsNotReadyMessage = `
+Bashible is not ready! Let's try to install it ...
+	Reason: %s
+`
+)
+
 func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeIP, devicePath string) error {
 	bundleName, err := DetermineBundleName(sshClient)
 	if err != nil {
@@ -88,12 +102,10 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 		out := strings.TrimSuffix(string(rawOut), "\n")
 
 		if strings.Contains(out, "Can't acquire lockfile /var/lock/bashible.") || strings.Contains(out, "Configuration is in sync, nothing to do.") {
-			log.InfoLn("Bashible is already installed and healthy!")
-			log.InfoF("\t%s\n", out)
+			log.InfoF(bashibleInstalledMessage, out)
 			bashibleUpToDate = true
 		} else {
-			log.InfoLn("Bashible is not ready! Let's try to install it ...")
-			log.InfoF("\tReason: %s\n", out)
+			log.InfoF(bashibleIsNotReadyMessage, out)
 		}
 		return nil
 	})
@@ -151,7 +163,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.SSHClient) error {
 			return nil
 		})
 		if err := availabilityCheck.WithDelaySeconds(3).AwaitAvailability(); err != nil {
-			return fmt.Errorf("await master available: %v", err)
+			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil
 	})
@@ -278,4 +290,48 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 
 		return nil
 	})
+}
+
+func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache cache.Cache) (map[string]map[int]string, error) {
+	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)$", metaConfig.ClusterPrefix)
+	groupsReg, _ := regexp.Compile(nodeGroupRegex)
+
+	nodesFromCache := make(map[string]map[int]string)
+	walkFunc := func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() || strings.HasSuffix(path, ".backup") {
+			return nil
+		}
+
+		if strings.HasPrefix(info.Name(), "base-infrastructure") || strings.HasPrefix(info.Name(), "uuid") {
+			return nil
+		}
+
+		name := strings.TrimSuffix(info.Name(), ".tfstate")
+		if !groupsReg.MatchString(name) {
+			return nil
+		}
+
+		nodeGroupNameAndNodeIndex := groupsReg.FindStringSubmatch(name)
+
+		nodeGroupName := nodeGroupNameAndNodeIndex[1]
+		rawIndex := nodeGroupNameAndNodeIndex[2]
+
+		index, convErr := strconv.Atoi(rawIndex)
+		if convErr != nil {
+			return fmt.Errorf("can't convert %q to integer: %v", rawIndex, convErr)
+		}
+
+		if _, ok := nodesFromCache[nodeGroupName]; !ok {
+			nodesFromCache[nodeGroupName] = make(map[int]string)
+		}
+
+		nodesFromCache[nodeGroupName][index] = name
+		return nil
+	}
+
+	if err := filepath.Walk(stateCache.GetDir(), walkFunc); err != nil {
+		return nil, fmt.Errorf("can't iterate the cache: %v", err)
+	}
+
+	return nodesFromCache, nil
 }

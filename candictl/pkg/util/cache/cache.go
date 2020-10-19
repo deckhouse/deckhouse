@@ -43,7 +43,7 @@ var globalCache Cache = &DummyCache{}
 func initCache(dir string) error {
 	var err error
 	once.Do(func() {
-		globalCache, err = NewStateCache(dir)
+		globalCache, err = NewTempStateCache(dir)
 	})
 	return err
 }
@@ -56,6 +56,11 @@ var (
 	_ Cache = &StateCache{}
 	_ Cache = &DummyCache{}
 )
+
+func NewTempStateCache(dir string) (*StateCache, error) {
+	cacheDir := filepath.Join(app.TerraformStateDir, encode(dir))
+	return NewStateCache(cacheDir)
+}
 
 func NewStateCache(dir string) (*StateCache, error) {
 	_ = os.MkdirAll(dir, 0755)
@@ -148,7 +153,7 @@ func (s *StateCache) Teardown() {
 }
 
 func Init(dir string) error {
-	return initCache(filepath.Join(app.TerraformStateDir, encode(dir)))
+	return initCache(dir)
 }
 
 var encoding = base32.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZ134567")

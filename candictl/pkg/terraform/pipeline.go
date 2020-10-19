@@ -66,12 +66,14 @@ func CheckPipeline(r *Runner, name string) (bool, error) {
 
 func DestroyPipeline(r *Runner, name string) error {
 	pipelineFunc := func() error {
-		err := r.Init()
+		autoApprove := r.autoApprove
+
+		err := r.WithAutoApprove(true).Init()
 		if err != nil {
 			return err
 		}
 
-		err = r.Destroy()
+		err = r.WithAutoApprove(autoApprove).Destroy()
 		if err != nil {
 			return err
 		}

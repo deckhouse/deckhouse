@@ -2,10 +2,6 @@ package bootstrap
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -195,6 +191,17 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	return cmd
 }
 
+const (
+	bootstrapAbortInvalidCacheMessage = `Create cache %s:
+	Error: %v
+	Probably that Kubernetes cluster was successfully bootstrapped.
+	Use "candictl destroy" command to delete the cluster.
+`
+	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
+If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+`
+)
+
 func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("abort", "Delete every node, which was created during bootstrap process.")
 	app.DefineConfigFlags(cmd)
@@ -207,98 +214,83 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		cachePath := metaConfig.CachePath()
-		if err = cache.Init(cachePath); err != nil {
-			// TODO: it's better to ask for confirmation here
-			return fmt.Errorf(
-				"Create cache %s:\n\tError: %v\n\n"+
-					"\tProbably that Kubernetes cluster was successfully bootstrapped.\n"+
-					"\tUse \"dekchouse-candi destroy\" command to delete the cluster.",
-				cachePath, err,
-			)
+		stateCache, err := cache.NewTempStateCache(cachePath)
+		if err != nil {
+			return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 		}
 
-		if !cache.Global().InCache("uuid") {
-			return fmt.Errorf("No UUID found in cached. Pheraps, the cluster was already bootstrapped.")
+		if !stateCache.InCache("uuid") {
+			return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
 		}
 
-		metaConfig.UUID = string(cache.Global().Load("uuid"))
-		log.InfoF("Cluster UUID from cache: %s\n", metaConfig.UUID)
-
-		masterGroupRegexp := fmt.Sprintf("^%s-master-([0-9]+)$", metaConfig.ClusterPrefix)
-		r, _ := regexp.Compile(masterGroupRegexp)
-
-		nodesToDelete := make(map[string][]byte)
-		if err := filepath.Walk(cache.Global().GetDir(), func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				return nil
-			}
-
-			if strings.HasSuffix(path, ".backup") {
-				return nil
-			}
-
-			if strings.HasPrefix(info.Name(), "base-infrastructure") || strings.HasPrefix(info.Name(), "uuid") {
-				return nil
-			}
-
-			name := strings.TrimSuffix(info.Name(), ".tfstate")
-			if !r.Match([]byte(name)) {
-				return fmt.Errorf(
-					"Static nodes state are found in cache\n\t%s\n\t"+
-						"It looks like you already have the Kuberenetes cluster. "+
-						"Please use \"candictl destroy\" command to delete the cluster or "+
-						"\"candictl converge\" command to delete unwanted static nodes.",
-					cache.Global().ObjectPath(name),
-				)
-			}
-			nodesToDelete[name] = cache.Global().Load(name)
+		_ = log.Process("common", "Get cluster UUID from the cache", func() error {
+			metaConfig.UUID = string(stateCache.Load("uuid"))
+			log.InfoF("Cluster UUID: %s\n", metaConfig.UUID)
 			return nil
-		}); err != nil {
-			return fmt.Errorf("can't iterate the cache: %v", err)
+		})
+
+		nodesToDelete, err := operations.BootstrapGetNodesFromCache(metaConfig, stateCache)
+		if err != nil {
+			return fmt.Errorf("bootstrap-phase abort preparation: %v", err)
 		}
 
-		for nodeName, state := range nodesToDelete {
-			err := log.Process("terraform", fmt.Sprintf("Destroy Node %s", nodeName), func() error {
-				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
-					WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
+		for nodeGroup, nodeData := range nodesToDelete {
+			if nodeGroup == "master" {
+				// we will destroy masters later because they need additional arguments and different terraform files
+				continue
+			}
+
+			for index, nodeName := range nodeData {
+				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, "static-node").
+					WithVariables(metaConfig.NodeGroupConfig(nodeGroup, index, "")).
 					WithName(nodeName).
-					WithState(state).
+					WithCache(stateCache).
+					WithAutoApprove(app.SanityCheck)
+				tomb.RegisterOnShutdown(nodeRunner.Stop)
+				stateCache.AddToClean(nodeName)
+
+				if err := terraform.DestroyPipeline(nodeRunner, nodeName); err != nil {
+					return err
+				}
+			}
+		}
+
+		if _, ok := nodesToDelete["master"]; ok {
+			for index, nodeName := range nodesToDelete["master"] {
+				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
+					WithVariables(metaConfig.NodeGroupConfig("master", index, "")).
+					WithName(nodeName).
+					WithCache(stateCache).
 					WithAutoApprove(app.SanityCheck)
 				tomb.RegisterOnShutdown(masterRunner.Stop)
 
-				cache.Global().AddToClean(nodeName)
-				return masterRunner.Destroy()
-			})
-			if err != nil {
-				return err
+				stateCache.AddToClean(nodeName)
+				if err := terraform.DestroyPipeline(masterRunner, nodeName); err != nil {
+					return err
+				}
 			}
 		}
 
-		err = log.Process("terraform", "Destroy base-infrastructure", func() error {
-			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
-				WithVariables(metaConfig.MarshalConfig()).
-				WithState(cache.Global().Load("base-infrastructure")).
-				WithAutoApprove(app.SanityCheck)
-			tomb.RegisterOnShutdown(baseRunner.Stop)
+		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+			WithVariables(metaConfig.MarshalConfig()).
+			WithCache(stateCache).
+			WithAutoApprove(app.SanityCheck)
+		tomb.RegisterOnShutdown(baseRunner.Stop)
 
-			cache.Global().AddToClean("base-infrastructure")
-			return baseRunner.Destroy()
-		})
-		if err != nil {
+		stateCache.AddToClean("base-infrastructure")
+		if err := terraform.DestroyPipeline(baseRunner, "Kubernetes cluster"); err != nil {
 			return err
 		}
 
-		cache.Global().AddToClean("uuid")
-		cache.Global().Clean()
-		cache.Global().Teardown()
+		stateCache.AddToClean("uuid")
+		stateCache.Clean()
+		stateCache.Teardown()
 		return nil
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
-			log.Warning("You will be asked for approve multiple times.\n" +
-				"If you understand what you are doing, you can use flag " +
-				"--yes-i-am-sane-and-i-understand-what-i-am-doing to skip approvals.\n\n")
+			log.Warning(bootstrapAbortCheckMessage)
 		}
 
 		return log.Process("bootstrap", "Abort", func() error { return runFunc() })
