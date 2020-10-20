@@ -37,7 +37,7 @@ ansible:
         chdir: /srv/jekyll-data
     - name: "Generate sidebars"
       shell: |
-        /bin/bash /srv/jekyll-data/modules_make_data > /srv/jekyll-data/_data/sidebars/documentation-main.yml2 &&  sed '1,+6d' _data/sidebars/documentation-main.yml >> /srv/jekyll-data/_data/sidebars/documentation-main.yml2  && mv -f /srv/jekyll-data/_data/sidebars/documentation-main.yml2 /srv/jekyll-data/_data/sidebars/documentation-main.yml
+        /bin/bash /srv/jekyll-data/modules_make_data > /srv/jekyll-data/_data/sidebars/modules.yml2 &&  sed '1,+6d' _data/sidebars/modules.yml >> /srv/jekyll-data/_data/sidebars/modules.yml2  && mv -f /srv/jekyll-data/_data/sidebars/modules.yml2 /srv/jekyll-data/_data/sidebars/modules.yml
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
@@ -85,21 +85,14 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['guides', 'README.md']
+  excludePaths: ['_not_actual', 'guides','RELEASES.md']
 - add: /docs-public
   to: /srv/jekyll-data/docs
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  excludePaths: ['guides', 'README.md']
-- add: /
-  to: /srv/jekyll-data
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths: ['candi/**/docs', 'candictl/**/*.md','deckhouse-controller/**/*.md']
+  includePaths: ['RELEASES.md']
 - add: /modules
   to: /srv/jekyll-data/modules
   owner: jekyll

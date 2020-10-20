@@ -1,6 +1,4 @@
----
 title: "Модуль prometheus-madison-integration"
----
 
 ## Описание
 

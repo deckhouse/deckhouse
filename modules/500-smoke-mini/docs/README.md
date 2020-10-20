@@ -6,7 +6,7 @@ title: "Модуль smoke-mini"
 
 Модуль запускает 3 `StatefulSet` использующих `PV` и каждый имеющий 1 реплику, со специальным приложением, поднимающим http сервер и предоставляющим API для выполнения тестов. Ресурсы одного из `StatefulSet` перешедуливаются раз в 10 минут на случайные узлы. 
 
-Модуль по-умолчанию **включен**.
+Модуль по умолчанию **включен**.
 
 ### Функционал тестирования
 * `/` – return 200
@@ -22,7 +22,7 @@ title: "Модуль smoke-mini"
     * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
     * Если указать `false` — будет форсироваться использование emptyDir'а.
 * `ingressClass` — класс ingress контроллера, который используется для smoke-mini.
-    * Опциональный параметр, по-умолчанию используется глобальное значение `modules.ingressClass`.
+    * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
 * `https` — выбираем, какой типа сертификата использовать для smoke-mini.
     * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
     * `mode` — режим работы HTTPS:
@@ -32,7 +32,7 @@ title: "Модуль smoke-mini"
         * `OnlyInURI` — smoke-mini будет работать по http (подразумевая, что перед ним стоит внешний https балансер, который терминирует https).
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для smoke-mini (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-        * По-умолчанию `letsencrypt`.
+        * По умолчанию `letsencrypt`.
     * `customCertificate`
       * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для smoke-mini (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-        * По-умолчанию `false`.
+        * По умолчанию `false`.

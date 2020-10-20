@@ -1,7 +1,3 @@
----
-title: Deckhouse
-permalink: /documentation.html
----
 
 ## Что такое Deckhouse?
 
@@ -131,7 +127,7 @@ global: |
 * `modules` — параметры для служебных компонентов;
   * `publicDomainTemplate` (желательно) — шаблон c ключом "%s" в качестве динамической части строки. Будет использоваться для образования служебных доменов (например, `%s.kube.domain.my`). Если параметр не указан, то ingress-ресурсы создаваться не будут.
   * `ingressClass` — класс ingress контроллера, который используется для служебных компонентов.
-    * По-умолчанию `nginx`.
+    * По умолчанию `nginx`.
   * `placement` — настройки, определяющие расположение компонентов Deckhouse.
     * `customTolerationKeys` — список ключей пользовательских taint'ов, необходимо указывать, чтобы позволить выезжать на выделенные ноды критическим add-on'ам, таким как например cni и csi.
       * Пример:
@@ -142,28 +138,28 @@ global: |
         ```
   * `https` — способ реализации HTTPS, используемый служебными компонентами.
     * `mode` — режим работы HTTPS:
-      * `Disabled` — в данном режиме все служебные компоненты будут работать только по http (некоторые модули могут не работать, например [user-authn]({{ site.baseurl }}/modules/150-user-authn));
+      * `Disabled` — в данном режиме все служебные компоненты будут работать только по http (некоторые модули могут не работать, например [user-authn](/modules/150-user-authn));
       * `CertManager` — все служебные компоненты будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
       * `CustomCertificate` — все служебные компоненты будут работать по https используя сертификат из namespace `d8-system`;
       * `OnlyInURI` — все служебные компоненты будут работать по http (подразумевая, что перед ними стоит внешний https-балансер, который терминирует https).
-      * По-умолчанию `CertManager`.
+      * По умолчанию `CertManager`.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для служебных компонентов (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-        * По-умолчанию `letsencrypt`.
+        * По умолчанию `letsencrypt`.
     * `customCertificate`
       * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для системных компонентов (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
-        * По-умолчанию `false`.
+        * По умолчанию `false`.
 * `storageClass` — имя storage class, который будет использоваться для всех служебных компонентов (prometheus, grafana, openvpn, ...).
-    * По-умолчанию — null, а значит служебные будут использовать `cluster.defaultStorageClass` (который определяется автоматически), а если такого нет — `emptyDir`.
+    * По умолчанию — null, а значит служебные будут использовать `cluster.defaultStorageClass` (который определяется автоматически), а если такого нет — `emptyDir`.
     * Этот параметр имеет смысл использовать только в исключительных ситуациях.
-* `highAvailability` — глобальный включатель режима отказоустойчивости для модулей, которые это поддерживают. По-умолчанию не определён и решение принимается на основе autodiscovery-параметра `global.discovery.clusterControlPlaneIsHighlyAvailable`.
+* `highAvailability` — глобальный включатель режима отказоустойчивости для модулей, которые это поддерживают. По умолчанию не определён и решение принимается на основе autodiscovery-параметра `global.discovery.clusterControlPlaneIsHighlyAvailable`.
 
 ### Включение и отключение модулей
 
 Deckhouse устанавливает только включённые [модули](https://github.com/flant/addon-operator/blob/master/MODULES.md). Смотри подробнее про алгоритм определения включённости модуля [тут](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery).
 
 # Разворачивание и управление узлами в кластерах Kubernetes
-Для создания новых кластеров и управления узлами используется подсистема [candi (Cluster and Infrastructure)]({{ site.baseurl }}/candi/). Ключевые преимущества:
+Для создания новых кластеров и управления узлами используется подсистема [candi (Cluster and Infrastructure)](/candi/). Ключевые преимущества:
 * Единый процесс установки и управления кластерами Kubernetes для baremetal и cloud инсталляций
 * Простое управляемое обновление:
    * компонентов kubernetes (control-plane, kubelet)
@@ -172,7 +168,7 @@ Deckhouse устанавливает только включённые [моду
 
 **Candi включает в себя**:
 * Ядро общего функционала, используемое в модулях и инсталляторе:
-    * Набор простых идемпотентных скриптов на bash, которые конфигурируют узлы (см. подробнее [bashible]({{ site.baseurl }}/candi/bashible/)).
+    * Набор простых идемпотентных скриптов на bash, которые конфигурируют узлы (см. подробнее [bashible](/candi/bashible/)).
     * Шаблоны конфигурации kubeadm (kubeadm-config.yaml и kustomize патчи), которыми конфигурируется control-plane.
     * Для каждого поддерживаемого облачного провайдера – необходимые тераформы и дополнительные скрипты конфигурации узлов.
 
@@ -180,34 +176,34 @@ Deckhouse устанавливает только включённые [моду
     * В облаках installer использует terraform для создания инфраструктуры и отдельный terraform для создания первого узла (при установке происходит два запуска!)
     * State terraform'а, оставшийся после создания базовой инфраструктуры, сохраняется в кластер в namespace `kube-system` в secret `d8-terraform-state`.
 
-* Модуль [control-plane-manager]({{ site.baseurl }}/modules/040-control-plane-manager) — реализация `managed` control plane:
+* Модуль [control-plane-manager](/modules/040-control-plane-manager) — реализация `managed` control plane:
     * При использовании этого модуля обновление и настройка компонентов control plane полностью переходят под управление Deckhouse. 
     * Обновление patch-версии будет происходить автоматически при релизах Deckhouse. Точность версии в конфигурации можно указать только до minor-версии (например `1.16`).
         * В Deckhouse для каждой поддерживаемой минорной версии определена **точная версия**. Версия кластера `1.15`, точная версия `1.15.9`.
         * Точная версия может не совпадать с максимально доступной версией в репозитории kubernetes.
     * Работает как для singlemaster, так и для multimaster кластеров. Позволяет добавлять в кластер новые master-узлы и удалять старые.
 
-* Модуль [node-manager]({{ site.baseurl }}/modules/040-node-manager) — реализации `managed` узлов (нод).
+* Модуль [node-manager](/modules/040-node-manager) — реализации `managed` узлов (нод).
     * Работает как в облаке, так и в baremetal кластерах.
     * Поддерживаемые типы узлов: Static, Hybrid, Cloud - подробнее о каждом типе написано в документации модуля.
     * Умно и безопасно по одному обновляет (или перекатывает) узлы при изменении настроек (например версии докера, ядра).
     * Позволяет пользователю отключить автоматическое обновление узлов и самостоятельно контролировать процесс, оповещает о необходимом обновления при помощи алертов.
     * Для управления узлами в кластере используется специальный ресурс - `NodeGroup`.
-    * Настройка узла и управление им реализованы при помощи [bashible]({{ site.baseurl }}/candi/bashible/).
+    * Настройка узла и управление им реализованы при помощи [bashible](/candi/bashible/).
 
 * Модули Deckhouse `cloud-provider-` для взаимодействия с облачной инфраструктурой:
     * Провайдеры, которые полностью поддерживают candi:
 
         | Провайдер     | Варианты установки |
         | ------------- | ------------------ |
-        | [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/)  | [layouts]({{ site.baseurl }}/candi/cloud-providers/openstack/) |
+        | [cloud-provider-openstack](/modules/030-cloud-provider-openstack/)  | [layouts](/candi/cloud-providers/openstack/) |
     
     * Необходимую информацию для подключения к API и настройки cloud-provider'ы берут из secret'ов в namespace `kube-system`, либо из настроек модуля.
 
 
 ### Разворачивание кластера и установка Deckhouse:
 
-Разворачивание кластера производится при помощи [специального приложения]({{ site.baseurl }}/candi/candictl.html) `candictl` (или installer).
+Разворачивание кластера производится при помощи [специального приложения](/candi/candictl.html) `candictl` (или installer).
 Installer принимает на вход единственный YAML-файл, в котором описана конфигурация для развертывания кластера.
 
 {% raw %}
@@ -251,7 +247,7 @@ candictl bootstrap \
 ```
 Для удобного запуска подготовлен специальный Docker-образ.
 
-Обратите внимание на поле `deckhouse.bundle` в InitConfiguration. Выбранный bundle определяет устанавливаемые по умолчанию модули Deckhouse. Подробнее читайте в [документации модуля deckhouse]({{ site.baseurl }}/modules/020-deckhouse/).
+Обратите внимание на поле `deckhouse.bundle` в InitConfiguration. Выбранный bundle определяет устанавливаемые по умолчанию модули Deckhouse. Подробнее читайте в [документации модуля deckhouse](/modules/020-deckhouse/).
 
 #### Варианты установки Deckhouse:
 Сейчас Deckhouse поддерживает 4 варианта установки:
@@ -274,4 +270,4 @@ candictl bootstrap \
 
 ## Ведение разработки
 
-[Читай документ для разработчиков]({{ site.baseurl }}/guides/development.html)
+[Читай документ для разработчиков](/guides/development.html)

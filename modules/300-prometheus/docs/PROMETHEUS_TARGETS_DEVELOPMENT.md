@@ -1,7 +1,5 @@
 ---
 title: "Разработка target'ов Prometheus"
-tags:
-  - prometheus
 type:
   - instruction
 search: Разработка target'ов Prometheus, prometheus target
@@ -11,7 +9,7 @@ search: Разработка target'ов Prometheus, prometheus target
 ----------------
 
 * Наиболее частая операция — добавление target'а для нового application'а (redis, rabbitmq и др.). Скорей всего для этого будет достаточно просто скопировать один из существующих service monitor'ов в директории `applications` и поправить названия.
-* Но если вам нужно сделать что-то более сложное, или если простое копирование не дает ожидаемого результата — придется разбираться и читать [документацию по внутреннему устройству]({{ site.baseurl }}/modules/200-operator-prometheus/internals.html) Prometheus Operator.
+* Но если вам нужно сделать что-то более сложное, или если простое копирование не дает ожидаемого результата — придется разбираться и читать документацию модуля [Prometheus Operator](/modules/200-operator-prometheus/).
 * Все существующие target'ы лежат в директории `prometheus-targets`, они обычно состоят из service monitor'а, некоторого exporter'а для Prometheus и необходимой обвязки, которая их стыкует.
 
 Лучшие практики

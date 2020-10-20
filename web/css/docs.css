@@ -94,7 +94,7 @@
     transform: rotate(-180deg);
 }
 
-.sidebar__submenu {
+.sidebar__submenu, .sidebar__subsubmenu{
     display: none;
     list-style-type: none;
     padding: 5px 0 0 10px;
@@ -107,6 +107,16 @@
 
 .sidebar__submenu-item > a {
     display: inline-block;
+    /*font-size: 14px;*/
+    color: #00122C;
+    letter-spacing: -0.26px;
+    line-height: 16px;
+    text-decoration: none;
+    padding: 10px 0;
+}
+
+.sidebar__subsubmenu-item > a{
+    display: inline-block;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;
@@ -115,15 +125,15 @@
     padding: 10px 0;
 }
 
-.sidebar__submenu-item > a:hover {
+.sidebar__submenu-item > a:hover, .sidebar__subsubmenu-item > a:hover {
     color: #4075FF;
 }
 
-.sidebar__submenu-item.active > a {
+.sidebar__submenu-item.active > a, .sidebar__subsubmenu-item.active > a {
     color: #4075FF;
 }
 
-.sidebar__submenu-item_parent > a:after {
+.sidebar__submenu-item_parent > a:after, .sidebar__subsubmenu-item_parent > a:after {
     content: '';
     display: inline-block;
     width: 7px;
@@ -134,7 +144,7 @@
     margin-left: 5px;
 }
 
-.sidebar__item_submenu-parent.active > a:after {
+.sidebar__item_submenu-parent.active > a:after, .sidebar__item_subsubmenu-parent.active > a:after {
     transform: rotate(-180deg);
 }
 
@@ -382,7 +392,8 @@
     font-stretch: normal;
     line-height: normal;
     letter-spacing: normal;
-    color: #00122c;
+    /*color: #00122c;*/
+    color: #4075FF;
 }
 
 .docs h3 {
@@ -392,7 +403,8 @@
     font-stretch: normal;
     line-height: normal;
     letter-spacing: -0.4px;
-    color: #4075FF;
+    /*color: #4075FF;*/
+    color: #00122c;
 }
 
 .docs h4 {
@@ -402,7 +414,8 @@
     font-stretch: normal;
     line-height: normal;
     letter-spacing: -0.3px;
-    color: #00122c;
+    color: #4075FF;
+    /*color: #00122c;*/
 }
 
 .docs h5 {
@@ -412,7 +425,8 @@
     font-stretch: normal;
     line-height: normal;
     letter-spacing: -0.3px;
-    color: #4075FF;
+    color: #00122c;
+    /*color: #4075FF;*/
 }
 
 .docs h6 {
@@ -422,7 +436,8 @@
     font-stretch: normal;
     line-height: normal;
     letter-spacing: -0.4px;
-    color: #00122c;
+    /*color: #00122c;*/
+    color: #4075FF;
 }
 
 .docs a {
@@ -599,4 +614,17 @@
     font-weight: normal;
     line-height: 1;
     padding-left: 0.375em;
+}
+
+.doc-checkmark::after {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    margin-left: 10px;
+    position: relative;
+    align-self: center;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-image: url(../images/icons/check.svg);
 }

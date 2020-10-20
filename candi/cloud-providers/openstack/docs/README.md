@@ -1,6 +1,4 @@
----
-title: Cloud provider - Openstack
----
+title: "Cloud provider — Openstack: Развертывание"
 
 ## Поддерживаемые схемы размещения
 
@@ -38,7 +36,7 @@ title: Cloud provider - Openstack
 * `provider` — передаются [параметры подключения]((/candi/cloud-providers/openstack/docs#credentials-%D0%B4%D0%BB%D1%8F-%D0%B7%D0%B0%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD%D0%B8%D1%8F-provider)) к api openstack, они совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#параметры).
 * `masterNodeGroup` — спецификация для описания NG мастера.
   * `replicas` — сколько мастер-узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource). Обязательными параметрами являются `flavorName`, `imageName`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`. Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`
@@ -58,7 +56,7 @@ title: Cloud provider - Openstack
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/#openstackinstanceclass-custom-resource). Обязательными параметрами являются `flavorName`, `imageName`, `mainNetwork`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`, `mainNetwork`. Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`
@@ -269,7 +267,7 @@ provider:
 Master нода и ноды кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер кубернетес с уже имеющимися виртуальными машинами.
 
-**Внимание!** 
+**Внимание!**
 
 В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается что они были ранее созданы.
 Для настройки политик безопасности необходимо явно указывать как `additionalSecurityGroups` в OpenStackClusterConfiguration

@@ -1,6 +1,4 @@
----
-title: Cloud provider - AWS
----
+title: "Cloud provider — AWS: Развертывание"
 
 ## Поддерживаемые схемы размещения
 

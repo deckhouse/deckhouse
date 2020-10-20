@@ -2,35 +2,19 @@
 title: "Модуль network-policy-engine"
 ---
 
-Данный модуль выкатывает в namespace `d8-system` daemonset с [kube-router](https://github.com/cloudnativelabs/kube-router) только в режиме поддержки [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) после чего в Kubernetes кластере включается полная поддержка Network Policies.
+## Описание модуля
 
-### Включение модуля
+Модуль управления сетевыми политиками.
 
-Модуль по-умолчанию **выключен**. Для включения добавьте в CM `deckhouse`:
+В Deckhouse был выбран консервативный подход к организации сети, при котором используются простые сетевые бекенды (*“чистый”* CNI или flannel в режиме `host-gw`). Этот подход оказался прост и надежен, поэтому показал себя с лучшей стороны.
 
-```yaml
-data:
-  networkPolicyEngineEnabled: "true"
-```
+Имплементация сетевых политик (`NetworkPolicy`) в Deckhouse тоже представляет простую и надежную систему, основанную на базе `kube-router` в режиме *Network Policy Controller* (`--run-firewall`). В этом случае `kube-router` транслирует сетевые политики `NetworkPolicy` в правила `iptables`, а они, в свою очередь, работают в любых инсталляциях, вне зависимости от облака или используемого CNI.
 
-### Примеры network policies
+Модуль `network-policy-engine` разворачивает в namespace `d8-system` Daemonset с [kube-router](https://github.com/cloudnativelabs/kube-router) в режиме поддержки [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/). В результате в Kubernetes кластере включается полная поддержка Network Policies.
 
-Разрешить подам обращаться к внешним ресурсам и обращение внутри namespace, но запрещает обращаться снаружи к подам в namespace:
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: delete
-spec:
-  podSelector: {}
-  egress:
-  - {}
-  ingress:
-  - from:
-    - podSelector: {}
-  policyTypes:
-  - Ingress
-  - Egress
-```
+Поддерживаются следующие форматы описания политик:
+- *networking.k8s.io/NetworkPolicy API*
+- *network policy V1/GA semantics*
+- *network policy beta semantics*
 
-Больше примеров можно посмотреть [тут](https://github.com/ahmetb/kubernetes-network-policy-recipes).
+[Примеры](https://github.com/ahmetb/kubernetes-network-policy-recipes) использования.

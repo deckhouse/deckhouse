@@ -52,12 +52,6 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
-    - name: "Make symlink for /index.html to pass tests"
-      shell: ln -s documentation.html index.html
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/_site
-        warn: false
     - name: "Link checking"
       shell: |
         (bundle exec htmlproofer \
@@ -85,7 +79,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['docs','candi/**/docs', 'candictl/**/*.md','deckhouse-controller/**/*.md']
+  includePaths: ['docs']
   excludePaths: ['_not_actual/']
 - add: /modules
   to: /srv/jekyll-data/modules
@@ -94,4 +88,3 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths: ['**/docs/']
-  excludePaths: ['**/FEATURES.md']

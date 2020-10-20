@@ -80,4 +80,3 @@ kubernetesVersion: 1.16.patch
 - [modules/041-kube-proxy/images/kube-proxy-1-16/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-16/Dockerfile)
 - [modules/041-kube-proxy/images/kube-proxy-1-17/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-17/Dockerfile)
 - [modules/041-kube-proxy/images/kube-proxy-1-18/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-18/Dockerfile)
-

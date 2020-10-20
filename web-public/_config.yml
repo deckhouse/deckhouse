@@ -44,7 +44,7 @@ defaults:
       search: true
       topnav: topnav
       output: web
-      sidebar: documentation-main
+      sidebar: main
 
 output: web
 
