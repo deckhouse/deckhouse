@@ -3,12 +3,11 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/flant/addon-operator/pkg/hook/types"
-	. "github.com/flant/shell-operator/pkg/hook/types"
-
 	binding_context "github.com/flant/shell-operator/pkg/hook/binding_context"
+	. "github.com/flant/shell-operator/pkg/hook/types"
 	"github.com/flant/shell-operator/test/hook/context"
-
 	"github.com/tidwall/gjson"
 
 	"github.com/deckhouse/deckhouse/testing/library"
