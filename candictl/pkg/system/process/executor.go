@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"time"
 
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
@@ -105,6 +106,8 @@ type Executor struct {
 	stopCh    chan struct{}
 	waitError error
 	killError error
+
+	timeout time.Duration
 }
 
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
@@ -168,6 +171,11 @@ func (e *Executor) CaptureStderr(buf *bytes.Buffer) *Executor {
 	} else {
 		e.StderrBuffer = &bytes.Buffer{}
 	}
+	return e
+}
+
+func (e *Executor) WithTimeout(timeout time.Duration) *Executor {
+	e.timeout = timeout
 	return e
 }
 
@@ -418,6 +426,15 @@ func (e *Executor) ProcessWait() {
 		waitErrCh <- e.cmd.Wait()
 	}()
 
+	go func() {
+		if e.timeout > 0 {
+			<-time.After(e.timeout)
+			if e.stopCh != nil {
+				e.stopCh <- struct{}{}
+			}
+		}
+	}()
+
 	// watch for wait or stop
 	go func() {
 		defer func() {
@@ -483,6 +500,7 @@ func (e *Executor) Run() error {
 	if err != nil {
 		return err
 	}
+
 	<-e.waitCh
 	return e.waitError
 }
