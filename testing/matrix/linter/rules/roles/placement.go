@@ -52,8 +52,8 @@ func ObjectRBACPlacement(m types.Module, object storage.StoreObject) errors.Lint
 				"kind %s not allowed in %q", objectKind, shortPath,
 			)
 		}
+		return errors.EmptyRuleError
 	}
-	return errors.EmptyRuleError
 }
 
 func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObject) errors.LintRuleError {
@@ -155,7 +155,8 @@ func objectRBACPlacementClusterRole(kind string, m types.Module, object storage.
 	shortPath := object.ShortPath()
 
 	name := "d8:" + m.Name
-	if shortPath == RootRBACForUsPath {
+	switch {
+	case shortPath == RootRBACForUsPath:
 		if !strings.HasPrefix(objectName, name) {
 			return errors.NewLintRuleError(
 				"MANIFEST053",
@@ -165,7 +166,7 @@ func objectRBACPlacementClusterRole(kind string, m types.Module, object storage.
 				kind, RootRBACForUsPath, name,
 			)
 		}
-	} else if strings.HasSuffix(shortPath, "rbac-for-us.yaml") {
+	case strings.HasSuffix(shortPath, "rbac-for-us.yaml"):
 		parts := strings.Split(
 			strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-for-us.yaml"), "templates/"),
 			string(os.PathSeparator),
@@ -180,7 +181,7 @@ func objectRBACPlacementClusterRole(kind string, m types.Module, object storage.
 				kind, name,
 			)
 		}
-	} else {
+	default:
 		return errors.NewLintRuleError(
 			"MANIFEST053",
 			object.Identity(),
@@ -189,6 +190,7 @@ func objectRBACPlacementClusterRole(kind string, m types.Module, object storage.
 			kind, RootRBACForUsPath,
 		)
 	}
+
 	return errors.EmptyRuleError
 }
 
@@ -197,156 +199,186 @@ func objectRBACPlacementRole(kind string, m types.Module, object storage.StoreOb
 	shortPath := object.ShortPath()
 	namespace := object.Unstructured.GetNamespace()
 
-	if shortPath == RootRBACForUsPath {
-		prefix := "d8:" + m.Name
-		namespace := object.Unstructured.GetNamespace()
-
-		if objectName == m.Name {
-			if namespace != m.Namespace && !isDeckhouseSystemNamespace(namespace) {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s in %q should be deployed in namespace \"d8-monitoring\", \"d8-system\" or %q",
-					kind, RootRBACForUsPath, m.Namespace,
-				)
-			}
-		} else if strings.HasPrefix(objectName, prefix) {
-			if !isSystemNamespace(namespace) {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s in %q should be deployed in namespace \"default\" or \"kube-system\"",
-					kind, RootRBACForUsPath,
-				)
-			}
-		} else {
-			return errors.NewLintRuleError(
-				"MANIFEST053",
-				object.Identity(),
-				objectName,
-				"%s in %q should equal %q or start with %q", kind, RootRBACForUsPath, m.Name, prefix,
-			)
-		}
-		return errors.EmptyRuleError
-	} else if shortPath == RootRBACToUsPath {
-		prefix := "access-to-" + m.Name
-		if !strings.HasPrefix(objectName, prefix) {
-			return errors.NewLintRuleError(
-				"MANIFEST053",
-				object.Identity(),
-				objectName,
-				"%s in %q should start with %q",
-				kind, RootRBACToUsPath, prefix,
-			)
-		}
-
-		namespace := object.Unstructured.GetNamespace()
-		if !isDeckhouseSystemNamespace(namespace) && namespace != m.Namespace {
-			return errors.NewLintRuleError(
-				"MANIFEST053",
-				object.Identity(),
-				namespace,
-				"%s in %q should be deployed in namespace \"d8-system\", \"d8-monitoring\" or %q",
-				kind, RootRBACToUsPath, m.Namespace,
-			)
-		}
-		return errors.EmptyRuleError
-	} else if strings.HasSuffix(shortPath, "rbac-for-us.yaml") {
-		parts := strings.Split(
-			strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-for-us.yaml"), "templates/"),
-			string(os.PathSeparator),
-		)
-		localPrefix := strings.Join(parts, ":")
-		globalPrefix := fmt.Sprintf("%s:%s", m.Name, strings.Join(parts, ":"))
-		systemPrefix := fmt.Sprintf("d8:%s", globalPrefix)
-
-		if strings.HasPrefix(objectName, localPrefix) {
-			if namespace != m.Namespace {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s with prefix %q should be deployed in namespace %q",
-					kind, localPrefix, m.Namespace,
-				)
-			}
-		} else if strings.HasPrefix(objectName, globalPrefix) {
-			if !isDeckhouseSystemNamespace(namespace) {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s with prefix %q should be deployed in namespace \"d8-system\" or \"d8-monitoring\"",
-					kind, globalPrefix,
-				)
-			}
-		} else if strings.HasPrefix(objectName, systemPrefix) {
-			if !isSystemNamespace(namespace) {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s with prefix %q should be deployed in namespace \"default\" or \"kube-system\"",
-					kind, systemPrefix,
-				)
-			}
-		} else {
-			return errors.NewLintRuleError(
-				"MANIFEST053",
-				object.Identity(),
-				objectName,
-				"%s in %q should start with %q or %q",
-				kind, shortPath, localPrefix, globalPrefix,
-			)
-		}
-	} else if strings.HasSuffix(shortPath, "rbac-to-us.yaml") {
-		parts := strings.Split(
-			strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-to-us.yaml"), "templates/"),
-			string(os.PathSeparator),
-		)
-
-		localPrefix := fmt.Sprintf("access-to-%s-", strings.Join(parts, "-"))
-		globalPrefix := fmt.Sprintf("access-to-%s-%s-", m.Name, strings.Join(parts, "-"))
-		namespace := object.Unstructured.GetNamespace()
-
-		if strings.HasPrefix(objectName, localPrefix) {
-			if namespace != m.Namespace {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s with prefix %q should be deployed in namespace %q",
-					kind, globalPrefix, m.Namespace,
-				)
-			}
-		} else if strings.HasPrefix(objectName, globalPrefix) {
-			if !isDeckhouseSystemNamespace(namespace) {
-				return errors.NewLintRuleError(
-					"MANIFEST053",
-					object.Identity(),
-					namespace,
-					"%s with prefix %q should be deployed in namespace \"d8-system\" or \"d8-monitoring\"",
-					kind, globalPrefix,
-				)
-			}
-		} else {
-			return errors.NewLintRuleError(
-				"MANIFEST053",
-				object.Identity(),
-				objectName,
-				"%s should start with %q or %q", kind, localPrefix, globalPrefix,
-			)
-		}
-	} else {
+	switch {
+	case shortPath == RootRBACForUsPath:
+		return handleRootRBACForUs(m, object, objectName, kind)
+	case shortPath == RootRBACToUsPath:
+		return handleRootRBACToUs(m, object, objectName, kind)
+	case strings.HasSuffix(shortPath, "rbac-for-us.yaml"):
+		return handleNestedRBACForUs(m, object, shortPath, objectName, namespace, kind)
+	case strings.HasSuffix(shortPath, "rbac-to-us.yaml"):
+		return handleNestedRBACToUs(m, object, shortPath, objectName, kind)
+	default:
+		msgTemplate := `%s should be in "templates/rbac-for-us.yaml", "templates/rbac-to-us.yaml", ".*/rbac-to-us.yaml" or ".*/rbac-for-us.yaml"`
 		return errors.NewLintRuleError(
 			"MANIFEST053",
 			object.Identity(),
 			shortPath,
-			"%s should be in \"templates/rbac-for-us.yaml\", \"templates/rbac-to-us.yaml\", \".*/rbac-to-us.yaml\" "+
-				"or \".*/rbac-for-us.yaml\"", kind,
+			msgTemplate,
+			kind,
 		)
 	}
+}
+
+// handleRootRBACForUs applies to templates/rbac-for-us.yaml file's objects
+func handleRootRBACForUs(m types.Module, object storage.StoreObject, objectName, kind string) errors.LintRuleError {
+	prefix := "d8:" + m.Name
+	namespace := object.Unstructured.GetNamespace()
+
+	switch {
+	case objectName == m.Name && namespace != m.Namespace:
+		if !isDeckhouseSystemNamespace(namespace) {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s in %q should be deployed in namespace \"d8-monitoring\", \"d8-system\" or %q",
+				kind, RootRBACForUsPath, m.Namespace,
+			)
+		}
+	case strings.HasPrefix(objectName, prefix):
+		if !isSystemNamespace(namespace) {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s in %q should be deployed in namespace \"default\" or \"kube-system\"",
+				kind, RootRBACForUsPath,
+			)
+		}
+	default:
+		return errors.NewLintRuleError(
+			"MANIFEST053",
+			object.Identity(),
+			objectName,
+			"%s in %q should equal %q or start with %q", kind, RootRBACForUsPath, m.Name, prefix,
+		)
+	}
+
+	return errors.EmptyRuleError
+}
+
+// handleRootRBACToUs applies to templates/rbac-to-us.yaml file's objects
+func handleRootRBACToUs(m types.Module, object storage.StoreObject, objectName, kind string) errors.LintRuleError {
+	prefix := "access-to-" + m.Name
+	if !strings.HasPrefix(objectName, prefix) {
+		return errors.NewLintRuleError(
+			"MANIFEST053",
+			object.Identity(),
+			objectName,
+			"%s in %q should start with %q",
+			kind, RootRBACToUsPath, prefix,
+		)
+	}
+
+	namespace := object.Unstructured.GetNamespace()
+	if !isDeckhouseSystemNamespace(namespace) && namespace != m.Namespace {
+		return errors.NewLintRuleError(
+			"MANIFEST053",
+			object.Identity(),
+			namespace,
+			"%s in %q should be deployed in namespace \"d8-system\", \"d8-monitoring\" or %q",
+			kind, RootRBACToUsPath, m.Namespace,
+		)
+	}
+
+	return errors.EmptyRuleError
+}
+
+// handleNestedRBACForUs applies to templates/**/rbac-for-us.yaml file's objects
+func handleNestedRBACForUs(m types.Module, object storage.StoreObject, shortPath, objectName, namespace, kind string) errors.LintRuleError {
+	parts := strings.Split(
+		strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-for-us.yaml"), "templates/"),
+		string(os.PathSeparator),
+	)
+	localPrefix := strings.Join(parts, ":")
+	globalPrefix := fmt.Sprintf("%s:%s", m.Name, strings.Join(parts, ":"))
+	systemPrefix := fmt.Sprintf("d8:%s", globalPrefix)
+
+	switch {
+	case strings.HasPrefix(objectName, localPrefix):
+		if namespace != m.Namespace {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s with prefix %q should be deployed in namespace %q",
+				kind, localPrefix, m.Namespace,
+			)
+		}
+	case strings.HasPrefix(objectName, globalPrefix):
+		if !isDeckhouseSystemNamespace(namespace) {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s with prefix %q should be deployed in namespace \"d8-system\" or \"d8-monitoring\"",
+				kind, globalPrefix,
+			)
+		}
+	case strings.HasPrefix(objectName, systemPrefix):
+		if !isSystemNamespace(namespace) {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s with prefix %q should be deployed in namespace \"default\" or \"kube-system\"",
+				kind, systemPrefix,
+			)
+		}
+	default:
+		return errors.NewLintRuleError(
+			"MANIFEST053",
+			object.Identity(),
+			objectName,
+			"%s in %q should start with %q or %q",
+			kind, shortPath, localPrefix, globalPrefix,
+		)
+	}
+
+	return errors.EmptyRuleError
+}
+
+// handleNestedRBACToUs applies to templates/**/rbac-to-us.yaml file's objects
+func handleNestedRBACToUs(m types.Module, object storage.StoreObject, shortPath, objectName, kind string) errors.LintRuleError {
+	parts := strings.Split(
+		strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-to-us.yaml"), "templates/"),
+		string(os.PathSeparator),
+	)
+
+	localPrefix := fmt.Sprintf("access-to-%s-", strings.Join(parts, "-"))
+	globalPrefix := fmt.Sprintf("access-to-%s-%s-", m.Name, strings.Join(parts, "-"))
+	namespace := object.Unstructured.GetNamespace()
+
+	switch {
+	case strings.HasPrefix(objectName, localPrefix):
+		if namespace != m.Namespace {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s with prefix %q should be deployed in namespace %q",
+				kind, globalPrefix, m.Namespace,
+			)
+		}
+	case strings.HasPrefix(objectName, globalPrefix):
+		if !isDeckhouseSystemNamespace(namespace) {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s with prefix %q should be deployed in namespace \"d8-system\" or \"d8-monitoring\"",
+				kind, globalPrefix,
+			)
+		}
+	default:
+		return errors.NewLintRuleError(
+			"MANIFEST053",
+			object.Identity(),
+			objectName,
+			"%s should start with %q or %q", kind, localPrefix, globalPrefix,
+		)
+	}
+
 	return errors.EmptyRuleError
 }

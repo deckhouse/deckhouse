@@ -323,7 +323,6 @@ func (hec *HookExecutionConfig) RunHook() {
 		err error
 
 		tmpDir string
-		//bindingContexts []hook.BindingContextV1
 
 		ValuesFile                *os.File
 		ConfigValuesFile          *os.File
