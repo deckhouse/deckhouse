@@ -35,6 +35,19 @@ func getClientOnce(sshClient *ssh.SSHClient, kubeCl *client.KubernetesClient) (*
 	return kubeCl, err
 }
 
+const (
+	destroyCacheErrorMessage = `Create cache:
+	Error: %v
+
+	Probably that Kubernetes cluster was already deleted.
+	If you want to continue, please delete the cache folder manually.
+`
+	destroyApprovalsMessage = `You will be asked for approve multiple times.
+If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+
+`
+)
+
 func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
 	app.DefineSSHFlags(cmd)
@@ -46,12 +59,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	runFunc := func(sshClient *ssh.SSHClient) error {
 		var err error
 		if err := cache.Init(sshClient.Check().String()); err != nil {
-			return fmt.Errorf(
-				"Create cache:\n\tError: %v\n\n"+
-					"\tProbably that Kubernetes cluster was already deleted.\n"+
-					"\tIf you want to continue, please delete the cache folder manually.",
-				err,
-			)
+			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
 		var kubeCl *client.KubernetesClient
@@ -164,10 +172,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 				err := terraform.DestroyPipeline(nodeRunner, name)
 				if err != nil {
-					log.ErrorLn(err)
-					log.ErrorLn("Maybe the node has already been removed.")
-					// We need to skip error there, because we don't modify data in cache
-					// even if node had been already deleted
+					return fmt.Errorf("destroing of node %s failed: %v", name, err)
 				}
 			}
 		}
@@ -192,9 +197,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
-			log.Warning("You will be asked for approve multiple times.\n" +
-				"If you understand what you are doing, you can use flag " +
-				"--yes-i-am-sane-and-i-understand-what-i-am-doing to skip approvals.\n\n")
+			log.Warning(destroyApprovalsMessage)
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()

@@ -199,7 +199,7 @@ func StartKubernetesAPIProxy(sshClient *ssh.SSHClient) (*client.KubernetesClient
 		if err := sshClient.Check().WithDelaySeconds(3).AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master available: %v", err)
 		}
-		err := retry.StartLoop("Kubernetes API proxy", 45, 20, func() error {
+		err := retry.StartLoop("Kubernetes API proxy", 45, 5, func() error {
 			kubeCl = client.NewKubernetesClient().WithSSHClient(sshClient)
 			if err := kubeCl.Init(""); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)

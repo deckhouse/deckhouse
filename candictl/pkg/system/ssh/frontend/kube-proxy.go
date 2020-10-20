@@ -30,7 +30,9 @@ func NewKubeProxy(sess *session.Session) *KubeProxy {
 
 func (k *KubeProxy) ProxyCMD() *Command {
 	command := fmt.Sprintf("kubectl proxy --port=%s --kubeconfig /etc/kubernetes/admin.conf", k.port)
-	return NewCommand(k.Session, command).Sudo()
+	cmd := NewCommand(k.Session, command).Sudo()
+	cmd.Executor = cmd.Executor.CaptureStderr(nil).CaptureStdout(nil)
+	return cmd
 }
 
 func (k *KubeProxy) Start() (port string, err error) {
@@ -79,7 +81,9 @@ func (k *KubeProxy) Start() (port string, err error) {
 	defer t.Stop()
 	select {
 	case e := <-waitCh:
-		return "", fmt.Errorf("proxy exited suddenly: %v", e)
+		template := `Proxy exited suddenly:
+%s%sStatus: %v`
+		return "", fmt.Errorf(template, string(k.proxy.StdoutBytes()), string(k.proxy.StderrBytes()), e)
 	case <-t.C:
 		return "", fmt.Errorf("timeout waiting for api proxy port")
 	case <-portReady:
@@ -152,6 +156,9 @@ func (k *KubeProxy) Start() (port string, err error) {
 
 func (k *KubeProxy) Stop() {
 	if k == nil {
+		return
+	}
+	if k.proxy == nil {
 		return
 	}
 	if k.stop {
