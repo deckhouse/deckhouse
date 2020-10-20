@@ -155,20 +155,20 @@ func EnableTrace() func() {
 
 	f, err := os.Create(fName)
 	if err != nil {
-		fmt.Printf("failed to create trace output file '%s': %v", fName, err)
+		log.InfoF("failed to create trace output file '%s': %v", fName, err)
 		os.Exit(1)
 	}
 	fns = append([]func(){
 		func() {
 			if err := f.Close(); err != nil {
-				fmt.Printf("failed to close trace file '%s': %v", fName, err)
+				log.InfoF("failed to close trace file '%s': %v", fName, err)
 				os.Exit(1)
 			}
 		},
 	}, fns...)
 
 	if err := trace.Start(f); err != nil {
-		fmt.Printf("failed to start trace to '%s': %v", fName, err)
+		log.InfoF("failed to start trace to '%s': %v", fName, err)
 		os.Exit(1)
 	}
 	fns = append([]func(){
