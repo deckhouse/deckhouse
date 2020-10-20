@@ -144,7 +144,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	cmd := parent.Command("create-resources", "Create resources in Kubernetes cluster.")
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	app.DefineResourcesFlags(cmd)
+	app.DefineResourcesFlags(cmd, true)
 
 	runFunc := func() error {
 		var resourcesToCreate *config.Resources
@@ -157,7 +157,8 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			resourcesToCreate = parsedResources
 		}
 
-		if resourcesToCreate == nil {
+		if resourcesToCreate == nil || len(resourcesToCreate.Items) == 0 {
+			log.Warning("Resources to create were not found.\n")
 			return nil
 		}
 

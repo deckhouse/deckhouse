@@ -43,7 +43,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
-	app.DefineResourcesFlags(cmd)
+	app.DefineResourcesFlags(cmd, false)
 	app.DefineDropCacheFlags(cmd)
 
 	runFunc := func() error {
