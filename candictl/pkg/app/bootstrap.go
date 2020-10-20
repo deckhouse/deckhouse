@@ -15,8 +15,12 @@ func DefineInternalNodeAddressFlags(cmd *kingpin.CmdClause) {
 		StringVar(&InternalNodeIP)
 }
 
-func DefineResourcesFlags(cmd *kingpin.CmdClause) {
+func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 	cmd.Flag("resources", "Path to a file with declared Kubernetes resources in YAML format.").
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)
+
+	if isRequired {
+		cmd.GetFlag("resources").Required()
+	}
 }
