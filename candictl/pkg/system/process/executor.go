@@ -402,6 +402,7 @@ func (e *Executor) Start() error {
 	if err != nil {
 		return err
 	}
+
 	err = e.cmd.Start()
 	if err != nil {
 		return err
@@ -483,6 +484,7 @@ func (e *Executor) Stop() {
 		return
 	}
 
+	e.stop = true
 	log.DebugF("Stop '%s'\n", e.cmd.String())
 	if e.stopCh != nil {
 		close(e.stopCh)
