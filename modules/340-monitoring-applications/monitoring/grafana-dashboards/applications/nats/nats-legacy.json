@@ -1,4 +1,19 @@
 {
+  "__inputs": [],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "5.1.0-beta1"
+    },
+    {
+      "type": "panel",
+      "id": "graph",
+      "name": "Graph",
+      "version": "5.0.0"
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -15,19 +30,105 @@
   "description": "NATS Server Dashboard",
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
-  "id": 35,
-  "iteration": 1597234662592,
+  "graphTooltip": 1,
+  "id": null,
+  "iteration": 1538431704006,
   "links": [],
   "panels": [
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$ds_prometheus",
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 14,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "nats_routes{namespace=~\"$namespace\", service=~\"$service\"}",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Routes",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 5
       },
       "id": 10,
       "panels": [],
@@ -43,34 +144,30 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 6
       },
-      "hiddenSeries": false,
       "id": 1,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
         "min": false,
+        "rightSide": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -78,20 +175,18 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "gnatsd_varz_cpu{namespace=~\"$namespace\"}",
+          "expr": "nats_cpu{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_cpu",
-          "refId": "A",
-          "step": 4
+          "legendFormat": "{{pod}}",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "Server CPU",
       "tooltip": {
@@ -100,6 +195,7 @@
         "sort": 0,
         "value_type": "cumulative"
       },
+      "transparent": false,
       "type": "graph",
       "xaxis": {
         "buckets": null,
@@ -140,34 +236,30 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 1
+        "y": 6
       },
-      "hiddenSeries": false,
       "id": 3,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
         "min": false,
+        "rightSide": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -175,20 +267,18 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "gnatsd_varz_mem{namespace=~\"$namespace\"}",
+          "expr": "nats_mem{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_mem",
-          "refId": "A",
-          "step": 4
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "Server Memory",
       "tooltip": {
@@ -211,7 +301,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -230,12 +320,11 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 13
       },
       "id": 11,
       "panels": [],
@@ -251,34 +340,29 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 0,
-        "y": 9
+        "y": 14
       },
-      "hiddenSeries": false,
       "id": 7,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -289,17 +373,15 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "gnatsd_varz_in_bytes{namespace=~\"$namespace\"}",
+          "expr": "nats_bytes_in{namespace=\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_in_bytes",
-          "refId": "A",
-          "step": 10
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "Bytes In",
       "tooltip": {
@@ -348,55 +430,53 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 9
+        "y": 14
       },
-      "hiddenSeries": false,
       "id": 8,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "returned",
+          "yaxis": 1
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": true,
       "targets": [
         {
-          "expr": "gnatsd_varz_in_msgs{namespace=~\"$namespace\"}",
+          "expr": "nats_msgs_in{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_in_msgs",
-          "refId": "A",
-          "step": 10
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "NATS Msgs In",
       "tooltip": {
@@ -445,34 +525,29 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 9
+        "y": 14
       },
-      "hiddenSeries": false,
       "id": 5,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -480,20 +555,18 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "gnatsd_varz_out_bytes{namespace=~\"$namespace\"}",
+          "expr": "nats_bytes_out{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_out_bytes",
-          "refId": "A",
-          "step": 10
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "Bytes Out",
       "tooltip": {
@@ -542,35 +615,30 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 9
+        "y": 14
       },
-      "hiddenSeries": false,
       "id": 6,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "rightSide": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -578,20 +646,18 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "gnatsd_varz_out_msgs{namespace=~\"$namespace\"}",
+          "expr": "nats_msgs_out{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_out_msgs",
-          "refId": "A",
-          "step": 10
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "NATS Msgs Out",
       "tooltip": {
@@ -633,12 +699,11 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 21
       },
       "id": 12,
       "panels": [],
@@ -654,37 +719,32 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 22
       },
-      "hiddenSeries": false,
       "id": 2,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
-      "lines": false,
-      "linewidth": 2,
+      "lines": true,
+      "linewidth": 0,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 2,
-      "points": true,
+      "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
@@ -692,17 +752,15 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "gnatsd_varz_connections{namespace=~\"$namespace\"}",
+          "expr": "nats_connections{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_connections",
-          "refId": "A",
-          "step": 2
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "Connections",
       "tooltip": {
@@ -751,58 +809,50 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 22
       },
-      "hiddenSeries": false,
       "id": 4,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
-      "lines": false,
-      "linewidth": 2,
+      "lines": true,
+      "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
+      "nullPointMode": "connected",
       "percentage": false,
       "pointradius": 2,
-      "points": true,
+      "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "gnatsd_varz_subscriptions{namespace=~\"$namespace\"}",
-          "hide": false,
+          "expr": "nats_subscriptions_total{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_subscriptions",
-          "refId": "A",
-          "step": 4
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
-      "title": "Subscriptions",
+      "title": "Subscriptions Total",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -849,34 +899,29 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 22
       },
-      "hiddenSeries": false,
       "id": 9,
       "isNew": true,
       "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
-      "lines": false,
-      "linewidth": 2,
+      "lines": true,
+      "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
       "pointradius": 2,
       "points": true,
@@ -884,20 +929,18 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "gnatsd_varz_slow_consumers{namespace=~\"$namespace\"}",
+          "expr": "nats_slow_consumers{namespace=~\"$namespace\", service=~\"$service\", pod=~\"$pod\"}",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{namespace }}-{{pod}}",
-          "metric": "gnatsd_varz_slow_consumers",
-          "refId": "A",
-          "step": 2
+          "legendFormat": "{{pod}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
-      "timeRegions": [],
       "timeShift": null,
       "title": "Slow Consumers",
       "tooltip": {
@@ -939,7 +982,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 22,
+  "schemaVersion": 16,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -950,33 +993,68 @@
           "value": "default"
         },
         "hide": 0,
-        "includeAll": false,
         "label": "Prometheus",
-        "multi": false,
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       },
       {
         "allValue": null,
         "current": {},
         "datasource": "$ds_prometheus",
-        "definition": "label_values(up{job=\"nats\"}, namespace)",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": "Namespace",
-        "multi": true,
+        "multi": false,
         "name": "namespace",
         "options": [],
-        "query": "label_values(up{job=\"nats\"}, namespace)",
+        "query": "label_values(nats_up, namespace)",
         "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
+        "regex": "/.*/",
         "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "$ds_prometheus",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Service",
+        "multi": false,
+        "name": "service",
+        "options": [],
+        "query": "label_values(nats_up{namespace=~\"$namespace\"}, service)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "$ds_prometheus",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": "label_values(nats_up{namespace=~\"$namespace\", service=~\"$service\"}, pod)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -1015,7 +1093,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "NATS",
-  "uid": "GCcRkBIMz",
-  "version": 14
+  "title": "NATS Legacy",
+  "uid": "BeAQB3diz",
+  "version": 2
 }
