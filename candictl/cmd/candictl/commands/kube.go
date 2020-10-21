@@ -102,7 +102,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(kubeCl, &deckhouse.Config{})
+			err = deckhouse.WaitForReadiness(kubeCl)
 			if err != nil {
 				return err
 			}

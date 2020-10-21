@@ -128,7 +128,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(kubeCl, &installConfig)
+			err = deckhouse.WaitForReadiness(kubeCl)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}

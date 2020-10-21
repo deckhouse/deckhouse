@@ -162,17 +162,17 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
+		}
+
+		err = operations.AskBecomePassword()
+		if err != nil {
+			return err
+		}
+
 		return log.Process("bootstrap", "Create resources", func() error {
-			sshClient, err := ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
-
 			if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
 				return err
 			}
@@ -200,6 +200,7 @@ const (
 `
 	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
 If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+
 `
 )
 
@@ -246,6 +247,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 					WithVariables(metaConfig.NodeGroupConfig(nodeGroup, index, "")).
 					WithName(nodeName).
 					WithCache(stateCache).
+					WithStatePath(stateCache.ObjectPath(nodeName)).
 					WithAutoApprove(app.SanityCheck)
 				tomb.RegisterOnShutdown(nodeRunner.Stop)
 				stateCache.AddToClean(nodeName)
@@ -262,6 +264,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 					WithVariables(metaConfig.NodeGroupConfig("master", index, "")).
 					WithName(nodeName).
 					WithCache(stateCache).
+					WithStatePath(stateCache.ObjectPath(nodeName)).
 					WithAutoApprove(app.SanityCheck)
 				tomb.RegisterOnShutdown(masterRunner.Stop)
 
@@ -275,6 +278,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
 			WithCache(stateCache).
+			WithStatePath(stateCache.ObjectPath("base-infrastructure")).
 			WithAutoApprove(app.SanityCheck)
 		tomb.RegisterOnShutdown(baseRunner.Stop)
 
