@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: конфигурация"
+title: "Сloud provider — GCP: настройки"
 ---
 
 Модуль настраивается автоматически исходя из выбранной схемы размещения (custom resource `GCPClusterConfiguration`). В большинстве случаев нет необходимости ручной конфигурации модуля.
@@ -26,39 +26,6 @@ title: "Сloud provider — GCP: конфигурация"
 * `disableExternalIP` — прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `true`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
     * Формат — bool. Опциональный параметр.
     * По-умолчанию `true`.
-
-### Примеры
-
-```yaml
-cloudProviderGcpEnabled: "true"
-cloudProviderGcp: |
-  networkName: default
-  subnetworkName: kube
-  region: europe-north1
-  zones:
-  - europe-north1-a
-  - europe-north1-b
-  - europe-north1-c
-  extraInstanceTags:
-  - kube
-  disableExternalIP: false
-  sshKey: "ssh-rsa testetestest"
-  serviceAccountKey: |
-    {
-      "type": "service_account",
-      "project_id": "test",
-      "private_key_id": "easfsadfdsafdsafdsaf",
-      "private_key": "-----BEGIN PRIVATE KEY-----\ntesttesttesttest\n-----END PRIVATE KEY-----\n",
-      "client_email": "test@test-sandbox.iam.gserviceaccount.com",
-      "client_id": "1421324321314131243214",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test%test-sandbox.iam.gserviceaccount.com"
-    }
-```
-
-## Storage
 
 Storage настраивать не нужно, модуль автоматически создаст 4 StorageClass'а, покрывающие все варианты дисков в GCP: standard или ssd, region-replicated или not-region-replicated.
 

@@ -1,5 +1,5 @@
 ---
-title: "Модуль vertical-pod-autoscaler: конфигурация"
+title: "Модуль vertical-pod-autoscaler: настройки"
 search: autoscaler
 ---
 

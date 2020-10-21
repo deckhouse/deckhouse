@@ -1,6 +1,44 @@
 ---
-title: "Модуль istio: примеры использования"
+title: "Модуль istio: примеры конфигурации"
 ---
+
+## Включить балансировку для сервиса `ratings.prod.svc.cluster.local`:
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: bookinfo-ratings
+spec:
+  host: ratings.prod.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_CONN
+```
+
+## Добавить к основному DestinationRule дополнительные, вторичные subset-ы со своими правилами.
+
+Эти subset-ы работают при использовании [VirtialService](cr.html#virtualservice):
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: bookinfo-ratings
+spec:
+  host: ratings.prod.svc.cluster.local
+  trafficPolicy: # срабатывает если к хосту обратились через классический Service.
+    loadBalancer:
+      simple: LEAST_CONN
+  subsets: # subset-ы работают только если к хосту обращаются через VirtualService, в котором эти subset-ы указаны в маршрутах.
+  - name: testv1
+    labels: # аналог selector у Service. Поды с такими лейблами попадут под действие этого subset-a.
+      version: v1
+  - name: testv3
+    labels:
+      version: v3
+    trafficPolicy:
+      loadBalancer:
+        simple: ROUND_ROBIN
+```
 
 ## Circuit Breaker
 
@@ -86,6 +124,53 @@ spec:
       weight: 10
 ```
 
+
+### Распределение нагрузки между сервисами с разными версиями для Canary Deployment
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reviews-route
+spec:
+  hosts:
+  - reviews.prod.svc.cluster.local
+  http:
+  - route:
+    - destination:
+        host: reviews.prod.svc.cluster.local
+        subset: testv1 # ссылка на subset из DestinationRule
+      weight: 25
+  - route:
+    - destination:
+        host: reviews.prod.svc.cluster.local
+        subset: testv3
+      weight: 75
+```
+
+##### Перенаправление location /uploads в другой сервис
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: uploads-route
+spec:
+  hosts:
+  - gallery.prod.svc.cluster.local
+  http:
+  - match:
+    - uri:
+        prefix: "/uploads" # если обратились на gallery.prod.svc.cluster.local/uploads/a.jpg
+    rewrite:
+      uri: "/data" # то меняем uri на /data/a.jpg
+    route:
+    - destination:
+        host: share.prod.svc.cluster.local # и обращаемся к share.prod.svc.cluster.local/data/a.jpg
+  - route:
+    - destination:
+        host: gallery.prod.svc.cluster.local # остальные запросы оставляем как есть
+```
+
+
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
@@ -127,3 +212,66 @@ spec:
   type: ClusterIP # Обязательно!
 ```
 
+## Пример настройки CR `Policy`
+```yaml
+apiVersion: authentication.istio.io/v1alpha1
+kind: Policy
+metadata:
+  name: productpage-mTLS-with-JWT
+  namespace: frod
+spec:
+  targets:
+  - name: productpage # включить данную политику аутентификации для единственного сервиса "productpage"
+    ports:
+    - number: 9000
+  peers: # Как аутентифицировать узел, с которого пришёл запрос
+  - mtls: # Все запросы от узлов должны проходить через TLS-шифрование
+      mode: STRICT
+  origins: # Узлом могут воспользоваться разные конечные пользователи и мы можем их отличать с помощью их JWT-токенов.
+  - jwt:
+      issuer: "https://securetoken.google.com"
+      audiences:
+      - "productpage"
+      jwksUri: "https://www.googleapis.com/oauth2/v1/certs"
+      jwt_headers:
+      - "x-goog-iap-jwt-assertion"
+      trigger_rules: # Не требовать JWT-аутентификацию для локейшна /health_check
+      - excluded_paths:
+        - exact: /health_check
+  principalBinding: USE_ORIGIN # Чьё авторство присваивать запросу? Узел или пользователь узла? В нашем случае — пользователь.
+```
+
+## Пример настройки CR `ServiceRole`
+
+```yaml
+apiVersion: "rbac.istio.io/v1alpha1"
+kind: ServiceRole
+metadata:
+  name: api-user
+  namespace: myns
+spec:
+  rules:
+  - services: ["store.prod.svc.cluster.local"]
+    methods: ["POST"]
+    paths: ["/rest"]
+  - services: ["api.prod.svc.cluster.local"]
+    methods: ["GET"]
+```
+
+## Пример настройки CR `ServiceRoleBinding`
+
+```yaml
+apiVersion: "rbac.istio.io/v1alpha1"
+kind: ServiceRoleBinding
+metadata:
+  name: binding-apis
+  namespace: myns
+spec:
+  subjects:
+  - user: "cluster.local/ns/myns/sa/my-service-account"
+  - properties:
+      request.headers[X-Secret-Header]: "la-resistance"
+  roleRef:
+    kind: ServiceRole
+    name: "api-user
+```

@@ -1,5 +1,5 @@
 ---
-title: "Модуль prometheus-metrics-adapter: примеры использования"
+title: "Модуль prometheus-metrics-adapter: примеры конфигурации"
 search: autoscaler, HorizontalPodAutoscaler 
 ---
 

@@ -30,17 +30,3 @@ title: "Сloud provider — AWS: Custom Resources"
 * `additionalTags` — дополнительные теги, которые будут присвоены созданным инстансам в AWS.
     * Формат — словарь.
     * Опциональный параметр.
-
-### Пример
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: AWSInstanceClass
-metadata:
-  name: worker
-spec:
-  instanceType: t3.large
-  ami: ami-040a1551f9c9d11ad
-  diskSizeGb: 15
-  diskType:  gp2
-```

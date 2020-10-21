@@ -1,5 +1,5 @@
 ---
-title: "Модуль user-authn: конфигурация"
+title: "Модуль user-authn: настройки"
 ---
 
 Модуль по умолчанию **выключен**. Для включения добавьте в CM `deckhouse`:
@@ -72,21 +72,6 @@ data:
   * `dexCustomCA` — CA, которая будет использована в случае `dexCAMode` = `Custom`.
     * Формат — обычный текст, без base64.
     * Необязательный параметр.
-
-### Пример конфигурации
-{% raw %}
-
-```yaml
-  userAuthnEnabled: "true"
-  userAuthn: |
-    kubeconfigGenerator:
-    - id: direct
-      masterURI: https://159.89.5.247:6443
-      description: "Direct access to kubernetes API"
-    publishAPI:
-      enable: true
-```
-{% endraw %}
 
 Автоматический деплой [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения и подключения его к dex происходит при создании Custom Resource [`DexAuthenticator`](cr.html#dexauthenticator).
 

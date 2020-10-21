@@ -1,5 +1,5 @@
 ---
-title: "Управление control plane: конфигурация"
+title: "Управление control plane: настройки"
 ---
 
 Управление компонентами control plane кластера осуществляется с помощью модуля `control-plane-manager`, а параметры кластера, влияющие на управление control plane, берутся из Custom Resource `ClusterConfiguration` (создается при инсталляции).
@@ -40,16 +40,3 @@ controlPlaneManagerEnabled: "false"
   * `auditPolicyEnabled` — bool, включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (audit-policy в ns kube-system)
 * `etcd` — параметры `etcd`.
   * `externalMembersNames` – массив имен внешних etcd member'ов (эти member'ы не будут удалятся).
-
-
-### Примеры
-
-```yaml
-controlPlaneManagerEnabled: "true"
-controlPlaneManager: |
-  bindToWildcard: true
-  certSANs:
-  - bakery.infra
-  - devs.infra
-  loadBalancer: {}
-```

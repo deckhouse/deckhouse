@@ -1,5 +1,5 @@
 ---
-title: "Модуль operator-prometheus: конфигурация"
+title: "Модуль operator-prometheus: настройки"
 ---
 
 Модуль не требует настройки.

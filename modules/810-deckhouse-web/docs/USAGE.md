@@ -1,11 +1,11 @@
 ---
-title: "Модуль dashboard: примеры конфигурации"
+title: "Модуль deckhouse-web: примеры конфигурации"
 ---
 
 ## Пример конфигурации модуля
 
 ```yaml
-dashboard: |
+deckhouseWeb: |
   nodeSelector:
     node-role/example: ""
   tolerations:

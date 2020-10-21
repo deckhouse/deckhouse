@@ -1,6 +1,16 @@
 ---
-title: "Модуль Prometheus Pushgateway: Примеры работы"
+title: "Модуль Prometheus Pushgateway: примеры конфигурации"
 ---
+
+## Пример настройки модуля
+```yaml
+prometheusPushgatewayEnabled: "true"
+prometheusPushgateway: |
+  instances:
+  - first
+  - second
+  - another
+```
 
 {% raw %}
 

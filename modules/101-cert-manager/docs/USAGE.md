@@ -1,11 +1,10 @@
 ---
-title: "Модуль cert-manager: примеры использования"
+title: "Модуль cert-manager: примеры конфигурации"
 ---
 
 
-## Как заказать сертификат
+## Пример заказа сертификата
 
-Все настолько понятно и очевидно, на сколько это вообще может быть! Бери и используй:
 ```yaml
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
@@ -42,7 +41,7 @@ spec:
 
 Подробнее можно прочитать [здесь](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 
-## Как заказать wildcard сертификат с DNS в Cloudflare
+## Заказ wildcard-сертификата с DNS в Cloudflare
 
 1. Получим `Global API Key` и `Email Address`:
    * Заходим на страницу: https://dash.cloudflare.com/profile
@@ -113,7 +112,7 @@ spec:
        secretName: tls-wildcard
    ```
 
-## Как заказать wildcard сертификат с DNS в Route53
+## Заказ wildcard-сертификата с DNS в Route53
 
 1. Создаем пользователя с необходимыми правами.
 
@@ -182,7 +181,7 @@ spec:
          - "*.domain.com"
    ```
 
-## Как заказать wildcard-сертификат с DNS в Google
+## Заказ wildcard-сертификата с DNS в Google
 
 1. Создаем сервис-аккаунт с необходимой ролью.
 
@@ -224,7 +223,7 @@ spec:
          - "*.domain.com"
    ```
 
-## Как заказать selfsigned-сертификат
+## Заказ selfsigned-сертификата
 
 Все еще проще, чем с LetsEncypt. Просто меняем `letsencrypt` на `selfsigned`:
 

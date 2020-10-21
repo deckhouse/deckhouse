@@ -1,8 +1,6 @@
 ---
-title: "Конфигурация"
+title: "Модуль deckhouse: настройки"
 ---
-
-## Параметры
 
 * `logLevel` — уровень логирования Deckhouse:
     * Возможные варианты: `Debug`, `Info`, `Error`; 
@@ -16,11 +14,3 @@ title: "Конфигурация"
 * `releaseChannel` — канал обновлений Deckhouse.
     * Возможные варианты в порядке возрастания стабильности обновлений: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`. 
 
-### Примеры
-
-```yaml
-deckhouse: |
-  logLevel: Debug
-  bundle: Minimal
-  releaseChannel: RockSolid
-```

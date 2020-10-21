@@ -4,7 +4,6 @@ title: "Модуль user-authz: Custom Resources"
 
 ## ClusterAuthorizationRule
 
-### Параметры
 * `subjects` — Пользователи и/или группы, которым вы хотите предоставить права. [Спецификация](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#subject-v1-rbac-authorization-k8s-io).
 * `accessLevel` — `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterAdmin`, `SuperAdmin`. Не обязательный параметр.
     * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
@@ -41,26 +40,3 @@ title: "Модуль user-authz: Custom Resources"
       kind: ClusterRole
       name: cluster-read-all
     ```
-
-### Примеры
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterAuthorizationRule
-metadata:
-  name: test
-spec:
-  subjects:
-  - kind: User
-    name: some@example.com
-  - kind: ServiceAccount
-    name: gitlab-runner-deploy
-    namespace: d8-service-accounts
-  - kind: Group
-    name: some-group-name
-  accessLevel: PrivilegedUser
-  portForwarding: true
-  allowAccessToSystemNamespaces: false     # Опция доступна только при enableMultiTenancy
-  limitNamespaces:                         # Опция доступна только при enableMultiTenancy
-  - review-.*
-  - stage
-```

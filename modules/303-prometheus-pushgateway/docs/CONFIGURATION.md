@@ -1,5 +1,5 @@
 ---
-title: "Модуль Prometheus Pushgateway: конфигурация"
+title: "Модуль Prometheus Pushgateway: настройки"
 ---
 
 Данный модуль устанавливает в кластер [Prometheus Pushgateway](https://github.com/prometheus/pushgateway). Он предназначен для приема метрик от приложения и отдачи их Prometheus.
@@ -21,13 +21,3 @@ data:
     * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
 
-### Примеры
-
-```yaml
-prometheusPushgatewayEnabled: "true"
-prometheusPushgateway: |
-  instances:
-  - first
-  - second
-  - another
-```

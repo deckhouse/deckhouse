@@ -1,5 +1,5 @@
 ---
-title: "Модуль monitoring-applications: конфигурация"
+title: "Модуль monitoring-applications: настройки"
 ---
 
 ## Параметры

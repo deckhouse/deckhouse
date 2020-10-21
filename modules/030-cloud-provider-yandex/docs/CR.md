@@ -61,15 +61,3 @@ title: "Сloud provider — Yandex.Cloud: Custom Resource"
   * Формат — key:value
   * Опциональный параметр.
 
-### Пример YandexInstanceClass
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: YandexInstanceClass
-metadata:
-  name: test
-spec:
-  cores: 4
-  memory: 8192
-```
-

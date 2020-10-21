@@ -70,6 +70,7 @@ git:
     - .helm
     - .werffiles
     - "_data/releases.yml"
+    - "_data/sidebars/main.yml"
     - "docs"
 - add: /web
   to: /srv/jekyll-data
@@ -79,6 +80,7 @@ git:
     setup: ['**/*']
   includePaths:
     - "_data/releases.yml"
+    - "_data/sidebars/main.yml"
 - add: /docs
   to: /srv/jekyll-data/docs
   owner: jekyll
