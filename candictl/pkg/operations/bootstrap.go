@@ -87,19 +87,14 @@ const (
 `
 )
 
-func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeIP, devicePath string) error {
-	bundleName, err := DetermineBundleName(sshClient)
-	if err != nil {
-		return err
-	}
-
+func CheckBashibleBundle(sshClient *ssh.SSHClient) bool {
 	var bashibleUpToDate bool
 	_ = log.Process("bootstrap", "Check Bashible", func() error {
-		bashibleCmd := sshClient.Command("bash", "/var/lib/bashible/bashible.sh", "--local").
-			Cmd().Sudo().WithTimeout(3 * time.Second)
+		bashibleCmd := sshClient.Command("/var/lib/bashible/bashible.sh", "--local").
+			Sudo().WithTimeout(20 * time.Second)
 		var output string
 
-		err = bashibleCmd.WithStdoutHandler(func(l string) { output += l + "\n" }).Run()
+		err := bashibleCmd.WithStdoutHandler(func(l string) { output += l + "\n" }).Run()
 		if err != nil {
 			log.DebugF("%v\n", err)
 		}
@@ -116,8 +111,13 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 		}
 		return nil
 	})
-	if bashibleUpToDate {
-		return nil
+	return bashibleUpToDate
+}
+
+func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+	bundleName, err := DetermineBundleName(sshClient)
+	if err != nil {
+		return err
 	}
 
 	templateController := template.NewTemplateController("")
@@ -129,6 +129,11 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 	if err := BootstrapMaster(sshClient, bundleName, nodeIP, cfg, templateController); err != nil {
 		return err
 	}
+
+	if ok := CheckBashibleBundle(sshClient); ok {
+		return nil
+	}
+
 	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
 	}

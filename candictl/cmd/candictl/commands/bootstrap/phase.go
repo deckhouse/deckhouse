@@ -12,7 +12,6 @@ import (
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
-	"flant/candictl/pkg/template"
 	"flant/candictl/pkg/terraform"
 	"flant/candictl/pkg/util/cache"
 	"flant/candictl/pkg/util/tomb"
@@ -87,7 +86,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 	app.DefineSSHFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	app.DefineInternalNodeAddressFlags(cmd)
+	app.DefineBashibleBundleFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -95,42 +94,21 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		return log.Process("bootstrap", "Execute bashible bundle", func() error {
-			sshClient, err := ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
+		}
 
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		err = operations.AskBecomePassword()
+		if err != nil {
+			return err
+		}
 
-			if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
-				return err
-			}
-			bundleName, err := operations.DetermineBundleName(sshClient)
-			if err != nil {
-				return err
-			}
+		if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
+			return err
+		}
 
-			templateController := template.NewTemplateController("")
-			log.InfoF("Templates Dir: %q\n\n", templateController.TmpDir)
-
-			if err := operations.BootstrapMaster(sshClient, bundleName, app.InternalNodeIP, metaConfig, templateController); err != nil {
-				return err
-			}
-			if err = operations.PrepareBashibleBundle(bundleName, app.InternalNodeIP, "", metaConfig, templateController); err != nil {
-				return err
-			}
-			if err := operations.ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
-				return err
-			}
-			if err := operations.RebootMaster(sshClient); err != nil {
-				return err
-			}
-			return nil
-		})
+		return operations.RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
