@@ -79,7 +79,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.internal.crowdProxyCert", "dGVzdA==")
 			hec.ValuesSet("userAuthn.internal.crowdProxyKey", "dGVzdA==")
-			hec.ValuesSetFromYaml("userAuthn.providers", `
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: crowdNexID
   name: crowdNextName
   type: Crowd

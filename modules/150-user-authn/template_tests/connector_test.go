@@ -33,9 +33,9 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 	})
 	Context("With gitlab provider in config values", func() {
 		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.providers", `
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: gitlabID
-  name: gitlabName
+  displayName: gitlabName
   type: Gitlab
   gitlab:
     clientID: clientID
@@ -70,9 +70,9 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 
 	Context("With Atlassian Crowd provider in config values", func() {
 		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.providers", `
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: crowdID
-  name: crowdName
+  displayName: crowdName
   type: Crowd
   crowd:
     clientID: clientID
@@ -105,9 +105,9 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 	})
 	Context("With Github and OIDC providers in config values", func() {
 		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.providers", `
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: githubID
-  name: githubName
+  displayName: githubName
   type: Github
   github:
     clientID: clientID
@@ -120,7 +120,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
       - Everyone
     - name: TestOrg2
 - id: oidcID
-  name: oidcName
+  displayName: oidcName
   type: OIDC
   oidc:
     issuer: https://issuer.com

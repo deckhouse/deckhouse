@@ -1,0 +1,361 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: dexproviders.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: dexproviders
+    singular: dexprovider
+    kind: DexProvider
+  version: v1alpha1
+  additionalPrinterColumns:
+    - JSONPath: .spec.type
+      name: Type
+      description: 'Type of authentication provider.'
+      type: string
+    - JSONPath: .spec.displayName
+      name: Display Name
+      description: 'Name that will be displayed on the providers selection screen.'
+      type: string
+  validation:
+    openAPIV3Schema:
+      type: object
+      required: ['spec']
+      properties:
+        spec:
+          type: object
+          required: ['displayName','type']
+          properties:
+            type:
+              type: string
+              description: 'Type of authentication provider.'
+              enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+            displayName:
+              type: string
+              description: 'Name that will be displayed on the providers selection screen.'
+            github:
+              type: object
+              required: ['clientID', 'clientSecret']
+              properties:
+                clientID:
+                  type: string
+                  description: 'Organization application ID from Github.'
+                clientSecret:
+                  type: string
+                  description: 'Organization application secret key from Github.'
+                teamNameField:
+                  type: string
+                  enum: ['name', 'slug', 'both']
+                  description: |
+                    As an example, group claims for member of 'Site Reliability Engineers' in
+                    Acme organization would yield:
+                     - ['acme:Site Reliability Engineers'] for 'name'
+                     - ['acme:site-reliability-engineers'] for 'slug'
+                     - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'both'
+
+                    'name' will be used by default.
+                useLoginAsID:
+                  type: boolean
+                  description: |
+                    Flag which will switch from using the internal GitHub id to the users handle (@mention) as the user id.
+                    It is possible for a user to change their own user name but it is very rare for them to do so.
+
+                    Equals to false by default.
+                orgs:
+                  type: array
+                  description: |
+                    Filter for user organizations. ID token will contain only organizations from this list.
+                    If the user is not in any organization from this list, an authorization will fail.
+
+                    By default, all organizations allowed.
+                  items:
+                    type: object
+                    required: ['name']
+                    properties:
+                      name:
+                        type: string
+                        description: 'Name of organization.'
+                      teams:
+                        type: array
+                        description: 'A white list of teams. Only include group claims for these teams.'
+                        items:
+                          type: string
+            gitlab:
+              type: object
+              required: ['clientID', 'clientSecret']
+              properties:
+                clientID:
+                  type: string
+                  description: 'Application ID from Gitlab.'
+                clientSecret:
+                  type: string
+                  description: 'Application secret key from Gitlab.'
+                baseURL:
+                  type: string
+                  example: 'https://gitlab.example.com'
+                  description: |
+                    Base part of gitlab URL. Default:  https://gitlab.com
+                groups:
+                   type: array
+                   description: 'A white list of groups. Only include group claims for these groups.'
+                   items:
+                     type: string
+                useLoginAsID:
+                  type: boolean
+                  description: |
+                    Flag which will switch from using the internal GitLab id to the users handle (@mention) as the user id.
+                    It is possible for a user to change their own user name but it is very rare for them to do so.
+
+                    Equals to false by default.
+            bitbucketCloud:
+              type: object
+              required: ['clientID', 'clientSecret']
+              properties:
+                clientID:
+                  type: string
+                  description: 'Team application ID from BitbucketCloud.'
+                clientSecret:
+                  type: string
+                  description: 'Team application secret key from BitbucketCloud.'
+                teams:
+                  type: array
+                  description: 'A white list of teams. Only include group claims for these teams.'
+                  items:
+                    type: string
+                includeTeamGroups:
+                  type: boolean
+                  description: |
+                    Optional parameter to include team groups.
+                    If enabled, the groups claim of dex id_token will looks like this:
+                    ["my_team", "my_team/administrators", "my_team/members"]
+
+                    Equals to false by default.
+            crowd:
+              type: object
+              required: ['clientID', 'clientSecret', 'baseURL']
+              properties:
+                clientID:
+                  type: string
+                  description: 'Application ID from Atlassian Crowd.'
+                clientSecret:
+                  type: string
+                  description: 'Application secret key from Atlassian Crowd.'
+                baseURL:
+                  type: string
+                  example: 'https://crowd.example.com/crowd'
+                  description: |
+                    Base part of Attlassian Crowd URL.
+                groups:
+                  type: array
+                  description: 'A white list of groups. Only include group claims for these groups.'
+                  items:
+                    type: string
+                usernamePrompt:
+                  type: string
+                  description: 'Prompt for username field. Equals to "Crowd username" by default.'
+                enableBasicAuth:
+                  type: boolean
+                  description: |
+                    It enables basic auth proxy for crowd. Works only if there is a single Crowd provider in your Kubernetes cluster.
+                    Equals to false by default.
+            oidc:
+              type: object
+              required: ['clientID', 'clientSecret', 'issuer']
+              properties:
+                clientID:
+                  type: string
+                  description: 'OIDC issuer application ID.'
+                clientSecret:
+                  type: string
+                  description: 'OIDC issuer application secret key.'
+                issuer:
+                  type: string
+                  example: 'https://accounts.google.com'
+                  description: |
+                    Canonical URL of the provider, also used for configuration discovery.
+                    This value MUST match the value returned in the provider config discovery.
+                insecureSkipEmailVerified:
+                  type: boolean
+                  description: |
+                    Allow authentication for clients without verified email address.
+                    Equals to false by default.
+                userIDKey:
+                  type: string
+                  description: |
+                    The set claim is used as user id. Default: "sub".
+                userNameKey:
+                  type: string
+                  description: |
+                    The set claim is used as user name. Default: "name"
+                scopes:
+                  type: array
+                  description: |
+                    List of additional scopes to request in token response.
+                    Default is ["openid", "profile", "email", "groups", "offline_access"]
+                  items:
+                    type: string
+                promptType:
+                  type: string
+                  description: |
+                    For offline_access, the prompt parameter is set by default to "prompt=consent".
+                    However this is not supported by all OIDC providers, some of them support different
+                    value for prompt, like "prompt=login" or "prompt=none"
+            ldap:
+              type: object
+              required: ['host', 'userSearch']
+              properties:
+                host:
+                  type: string
+                  example: ldap.example.com:636
+                  description: |
+                    Host and optional port of the LDAP server in the form "host:port".
+                    If the port is not supplied, it will be guessed based on "insecureNoSSL",
+                    and "startTLS" flags. 389 for insecure or StartTLS connections, 636
+                    otherwise.
+                insecureNoSSL:
+                  type: boolean
+                  description: |
+                    Following field is required if the LDAP host is not using TLS (port 389).
+                    This option inherently leaks passwords to anyone on the same network as dex.
+                    Equals to false by default.
+                startTLS:
+                  type: boolean
+                  description: |
+                    When connecting to the server, connect using the ldap:// protocol then issue
+                    a StartTLS command. If unspecified, connections will use the ldaps:// protocol
+                    Equals to false by default.
+                usernamePrompt:
+                  type: string
+                  description: |
+                    The attribute to display in the provided password prompt. If unset, will display "LDAP Username".
+                  example: SSO Username
+                rootCAData:
+                  type: string
+                  description: 'A raw certificate file can also be provided inline.'
+                  example: |
+                    -----BEGIN CERTIFICATE-----
+                    MIIFaDC...
+                    -----END CERTIFICATE-----
+                insecureSkipVerify:
+                  type: boolean
+                  description: |
+                    If a custom certificate isn't provide, this option can be used to turn on
+                    TLS certificate checks. As noted, it is insecure and shouldn't be used outside
+                    of explorative phases.
+                    Equals to false by default.
+                bindDN:
+                  type: string
+                  example: 'uid=serviceaccount,cn=users,dc=example,dc=com'
+                  description: |
+                    The DN for an application service account. The connector uses
+                    these credentials to search for users and groups. Not required if the LDAP
+                    server provides access for anonymous auth.
+                bindPW:
+                  type: string
+                  example: password
+                  description: |
+                    Password for read-only service account.
+                    Please note that if the bind password contains a `$`, it has to be saved in an
+                    environment variable which should be given as the value to `bindPW`.
+                userSearch:
+                  type: object
+                  required: ['baseDN', 'username', 'idAttr', 'emailAttr']
+                  description: 'User search maps a username and password entered by a user to a LDAP entry.'
+                  properties:
+                    bindDN:
+                      type: string
+                      example: 'cn=users,dc=example,dc=com'
+                      description: 'BaseDN to start the search from.'
+                    filter:
+                      type: string
+                      example: '(objectClass=person)'
+                      description: 'Optional filter to apply when searching the directory.'
+                    username:
+                      type: string
+                      description: |
+                        Username attribute used for comparing user entries. This will be translated
+                        and combined with the other filter as "(<attr>=<username>)".
+                    idAttr:
+                      type: string
+                      description: |
+                        LDAP attribute that will be matched to dex user id entry.
+                    emailAttr:
+                      type: string
+                      description: |
+                        LDAP attribute that will be matched to dex user email entry.
+                        When an email address is not available, use another value unique to the user, like uid.
+                    nameAttr:
+                      type: string
+                      description: |
+                        LDAP attribute that will be matched to dex user name entry.
+                        No default value provided.
+                groupSearch:
+                  type: object
+                  required: ['baseDN', 'userMatchers', 'nameAttr']
+                  description: 'Group search queries for groups given a user entry.'
+                  properties:
+                    bindDN:
+                      type: string
+                      example: 'cn=users,dc=example,dc=com'
+                      description: 'BaseDN to start the search from.'
+                    filter:
+                      type: string
+                      example: '(objectClass=person)'
+                      description: 'Optional filter to apply when searching the directory.'
+                    nameAttr:
+                      type: string
+                      description: |
+                        Represents group name.
+                    userMatchers:
+                      type: array
+                      description: |
+                        Following list contains field pairs that are used to match a user to a group. It adds a
+                        requirement to the filter that an attribute in the group must match the user's
+                        attribute value.
+                      items:
+                        type: object
+                        required: ['userAttr', 'groupAttr']
+                        properties:
+                          userAttr:
+                            type: string
+                            example: uid
+                          groupAttr:
+                            type: string
+                            example: member
+          oneOf:
+          - properties:
+              inlet:
+                enum: ['Github']
+              github: {}
+            required: ['github']
+          - properties:
+              inlet:
+                enum: ['Gitlab']
+              gitlab: {}
+            required: ['gitlab']
+          - properties:
+              inlet:
+                enum: ['BitbucketCloud']
+              bitbucketCloud: {}
+            required: ['bitbucketCloud']
+          - properties:
+              inlet:
+                enum: ['Crowd']
+              crowd: {}
+            required: ['crowd']
+          - properties:
+              inlet:
+                enum: ['OIDC']
+              oidc: {}
+            required: ['oidc']
+          - properties:
+              inlet:
+                enum: ['LDAP']
+              ldap: {}
+            required: ['ldap']

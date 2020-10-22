@@ -19,13 +19,11 @@ function __main__() {
   if [[ $(values::get userAuthn.publishAPI.enable) != "true" ]]; then
     return 0
   fi
-  if ! values::has userAuthn.providers ; then
+  if ! values::has userAuthn.internal.providers ; then
     return 0
   fi
-  if ! values::has userAuthn.providers ; then
-    return 0
-  fi
-  crowd_configs=$(values::get userAuthn.providers | jq -r ' .[] | select (.type == "Crowd")')
+
+  crowd_configs=$(values::get userAuthn.internal.providers | jq -r ' .[] | select (.type == "Crowd")')
   if [[ $(jq ' . | length' <<< ${crowd_configs} | wc -l) -ne 1 ]]; then
     return 0
   fi

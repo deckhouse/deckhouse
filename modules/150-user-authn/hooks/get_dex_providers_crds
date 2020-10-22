@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: providers
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: deckhouse.io/v1alpha1
+      kind: DexProvider
+      queue: /modules/$(module::name::kebab_case)
+      jqFilter: |
+        .spec + {"id": .metadata.name}
+EOF
+}
+
+function __main__() {
+  if ! context::has 'snapshots.providers.0'; then
+    values::set userAuthn.internal.providers '[]'
+    return 0
+  fi
+
+  values::set userAuthn.internal.providers "$(context::jq -rc '[ .snapshots.providers[] | .filterResult ]')"
+}
+
+hook::run "$@"

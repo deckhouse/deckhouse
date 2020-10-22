@@ -4,6 +4,7 @@ userAuthn:
     dexClientCRDs: []
     dexUsersCRDs: []
     dexAuthenticatorCRDs: []
+    providers: []
   publishAPI:
     enable: false
     https:

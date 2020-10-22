@@ -1,6 +1,6 @@
 {{- if include "is_basic_auth_enabled_in_any_crowd" . }}
   {{- $crowd_config := false }}
-  {{- range $provider := .Values.userAuthn.providers }}
+  {{- range $provider := .Values.userAuthn.internal.providers }}
   {{- if eq $provider.type "Crowd" }}
     {{- if $provider.crowd.enableBasicAuth }}
       {{- if $crowd_config }}
