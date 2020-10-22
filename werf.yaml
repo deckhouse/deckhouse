@@ -14,7 +14,7 @@ cleanup:
       last: 10
 ---
 image: common-base
-from: alpine:3.11
+from: alpine:3.12
 ansible:
   beforeInstall:
   - apk: update_cache=yes
@@ -236,7 +236,7 @@ docker:
 
 ---
 artifact: kcov
-from: flant/kcov-alpine:v0.5
+from: flant/kcov-alpine:v0.6
 ---
 image: tests
 fromImage: base-for-go
@@ -424,7 +424,7 @@ ansible:
         | sh -s -- -b $(go env GOPATH)/bin v1.31.0
 ---
 artifact: jq
-from: alpine:3.11
+from: alpine:3.12
 git:
 - url: https://github.com/stedolan/jq
   add: /
@@ -459,7 +459,7 @@ ansible:
 
 ---
 artifact: libjq
-from: alpine:3.11
+from: alpine:3.12
 git:
 - url: https://github.com/flant/libjq-go
   tag: v1.6.1

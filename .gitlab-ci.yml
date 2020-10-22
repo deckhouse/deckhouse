@@ -8,6 +8,8 @@ include:
 
 variables:
   WERF_VERBOSE: "1"
+  WERF_IMAGES_REPO: ${HARBOR_HOST}/sys/antiopa
+  WERF_IMAGES_REPO_IMPLEMENTATION: harbor
 
 stages:
   - build_modules_images
