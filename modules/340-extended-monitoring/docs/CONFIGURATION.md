@@ -6,12 +6,12 @@ title: "Модуль extended-monitoring: настройки"
 
 * `imageAvailability` — настройки мониторинга доступности образов в кластере.
   * `exporterEnabled` — включен ли imageAvailabilityExporter
-    * Формат — bool. По-умолчанию, `true`.
+    * Формат — bool. По умолчанию, `true`.
   * `ignoredImages` — список имён образов, наличие которых не надо проверять в registry. Например, `alpine:3.12` или `quay.io/test/test:v1.1`.
     * Формат — массив строк.
     * Опциональный параметр.
   * `skipRegistryCertVerification` — пропускать ли проверку сертификата container registry.
-    * Формат — bool. По-умолчанию, `false`.
+    * Формат — bool. По умолчанию, `false`.
 
 ## Параметры `extended-monitoring-exporter`
 

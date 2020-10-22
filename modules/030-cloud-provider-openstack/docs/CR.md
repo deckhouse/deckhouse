@@ -17,7 +17,7 @@ title: "Сloud provider — OpenStack: Custom Resources"
     * Получить список всех доступных образов можно с помощью команды: `openstack image list`
     * Опциональный параметр.
     * Формат — строкa.
-    * По-умолчанию будет установлено значение либо из OpenStackCloudDiscoveryData, либо из настроек `instances.imageName`.
+    * По умолчанию будет установлено значение либо из OpenStackCloudDiscoveryData, либо из настроек `instances.imageName`.
 * `rootDiskSize` — если параметр не указан, то для инстанса используется локальный диск с размером указанным в flavor.
   Если параметр присутствует, то OpenStack server будет создан на Cinder volume с указанным размером и стандартным для кластера типом.
     * Опциональный параметр.
@@ -32,7 +32,7 @@ title: "Сloud provider — OpenStack: Custom Resources"
 * `mainNetwork` — путь до network, которая будет подключена к виртуальной машине, как основная сеть (шлюз по умолчанию).
     * Опциональный параметр.
     * Формат — строкa.
-    * По-умолчанию будет установлено значение из OpenStackCloudDiscoveryData.
+    * По умолчанию будет установлено значение из OpenStackCloudDiscoveryData.
 * `additionalNetworks` - список сетей, которые будут подключены к инстансу.
     * Опциональный параметр.
     * Формат — массив строк.
@@ -42,7 +42,7 @@ title: "Сloud provider — OpenStack: Custom Resources"
       - enp6t4snovl2ko4p15em
       - enp34dkcinm1nr5999lu
       ```
-    * По-умолчанию будет установлено значение из OpenStackCloudDiscoveryData.
+    * По умолчанию будет установлено значение из OpenStackCloudDiscoveryData.
 * `additionalSecurityGroups` — Список `securityGroups`, которые необходимо прикрепить к instances `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud провайдера. Используется для задания firewall правил по отношению к заказываемым instances.
     > SecurityGroups могут не поддерживаться облачным провайдером
     * Опциональный параметр.

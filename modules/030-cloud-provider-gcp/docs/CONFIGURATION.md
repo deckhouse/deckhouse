@@ -25,7 +25,7 @@ title: "Сloud provider — GCP: настройки"
     * [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys).
 * `disableExternalIP` — прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `true`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
     * Формат — bool. Опциональный параметр.
-    * По-умолчанию `true`.
+    * По умолчанию `true`.
 
 Storage настраивать не нужно, модуль автоматически создаст 4 StorageClass'а, покрывающие все варианты дисков в GCP: standard или ssd, region-replicated или not-region-replicated.
 
