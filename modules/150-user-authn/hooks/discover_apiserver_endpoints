@@ -11,6 +11,7 @@ function __config__() {
      apiVersion: v1
      kind: Endpoints
      executeHookOnEvent: ["Added", "Modified"]
+     queue: /modules/$(module::name::kebab_case)
      group: main
      keepFullObjectsInMemory: false
      nameSelector:
@@ -23,6 +24,7 @@ function __config__() {
      apiVersion: v1
      kind: Service
      executeHookOnEvent: ["Added", "Modified"]
+     queue: /modules/$(module::name::kebab_case)
      group: main
      keepFullObjectsInMemory: false
      nameSelector:
