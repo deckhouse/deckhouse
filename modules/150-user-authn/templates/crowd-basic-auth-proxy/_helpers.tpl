@@ -1,6 +1,6 @@
 {{- define "is_basic_auth_enabled_in_any_crowd" }}
   {{- if .Values.userAuthn.publishAPI.enable }}
-    {{- range $provider := .Values.userAuthn.providers }}
+    {{- range $provider := .Values.userAuthn.internal.providers }}
       {{- if eq $provider.type "Crowd" }}
         {{- if $provider.crowd.enableBasicAuth }}
           not empty string

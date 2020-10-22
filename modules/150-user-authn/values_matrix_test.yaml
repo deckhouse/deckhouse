@@ -37,99 +37,6 @@ userAuthn:
   controlPlaneConfigurator:
     enabled:
       __ConstantChoices__: [true, false]
-  providers:
-    __ConstantChoices__:
-    - __EmptyItem__
-    -
-      - id: github
-        name: github
-        type: Github
-        github:
-          clientID: plainstring
-          clientSecret: plainstring
-          orgs:
-          - name: opensource
-            teams:
-            - Testers
-            - Developers
-          - name: closesource
-          teamNameField: slug
-          useLoginAsID: true
-    -
-      - id: crowd
-        name: crowd
-        type: Crowd
-        crowd:
-          clientID: plainstring
-          clientSecret: plainstring
-          groups:
-          - only
-          - team
-          enableBasicAuth: true
-      - id: crowd-next
-        name: crowd-next
-        type: Crowd
-        crowd:
-          clientID: plainstring
-          clientSecret: plainstring
-          enableBasicAuth: false
-      - id: gitlab
-        name: gitlab
-        type: Gitlab
-        gitlab:
-          clientID: plainstring
-          clientSecret: plainstring
-          groups:
-          - only
-          - team
-    -
-      - id: oidc
-        name: google
-        type: OIDC
-        oidc:
-          issuer: "https://issue.example.com"
-          clientID: plainstring
-          clientSecret: plainstring
-          basicAuthUnsupported: true
-          insecureSkipEmailVerified: true
-          getUserInfo: true
-          scopes:
-          - profile
-          - email
-          userIDKey: subsub
-          userNameKey: noname
-      - id: bitbucket
-        name: bitbucket
-        type: BitbucketCloud
-        bitbucketCloud:
-          clientID: plainstring
-          clientSecret: plainstring
-          teams:
-          - only
-          - team
-      - id: ldap
-        type: LDAP
-        name: ldap
-        ldap:
-          host: "https://ldap.host.example.com"
-          ca: plainstring
-          insecureSkipVerify: true
-          bindDN: plainstring
-          bindPW: plainstring
-          startTLS: true
-          userSearch:
-            baseDN: plainstring
-            filter: plainstring
-            username: uuid
-            idAttr: uuid
-            emailAttr: email
-            nameAttr: sub
-          groupSearch:
-            baseDN: plainstring
-            filter: plainstring
-            nameAttr: name
-            userAttr: uuid
-            groupAttr: groups
   publishAPI:
     enable:
       __ConstantChoices__: [false, true]
@@ -146,6 +53,97 @@ userAuthn:
       key: test
     kubernetesDexClientAppSecret: plainstring
     kubernetesCA: plainstring
+    providers:
+      __ConstantChoices__:
+        - __EmptyItem__
+        - - id: github
+            displayName: github
+            type: Github
+            github:
+              clientID: plainstring
+              clientSecret: plainstring
+              orgs:
+                - name: opensource
+                  teams:
+                    - Testers
+                    - Developers
+                - name: closesource
+              teamNameField: slug
+              useLoginAsID: true
+        - - id: crowd
+            displayName: crowd
+            type: Crowd
+            crowd:
+              clientID: plainstring
+              clientSecret: plainstring
+              groups:
+                - only
+                - team
+              enableBasicAuth: true
+          - id: crowd-next
+            displayName: crowd-next
+            type: Crowd
+            crowd:
+              clientID: plainstring
+              clientSecret: plainstring
+              enableBasicAuth: false
+          - id: gitlab
+            displayName: gitlab
+            type: Gitlab
+            gitlab:
+              clientID: plainstring
+              clientSecret: plainstring
+              groups:
+                - only
+                - team
+        - - id: oidc
+            displayName: google
+            type: OIDC
+            oidc:
+              issuer: "https://issue.example.com"
+              clientID: plainstring
+              clientSecret: plainstring
+              basicAuthUnsupported: true
+              insecureSkipEmailVerified: true
+              getUserInfo: true
+              scopes:
+                - profile
+                - email
+              userIDKey: subsub
+              userNameKey: noname
+          - id: bitbucket
+            displayName: bitbucket
+            type: BitbucketCloud
+            bitbucketCloud:
+              clientID: plainstring
+              clientSecret: plainstring
+              teams:
+                - only
+                - team
+          - id: ldap
+            type: LDAP
+            displayName: ldap
+            ldap:
+              host: "ldap.host.example.com:1234"
+              rootCAData: plainstring
+              insecureSkipVerify: true
+              bindDN: plainstring
+              bindPW: plainstring
+              startTLS: true
+              userSearch:
+                baseDN: plainstring
+                filter: plainstring
+                username: uuid
+                idAttr: uuid
+                emailAttr: email
+                nameAttr: sub
+              groupSearch:
+                baseDN: plainstring
+                filter: plainstring
+                nameAttr: name
+                userMatchers:
+                - userAttr: uuid
+                  groupAttr: groups
     discoveredDexCA:
       __ConstantChoices__: [teststring, __EmptyItem__]
     controlPlaneConfigurator:

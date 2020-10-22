@@ -25,13 +25,13 @@
   {{- if $context.Values.userAuthn.internal.dexUsersCRDs }}
   enablePasswordDB: true
   {{- end }}
-  {{- if $context.Values.userAuthn.providers }}
+  {{- if $context.Values.userAuthn.internal.providers }}
   connectors:
-    {{- range $provider := $context.Values.userAuthn.providers }}
+    {{- range $provider := $context.Values.userAuthn.internal.providers }}
       {{- if eq $provider.type "Github" }}
     - type: github
       id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
+      name: {{ $provider.displayName | quote }}
       config:
         clientID: {{ $provider.github.clientID | quote }}
         clientSecret: {{ $provider.github.clientSecret | quote }}
@@ -56,12 +56,13 @@
       {{- if eq $provider.type "Gitlab" }}
     - type: gitlab
       id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
+      name: {{ $provider.displayName | quote }}
       config:
         baseURL: {{ $provider.gitlab.baseURL | quote }}
         clientID: {{ $provider.gitlab.clientID | quote }}
         clientSecret: {{ $provider.gitlab.clientSecret | quote }}
         redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        useLoginAsID: {{ $provider.gitlab.useLoginAsID | default false }}
         {{- if $provider.gitlab.groups }}
         groups:
           {{- range $group := $provider.gitlab.groups }}
@@ -73,7 +74,7 @@
       {{- if eq $provider.type "BitbucketCloud" }}
     - type: bitbucket-cloud
       id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
+      name: {{ $provider.displayName | quote }}
       config:
         clientID: {{ $provider.bitbucketCloud.clientID | quote }}
         clientSecret: {{ $provider.bitbucketCloud.clientSecret | quote }}
@@ -91,31 +92,37 @@
       {{- if eq $provider.type "LDAP" }}
     - type: ldap
       id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
+      name: {{ $provider.displayName | quote }}
       config:
         host: {{ $provider.ldap.host | quote }}
         {{- if $provider.ldap.insecureSkipVerify }}
         insecureSkipVerify: {{ $provider.ldap.insecureSkipVerify | quote }}
         {{- end }}
-        {{- if $provider.ldap.ca }}
-        rootCAData: {{ $provider.ldap.ca | b64enc }}
+        {{- if $provider.ldap.rootCAData }}
+        rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
         {{- end }}
+        {{- if $provider.ldap.bindDN  }}
         bindDN: {{ $provider.ldap.bindDN | quote }}
+        {{- end }}
+        {{- if $provider.ldap.bindPW  }}
         bindPW: {{ $provider.ldap.bindPW | quote }}
+        {{- end }}
         {{- if $provider.ldap.startTLS }}
         startTLS: true
         {{- end }}
         userSearch:
 {{ $provider.ldap.userSearch | toYaml | indent 8 }}
+        {{- if $provider.ldap.groupSearch }}
         groupSearch:
 {{ $provider.ldap.groupSearch | toYaml | indent 8 }}
-        usernamePrompt: "LDAP username"
+        {{- end }}
+        usernamePrompt: {{ $provider.ldap.usernamePrompt | default "LDAP username" | quote }}
       {{- end }}
 
       {{- if eq $provider.type "OIDC" }}
     - type: oidc
       id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
+      name: {{ $provider.displayName | quote }}
       config:
         issuer: {{ $provider.oidc.issuer | quote }}
         clientID: {{ $provider.oidc.clientID | quote }}
@@ -143,13 +150,15 @@
         - groups
         - offline_access
         {{- end }}
-        usernamePrompt: "OIDC username"
+        {{- if $provider.oidc.promptType }}
+        promptType: {{ $provider.oidc.promptType | quote }}
+        {{- end }}
       {{- end }}
 
       {{- if eq $provider.type "Crowd" }}
     - type: atlassian-crowd
       id: {{ $provider.id | quote }}
-      name: {{ $provider.name | quote }}
+      name: {{ $provider.displayName | quote }}
       config:
         baseURL: {{ $provider.crowd.baseURL | quote }}
         clientID: {{ $provider.crowd.clientID | quote }}

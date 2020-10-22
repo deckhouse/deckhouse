@@ -1,0 +1,51 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+EOF
+}
+
+function __main__() {
+  if ! values::has --config 'userAuthn.providers.0'; then
+    return 0
+  fi
+
+  providers=$(values::get --config userAuthn.providers | jq -cr '
+    . | map(
+      {
+        "apiVersion": "deckhouse.io/v1alpha1",
+        "kind": "DexProvider",
+        "metadata": {
+          "name": .id
+        },
+        "spec": {
+          "type": .type,
+          "displayName": .name,
+
+          "github": .github,
+          "gitlab": .gitlab,
+          "bitbucketCloud": .bitbucketCloud,
+          "oidc": .oidc,
+          "crowd": .crowd,
+          "ldap": .ldap,
+        } | with_entries( select( .value != null ) )
+      }
+    )'
+  )
+
+  for key in $(jq -rc 'keys[]' <<< "${providers}"); do
+    provider=$(jq -rc --arg key "$key" '.[$key | tonumber]' <<< "${providers}")
+    id=$(jq -rc '.metadata.name' <<< ${provider} | tools::to_slug)
+
+    kubernetes::replace_or_create_json <<< $(jq -r --arg slug_id "$id" '.metadata.name = $slug_id' <<< ${provider})
+  done
+
+  echo "$(values::get --config userAuthn.providers)" # log-driven backup
+  values::unset --config userAuthn.providers
+}
+
+hook::run "$@"
