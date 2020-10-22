@@ -23,7 +23,7 @@ function __on_kubernetes::prometheus_scrape_interval::synchronization() {
   if context::has objects.0; then
     values::set global.discovery.prometheusScrapeInterval "$(context::get objects.0.filterResult | deckhouse-controller helper unit convert --mode duration)"
   else
-    values::unset global.discovery.prometheusScrapeInterval
+    values::set global.discovery.prometheusScrapeInterval 30
   fi
 }
 
@@ -32,7 +32,7 @@ function __on_kubernetes::prometheus_scrape_interval::added_or_modified() {
 }
 
 function __on_kubernetes::prometheus_scrape_interval::deleted() {
-  values::unset global.discovery.prometheusScrapeInterval
+  values::set global.discovery.prometheusScrapeInterval 30
 }
 
 hook::run "$@"

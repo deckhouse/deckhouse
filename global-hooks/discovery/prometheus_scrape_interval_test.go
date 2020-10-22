@@ -50,7 +50,7 @@ data:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").String()).To(Equal("30"))
 		})
 
 		Context("CM d8-monitoring/prometheus-scrape-interval created", func() {
@@ -71,9 +71,9 @@ data:
 					f.RunHook()
 				})
 
-				It("Hook must execute successfully and global.discovery.prometheusScrapeInterval unset", func() {
+				It("Hook must execute successfully and global.discovery.prometheusScrapeInterval must equals to default value '30'", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").Exists()).To(BeFalse())
+					Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").String()).To(Equal("30"))
 				})
 			})
 		})
@@ -109,9 +109,9 @@ data:
 					f.RunHook()
 				})
 
-				It("global.discovery.prometheusScrapeInterval must not exists", func() {
+				It("global.discovery.prometheusScrapeInterval must equals to default value '30'", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").Exists()).To(BeFalse())
+					Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").String()).To(Equal("30"))
 				})
 			})
 		})
