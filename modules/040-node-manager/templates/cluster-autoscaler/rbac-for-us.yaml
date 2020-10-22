@@ -39,6 +39,13 @@ rules:
   resources: ["endpoints"]
   resourceNames: ["cluster-autoscaler"]
   verbs: ["get", "update", "patch", "delete"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  resourceNames: ["cluster-autoscaler"]
+  verbs: ["get", "update", "patch", "delete"]
 - apiGroups:
   - machine.sapcloud.io
   resources:
