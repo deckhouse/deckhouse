@@ -188,7 +188,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
 
-		err = deckhouse.WaitForReadiness(kubeCl, config)
+		err = deckhouse.WaitForReadiness(kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse install: %v", err)
 		}

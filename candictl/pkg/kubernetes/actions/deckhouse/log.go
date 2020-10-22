@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,6 +16,12 @@ import (
 	"flant/candictl/pkg/log"
 )
 
+var (
+	ErrListPods      = errors.New("No Deckhouse pod found.")
+	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
+	ErrRequestFailed = errors.New("Request failed. Probably pod doesn't exist anymore.")
+)
+
 type logLine struct {
 	Module    string `json:"module,omitempty"`
 	Level     string `json:"level,omitempty"`
@@ -23,20 +30,20 @@ type logLine struct {
 	Component string `json:"operator.component,omitempty"`
 }
 
-func PrintDeckhouseLogs(ctx context.Context, kubeCl *client.KubernetesClient, stopChan chan struct{}) error {
+func PrintDeckhouseLogs(ctx context.Context, kubeCl *client.KubernetesClient) (bool, error) {
 	pods, err := kubeCl.CoreV1().Pods("d8-system").List(metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		return fmt.Errorf("Waiting for an API")
+		return false, ErrListPods
 	}
 
 	if len(pods.Items) < 1 {
-		return fmt.Errorf("No Deckhouse pod found")
+		return false, ErrListPods
 	}
 
 	for _, pod := range pods.Items {
 		message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
 		if pod.Status.Phase != corev1.PodRunning {
-			return fmt.Errorf(message)
+			return false, fmt.Errorf(message)
 		}
 		log.InfoLn(message)
 		log.InfoLn("Running pod found! Checking logs...")
@@ -44,27 +51,41 @@ func PrintDeckhouseLogs(ctx context.Context, kubeCl *client.KubernetesClient, st
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(5)}
 
-	ticker := time.NewTicker(3 * time.Second)
-	defer ticker.Stop()
-
 	for {
 		select {
-		case <-ticker.C:
+		case <-ctx.Done():
+			return false, ErrTimedOut
+		default:
 			request := kubeCl.CoreV1().Pods("d8-system").GetLogs(pods.Items[0].Name, &logOptions)
 			result, err := request.DoRaw()
 			if err != nil {
-				return fmt.Errorf("Request failed. Probably pod doesn't exist anymore.")
+				return false, ErrRequestFailed
 			}
 
 			printLogsByLine(result)
 
+			runningPod, err := kubeCl.CoreV1().Pods("d8-system").Get(pods.Items[0].Name, metav1.GetOptions{})
+			if err != nil {
+				return false, ErrRequestFailed
+			}
+
+			ready := true
+			status := runningPod.Status
+			for _, condition := range status.Conditions {
+				if condition.Status == corev1.ConditionTrue {
+					continue
+				}
+				ready = false
+				log.DebugF("Pod is not ready: %s = %s\n", condition.Type, condition.Status)
+			}
+
+			if ready {
+				return true, nil
+			}
+
 			<-time.After(time.Second)
 			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
-		case <-ctx.Done():
-			return nil
-		case <-stopChan:
-			return nil
 		}
 	}
 }
@@ -90,6 +111,10 @@ func printLogsByLine(content []byte) {
 		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
 			log.InfoF("\tModule %q run successfully\n", line.Module)
 			continue
+		}
+
+		if line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
+			log.InfoLn("No more converge tasks found in Deckhouse queue.")
 		}
 	}
 }

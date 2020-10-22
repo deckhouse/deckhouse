@@ -3,6 +3,7 @@ package deckhouse
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -273,63 +274,29 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 	})
 }
 
-func WaitForReadiness(kubeCl *client.KubernetesClient, cfg *Config) error {
+func WaitForReadiness(kubeCl *client.KubernetesClient) error {
 	return log.Process("default", "Waiting for Deckhouse to become Ready", func() error {
-		// watch for deckhouse pods in namespace become Ready
-		ready := make(chan struct{}, 1)
-		stopLogsChan := make(chan struct{}, 1)
-
-		informer := client.NewDeploymentInformer(context.Background(), kubeCl)
-		informer.Namespace = "d8-system"
-		informer.FieldSelector = "metadata.name=deckhouse"
-
-		err := informer.CreateSharedInformer()
-		if err != nil {
-			return err
-		}
-		defer informer.Stop()
-
-		var waitErr error
-		informer.WithKubeEventCb(func(obj *appsv1.Deployment, event string) {
-			switch event {
-			case "Added":
-				fallthrough
-			case "Modified":
-				// Naive simple ready indicator
-				status := obj.Status
-				if status.Replicas > 0 && status.Replicas == status.ReadyReplicas && status.UnavailableReplicas == 0 {
-					stopLogsChan <- struct{}{}
-					ready <- struct{}{}
-				}
-			case "Deleted":
-				waitErr = fmt.Errorf("Deckhouse deployment was deleted while waiting for readiness.")
-				stopLogsChan <- struct{}{}
-				ready <- struct{}{}
-			}
-		})
-
-		go informer.Run()
-
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 		for {
 			select {
-			case <-ticker.C:
-				err = PrintDeckhouseLogs(ctx, kubeCl, stopLogsChan)
+			case <-ctx.Done():
+				return ErrTimedOut
+			default:
+				ready, err := PrintDeckhouseLogs(ctx, kubeCl)
 				if err != nil {
+					if errors.Is(err, ErrTimedOut) {
+						return err
+					}
 					log.InfoLn(err.Error())
 				}
-			case <-ctx.Done():
-				return fmt.Errorf("Timeout while waiting for deckhouse deployment readiness. Check deckhouse queue and logs for errors.")
-			case <-ready:
-				if waitErr == nil {
-					log.InfoF("Deckhouse deployment is ready.\n")
+
+				if ready {
+					log.InfoLn("Deckhouse pod is Ready!")
 					return nil
 				}
-				return waitErr
+
+				time.Sleep(5 * time.Second)
 			}
 		}
 	})
