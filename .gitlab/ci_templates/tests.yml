@@ -1,122 +1,136 @@
 .Matrix Tests template:
   stage: testing
+  before_script:
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
   script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests
-        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
+  - pwd
+  - docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+  - werf run tests
+      --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+      -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
   interruptible: true
 
 .Hooks Configuration Tests template:
   stage: testing
   before_script:
-    - rm -rf shell-operator || true
-    - git submodule update --init --recursive
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
+  - rm -rf shell-operator || true
+  - git submodule update --init --recursive
   script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - werf run tests
-        --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-        -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
+  - pwd
+  - docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+  - werf run tests
+      --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+      -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
   interruptible: true
 
 .Tests template:
   stage: testing
   before_script:
-    - rm -rf shell-operator || true
-    - git submodule update --init --recursive
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
+  - rm -rf shell-operator || true
+  - git submodule update --init --recursive
   script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - rm -rf testing/kcov-report
-    - chmod -R 0777 testing
-    - |
-      >testing/dummy_dirs
-      for dir in $(find -L global-hooks modules/*/hooks -type d); do
-        echo "$dir" >> testing/dummy_dirs
-        cat > "$dir/dummy" <<"EOF"
-          #!/bin/bash
-      EOF
-      done
-    - >
-      werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
-      go test -vet=off ./modules/... ./global-hooks/...
-    - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
+  - pwd
+  - docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+  - rm -rf testing/kcov-report
+  - chmod -R 0777 testing
+  - |
+    >testing/dummy_dirs
+    for dir in $(find -L global-hooks modules/*/hooks -type d); do
+      echo "$dir" >> testing/dummy_dirs
+      cat > "$dir/dummy" <<"EOF"
+        #!/bin/bash
+    EOF
+    done
+  - >
+    werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
+    go test -vet=off ./modules/... ./global-hooks/...
+  - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   after_script:
-    - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse alpine:3.11 chmod -R 0777 /testing
+  - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse alpine:3.11 chmod -R 0777 /testing
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   artifacts:
     when: always
     paths:
     - testing/kcov-report
     expire_in: 14 days
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
   interruptible: true
 
 .No Cyrillic Validation template:
   stage: testing
   script:
-    - pwd
-    - ./testing/validate_no_cyrillic.sh ${CI_PROJECT_ID} ${CI_COMMIT_SHA} ${FOX_ACCESS_TOKEN}
+  - pwd
+  - ./testing/validate_no_cyrillic.sh ${CI_PROJECT_ID} ${CI_COMMIT_SHA} ${FOX_ACCESS_TOKEN}
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
   interruptible: true
 
 .Web links test:
+  stage: testing
   variables:
     REPORT_FILE: link_test_report.txt
-  stage: testing
+  before_script:
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
   script:
-    - ./modules_images_werf test_web_links
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
-    - werf run --config werf-web.yaml dev/web-public --docker-options="--rm --entrypoint cat" -- /usr/share/nginx/html/link_test_report.txt | tee ${REPORT_FILE}
-    - echo -e "\n#################################################\nPublic site link checking report...\n"
-    - |
-      cat ${REPORT_FILE} | grep -Eq 'finished successfully.$'
-      if [ $? -ne 0 ]; then
-        exit 1
-      fi
+  - docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - ./modules_images_werf test_web_links
+  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
+  - werf run --config werf-web.yaml dev/web-public --docker-options="--rm --entrypoint cat" -- /usr/share/nginx/html/link_test_report.txt | tee ${REPORT_FILE}
+  - echo -e "\n#################################################\nPublic site link checking report...\n"
+  - |
+    cat ${REPORT_FILE} | grep -Eq 'finished successfully.$'
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
   after_script:
     - rm -f ${REPORT_FILE}
   except:
@@ -135,18 +149,22 @@
 
 .Candictl Tests template:
   stage: testing
+  before_script:
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
   script:
-    - pwd
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
-    - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
+  - pwd
+  - docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
+  - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"

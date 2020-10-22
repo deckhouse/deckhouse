@@ -1,25 +1,30 @@
 .Cleanup registry template:
   stage: cleanup_registry
   before_script:
-    - type multiwerf && source <(multiwerf use 1.1 alpha)
-    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
+  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+  - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   script:
-    - werf cleanup --without-kube
+  - werf cleanup --without-kube
   only:
   - schedules
 
 .Cleanup modules registry template:
   stage: cleanup_registry
+  before_script:
+  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-modules-images
+  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
   script:
-    - ./modules_images_werf cleanup
+  - ./modules_images_werf cleanup
   only:
   - schedules
 
 .Cleanup modules images template:
   stage: cleanup_builder
   script:
-    - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
-    - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
+  - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
+  - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
   only:
-    - schedules
+  - schedules
