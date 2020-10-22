@@ -105,7 +105,6 @@ scheduler:
     bind-address: {{ .nodeIP | quote }}
 {{- end }}
     port: "0"
-    v: "8"
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}
