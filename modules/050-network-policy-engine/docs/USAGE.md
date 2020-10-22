@@ -1,5 +1,5 @@
 ---
-title: "Модуль network-policy-engine: примеры использования"
+title: "Модуль network-policy-engine: примеры конфигурации"
 ---
 
 ## Примеры network policies

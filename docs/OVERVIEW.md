@@ -130,7 +130,7 @@ global: |
 
 Deckhouse устанавливает только включённые [модули](https://github.com/flant/addon-operator/blob/master/MODULES.md). Смотри подробнее про алгоритм определения включённости модуля [тут](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery).
 
-Модули могут быть включены или выключены по умолчанию, исходя из используемого [варианта поставки](/modules/020-deckhouse/configuration.html#параметры).
+Модули могут быть включены или выключены по умолчанию, исходя из используемого [варианта поставки](/modules/020-deckhouse/configuration.html).
 
 Для включения/отключения модуля, необходимо добавить в configMap `deckhouse` параметр `<moduleName>Enabled` — `"true"` или `"false"`, где `<moduleName>` — название модуля в camelCase.
 

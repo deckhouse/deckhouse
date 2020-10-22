@@ -2,79 +2,99 @@
 {% assign sidebar = site.data.sidebars[page.sidebar].entries %}
 <ul class="sidebar" id="mysidebar">
   {%- capture page_url_without_index_html %}{{ page.url | remove: "index.html" }}{% endcapture %}
-  {% for entry in sidebar %}
+  {%- for entry in sidebar %}
   {%- for folder in entry.folders %}
-        {%- if folder.folderitems %}
-          <li class="sidebar__item sidebar__item_parent">
+        {%- if folder.folders %}
+            <li class="sidebar__item sidebar__item_parent">
             <a title="{{folder.title}}" href="#">{{folder.title}} </a>
             <ul class="sidebar__submenu">
-            {%- for folderitem in folder.folderitems %}
-            {%- if folderitem.external_url %}
-            <li class="sidebar__submenu-item"><a title="{{folderitem.title}}" href="{{folderitem.external_url}}" target="_blank" rel="noopener">{{folderitem.title}}</a></li>
-            {%- elsif page.url == folderitem.url %}
-            <li class="sidebar__submenu-item active"><a title="{{folderitem.title}}" href="{{ site.baseurl }}/{{folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
-            {%- elsif page_url_without_index_html == folderitem.url %}
-            <li class="sidebar__submenu-item active"><a title="{{folderitem.title}}" href="{{ site.baseurl }}/{{folderitem.url | remove_first: "/" }}">{{folderitem.title}}</a></li>
-            {%- elsif folderitem.type == "empty" %}
-            <li class="sidebar__submenu-item"><a title="{{folderitem.title}}" href="{{ site.baseurl }}/{{folderitem.url | remove_first: "/"}}">{{folderitem.title}}</a></li>
-            {%- else %}
-            <li class="sidebar__submenu-item"><a title="{{folderitem.title}}" href="{{ site.baseurl }}/{{folderitem.url | remove_first: "/"}}">{{folderitem.title}}</a></li>
-            {%- endif %}
-            {%- endfor %}
-            </ul>
-          </li>
-        {%- elsif folder.subfolders %}
-          <li class="sidebar__item sidebar__item_parent">
-            <a title="{{folder.title}}" href="#">{{folder.title}} </a>
-            <ul class="sidebar__submenu">
-            {%- for subfolder in folder.subfolders %}
-                {%- if subfolder.subfolders %}
+            {%- for subfolder in folder.folders %}
+                {%- if subfolder.folders %}
                     <li class="sidebar__item sidebar__item_parent">
                     <a title="{{subfolder.title}}" href="#">{{subfolder.title}} </a>
                     <ul class="sidebar__submenu">
-                    {%- for subsubfolder in subfolder.subfolders %}
-                      {%- if subsubfolder.subfolderitems %}
-                        <li class="sidebar__subsubmenu-item sidebar__subsubmenu-item_parent"><a title="{{subsubfolder.title}}" href="#">{{ subsubfolder.title }}</a>
+                    {%- for l2_folder in subfolder.folders %}
+                      {%- if l2_folder.folders %}
+                        <li class="sidebar__subsubmenu-item sidebar__subsubmenu-item_parent">
+                        <a title="{{l2_folder.title}}" href="#">{{ l2_folder.title }}</a>
                         <ul class="sidebar__subsubmenu">
-                        {% for subsubfolderitem in subsubfolder.subfolderitems %}
-                          {% if subsubfolderitem.external_url %}
-                          <li class="sidebar__subsubmenu-item"><a title="{{subsubfolderitem.title}}" href="{{subsubfolderitem.external_url}}" target="_blank" rel="noopener">{{subsubfolderitem.title}}</a></li>
-                          {% elsif page.url == subsubfolderitem.url %}
-                          <li class="sidebar__subsubmenu-item active"><a title="{{subsubfolderitem.title}}" href="{{ site.baseurl }}/{{subsubfolderitem.url | remove_first: "/"}}">{{subsubfolderitem.title}}</a></li>
-                          {% elsif page_url_without_index_html == subsubfolderitem.url %}
-                          <li class="sidebar__subsubmenu-item active"><a title="{{subsubfolderitem.title}}" href="{{ site.baseurl }}/{{subsubfolderitem.url | remove_first: "/"}}">{{subsubfolderitem.title}}</a></li>
-                          {% else %}
-                          <li class="sidebar__subsubmenu-item"><a title="{{subsubfolderitem.title}}" href="{{ site.baseurl }}/{{subsubfolderitem.url | remove_first: "/"}}">{{subsubfolderitem.title}}</a></li>
-                          {% endif %}
+                        {%- for l3_folder in l2_folder.folders %}
+                          {%- if l3_folder.folders %}
+                            <li class="sidebar__subsubmenu-item sidebar__subsubmenu-item_parent">
+                            <a title="{{l3_folder.title}}" href="#">{{ l3_folder.title }}</a>
+                            <ul class="sidebar__subsubmenu">
+                            {%- for l4_folder in l3_folder.folders %}
+                              {%- if l4_folder.folders %}
+                                <li class="sidebar__subsubmenu-item sidebar__subsubmenu-item_parent">
+                                <a title="{{l4_folder.title}}" href="#">{{ l4_folder.title }}</a>
+                                <ul class="sidebar__subsubmenu">
+                                {%- for l5_folder in l4_folder.folders %}
+                                  {%- if l5_folder.external_url %}
+                                  <li class="sidebar__subsubmenu-item"><a title="{{ l5_folder.title}}" href="{{l5_folder.external_url}}" target="_blank" rel="noopener">{{l5_folder.title}}</a></li>
+                                  {%- elsif page.url == subsubsubfolderitem.url %}
+                                  <li class="sidebar__subsubmenu-item active"><a title="{{l5_folder.title}}" href="{{ site.baseurl }}/{{l5_folder.url | remove_first: "/"}}">{{l5_folder.title}}</a></li>
+                                  {%- elsif page_url_without_index_html == l5_folder.url %}
+                                  <li class="sidebar__subsubmenu-item active"><a title="{{l5_folder.title}}" href="{{ site.baseurl }}/{{l5_folder.url | remove_first: "/"}}">{{l5_folder.title}}</a></li>
+                                  {%- else %}
+                                  <li class="sidebar__subsubmenu-item"><a title="{{l5_folder.title}}" href="{{ site.baseurl }}/{{l5_folder.url | remove_first: "/"}}">{{l5_folder.title}}</a></li>
+                                  {%- endif %}
+                                {%- endfor %}
+                                </ul>
+                                </li>
+                              {%- else %}
+                                {%- if l4_folder.external_url %}
+                                <li class="sidebar__subsubmenu-item"><a title="{{ l4_folder.title}}" href="{{l4_folder.external_url}}" target="_blank" rel="noopener">{{l4_folder.title}}</a></li>
+                                {%- elsif page.url == l4_folder.url %}
+                                <li class="sidebar__subsubmenu-item active"><a title="{{l4_folder.title}}" href="{{ site.baseurl }}/{{l4_folder.url | remove_first: "/"}}">{{l4_folder.title}}</a></li>
+                                {%- elsif page_url_without_index_html == l4_folder.url %}
+                                <li class="sidebar__subsubmenu-item active"><a title="{{l4_folder.title}}" href="{{ site.baseurl }}/{{l4_folder.url | remove_first: "/"}}">{{l4_folder.title}}</a></li>
+                                {%- else %}
+                                <li class="sidebar__subsubmenu-item"><a title="{{l4_folder.title}}" href="{{ site.baseurl }}/{{l4_folder.url | remove_first: "/"}}">{{l4_folder.title}}</a></li>
+                                {%- endif %}
+                              {%- endif %}
+                            {%- endfor %}
+                            </ul>
+                            </li>
+                          {%- else %}
+                              {%- if l3_folder.external_url %}
+                              <li class="sidebar__subsubmenu-item"><a title="{{l3_folder.title}}" href="{{l3_folder.external_url}}" target="_blank" rel="noopener">{{l3_folder.title}}</a></li>
+                              {%- elsif page.url == l3_folder.url %}
+                              <li class="sidebar__subsubmenu-item active"><a title="{{l3_folder.title}}" href="{{ site.baseurl }}/{{l3_folder.url | remove_first: "/"}}">{{l3_folder.title}}</a></li>
+                              {%- elsif page_url_without_index_html == l3_folder.url %}
+                              <li class="sidebar__subsubmenu-item active"><a title="{{l3_folder.title}}" href="{{ site.baseurl }}/{{l3_folder.url | remove_first: "/"}}">{{l3_folder.title}}</a></li>
+                              {%- else %}
+                              <li class="sidebar__subsubmenu-item"><a title="{{l3_folder.title}}" href="{{ site.baseurl }}/{{l3_folder.url | remove_first: "/"}}">{{l3_folder.title}}</a></li>
+                              {%- endif %}
+                          {%- endif %}
                         {% endfor %}
                         </ul>
                         </li>
                       {%- else %}
-                          {% if subsubfolder.external_url %}
-                          <li class="sidebar__subsubmenu-item"><a title="{{subsubfolder.title}}" href="{{subsubfolder.external_url}}" target="_blank" rel="noopener">{{subsubfolder.title}}</a></li>
-                          {% elsif page.url == subsubfolder.url %}
-                          <li class="sidebar__subsubmenu-item active"><a title="{{subsubfolder.title}}" href="{{ site.baseurl }}/{{subsubfolder.url | remove_first: "/"}}">{{subsubfolder.title}}</a></li>
-                          {% elsif page_url_without_index_html == subsubfolder.url %}
-                          <li class="sidebar__subsubmenu-item active"><a title="{{subsubfolder.title}}" href="{{ site.baseurl }}/{{subsubfolder.url | remove_first: "/"}}">{{subsubfolder.title}}</a></li>
-                          {% else %}
-                          <li class="sidebar__subsubmenu-item"><a title="{{subsubfolder.title}}" href="{{ site.baseurl }}/{{subsubfolder.url | remove_first: "/"}}">{{subsubfolder.title}}</a></li>
-                          {% endif %}
+                          {%- if l2_folder.external_url %}
+                          <li class="sidebar__subsubmenu-item"><a title="{{l2_folder.title}}" href="{{l2_folder.external_url}}" target="_blank" rel="noopener">{{l2_folder.title}}</a></li>
+                          {%- elsif page.url == l2_folder.url %}
+                          <li class="sidebar__subsubmenu-item active"><a title="{{l2_folder.title}}" href="{{ site.baseurl }}/{{l2_folder.url | remove_first: "/"}}">{{l2_folder.title}}</a></li>
+                          {%- elsif page_url_without_index_html == l2_folder.url %}
+                          <li class="sidebar__subsubmenu-item active"><a title="{{l2_folder.title}}" href="{{ site.baseurl }}/{{l2_folder.url | remove_first: "/"}}">{{l2_folder.title}}</a></li>
+                          {%- else %}
+                          <li class="sidebar__subsubmenu-item"><a title="{{l2_folder.title}}" href="{{ site.baseurl }}/{{l2_folder.url | remove_first: "/"}}">{{l2_folder.title}}</a></li>
+                          {%- endif %}
                       {%- endif %}
-                    {% endfor %}
+                    {%- endfor %}
                     </ul>
                     </li>
                 {%- else %}
-                    {% if subfolder.external_url %}
+                    {%- if subfolder.external_url %}
                     <li class="sidebar__submenu-item"><a title="{{subfolder.title}}" href="{{subfolder.external_url}}" target="_blank" rel="noopener">{{subfolder.title}}</a></li>
-                    {% elsif page.url == subfolder.url %}
+                    {%- elsif page.url == subfolder.url %}
                     <li class="sidebar__submenu-item active"><a title="{{subfolder.title}}" href="{{ site.baseurl }}/{{subfolder.url | remove_first: "/"}}">{{subfolder.title}}</a></li>
-                    {% elsif page_url_without_index_html == subfolder.url %}
+                    {%- elsif page_url_without_index_html == subfolder.url %}
                     <li class="sidebar__submenu-item active"><a title="{{subfolder.title}}" href="{{ site.baseurl }}/{{subfolder.url | remove_first: "/"}}">{{subfolder.title}}</a></li>
-                    {% else %}
+                    {%- else %}
                     <li class="sidebar__submenu-item"><a title="{{subfolder.title}}" href="{{ site.baseurl }}/{{subfolder.url | remove_first: "/"}}">{{subfolder.title}}</a></li>
-                    {% endif %}
+                    {%- endif %}
                 {%- endif %}
-            {% endfor %}
+            {%- endfor %}
             </ul>
           </li>
         {%- elsif folder.external_url %}
@@ -86,8 +106,8 @@
         {%- else %}
             <li class="sidebar__item"><a href="{{ site.baseurl }}{{ folder.url }}">{{folder.title}}</a></li>
         {%- endif %}
-  {% endfor %}
-  {% endfor %}
+  {%- endfor %}
+  {%- endfor %}
       <!-- if you aren't using the accordion, uncomment this block:
          <p class="external">
              <a href="#" id="collapseAll">Collapse All</a> | <a href="#" id="expandAll">Expand All</a>

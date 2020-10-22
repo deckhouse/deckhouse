@@ -1,5 +1,5 @@
 ---
-title: "Prometheus-мониторинг: конфигурация"
+title: "Prometheus-мониторинг: настройки"
 type:
   - instruction
 search: prometheus
@@ -91,18 +91,4 @@ search: prometheus
         * `25 GiB` — если PVC нет и StorageClass не поддерживает ресайз.
     * Если используется `local-storage` и требуется изменить `retentionSize`, то необходимо вручную изменить размер PV и PVC в нужную сторону. **Внимание!** Для расчета берется значение из `.status.capacity.storage` PVC, поскольку оно отражает рельный размер PV в случае ручного ресайза.
 
-### Примеры
-
-```yaml
-prometheus: |
-  password: xxxxxx
-  retentionDays: 7
-  storageClass: rbd
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
-```
 

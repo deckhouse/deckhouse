@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Yandex.Cloud: конфигурация"
+title: "Сloud provider — Yandex.Cloud: настройки"
 ---
 
 ## Параметры
@@ -9,15 +9,6 @@ title: "Сloud provider — Yandex.Cloud: конфигурация"
 * `additionalExternalNetworkIDs` — список Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node;
   * Формат — массив строк.
   * Опциональный параметр.
-
-### Примеры
-
-```yaml
-cloudProviderYandexEnabled: "true"
-cloudProviderYandex: |
-  additionalExternalNetworkIDs:
-  - enp6t4snovl2ko4p15em
-```
 
 ## Storage
 

@@ -1,10 +1,8 @@
 ---
-title: "Модуль cert-manager: конфигурация"
+title: "Модуль cert-manager: настройки"
 ---
 
 Обязательных настроек нет.
-
-## Параметры
 
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет использоваться значение `{"node-role.deckhouse.io/cert-manager":""}` или `{"node-role.deckhouse.io/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
@@ -17,16 +15,4 @@ title: "Модуль cert-manager: конфигурация"
 *  `route53AccessKeyID` — Access Key ID пользователя с необходимыми правами [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/) для управления доменными записями домена
 *  `route53SecretAccessKey` — Secret Access Key пользователя с необходимыми правами для управления доменными записями домена
 *  `digitalOceanCredentials` — Access Token от Digital Ocean API, который можно создать в разделе `API`
-*  `cloudDNSServiceAccount` — Service Account для [Google Cloud](usage.html#как-заказать-wildcard-сертификат-с-dns-в-google) из того-же проекта с ролью Администратора DNS
-
-### Примеры
-
-```yaml
-certManager: |
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
-```
+*  `cloudDNSServiceAccount` — Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google) из того-же проекта с ролью Администратора DNS

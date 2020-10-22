@@ -1,5 +1,5 @@
 ---
-title: "Модуль extended-monitoring: конфигурация"
+title: "Модуль extended-monitoring: настройки"
 ---
 
 ## Параметры `image-availability-exporter`

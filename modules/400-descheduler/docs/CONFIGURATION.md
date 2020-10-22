@@ -1,5 +1,5 @@
 ---
-title: "Модуль descheduler: конфигурация"
+title: "Модуль descheduler: настройки"
 ---
 
 Обязательных настроек нет.
@@ -20,18 +20,3 @@ title: "Модуль descheduler: конфигурация"
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
   * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
   * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-
-### Примеры
-
-```yaml
-descheduler: |
-  removePodsViolatingNodeAffinity: false
-  removeDuplicates: true
-  lowNodeUtilization: true
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
-```

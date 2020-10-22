@@ -1,14 +1,59 @@
 ---
-title: "Prometheus-мониторинг: примеры использования"
+title: "Prometheus-мониторинг: примеры конфигурации"
 type:
   - instruction
 search: prometheus remote write, как подключится к Prometheus, пользовательская Grafana, prometheus remote write
 ---
 
+## Пример конфигурации модуля
+
+```yaml
+prometheus: |
+  password: xxxxxx
+  retentionDays: 7
+  storageClass: rbd
+  nodeSelector:
+    node-role/example: ""
+  tolerations:
+  - key: dedicated
+    operator: Equal
+    value: example
+```
 
 ## Запись данных Prometheus в longterm storage
 
 У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью Custom Resource `PrometheusRemoteWrite`.
+
+### Пример минимального PrometheusRemoteWrite
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: PrometheusRemoteWrite
+metadata:
+  name: test-remote-write
+spec:
+  url: https://victoriametrics-test.domain.com/api/v1/write
+```
+
+### Пример расширенного PrometheusRemoteWrite
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: PrometheusRemoteWrite
+metadata:
+  name: test-remote-write
+spec:
+  url: https://victoriametrics-test.domain.com/api/v1/write
+  basicAuth:
+    username: blahblah
+    password: dddddddd
+  writeRelabelConfigs:
+  - sourceLabels: [__name__]
+    action: keep
+    regex: prometheus_build_.*
+  - sourceLabels: [__name__]
+    action: keep
+    regex: my_cool_app_metrics_.*
+```
+
 
 ## Подключение Prometheus к сторонней Grafana
 

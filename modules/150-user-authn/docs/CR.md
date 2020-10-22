@@ -12,7 +12,6 @@ title: "Модуль user-authn: Custom Resources"
 
 **Важно!** При перезапуске pod'а с oauth2-proxy при помощи refresh token'а будут получены и сохранены в память (redis) актуальные access token и id token.
 
-### Параметры
 * `applicationDomain` — внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в dex.
     * Формат — строка с адресом (пример: `my-app.kube.my-domain.com`, обязательно НЕ указывать HTTP схему.
 * `sendAuthorizationHeader` — флаг, который отвечает за отправку конечному приложению header'а `Authorization: Bearer`.
@@ -26,89 +25,19 @@ title: "Модуль user-authn: Custom Resources"
 * `whitelistSourceRanges` — список CIDR, которым разрешено проходить аутентификацию.
     * Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
 
-### Примеры
-{% raw %}
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexAuthenticator
-metadata:
-  name: my-cool-app # поды аутентификатора будут иметь префикс my-cool-app
-  namespace: my-cool-namespace # неймспейс, в котором будет развернут dex-authenticator
-spec:
-  applicationDomain: "my-app.kube.my-domain.com" # домен, на котором висит ваше приложение
-  sendAuthorizationHeader: false # отправлять ли `Authorization: Bearer` header приложению, полезно в связке с auth_request в nginx
-  applicationIngressCertificateSecretName: "ingress-tls" # имя секрета с tls сертификатом
-  applicationIngressClassName: "nginx"
-  keepUsersLoggedInFor: "720h"
-  allowedGroups:
-  - everyone
-  - admins
-  whitelistSourceRanges:
-  - 1.1.1.1
-  - 192.168.0.0/24
-```
-{% endraw %}
-
-После появления CR `DexAuthenticator` в кластере, в указанном namespace'е появятся необходимые deployment, service, ingress, secret.
-Чтобы подключить своё приложение к dex, достаточно будет добавить в Ingress-ресурс вашего приложения следующие аннотации:
-
-{% raw %}
-```yaml
-annotations:
-  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-  nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ домен вашего кластера, например | cluster.local }}/dex-authenticator/auth
-  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-```
-{% endraw %}
-
-#### Настройка ограничений на основе CIDR
-
-В DexAuthenticator нет встроенной системы управления разрешением аутентификации на основе IP адреса пользователя. Вместо этого вы можете воспользоваться аннотациями для Ingress-ресурсов:
-
-* Если нужно ограничить доступ по IP и оставить прохождение аутентификации в dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
-```yaml
-nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
-```
-* Если вы хотите, чтобы пользователи из указанных сетей были освобождены от прохождения аутентификации в dex, а пользователи из остальных сетей были обязаны аутентифицироваться в dex - добавьте следующую аннотацию:
-```yaml
-nginx.ingress.kubernetes.io/satisfy: "any"
-```
-
 ## DexClient
 
 Позволяет приложениям, поддерживающим DC-аутентификацию взаимодействовать с dex.
 
-### Параметры
 * `redirectURIs` — список адресов, на которые допустимо редиректить dex'у после успешного прохождения аутентификации.
 * `trustedPeers` — id клиентов, которым позволена cross аутентификация. [Подробнее тут](https://developers.google.com/identity/protocols/CrossClientAuth).
 * `allowedGroups` — список групп, участникам которых разрешено подключаться к этому клиенту;
     * По умолчанию разрешено всем группам.
 
-### Примеры
-{% raw %}
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexClient
-metadata:
-  name: myname
-  namespace: mynamespace
-spec:
-  redirectURIs:
-  - https://app.example.com/callback
-  - https://app.example.com/callback-reserve
-  allowedGroups:
-  - Everyone
-  - admins
-  trustedPeers:
-  - opendistro-sibling
-```
-{% endraw %}
-
 ## DexProvider
 
 Описывает конфигурацию подключения стороннего провайдера. С его помощью можно гибко настроить интеграцию вашего каталога учетных записей с Kubernetes.
 
-### Параметры
 * `type` — тип внешнего провайдера, в данный момент поддерживается 6 типов: `Github`, `Gitlab`, `BitbucketCloud`, `Crowd`, `OIDC`, `LDAP`;
 * `displayName` — имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации (если настроен всего один – эта страница не будет показана);
 * `github` – параметры провайдера Github (можно указывать только если `type: Github`:
@@ -211,151 +140,12 @@ spec:
             * `groupAttr` — имя атрибута, в котором хранятся имена пользователей, состоящих в группе.
                 * Пример: `member`
 
-### Примеры
-#### Github
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexProvider
-metadata:
-  name: github
-spec:
-  type: Github
-  displayName: My Company Github
-  github:
-    clientID: plainstring
-    clientSecret: plainstring
-```
-#### GitLab
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexProvider
-metadata:
-  name: gitlab
-spec:
-  type: Gitlab
-  displayName: Dedicated Gitlab
-  gitlab:
-    baseURL: https://gitlab.example.com
-    clientID: plainstring
-    clientSecret: plainstring
-    groups:
-    - administrators
-    - users
-```
-
-#### Atlassian Crowd
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexProvider
-metadata:
-  name: crowd
-spec:
-  type: Crowd
-  displayName: Crowd
-  crowd:
-    baseURL: https://crowd.example.com/crowd
-    clientID: plainstring
-    clientSecret: plainstring
-    enableBasicAuth: true
-    groups:
-    - administrators
-    - users
-```
-
-#### Bitbucket Cloud
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexProvider
-metadata:
-  name: gitlab
-spec:
-  type: BitbucketCloud
-  displayName: Bitbucket
-  bitbucketCloud:
-    clientID: plainstring
-    clientSecret: plainstring
-    includeTeamGroups: true
-    teams:
-    - administrators
-    - users
-```
-#### OIDC (OpenID Connect)
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexProvider
-metadata:
-  name: okta
-spec:
-  type: OIDC
-  displayName: My Company Okta
-  oidc:
-    issuer: https://my-company.okta.com
-    clientID: plainstring
-    clientSecret: plainstring
-    insecureSkipEmailVerified: true
-    getUserInfo: true
-```
-#### LDAP
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: DexProvider
-metadata:
-  name: active-directory
-spec:
-  type: LDAP
-  displayName: Active Directory
-  ldap:
-    host: ad.example.com:636
-    insecureSkipVerify: true
-
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
-
-    usernamePrompt: Email Address
-
-    userSearch:
-      baseDN: cn=Users,dc=example,dc=com
-      filter: "(objectClass=person)"
-      username: userPrincipalName
-      idAttr: DN
-      emailAttr: userPrincipalName
-      nameAttr: cn
-
-    groupSearch:
-      baseDN: cn=Users,dc=example,dc=com
-      filter: "(objectClass=group)"
-      userMatchers:
-      - userAttr: DN
-        groupAttr: member
-      nameAttr: cn
-```
-
 ## User
 
 Содержит информацию о статическом пользователе.
-
-### Параметры
 
 * `userID` — имя пользователя
 * `email` — e-mail пользователя
 * `password` — хэшированный пароль пользователя
   * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`
 * `groups` — массив групп, в которых у пользователя есть членство
-
-### Примеры
-{% raw %}
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: User
-metadata:
-  name: admin
-spec:
-  email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  userID: some-unique-user-id
-  groups:
-  - Everyone
-  - admins
-```
-{% endraw %}

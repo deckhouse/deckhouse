@@ -1,6 +1,31 @@
 ---
-title: "Модуль user-authz: примеры использования"
+title: "Модуль user-authz: примеры конфигурации"
 ---
+
+## Пример `ClusterAuthorizationRule`
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterAuthorizationRule
+metadata:
+  name: test
+spec:
+  subjects:
+  - kind: User
+    name: some@example.com
+  - kind: ServiceAccount
+    name: gitlab-runner-deploy
+    namespace: d8-service-accounts
+  - kind: Group
+    name: some-group-name
+  accessLevel: PrivilegedUser
+  portForwarding: true
+  allowAccessToSystemNamespaces: false     # Опция доступна только при enableMultiTenancy
+  limitNamespaces:                         # Опция доступна только при enableMultiTenancy
+  - review-.*
+  - stage
+```
+
 
 ## Создание пользователя
 
@@ -69,7 +94,7 @@ spec:
 
 ## Настройка kube-apiserver
 
-Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-manager](/modules/040-control-plane-manager).
 
 {% offtopic title="Изменения манифеста, которые произойдут" %}
 
@@ -151,11 +176,11 @@ rules:
   - delete
 ```
 
-## TODO
+<!--## TODO-->
 
-1. There is a CR `ClusterAuthorizationRule`. Its resources are used to generate `ClusterRoleBindings` for users who mentioned in the field `subjects`. The set of `ClusterRoles` to bind is declared by fields:
-    1. `accessLevel` — pre-defined `ClusterRole` set.
-    2. `portForwarding` — pre-defined `ClusterRole` set.
-    3. `additionalRoles` — user-defined `ClusterRole` set.
-2. The configuration of fields `allowAccessToSystemNamespaces` and `limitNamespaces` affects the `user-authz-webhook` DaemonSet, which is authorization agent of apiserver,
-3. When creating `ClusterRole` objects with annotation `user-authz.deckhouse.io/access-level`, the set of `ClusterRoles` for binding to the corresponding subject is extended.
+<!--1. There is a CR `ClusterAuthorizationRule`. Its resources are used to generate `ClusterRoleBindings` for users who mentioned in the field `subjects`. The set of `ClusterRoles` to bind is declared by fields:-->
+<!--    1. `accessLevel` — pre-defined `ClusterRole` set.-->
+<!--    2. `portForwarding` — pre-defined `ClusterRole` set.-->
+<!--    3. `additionalRoles` — user-defined `ClusterRole` set.-->
+<!--2. The configuration of fields `allowAccessToSystemNamespaces` and `limitNamespaces` affects the `user-authz-webhook` DaemonSet, which is authorization agent of apiserver,-->
+<!--3. When creating `ClusterRole` objects with annotation `user-authz.deckhouse.io/access-level`, the set of `ClusterRoles` for binding to the corresponding subject is extended.-->
