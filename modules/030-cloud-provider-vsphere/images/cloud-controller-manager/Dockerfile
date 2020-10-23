@@ -5,5 +5,6 @@ RUN apk add --no-cache git mercurial patch make && \
     make build
 
 FROM alpine:3.11
+RUN apk add --no-cache ca-certificates
 COPY --from=0 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64 /bin/vsphere-cloud-controller-manager
 ENTRYPOINT [ "/bin/vsphere-cloud-controller-manager" ]

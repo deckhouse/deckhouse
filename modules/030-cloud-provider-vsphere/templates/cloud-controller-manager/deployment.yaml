@@ -57,9 +57,6 @@ spec:
             - mountPath: /etc/kubernetes/pki
               name: k8s-certs
               readOnly: true
-            - mountPath: /etc/ssl/certs
-              name: ca-certs
-              readOnly: true
             - mountPath: /etc/cloud-contoller-manager-config
               name: config
               readOnly: true
@@ -71,10 +68,6 @@ spec:
           path: /etc/kubernetes/pki
           type: DirectoryOrCreate
         name: k8s-certs
-      - hostPath:
-          path: /etc/ssl/certs
-          type: DirectoryOrCreate
-        name: ca-certs
       - name: config
         secret:
           secretName: cloud-controller-manager
