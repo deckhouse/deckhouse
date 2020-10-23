@@ -6,10 +6,13 @@
 shopt -s extglob
 
 ip_addr_show_output=$(ip -json addr show)
-primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-primary_ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$primary_mac" '.[] | select(.address == $mac) | .ifname')"
+configured_macs="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
+for mac in $configured_macs; do
+  ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$mac" '.[] | select(.address == $mac) | .ifname')|"
+  configured_ifnames_pattern+="$ifname"
+done
 
-for i in /sys/class/net/!($primary_ifname); do
+for i in /sys/class/net/!(${configured_ifnames_pattern%?}); do
   if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio.*' 1>/dev/null 2>&1; then
     continue
   fi
