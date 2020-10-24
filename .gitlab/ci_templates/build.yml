@@ -1,8 +1,7 @@
 .Build Modules Images template:
   stage: build_modules_images
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-modules-images
-  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
+  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-modules-images
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
@@ -25,10 +24,9 @@
 .Build template:
   stage: build
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_IMAGES_REPO}/stages-deckhouse
-  - export WERF_STAGES_STORAGE_REPO_IMPLEMENTATION=harbor
-  - export DESTINATION_IMAGE=${WERF_IMAGES_REPO}:${CI_COMMIT_TAG}
-  - export DESTINATION_INSTALL_IMAGE=${WERF_IMAGES_REPO}/install:${CI_COMMIT_TAG}
+  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - export DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+  - export DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
   - docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
   - rm -rf shell-operator || true
   - git submodule update --init --recursive

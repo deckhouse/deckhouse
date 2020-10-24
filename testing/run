@@ -96,9 +96,9 @@ if [[ -z "$(docker ps --filter "name=$CONTAINER_NAME" -q)" ]]; then
   # shellcheck disable=SC1090
   . "$(multiwerf use 1.1 stable --as-file)"
 
-  werf build tests --stages-storage=registry.flant.com/sys/antiopa/stages
+  werf build tests --stages-storage=registry-harbor.flant.com/sys/antiopa/stages-deckhouse
   # shellcheck disable=SC2016
-  werf run tests --stages-storage=registry.flant.com/sys/antiopa/stages \
+  werf run tests --stages-storage=registry-harbor.flant.com/sys/antiopa/stages-deckhouse \
     --docker-options="-v $(pwd):/deckhouse --name $CONTAINER_NAME --rm -d -e KCOV_DISABLED=yes -w /deckhouse -p 127.0.0.1:4284:4284" \
     -- \
     dumb-init -- bash -c 'touch /last-used; while [[ -z "$(find /last-used -mmin +60)" ]]; do sleep 60; done'
