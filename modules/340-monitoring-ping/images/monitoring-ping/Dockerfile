@@ -1,4 +1,4 @@
-FROM python:3.6-alpine3.8
+FROM python:3.7.9-alpine3.12
 COPY monitoring-ping.py requirements.txt /
 WORKDIR /
 RUN pip3 install --upgrade pip && pip3 install -r requirements.txt && apk add --no-cache fping

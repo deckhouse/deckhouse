@@ -1,4 +1,5 @@
-FROM alpine:3.6
+ARG BASE_ALPINE
+FROM $BASE_ALPINE
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/usr/bin/iptables-loop"]

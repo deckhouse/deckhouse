@@ -1,4 +1,4 @@
-FROM python:3.6-alpine
+FROM python:3.7.9-alpine3.12
 RUN apk update && \
     apk add bash iptables bind-tools netcat-openbsd && \
     apk add openssl easy-rsa openvpn && \

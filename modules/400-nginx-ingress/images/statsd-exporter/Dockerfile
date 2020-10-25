@@ -1,4 +1,6 @@
-FROM golang:1.11-alpine
+ARG BASE_ALPINE
+ARG BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE
 WORKDIR /go/src/github.com/prometheus/statsd_exporter
 ENV USER=root
 RUN apk add --no-cache make git curl && \
@@ -6,7 +8,7 @@ RUN apk add --no-cache make git curl && \
     tar -xz --strip-components=1 && \
     make build
 
-FROM alpine:3.9
+FROM $BASE_ALPINE
 COPY --from=0 /go/src/github.com/prometheus/statsd_exporter/statsd_exporter /bin/
 COPY rootfs /
 ENTRYPOINT [ "/bin/statsd_exporter" ]

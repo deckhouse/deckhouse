@@ -1,4 +1,5 @@
-FROM golang:1.13-buster
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER
 WORKDIR /src/
 COPY volume-stats.patch /
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch

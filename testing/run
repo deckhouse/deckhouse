@@ -1,6 +1,9 @@
 #!/bin/bash -e
 
 CONTAINER_NAME="deckhouse-testing"
+export BASE_ALPINE=${BASE_ALPINE:-"alpine:3.12.1"}
+export BASE_GOLANG_ALPINE=${BASE_GOLANG_ALPINE:-"golang:1.15.3-alpine3.12"}
+export BASE_GOLANG_BUSTER=${BASE_GOLANG_BUSTER:-"golang:1.15.3-buster"}
 
 if [[ "$1" == "--debug" ]]; then
   DEBUG=yes

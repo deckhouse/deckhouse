@@ -1,8 +1,8 @@
-FROM python:3.6-alpine
+FROM python:3.7.9-alpine3.12
 
 RUN apk add curl git gcc libc-dev linux-headers npm openssl
 
-RUN python3.6 -m pip install flask uwsgi
+RUN python3.7 -m pip install flask uwsgi
 
 WORKDIR /app
 

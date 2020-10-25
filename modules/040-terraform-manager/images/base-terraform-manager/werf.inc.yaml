@@ -1,6 +1,6 @@
 ---
 artifact: candictl
-from: golang:1.13-alpine3.11
+from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
 - add: /candictl
   to: /candictl
@@ -29,7 +29,7 @@ ansible:
       chdir: /candictl/hack
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: alpine:3.11
+from: {{ env "BASE_ALPINE" }}
 docker:
   ENTRYPOINT: ["candictl"]
 import:

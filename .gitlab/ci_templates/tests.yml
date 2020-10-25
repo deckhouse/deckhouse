@@ -74,7 +74,7 @@
     go test -vet=off ./modules/... ./global-hooks/...
   - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   after_script:
-  - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse alpine:3.11 chmod -R 0777 /testing
+  - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse ${BASE_ALPINE} chmod -R 0777 /testing
   except:
   - schedules
   - alpha

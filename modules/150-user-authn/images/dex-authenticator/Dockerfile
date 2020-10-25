@@ -1,4 +1,6 @@
-FROM golang:1.13-alpine3.10
+ARG BASE_ALPINE
+ARG BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE
 WORKDIR /go/src/github.com/pusher/oauth2_proxy
 
 # Download tools
@@ -14,7 +16,7 @@ RUN patch -p1 < /cookie-refresh.patch \
   && ./configure \
   && make build
 
-FROM alpine:3.10
+FROM $BASE_ALPINE
 RUN apk --update add curl bash  ca-certificates && update-ca-certificates
 COPY --from=0 /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 

@@ -1,4 +1,5 @@
-FROM alpine:3.11.2
+ARG BASE_ALPINE
+FROM $BASE_ALPINE
 COPY --from=coredns/coredns:1.6.9 /coredns  /coredns
 COPY start.sh /
 COPY liveness.sh /
