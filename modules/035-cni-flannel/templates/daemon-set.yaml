@@ -16,6 +16,8 @@ spec:
       labels:
         tier: node
         app: flannel
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry

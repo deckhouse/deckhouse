@@ -14,7 +14,7 @@ func TestHooks(t *testing.T) {
 	RunSpecs(t, "Hooks Suite")
 }
 
-var _ = Describe("Modules :: cniFlannel :: hooks :: get_configuration ::", func() {
+var _ = Describe("Modules :: cniFlannel :: hooks :: set_pod_network_mode ::", func() {
 	f := HookExecutionConfigInit(`{"cniFlannel":{"internal":{}}}`, ``)
 
 	state := `
@@ -26,7 +26,19 @@ metadata:
   namespace: kube-system
 data:
   cni: Zmxhbm5lbA== # flannel
-  flannel: ICAgIHsKICAgICAgInBvZE5ldHdvcmtNb2RlIjogInZ4bGFuIgogICAgfQ== # {"podNetworkMode":"vxlan"}"
+  flannel: ICAgIHsKICAgICAgInBvZE5ldHdvcmtNb2RlIjogInZ4bGFuIgogICAgfQ== # {"podNetworkMode":"vxlan"}
+`
+
+	stateWithEmptyFlannelConfig := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cni-configuration
+  namespace: kube-system
+data:
+  cni: Zmxhbm5lbA== # flannel
+  flannel: e30= # {}
 `
 
 	stateWithoutFlannelConfig := `
@@ -62,9 +74,6 @@ data:
 			})
 
 		})
-	})
-
-	Context("d8-cni-configuration", func() {
 
 		It("Must be executed successfully", func() {
 
@@ -76,9 +85,16 @@ data:
 			})
 
 		})
-	})
 
-	Context("d8-cni-configuration", func() {
+		It("Must be executed successfully", func() {
+
+			By("podNetworkMode must be host-gw", func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateWithEmptyFlannelConfig))
+				f.RunHook()
+				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
+			})
+
+		})
 
 		It("Must be executed successfully", func() {
 

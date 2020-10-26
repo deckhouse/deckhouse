@@ -1,0 +1,56 @@
+#!/bin/bash
+### Migration 26.10.2020: Remove after release with this MR
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: cm
+      keepFullObjectsInMemory: false
+      group: main
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-flannel-cfg]
+      jqFilter: |
+        {"backend": .data."net-conf.json" | fromjson.Backend.Type}
+    - name: ds
+      keepFullObjectsInMemory: false
+      group: main
+      apiVersion: apps/v1
+      kind: DaemonSet
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-flannel-ds]
+      jqFilter: |
+        {"name": .metadata.name}
+    - name: ns
+      keepFullObjectsInMemory: false
+      group: main
+      apiVersion: v1
+      kind: Namespace
+      nameSelector:
+        matchNames:
+        - d8-cni-flannel
+      jqFilter: .metadata.name
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.ns.0; then
+    return 0
+  fi
+
+  if context::has snapshots.cm.0 && context::has snapshots.ds.0; then
+    values::set cniFlannelEnabled "true"
+  fi
+}
+
+hook::run "$@"

@@ -1,0 +1,95 @@
+#!/bin/bash
+### Migration 26.10.2020: Remove after release with this MR
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+    kubernetes:
+    - name: cm
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      executeHookOnSynchronization: false
+      group: main
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-flannel-cfg]
+      jqFilter: |
+        {"backend": .data."net-conf.json" | fromjson.Backend.Type}
+    - name: ds
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      executeHookOnSynchronization: false
+      group: main
+      apiVersion: apps/v1
+      kind: DaemonSet
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [kube-flannel-ds]
+      jqFilter: |
+        {"name": .metadata.name}
+    - name: ns
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      executeHookOnSynchronization: false
+      group: main
+      apiVersion: v1
+      kind: Namespace
+      nameSelector:
+        matchNames:
+        - d8-cni-flannel
+      jqFilter: .metadata.name
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.ns.0; then
+    return 0
+  fi
+
+  if context::has snapshots.cm.0 && context::has snapshots.ds.0; then
+    echo "---" > /tmp/flannel-ds.yaml
+    kubectl -n kube-system get DaemonSet kube-flannel-ds -o yaml >> /tmp/flannel-ds.yaml 2>/dev/null
+    echo "---" > /tmp/flannel-cm.yaml
+    kubectl -n kube-system get ConfigMap kube-flannel-cfg -o yaml >> /tmp/flannel-cm.yaml 2>/dev/null
+    echo "---" > /tmp/flannel-sa.yaml
+    kubectl -n kube-system get ServiceAccount flannel -o yaml >> /tmp/flannel-sa.yaml 2>/dev/null || true
+    echo "---" > /tmp/flannel-cr.yaml
+    kubectl get ClusterRole flannel -o yaml >> /tmp/flannel-cr.yaml 2>/dev/null || true
+    echo "---" > /tmp/flannel-crb.yaml
+    kubectl get ClusterRoleBinding flannel -o yaml >> /tmp/flannel-crb.yaml 2>/dev/null || true
+    echo "---" > /tmp/flannel-psp.yaml
+    kubectl get PodSecurityPolicy psp.flannel.unprivileged -o yaml >> /tmp/flannel-psp.yaml 2>/dev/null || true
+
+    cat /tmp/flannel-* | gzip -9 | base64 -w0 > /tmp/flannel-backup
+    kubectl -n kube-system create secret generic flannel-backup --from-file=/tmp/flannel-backup
+
+    # kubectl -n kube-system get secret flannel-backup -o json | jq '.data."flannel-backup"' -r | base64 -d | base64 -d | gzip -d #| kubectl create -f -
+
+    if context::jq -er '.snapshots.cm[0].filterResult.backend == "vxlan"' > /dev/null; then
+      echo "INFO: set podNetworkMode: vxlan"
+      values::set --config cniFlannel.podNetworkMode "vxlan"
+    fi
+
+    kubernetes::delete_if_exists::non_blocking "kube-system" "DaemonSet/kube-flannel-ds"
+    kubernetes::delete_if_exists::non_blocking "kube-system" "ConfigMap/kube-flannel-cfg"
+    kubernetes::delete_if_exists::non_blocking "kube-system" "ServiceAccount/flannel"
+
+    kubernetes::delete_if_exists::non_blocking "" "ClusterRoleBinding/flannel"
+    kubernetes::delete_if_exists::non_blocking "" "ClusterRole/flannel"
+    kubernetes::delete_if_exists::non_blocking "" "PodSecurityPolicy/psp.flannel.unprivileged"
+
+    fltr='. | .data.cniFlannelEnabled = "true"'
+    kubernetes::patch_jq d8-system configmap/deckhouse "$fltr"
+  fi
+}
+
+hook::run "$@"

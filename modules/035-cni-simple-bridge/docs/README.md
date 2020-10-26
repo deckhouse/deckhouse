@@ -4,4 +4,10 @@ title: "Модуль cni-simple-bridge"
 
 ## Содержимое модуля
 
-@TODO
+Модуль не имеет настроек.
+
+Включается автоматически для следующих cloud-provider'ов:
+- aws
+- azure
+- gcp
+- yandex

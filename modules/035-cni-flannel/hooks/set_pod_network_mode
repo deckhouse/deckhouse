@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    kubernetes:
+    - name: cni_configuration_secret
+      queue: /modules/$(module::name::kebab_case)
+      keepFullObjectsInMemory: false
+      group: main
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-cni-configuration]
+      jqFilter: |
+        (.data // {}) | with_entries(.value |= (. | @base64d)) |
+        if has("flannel") then .flannel | fromjson else {} end |
+        {
+          "podNetworkMode": (if has("podNetworkMode") then .podNetworkMode else "host-gw" end)
+        }
+EOF
+}
+
+function __main__() {
+  pod_network_mode="host-gw"
+
+  if values::has --config cniFlannel.podNetworkMode; then
+    pod_network_mode="$(values::get --config cniFlannel.podNetworkMode)"
+  fi
+
+  if context::has snapshots.cni_configuration_secret.0; then
+    pod_network_mode="$(context::jq -r '.snapshots.cni_configuration_secret[0].filterResult.podNetworkMode')"
+  fi
+
+  values::set cniFlannel.internal.podNetworkMode "$pod_network_mode"
+}
+
+hook::run "$@"
