@@ -101,7 +101,9 @@ done
   server {
     listen 127.0.0.1:6445;
     proxy_pass kubernetes;
-    proxy_timeout 10m;
+    # Configurator uses 24h proxy_timeout in case of long running jobs like kubectl exec or kubectl logs
+    # After time out, nginx will force a client to reconnect
+    proxy_timeout 24h;
     proxy_connect_timeout 1s;
   }
 }
