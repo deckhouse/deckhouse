@@ -389,14 +389,10 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 ### Как создать кластер в новом VPC с доступом через имеющийся бастион?
 
-* Во время бутстрапа кластера прервать установку сразу после стадии:
+* Выполнить бутстрап base-infrastructure кластера:
 
 ```
-Terraform: Pipeline base-infrastructure for Kubernetes cluster
-```
-Чтобы не успела отработать следующая стадия:
-```
-Terraform: Pipeline master-node for mycluster-master-0
+candictl bootstrap-phase base-infra --config config
 ```
 
 * Поднять пиринг по инструкции [выше](#как-поднять-пиринг-между-vpc).
