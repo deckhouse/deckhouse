@@ -259,17 +259,18 @@ tags:
 
 ### Настройка IAM через веб-интерфейс
 
-* Создать `Customer Managed Policy`
+* IAM -> Создать `Customer Managed Policy`
 * Выбрать вкладку `JSON` и вставить спецификацию выше.
 * `Review Policy`
 * Задать имя, например `D8CloudProviderAWS`
 * `Create Policy`
-* Создать IAM User
+* IAM -> Создать IAM User
 * Задать имя, например `d8-candi`
 * Выбрать `Programmatic access`
-* Выбрать вкладку `Attach existing policies directly` и нажать `Create Policy`
-* Найти `D8CloudProviderAWS` и поставить галку
-* Далее по интуиции
+* Next: Permissions
+* Выбрать вкладку `Attach existing policies directly`
+* Вбить в поиск `D8CloudProviderAWS` и поставить галку
+* Next и далее по интуиции
 
 ### Настройка IAM через cli
 
@@ -362,4 +363,46 @@ resource "aws_iam_user_policy_attachment" "policy-attachment" {
   user       = aws_iam_user.user.name
   policy_arn = aws_iam_policy.policy.arn
 }
+```
+
+## Рекомендации по настройки пиринга
+
+### Как поднять пиринг между VPC?
+
+Для примера будем поднимать пиринг между двумя VPC — vpc-a и vpc-b.
+
+**Важно!**
+IPv4 CIDR у обоих VPC должен различаться.
+
+* Перейти в регион, где работает vpc-a.
+* VPC -> VPC Peering Connections -> Create Peering Connection, настроить пиринг:
+
+  * Name: vpc-a-vpc-b
+  * Заполнить Local и Another VPC.
+
+* Перейти в регион, где работает vpc-b.
+* VPC -> VPC Peering Connections.
+* Выделить свежеиспечённый пиринг и выбрать Action "Accept Request".
+* Для vpc-a добавить во все таблицы маршрутизации маршруты до CIDR vpc-b через пиринг.
+* Для vpc-b добавить во все таблицы маршрутизации маршруты до CIDR vpc-a через пиринг.
+
+
+### Как создать кластер в новом VPC с доступом через имеющийся бастион?
+
+* Во время бутстрапа кластера прервать установку сразу после стадии:
+
+```
+Terraform: Pipeline base-infrastructure for Kubernetes cluster
+```
+Чтобы не успела отработать следующая стадия:
+```
+Terraform: Pipeline master-node for mycluster-master-0
+```
+
+* Поднять пиринг по инструкции [выше](#как-поднять-пиринг-между-vpc).
+* Продолжить установку кластера, на вопрос про кеш терраформа нужно ответить "y":
+
+```
+candictl bootstrap --config config --ssh-...
+
 ```
