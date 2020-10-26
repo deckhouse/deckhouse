@@ -1,176 +1,412 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 3d07f2ff..beb482fe 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -279,6 +279,9 @@ type Expiry struct {
+
+ 	// AuthRequests defines the duration of time for which the AuthRequests will be valid.
+ 	AuthRequests string `json:"authRequests"`
++
++	// RefreshToken defines refresh tokens expiry policy
++	RefreshToken RefreshTokenExpiry `json:"refreshTokens"`
+ }
+
+ // Logger holds configuration required to customize logging for dex.
+@@ -289,3 +292,10 @@ type Logger struct {
+ 	// Format specifies the format to be used for logging.
+ 	Format string `json:"format"`
+ }
++
++type RefreshTokenExpiry struct {
++	DisableRotation   bool   `json:"disableRotation"`
++	ReuseInterval     string `json:"reuseInterval"`
++	AbsoluteLifetime  string `json:"absoluteLifetime"`
++	ValidIfNotUsedFor string `json:"validIfNotUsedFor"`
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 27fba306..448f8f18 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -269,6 +269,17 @@ func serve(cmd *cobra.Command, args []string) error {
+ 		logger.Infof("config auth requests valid for: %v", authRequests)
+ 		serverConfig.AuthRequestsValidFor = authRequests
+ 	}
++	refreshTokenPolicy, err := server.NewRefreshTokenPolicyFromConfig(
++		logger,
++		c.Expiry.RefreshToken.DisableRotation,
++		c.Expiry.RefreshToken.ValidIfNotUsedFor,
++		c.Expiry.RefreshToken.AbsoluteLifetime,
++		c.Expiry.RefreshToken.ReuseInterval,
++	)
++	if err != nil {
++		return fmt.Errorf("invalid refresh token expiration policy config: %v", err)
++	}
++	serverConfig.RefreshTokenPolicy = refreshTokenPolicy
+
+ 	serv, err := server.NewServer(context.Background(), serverConfig)
+ 	if err != nil {
 diff --git a/server/handlers.go b/server/handlers.go
-index 694ababb..e2e882ec 100644
+index 694ababb..d6e2f3bd 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
-@@ -963,7 +963,8 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
- 		s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
- 		return
- 	}
--	if refresh.Token != token.Token {
-+
-+	if refresh.Token != token.Token && refresh.ObsoleteToken != token.Token {
- 		s.logger.Errorf("refresh token with id %s claimed twice", refresh.ID)
- 		s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
- 		return
-@@ -1013,12 +1014,6 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
- 		connectorData = session.ConnectorData
- 	}
-
--	conn, err := s.getConnector(refresh.ConnectorID)
--	if err != nil {
--		s.logger.Errorf("connector with ID %q not found: %v", refresh.ConnectorID, err)
--		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
--		return
--	}
- 	ident := connector.Identity{
- 		UserID:            refresh.Claims.UserID,
- 		Username:          refresh.Claims.Username,
-@@ -1029,19 +1024,32 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
- 		ConnectorData:     connectorData,
- 	}
-
--	// Can the connector refresh the identity? If so, attempt to refresh the data
--	// in the connector.
--	//
--	// TODO(ericchiang): We may want a strict mode where connectors that don't implement
--	// this interface can't perform refreshing.
--	if refreshConn, ok := conn.Connector.(connector.RefreshConnector); ok {
--		newIdent, err := refreshConn.Refresh(r.Context(), parseScopes(scopes), ident)
-+	currentTime := s.now()
-+	isExpiredObsoleteToken := refresh.ObsoleteToken == token.Token && currentTime.After(refresh.LastUsed.Add(s.idTokensValidFor / 4))
-+	isNonObsoleteToken := refresh.ObsoleteToken != token.Token
-+
-+	if isExpiredObsoleteToken || isNonObsoleteToken {
-+		conn, err := s.getConnector(refresh.ConnectorID)
- 		if err != nil {
--			s.logger.Errorf("failed to refresh identity: %v", err)
-+			s.logger.Errorf("connector with ID %q not found: %v", refresh.ConnectorID, err)
- 			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
- 			return
+@@ -905,7 +905,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request, client s
+ 		} else {
+ 			if oldTokenRef, ok := session.Refresh[tokenRef.ClientID]; ok {
+ 				// Delete old refresh token from storage.
+-				if err := s.storage.DeleteRefresh(oldTokenRef.ID); err != nil {
++				if err := s.storage.DeleteRefresh(oldTokenRef.ID); err != nil && err != storage.ErrNotFound {
+ 					s.logger.Errorf("failed to delete refresh token: %v", err)
+ 					s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+ 					deleteToken = true
+@@ -958,14 +958,37 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		}
--		ident = newIdent
+ 		return
+ 	}
 +
-+		// Can the connector refresh the identity? If so, attempt to refresh the data
-+		// in the connector.
-+		//
-+		// TODO(ericchiang): We may want a strict mode where connectors that don't implement
-+		// this interface can't perform refreshing.
-+		if refreshConn, ok := conn.Connector.(connector.RefreshConnector); ok {
-+			newIdent, err := refreshConn.Refresh(r.Context(), parseScopes(scopes), ident)
-+			if err != nil {
-+				s.logger.Errorf("failed to refresh identity: %v", err)
-+				s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
-+				return
-+			}
-+			ident = newIdent
++	s.logger.Debugf("Refresh token: %s", refresh.Token)
++	s.logger.Debugf("Token token: %s", token.Token)
++	s.logger.Debugf("Obsolete Token token: %s", refresh.ObsoleteToken)
++
++	allowedToReuseToken := s.refreshTokenPolicy.AllowedToReuse(refresh.LastUsed)
++	s.logger.Debugf("Allowed to reuse: %v", allowedToReuseToken)
++
+ 	if refresh.ClientID != client.ID {
+ 		s.logger.Errorf("client %s trying to claim token for client %s", client.ID, refresh.ClientID)
+ 		s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
+ 		return
+ 	}
++
+ 	if refresh.Token != token.Token {
+-		s.logger.Errorf("refresh token with id %s claimed twice", refresh.ID)
+-		s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
++		if !allowedToReuseToken || refresh.ObsoleteToken != token.Token {
++			s.logger.Errorf("refresh token with id %s claimed twice", refresh.ID)
++			s.tokenErrHelper(w, errInvalidRequest, "Refresh token is invalid or has already been claimed by another client.", http.StatusBadRequest)
++			return
 +		}
++	}
++
++	if s.refreshTokenPolicy.CompletelyExpired(refresh.CreatedAt) {
++		s.logger.Debugf("refresh token with id %s expired", refresh.ID)
++		s.tokenErrHelper(w, errInvalidRequest, "Refresh token expired.", http.StatusBadRequest)
++		return
++	}
++
++	if s.refreshTokenPolicy.ExpiredBecauseUnused(refresh.LastUsed) {
++		s.logger.Debugf("refresh token with id %s expired because being unused", refresh.ID)
++		s.tokenErrHelper(w, errInvalidRequest, "Refresh token expired.", http.StatusBadRequest)
+ 		return
  	}
 
- 	claims := storage.Claims{
-@@ -1067,10 +1075,11 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+@@ -1067,22 +1090,34 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
  		return
  	}
 
 -	newToken := &internal.RefreshToken{
 -		RefreshId: refresh.ID,
 -		Token:     storage.NewID(),
+-	}
+-	rawNewToken, err := internal.Marshal(newToken)
+-	if err != nil {
+-		s.logger.Errorf("failed to marshal refresh token: %v", err)
+-		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+-		return
 +	newToken := token
-+	if isExpiredObsoleteToken || isNonObsoleteToken {
-+		newToken.Token = storage.NewID()
- 	}
-+
- 	rawNewToken, err := internal.Marshal(newToken)
- 	if err != nil {
- 		s.logger.Errorf("failed to marshal refresh token: %v", err)
-@@ -1078,47 +1087,50 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
- 		return
- 	}
-
--	lastUsed := s.now()
--	updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
--		if old.Token != refresh.Token {
--			return old, errors.New("refresh token claimed twice")
-+	if isExpiredObsoleteToken || isNonObsoleteToken {
-+		lastUsed := currentTime
-+		updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
-+			if old.Token != refresh.Token {
-+				return old, errors.New("refresh token claimed twice")
-+			}
-+			old.ObsoleteToken = old.Token
-+			old.Token = newToken.Token
-+			// Update the claims of the refresh token.
-+			//
-+			// UserID intentionally ignored for now.
-+			old.Claims.Username = ident.Username
-+			old.Claims.PreferredUsername = ident.PreferredUsername
-+			old.Claims.Email = ident.Email
-+			old.Claims.EmailVerified = ident.EmailVerified
-+			old.Claims.Groups = ident.Groups
-+			old.LastUsed = lastUsed
-+
-+			// ConnectorData has been moved to OfflineSession
-+			old.ConnectorData = []byte{}
-+			return old, nil
- 		}
--		old.Token = newToken.Token
--		// Update the claims of the refresh token.
--		//
--		// UserID intentionally ignored for now.
--		old.Claims.Username = ident.Username
--		old.Claims.PreferredUsername = ident.PreferredUsername
--		old.Claims.Email = ident.Email
--		old.Claims.EmailVerified = ident.EmailVerified
--		old.Claims.Groups = ident.Groups
--		old.LastUsed = lastUsed
--
--		// ConnectorData has been moved to OfflineSession
--		old.ConnectorData = []byte{}
--		return old, nil
--	}
--
--	// Update LastUsed time stamp in refresh token reference object
--	// in offline session for the user.
--	if err := s.storage.UpdateOfflineSessions(refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
--		if old.Refresh[refresh.ClientID].ID != refresh.ID {
--			return old, errors.New("refresh token invalid")
-+
-+		// Update LastUsed time stamp in refresh token reference object
-+		// in offline session for the user.
-+		if err := s.storage.UpdateOfflineSessions(refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
-+			if old.Refresh[refresh.ClientID].ID != refresh.ID {
-+				return old, errors.New("refresh token invalid")
-+			}
-+			old.Refresh[refresh.ClientID].LastUsed = lastUsed
-+			old.ConnectorData = ident.ConnectorData
-+			return old, nil
-+		}); err != nil {
-+			s.logger.Errorf("failed to update offline session: %v", err)
-+			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
-+			return
- 		}
--		old.Refresh[refresh.ClientID].LastUsed = lastUsed
--		old.ConnectorData = ident.ConnectorData
--		return old, nil
--	}); err != nil {
--		s.logger.Errorf("failed to update offline session: %v", err)
--		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
--		return
--	}
-
--	// Update refresh token in the storage.
--	if err := s.storage.UpdateRefreshToken(refresh.ID, updater); err != nil {
--		s.logger.Errorf("failed to update refresh token: %v", err)
--		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
--		return
-+		// Update refresh token in the storage.
-+		if err := s.storage.UpdateRefreshToken(refresh.ID, updater); err != nil {
-+			s.logger.Errorf("failed to update refresh token: %v", err)
-+			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
-+			return
++	if s.refreshTokenPolicy.RotationEnabled() {
++		newToken = &internal.RefreshToken{
++			RefreshId: refresh.ID,
++			Token:     storage.NewID(),
 +		}
  	}
 
+ 	lastUsed := s.now()
+ 	updater := func(old storage.RefreshToken) (storage.RefreshToken, error) {
+-		if old.Token != refresh.Token {
+-			return old, errors.New("refresh token claimed twice")
++		if s.refreshTokenPolicy.RotationEnabled() {
++			if old.Token != refresh.Token {
++				s.logger.Debugf("Old token %s doesn't equal to refresh token %s", old.Token, refresh.Token)
++				s.logger.Debugf("Now allowed obsolete token: %s", old.ObsoleteToken)
++				s.logger.Debugf("Now allowed token: %s", refresh.Token)
++				s.logger.Debugf("Is allowed to reuse? : %v", s.refreshTokenPolicy.AllowedToReuse(old.LastUsed))
++
++				if s.refreshTokenPolicy.AllowedToReuse(old.LastUsed) && old.ObsoleteToken == refresh.Token {
++					s.logger.Debugf("Allowed to reuse %s token", old.Token)
++					newToken.Token = old.Token
++					return old, nil
++				}
++				return old, errors.New("refresh token claimed twice")
++			}
++
++			old.ObsoleteToken = old.Token
+ 		}
++
+ 		old.Token = newToken.Token
+ 		// Update the claims of the refresh token.
+ 		//
+@@ -1121,6 +1156,14 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		return
+ 	}
+
++	rawNewToken, err := internal.Marshal(newToken)
++	if err != nil {
++		s.logger.Errorf("failed to marshal refresh token: %v", err)
++		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
++		return
++	}
++	s.logger.Debugf("New token: %s", newToken.Token)
++
  	s.writeAccessToken(w, idToken, accessToken, rawNewToken, expiry)
+ }
+
+diff --git a/server/rotation.go b/server/rotation.go
+index 464dccf0..c2d8bb99 100644
+--- a/server/rotation.go
++++ b/server/rotation.go
+@@ -177,3 +177,73 @@ func (k keyRotater) rotate() error {
+ 	k.logger.Infof("keys rotated, next rotation: %s", nextRotation)
+ 	return nil
+ }
++
++type RefreshTokenPolicy struct {
++	rotateRefreshTokens bool
++
++	absoluteLifetime  time.Duration
++	validIfNotUsedFor time.Duration
++	reuseInterval     time.Duration
++
++	Clock func() time.Time
++
++	logger log.Logger
++}
++
++func NewRefreshTokenPolicyFromConfig(logger log.Logger, rotation bool, validIfNotUsedFor, absoluteLifetime, reuseInterval string) (*RefreshTokenPolicy, error) {
++	r := RefreshTokenPolicy{Clock: time.Now, logger: logger}
++	var err error
++
++	if validIfNotUsedFor != "" {
++		r.validIfNotUsedFor, err = time.ParseDuration(validIfNotUsedFor)
++		if err != nil {
++			return nil, fmt.Errorf("invalid config value %q for refresh token valid if not used for: %v", validIfNotUsedFor, err)
++		}
++		logger.Infof("config refresh tokens valid if not used for: %v", validIfNotUsedFor)
++	}
++
++	if absoluteLifetime != "" {
++		r.absoluteLifetime, err = time.ParseDuration(absoluteLifetime)
++		if err != nil {
++			return nil, fmt.Errorf("invalid config value %q for refresh tokens absolute lifetime: %v", absoluteLifetime, err)
++		}
++		logger.Infof("config refresh tokens absolute lifetime: %v", absoluteLifetime)
++	}
++
++	if reuseInterval != "" {
++		r.reuseInterval, err = time.ParseDuration(reuseInterval)
++		if err != nil {
++			return nil, fmt.Errorf("invalid config value %q for refresh tokens reuse interval: %v", reuseInterval, err)
++		}
++		logger.Infof("config refresh tokens reuse interval: %v", reuseInterval)
++	}
++
++	r.rotateRefreshTokens = !rotation
++	logger.Infof("config refresh tokens rotation enabled: %v", r.rotateRefreshTokens)
++	return &r, nil
++}
++
++func (r *RefreshTokenPolicy) RotationEnabled() bool {
++	return r.rotateRefreshTokens
++}
++
++func (r *RefreshTokenPolicy) CompletelyExpired(lastUsed time.Time) bool {
++	if r.absoluteLifetime == 0 {
++		return false // expiration disabled
++	}
++	return r.Clock().After(lastUsed.Add(r.absoluteLifetime))
++}
++
++func (r *RefreshTokenPolicy) ExpiredBecauseUnused(lastUsed time.Time) bool {
++	if r.validIfNotUsedFor == 0 {
++		return false // expiration disabled
++	}
++	return r.Clock().After(lastUsed.Add(r.validIfNotUsedFor))
++}
++
++func (r *RefreshTokenPolicy) AllowedToReuse(lastUsed time.Time) bool {
++	if r.reuseInterval == 0 {
++		return false // expiration disabled
++	}
++	return !r.Clock().After(lastUsed.Add(r.reuseInterval))
++}
+diff --git a/server/rotation_test.go b/server/rotation_test.go
+index 66c269ce..c452f0e4 100644
+--- a/server/rotation_test.go
++++ b/server/rotation_test.go
+@@ -1,6 +1,7 @@
+ package server
+
+ import (
++	"github.com/stretchr/testify/require"
+ 	"os"
+ 	"sort"
+ 	"testing"
+@@ -100,3 +101,22 @@ func TestKeyRotater(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestRefreshTokenPolicy(t *testing.T) {
++	lastTime := time.Now()
++	l := &logrus.Logger{
++		Out:       os.Stderr,
++		Formatter: &logrus.TextFormatter{DisableColors: true},
++		Level:     logrus.DebugLevel,
++	}
++
++	r, err := NewRefreshTokenPolicyFromConfig(l, true, "1s", "1s", "1s")
++	require.NoError(t, err)
++	require.Equal(t, true, r.AllowedToReuse(lastTime))
++	require.Equal(t, false, r.ExpiredBecauseUnused(lastTime))
++	require.Equal(t, false, r.CompletelyExpired(lastTime))
++
++	time.Sleep(1 * time.Second)
++	require.Equal(t, false, r.AllowedToReuse(lastTime))
++	require.Equal(t, true, r.ExpiredBecauseUnused(lastTime))
++	require.Equal(t, true, r.CompletelyExpired(lastTime))}
+diff --git a/server/server.go b/server/server.go
+index 09292b16..08de3b10 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -74,9 +74,11 @@ type Config struct {
+ 	// If enabled, the connectors selection page will always be shown even if there's only one
+ 	AlwaysShowLoginScreen bool
+
+-	RotateKeysAfter      time.Duration // Defaults to 6 hours.
+-	IDTokensValidFor     time.Duration // Defaults to 24 hours
+-	AuthRequestsValidFor time.Duration // Defaults to 24 hours
++	RotateKeysAfter       time.Duration // Defaults to 6 hours.
++	IDTokensValidFor      time.Duration // Defaults to 24 hours
++	AuthRequestsValidFor  time.Duration // Defaults to 24 hours
++
++	RefreshTokenPolicy *RefreshTokenPolicy
+ 	// If set, the server will use this connector to handle password grants
+ 	PasswordConnector string
+
+@@ -158,6 +160,8 @@ type Server struct {
+ 	idTokensValidFor     time.Duration
+ 	authRequestsValidFor time.Duration
+
++	refreshTokenPolicy *RefreshTokenPolicy
++
+ 	logger log.Logger
+ }
+
+@@ -218,6 +222,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+ 		supportedResponseTypes: supported,
+ 		idTokensValidFor:       value(c.IDTokensValidFor, 24*time.Hour),
+ 		authRequestsValidFor:   value(c.AuthRequestsValidFor, 24*time.Hour),
++		refreshTokenPolicy:     c.RefreshTokenPolicy,
+ 		skipApproval:           c.SkipApprovalScreen,
+ 		alwaysShowLogin:        c.AlwaysShowLoginScreen,
+ 		now:                    now,
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index 4bdf3dd6..aa662570 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"net/http"
+ 	"strings"
+ 	"time"
+
+@@ -434,19 +435,33 @@ func (cli *client) DeleteConnector(id string) error {
+ }
+
+ func (cli *client) UpdateRefreshToken(id string, updater func(old storage.RefreshToken) (storage.RefreshToken, error)) error {
+-	r, err := cli.getRefreshToken(id)
+-	if err != nil {
+-		return err
++	tokenUpdater := func() error {
++		r, err := cli.getRefreshToken(id)
++		if err != nil {
++			return err
++		}
++		updated, err := updater(toStorageRefreshToken(r))
++		if err != nil {
++			return err
++		}
++		updated.ID = id
++
++		newToken := cli.fromStorageRefreshToken(updated)
++		newToken.ObjectMeta = r.ObjectMeta
++
++		return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
+ 	}
+-	updated, err := updater(toStorageRefreshToken(r))
+-	if err != nil {
++
++	for {
++		err := tokenUpdater()
++		if httpErr, ok := err.(httpError); ok {
++			if httpErr.StatusCode() == http.StatusConflict {
++				cli.logger.Debugf("conflict while updating refresh token with id %s", id)
++				continue
++			}
++		}
+ 		return err
+ 	}
+-	updated.ID = id
+-
+-	newToken := cli.fromStorageRefreshToken(updated)
+-	newToken.ObjectMeta = r.ObjectMeta
+-	return cli.put(resourceRefreshToken, r.ObjectMeta.Name, newToken)
+ }
+
+ func (cli *client) UpdateClient(id string, updater func(old storage.Client) (storage.Client, error)) error {
+@@ -484,19 +499,33 @@ func (cli *client) UpdatePassword(email string, updater func(old storage.Passwor
+ }
+
+ func (cli *client) UpdateOfflineSessions(userID string, connID string, updater func(old storage.OfflineSessions) (storage.OfflineSessions, error)) error {
+-	o, err := cli.getOfflineSessions(userID, connID)
+-	if err != nil {
+-		return err
++	sessionUpdater := func() error {
++		session, err := cli.getOfflineSessions(userID, connID)
++		if err != nil {
++			return err
++		}
++
++		updated, err := updater(toStorageOfflineSessions(session))
++		if err != nil {
++			return err
++		}
++
++		newOfflineSessions := cli.fromStorageOfflineSessions(updated)
++		newOfflineSessions.ObjectMeta = session.ObjectMeta
++
++		return cli.put(resourceOfflineSessions, session.ObjectMeta.Name, newOfflineSessions)
+ 	}
+
+-	updated, err := updater(toStorageOfflineSessions(o))
+-	if err != nil {
++	for {
++		err := sessionUpdater()
++		if httpErr, ok := err.(httpError); ok {
++			if httpErr.StatusCode() == http.StatusConflict {
++				cli.logger.Debugf("conflict while updating offline session for user with id %s", userID)
++				continue
++			}
++		}
+ 		return err
+ 	}
+-
+-	newOfflineSessions := cli.fromStorageOfflineSessions(updated)
+-	newOfflineSessions.ObjectMeta = o.ObjectMeta
+-	return cli.put(resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
+ }
+
+ func (cli *client) UpdateKeys(updater func(old storage.Keys) (storage.Keys, error)) error {
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
 index 5eda1781..787ff88b 100644
 --- a/storage/kubernetes/types.go

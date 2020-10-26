@@ -16,8 +16,11 @@
     authRequests: "1h"
     signingKeys: "6h"
     idTokens: {{ $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
+    refreshTokens:
+      reuseInterval: "2m"
+      validIfNotUsedFor: "2190h" # 3 months
   logger:
-    level: debug
+    level: info
     format: json
   oauth2:
     responseTypes: ["code", "token", "id_token"]
