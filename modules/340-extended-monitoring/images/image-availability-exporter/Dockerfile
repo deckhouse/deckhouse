@@ -1,1 +1,1 @@
-FROM flant/k8s-image-availability-exporter:v0.1.13
+FROM flant/k8s-image-availability-exporter:v0.1.14
