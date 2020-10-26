@@ -10,6 +10,7 @@ variables:
   WERF_VERBOSE: "1"
   WERF_STAGES_REPO_BASE: ${HARBOR_HOST}/sys/antiopa
   WERF_STAGES_STORAGE_REPO_IMPLEMENTATION: harbor
+  STAGES_STORAGE_LOGIN_CMD: "docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}"
 
 stages:
   - build_modules_images

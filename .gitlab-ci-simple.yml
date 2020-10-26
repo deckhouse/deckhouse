@@ -13,6 +13,9 @@ stages:
   - cleanup_registry
   - cleanup_builder
 
+variables:
+  WERF_STAGES_REPO_BASE: ${CI_REGISTRY_IMAGE}
+
 Build Modules Images:
   extends: .Build Modules Images template
   tags:
@@ -69,7 +72,7 @@ Cleanup registry:
 Cleanup modules registry:
   extends: .Cleanup modules registry template
   variables:
-    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-modules-images
+    WERF_STAGES_STORAGE: ${WERF_STAGES_REPO_BASE}/stages-modules-images
   tags:
     - deckhouse
   retry: 2
