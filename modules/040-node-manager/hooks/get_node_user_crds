@@ -1,0 +1,29 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+   configVersion: v1
+   kubernetes:
+   - name: nodeuser
+     group: main
+     keepFullObjectsInMemory: false
+     queue: /modules/$(module::name::kebab_case)
+     apiVersion: deckhouse.io/v1alpha1
+     kind: NodeUser
+     jqFilter: '.| {"name": .metadata.name, "spec": .spec }'
+EOF
+}
+
+function __main__() {
+  crds="$(context::jq -r '.snapshots.nodeuser | map(.filterResult)')"
+  # Check if uid is unique
+  if jq -e '([.[].spec.uid] | unique | length) != ([.[].spec.uid] | length)' <<< "$crds" > /dev/null; then
+    >&2 echo "ERROR: UIDs are not unique among NodeUser CRs."
+    return 1
+  fi
+  values::set nodeManager.internal.nodeUsers "$crds"
+}
+
+hook::run "$@"
