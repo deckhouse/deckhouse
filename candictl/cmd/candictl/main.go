@@ -63,6 +63,7 @@ func main() {
 		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
 		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
 		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
+		bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
 	}
 
 	commands.DefineConvergeCommand(kpApp)

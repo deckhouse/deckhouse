@@ -281,3 +281,58 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 	return cmd
 }
+
+const bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base-infrastructure for non-cloud Kubernetes cluster.
+You have to create it manually.
+`
+
+func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	cmd := parent.Command("base-infra", "Create base infrastructure for Cloud Kubernetes cluster.")
+	app.DefineConfigFlags(cmd)
+	app.DefineTerraformFlags(cmd)
+	app.DefineDropCacheFlags(cmd)
+
+	runFunc := func() error {
+		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		if err != nil {
+			return err
+		}
+
+		if metaConfig.ClusterType != config.CloudClusterType {
+			return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)
+		}
+
+		cachePath := metaConfig.CachePath()
+		if err = cache.Init(cachePath); err != nil {
+			// TODO: it's better to ask for confirmation here
+			return fmt.Errorf(cacheMessage, cachePath, err)
+		}
+
+		if app.DropCache {
+			cache.RemoveEverythingFromCache(metaConfig.CachePath())
+		}
+
+		clusterUUID, err := generateClusterUUID()
+		if err != nil {
+			return err
+		}
+		cache.Global().AddToClean("uuid")
+		metaConfig.UUID = clusterUUID
+
+		return log.Process("bootstrap", "Cloud infrastructure", func() error {
+			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+				WithVariables(metaConfig.MarshalConfig()).
+				WithAutoApprove(true)
+			tomb.RegisterOnShutdown(baseRunner.Stop)
+
+			_, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+			return err
+		})
+	}
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		return runFunc()
+	})
+
+	return cmd
+}

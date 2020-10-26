@@ -30,11 +30,39 @@ const banner = "" +
 |_____/ \____)____)_| \_)_| |_|\___/ \____(___/ \____)   \______)_||_|_| |_|\____(_____)
 ========================================================================================`
 
+const cacheMessage = `Create cache %s:
+	Error: %v
+
+	Probably that Kubernetes cluster was successfully bootstrapped.
+	If you want to continue, please delete the cache folder manually.
+`
+
 func printBanner() {
 	_ = log.Process("bootstrap", "Banner", func() error {
 		log.InfoLn(banner)
 		return nil
 	})
+}
+
+func generateClusterUUID() (string, error) {
+	var clusterUUID string
+	err := log.Process("bootstrap", "Cluster UUID", func() error {
+		if !cache.Global().InCache("uuid") {
+			genClusterUUID, err := uuid.NewRandom()
+			if err != nil {
+				return fmt.Errorf("can't create cluster UUID: %v", err)
+			}
+
+			clusterUUID = genClusterUUID.String()
+			cache.Global().Save("uuid", []byte(clusterUUID))
+			log.InfoF("Generated cluster UUID: %s\n", clusterUUID)
+		} else {
+			clusterUUID = string(cache.Global().Load("uuid"))
+			log.InfoF("Cluster UUID from cache: %s\n", clusterUUID)
+		}
+		return nil
+	})
+	return clusterUUID, err
 }
 
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
@@ -69,12 +97,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		cachePath := metaConfig.CachePath()
 		if err = cache.Init(cachePath); err != nil {
 			// TODO: it's better to ask for confirmation here
-			return fmt.Errorf(
-				"Create cache %s:\n\tError: %v\n\n"+
-					"\tProbably that Kubernetes cluster was successfully bootstrapped.\n"+
-					"\tIf you want to continue, please delete the cache folder manually.",
-				cachePath, err,
-			)
+			return fmt.Errorf(cacheMessage, cachePath, err)
 		}
 
 		if app.DropCache {
@@ -91,25 +114,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			resourcesToCreate = parsedResources
 		}
 
-		var clusterUUID string
-		err = log.Process("bootstrap", "Cluster UUID", func() error {
-			if !cache.Global().InCache("uuid") {
-				genClusterUUID, err := uuid.NewRandom()
-				if err != nil {
-					return fmt.Errorf("can't create cluster UUID: %v", err)
-				}
-
-				clusterUUID = genClusterUUID.String()
-				cache.Global().Save("uuid", []byte(clusterUUID))
-				log.InfoF("Generated cluster UUID: %s\n", clusterUUID)
-			} else {
-				clusterUUID = string(cache.Global().Load("uuid"))
-				log.InfoF("Cluster UUID from cache: %s\n", clusterUUID)
-			}
-			return nil
-		})
+		clusterUUID, err := generateClusterUUID()
 		if err != nil {
-			return nil
+			return err
 		}
 		cache.Global().AddToClean("uuid")
 		metaConfig.UUID = clusterUUID
