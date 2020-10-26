@@ -1,0 +1,45 @@
+#!/bin/bash
+
+### Migration 23.10.2020: Remove in final `domain migration` release
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    schedule:
+    - name: check_configmap_deckhouse
+      queue: /modules/$(module::name::kebab_case)/check_configmap_deckhouse
+      crontab: "*/10 * * * *"
+EOF
+}
+
+function __main__() {
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
+  configmap=$(kubectl -n d8-system get cm deckhouse -o json | jq -rc '.data | to_entries | .[].value | select(. | test(":"))' | yq r - --tojson)
+
+  old_domain_found="$(jq --arg modules "$modules" '(
+          [
+            (.. | select(type=="object" and has("nodeSelector")) | .nodeSelector) // {} | keys[] |
+            select(. | startswith("node-role.flant.com")) | split("/")[1] |
+            select(. // empty | test("^(\($modules))$"))
+          ] +
+          [
+            (.. | select(type=="object" and has("tolerations")) | .tolerations) // [] | .[] |
+            select(.key=="dedicated.flant.com" and (.value // empty | test("^(\($modules))$")))
+          ]
+          | length > 0
+        )' <<< "$configmap")"
+
+  group="/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_configmap"
+
+  if [ "$old_domain_found" == true ] ; then
+    jq -c --arg group "$group" '.group = $group' <<< '{"name": "migrate_domain_configmap", "set": 1, "labels": {"name": "deckhouse", "namespace": "d8-system"}}' >> $METRICS_PATH
+  fi
+
+  # Used to hack metrics deletion
+  jq -c --arg group "$group" '.group = $group' <<< '{"name": "migrate_domain_configmap", "set": 0, "labels": {"name": "none", "namespace": "none"}}' >> $METRICS_PATH
+}
+
+hook::run $@

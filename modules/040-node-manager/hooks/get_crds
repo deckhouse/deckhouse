@@ -16,6 +16,11 @@ function __config__() {
     fi
   fi
 
+  ### Migration 23.10.2020: Revert this file to commit `3f33e6e65a29997b84fda9c5c4218ee686facd9c` in final `domain migration` release.
+  ### In other words: remove addition of `node-role.deckhouse.io` labels in `jqFilter` and following `module list` routine.
+
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
   cat << EOF
     configVersion: v1
     kubernetes:
@@ -30,7 +35,22 @@ function __config__() {
         {
           "name": .metadata.name,
           "spec": (
-            .spec
+            (.spec |
+              if ((.nodeTemplate // {}).labels // {}) != {} then
+                .nodeTemplate.labels = (
+                  ((.nodeTemplate // {}).labels // {}) +
+                  (
+                    (.nodeTemplate // {}).labels // {} |
+                    with_entries(
+                      select((.key | test("^node-role\\\.flant\\\.com/(${modules})$")) and .value == "") |
+                      .key |= sub("node-role.flant.com/"; "node-role.deckhouse.io/")
+                    )
+                  )
+                )
+              else
+              .
+              end
+            )
             +
             {"manualRolloutID": (.metadata.annotations."manual-rollout-id" // "")}
           )

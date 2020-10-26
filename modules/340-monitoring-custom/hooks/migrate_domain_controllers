@@ -1,8 +1,12 @@
 #!/bin/bash
 
+### Migration 23.10.2020: Remove in final `domain migration` release
+
 source /deckhouse/shell_lib.sh
 
 function __config__() {
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
   cat << EOF
     configVersion: v1
     kubernetes:
@@ -21,27 +25,23 @@ function __config__() {
         if
         (
           [
-            .spec.template.spec.nodeSelector // {} | keys[] |
-            select(. | startswith("node-role.flant.com")) | split("/")[1] |
-            select(. // empty | test("^(frontend|system)$"))
+            .spec.template.spec.nodeSelector // {} | to_entries[] |
+            select((.key | test("^node-role\\\.flant\\\.com/(${modules})$")) and .value == "")
           ] +
           [
             (.spec.template.spec.affinity.nodeAffinity | .. | .matchExpressions? // []) | .[] |
-            select(.key | startswith("node-role.flant.com")) | .key | split("/")[1] |
-            select(. // empty | test("^(frontend|system)$"))
+            select(.key | test("^node-role\\\.flant\\\.com/(${modules})$"))
           ] +
           [
-            (.spec.template.spec.tolerations // []) as \$tolerations | \$tolerations[] |
-            select(.key=="dedicated.flant.com" and (.value // empty | test("^(frontend|system)$"))) | .value as \$value |
-            if (map(select(\$tolerations[] | .key == "dedicated.deckhouse.io" and .value==\$value)) | length == 0)
-            then . else empty end
+            (.spec.template.spec.tolerations // []) | .[] |
+            select(.key=="dedicated.flant.com" and (.value // "" | test("^(${modules}|)$")))
           ]
           | length > 0
         )
         then
         {
-          "name": "migrate_domain_resources",
-          "group": "/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_resources",
+          "name": "migrate_domain_controllers",
+          "group": "/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_controllers",
           "set": 1,
           "labels":
           {
@@ -79,9 +79,10 @@ EOF
 }
 
 function __main__() {
-  context::jq -rc '.snapshots.statefulsets + .snapshots.daemonsets + .snapshots.deployments | .[] | select(.filterResult != null) | .filterResult' >> $METRICS_PATH
+  context::jq -c '.. | .filterResult? | select(.)' >> $METRICS_PATH
   # Used to hack metrics deletion
-  echo "{\"name\": \"migrate_domain_resources\", \"group\": \"/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_resources\", \"set\": 0, \"labels\":{\"name\": \"none\",\"controller\": \"none\",\"namespace\": \"none\"}}" >> $METRICS_PATH
+  group="/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_controllers"
+  jq -c --arg group "$group" '.group = $group' <<< '{"name": "migrate_domain_controllers", "set": 0, "labels": {"name": "none", "controller": "none", "namespace": "none"}}' >> $METRICS_PATH
 }
 
 hook::run $@
