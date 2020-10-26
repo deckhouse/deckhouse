@@ -12,37 +12,37 @@ title: "Сloud provider — Yandex.Cloud: Custom Resource"
   * Формат — integer.
 * `coreFraction` - базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
   * Формат — integer.
-  * По-умолчанию `100`.
+  * По умолчанию `100`.
   * Допустимые значения `0`, `5`, `20`, `50`, `100`.
 * `memory` — количество оперативной памяти в мебибайтах у создаваемых инстансов.
   * Формат — integer.
 * `gpus` — количество графических адаптеров у создаваемых инстансов.
   * Формат — integer.
-  * По-умолчанию `0`.
+  * По умолчанию `0`.
   * Опциональный параметр.
 * `platformID` — тип платформы instances. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
   * Формат — строка.
-  * По-умолчанию `standard-v2`.
+  * По умолчанию `standard-v2`.
   * Опциональный параметр.
 * `imageID` — идентификатор образа, который будет установлен в заказанные instance'ы.
   * Формат — строка.
-  * По-умолчанию образ из masterInstanceClass из providerClusterConfiguration.
+  * По умолчанию образ из masterInstanceClass из providerClusterConfiguration.
   * Опциональный параметр.
 * `preemptible` — Заказывать ли preemptible instance.
   * Формат — bool.
-  * По-умолчанию `false`.
+  * По умолчанию `false`.
   * Опциональный параметр.
 * `diskType` — тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
   * Формат — строка.
-  * По-умолчанию `network-ssd`.
+  * По умолчанию `network-ssd`.
   * Опциональный параметр.
 * `diskSizeGB` — размер диска у инстансов.
   * Формат — integer. В ГиБ.
-  * По-умолчанию `50` ГиБ.
+  * По умолчанию `50` ГиБ.
   * Опциональный параметр.
 * `assignPublicIPAddress` - Присваивать ли публичные ip адреса инстансам.
   * Формат — bool.
-  * По-умолчанию `false`.
+  * По умолчанию `false`.
   * Опциональный параметр.
 * `mainSubnet` — позволяет переопределить имя основного subnet, к которому будет подключен инстанс, по умолчанию
 используется subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.

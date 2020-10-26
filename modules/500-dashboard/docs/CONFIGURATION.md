@@ -8,7 +8,7 @@ title: "Модуль dashboard: настройки"
 * `ingressClass` — класс ingress контроллера, который используется для dashboard.
     * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
 * `accessLevel` — уровень доступа в dashboard при отсутствии внешней аутентификации `externalAuthentication`. Возможные значения описаны в [user-authz](/modules/140-user-authz/).
-    * По-умолчанию: `User`.
+    * По умолчанию: `User`.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
          * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -30,10 +30,10 @@ title: "Модуль dashboard: настройки"
         * `OnlyInURI` — dashboard будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с https схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dashboard (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-        * По-умолчанию `letsencrypt`.
+        * По умолчанию `letsencrypt`.
     * `customCertificate`
       * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для dashboard (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-        * По-умолчанию `false`.
+        * По умолчанию `false`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.

@@ -21,10 +21,10 @@ title: "Модуль deckhouse-web: настройки"
         * `OnlyInURI` — web-интерфейс документации будет доступен по HTTP (подразумевая, что перед ним стоит внешний HTTPS-балансер, который терминирует HTTPS) и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
     * `certManager`
       * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-        * По-умолчанию `letsencrypt`.
+        * По умолчанию `letsencrypt`.
     * `customCertificate`
       * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для web-интерфейса документации (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-        * По-умолчанию `false`.
+        * По умолчанию `false`.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.

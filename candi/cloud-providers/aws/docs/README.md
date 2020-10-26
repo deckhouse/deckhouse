@@ -7,7 +7,7 @@ title: "Cloud provider — AWS: Развертывание"
 * `layout` — архитектура расположения ресурсов в облаке.
   * Варианты — `Standard` или `WithoutNAT` (описание ниже).
 * `standard` — настройки для лейаута `Standard`.
-  * `associatePublicIPToMasters` — выдать ли мастерам публичные IP. По-умолчанию — `true`.
+  * `associatePublicIPToMasters` — выдать ли мастерам публичные IP. По умолчанию — `true`.
 * `provider` — параметры подключения к API AWS.
   * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
   * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
@@ -40,7 +40,7 @@ title: "Cloud provider — AWS: Развертывание"
 * `nodeNetworkCIDR` — подсеть, в которой будут работать ноды кластера.
   * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC.
   * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
-  * Необязательный, но рекомендованный параметр. По-умолчанию — соответствует целому диапазону адресов VPC.
+  * Необязательный, но рекомендованный параметр. По умолчанию — соответствует целому диапазону адресов VPC.
 * `sshPublicKey` — публичный ключ для доступа на ноды.
 * `tags` — теги, которые будут присвоены всем созданным ресурсам.
 
