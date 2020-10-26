@@ -7,7 +7,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: migrate_domain_alert ::", func() {
+var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: migrate_domain_controllers ::", func() {
 	const (
 		stateStetefulSetWithProperLabel = `
 ---
@@ -56,11 +56,6 @@ spec:
   template:
     spec:
       tolerations:
-      - key: dedicated.flant.com
-        operator: Exists
-      - key: dedicated.flant.com
-        value: system
-        operator: Exists
       - key: dedicated.deckhouse.io
         value: system
         operator: Exists

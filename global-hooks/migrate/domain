@@ -1,8 +1,12 @@
 #!/bin/bash
 
+### Migration 23.10.2020: Remove in final `domain migration` release
+
 source /deckhouse/shell_lib.sh
 
 function __config__() {
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
   cat << EOF
     configVersion: v1
     kubernetes:
@@ -17,9 +21,9 @@ function __config__() {
           "name": .metadata.name,
           "missing_labels":
             [
-              .metadata.labels // {} | keys as \$keys | \$keys[] |
-              select(startswith("node-role.flant.com/")) |
-              split("/")[1] | select(. | test("(frontend|system)")) | "node-role.deckhouse.io/\(.)" |
+              .metadata.labels // {} | with_entries(select(.value == "")) | keys as \$keys | \$keys[] |
+              select(. | test("^node-role\\\.flant\\\.com/(${modules})$")) |
+              sub("node-role.flant.com/"; "node-role.deckhouse.io/") |
               select(. | IN(\$keys[]) | not)
             ]
         }

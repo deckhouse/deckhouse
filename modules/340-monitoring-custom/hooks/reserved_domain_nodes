@@ -1,0 +1,52 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Node
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        if
+        (
+          [
+            .metadata.labels // {} | keys[] |
+            select(. | startswith("node-role.deckhouse.io")) | split("/")[1] |
+            select(. // empty | test("^(${modules})$") | not)
+          ] +
+          [
+            .spec.taints // [] | .[] |
+            select(.key=="dedicated.deckhouse.io" and (.value // empty | test("^(${modules})$") | not))
+          ]
+          | length > 0
+        )
+        then
+        {
+          "name": "reserved_domain_nodes",
+          "group": "/modules/$(module::name::kebab_case)/reserved_domain_alert#reserved_domain_nodes",
+          "set": 1,
+          "labels":
+          {
+            "name": .metadata.name
+          }
+        }
+        else null end
+EOF
+}
+
+function __main__() {
+  context::jq -c '.. | .filterResult? | select(.)' >> $METRICS_PATH
+  # Used to hack metrics deletion
+  group="/modules/$(module::name::kebab_case)/reserved_domain_alert#reserved_domain_nodes"
+  jq -c --arg group "$group" '.group = $group' <<< '{"name": "reserved_domain_nodes", "set": 0, "labels": {"name": "none"}}' >> $METRICS_PATH
+}
+
+hook::run $@

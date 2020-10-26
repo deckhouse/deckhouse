@@ -102,10 +102,13 @@ Status:
 
 ## Как выделить узлы под специфические нагрузки
 
-> Во всех случаях использование `dedicated.deckhouse.io` в ключе или его части не рекомендуется, данный ключ зарезервирован для использования внутри **Deckhouse**.
+> ⛔ Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов **Deckhouse**. Отдайте предпочтение в пользу ключей `dedicated` или `dedicated.client.com`. 
 
 Для решений данной задачи существуют два механизма:
 - Установка меток в `NodeGroup` `spec.nodeTemplate.labels`, для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает какие именно ноды будут выбраны планировщиком для запуска целевого приложения
 - Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints`, с дальнейшим снятием их в `Pod` [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих нодах.
 
+> ℹ️ Произвольные ключи для `taints` (например `dedicated` или `dedicated.client.com`) нужно добавить в `ConfigMap` `d8-system/deckhouse`, в секцию `global.modules.placement.customTolerationKeys`. Таким образом мы разрешим системным компонентам (например `cni-flannel`) выезжать на эти выделенные ноды.
+
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
+

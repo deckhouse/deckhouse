@@ -1,0 +1,60 @@
+#!/bin/bash
+
+### Migration 23.10.2020: Remove in final `domain migration` release
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: dexauthenticators
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: deckhouse.io/v1alpha1
+      kind: DexAuthenticator
+      keepFullObjectsInMemory: false
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+      jqFilter: |
+        if
+        (
+          [
+            .spec.nodeSelector // {} | to_entries[] |
+            select((.key | test("^node-role\\\.flant\\\.com/(${modules})$")) and .value == "")
+          ] +
+          [
+            .spec.tolerations // [] | .[] |
+            select(.key=="dedicated.flant.com" and (.value // "" | test("^(${modules}|)$")))
+          ]
+          | length > 0
+        )
+        then
+        {
+          "name": "migrate_domain_resources",
+          "group": "/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_resources",
+          "set": 1,
+          "labels":
+          {
+            "name": .metadata.name,
+            "kind": .kind,
+            "namespace": (.metadata.namespace // "none")
+          }
+        }
+        else null end
+EOF
+}
+
+function __main__() {
+  context::jq -c '.. | .filterResult? | select(.)' >> $METRICS_PATH
+  # Used to hack metrics deletion
+  group="/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_resources"
+  jq -c --arg group "$group" '.group = $group' <<< '{"name": "migrate_domain_resources", "set": 0, "labels": {"name": "none", "kind": "none", "namespace": "none"}}' >> $METRICS_PATH
+}
+
+hook::run $@

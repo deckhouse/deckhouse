@@ -417,4 +417,51 @@ spec:
 		})
 	})
 
+	Context("NG with label node-role.flant.com/system and minimal Static Node", func() {
+		BeforeEach(func() {
+
+			state := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: Static
+  nodeTemplate:
+    labels:
+      node.deckhouse.io/group: wor-ker
+      node-role.flant.com/system: ""
+      node-role.flant.com/stateful: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/group: wor-ker
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully; new node-role.deckhouse.io label must be set", func() {
+			expectedLastApplied := `
+				{
+					"labels": {
+						"node-role.deckhouse.io/system": "",
+						"node-role.flant.com/system": "",
+						"node-role.flant.com/stateful": "",
+						"node.deckhouse.io/group": "wor-ker"
+					},
+					"annotations": {},
+					"taints": []
+				}
+			`
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
+		})
+	})
+
 })
