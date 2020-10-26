@@ -44,4 +44,18 @@ spec:
   disruptions:
     approvalMode: Manual
 ```
+## Пример описания `NodeUser`
 
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeUser
+metadata:
+  name: testuser
+spec:
+  uid: 1001
+  sshPublicKey: "ssh-rsa xxx"
+  passwordHash: $2a$10$GAwx2h0D1jiEeBt.JECSEenGvShJbu.mOSQ/jaRk1ly9c31TcHjim
+  isSudoer: true
+  extraGroups:
+  - docker
+```

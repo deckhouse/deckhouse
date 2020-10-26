@@ -7,6 +7,10 @@ matrixTestDefaults:
         bashibleBundle: mybundle
         bashibleChecksum: mychecksum
         machineClassChecksumBeforeMigration: null
+    nodeUsers:
+      __ConstantChoises__:
+        - []
+        - [{"name":"test1","spec":{"extraGroups":["docker","printer"],"isSudoer":false,"passwordHash":"$2a$10","sshPublicKey":"ssh-rsa pubkey","uid":1001}},{"name":"test2","spec":{"isSudoer":true,"passwordHash":"$2a$20","sshPublicKey":"ssh-rsa pubkey2","uid":1002}}]
 global:
   enabledModules:
     __ConstantChoices__:

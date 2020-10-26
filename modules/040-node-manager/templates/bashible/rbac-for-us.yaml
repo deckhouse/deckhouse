@@ -9,6 +9,7 @@ rules:
 - apiGroups: [""]
   resourceNames:
   - bashible-bashbooster
+  - node-users
 
 {{- range $bundle := list "ubuntu-lts" "centos-7" }}
   {{- range $kubernetes_version := list "1.14" "1.15" "1.16" "1.17" "1.18" }}
