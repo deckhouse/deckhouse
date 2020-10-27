@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: status
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "status")) | indent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: status
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: status
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      enableServiceLinks: false
+{{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+      containers:
+        - name: webui
+          image: {{ .Values.global.modulesImages.registry }}/upmeter/status:{{ .Values.global.modulesImages.tags.upmeter.status }}
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "/usr/sbin/nginx", "-s", "quit" ]
+          ports:
+          - name: http
+            containerPort: 80
+            protocol: TCP

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  legacy::common_hooks::certificates::order_certificate::config
+}
+
+function __main__() {
+  legacy::common_hooks::certificates::order_certificate::main "d8-upmeter" "upmeter-tls" "d8-upmeter:upmeter" "internal.upmeter"
+}
+
+hook::run "$@"

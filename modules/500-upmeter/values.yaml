@@ -1,0 +1,17 @@
+upmeter:
+  internal:
+    smokeMini:
+      sts:
+        a: {}
+        b: {}
+        c: {}
+        d: {}
+        e: {}
+  auth:
+    webui: {}
+    status: {}
+  smokeMini:
+    auth: {}
+  disabledProbes: []
+  statusPageAuthDisabled: false
+  smokeMiniDisabled: false

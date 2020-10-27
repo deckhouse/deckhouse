@@ -1,0 +1,41 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+EOF
+}
+
+function __main__() {
+  if values::has upmeter.internal.deployDexAuthenticator ; then
+    allowedGroups=""
+    if values::has upmeter.auth.webui.allowedUserGroups ; then
+      allowedGroups="allowedGroups: $(values::get upmeter.auth.webui.allowedUserGroups)"
+    fi
+    cat <<EOF | kubectl apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+  name: upmeter
+  namespace: d8-upmeter
+  labels:
+    heritage: deckhouse
+    module: upmeter
+    app: dex-authenticator
+spec:
+  applicationDomain: "$(module::public_domain upmeter)"
+  applicationIngressCertificateSecretName: "ingress-tls"
+  applicationIngressClassName: "$(module::ingress_class)"
+  $allowedGroups
+EOF
+  else
+    if kubectl -n d8-upmeter get dexauthenticator upmeter >/dev/null 2>/dev/null ; then
+      kubectl -n d8-upmeter delete dexauthenticator upmeter >/dev/null 2>/dev/null
+    fi
+  fi
+}
+
+hook::run "$@"

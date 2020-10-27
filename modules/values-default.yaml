@@ -46,3 +46,4 @@ secretCopierEnabled: true
 deckhouseWebEnabled: true
 helmEnabled: true
 smokeMiniEnabled: true
+upmeterEnabled: true

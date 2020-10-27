@@ -1,0 +1,54 @@
+{{- if eq .Values.upmeter.smokeMiniDisabled false }}
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: smoke-mini
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "smoke-mini")) | indent 2 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+{{- if .Values.upmeter.smokeMini.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.upmeter.smokeMini.auth.whitelistSourceRanges | join "," }}
+{{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/limit-rpm: "150"
+spec:
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
+    secretName: ingress-tls-smoke-mini
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: smoke-mini
+          servicePort: http
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: smoke-mini
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "smoke-mini")) | indent 2 }}
+spec:
+  secretName: ingress-tls-smoke-mini
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
+  acme:
+    config:
+{{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | indent 4 }}
+      domains:
+      - {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+{{- end }}
+{{- end }}

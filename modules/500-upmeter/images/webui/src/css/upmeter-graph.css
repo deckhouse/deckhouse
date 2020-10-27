@@ -1,0 +1,104 @@
+
+div.tooltip {
+  position: absolute;
+  /*text-align: center;*/
+  width: 120px;
+  /*height: 200px;*/
+  padding: 5px;
+  font: 12px sans-serif;
+  color: #f7f9ff;
+  background: #8c8c8c;
+  border: 0;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+/* remove bootstrap's thick focus outline */
+.btn-toolbar-status-graph .btn {
+  box-shadow: none !important;
+}
+.btn-toolbar-status-graph .btn {
+  box-shadow: none !important;
+}
+
+/* svg element */
+#graph {
+  /*border: 1px solid darkred;*/
+  /*background-color: #cccccc;*/
+}
+
+/* svg styling! */
+.pie-seg-up {
+  fill:  #4cae4c;
+}
+
+/* svg styling! */
+.pie-seg-down {
+  fill: #d43f3a;
+}
+
+/* svg styling! */
+.pie-seg-muted {
+  fill: #ffff00;
+}
+
+/* svg styling! */
+.pie-seg-unknown {
+  fill: #8c8c8c;
+}
+
+/* svg styling! */
+.pie-seg-nodata {
+  fill: #ffffff00;
+  /* stroke-width: 1px;
+  stroke: #8c8c8c; */
+}
+
+/* svg styling! */
+.pie-text-group {
+  fill:  #00122C;
+  font-size: 11px;
+  text-anchor: middle;
+  alignment-baseline: central;
+}
+
+/* svg styling! */
+.pie-text-probe {
+  fill:  #00122C;
+  font-size: 10px;
+  text-anchor: middle;
+  alignment-baseline: central;
+}
+
+/* svg styling! */
+.group-label {
+  fill: #0062cc;
+  /*fill: #2e6da4;*/
+  text-decoration: underline;
+  cursor: pointer;
+  /*text-anchor: middle;*/
+  alignment-baseline: central;
+}
+
+/* svg styling! */
+.group-icon {
+  color: #0062cc;
+  cursor: pointer;
+}
+
+/* svg styling! */
+.probe-label {
+  fill: #007bff;
+  cursor: default;
+  /*fill: #1f76b0;*/
+}
+
+/* svg styling! */
+.top-ticks{
+  cursor: default;
+}
+
+.tick-line {
+  stroke-dasharray: 5,2;
+  stroke: #d5d5d5;
+}
