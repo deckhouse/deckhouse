@@ -1,0 +1,137 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: node_groups
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "maxInstances": ((.spec.cloudInstances.zones // ["defaultZone"] | length) * (.spec.cloudInstances.maxPerZone // 1)),
+          "standby": (.spec.cloudInstances.standby // null),
+          "taints": (.spec.nodeTemplate.taints // [])
+        }
+    - name: nodes
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        {
+          "group": .metadata.labels."node.deckhouse.io/group",
+          # .status.allocatable represents all available resources, not the only remaining.
+          "allocatableCPU": .status.allocatable.cpu,
+          "allocatableMemory": .status.allocatable.memory,
+          "isReady": ([(.status.conditions // [])[] | select(.type == "Ready" and .status == "True")] | length > 0),
+          "isUnschedulable": (.spec.unschedulable // false)
+        }
+    - name: standby_pods
+      apiVersion: v1
+      kind: Pod
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - node-standby
+      namespace:
+        nameSelector:
+          matchNames: [d8-cloud-instance-manager]
+      jqFilter: |
+        {
+          "group": .metadata.labels.ng,
+          "isReady": ([(.status.conditions // [])[] | select(.type == "Ready" and .status == "True")] | length > 0)
+        }
+EOF
+}
+
+
+# $1 — CIG name
+# $2 — standby nodes count or empty
+function _set_ng_standby_status() {
+  if [ -n "$2" ]; then
+    status_patch="$(jq -n --argjson count "$2" '{"standby": $count}')"
+  else
+    status_patch="$(jq -n '{"standby": null}')"
+  fi
+  kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${status_patch}"
+}
+
+function __main__() {
+  standby_node_groups="[]"
+
+  for i in $(context::jq -r '.snapshots.node_groups | keys[]'); do
+    ng=$(context::get snapshots.node_groups.$i.filterResult)
+    ng_name=$(jq -r '.name' <<< "$ng")
+
+    if ! standby=$(jq -er 'select(.standby) | .standby' <<< "$ng"); then
+      _set_ng_standby_status "${ng_name}" ""
+      continue
+    fi
+
+    max_instances=$(jq -r '.maxInstances' <<< "$ng")
+
+    if [[ $standby =~ ^[0-9]+%$ ]]; then
+      percent=$(echo "$standby" | sed -r 's/[^0-9]+//g')
+      desired_standby=$((max_instances*percent/100))
+    else
+      desired_standby=$standby
+    fi
+
+    # Running standby Pods count - representing Running standby Nodes count.
+    standby_nodes_count=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.standby_pods[].filterResult | select(.group == $ng_name and .isReady == true)] | length')
+    _set_ng_standby_status "${ng_name}" "${standby_nodes_count}"
+
+    ready_nodes_count=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .isReady == true and .isUnschedulable == false)] | length')
+    duty_nodes_count=$((ready_nodes_count-standby_nodes_count))
+    total_nodes_count=$((duty_nodes_count+desired_standby))
+    if (( total_nodes_count > max_instances )); then
+      excess_nodes_count=$((total_nodes_count-max_instances))
+      desired_standby=$((desired_standby-excess_nodes_count))
+    fi
+
+    # Always keep one Pending standby Pod to catch a Node on application scale down.
+    if (( desired_standby <= 0 )); then
+      desired_standby=1
+    fi
+
+    allocatable_cpu=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableCPU) | .allocatableCPU] | sort | first // 0 ')
+    reserve_cpu="$(echo $allocatable_cpu | deckhouse-controller helper unit convert --mode kube-resource-unit --output milli)"
+    # Keep 500m of CPU for node purposes.
+    reserve_cpu=$((reserve_cpu-500))
+    # For Nodes with unknown cpu amount or less than 500m - request 10m of cpu (e.g. disable reservation by cpu).
+    if (( reserve_cpu < 10 )); then
+      reserve_cpu="10"
+    fi
+    reserve_cpu="${reserve_cpu}m"
+
+    allocatable_memory=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableMemory) | .allocatableMemory] | sort | first // 0')
+    reserve_memory="$(echo $allocatable_memory | deckhouse-controller helper unit convert --mode kube-resource-unit)"
+    # Keep 1Gi of CPU for node purposes.
+    reserve_memory=$((reserve_memory-(1024*1024*1024)))
+    # Convert to Mi.
+    reserve_memory=$((reserve_memory/1024/1024))
+    # For Nodes with unknown memory amount or less than 1Gi - request 10Mi of memory (e.g. disable reservation by memory).
+    if (( reserve_memory < 10 )); then
+      reserve_memory="10"
+    fi
+    reserve_memory="${reserve_memory}Mi"
+
+    standby_node_groups="$(jq --argjson ng "$ng" --arg desired_standby "$desired_standby" --arg reserve_cpu "$reserve_cpu" --arg reserve_memory "$reserve_memory" '. + [$ng | {"name": .name, "standby": $desired_standby | tonumber, "reserveCPU": $reserve_cpu, "reserveMemory": $reserve_memory, "taints": .taints}]' <<< $standby_node_groups)"
+  done
+
+  values::set nodeManager.internal.standbyNodeGroups "$standby_node_groups"
+}
+
+hook::run "$@"

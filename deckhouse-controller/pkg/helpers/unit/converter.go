@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Convert(mode string) error {
+func Convert(mode string, output string) error {
 	reader := bufio.NewReader(os.Stdin)
 
 	input, err := reader.ReadString('\n')
@@ -25,11 +25,21 @@ func Convert(mode string) error {
 		if err != nil {
 			return fmt.Errorf("failed to parse: %s", err)
 		}
-		fmt.Println(bro.Seconds())
+		switch output {
+		case "value":
+			fmt.Println(bro.Seconds())
+		case "milli":
+			fmt.Println(bro.Milliseconds())
+		}
 
 	case "kube-resource-unit":
 		quantity := resource.MustParse(input)
-		fmt.Println(quantity.Value())
+		switch output {
+		case "value":
+			fmt.Println(quantity.Value())
+		case "milli":
+			fmt.Println(quantity.MilliValue())
+		}
 
 	default:
 		return fmt.Errorf("unknown mode")

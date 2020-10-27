@@ -29,9 +29,10 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 	{
 		unitCommand := helpersCommand.Command("unit", "Unit related methods.")
 		unitConvertCommand := unitCommand.Command("convert", "Convert units.")
-		unitConvertMode := unitConvertCommand.Flag("mode", "Mode of unit converter").Enum("duration", "kube-resource-unit")
+		unitConvertMode := unitConvertCommand.Flag("mode", "Mode of unit converter").PlaceHolder("duration | kube-resource-unit").Enum("duration", "kube-resource-unit")
+		unitConvertOutput := unitConvertCommand.Flag("output", "Output of unit converter").PlaceHolder("value | milli").Default("value").Enum("value", "milli")
 		unitConvertCommand.Action(func(c *kingpin.ParseContext) error {
-			return unit.Convert(*unitConvertMode)
+			return unit.Convert(*unitConvertMode, *unitConvertOutput)
 		})
 	}
 
