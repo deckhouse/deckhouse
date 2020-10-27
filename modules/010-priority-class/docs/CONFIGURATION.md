@@ -24,4 +24,5 @@ title: "Модуль priority-class: настройки"
 | `staging`                 | Staging окружения для приложений.                                                                                                                                    | 3000       |
 | `cluster-low`             | Компоненты кластера, без которых возможна эксплуатация кластера, но которые желательны. <br>`prometheus-operator`, `node-ping`, `okmeter`, `dashboard`, `dashboard-oauth2-proxy`, `cert-manager`, `prometheus-longterm`                                                                              | 2000       |
 | `develop` (default)       | Develop окружения для приложений. Класс по умолчанию, если не проставлены иные классы.                                                                               | 1000       |
+| `standby`                 | Этот класс не предназначен для приложений. Используется в системных целях для резервирования нод.                                                                      | -1         |
 
