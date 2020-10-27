@@ -22,29 +22,25 @@ affinity:
   {{- if (include "helm_lib_ha_enabled" .) }}
     {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 0 }}
 replicas: {{ index .Values.global.discovery "clusterMasterCount" }}
-      {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 1 }}
 strategy:
   type: RollingUpdate
   rollingUpdate:
     maxSurge: 0
-        {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 2 }}
+      {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 2 }}
     maxUnavailable: 2
-        {{- else }}
+      {{- else }}
     maxUnavailable: 1
-        {{- end }}
       {{- end }}
     {{- else if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 }}
 replicas: {{ index .Values.global.discovery.d8SpecificNodeCountByRole "master" }}
-      {{- if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 1 }}
 strategy:
   type: RollingUpdate
   rollingUpdate:
     maxSurge: 0
-        {{- if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 2 }}
+      {{- if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 2 }}
     maxUnavailable: 2
-        {{- else }}
+      {{- else }}
     maxUnavailable: 1
-        {{- end }}
       {{- end }}
     {{- else }}
 replicas: 2
@@ -56,6 +52,11 @@ strategy:
     {{- end }}
   {{- else }}
 replicas: 1
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
   {{- end }}
 {{- end }}
 

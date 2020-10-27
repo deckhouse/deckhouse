@@ -156,7 +156,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: node.kubernetes.io/disk-pressure
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(cainjector.Field("spec.strategy").Exists()).To(BeFalse())
+			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(cert_manager.Exists()).To(BeTrue())
@@ -299,7 +299,7 @@ podAntiAffinity:
 - key: node.kubernetes.io/disk-pressure
 `))
 			Expect(cainjector.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(cainjector.Field("spec.strategy").Exists()).To(BeFalse())
+			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
 			Expect(cert_manager.Exists()).To(BeTrue())
