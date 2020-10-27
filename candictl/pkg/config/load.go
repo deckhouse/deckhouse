@@ -26,6 +26,10 @@ var once sync.Once
 var store *SchemaStore
 
 func NewSchemaStore() *SchemaStore {
+	return newSchemaStore(candiDir)
+}
+
+func newSchemaStore(candiDir string) *SchemaStore {
 	once.Do(func() {
 		store = &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
 		err := filepath.Walk(candiDir, func(path string, info os.FileInfo, err error) error {

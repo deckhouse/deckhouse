@@ -120,6 +120,47 @@ func TestDeletePods(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		_, err = fakeClient.CoreV1().Pods("default").Create(&v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "withDifferentPv",
+				Namespace: "default",
+			},
+			Spec: v1.PodSpec{
+				Volumes: []v1.Volume{{
+					Name: "test",
+					VolumeSource: v1.VolumeSource{
+						EmptyDir: &v1.EmptyDirVolumeSource{},
+					},
+				}},
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = fakeClient.CoreV1().Pods("default").Create(&v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "withTwoPv",
+				Namespace: "default",
+			},
+			Spec: v1.PodSpec{
+				Volumes: []v1.Volume{
+					{
+						Name: "test",
+						VolumeSource: v1.VolumeSource{
+							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+								ClaimName: "test",
+							}},
+					},
+					{
+						Name: "test2",
+						VolumeSource: v1.VolumeSource{
+							EmptyDir: &v1.EmptyDirVolumeSource{},
+						},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
 		_, err = fakeClient.CoreV1().Pods("test-ns").Create(&v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withoutPv",
@@ -135,7 +176,8 @@ func TestDeletePods(t *testing.T) {
 		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{})
 		require.NoError(t, err)
 
-		require.Len(t, pods.Items, 1)
-		require.Equal(t, "withoutPv", pods.Items[0].Name)
+		require.Len(t, pods.Items, 2)
+		require.Equal(t, "withDifferentPv", pods.Items[0].Name)
+		require.Equal(t, "withoutPv", pods.Items[1].Name)
 	})
 }

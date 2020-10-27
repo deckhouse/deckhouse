@@ -38,17 +38,22 @@ func DeletePods(kubeCl *client.KubernetesClient) error {
 			return err
 		}
 
-	podsLoop:
 		for _, pod := range pods.Items {
 			// We have to delete only pods with pvc to trigger pv/pvc deletion
 			if len(pod.Spec.Volumes) == 0 {
 				continue
 			}
 
+			podWithPersistentVolumeClaim := false
 			for _, volume := range pod.Spec.Volumes {
-				if volume.PersistentVolumeClaim == nil {
-					continue podsLoop
+				if volume.PersistentVolumeClaim != nil {
+					podWithPersistentVolumeClaim = true
+					break
 				}
+			}
+
+			if !podWithPersistentVolumeClaim {
+				continue
 			}
 
 			err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{})
