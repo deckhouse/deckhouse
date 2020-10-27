@@ -23,7 +23,7 @@ title: "Сloud provider — OpenStack: Custom Resources"
     * Опциональный параметр.
     * Формат — integer. В гигабайтах.
     > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска
-    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](usage.html#загрузка-image-в-openstack)
+    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](faq.html#как-загрузить-image-в-openstack)
       > ```bash
         openstack volume type list
         openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME

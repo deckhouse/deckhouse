@@ -55,7 +55,7 @@ security groups указываются в `OpenStackClusterConfiguration`:
 Необходимо прописать параметр `additionalSecurityGroups` для всех OpenStackInstanceClass в кластере, которым нужны дополнительные
 security groups. Смотри [параметры модуля cloud-provider-openstack](/modules/030-cloud-provider-openstack/configuration.html).
 
-## Как поднять гибридный (вручную заведённые ноды) кластер?
+## Как поднять гибридный кластер?
 
 Hybrid кластер представляет собой объединённые в один кластер bare metal ноды и ноды openstack. Для создания такого кластера
 необходимо наличие L2 сети между всеми нодами кластера.
@@ -183,7 +183,7 @@ parameters:
 volumeBindingMode: WaitForFirstConsumer
 ```
 
-## Как мне загрузить image в OpenStack?
+## Как загрузить image в OpenStack?
 
 1. Скачиваем последний стабильный образ ubuntu 18.04
 
