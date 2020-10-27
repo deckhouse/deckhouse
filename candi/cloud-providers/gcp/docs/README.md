@@ -12,7 +12,7 @@ title: "Cloud provider — GCP: Развертывание"
     * `cloudNATAddresses` — список имен публичных статических IP-адресов для `Cloud NAT`. Если параметр не определен, то по умолчанию будет аллоцирован один адрес и в зависимости от нагрузки, количество адресов будет автоматически изменяться (рекомендованный Google режим). Подробнее про `CloudNAT` см. [benefits](https://cloud.google.com/nat/docs/overview#benefits),  [addresses](https://cloud.google.com/nat/docs/ports-and-addresses#addresses).
 * `sshKey` — публичный ключ для доступа на ноды под пользователем `user`.
 * `subnetworkCIDR` — подсеть, в которой будут работать ноды кластера.
-* `peeredVPCs` — список GCP VPC networks, с которыми будет объединена сеть кластера.
+* `peeredVPCs` — список GCP VPC networks, с которыми будет объединена сеть кластера. Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
 * `labels` — список лейблов, которые будут прикреплены ко всем ресурсам (которые это поддерживают) кластера. Подробнее про лейблы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
     * Формат — `key: value`.
 * `masterNodeGroup` — спека для описания NG мастера.
