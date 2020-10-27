@@ -6,7 +6,7 @@
 {{- end }}
 
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
+  {{ if not (has . (list "frontend" "monitoring" "system" "master" "any-node" "any-uninitialized-node" "any-node-with-no-csi" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -73,6 +73,21 @@ nodeSelector:
   {{- end }}
 {{- end }}
 
+{{- define "_helm_lib_any_node_tolerations" }}
+- key: node-role.kubernetes.io/master
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+{{ include "helm_lib_internal_node_problems_tolerations" . }}
+  {{- if .Values.global.modules.placement.customTolerationKeys }}
+    {{- range $key := .Values.global.modules.placement.customTolerationKeys }}
+- key: {{ $key | quote }}
+  operator: "Exists"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }}
@@ -87,9 +102,54 @@ nodeSelector:
     {{ $tolerateNodeProblems = index . 3 }}
   {{- end }}
 
-  {{- if $module_values.tolerations }}
+{{- /* Strategies block: Each strategy represents group of nodes */ -}}
+{{- /* Any uninitialized node: any node, which was not initialized by Deckhouse */ -}}
+  {{- if eq $strategy "any-uninitialized-node" }}
+tolerations:
+- key: node.deckhouse.io/uninitialized
+  operator: "Exists"
+  effect: "NoSchedule"
+    {{- if $context.Values.global.clusterConfiguration }}
+      {{- if ne $context.Values.global.clusterConfiguration.clusterType "Static" }}
+- key: node.deckhouse.io/csi-not-bootstrapped
+  operator: "Exists"
+  effect: "NoSchedule"
+      {{- end }}
+    {{- end }}
+{{ include "_helm_lib_any_node_tolerations" $context }}
+
+{{- /* Any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it */ -}}
+  {{- else if eq $strategy "any-node-with-no-csi" }}
+tolerations:
+- key: node.deckhouse.io/csi-not-bootstrapped
+  operator: "Exists"
+  effect: "NoSchedule"
+{{ include "_helm_lib_any_node_tolerations" $context }}
+
+{{- /* Any node: any node in the cluster with any known taints */ -}}
+  {{- else if eq $strategy "any-node" }}
+tolerations:
+{{- include "_helm_lib_any_node_tolerations" $context }}
+
+{{- /* Master: Nodes for control plane and other vital cluster components */ -}}
+  {{- else if eq $strategy "master" }}
+tolerations:
+{{ include "_helm_lib_any_node_tolerations" $context }}
+    {{- if $module_values.tolerations }}
+{{ $module_values.tolerations | toYaml }}
+    {{- end }}
+
+{{- /* Wildcard: gives permissions to schedule on any node with any taints (use with caution) */ -}}
+  {{- else if eq $strategy "wildcard" }}
+tolerations:
+- operator: Exists
+
+{{- /* Tolerations from module config: overrides below strategies, if there is any toleration specified */ -}}
+  {{- else if $module_values.tolerations }}
 tolerations:
 {{ $module_values.tolerations | toYaml }}
+
+{{- /* Monitoring: Nodes for monitoring components: prometheus, grafana, kube-state-metrics, etc. */ -}}
   {{- else if eq $strategy "monitoring" }}
 tolerations:
 - key: dedicated.flant.com
@@ -113,6 +173,8 @@ tolerations:
     {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
+
+{{- /* Frontend: Nodes for ingress-controllers */ -}}
   {{- else if eq $strategy "frontend" }}
 tolerations:
 - key: dedicated.flant.com
@@ -130,6 +192,8 @@ tolerations:
     {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
+
+{{- /* System: Nodes for system components: prometheus, dns, cert-manager */ -}}
   {{- else if eq $strategy "system" }}
 tolerations:
 - key: dedicated.flant.com
@@ -147,32 +211,6 @@ tolerations:
     {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
-  {{- else if eq $strategy "any-node" }}
-tolerations:
-- key: node-role.kubernetes.io/master
-- key: node.deckhouse.io/uninitialized
-  operator: "Exists"
-  effect: "NoSchedule"
-    {{- if $context.Values.global.clusterConfiguration }}
-      {{- if ne $context.Values.global.clusterConfiguration.clusterType "Static" }}
-- key: node.deckhouse.io/csi-not-bootstrapped
-  operator: "Exists"
-  effect: "NoSchedule"
-      {{- end }}
-    {{- end }}
-- key: dedicated.deckhouse.io
-  operator: "Exists"
-- key: dedicated
-  operator: "Exists"
-{{ include "helm_lib_internal_node_problems_tolerations" $context }}
-    {{- if $context.Values.global.modules.placement.customTolerationKeys }}
-      {{- range $key := $context.Values.global.modules.placement.customTolerationKeys }}
-- key: {{ $key | quote }}
-  operator: "Exists"
-      {{- end }}
-    {{- end }}
-  {{- else if eq $strategy "wildcard" }}
-tolerations:
-- operator: Exists
+
   {{- end }}
 {{- end }}

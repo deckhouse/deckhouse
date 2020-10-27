@@ -35,10 +35,9 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
       hostNetwork: true
       serviceAccountName: {{ .Chart.Name }}
-      initContainers:
       containers:
       - name: simple-bridge
         image: {{ .Values.global.modulesImages.registry }}/cni-simple-bridge/simple-bridge:{{ .Values.global.modulesImages.tags.cniSimpleBridge.simpleBridge }}

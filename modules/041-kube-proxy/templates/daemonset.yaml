@@ -38,7 +38,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       priorityClassName: system-node-critical
-{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
       initContainers:
       - name: api-proxy-check
         image: {{ .Values.global.modulesImages.registry }}/kube-proxy/api-proxy-check:{{ index .Values.global.modulesImages.tags.kubeProxy.apiProxyCheck }}

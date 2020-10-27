@@ -143,9 +143,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -203,9 +200,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.kubernetes.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -286,9 +280,6 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -346,9 +337,6 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/master\":\"\"}"))
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
-- effect: NoSchedule
-  key: node.deckhouse.io/uninitialized
-  operator: Exists
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
