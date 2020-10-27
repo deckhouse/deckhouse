@@ -2,13 +2,10 @@ package config
 
 import (
 	"testing"
-
-	"github.com/go-openapi/spec"
 )
 
-//nolint:funlen
 func TestSchemaStore(t *testing.T) {
-	newStore := SchemaStore{make(map[SchemaIndex]*spec.Schema)}
+	newStore := newSchemaStore("/tmp")
 
 	err := newStore.upload([]byte(`
 kind: TestKind
