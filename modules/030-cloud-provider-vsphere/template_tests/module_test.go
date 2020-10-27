@@ -59,17 +59,23 @@ const moduleValues = `
       - name: mydsname2
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
-    defaultDatastore: mydsname2
-    host: myhost
-    username: myuname
-    password: myPaSsWd
-    insecure: true
-    regionTagCategory: myregtagcat
-    zoneTagCategory: myzonetagcat
-    region: myreg
-    sshKeys: ["mysshkey1", "mysshkey2"]
-    vmFolderPath: dev/test
-    zones: ["aaa", "bbb"]
+      defaultDatastore: mydsname2
+      server: myhost
+      username: myuname
+      password: myPaSsWd
+      insecure: true
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      sshKey: mysshkey1
+      vmFolderPath: dev/test
+      zones: ["aaa", "bbb"]
+      masterInstanceClass:
+        datastore: dev/lun_1
+        mainNetwork: k8s-msk/test_187
+        memory: 8192
+        numCPUs: 4
+        template: dev/golden_image
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
@@ -117,15 +123,18 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			// user story #1
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			expectedProviderRegistrationJSON := `{
-          "host": "myhost",
+          "server": "myhost",
           "insecure": true,
           "password": "myPaSsWd",
           "region": "myreg",
           "regionTagCategory": "myregtagcat",
-          "sshKeys": [
-            "mysshkey1",
-            "mysshkey2"
-          ],
+          "instanceClassDefaults": {
+            "datastore": "dev/lun_1",
+            "resourcePool": null,
+            "template": "dev/golden_image",
+            "disableTimesync": true
+          },
+          "sshKey": "mysshkey1",
           "username": "myuname",
           "vmFolderPath": "dev/test",
           "zoneTagCategory": "myzonetagcat"

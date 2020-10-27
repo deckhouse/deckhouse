@@ -10,7 +10,7 @@ spec:
   numCPUs: {{ .nodeGroup.instanceClass.numCPUs }}
   memory: {{ add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4) }}
   rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
-  template: {{ .nodeGroup.instanceClass.template | quote }}
+  template: {{ .nodeGroup.instanceClass.template | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.template | quote }}
   virtualMachineFolder: {{ .Values.nodeManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
   mainNetwork: {{ .nodeGroup.instanceClass.mainNetwork | quote }}
 {{- if .nodeGroup.instanceClass.additionalNetworks }}
@@ -19,22 +19,20 @@ spec:
   - {{ . | quote }}
   {{- end }}
 {{- end }}
-  datastore: {{ .nodeGroup.instanceClass.datastore | quote }}
+  datastore: {{ .nodeGroup.instanceClass.datastore | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.datastore | quote }}
 {{- /* Откатить после окончания ***REMOVED***а */ -}}
-{{- if or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes }}
-  resourcePool: {{ or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes | quote }}
+{{- if or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePool }}
+  resourcePool: {{ or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePool | quote }}
 {{- end }}
 {{- if hasKey .nodeGroup.instanceClass "disableTimesync" }}
   disableTimesync: {{ .nodeGroup.instanceClass.disableTimesync }}
 {{- else }}
-  disableTimesync: true
+  disableTimesync: {{ .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.disableTimesync }}
 {{- end }}
   clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
   nodeRoleTag: {{ .nodeGroup.name }}-{{ .zoneName }}
   sshKeys:
-{{- range .Values.nodeManager.internal.cloudProvider.vsphere.sshKeys }}
-  - {{ . | quote }}
-{{- end }}
+  - {{ .Values.nodeManager.internal.cloudProvider.vsphere.sshKey }}
 {{- if not .nodeGroup.instanceClass.runtimeOptions }}
 {{ $_ := set .nodeGroup.instanceClass "runtimeOptions" dict }}
 {{- end }}

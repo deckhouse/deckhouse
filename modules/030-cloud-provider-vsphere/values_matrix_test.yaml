@@ -40,24 +40,23 @@ cloudProviderVsphere:
       - name: mydsname
         path: /my/ds/path/mydsname
         zones: ["zonea", "zoneb"]
-    defaultDatastore: mydsname
-    host: myhost
-    username: myuname
-    password: myPaSsWd
-    insecure:
-      __ConstantChoices__:
-      - true
-      - false
-    regionTagCategory: myregtagcat
-    zoneTagCategory: myzonetagcat
-    region: myreg
-    sshKeys: ["mysshkey1", "mysshkey2"]
-    vmFolderPath: dev/test
-    zones: ["aaa", "bbb"]
-  - internal: # minimum
-      datastores: []
-    host: myhost
-    username: myuname
-    password: myPaSsWd
-    region: myreg
-    vmFolderPath: dev/test
+      defaultDatastore: mydsname
+      server: myhost
+      username: myuname
+      password: myPaSsWd
+      insecure:
+        __ConstantChoices__:
+        - true
+        - false
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      sshKey: mysshkey1
+      masterInstanceClass:
+        datastore: dev/lun_1
+        mainNetwork: k8s-msk/test_187
+        memory: 8192
+        numCPUs: 4
+        template: dev/golden_image
+      vmFolderPath: dev/test
+      zones: ["aaa", "bbb"]

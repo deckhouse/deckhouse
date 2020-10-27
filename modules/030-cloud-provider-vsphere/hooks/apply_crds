@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __on_startup() {
-  kubectl apply -f $(module::path)/crds/
+  kubectl apply -f "$(module::path)/candi/openapi/instance_class.yaml"
 }
 
 hook::run "$@"

@@ -12,3 +12,6 @@ variables:
   TF_YANDEX_NAMESPACE: yandex-cloud
   TF_YANDEX_TYPE: yandex
   TF_YANDEX_VERSION: 0.45.1
+  TF_VSPHERE_NAMESPACE: hashicorp
+  TF_VSPHERE_TYPE: vsphere
+  TF_VSPHERE_VERSION: 1.24.2

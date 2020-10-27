@@ -1,0 +1,49 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+import:
+- artifact: terraform-provider-vsphere
+  add: /terraform-provider-vsphere/terraform-provider-vsphere
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
+  before: setup
+ansible:
+  install:
+  - name: "Create a directory for terraform provider vsphere"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64
+      state: directory
+  - apk:
+      name: ca-certificates
+      update_cache: yes
+  - command: rm -rf /var/cache/apk/*
+---
+artifact: terraform-provider-vsphere
+from: golang:1.15.2-alpine3.12
+git:
+  - url: https://github.com/flant/terraform-provider-vsphere
+    add: /
+    to: /terraform-provider-vsphere
+    tag: v{{ env "TF_VSPHERE_VERSION" }}-flant.1
+    stageDependencies:
+      install:
+        - "**/*"
+ansible:
+  beforeInstall:
+    - apk:
+        name:
+        - git
+        - ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - command: go mod download
+      args:
+        chdir: /terraform-provider-vsphere
+
+  setup:
+    - command: go build -o terraform-provider-vsphere
+      args:
+        chdir: /terraform-provider-vsphere
+      environment:
+        CGO_ENABLED: "0"

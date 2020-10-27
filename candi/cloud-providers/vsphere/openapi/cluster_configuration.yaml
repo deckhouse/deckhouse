@@ -1,0 +1,191 @@
+kind: VsphereClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, masterNodeGroup, regionTagCategory, zoneTagCategory, sshPublicKey, vmFolderPath, region, zones, layout, provider]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [VsphereClusterConfiguration]
+      masterNodeGroup:
+        type: object
+        additionalProperties: false
+        required: [replicas, instanceClass]
+        properties:
+          replicas:
+            type: integer
+          zones:
+            type: array
+            items:
+              type: string
+            uniqueItems: true
+          instanceClass:
+            type: object
+            additionalProperties: false
+            required: [numCPUs, memory, template, mainNetwork, datastore]
+            properties:
+              numCPUs:
+                type: integer
+              memory:
+                type: integer
+              template:
+                type: string
+              mainNetwork:
+                type: string
+              datastore:
+                type: string
+              additionalNetworks:
+                type: array
+                items:
+                  type: string
+              rootDiskSize:
+                type: integer
+              resourcePool:
+                type: string
+              mainNetworkIPAddresses:
+                type: array
+                items:
+                  type: string
+              runtimeOptions:
+                type: object
+                properties:
+                  nestedHardwareVirtualization:
+                    type: boolean
+                  cpuShares:
+                    type: integer
+                  cpuLimit:
+                    type: integer
+                  cpuReservation:
+                    type: integer
+                  memoryShares:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  memoryLimit:
+                    type: integer
+                  memoryReservation:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+      nodeGroups:
+        type: array
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              type: string
+            replicas:
+              type: integer
+            zones:
+              type: array
+              items:
+                type: string
+              uniqueItems: true
+            instanceClass:
+              type: object
+              additionalProperties: false
+              required: [numCPUs, memory, template, mainNetwork, datastore]
+              properties:
+                numCPUs:
+                  type: integer
+                memory:
+                  type: integer
+                template:
+                  type: string
+                mainNetwork:
+                  type: string
+                datastore:
+                  type: string
+                additionalNetworks:
+                  type: array
+                  items:
+                    type: string
+                rootDiskSize:
+                  type: integer
+                resourcePool:
+                  type: string
+                mainNetworkIPAddresses:
+                  type: array
+                  items:
+                    type: string
+                runtimeOptions:
+                  type: object
+                  properties:
+                    nestedHardwareVirtualization:
+                      type: boolean
+                    cpuShares:
+                      type: integer
+                    cpuLimit:
+                      type: integer
+                    cpuReservation:
+                      type: integer
+                    memoryShares:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+                    memoryLimit:
+                      type: integer
+                    memoryReservation:
+                      type: integer
+                      minimum: 0
+                      maximum: 100
+      sshPublicKey:
+        type: string
+      regionTagCategory:
+        type: string
+      zoneTagCategory:
+        type: string
+      defaultDatastore:
+        type: string
+      disableTimesync:
+        type: boolean
+      externalNetworkNames:
+        type: array
+        items:
+          type: string
+      internalNetworkNames:
+        type: array
+        items:
+          type: string
+      internalNetworkCIDR:
+        type: string
+      vmFolderPath:
+        type: string
+      region:
+        type: string
+      zones:
+        type: array
+        items:
+          type: string
+        uniqueItems: true
+      layout:
+        type: string
+      provider:
+        type: object
+        additionalProperties: false
+        properties:
+          server:
+            type: string
+          username:
+            type: string
+          password:
+            type: string
+          insecure:
+            type: boolean
+        required:
+        - server
+        - username
+        - password
+    oneOf:
+    - required: [layout]
+      properties:
+        layout:
+          enum:
+          - Standard
+          type: string

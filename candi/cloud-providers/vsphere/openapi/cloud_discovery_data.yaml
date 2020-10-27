@@ -1,0 +1,17 @@
+kind: VsphereCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, vmFolderPath]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [VsphereCloudDiscoveryData]
+      vmFolderPath:
+        type: string
+        minLength: 1

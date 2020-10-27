@@ -56,7 +56,7 @@ title: "Cloud provider — Openstack: Развертывание"
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`, `mainNetwork`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`, `mainNetwork`. Параметры, обозначенные **жирным** шрифтом уникальны для `OpenStackClusterConfiguration`. Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`
@@ -64,11 +64,11 @@ title: "Cloud provider — Openstack: Развертывание"
     * `additionalSecurityGroups`
     * `additionalTags`
     * `additionalNetworks`
-    * `networksWithSecurityDisabled` - в этом списке необходимо перечислить все сети из `mainNetwork` и `additionalNetworks`, в которых **НЕЛЬЗЯ** настраивать `SecurityGroups` и `AllowedAddressPairs` на портах.
+    * **`networksWithSecurityDisabled`** - в этом списке необходимо перечислить все сети из `mainNetwork` и `additionalNetworks`, в которых **НЕЛЬЗЯ** настраивать `SecurityGroups` и `AllowedAddressPairs` на портах.
       * Формат — массив строк.
-    * `floatingIPPools` - список сетей, в которых заказывать Floating IP для нод
+    * **`floatingIPPools`** - список сетей, в которых заказывать Floating IP для нод
       * Формат — массив строк.
-    * `configDrive` - флаг, указывающий будет ли монтироваться на ноду дополнительный диск, содержащий конфигурацию для бутстрапа ноды. Необходимо устанавливать, если в сети, указанной в качестве `mainNetwork` отключен DHCP.
+    * **`configDrive`** - флаг, указывающий будет ли монтироваться на ноду дополнительный диск, содержащий конфигурацию для бутстрапа ноды. Необходимо устанавливать, если в сети, указанной в качестве `mainNetwork` отключен DHCP.
       * Опциональный параметр.
       * По умолчанию `false`
   * `zones` — ограничение набора зон, в которых разрешено создавать ноды.
@@ -127,7 +127,7 @@ nodeGroups:
     additionalNetworks:                                   # optional
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified 
+    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
     - office
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
@@ -166,7 +166,7 @@ layout: StandardWithNoRouter
 standardWithNoRouter:
   internalNetworkCIDR: 192.168.199.0/24                   # required
   externalNetworkName: ext-net                            # required
-  externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)   
+  externalNetworkDHCP: false                              # optional, whether dhcp is enabled in specified external network (default true)
   internalNetworkSecurity: true|false                     # optional, default true
 masterNodeGroup:
   replicas: 3
@@ -191,7 +191,7 @@ nodeGroups:
     additionalNetworks:                                   # optional
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified 
+    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
     - office
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
@@ -215,7 +215,7 @@ Master нода и ноды кластера подключаются к сущ�
 сети без роутера, поэтому нельзя заказать балансировщик с floating ip. Если заказывать internal loadbalancer, у которого
 virtual ip создаётся в публичной сети, то он всё равно доступен только с нод кластера.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vTZbaJg7oIvoh2hkEW-DKbqeujhOiJtv_JSvfvDfXE9-mX_p6uggoY1Z9N2EAJ79c7IMfQC9ttQAmaP/pub?w=960&h=720) 
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vTZbaJg7oIvoh2hkEW-DKbqeujhOiJtv_JSvfvDfXE9-mX_p6uggoY1Z9N2EAJ79c7IMfQC9ttQAmaP/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
 ```
@@ -249,7 +249,7 @@ nodeGroups:
     additionalNetworks:                                   # optional
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified 
+    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
     - office
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
@@ -273,7 +273,7 @@ Master нода и ноды кластера подключаются к сущ�
 Для настройки политик безопасности необходимо явно указывать как `additionalSecurityGroups` в OpenStackClusterConfiguration
 для masterNodeGroup и других nodeGroups, так и `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vQOcYZPtHBqMtlNx9PDcMrqI0WEwRssL-oXONnrOoKNaIx1fcEODo9dK2zOoF1wbKeKJlhphFTuefB-/pub?w=960&h=720) 
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vQOcYZPtHBqMtlNx9PDcMrqI0WEwRssL-oXONnrOoKNaIx1fcEODo9dK2zOoF1wbKeKJlhphFTuefB-/pub?w=960&h=720)
 <!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
 
 
@@ -309,7 +309,7 @@ nodeGroups:
     additionalNetworks:                                   # optional
     - office
     - shared
-    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified 
+    networksWithSecurityDisabled:                         # optional, if there are networks with disabled port security their names must be specified
     - office
     floatingIPPools:                                      # optional, list of network pools where to order floating ips
     - public
