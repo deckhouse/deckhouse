@@ -13,7 +13,7 @@ EOF
 }
 
 function __main__() {
-  GOVC_URL="$(values::get --required cloudProviderVsphere.internal.host)"
+  GOVC_URL="$(values::get --required cloudProviderVsphere.internal.server)"
   export GOVC_URL
   GOVC_USERNAME="$(values::get --required cloudProviderVsphere.internal.username)"
   export GOVC_USERNAME
