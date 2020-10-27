@@ -287,7 +287,7 @@ internal:
     type: vsphere
     machineClassKind: VsphereMachineClass
     vsphere:
-      host: myhost.qqq
+      server: myhost.qqq
       username: myname
       password: pAsSwOrd
       insecure: true #

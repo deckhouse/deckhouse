@@ -13,20 +13,20 @@ EOF
 }
 
 function __main__() {
-  GOVC_URL="$(values::get --required cloudProviderVsphere.host)"
+  GOVC_URL="$(values::get --required cloudProviderVsphere.internal.host)"
   export GOVC_URL
-  GOVC_USERNAME="$(values::get --required cloudProviderVsphere.username)"
+  GOVC_USERNAME="$(values::get --required cloudProviderVsphere.internal.username)"
   export GOVC_USERNAME
-  GOVC_PASSWORD="$(values::get --required cloudProviderVsphere.password)"
+  GOVC_PASSWORD="$(values::get --required cloudProviderVsphere.internal.password)"
   export GOVC_PASSWORD
-  GOVC_INSECURE="$(values::get --required cloudProviderVsphere.insecure)"
+  GOVC_INSECURE="$(values::get --required cloudProviderVsphere.internal.insecure)"
   export GOVC_INSECURE
 
-  VSPHERE_REGION_TAG_NAME="$(values::get --required cloudProviderVsphere.region)"
+  VSPHERE_REGION_TAG_NAME="$(values::get --required cloudProviderVsphere.internal.region)"
   export VSPHERE_REGION_TAG_NAME
-  VSPHERE_REGION_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.regionTagCategory)"
+  VSPHERE_REGION_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.internal.regionTagCategory)"
   export VSPHERE_REGION_TAG_CATEGORY_NAME
-  VSPHERE_ZONE_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.zoneTagCategory)"
+  VSPHERE_ZONE_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.internal.zoneTagCategory)"
   export VSPHERE_ZONE_TAG_CATEGORY_NAME
 
   if values::get --required cloudProviderVsphere.internal.datacenter >/dev/null 2>&1 ||

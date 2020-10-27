@@ -231,7 +231,7 @@ nodeManager:
         machineClassKind: VsphereMachineClass
         vsphere:
           __ConstantChoices__:
-          - host: myhost.qqq # maximum
+          - server: myhost.qqq # maximum
             username: myname
             password: pAsSwOrd
             insecure: true # optional
@@ -241,7 +241,7 @@ nodeManager:
             sshKeys: [key1, key2] # optional
             vmFolderPath: dev/test
             disableTimesync: false
-          - host: myhost.qqq # minimum
+          - server: myhost.qqq # minimum
             username: myname
             password: pAsSwOrd
             region: myreg

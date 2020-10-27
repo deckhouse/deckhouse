@@ -18,26 +18,26 @@ title: "Cloud provider — GCP: Развертывание"
 * `masterNodeGroup` — спека для описания NG мастера.
     * `replicas` — сколько мастер-узлов создать.
     * `zones` — список зон, в которых допустимо создавать мастер-узлы.
-    * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource). Допустимые параметры:
+    * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
         * `machineType`
         * `image`
         * `diskSizeGb`
         * `additionalNetworkTags`
         * `additionalLabels`
-        * `disableExternalIP` — параметр доступен только для layout `Standard`.
+        * **`disableExternalIP`** — параметр доступен только для layout `Standard`.
             * `true` —  значение по умолчанию. Узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
             * `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
     * `name` — имя NG, будет использоваться для генерации имен нод.
     * `replicas` — количество нод.
     * `zones` — список зон, в которых допустимо создавать статичные-узлы.
-    * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource). Допустимые параметры:
+    * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
         * `machineType`
         * `image`
         * `diskSizeGb`
         * `additionalNetworkTags`
         * `additionalLabels`
-        * `disableExternalIP` — параметр доступен только для layout `Standard`.
+        * **`disableExternalIP`** — параметр доступен только для layout `Standard`.
             * `true` —  значение по умолчанию. Узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
             * `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
 * `provider` — параметры подключения к API GCP.
@@ -171,8 +171,12 @@ provider:
 
 ## Создание сервис-аккаунта
 
-* [Google cloud console](#google-cloud-console)
-* [gcloud command-line tool](#gcloud-command-line-tool)
+- [Поддерживаемые схемы размещения](#поддерживаемые-схемы-размещения)
+  - [Standard](#standard)
+  - [WithoutNAT](#withoutnat)
+- [Создание сервис-аккаунта](#создание-сервис-аккаунта)
+  - [Google cloud console](#google-cloud-console)
+  - [gcloud command-line tool](#gcloud-command-line-tool)
 
 **Внимание!** `service account key` невозможно восстановить, только удалить и создать новый.
 

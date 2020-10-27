@@ -1,4 +1,2 @@
 cloudProviderVsphere:
   internal: {}
-  regionTagCategory: k8s-region
-  zoneTagCategory: k8s-zone

@@ -519,6 +519,39 @@ ansible:
         chdir: /helm
       environment:
         CGO_ENABLED: "0"
+
+---
+artifact: terraform-provider-vsphere
+fromImage: base-for-go
+git:
+  - url: https://github.com/flant/terraform-provider-vsphere
+    add: /
+    to: /terraform-provider-vsphere
+    tag: v{{ env "TF_VSPHERE_VERSION" }}-flant.1
+    stageDependencies:
+      install:
+        - "**/*"
+ansible:
+  beforeInstall:
+    - apk:
+        name:
+        - git
+        - ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - command: go mod download
+      args:
+        chdir: /terraform-provider-vsphere
+
+  setup:
+    - command: go build -o terraform-provider-vsphere
+      args:
+        chdir: /terraform-provider-vsphere
+      environment:
+        CGO_ENABLED: "0"
+
 ---
 image: dev/install
 fromImage: dev
@@ -526,6 +559,10 @@ import:
 - artifact: candictl
   add: /candictl/hack/candictl
   to: /usr/bin/candictl
+  before: setup
+- artifact: terraform-provider-vsphere
+  add: /terraform-provider-vsphere/terraform-provider-vsphere
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
   before: setup
 ansible:
   beforeInstall:
