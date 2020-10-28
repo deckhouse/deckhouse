@@ -50,7 +50,7 @@ const globalValues = `
     kubernetesVersion: 1.15.4
 `
 
-const moduleValues = `
+const moduleValuesA = `
     internal:
       datastores:
       - name: mydsname1
@@ -78,13 +78,36 @@ const moduleValues = `
         template: dev/golden_image
 `
 
+const moduleValuesB = `
+    internal:
+      datastores:
+      - name: mydsname1
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      defaultDatastore: mydsname2
+      server: myhost
+      username: myuname
+      password: myPaSsWd
+      insecure: true
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      sshKey: mysshkey1
+      vmFolderPath: dev/test
+      zones: ["aaa", "bbb"]
+      masterInstanceClass: null
+`
+
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
 		})
 
@@ -165,6 +188,36 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname1").Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname2").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname2").Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).String()).To(Equal("true"))
+		})
+	})
+
+	Context("Vsphere", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			expectedProviderRegistrationJSON := `{
+          "server": "myhost",
+          "insecure": true,
+          "password": "myPaSsWd",
+          "region": "myreg",
+          "regionTagCategory": "myregtagcat",
+          "sshKey": "mysshkey1",
+          "username": "myuname",
+          "vmFolderPath": "dev/test",
+          "zoneTagCategory": "myzonetagcat"
+        }`
+
+			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.vsphere").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
 		})
 	})
 })

@@ -9,7 +9,7 @@ spec:
   zone:  {{ .zoneName | quote }}
   numCPUs: {{ .nodeGroup.instanceClass.numCPUs }}
   memory: {{ add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4) }}
-  rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
+  rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize | default 20 }}
   template: {{ .nodeGroup.instanceClass.template | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.template | quote }}
   virtualMachineFolder: {{ .Values.nodeManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
   mainNetwork: {{ .nodeGroup.instanceClass.mainNetwork | quote }}
