@@ -33,18 +33,18 @@ func NewAccessProber() types.Prober {
 
 	pr.RunFn = func(start int64) {
 		log := pr.LogEntry()
-		var err error
 		util.DoWithTimer(accessTimeout, func() {
-			_, err = pr.KubernetesClient.Discovery().ServerVersion()
+			_, err := pr.KubernetesClient.Discovery().ServerVersion()
+			if err != nil {
+				log.Errorf("Get cluster version: %v type=%T", err, err)
+				pr.ResultCh <- pr.Result(types.ProbeFailed)
+			} else {
+				pr.ResultCh <- pr.Result(types.ProbeSuccess)
+			}
 		}, func() {
 			log.Infof("Exceeds timeout '%s' when fetch /version", accessTimeout.String())
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
-
-		if err != nil {
-			log.Errorf("Get cluster version: %v", err)
-		}
-		pr.ResultCh <- pr.Result(err == nil)
 	}
 
 	return pr

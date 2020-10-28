@@ -3,17 +3,20 @@ package upmeter
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 
 	"upmeter/pkg/app"
 	"upmeter/pkg/crd"
 	"upmeter/pkg/upmeter/api"
 	"upmeter/pkg/upmeter/db"
+	"upmeter/pkg/upmeter/db/migrations"
 )
 
 // Informer initializes all dependencies:
@@ -84,12 +87,22 @@ func (inf *Informer) Start() error {
 		return fmt.Errorf("db connect: %v", err)
 	}
 
+	// Apply migrations
+	err = migrations.Migrator.Apply()
+	if err != nil {
+		return fmt.Errorf("db migrate: %v", err)
+	}
+
 	// Setup API handlers
 	http.HandleFunc("/api/probe", api.ProbeListHandler)
 
 	statusHandler := api.NewStatusRangeHandler()
 	statusHandler.WithCRDMonitor(inf.CrdMonitor)
 	http.Handle("/api/status/range", statusHandler)
+
+	publicStatusHandler := api.NewPublicStatusHandler()
+	publicStatusHandler.WithCRDMonitor(inf.CrdMonitor)
+	http.Handle("/public/api/status", publicStatusHandler)
 
 	http.HandleFunc("/downtime", api.DowntimeHandler)
 

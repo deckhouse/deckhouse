@@ -52,13 +52,19 @@ function main() {
 
     # skip documentation
     if [[ "$new_path" == *".md" ]] || [[ -n $(echo $new_path | grep -E "^web-public/|^web/") ]]; then
-      echo "  * skip: $new_path"
+      echo "  * skip documentation: $new_path"
+      continue
+    fi
+
+    # skip translations
+    if [[ "$new_path" == *"/i18n/"* ]] ; then
+      echo "  * skip translations: $new_path"
       continue
     fi
 
     # skip self
     if [[ "$new_path" == *"validate_no_cyrillic.sh" ]] ; then
-      echo "  * skip: $new_path"
+      echo "  * skip self: $new_path"
       continue
     fi
 

@@ -16,7 +16,7 @@ import (
 /*
 CHECK:
 Cluster should be able to create Deployment and Pod.
-Cluster should be able to delete Deploymeny and Pod
+Cluster should be able to delete Deployment and Pod.
 
 Create Deployment with Pod spec that have never-matched nodeSelector and nonexistent image.
 Wait for Pod status is not Unknown. Delete Deployment, wait that Pod is disappeared.
@@ -37,6 +37,7 @@ func NewControlPlaneManagerProber() types.Prober {
 	const mgrPodPendingTimeout = time.Second * 10
 	const mgrDeleteDeploymentTimeout = time.Second * 5
 	const mgrPodDisappearTimeout = time.Second * 10
+	const deleteGarbageTimeout = 10 * time.Second
 
 	pr := &types.CommonProbe{
 		ProbeRef: &mgrProbeRef,
@@ -45,8 +46,14 @@ func NewControlPlaneManagerProber() types.Prober {
 
 	pr.RunFn = func(start int64) {
 		log := pr.LogEntry()
-		deployName := util.RandomIdentifier("upmeter-control-plane-manager")
 
+		// Set Unknown result if API server is unavailable
+		if !CheckApiAvailable(pr) {
+			return
+		}
+
+		deployName := util.RandomIdentifier("upmeter-control-plane-manager")
+		deployReplicas := int32(1)
 		deployment := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Deployment",
@@ -63,10 +70,7 @@ func NewControlPlaneManagerProber() types.Prober {
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: func() *int32 {
-					var a int32 = 1
-					return &a
-				}(),
+				Replicas: &deployReplicas,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"upmeter-agent": util.AgentUniqueId(),
@@ -105,25 +109,30 @@ func NewControlPlaneManagerProber() types.Prober {
 			},
 		}
 
-		var err error
-		var errors = 0
+		if !GarbageCollect(pr, deployment.Kind, deployment.Labels) {
+			return
+		}
+
+		var stop bool
+
 		util.DoWithTimer(mgrCreateDeploymentTimeout, func() {
 			_, err := pr.KubernetesClient.AppsV1().Deployments(app.Namespace).Create(deployment)
 			if err != nil {
-				errors++
+				pr.ResultCh <- pr.Result(types.ProbeUnknown)
 				log.Errorf("Create Deployment/%s: %v", deployName, err)
+				stop = true
 			}
 		}, func() {
 			log.Infof("Exceed timeout when create Deployment/%s", deployName)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
 		var pendingPodName = ""
 
 		util.DoWithTimer(mgrPodPendingTimeout, func() {
-			waitErrors := 0
-			count := int(mgrPodPendingTimeout.Seconds())
-			lastPhase := v1.PodUnknown
+			var listErr error
+			var count = int(mgrPodPendingTimeout.Seconds())
+			var lastPhase = v1.PodUnknown
 			podLabels := labels.FormatLabels(map[string]string{
 				"app": deployName,
 			})
@@ -133,11 +142,10 @@ func NewControlPlaneManagerProber() types.Prober {
 			for i := 0; i < count; i++ {
 				podList, err := pr.KubernetesClient.CoreV1().Pods(app.Namespace).List(listOptions)
 				if err != nil {
-					waitErrors++
-					log.Errorf("Cannot list Pods for Deployment/%s: %v", deployName, err)
+					listErr = err
+					continue
 				}
-
-				// Check is OK if at least one Pod is in a "Pending" state.
+				// Stop waiting when at least one Pod is in a "Pending" state.
 				for _, pod := range podList.Items {
 					if pod.Status.Phase == v1.PodPending {
 						pendingPodName = pod.Name
@@ -146,55 +154,45 @@ func NewControlPlaneManagerProber() types.Prober {
 				}
 				time.Sleep(time.Second)
 			}
-			if waitErrors > 0 {
-				errors++
-				log.Errorf("Deployment/%s has no Pending or Running pod, phase: '%s'", deployName, lastPhase)
+			if listErr != nil {
+				log.Errorf("Deployment/%s list pods: %v", deployName, listErr)
 			}
+			// No Pod in Pending or Running state, probe is failed.
+			log.Errorf("Deployment/%s has no Pending or Running pod, phase: '%s'", deployName, lastPhase)
+			pr.ResultCh <- pr.Result(types.ProbeFailed)
 		}, func() {
 			log.Infof("Exceed timeout while waiting pending Pod")
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
 		util.DoWithTimer(mgrDeleteDeploymentTimeout, func() {
-			err = pr.KubernetesClient.AppsV1().Deployments(app.Namespace).Delete(deployment.Name, &metav1.DeleteOptions{})
+			err := pr.KubernetesClient.AppsV1().Deployments(app.Namespace).Delete(deployment.Name, &metav1.DeleteOptions{})
 			if err != nil {
-				errors++
+				pr.ResultCh <- pr.Result(types.ProbeFailed)
 				log.Errorf("Delete Deployment/%s: %v", deployName, err)
+				stop = true
 			}
 		}, func() {
 			log.Infof("Exceed timeout when delete Deployment/%s", deployName)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
+		if stop {
+			return
+		}
+
 		util.DoWithTimer(mgrPodDisappearTimeout, func() {
-			waitErrors := 0
-			count := int(mgrPodDisappearTimeout.Seconds())
-			podLabels := labels.FormatLabels(map[string]string{
-				"app": deployName,
-			})
-			listOptions := metav1.ListOptions{
-				LabelSelector: podLabels,
-				FieldSelector: "metadata.name=" + pendingPodName,
-			}
-			for i := 0; i < count; i++ {
-				podList, err := pr.KubernetesClient.CoreV1().Pods(app.Namespace).List(listOptions)
-				if err == nil && len(podList.Items) == 0 {
-					return
-				}
-				waitErrors++
-				time.Sleep(time.Second)
-			}
-			if waitErrors > 0 {
-				errors++
+			if WaitForObjectDeletion(pr, mgrPodDisappearTimeout, "Pod", pendingPodName) {
+				pr.ResultCh <- pr.Result(types.ProbeSuccess)
+			} else {
 				log.Errorf("Deleted Deployment/%s still has Pod/%s", deployName, pendingPodName)
+				pr.ResultCh <- pr.Result(types.ProbeFailed)
 			}
 		}, func() {
 			log.Infof("Exceed timeout while wait for Pod deletion")
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
-		// Final result
-		pr.ResultCh <- pr.Result(errors == 0)
 	}
 
 	return pr

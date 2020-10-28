@@ -1,0 +1,42 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title>Status</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1 class="display-4">Status</h1>
+  <hr class="my-4">
+
+  <div class="load-message alert alert-danger d-flex align-items-center hidden" role="alert"></div>
+
+  <div class="statuses-holder">
+    <div class="top-summary alert d-flex align-items-center" role="alert">
+      <span class="summary-label text-secondary">Load status...</span>
+      <div class="summary-related spinner-border ml-auto load-indicator float-right hidden" role="status">
+        <span class="sr-only">...</span>
+      </div>
+    </div>
+
+    <div class="statuses"></div>
+
+    <div class="error-related fade-panel hidden"></div>
+
+    <div class="error-related spinner-border ml-auto load-indicator hidden" role="status">
+      <span class="sr-only">...</span>
+    </div>
+
+  </div>
+  <hr class="my-4">
+  <a href="/public/api/details" class="details-link" style="display: none;">Details→</a>
+</div>
+
+</body>
+</html>

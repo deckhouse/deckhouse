@@ -78,7 +78,7 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "status") }}
     http:
       paths:
-      - path: /api
+      - path: /public/api
         backend:
           serviceName: upmeter
           servicePort: https

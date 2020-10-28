@@ -31,6 +31,7 @@ func NewSchedulerProber() types.Prober {
 	const schCreatePodTimeout = time.Second * 5
 	const schSchedulerReactionTimeout = time.Second * 20
 	const schDeletePodTimeout = time.Second * 5
+	const deleteGarbageTimeout = 10 * time.Second
 
 	pr := &types.CommonProbe{
 		ProbeRef: &schProbeRef,
@@ -40,8 +41,13 @@ func NewSchedulerProber() types.Prober {
 	pr.RunFn = func(start int64) {
 		log := pr.LogEntry()
 
-		podName := util.RandomIdentifier("upmeter-control-plane-scheduler")
+		// Set Unknown result if API server is unavailable
+		if !CheckApiAvailable(pr) {
+			return
+		}
 
+		// Probe checks if scheduler is working, so Pod exits immediately and never restarts.
+		podName := util.RandomIdentifier("upmeter-control-plane-scheduler")
 		pod := &v1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Pod",
@@ -60,72 +66,88 @@ func NewSchedulerProber() types.Prober {
 				Containers: []v1.Container{
 					{
 						Name:            "pause",
-						Image:           "k8s.gcr.io/pause:3.1",
+						Image:           "alpine:3.12",
 						ImagePullPolicy: v1.PullIfNotPresent,
 						Command: []string{
-							"/pause",
+							"true",
 						},
 					},
 				},
+				RestartPolicy: v1.RestartPolicyNever,
 				Tolerations: []v1.Toleration{
 					{Operator: v1.TolerationOpExists},
 				},
 			},
 		}
 
-		var err error
-		var errors = 0
+		if !GarbageCollect(pr, pod.Kind, pod.Labels) {
+			return
+		}
+
+		var stop bool
+
+		// Create test Pod.
 		util.DoWithTimer(schCreatePodTimeout, func() {
 			_, err := pr.KubernetesClient.CoreV1().Pods(app.Namespace).Create(pod)
 			if err != nil {
-				errors++
+				pr.ResultCh <- pr.Result(types.ProbeUnknown)
 				log.Errorf("Create Pod/%s: %v", podName, err)
+				stop = true
 			}
 		}, func() {
 			log.Infof("Exceed timeout when create Pod/%s", podName)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
-		// TODO watch pod is scheduled
+		if stop {
+			return
+		}
+
+		// If Pod is created, wait for scheduler decision and delete Pod.
 		util.DoWithTimer(schSchedulerReactionTimeout, func() {
-			schErrors := 0
-			count := int(schSchedulerReactionTimeout.Seconds())
-			lastPhase := v1.PodUnknown
+			var count = int(schSchedulerReactionTimeout.Seconds())
+			var lastPhase = v1.PodUnknown
+			var getErr error
 			for i := 0; i < count; i++ {
 				podObj, err := pr.KubernetesClient.CoreV1().Pods(app.Namespace).Get(pod.Name, metav1.GetOptions{})
 				if err != nil {
-					schErrors++
-					log.Warnf("Check Pod/%s status: %v", podName, err)
-					//pr.ResultCh <- pr.ResultFail(nsProbeRef)
+					getErr = err
+					//log.Warnf("Check Pod/%s status: %v", podName, err)
+					continue
 				}
 				lastPhase = podObj.Status.Phase
-				if lastPhase == v1.PodRunning {
+				if lastPhase == v1.PodRunning || lastPhase == v1.PodSucceeded || podObj.Spec.Hostname != "" {
+					pr.ResultCh <- pr.Result(types.ProbeSuccess)
 					return
 				}
 				time.Sleep(time.Second)
 			}
-			if schErrors > 0 {
-				errors++
-				log.Errorf("Pod/%s is not scheduled, phase: '%s'", podName, lastPhase)
+			if getErr != nil {
+				log.Errorf("Pod/%s get error: %s", podName, getErr)
 			}
+			log.Errorf("Pod/%s is not scheduled, phase: '%s'", podName, lastPhase)
+			pr.ResultCh <- pr.Result(types.ProbeFailed)
 		}, func() {
 			log.Infof("Exceed timeout waiting Pod/%s is scheduled", podName)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
+		// Delete does not change probe result. Next probe execution will change result
+		// to Unknown if garbage is non-deletable.
 		util.DoWithTimer(schDeletePodTimeout, func() {
-			err = pr.KubernetesClient.CoreV1().Pods(app.Namespace).Delete(pod.Name, &metav1.DeleteOptions{})
+			err := pr.KubernetesClient.CoreV1().Pods(app.Namespace).Delete(pod.Name, &metav1.DeleteOptions{})
 			if err != nil {
-				errors++
 				log.Errorf("Delete Pod/%s: %v", podName, err)
+				return
+			}
+
+			if !WaitForObjectDeletion(pr, schDeletePodTimeout, pod.Kind, pod.Name) {
+				return
 			}
 		}, func() {
-			log.Infof("Exceed timeout when delete Pod/%s", podName)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			log.Infof("Exceed timeout deleting Pod/%s", podName)
 		})
 
-		// Final result
-		pr.ResultCh <- pr.Result(errors == 0)
 	}
 
 	return pr

@@ -37,8 +37,8 @@ func DowntimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Put downtime episodes to storage in "background".
-	go entity.SaveDowntimeEpisodes(episodes)
+	// Put downtime episodes to storage.
+	entity.SaveDowntimeEpisodes(episodes)
 
 	// Response with empty object if everything is ok.
 	w.Header().Set("Content-Type", "application/json")

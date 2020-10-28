@@ -7,7 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/upmeter/db"
+	"upmeter/pkg/upmeter/db/dao"
+	"upmeter/pkg/upmeter/entity"
 )
 
 func ProbeListHandler(w http.ResponseWriter, r *http.Request) {
@@ -22,12 +23,14 @@ func ProbeListHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 		select group, probe from downtime
 	*/
-	probeRefs, err := db.Downtime30s.ListGroupProbe()
+	probeRefs, err := dao.Downtime5m.ListGroupProbe()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
 		return
 	}
+
+	probeRefs = entity.FilterDisabledProbesFromGroupProbeList(probeRefs)
 
 	out, err := json.Marshal(probeRefs)
 	if err != nil {

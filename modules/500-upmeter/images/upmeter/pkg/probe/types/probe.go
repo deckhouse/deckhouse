@@ -18,6 +18,7 @@ type ProbeState struct {
 	Running   bool
 	StartedAt int64
 	Period    int64 // Period between runs
+	FirstRun  bool
 }
 
 // probe should run if it is not running and period is reached
@@ -36,6 +37,11 @@ func (ps *ProbeState) Start(tm int64) {
 func (ps *ProbeState) Stop() {
 	ps.Running = false
 	// Do not reset StartedAt to calculate delay.
+	// Reset FirstRun
+	if ps.FirstRun {
+		ps.FirstRun = false
+	}
+
 }
 
 type CommonProbe struct {
@@ -55,7 +61,9 @@ func (c *CommonProbe) State() *ProbeState {
 }
 
 func (c *CommonProbe) Init() error {
-	c.ProbeState = &ProbeState{}
+	c.ProbeState = &ProbeState{
+		FirstRun: true,
+	}
 	if c.Period > 0 {
 		c.ProbeState.Period = c.Period
 	}

@@ -1,10 +1,13 @@
 package entity
 
 import (
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+
 	"upmeter/pkg/probe/types"
+	"upmeter/pkg/util"
 )
 
 type StatusInfo struct {
@@ -40,6 +43,14 @@ func (s *StatusInfo) SetSeconds(up int64, down int64, unknown int64, nodata int6
 	s.Down = down
 	s.Unknown = unknown
 	s.NoData = nodata
+}
+
+func (s *StatusInfo) Known() int64 {
+	return s.Up + s.Down
+}
+
+func (s *StatusInfo) Avail() int64 {
+	return s.Up + s.Down + s.Unknown
 }
 
 // ByTimeSlot implements sort.Interface based on the TimeSlot field.
@@ -80,6 +91,8 @@ func CalculateStatuses(
 	groupName string,
 	probeName string,
 ) map[string]map[string][]StatusInfo {
+	episodes = FilterDisabledProbesFromEpisodes(episodes)
+
 	// Combine multiple episodes for the same probe and timeslot.
 	episodes = CombineEpisodesByTimeslot(episodes)
 
@@ -124,7 +137,7 @@ func CombineEpisodesByTimeslot(episodes []types.DowntimeEpisode) []types.Downtim
 		for _, indicies := range timeslots {
 			ep := episodes[indicies[0]]
 			for _, index := range indicies {
-				ep = CombineEpisodes(ep, episodes[index])
+				ep = ep.CombineSeconds(episodes[index], 300)
 			}
 			newEpisodes = append(newEpisodes, ep)
 		}
@@ -158,16 +171,15 @@ func CalculateTotalForStepRange(statuses map[string]map[string]map[int64]*Status
 			upSeconds = append(upSeconds, info.Up)
 			downSeconds = append(downSeconds, info.Down)
 			unknownSeconds = append(unknownSeconds, info.Unknown)
-			maxKnown = Max(maxKnown, info.Up+info.Down)
-			maxAvail = Max(maxAvail, info.Up+info.Down+info.Unknown)
+			maxKnown = util.Max(maxKnown, info.Known())
+			maxAvail = util.Max(maxAvail, info.Avail())
 		}
 
-		totalStatusInfo.Up = Min(upSeconds...)
+		totalStatusInfo.Up = util.Min(upSeconds...)
 		// down should not be less then known and not more then avail.
-		totalStatusInfo.Down = ClampToRange(Max(downSeconds...), maxKnown-totalStatusInfo.Up, maxAvail-totalStatusInfo.Up)
+		totalStatusInfo.Down = util.ClampToRange(util.Max(downSeconds...), 0, maxAvail-totalStatusInfo.Up)
 		totalStatusInfo.Unknown = maxAvail - totalStatusInfo.Up - totalStatusInfo.Down
-		newAvail := totalStatusInfo.Up + totalStatusInfo.Down + totalStatusInfo.Unknown
-		totalStatusInfo.NoData = (stepRange[1] - stepRange[0]) - newAvail
+		totalStatusInfo.NoData = (stepRange[1] - stepRange[0]) - maxAvail
 
 		if _, ok := statuses[group][totalProbeName]; !ok {
 			statuses[group][totalProbeName] = map[int64]*StatusInfo{}
@@ -177,25 +189,72 @@ func CalculateTotalForStepRange(statuses map[string]map[string]map[int64]*Status
 	}
 }
 
+// UpdateMute applies muting to a StatusInfo based on intervals described by incidents.
 func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents []types.DowntimeIncident, stepRanges [][]int64) {
 	for groupName := range statuses {
 		for _, stepRange := range stepRanges {
 			var stepDuration int64 = stepRange[1] - stepRange[0]
+			var muteDuration int64 = 0
+			var relatedDowntimes = make([]types.DowntimeIncident, 0)
 
+			// calculate maximum known mute duration
 			for _, incident := range incidents {
-				muteDuration := incident.MuteDuration(stepRange[0], stepRange[1], groupName)
-				if muteDuration == 0 {
+				m := incident.MuteDuration(stepRange[0], stepRange[1], groupName)
+				if m == 0 {
+					continue
+				}
+				muteDuration = util.Max(muteDuration, m)
+				relatedDowntimes = append(relatedDowntimes, incident)
+			}
+
+			// Apply muteDuration to all probes in group.
+			for probeName := range statuses[groupName] {
+				status := statuses[groupName][probeName][stepRange[0]]
+
+				status.Downtimes = relatedDowntimes
+
+				// Mute Unknown first
+				if muteDuration <= status.Unknown {
+					status.Unknown -= muteDuration
+					status.Muted = muteDuration
 					continue
 				}
 
-				for probeName := range statuses[groupName] {
-					statusInfo := statuses[groupName][probeName][stepRange[0]]
+				// Mute Down
+				if muteDuration <= status.Unknown+status.Down {
+					status.Down = status.Down - (muteDuration - status.Unknown)
+					status.Unknown = 0
+					status.Muted = muteDuration
+					continue
+				}
 
-					// TODO should we mute 'Up' seconds?
-					statusInfo.Muted = ClampToRange(muteDuration, 0, stepDuration-statusInfo.Up)
-					statusInfo.Down = ClampToRange(statusInfo.Down-statusInfo.Muted, 0, stepDuration-statusInfo.Up-statusInfo.Muted)
-					statusInfo.Unknown = Max(stepDuration-statusInfo.Up-statusInfo.Muted-statusInfo.Down, 0)
-					statusInfo.Downtimes = append(statusInfo.Downtimes, incident)
+				// Do not mute Up seconds and make sure that seconds sum is not exceeded step duration
+				if status.NoData == 0 {
+					status.Unknown = 0
+					status.Down = 0
+					if muteDuration+status.Up > stepDuration {
+						status.Muted = stepDuration - status.Up
+					} else {
+						status.Muted = muteDuration
+					}
+					continue
+				}
+
+				// Mute Nodata if interval in incident is more than sum of known seconds.
+				if status.NoData > 0 {
+					knownSeconds := status.Unknown + status.Down + status.Up
+					if muteDuration-knownSeconds > 0 {
+						// Do not mute 'Up' seconds
+						status.Muted = muteDuration - status.Up
+						status.Unknown = 0
+						status.Down = 0
+						// decrease no data
+						status.NoData -= muteDuration - knownSeconds
+						if status.NoData < 0 {
+							// This should not happen
+							status.NoData = 0
+						}
+					}
 				}
 			}
 		}
@@ -270,5 +329,17 @@ func TransformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 			}
 		}
 	}
+	return res
+}
+
+func FilterDisabledProbesFromEpisodes(episodes []types.DowntimeEpisode) []types.DowntimeEpisode {
+	res := make([]types.DowntimeEpisode, 0)
+
+	for _, episode := range episodes {
+		if types.IsProbeEnabled(episode.ProbeRef.ProbeId()) {
+			res = append(res, episode)
+		}
+	}
+
 	return res
 }

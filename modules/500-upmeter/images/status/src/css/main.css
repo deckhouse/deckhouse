@@ -1,0 +1,72 @@
+.container{
+  max-width: 720px!important;
+  padding-top: 1.5rem;
+}
+
+.top-summary .summary-label{
+  font-size: 1.5rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.statuses {
+  margin-top: 3rem;
+  font-size: 1.2rem;
+}
+
+.statuses-holder {
+  min-height: 8rem;
+  position: relative
+}
+
+.statuses-holder .fade-panel{
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  position: absolute;
+  background-color: #fafafa;
+  opacity: .8;
+  z-index: 2;
+}
+
+.statuses-holder .error-related.load-indicator{
+  color: #555;
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 1;
+
+  top: calc(50% - (2.5rem/2));
+  left: calc(50% - (2.5rem/2));
+  position: absolute;
+  z-index: 3;
+}
+
+.summary-related.load-indicator{
+  color: #ccc;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-width: .23rem;
+}
+
+.group-label {
+  font-weight: normal;
+}
+
+.group-description {
+  font-weight: normal;
+  font-size: 0.9rem;
+  color: #999;
+  padding-top: 1rem;
+}
+
+.status-label {
+  font-weight: 300;
+  margin-left: auto; /* align to the right */
+}
+
+.details-link {
+  float: right
+}

@@ -45,6 +45,13 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 	g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(600))
 	g.Expect(steps.Ranges[2][0]).Should(BeEquivalentTo(600))
 	g.Expect(steps.Ranges[2][1]).Should(BeEquivalentTo(900))
+	// Step ranges used in status_test.go
+	steps = CalculateAdjustedStepRanges(0, 1200, 600)
+	g.Expect(steps.Ranges).Should(HaveLen(2))
+	g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(0))
+	g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(600))
+	g.Expect(steps.Ranges[1][0]).Should(BeEquivalentTo(600))
+	g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(1200))
 
 	// Big step
 	steps = CalculateAdjustedStepRanges(10000, 70000, 7200)

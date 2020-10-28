@@ -42,7 +42,7 @@ func NewNeighborViaServiceProber() types.Prober {
 
 		smokeIPs, failed := ResolveSmokeMiniIps(SmokeMiniAddr, nghsrvDnsTimeout)
 		if failed {
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 			return
 		}
 

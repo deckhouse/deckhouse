@@ -2,32 +2,25 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
+
 	_ "github.com/mattn/go-sqlite3"
+
+	"upmeter/pkg/upmeter/db/dao"
+	"upmeter/pkg/upmeter/db/migrations"
+	"upmeter/pkg/upmeter/db/util"
 )
 
 func Connect(path string, dbhInjector ...func(*sql.DB)) error {
-	dbh, err := sql.Open("sqlite3", path)
-	if err != nil {
-		return fmt.Errorf("open db '%s': %v", path, err)
+	if len(dbhInjector) == 0 {
+		dbhInjector = append(dbhInjector, DefaultDbhInjector)
 	}
 
-	err = EnsureTables(dbh)
-	if err != nil {
-		return fmt.Errorf("ensure tables: %v", err)
-	}
-
-	if len(dbhInjector) > 0 && dbhInjector[0] != nil {
-		dbhInjector[0](dbh)
-	} else {
-		InjectDbh(dbh)
-	}
-
-	return nil
+	return util.Connect(path, dbhInjector...)
 }
 
 // InjectDbh injects dbh into all default Dao
-func InjectDbh(dbh *sql.DB) {
-	Downtime30s.Dbh = dbh
-	Downtime5m.Dbh = dbh
+func DefaultDbhInjector(dbh *sql.DB) {
+	dao.Downtime30s.Dbh = dbh
+	dao.Downtime5m.Dbh = dbh
+	migrations.Migrator.Dbh = dbh
 }
