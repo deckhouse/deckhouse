@@ -84,6 +84,8 @@ entries:
               url: /modules/030-cloud-provider-openstack/configuration.html
             - title: Custom Resources
               url: /modules/030-cloud-provider-openstack/cr.html
+          - title: FAQ
+            url: /modules/030-cloud-provider-openstack/faq.html
         - title: VMware vSphere
           folders:
           - title: Описание
@@ -96,6 +98,8 @@ entries:
               url: /modules/030-cloud-provider-vsphere/configuration.html
             - title: Custom Resources
               url: /modules/030-cloud-provider-vsphere/cr.html
+          - title: FAQ
+            url: /modules/030-cloud-provider-vsphere/faq.html
         - title: Yandex.Cloud
           folders:
           - title: Описание
