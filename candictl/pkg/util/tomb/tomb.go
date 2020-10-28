@@ -28,7 +28,8 @@ type teardownCallbacks struct {
 	mutex sync.RWMutex
 	data  []func()
 
-	exhausted bool
+	exhausted        bool
+	notInterruptable bool
 
 	waitCh chan struct{}
 	stopCh chan struct{}
@@ -89,23 +90,33 @@ func StopCh() chan struct{} {
 	return callbacks.stopCh
 }
 
+func WithoutInterruptions(fn func()) {
+	callbacks.notInterruptable = true
+	defer func() { callbacks.notInterruptable = false }()
+	fn()
+}
+
 func WaitForProcessInterruption() {
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM)
 
+Select:
 	s := <-interruptCh
-	go func() {
-		<-interruptCh
-		log.ErrorLn("Killed by interrupting process twice.")
-		os.Exit(1)
-	}()
 
 	switch s {
 	case syscall.SIGTERM, syscall.SIGINT:
+		if callbacks.notInterruptable {
+			goto Select
+		}
+		go func() {
+			<-interruptCh
+			log.ErrorLn("Killed by interrupting process twice.")
+			os.Exit(1)
+		}()
 		callbacks.Cancel()
-		log.Warning(fmt.Sprintf("Graceful shutdown by \"%s\" signal ...\n", s.String()))
 		StopCh() <- struct{}{}
 		Shutdown()
+		log.Warning(fmt.Sprintf("Graceful shutdown by %q signal ...\n", s.String()))
 	default:
 		os.Exit(1)
 	}

@@ -14,6 +14,7 @@ import (
 	"flant/candictl/pkg/operations"
 	"flant/candictl/pkg/system/ssh"
 	"flant/candictl/pkg/util/retry"
+	"flant/candictl/pkg/util/tomb"
 )
 
 func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -45,7 +46,8 @@ func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.C
 		}
 		configData := clusterConfig.Data["cluster-configuration.yaml"]
 
-		modifiedData, err := operations.Edit(configData)
+		var modifiedData []byte
+		tomb.WithoutInterruptions(func() { modifiedData, err = operations.Edit(configData) })
 		if err != nil {
 			return err
 		}
@@ -102,7 +104,8 @@ func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause) *k
 
 		providerConfigData := providerClusterConfig.Data["cloud-provider-cluster-configuration.yaml"]
 
-		modifiedData, err := operations.Edit(providerConfigData)
+		var modifiedData []byte
+		tomb.WithoutInterruptions(func() { modifiedData, err = operations.Edit(providerConfigData) })
 		if err != nil {
 			return err
 		}

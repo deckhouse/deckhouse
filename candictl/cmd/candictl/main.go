@@ -124,7 +124,7 @@ func main() {
 	go func() {
 		_, err := kpApp.Parse(os.Args[1:])
 		if err != nil {
-			_, err = fmt.Fprint(os.Stderr, color.New(color.FgRed).Sprintf("\n%v\n", err))
+			_, err = color.New(color.FgRed).Fprintf(os.Stderr, "\n%v\n", err)
 			if err != nil {
 				panic(err)
 			}

@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 const (
 	CloudClusterType  = "Cloud"
 	StaticClusterType = "Static"
@@ -14,8 +16,8 @@ func (i *SchemaIndex) IsValid() bool {
 	return i.Kind != "" && i.Version != ""
 }
 
-func (i *SchemaIndex) String() bool {
-	return i.Kind != "" && i.Version != ""
+func (i *SchemaIndex) String() string {
+	return fmt.Sprintf("%s, %s", i.Kind, i.Version)
 }
 
 type OpenAPISchema struct {
