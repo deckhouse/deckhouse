@@ -33,7 +33,10 @@ func newSchemaStore(candiDir string) *SchemaStore {
 	once.Do(func() {
 		store = &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
 		err := filepath.Walk(candiDir, func(path string, info os.FileInfo, err error) error {
-			if strings.HasSuffix(path, providerSchemaFilenameSuffix) || info.Name() == "cloud_discovery_data.yaml" {
+			switch {
+			case strings.HasSuffix(path, providerSchemaFilenameSuffix):
+				fallthrough
+			case info != nil && info.Name() == "cloud_discovery_data.yaml":
 				uploadError := store.UploadByPath(path)
 				if uploadError != nil {
 					return uploadError
@@ -72,7 +75,12 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		)
 	}
 
-	isValid, err := openAPIValidate(doc, s.Get(index))
+	schema := s.Get(index)
+	if schema == nil {
+		return fmt.Errorf("Schema for %s does not found.", index.String())
+	}
+
+	isValid, err := openAPIValidate(doc, schema)
 	if !isValid {
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
