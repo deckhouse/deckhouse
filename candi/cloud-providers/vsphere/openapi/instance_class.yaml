@@ -30,10 +30,7 @@ spec:
           required:
           - numCPUs
           - memory
-          - rootDiskSize
-          - template
           - mainNetwork
-          - datastore
           properties:
             numCPUs:
               description: Count of vCPUs to allocate to vSphere VirtualMachines.

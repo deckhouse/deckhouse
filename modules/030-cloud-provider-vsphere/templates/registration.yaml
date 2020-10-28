@@ -25,14 +25,16 @@ data:
   {{- $_ := set $vsphereValues "sshKey" .Values.cloudProviderVsphere.internal.sshKey }}
   {{- $_ := set $vsphereValues "vmFolderPath" .Values.cloudProviderVsphere.internal.vmFolderPath }}
 
-  {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
-  {{- $_ := set $vsphereValues.instanceClassDefaults "template" .Values.cloudProviderVsphere.internal.masterInstanceClass.template }}
-  {{- $_ := set $vsphereValues.instanceClassDefaults "datastore" .Values.cloudProviderVsphere.internal.masterInstanceClass.datastore }}
-  {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePool" .Values.cloudProviderVsphere.internal.masterInstanceClass.resourcePool }}
-  {{- if hasKey .Values.cloudProviderVsphere.internal "disableTimesync" }}
-    {{- $_ := set $vsphereValues.instanceClassDefaults "disableTimesync" .Values.cloudProviderVsphere.internal.disableTimesync }}
-  {{- else }}
-    {{- $_ := set $vsphereValues.instanceClassDefaults "disableTimesync" true }}
+  {{- if .Values.cloudProviderVsphere.internal.masterInstanceClass }}
+    {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
+    {{- $_ := set $vsphereValues.instanceClassDefaults "template" .Values.cloudProviderVsphere.internal.masterInstanceClass.template }}
+    {{- $_ := set $vsphereValues.instanceClassDefaults "datastore" .Values.cloudProviderVsphere.internal.masterInstanceClass.datastore }}
+    {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePool" .Values.cloudProviderVsphere.internal.masterInstanceClass.resourcePool }}
+    {{- if hasKey .Values.cloudProviderVsphere.internal "disableTimesync" }}
+      {{- $_ := set $vsphereValues.instanceClassDefaults "disableTimesync" .Values.cloudProviderVsphere.internal.disableTimesync }}
+    {{- else }}
+      {{- $_ := set $vsphereValues.instanceClassDefaults "disableTimesync" true }}
+    {{- end }}
   {{- end }}
 
   vsphere: {{ $vsphereValues | toJson | b64enc | quote }}
