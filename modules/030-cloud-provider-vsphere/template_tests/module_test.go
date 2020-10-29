@@ -69,6 +69,7 @@ const moduleValuesA = `
       region: myreg
       sshKey: mysshkey1
       vmFolderPath: dev/test
+      datacenter: X1
       zones: ["aaa", "bbb"]
       masterInstanceClass:
         datastore: dev/lun_1
@@ -97,6 +98,7 @@ const moduleValuesB = `
       region: myreg
       sshKey: mysshkey1
       vmFolderPath: dev/test
+      datacenter: X1
       zones: ["aaa", "bbb"]
       masterInstanceClass: null
 `
@@ -153,7 +155,6 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
           "regionTagCategory": "myregtagcat",
           "instanceClassDefaults": {
             "datastore": "dev/lun_1",
-            "resourcePool": null,
             "template": "dev/golden_image",
             "disableTimesync": true
           },
@@ -209,6 +210,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
           "password": "myPaSsWd",
           "region": "myreg",
           "regionTagCategory": "myregtagcat",
+          "instanceClassDefaults": {},
           "sshKey": "mysshkey1",
           "username": "myuname",
           "vmFolderPath": "dev/test",

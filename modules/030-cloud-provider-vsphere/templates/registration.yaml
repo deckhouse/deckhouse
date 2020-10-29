@@ -15,21 +15,23 @@ data:
 
   # vsphere
   {{- $vsphereValues := dict }}
-  {{- $_ := set $vsphereValues "server" .Values.cloudProviderVsphere.internal.server }}
-  {{- $_ := set $vsphereValues "username" .Values.cloudProviderVsphere.internal.username }}
-  {{- $_ := set $vsphereValues "password" .Values.cloudProviderVsphere.internal.password }}
-  {{- $_ := set $vsphereValues "insecure" .Values.cloudProviderVsphere.internal.insecure }}
-  {{- $_ := set $vsphereValues "regionTagCategory" .Values.cloudProviderVsphere.internal.regionTagCategory }}
-  {{- $_ := set $vsphereValues "zoneTagCategory" .Values.cloudProviderVsphere.internal.zoneTagCategory }}
-  {{- $_ := set $vsphereValues "region" .Values.cloudProviderVsphere.internal.region }}
-  {{- $_ := set $vsphereValues "sshKey" .Values.cloudProviderVsphere.internal.sshKey }}
-  {{- $_ := set $vsphereValues "vmFolderPath" .Values.cloudProviderVsphere.internal.vmFolderPath }}
+  {{- $_ := set $vsphereValues "server" (.Values.cloudProviderVsphere.internal.server | required ".Values.cloudProviderVsphere.internal.server is required") }}
+  {{- $_ := set $vsphereValues "username" (.Values.cloudProviderVsphere.internal.username | required ".Values.cloudProviderVsphere.internal.username is required") }}
+  {{- $_ := set $vsphereValues "password" (.Values.cloudProviderVsphere.internal.password | required ".Values.cloudProviderVsphere.internal.password is required") }}
+  {{- $_ := set $vsphereValues "insecure" (.Values.cloudProviderVsphere.internal.insecure | required ".Values.cloudProviderVsphere.internal.insecure is required") }}
+  {{- $_ := set $vsphereValues "regionTagCategory" (.Values.cloudProviderVsphere.internal.regionTagCategory | required ".Values.cloudProviderVsphere.internal.regionTagCategory is required") }}
+  {{- $_ := set $vsphereValues "zoneTagCategory" (.Values.cloudProviderVsphere.internal.zoneTagCategory | required ".Values.cloudProviderVsphere.internal.zoneTagCategory is required") }}
+  {{- $_ := set $vsphereValues "region" (.Values.cloudProviderVsphere.internal.region | required ".Values.cloudProviderVsphere.internal.region is required") }}
+  {{- $_ := set $vsphereValues "sshKey" (.Values.cloudProviderVsphere.internal.sshKey | required ".Values.cloudProviderVsphere.internal.sshKey is required") }}
+  {{- $_ := set $vsphereValues "vmFolderPath" (.Values.cloudProviderVsphere.internal.vmFolderPath | required ".Values.cloudProviderVsphere.internal.vmFolderPath is required") }}
 
+  {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
   {{- if .Values.cloudProviderVsphere.internal.masterInstanceClass }}
-    {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
-    {{- $_ := set $vsphereValues.instanceClassDefaults "template" .Values.cloudProviderVsphere.internal.masterInstanceClass.template }}
-    {{- $_ := set $vsphereValues.instanceClassDefaults "datastore" .Values.cloudProviderVsphere.internal.masterInstanceClass.datastore }}
-    {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePool" .Values.cloudProviderVsphere.internal.masterInstanceClass.resourcePool }}
+    {{- $_ := set $vsphereValues.instanceClassDefaults "template" (.Values.cloudProviderVsphere.internal.masterInstanceClass.template | required ".Values.cloudProviderVsphere.internal.masterInstanceClass.template is required") }}
+    {{- $_ := set $vsphereValues.instanceClassDefaults "datastore" (.Values.cloudProviderVsphere.internal.masterInstanceClass.datastore | required ".Values.cloudProviderVsphere.internal.masterInstanceClass.datastore is required") }}
+    {{- if hasKey .Values.cloudProviderVsphere.internal "resourcePool" }}
+      {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePool" .Values.cloudProviderVsphere.internal.masterInstanceClass.resourcePool }}
+    {{- end }}
     {{- if hasKey .Values.cloudProviderVsphere.internal "disableTimesync" }}
       {{- $_ := set $vsphereValues.instanceClassDefaults "disableTimesync" .Values.cloudProviderVsphere.internal.disableTimesync }}
     {{- else }}
