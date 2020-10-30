@@ -128,7 +128,7 @@ func (c *ConvergeExporter) Start() {
 func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 	c.getStatistic()
 
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(c.CheckInterval)
 	for {
 		select {
 		case <-ticker.C:
