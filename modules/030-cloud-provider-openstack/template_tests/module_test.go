@@ -228,6 +228,8 @@ internal-network-name = "myintnetname2"
 ipv6-support-disabled = true
 [LoadBalancer]
 create-monitor = "true"
+monitor-delay = "2s"
+monitor-timeout = "1s"
 subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"`
 			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())

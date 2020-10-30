@@ -19,6 +19,7 @@ spec:
   loadBalancerWithProxyProtocol:
     annotations:
       loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   tolerations:
