@@ -172,6 +172,17 @@ dhcpOptions:
 
 В данной схеме размещения создаётся NAT instance, а в таблицу маршрутизации добавляется правило на 0.0.0.0/0 с NAT instance nexthop'ом.
 
+По-умолчанию, NAT instance создастся в зоне `ru-central1-c`. Если необходима другая зона, то стоит вручную создать subnet в нужной зоне и указать его в параметре `withNATInstance.internalSubnetID`.
+
+**Внимание!** Сразу же (в течение 3х минут) после создания базовых сетевых ресурсов, нужно вручную прописать маршрут к созданному NAT instance. Если этого не сделать, то bootstrap процесс не сможет завершиться.
+
+```text
+$ yc compute instance list | grep nat
+| ef378c62hvqi075cp57j | kube-yc-nat | ru-central1-c | RUNNING | 130.193.44.28   | 192.168.178.22 |
+
+$ yc vpc route-table update --name kube-yc --route "0.0.0.0/0=192.168.178.22"
+```
+
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSnNqebgRdwGP8lhKMJfrn5c0QXDpe9YdmIlK4eDberysLLgYiKNuwaPLHcyQhJigvQ21SANH89uipE/pub?w=812&h=655)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
