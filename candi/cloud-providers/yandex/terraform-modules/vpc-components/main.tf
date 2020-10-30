@@ -2,14 +2,6 @@ resource "yandex_vpc_route_table" "kube" {
   name           = var.prefix
   network_id     = var.network_id
 
-  dynamic "static_route" {
-    for_each = var.should_create_nat_instance ? [var.nat_instance_external_subnet_id != null ? yandex_compute_instance.nat_instance.0.network_interface.1.ip_address : yandex_compute_instance.nat_instance.0.network_interface.0.ip_address] : []
-    content {
-      destination_prefix = "0.0.0.0/0"
-      next_hop_address   = static_route.value
-    }
-  }
-
   lifecycle {
     ignore_changes = [
       static_route,
