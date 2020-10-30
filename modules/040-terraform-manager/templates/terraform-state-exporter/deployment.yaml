@@ -46,6 +46,7 @@ spec:
         - "terraform"
         - "converge-exporter"
         - "--logger-type=json"
+        - "--check-interval=10m"
         image: {{ .Values.global.modulesImages.registry }}/terraform-manager/{{ include "terraform_manager_image" . }}
         livenessProbe:
           httpGet:
