@@ -24,7 +24,7 @@ search: добавить ноду в кластер, настроить ноду
 ## Как изменить node-group у статичного узла?
 
 Чтобы перенести существующий статичный узел из одной node-group в другую, необходимо изменить у узла лейбл группы:
-```shell script
+```shell
 kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
 ```
 
@@ -35,7 +35,7 @@ kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
 - Остановить сервис и таймер bashible: `systemctl stop bashible.timer bashible.service`
 - Удалить скрипты bashible: `rm -rf /var/lib/bashible`
 - Удалить с ноды аннотации и лейблы:
-```shell script
+```shell
 kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- update.node.deckhouse.io/waiting-for-approval- update.node.deckhouse.io/disruption-approved- update.node.deckhouse.io/disruption-required- update.node.deckhouse.io/approved- update.node.deckhouse.io/draining- update.node.deckhouse.io/drained-
 kubectl label node <node_name> node.deckhouse.io/group-
 ```
@@ -50,7 +50,7 @@ kubectl label node <node_name> node.deckhouse.io/group-
 - Найти ноду, которая сейчас бутстрапится: `kubectl -n d8-cloud-instance-manager  get machine | grep Pending`
 - Посмотреть информацию о `machine`: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`
 В дескрайбе мы увидим такую информацию:
-```shell script
+```shell
 Status:
   Bootstrap Status:
     Description:   Use 'nc 192.168.199.115 8000' to get bootstrap logs.
@@ -65,7 +65,7 @@ Status:
 Если у вас есть нода с GPU и вы хотите настроить docker для работы с `node-manager`, то вам необходимо выполнить все настройки на ноде по [документации](https://github.com/NVIDIA/k8s-device-plugin#quick-start).
 
 Создать `NodeGroup` с такими параметрами:
-```shell script
+```shell
   docker:
     manage: false
   operatingSystem:
