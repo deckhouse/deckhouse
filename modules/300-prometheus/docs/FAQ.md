@@ -205,3 +205,31 @@ spec:
     app: my-alertmanager
 ```
 **Важно!!** если вы создаете Endpoints для Service вручную (например для использования внешнего alertmanager'а), обязательно указывать имя порта (name) и в Service, и в Endpoints.
+
+## Как в alertmanager игнорировать лишние алерты?
+
+Решение сводится к настройке маршрутизации алертов в вашем Alertmanager.
+
+Потребуется: 
+1. Завести получателя без параметров.
+1. Смаршрутизировать лишние алерты в этого получателя. 
+
+В `alertmanager.yaml` это будет выглядеть так:
+```yaml
+receivers:
+- name: blackhole
+  # Получатель определенный без параметров будет работать как "/dev/null".
+- name: some-other-receiver
+  # ...
+route:
+  routes:
+  - match:
+      alertname: DeadMansSwitch
+    receiver: blackhole
+  - match_re:
+      service: ^(foo1|foo2|baz)$
+    receiver: blackhole
+  - receiver: some-other-receiver
+```
+
+С подробным описанием всех параметров можно ознакомится в [официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file). 
