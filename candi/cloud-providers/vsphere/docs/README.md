@@ -71,9 +71,6 @@ title: Cloud provider - Vsphere
 * `zoneTagCategory` — имя **категории** тэгов, использующихся для идентификации зоны (vSphere Cluster).
   * Формат — string.
   * Опциональный параметр. По-умолчанию `k8s-zone`.
-* `defaultDatastore` — имя vSphere Datastore, который будет использоваться в качестве default StorageClass.
-  * Формат — string.
-  * Опциональный параметр. По-умолчанию будет использован лексикографически первый Datastore.
 * `disableTimesync` — отключить ли синхронизацию времени со стороны vSphere. **Внимание!** это не отключит NTP демоны в гостевой ОС, а лишь отключит "подруливание" временем со стороны ESXi.
   * Формат — bool.
   * Опциональный параметр. По-умолчанию `true`.
@@ -117,7 +114,6 @@ provider:
 vmFolderPath: dev
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
-defaultDatastore: lun_2_dev
 region: X1
 internalNetworkCIDR: 192.168.199.0/24
 masterNodeGroup:

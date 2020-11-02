@@ -4,8 +4,8 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: {{ $ds.name }}
-  {{- if $.Values.cloudProviderVsphere.internal.defaultDatastore }}
-    {{- if $ds.path | hasSuffix $.Values.cloudProviderVsphere.internal.defaultDatastore }}
+  {{- if $.Values.cloudProviderVsphere.defaultDatastore }}
+    {{- if $ds.path | hasSuffix $.Values.cloudProviderVsphere.defaultDatastore }}
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
     {{- end }}

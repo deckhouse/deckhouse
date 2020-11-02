@@ -40,7 +40,6 @@ cloudProviderVsphere:
       - name: mydsname
         path: /my/ds/path/mydsname
         zones: ["zonea", "zoneb"]
-      defaultDatastore: mydsname
       server: myhost
       username: myuname
       password: myPaSsWd

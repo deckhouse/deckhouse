@@ -59,7 +59,6 @@ const moduleValuesA = `
       - name: mydsname2
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
-      defaultDatastore: mydsname2
       server: myhost
       username: myuname
       password: myPaSsWd
@@ -88,7 +87,6 @@ const moduleValuesB = `
       - name: mydsname2
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
-      defaultDatastore: mydsname2
       server: myhost
       username: myuname
       password: myPaSsWd
@@ -186,9 +184,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 			// user story #3
 			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname1").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname1").Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname2").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname2").Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).String()).To(Equal("true"))
 		})
 	})
 

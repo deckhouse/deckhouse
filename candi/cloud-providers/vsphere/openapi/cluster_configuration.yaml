@@ -141,8 +141,6 @@ apiVersions:
         type: string
       zoneTagCategory:
         type: string
-      defaultDatastore:
-        type: string
       disableTimesync:
         type: boolean
       externalNetworkNames:

@@ -31,7 +31,6 @@ cloudProviderVsphere:
   zoneTagCategory: override
   internalNetworkNames: [override1, override2]
   externalNetworkNames: [override1, override2]
-  defaultDatastore: override
   disableTimesync: false
   vmFolderPath: override
   sshKeys: [override1, override2]
@@ -60,7 +59,6 @@ provider:
 vmFolderPath: test
 regionTagCategory: test
 zoneTagCategory: test
-defaultDatastore: test
 region: test
 internalNetworkCIDR: test
 sshPublicKey: test
@@ -129,7 +127,6 @@ regionTagCategory: test
 zoneTagCategory: test
 internalNetworkNames: [test1, test2]
 externalNetworkNames: [test1, test2]
-defaultDatastore: test
 disableTimesync: true
 vmFolderPath: test
 sshKey: test
@@ -163,7 +160,6 @@ regionTagCategory: override
 zoneTagCategory: override
 internalNetworkNames: [override1, override2]
 externalNetworkNames: [override1, override2]
-defaultDatastore: override
 disableTimesync: true
 vmFolderPath: override
 sshKey: override1
@@ -190,7 +186,6 @@ regionTagCategory: override
 zoneTagCategory: override
 internalNetworkNames: [override1, override2]
 externalNetworkNames: [override1, override2]
-defaultDatastore: override
 disableTimesync: true
 vmFolderPath: override
 sshKey: override1
@@ -217,7 +212,6 @@ regionTagCategory: override
 zoneTagCategory: override
 internalNetworkNames: [override1, override2]
 externalNetworkNames: [override1, override2]
-defaultDatastore: override
 disableTimesync: true
 vmFolderPath: override
 sshKey: override1

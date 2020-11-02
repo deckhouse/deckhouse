@@ -14,6 +14,17 @@ title: "Сloud provider — VMware vSphere: настройки"
 Если вам необходимо настроить модуль, потому что, например, у вас bare metal кластер, для которого нужно включить
 возможность добавлять дополнительные инстансы из vSphere, то смотрите раздел как [настроить Hybrid кластер в vSphere](faq.html#как-поднять-гибридный-кластер).
 
+* `defaultDatastore` — имя vSphere Datastore, который будет использоваться в качестве default StorageClass.
+  * Формат — string.
+  * Опциональный параметр. По умолчанию будет использован лексикографически первый Datastore.
+
+### Пример
+
+```yaml
+cloudProviderVsphere: |
+  defaultDatastore: "msk1-dev"
+```
+
 ## Storage
 
 StorageClass будет создан автоматически для каждого Datastore и DatastoreCluster из зон(-ы). Для указания default StorageClass, необходимо в конфигурацию модуля добавить параметр `defaultDataStore`.
