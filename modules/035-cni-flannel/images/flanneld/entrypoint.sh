@@ -20,4 +20,15 @@ fi
 
 cp -f /etc/kube-flannel/cni-conf.json /etc/cni/net.d/10-flannel.conflist
 
+# remove after 20.18 release
+IPTABLES_SAVE="$(iptables-save -t nat | grep -vE "comment|docker0" | grep '^\-A POSTROUTING')"
+if [ "$(grep "\-A POSTROUTING ! -s .*/16 -d .*/16 -j MASQUERADE" <<< "$IPTABLES_SAVE" | wc -l)" -gt 1 ]; then
+  DELETE_RULE="$(grep "\-A POSTROUTING ! -s .*/16 -d .*/16 -j MASQUERADE" <<< "$IPTABLES_SAVE" | head -n1 | sed 's/-A/-D/')"
+  iptables -t nat $DELETE_RULE
+fi
+if [ "$(grep "\-A POSTROUTING -s .*/16 ! -d .*/4 -j MASQUERADE" <<< "$IPTABLES_SAVE" | wc -l)" -gt 1 ]; then
+  DELETE_RULE="$(grep "\-A POSTROUTING -s .*/16 ! -d .*/4 -j MASQUERADE" <<< "$IPTABLES_SAVE" | head -n1 | sed 's/-A/-D/')"
+  iptables -t nat $DELETE_RULE
+fi
+
 exec /opt/bin/flanneld $@ $ifaces
