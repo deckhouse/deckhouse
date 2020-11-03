@@ -41,6 +41,9 @@ spec:
           - mountPath: /db
             name: data
             readOnly: false
+        resources:
+          limits:
+            memory: "300Mi"
       - name: kube-rbac-proxy
         image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
