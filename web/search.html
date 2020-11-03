@@ -1,0 +1,30 @@
+---
+title: "Поиск"
+search: exclude
+permalink: /search.html
+toc: false
+---
+
+<div class="search__results__counts"><span>Найдено документов: </span><span id="search__results__counts__data"></span></div>
+
+<ul class="search__results__absent">Документов не найдено</ul>
+<ul id="search-results"></ul>
+
+<script>
+var documents=[
+{%- assign searchedpages = site.pages | where: "search", true %}
+{%- for page in searchedpages %}
+{%- unless page.search == "exclude" %}{
+"title": "{{ page.title | escape }}",
+"url": "/{{ page.url | remove_first: "/"}}",
+"content": {{ page.content | strip_html | strip_newlines | lstrip | rstrip | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | jsonify }}}
+{%- unless forloop.last %},{% endunless %}
+{%- endunless %}
+{%- endfor %}
+];
+</script>
+{% asset lunr.js %}
+{% asset lunr.stemmer.support.js %}
+{% asset lunr.multi.js %}
+{% asset lunr.ru.js %}
+{% asset search.js %}
