@@ -5,7 +5,7 @@
   script:
   - pwd
   - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
@@ -31,7 +31,7 @@
   script:
   - pwd
   - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
@@ -57,7 +57,7 @@
   script:
   - pwd
   - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - rm -rf testing/kcov-report
   - chmod -R 0777 testing
@@ -118,7 +118,7 @@
   script:
   - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
   - ./modules_images_werf test_web_links
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
   - werf run --config werf-web.yaml dev/web-public --docker-options="--rm --entrypoint cat" -- /usr/share/nginx/html/link_test_report.txt | tee ${REPORT_FILE}
   - echo -e "\n#################################################\nPublic site link checking report...\n"
@@ -150,7 +150,7 @@
   script:
   - pwd
   - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
   - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
   except:

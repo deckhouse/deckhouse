@@ -79,7 +79,7 @@ fi
 SUBCOMMAND=$1
 shift
 
-type multiwerf && source <(multiwerf use 1.1 alpha)
+type multiwerf && source <(multiwerf use 1.1 early-access)
 type werf && source <(werf ci-env gitlab --verbose)
 
 case "$SUBCOMMAND" in

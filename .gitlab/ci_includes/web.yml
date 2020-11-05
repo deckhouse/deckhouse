@@ -4,7 +4,7 @@ Build Website:
   - export WERF_CONFIG=werf-web.yaml
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - source <(werf ci-env gitlab --verbose)
   - if [ "$CI_COMMIT_REF_NAME" == "master" ] ; then export WERF_TAG_GIT_BRANCH=master ; fi
   - werf build-and-publish
@@ -29,7 +29,7 @@ Web links test:
 .web_base_deploy: &web_base_deploy
   stage: deploy_website
   script:
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --config werf-web.yaml --verbose)
   - werf deploy
     --config werf-web.yaml
@@ -95,7 +95,7 @@ Web cleanup:
   - export WERF_CONFIG=werf-web.yaml
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --verbose)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   - werf cleanup

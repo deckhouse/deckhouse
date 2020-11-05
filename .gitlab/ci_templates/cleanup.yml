@@ -2,7 +2,7 @@
   stage: cleanup_registry
   before_script:
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
-  - type multiwerf && source <(multiwerf use 1.1 alpha)
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   script:
