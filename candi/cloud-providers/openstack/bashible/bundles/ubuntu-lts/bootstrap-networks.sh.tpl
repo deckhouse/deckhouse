@@ -1,8 +1,5 @@
 #!/bin/bash
 
-{{- if hasKey .nodeGroup "instanceClass" }}
-  {{- if .nodeGroup.instanceClass.additionalNetworks }}
-
 shopt -s extglob
 
 ip_addr_show_output=$(ip -json addr show)
@@ -40,6 +37,3 @@ netplan generate
 netplan apply
 
 shopt -u extglob
-
-  {{- end }}
-{{- end }}
