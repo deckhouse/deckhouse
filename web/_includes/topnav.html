@@ -63,21 +63,10 @@
                 <li>
                     <!--start search-->
                     <div class="header-search">
-                        <input type="text" class="header-search__input" id="search-input" placeholder="{{site.data.strings.search_placeholder_text}}">
-                        <ul class="header-search__results" id="results-container"></ul>
+                        <form action="/search.html" method="get">
+                        <input type="text" class="header-search__input" id="search-box" name="query" placeholder="{{site.data.strings.search_placeholder_text}}">
+                        </form>
                     </div>
-                    {% asset jekyll-search.js %}
-                    <script type="text/javascript">
-                            SimpleJekyllSearch.init({
-                                searchInput: document.getElementById('search-input'),
-                                resultsContainer: document.getElementById('results-container'),
-                                dataSource: '{{ site.baseurl }}/search.json?{{ 'now' | date: "%s"}}',
-                                searchResultTemplate: '<li><a href="{url}" title="{{page.title | escape }}">{title}</a></li>',
-                    noResultsText: '{{site.data.strings.search_no_results_text}}',
-                            limit: 10,
-                            fuzzy: true,
-                    })
-                    </script>
                     <!--end search-->
                 </li>
             </ul>

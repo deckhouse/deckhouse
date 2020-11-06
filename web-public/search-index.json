@@ -1,0 +1,16 @@
+---
+title: search
+layout: none
+search: exclude
+---
+[
+{%- assign searchedpages = site.pages | where: "search", true %}
+{%- for page in searchedpages %}
+{%- unless page.search == "exclude" %}
+"title": "{{ page.title | escape }}",
+"url": "/{{ page.url | remove_first: "/"}}",
+"content": {{ page.content | strip_html | strip_newlines | lstrip | rstrip | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | jsonify }}}
+{%- unless forloop.last %},{% endunless %}
+{%- endunless %}
+{%- endfor %}
+]
