@@ -25,6 +25,7 @@ data "vsphere_tag" "zone_tag" {
 data "vsphere_dynamic" "cluster_id" {
   filter     = [data.vsphere_tag.zone_tag.id]
   type       = "ClusterComputeResource"
+  resolve_inventory_path = true
 }
 
 data "vsphere_datastore" "datastore" {
@@ -34,7 +35,7 @@ data "vsphere_datastore" "datastore" {
 
 data "vsphere_resource_pool" "resource_pool" {
   count = length(local.resourcePool) == 0 ? 0 : 1
-  name          = local.resourcePool
+  name          = join("/", [data.vsphere_dynamic.cluster_id.inventory_path, "Resources", local.resourcePool])
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
 
