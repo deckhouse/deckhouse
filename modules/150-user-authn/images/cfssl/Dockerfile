@@ -1,4 +1,5 @@
-FROM alpine:3.10
+ARG BASE_ALPINE
+FROM $BASE_ALPINE
 
 RUN apk update && \
   apk add bash jq && \

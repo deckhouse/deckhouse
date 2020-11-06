@@ -1,4 +1,5 @@
-FROM golang:1.13-buster
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER
 WORKDIR /src/
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     wget https://github.com/kubernetes/cloud-provider-openstack/archive/b9e62747cd65c74c3be9a042d3dd58ddaf561cfd.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \

@@ -14,7 +14,7 @@ cleanup:
       last: 10
 ---
 image: common-base
-from: alpine:3.12
+from: {{ env "BASE_ALPINE" }}
 ansible:
   beforeInstall:
   - apk: update_cache=yes
@@ -424,7 +424,7 @@ ansible:
         | sh -s -- -b $(go env GOPATH)/bin v1.31.0
 ---
 artifact: jq
-from: alpine:3.12
+from: {{ env "BASE_ALPINE" }}
 git:
 - url: https://github.com/stedolan/jq
   add: /
@@ -459,7 +459,7 @@ ansible:
 
 ---
 artifact: libjq
-from: alpine:3.12
+from: {{ env "BASE_ALPINE" }}
 git:
 - url: https://github.com/flant/libjq-go
   tag: v1.6.1

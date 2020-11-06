@@ -1,3 +1,4 @@
+ARG BASE_ALPINE
 FROM golang:1.12-alpine3.11
 WORKDIR /src/
 COPY old_certs.patch /
@@ -6,7 +7,7 @@ RUN apk add --no-cache make bash git mercurial patch rsync && \
     patch -p0 < /old_certs.patch && \
     make all WHAT=cmd/kube-apiserver
 
-FROM alpine:3.11
+FROM $BASE_ALPINE
 COPY --from=0 /src/_output/bin/kube-apiserver /usr/local/bin/kube-apiserver
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 ENTRYPOINT [ "/usr/local/bin/kube-apiserver" ]

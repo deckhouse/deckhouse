@@ -1,4 +1,5 @@
-FROM golang:1.13-alpine3.10
+ARG BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make
 WORKDIR /dex
 COPY bitbucket-groups.patch bitbucket-teams.patch client-groups.patch obsolete.patch static-user-groups.patch fix-relative-url.patch oidc-icon.patch /

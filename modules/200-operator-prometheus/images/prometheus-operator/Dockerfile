@@ -1,4 +1,5 @@
-FROM golang:1.12
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER
 RUN apt update && apt install -qfy \
   bash make git patch ca-certificates openssh-client openssl
 RUN mkdir /coreos && cd /coreos \

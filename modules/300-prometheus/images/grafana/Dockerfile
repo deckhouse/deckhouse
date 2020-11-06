@@ -1,3 +1,4 @@
+ARG BASE_ALPINE
 FROM grafana/build-container:1.2.19
 RUN mkdir -p /go/src/github.com/grafana/grafana && \
     curl -LSs https://github.com/grafana/grafana/archive/v7.0.6.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
@@ -11,7 +12,7 @@ RUN patch -p1 < ./fix_thin_bars.patch
 RUN bash -c "go run build.go build package" && \
     mv dist/*.deb /grafana.deb
 
-FROM alpine:3.10
+FROM $BASE_ALPINE
 WORKDIR /plugin
 RUN apk add --no-cache git && \
     cd /plugin && \

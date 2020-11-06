@@ -1,4 +1,5 @@
-FROM golang:1.13
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - &&  \
   apt install -y nodejs && \

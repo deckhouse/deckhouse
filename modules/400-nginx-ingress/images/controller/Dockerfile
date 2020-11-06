@@ -1,4 +1,5 @@
-FROM golang:1.12-buster
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER
 
 WORKDIR /src/
 COPY lua-info.patch /

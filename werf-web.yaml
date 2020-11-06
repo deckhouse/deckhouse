@@ -120,11 +120,9 @@ import:
 ---
 {{ $_ := set . "RubyVersion" "2.5.1" }}
 {{ $_ := set . "BundlerVersion" "1.17.3" }}
-{{ $_ := set . "BaseImage" "registry.flant.com/images/ubuntu:16.04" }}
-{{ $_ := set . "UbuntuCodename" "xenial" }}
 
 image: web/saml-authenticator
-from: {{ .BaseImage }}
+from: "registry.flant.com/images/ubuntu:16.04"
 docker:
   WORKDIR: /app
 ansible:

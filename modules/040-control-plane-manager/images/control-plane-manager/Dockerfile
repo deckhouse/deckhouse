@@ -1,4 +1,6 @@
-FROM golang:1.13.12-buster as kubeadm_builder
+ARG BASE_ALPINE
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER as kubeadm_builder
 WORKDIR /src/
 RUN apt update
 RUN apt install rsync patch -y
@@ -30,7 +32,7 @@ RUN cd kubernetes-1.18 && \
   patch -p1 < /patch/v1.18/07-local-init-configuration.patch && \
   make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.18
 
-FROM alpine:3.11
+FROM $BASE_ALPINE
 RUN apk add --no-cache jq curl bash gettext grep
 RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v1.16.15/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl && \
   chmod +x /usr/local/bin/kubectl

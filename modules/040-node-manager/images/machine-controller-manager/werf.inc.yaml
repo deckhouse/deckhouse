@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: alpine:3.11
+from: {{ env "BASE_ALPINE" }}
 docker:
   ENV:
     WORKDIR: /
@@ -11,7 +11,7 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/build
-from: golang:1.13-alpine3.11
+from: {{ env "BASE_GOLANG_ALPINE" }}
 ansible:
   beforeInstall:
   - name: "Install dependencies"

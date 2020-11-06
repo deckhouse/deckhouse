@@ -1,4 +1,6 @@
-FROM golang:1.13-alpine3.10
+ARG BASE_ALPINE
+ARG BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE
 
 RUN apk add --no-cache --update alpine-sdk bash patch git
 
@@ -13,7 +15,7 @@ RUN git clone -b v1.2.0 https://github.com/mintel/dex-k8s-authenticator.git . &&
   go mod download && \
   make build
 
-FROM alpine:3.10.3
+FROM $BASE_ALPINE
 
 RUN apk add --update ca-certificates openssl curl tini
 

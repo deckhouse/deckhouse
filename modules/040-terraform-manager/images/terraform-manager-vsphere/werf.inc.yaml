@@ -18,7 +18,7 @@ ansible:
   - command: rm -rf /var/cache/apk/*
 ---
 artifact: terraform-provider-vsphere
-from: golang:1.15.2-alpine3.12
+from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
   - url: https://github.com/flant/terraform-provider-vsphere
     add: /

@@ -1,4 +1,6 @@
-FROM golang:1.12
+ARG BASE_ALPINE
+ARG BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER
 WORKDIR /src/
 COPY csi-metrics-and-volume-expansion.patch /
 RUN apt update && apt-get install -y --no-install-recommends git mercurial patch && \
