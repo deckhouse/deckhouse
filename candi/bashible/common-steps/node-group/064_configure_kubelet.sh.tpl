@@ -150,7 +150,7 @@ maxOpenFiles: 1000000
   {{- $max_pods = .nodeGroup.kubelet.maxPods | default $max_pods }}
 {{- end }}
 maxPods: {{ $max_pods }}
-nodeStatusUpdateFrequency: 10s
+nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s
 podsPerCore: 0
 podPidsLimit: -1
 readOnlyPort: 0

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: secret
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-control-plane-manager-control-plane-arguments]
+      jqFilter: |
+        (.data // {}) | with_entries(.value |= (. | @base64d)) |
+        {
+          "node_status_update_frequency": (."arguments.json" // "{}" | fromjson | ((.nodeMonitorGracePeriod // empty) / 4 | round))
+        }
+EOF
+}
+
+function __main__() {
+  if ! context::has snapshots.secret.0.filterResult.node_status_update_frequency; then
+    values::unset nodeManager.internal.nodeStatusUpdateFrequency
+    return 0
+  fi
+
+  values::set nodeManager.internal.nodeStatusUpdateFrequency "$(context::get snapshots.secret.0.filterResult.node_status_update_frequency)"
+}
+
+hook::run "$@"
