@@ -1,12 +1,12 @@
 {{- if (include "helm_lib_cluster_has_non_static_nodes" .) }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   name: vsphere-csi-node
   namespace: d8-cloud-provider-vsphere
-{{ include "helm_lib_module_labels" (list . (dict "app" "node")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "node" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -14,7 +14,7 @@ spec:
     name: vsphere-csi-node
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
+  {{- end }}
 ---
 kind: DaemonSet
 apiVersion: apps/v1
@@ -45,7 +45,7 @@ spec:
       - name: deckhouse-registry
       hostNetwork: true
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       containers:
       - name: node-driver-registerar
         image: {{ .Values.global.modulesImages.registry }}/cloud-provider-vsphere/node-registrar:{{ .Values.global.modulesImages.tags.cloudProviderVsphere.nodeRegistrar }}

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: node-exporter
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "node-exporter")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-exporter" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -13,16 +13,6 @@ spec:
     name: node-exporter
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: node-exporter
-      maxAllowed:
-        cpu: 0.1
-        memory: 0.1Gi
-    - containerName: kubelet-eviction-thresholds-exporter
-      maxAllowed:
-        cpu: 0.1
-        memory: 0.1Gi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -49,7 +39,7 @@ spec:
       hostPID: true
       serviceAccountName: node-exporter
 {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}/monitoring-kubernetes/node-exporter:{{ $.Values.global.modulesImages.tags.monitoringKubernetes.nodeExporter }}
         name: node-exporter
@@ -115,10 +105,6 @@ spec:
         ports:
         - containerPort: 9101
           name: https-metrics
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       volumes:
       - name: textfile
         hostPath:

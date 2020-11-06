@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-local-dns" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -13,12 +13,6 @@ spec:
     name: node-local-dns
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "coredns"
-      maxAllowed:
-        cpu: 2
-        memory: 256Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -37,7 +31,7 @@ spec:
         app: node-local-dns
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       hostNetwork: true
       serviceAccountName: node-local-dns
       dnsPolicy: ClusterFirstWithHostNet
@@ -50,10 +44,6 @@ spec:
           value: {{ .Values.global.discovery.clusterDomain | quote }}
         - name: KUBE_DNS_SVC_IP
           value: {{ .Values.global.discovery.clusterDNSAddress | quote }}
-        resources:
-          requests:
-            cpu: 25m
-            memory: 30Mi
         securityContext:
           privileged: true
         ports:
@@ -111,10 +101,6 @@ spec:
         ports:
         - containerPort: 9254
           name: https-metrics
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       volumes:
       - name: xtables-lock
         hostPath:

@@ -107,7 +107,7 @@ function __main__() {
     fi
 
     allocatable_cpu=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableCPU) | .allocatableCPU] | sort | first // 0 ')
-    reserve_cpu="$(echo $allocatable_cpu | deckhouse-controller helper unit convert --mode kube-resource-unit --output milli)"
+    reserve_cpu="$(tools::dk_convert --milli "$allocatable_cpu")"
     # Keep 500m of CPU for node purposes.
     reserve_cpu=$((reserve_cpu-500))
     # For Nodes with unknown cpu amount or less than 500m - request 10m of cpu (e.g. disable reservation by cpu).
@@ -117,7 +117,7 @@ function __main__() {
     reserve_cpu="${reserve_cpu}m"
 
     allocatable_memory=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableMemory) | .allocatableMemory] | sort | first // 0')
-    reserve_memory="$(echo $allocatable_memory | deckhouse-controller helper unit convert --mode kube-resource-unit)"
+    reserve_memory="$(tools::dk_convert "$allocatable_memory")"
     # Keep 1Gi of CPU for node purposes.
     reserve_memory=$((reserve_memory-(1024*1024*1024)))
     # Convert to Mi.

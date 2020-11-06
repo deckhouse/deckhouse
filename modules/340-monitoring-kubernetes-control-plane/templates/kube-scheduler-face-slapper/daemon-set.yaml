@@ -14,7 +14,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: kube-scheduler-face-slapper
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "kube-scheduler-face-slapper")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kube-scheduler-face-slapper" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -22,12 +22,6 @@ spec:
     name: kube-scheduler-face-slapper
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "*"
-      maxAllowed:
-        cpu: 0.01
-        memory: 0.02Gi
   {{- end }}
 ---
 apiVersion: apps/v1
@@ -51,7 +45,7 @@ spec:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       containers:
       - name: face-slapper
         image: {{ .Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/kube-scheduler-face-slapper:{{ .Values.global.modulesImages.tags.monitoringKubernetesControlPlane.kubeSchedulerFaceSlapper }}

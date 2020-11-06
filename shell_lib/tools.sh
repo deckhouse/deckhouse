@@ -35,3 +35,27 @@ function tools::to_slug() {
     return 1
   fi
 }
+
+function tools::dk_convert {
+  local config=""
+  local val=""
+  if [[ "$1" == "--milli" ]] ; then
+    config=$1
+    shift
+  fi
+  val=$1
+  case $config in
+    "--milli")
+      if ! deckhouse-controller helper unit convert --mode kube-resource-unit --output milli <<< "$val" 2>/dev/null; then
+        >&2 echo "ERROR: input value $1 must be in Quantity format !"
+        return 1
+      fi
+      ;;
+    *)
+      if ! deckhouse-controller helper unit convert --mode kube-resource-unit <<< "$val" 2>/dev/null; then
+        >&2 echo "ERROR: input value $1 must be in Quantity format !"
+        return 1
+      fi
+      ;;
+  esac
+}

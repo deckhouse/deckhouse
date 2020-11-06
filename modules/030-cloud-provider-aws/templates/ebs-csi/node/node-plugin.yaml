@@ -1,4 +1,21 @@
 {{- if (include "helm_lib_cluster_has_non_static_nodes" .) }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: ebs-csi-node
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-node" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: ebs-csi-node
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -27,7 +44,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: ebs-csi-node
       hostNetwork: true
       containers:

@@ -1,3 +1,20 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: node-termination-handler
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: node-termination-handler
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -24,7 +41,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: node-termination-handler
       hostNetwork: true
       containers:

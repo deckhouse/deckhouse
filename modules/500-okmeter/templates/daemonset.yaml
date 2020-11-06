@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: okmeter
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "okmeter")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "okmeter" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -13,12 +13,6 @@ spec:
     name: okmeter
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: okagent
-      maxAllowed:
-        cpu: 0.2
-        memory: 1Gi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -40,7 +34,7 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: okmeter
       hostNetwork: true
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
       containers:
       - name: okagent

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: monitoring-ping
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -13,12 +13,6 @@ spec:
     name: monitoring-ping
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: monitoring-ping
-      maxAllowed:
-        cpu: 0.1
-        memory: 0.05Gi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -41,7 +35,7 @@ spec:
       terminationGracePeriodSeconds: 0
       hostNetwork: true
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: monitoring-ping
       containers:
       - image: {{ .Values.global.modulesImages.registry }}/monitoring-ping/monitoring-ping:{{ .Values.global.modulesImages.tags.monitoringPing.monitoringPing }}

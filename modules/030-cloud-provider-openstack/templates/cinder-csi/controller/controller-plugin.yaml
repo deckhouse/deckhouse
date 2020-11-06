@@ -1,3 +1,19 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: csi-cinder-controller-plugin
+  namespace: d8-cloud-provider-openstack
+{{ include "helm_lib_module_labels" (list . (dict "app" "csi-cinder-controller-plugin" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: csi-cinder-controller-plugin
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
 ---
 kind: StatefulSet
 apiVersion: apps/v1
@@ -20,7 +36,7 @@ spec:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: cinder-csi-controller
       containers:
         - name: csi-attacher

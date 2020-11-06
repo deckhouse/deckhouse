@@ -31,7 +31,7 @@ spec:
 {{ toYaml $hostGroup.tolerations | indent 2 }}
   {{- end }}
 {{- else }}
-{{- include "helm_lib_tolerations" (tuple $ "every-node") | indent 2 }}
+{{- include "helm_lib_tolerations" (tuple $ "any-node") | indent 2 }}
 {{- end }}
   # Так как довольно часто клиентам нужно обновлять свои агенты dynatrace, то предлагаю оставить default, который является: docker.io/dynatrace/oneagent:latest
   # image: ""
@@ -59,10 +59,6 @@ spec:
   tokens: oneagent
   args:
   - APP_LOG_CONTENT_ACCESS=1 # Данный параметр включает анализ логов хостовой системы
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
 {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 2 }}
-{{- include "helm_lib_tolerations" (tuple $ "every-node") | indent 2 }}
+{{- include "helm_lib_tolerations" (tuple $ "any-node") | indent 2 }}
 {{- end }}
