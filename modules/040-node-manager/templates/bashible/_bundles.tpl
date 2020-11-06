@@ -52,6 +52,10 @@
   {{- $_ := set $tpl_context "kubernetesVersion" $ng.kubernetesVersion }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
 
+  {{- if hasKey $context.Values.nodeManager.internal "nodeStatusUpdateFrequency" }}
+  {{- $_ := set $tpl_context "nodeStatusUpdateFrequency" $context.Values.nodeManager.internal.nodeStatusUpdateFrequency }}
+  {{- end }}
+
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_common_steps_pattern" (list "node-group")) }}
     {{- include "bundles_validate_step_file" $step_file }}
 {{ trimSuffix ".tpl" (base $step_file) }}: {{ tpl ($context.Files.Get $step_file) $tpl_context | b64enc }}

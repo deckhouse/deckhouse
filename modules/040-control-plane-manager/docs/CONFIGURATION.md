@@ -40,3 +40,6 @@ controlPlaneManagerEnabled: "false"
   * `auditPolicyEnabled` — bool, включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (audit-policy в ns kube-system)
 * `etcd` — параметры `etcd`.
   * `externalMembersNames` – массив имен внешних etcd member'ов (эти member'ы не будут удалятся).
+* `nodeMonitorGracePeriodSeconds` — число секунд, через которое `Node` перейдёт в состояние `Unreachable` при потере с ней связи. По умолчанию `40`.
+* `failedNodePodEvictionTimeoutSeconds` — количество секунд, по прошествии которых, поды с `Unreachable` `Node` будут удалены. По умолчанию `300`.
+  * **Важно!** При изменении этого параметра потребуется перезапуск подов.

@@ -50,6 +50,9 @@
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
 {{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
+{{- $_ := set $tpl_context "arguments" .Values.controlPlaneManager.internal.arguments }}
+{{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- define "control_plane_config" }}

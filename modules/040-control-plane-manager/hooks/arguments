@@ -1,0 +1,41 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  arguments="{}"
+
+  if values::has controlPlaneManager.nodeMonitorGracePeriodSeconds; then
+    # Following arguments would be passed to kube-controller-manager.
+    # Also `nodeMonitorGracePeriod` divided by 4, would be passed to kubelet as `nodeStatusUpdateFrequency`.
+    arguments="$(jq --argjson node_monitor_grace_period "$(values::get controlPlaneManager.nodeMonitorGracePeriodSeconds)" '
+      ."nodeMonitorGracePeriod" = $node_monitor_grace_period |
+      ."nodeMonitorPeriod" = ($node_monitor_grace_period / 8 | round)
+      ' <<< "$arguments")"
+  fi
+
+  if values::has controlPlaneManager.failedNodePodEvictionTimeoutSeconds; then
+    # Following arguments would be passed to corresponding components:
+    # - `podEvictionTimeout` to kube-controller-manager.
+    # - `defaultUnreachableTolerationSeconds` to kube-apiserver.
+    arguments="$(jq --argjson pod_eviction_timeout "$(values::get controlPlaneManager.failedNodePodEvictionTimeoutSeconds)" '
+      ."podEvictionTimeout" = $pod_eviction_timeout |
+      ."defaultUnreachableTolerationSeconds" = $pod_eviction_timeout
+      ' <<< $arguments)"
+  fi
+
+  if [ "$arguments" != "{}" ]; then
+    values::set controlPlaneManager.internal.arguments "$arguments"
+  else
+    values::unset controlPlaneManager.internal.arguments
+  fi
+}
+
+hook::run "$@"

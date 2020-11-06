@@ -31,6 +31,11 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+{{- if hasKey . "arguments" }}
+  {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
+    default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
+  {{- end }}
+{{- end }}
 {{- if hasKey . "apiserver" }}
   {{- if hasKey .apiserver "etcdServers" }}
     {{- if .apiserver.etcdServers }}
@@ -92,6 +97,15 @@ controllerManager:
     port: "0"
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
+{{- end }}
+{{- if hasKey . "arguments" }}
+  {{- if hasKey .arguments "nodeMonitorPeriod" }}
+    node-monitor-period: "{{ .arguments.nodeMonitorPeriod }}s"
+    node-monitor-grace-period: "{{ .arguments.nodeMonitorGracePeriod }}s"
+  {{- end }}
+  {{- if hasKey .arguments "podEvictionTimeout" }}
+    pod-eviction-timeout: "{{ .arguments.podEvictionTimeout }}s"
+  {{- end }}
 {{- end }}
 scheduler:
   extraVolumes:
