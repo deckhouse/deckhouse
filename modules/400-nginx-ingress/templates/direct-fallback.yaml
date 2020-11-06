@@ -126,10 +126,6 @@ spec:
         ports:
         - containerPort: 10355
           name: https-metrics
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       imagePullSecrets:
       - name: deckhouse-registry
   {{- end }}

@@ -5,7 +5,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-vsphere
-{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -60,9 +60,6 @@ spec:
             - mountPath: /etc/cloud-contoller-manager-config
               name: config
               readOnly: true
-          resources:
-            requests:
-              cpu: 200m
       volumes:
       - hostPath:
           path: /etc/kubernetes/pki

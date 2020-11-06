@@ -6,7 +6,7 @@
 {{- end }}
 
 {{- define "helm_lib_internal_check_tolerations_strategy" -}}
-  {{ if not (has . (list "frontend" "monitoring" "system" "every-node" "wildcard" )) }}
+  {{ if not (has . (list "frontend" "monitoring" "system" "any-node" "wildcard" )) }}
     {{- fail (printf "unknown strategy \"%v\"" .) }}
   {{- end }}
   {{- . -}}
@@ -147,7 +147,7 @@ tolerations:
     {{- if $tolerateNodeProblems }}
 {{ include "helm_lib_internal_node_problems_tolerations" $context }}
     {{- end }}
-  {{- else if eq $strategy "every-node" }}
+  {{- else if eq $strategy "any-node" }}
 tolerations:
 - key: node-role.kubernetes.io/master
 - key: node.deckhouse.io/uninitialized

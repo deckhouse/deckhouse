@@ -176,10 +176,6 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-statsd-metrics
                   name: nginx-ingress
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
       volumes:
       - name: client-body-temp-path
         emptyDir: {}

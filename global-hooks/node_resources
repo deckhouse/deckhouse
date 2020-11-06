@@ -1,0 +1,176 @@
+#!/bin/bash
+# Overview:
+# 1. We count minimal allocatable resources on master nodes (cpu and memory). Allocatable resources on master nodes shares between
+#    ControlPlane and Master vpa resources.
+# 2. We calculate hardcoded percentage from allocatable resources (control_plane_percent(40%) + master_percent(40%) ).
+# 3. If calculated values is more than global config values (controlPlaneRequestsCpu, controlPlaneRequestsMemory), we use global config values.
+# 4. We divide allocatable resources on two groups - resources for ControlPlane and resources for Master (control_plane_percent, master_percent).
+# 5. Resources for ControlPlane - setting global variables allocatableMilliCpuControlPlane and allocatableMemoryControlPlane.
+# 6. Resources for Master - setting global variables allocatableMilliCpuMaster and allocatableMemoryMaster.
+# 7. We count minimal allocatable resources on any node (cpu and memory).
+# 8. If counted resources more than hardcoded values, we use hardcoded values.
+# 9. We calculate hardcoded percentage from allocatable resources (any_node(20%)).
+# 10. If calculated values is more than global config values (anyNodeRequestsCpu, anyNodeRequestsMemory), we use global config values.
+# 11. Resources for any node - setting global variables allocatableMilliCpuAnyNode and allocatableMemoryAnyNode.
+
+source /deckhouse/shell_lib.sh
+
+# Hardcoded constants
+# percentages
+control_plane_percent="40"
+master_percent="40"
+any_node_percent="20"
+# Set hardUpperLimit allocatable resources in millicpu and memory bytes
+hard_upper_limit_allocatable_millicpu_master=$(( 2 * 1024 ))                       # 2 Cpu
+hard_upper_limit_allocatable_memory_master=$(( 2 * 1024 * 1024 * 1024 ))           # 2048M ram
+hard_upper_limit_allocatable_millicpu_any_node=$(( 2 * 1024 ))                   # 2 Cpu
+hard_upper_limit_allocatable_memory_any_node=$(( 2 * 1024 * 1024 * 1024 ))       # 2048M ram
+
+function __config__() {
+    cat << "EOF"
+    configVersion: v1
+    kubernetes:
+    - name: nodes_resources
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        {
+          labels: .metadata.labels,
+          allocatableCPU: .status.allocatable.cpu,
+          allocatableMemory: .status.allocatable.memory
+        }
+EOF
+}
+
+# min of val1 and val2
+function min() {
+  local val1="$1"
+  local val2="$2"
+  if [ "$val1" -lt "$val2" ]; then
+    echo "$val1"
+  else
+    echo "$val2"
+  fi
+}
+
+# Get percentage
+function percentage() {
+  local value="$1"
+  local percentage="$2"
+  bc <<< "$value * $percentage / 100"
+}
+
+# Get value from config or return ""
+function get_config_value() {
+  local config=""
+  if [[ "$1" == "--milli" ]] ; then
+    config=$1
+    shift
+  fi
+  local key="$1"
+  if values::has --config "$key" ; then
+    case $config in
+      "--milli")
+        tools::dk_convert --milli "$(values::get --config "$key")" || true
+        ;;
+      *)
+        tools::dk_convert "$(values::get --config "$key")" || true
+        ;;
+      esac
+  fi
+}
+
+# Compute minimal resource
+function compute_minimal_resource() {
+  local discovery_resource="$1"
+  local hard_upper_resource="$2"
+  local config_resource="$3"
+  local percent="$4"
+
+  resource="$(min "$discovery_resource" "$hard_upper_resource")"
+  resource_percent="$(percentage "$resource" "$percent")"
+
+  if [ -n "$config_resource" ];  then
+    min "$resource_percent" "$config_resource"
+  else
+    echo "$resource_percent"
+  fi
+}
+
+function __main__() {
+  summary_percent_on_master="$(( control_plane_percent + master_percent ))"
+
+  # Get requests parameters from config and convert it to milli for cpu and bytes for memory
+  config_allocatable_millicpu_master="$(get_config_value --milli "global.controlPlaneRequestsCpu")"
+  config_allocatable_memory_master="$(get_config_value "global.controlPlaneRequestsMemory")"
+  config_allocatable_millicpu_any_node="$(get_config_value --milli "global.anyNodeRequestsCpu")"
+  config_allocatable_memory_any_node="$(get_config_value "global.anyNodeRequestsMemory")"
+
+  # Get minimal cpu an memory allocatable on master nodes and convert it to milli for cpu and bytes for memory
+  discovery_allocatable_millicpu_master="$(tools::dk_convert --milli "$(context::jq -re '
+  .snapshots.nodes_resources |
+  map(.filterResult) |
+  map(select(.labels."node-role.kubernetes.io/master")) |
+  sort_by(.allocatableCPU | tonumber) |
+  first |.allocatableCPU')" )"
+  discovery_allocatable_memory_master="$(tools::dk_convert "$(context::jq -re '
+  .snapshots.nodes_resources |
+  map(.filterResult) |
+  map(select(.labels."node-role.kubernetes.io/master")) |
+  sort_by(.allocatableMemory | tonumber) |
+  first |.allocatableMemory')" )"
+
+  # Get minimal cpu an memory allocatable on any nodes and convert it to milli for cpu and bytes for memory
+  discovery_allocatable_millicpu_any_node="$(tools::dk_convert --milli "$(context::jq -re '
+  .snapshots.nodes_resources |
+  map(.filterResult) |
+  sort_by(.allocatableCPU | tonumber) |
+  first |.allocatableCPU')" )"
+  discovery_allocatable_memory_any_node="$(tools::dk_convert "$(context::jq -re '
+  .snapshots.nodes_resources |
+  map(.filterResult) |
+  sort_by(.allocatableMemory | tonumber) |
+  first |.allocatableMemory')" )"
+
+  # Compute available resources
+  allocatable_millicpu_full_master="$(compute_minimal_resource \
+    "$discovery_allocatable_millicpu_master"\
+    "$hard_upper_limit_allocatable_millicpu_master"\
+    "$config_allocatable_millicpu_master"\
+    "$summary_percent_on_master")"
+  allocatable_memory_full_master="$(compute_minimal_resource \
+    "$discovery_allocatable_memory_master"\
+    "$hard_upper_limit_allocatable_memory_master"\
+    "$config_allocatable_memory_master"\
+    "$summary_percent_on_master")"
+  allocatable_millicpu_any_node="$(compute_minimal_resource \
+    "$discovery_allocatable_millicpu_any_node"\
+    "$hard_upper_limit_allocatable_millicpu_any_node"\
+    "$config_allocatable_millicpu_any_node"\
+    "$any_node_percent")"
+  allocatable_memory_any_node="$(compute_minimal_resource \
+    "$discovery_allocatable_memory_any_node"\
+    "$hard_upper_limit_allocatable_memory_any_node"\
+    "$config_allocatable_memory_any_node"\
+    "$any_node_percent")"
+  # Divide Master onto Master and Control-plane
+  allocatable_millicpu_control_plane="$(bc <<< "$allocatable_millicpu_full_master * $control_plane_percent / $summary_percent_on_master")"
+  allocatable_memory_control_plane="$(bc <<< "$allocatable_memory_full_master * $control_plane_percent / $summary_percent_on_master")"
+  allocatable_millicpu_master="$(bc <<< "$allocatable_millicpu_full_master * $master_percent / $summary_percent_on_master")"
+  allocatable_memory_master="$(bc <<< "$allocatable_memory_full_master * $master_percent / $summary_percent_on_master")"
+
+  # set global values for control-plane
+  values::set global.allocatableMilliCpuControlPlane "$allocatable_millicpu_control_plane"
+  values::set global.allocatableMemoryControlPlane "$allocatable_memory_control_plane"
+  # set global values for master
+  values::set global.allocatableMilliCpuMaster "$allocatable_millicpu_master"
+  values::set global.allocatableMemoryMaster "$allocatable_memory_master"
+  # set global values for any node
+  values::set global.allocatableMilliCpuAnyNode "$allocatable_millicpu_any_node"
+  values::set global.allocatableMemoryAnyNode "$allocatable_memory_any_node"
+}
+
+hook::run "$@"
+

@@ -1,0 +1,133 @@
+#!/bin/bash
+# Overview:
+#   1. All system components require resource requests, managed by vpa.
+#   2. Sum of all resource requests should not exceed manually configured resources limits, or if manually configured limits are not set, allocatable resources on nodes.
+#   3. We expect that resources limits to be allocated fairly between vpa requests.
+# We have 3 groups of resources:
+#   1. ControlPlane - resources for pods in control-plane (kube-controller-manager, kube-scheduler, kube-apiserver, etcd).
+#   2. Master - vpa resources, working on master nodes (label "workload-resource-policy.deckhouse.io: master").
+#   3. AnyNode - vpa resources, working on any node (label "workload-resource-policy.deckhouse.io: any-node").
+# Calculate steps:
+#   1. Get allocatable values from global values.
+#   2. We calculate sum of uncappedTargets requests for all vpa resources in Master group, and proportionally sets MaxAllowed values for this resources,
+#      based on calculated resources for Master group.
+#   3. We calculate sum of uncappedTargets requests for all vpa resources in AnyNode group, and proportionally sets MaxAllowed values for this resources,
+#      based on calculated resources for AnyNode group.
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+    cat << "EOF"
+    configVersion: v1
+    schedule:
+    - name: vpacrontab
+      group: vpa
+      crontab: "0 */6 * * *"
+    kubernetes:
+    - name: vpa
+      group: vpa
+      keepFullObjectsInMemory: false
+      apiVersion: autoscaling.k8s.io/v1
+      kind: VerticalPodAutoscaler
+      executeHookOnEvent: []
+      labelSelector:
+        matchLabels:
+          heritage: deckhouse
+      jqFilter: |
+        {
+          namespace: .metadata.namespace,
+          name: .metadata.name,
+          labels: .metadata.labels,
+          recommendation: .status.recommendation
+        }
+    - name: vpawithoutrecommendations
+      group: vpa
+      keepFullObjectsInMemory: false
+      apiVersion: autoscaling.k8s.io/v1
+      kind: VerticalPodAutoscaler
+      executeHookOnEvent: ["Added", "Modified"]
+      labelSelector:
+        matchLabels:
+          heritage: deckhouse
+      jqFilter: |
+        .status.recommendation.containerRecommendations // [] | any(.uncappedTarget)
+EOF
+}
+
+function __main__() {
+  # get global values for master
+  allocatable_millicpu_master="$(values::get global.allocatableMilliCpuMaster )"
+  allocatable_memory_master="$(values::get global.allocatableMemoryMaster )"
+  # get global values for any node
+  allocatable_millicpu_any_node="$(values::get global.allocatableMilliCpuAnyNode )"
+  allocatable_memory_any_node="$(values::get global.allocatableMemoryAnyNode )"
+
+  # Parse vpa resources
+  # shellcheck disable=SC2016
+  jq_result="$(context::jq -r '.snapshots.vpa[] |
+  select(.filterResult and (.filterResult.labels."workload-resource-policy.deckhouse.io" == "any-node" or
+  .filterResult.labels."workload-resource-policy.deckhouse.io" == "master")) |
+  .filterResult | .namespace as $namespace | .name as $name | .labels."workload-resource-policy.deckhouse.io" as $lbvalue |
+  .recommendation.containerRecommendations[]? |
+  {namespace: $namespace, name: $name ,containerName: .containerName, cpu: .uncappedTarget.cpu, memory: .uncappedTarget.memory, label: $lbvalue }')"
+
+  # if jq_result is empty, exit
+  [ -n "$jq_result" ] || return 0
+
+  mapfile -t namespace_array <<< "$(jq -rec ' .namespace' <<< "$jq_result")"
+  mapfile -t name_array <<< "$(jq -rec ' .name'  <<< "$jq_result")"
+  mapfile -t container_name_array <<< "$(jq -rec ' .containerName' <<< "$jq_result")"
+  mapfile -t cpu_array <<< "$(jq -rec ' .cpu' <<< "$jq_result")"
+  mapfile -t memory_array <<< "$(jq -rec ' .memory' <<< "$jq_result")"
+  mapfile -t label_array <<< "$(jq -rec ' .label' <<< "$jq_result")"
+
+  # convert cpu to milli and memory to bytes
+  for ((i=0; i<${#container_name_array[@]}; i++)); do
+   cpu_array[$i]="$(tools::dk_convert --milli "${cpu_array[$i]}")"
+   memory_array[$i]="$(tools::dk_convert "${memory_array[$i]}")"
+  done
+
+  # Get summary requests for master group and any-node group
+  for ((i=0; i<${#container_name_array[@]}; i++)); do
+    case ${label_array[$i]} in
+      master)
+        cpu_expr_master+=${cpu_array[$i]}" "
+        memory_expr_master+=${memory_array[$i]}" "
+        ;;
+      any-node)
+        cpu_expr_any_node+=${cpu_array[$i]}" "
+        memory_expr_any_node+=${memory_array[$i]}" "
+        ;;
+    esac
+  done
+  summary_millicpu_master="$(jq -sre 'join("+")' <<< "$cpu_expr_master" | bc)"
+  summary_memory_master="$(jq -sre 'join("+")' <<< "$memory_expr_master" | bc)"
+  summary_millicpu_any_node="$(jq -sre 'join("+")' <<< "$cpu_expr_any_node" | bc)"
+  summary_memory_any_node="$(jq -sre 'join("+")' <<< "$memory_expr_any_node" | bc)"
+
+  # patch vpa resources
+  declare -A jq_patch
+
+  for ((i=0; i<${#container_name_array[@]}; i++)); do
+   # Compute limits for VPA
+    case ${label_array[$i]} in
+      master)
+        vpa_millicpu="$(bc <<< "$allocatable_millicpu_master * ${cpu_array[$i]} / $summary_millicpu_master" )"
+        vpa_memory="$(bc <<< "$allocatable_memory_master * ${memory_array[$i]} / $summary_memory_master" )"
+        ;;
+      any-node)
+        vpa_millicpu="$(bc <<< "$allocatable_millicpu_any_node * ${cpu_array[$i]} / $summary_millicpu_any_node" )"
+        vpa_memory="$(bc <<< "$allocatable_memory_any_node * ${memory_array[$i]} / $summary_memory_any_node" )"
+        ;;
+    esac
+
+   jq_patch["${namespace_array[$i]} ${name_array[$i]}"]+="{ containerName: \"${container_name_array[$i]}\", maxAllowed: { cpu: \"${vpa_millicpu}m\", memory: \"${vpa_memory}\" }},"
+  done
+
+  for key in "${!jq_patch[@]}"; do
+    kubernetes::patch_jq "$( cut -d " " -f1 <<< "$key" )" "verticalpodautoscaler/$( cut -d " " -f2 <<< "$key" )" ". | .spec.resourcePolicy.containerPolicies = [ ${jq_patch[$key]%?} ]"
+  done
+
+}
+
+hook::run "$@"

@@ -1,3 +1,19 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: simple-bridge
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "simple-bridge" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: simple-bridge
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -19,7 +35,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       hostNetwork: true
       serviceAccountName: {{ .Chart.Name }}
       initContainers:
@@ -28,10 +44,6 @@ spec:
         image: {{ .Values.global.modulesImages.registry }}/cni-simple-bridge/simple-bridge:{{ .Values.global.modulesImages.tags.cniSimpleBridge.simpleBridge }}
         command:
         - /bin/simple-bridge
-        resources:
-          requests:
-            cpu: "10m"
-            memory: "5Mi"
         securityContext:
           privileged: true
         env:

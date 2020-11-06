@@ -1,3 +1,19 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: ebs-csi-controller
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ebs-csi-controller" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: ebs-csi-controller
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -20,7 +36,7 @@ spec:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: ebs-csi-controller
       containers:
       - name: csi-provisioner

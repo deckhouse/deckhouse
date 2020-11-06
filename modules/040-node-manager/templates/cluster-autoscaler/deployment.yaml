@@ -24,6 +24,22 @@
 
 {{- if include "cluster_autoscaler_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: cluster-autoscaler
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: cluster-autoscaler
+  updatePolicy:
+    updateMode: "Auto"
+    {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -44,7 +60,7 @@ spec:
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: cluster-autoscaler
       terminationGracePeriodSeconds: 5
       imagePullSecrets:
@@ -84,13 +100,6 @@ spec:
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
-        resources:
-          limits:
-            cpu: 150m
-            memory: 500Mi
-          requests:
-            cpu: 100m
-            memory: 300Mi
       - name: kube-rbac-proxy
         image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -124,9 +133,5 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 443
-        resources:
-          requests:
-            memory: 50Mi
-            cpu: 25m
   {{- end }}
 {{- end }}

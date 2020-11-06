@@ -118,14 +118,14 @@ function calculate_disk_size_and_retention() {
   if [ "$(context::jq -r --arg name $prometheus_name '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name)] | length')" -gt "0" ]; then
     # If at least one pvc exists
 
-    # current_pvc_size="$(context::jq -re --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage' | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs '[split("\n")[:-1][] | tonumber] | max')"
+    # current_pvc_size="$(context::jq -re --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage' | while read s; do tools::dk_convert "$s"; done | jq -rRs '[split("\n")[:-1][] | tonumber] | max')"
 
     if ! current_pvcs_size="$(context::jq -re --arg name $prometheus_name '.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name and .status.capacity.storage != null) | .status.capacity.storage')"; then
       >&2 echo "!!! ERROR: One or more PVC exists for prometheus-$prometheus_name, but not have .status.capacity.storage !!!"
       return 1
     fi
 
-    current_pvc_size="$(echo "$current_pvcs_size" | while read s; do deckhouse-controller helper unit convert --mode=kube-resource-unit <<< "$s"; done | jq -rRs '[split("\n")[:-1][] | tonumber] | max')"
+    current_pvc_size="$(echo "$current_pvcs_size" | while read s; do tools::dk_convert "$s"; done | jq -rRs '[split("\n")[:-1][] | tonumber] | max')"
 
     # If actual filesystem size is larger than PVC size (someone has manualy resized disk), we use actual filesystem size,
     # instead of PVC size, in subsequent calculations

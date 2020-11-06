@@ -21,15 +21,15 @@ func Convert(mode string, output string) error {
 
 	switch mode {
 	case "duration":
-		bro, err := time.ParseDuration(input)
+		duration, err := time.ParseDuration(input)
 		if err != nil {
 			return fmt.Errorf("failed to parse: %s", err)
 		}
 		switch output {
 		case "value":
-			fmt.Println(bro.Seconds())
+			fmt.Println(duration.Seconds())
 		case "milli":
-			fmt.Println(bro.Milliseconds())
+			fmt.Println(duration.Milliseconds())
 		}
 
 	case "kube-resource-unit":

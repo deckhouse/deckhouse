@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: user-authz-webhook
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -33,7 +33,7 @@ spec:
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       hostNetwork: true

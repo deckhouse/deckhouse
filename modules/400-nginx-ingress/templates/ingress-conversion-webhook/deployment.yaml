@@ -1,3 +1,19 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name:  ingress-conversion-webhook
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "ingress-conversion-webhook" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: ingress-conversion-webhook
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -25,7 +41,7 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "ingress-conversion-webhook")) | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "every-node") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       serviceAccountName: kube-nginx-ingress-ingress-conversion-webhook
       imagePullSecrets:
       - name: deckhouse-registry
@@ -49,10 +65,6 @@ spec:
               port: 8080
             periodSeconds: 1
             failureThreshold: 3
-          resources:
-            requests:
-              memory: 20Mi
-              cpu: 10m
           volumeMounts:
             - name: webhook-certs
               mountPath: /etc/webhook/certs
