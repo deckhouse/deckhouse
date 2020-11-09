@@ -6,7 +6,7 @@
 - openstack
 - vsphere
 
-Для включения в bare metall, необходимо в configmap deckhouse добавить:
+Для включения в bare-metal, необходимо в configmap deckhouse добавить:
 ```
 cniFlannelEnabled: "true"
 ```
@@ -16,6 +16,7 @@ cniFlannelEnabled: "true"
 * `flannel`:
     * `podNetworkMode` — режим работы `host-gw` или `vxlan`.
         * Значение по умолчанию `host-gw`.
+        * **Внимание!** Изменять параметр можно только при использовании модуля в bare-metal-кластерах.
 
 Пример:
 ```yaml

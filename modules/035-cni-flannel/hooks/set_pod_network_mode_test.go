@@ -1,18 +1,11 @@
 package hooks
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func TestHooks(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Hooks Suite")
-}
 
 var _ = Describe("Modules :: cniFlannel :: hooks :: set_pod_network_mode ::", func() {
 	f := HookExecutionConfigInit(`{"cniFlannel":{"internal":{}}}`, ``)
@@ -63,23 +56,29 @@ data:
 	})
 
 	Context("d8-cni-configuration", func() {
-
 		It("Must be executed successfully", func() {
-
 			By("podNetworkMode must be vxlan", func() {
 				f.BindingContexts.Set(f.KubeStateSet(state))
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("vxlan"))
 			})
+		})
+
+		It("Must be executed successfully", func() {
+			By("podNetworkMode must be vxlan, because secret has higher priority, than config", func() {
+				f.BindingContexts.Set(f.KubeStateSet(state))
+				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.RunHook()
+				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("vxlan"))
+			})
 
 		})
 
 		It("Must be executed successfully", func() {
-
 			By("podNetworkMode must be host-gw", func() {
-				f.BindingContexts.Set(f.KubeStateSet(state))
 				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.BindingContexts.Set(BeforeHelmContext)
 				f.RunHook()
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
 			})
@@ -87,23 +86,19 @@ data:
 		})
 
 		It("Must be executed successfully", func() {
-
 			By("podNetworkMode must be host-gw", func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateWithEmptyFlannelConfig))
 				f.RunHook()
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
 			})
-
 		})
 
 		It("Must be executed successfully", func() {
-
 			By("podNetworkMode must be host-gw", func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateWithoutFlannelConfig))
 				f.RunHook()
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
 			})
-
 		})
 	})
 })
