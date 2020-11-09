@@ -66,6 +66,11 @@ func CheckPipeline(r *Runner, name string) (bool, error) {
 
 func DestroyPipeline(r *Runner, name string) error {
 	pipelineFunc := func() error {
+		if r.ResourcesQuantityInState() == 0 {
+			log.InfoLn("Nothing to destroy! Skipping ...")
+			return nil
+		}
+
 		err := r.Init()
 		if err != nil {
 			return err
