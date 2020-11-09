@@ -18,7 +18,7 @@ function __config__() {
             "hostname": .metadata.labels."kubernetes.io/hostname",
             "zone": (.metadata.labels | if has("failure-domain.beta.kubernetes.io/zone") then ."failure-domain.beta.kubernetes.io/zone" else "NONE" end),
             "unschedulable": (.spec.unschedulable // false),
-            "ready": (if .status.conditions then .status.conditions[] | select(.type == "Ready") | .status == "True" else false end)
+            "ready": ([(.status.conditions // [])[] | select(.type == "Ready" and .status == "True")] | length > 0)
           }
     - name: statefulsets
       group: main
@@ -35,11 +35,11 @@ function __config__() {
       executeHookOnEvent: []
       jqFilter: |
         {
-          "node_hostname": (.metadata.annotations | if has("node") then .node else "" end),
+          "nodeHostname": (.metadata.annotations | if has("node") then .node else "" end),
           "zone": (.metadata.annotations | if has("zone") then .zone else "NONE" end),
-          "sts": .metadata.name[-1:],
+          "stsIndex": .metadata.name[-1:],
           "image": .spec.template.spec.containers[0].image,
-          "storageClassName": (.spec | if has("volumeClaimTemplates") then .volumeClaimTemplates[] | select(.metadata.name=="disk") | .spec.storageClassName else false end)
+          "storageClassName": (((.spec.volumeClaimTemplates // [])[] | select(.metadata.name=="disk").spec.storageClassName) // false)
         }
     - name: pods
       group: main
@@ -57,7 +57,7 @@ function __config__() {
       jqFilter: |
         {
           "name": .metadata.name,
-          "sts": .metadata.ownerReferences[0].name[-1:],
+          "stsIndex": .metadata.ownerReferences[0].name[-1:],
           "creationTimestamp": (.metadata.creationTimestamp | fromdateiso8601)
         }
     - name: pdb
@@ -75,7 +75,7 @@ function __config__() {
       executeHookOnEvent: []
       jqFilter: |
         {
-          "disruptionAllowed": (.status.disruptionsAllowed > 0)
+          "disruptionsAllowed": (.status.disruptionsAllowed > 0)
         }
     - name: default_sc
       group: main
@@ -105,7 +105,7 @@ function __config__() {
       jqFilter: |
         {
           "name": .metadata.name,
-          "isDeletionTimestamp": (if .metadata | has("deletionTimestamp") then true else false end)
+          "isDeleted": (if .metadata | has("deletionTimestamp") then true else false end)
         }
     - name: pods_mod
       keepFullObjectsInMemory: true
@@ -144,7 +144,7 @@ function __config__() {
       jqFilter: |
         {
           "name": .metadata.name,
-          "isDeletionTimestamp": (if .metadata | has("deletionTimestamp") then true else false end)
+          "isDeleted": (if .metadata | has("deletionTimestamp") then true else false end)
         }
     - name: pods_del
       group: pvc_deleted
@@ -174,7 +174,7 @@ EOF
 
 function __on_group::pvc_modified() {
   for i in $(context::jq -r '.snapshots.pvc_modified | keys[]'); do
-    if context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.isDeletionTimestamp' >/dev/null; then
+    if context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.isDeleted' >/dev/null; then
       pvc_name="$(context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.name')"
       pod_name="$(echo "$pvc_name" | cut -d- -f2-)"
       if context::jq -er --arg pod_name "$pod_name" '.snapshots.pods_mod[].filterResult | select(.name == $pod_name)' >/dev/null; then
@@ -212,51 +212,51 @@ function __on_group::main() {
 
   if ! values::has upmeter.internal.smokeMini.sts.a.image; then
     current_values="$(values::get upmeter.internal.smokeMini.sts)"
-    values="$(context::jq -rc --argjson current_values "$current_values" '[.snapshots.statefulsets[].filterResult | {(.sts): {"node": .node_hostname, "zone": .zone, "image": .image, "effectiveStorageClass": (.storageClassName // false)}}] | reduce .[] as $i ($current_values; . + $i)')"
+    values="$(context::jq -rc --argjson current_values "$current_values" '[.snapshots.statefulsets[].filterResult | {(.stsIndex): {"node": .nodeHostname, "zone": .zone, "image": .image, "effectiveStorageClass": (.storageClassName // false)}}] | reduce .[] as $i ($current_values; . + $i)')"
     values::set upmeter.internal.smokeMini.sts "$values"
   fi
 
   # Find non existent sts, if any
-  target_sts="$(values::jq -r '.upmeter.internal.smokeMini.sts | [to_entries[] | select(.value | has("node") | not)] | select(.!=[]) | first.key')"
+  target_sts_index="$(values::jq -r '.upmeter.internal.smokeMini.sts | [to_entries[] | select(.value | has("node") | not)] | select(.!=[]) | first.key')"
 
   # Otherwise, find sts placed on non existent node
-  if [ -z "$target_sts" ]; then
+  if [ -z "$target_sts_index" ]; then
     for i in $(context::jq -r '.snapshots.statefulsets | keys[]'); do
-      if ! context::jq -e --argjson i "$i" '.snapshots.statefulsets[$i].filterResult as $sts | .snapshots.nodes[].filterResult | select(.hostname == $sts.node_hostname)' >/dev/null ; then
-        target_sts="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.sts')"
+      if ! context::jq -e --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.nodeHostname as $node_hostname | .snapshots.nodes[].filterResult | select(.hostname == $node_hostname)' >/dev/null ; then
+        target_sts_index="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.stsIndex')"
         break
       fi
     done
   fi
 
   # Otherwise, find sts placed on unscheduleable node
-  if [ -z "$target_sts" ]; then
+  if [ -z "$target_sts_index" ]; then
     for i in $(context::jq -r '.snapshots.statefulsets | keys[]'); do
-      if context::jq -e --argjson i "$i" '.snapshots.statefulsets[$i].filterResult as $sts | .snapshots.nodes[].filterResult | select(.hostname == $sts.node_hostname and .unschedulable)' >/dev/null ; then
-        target_sts="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.sts')"
+      if context::jq -e --argjson i "$i" '.snapshots.statefulsets[$i].filterResult as $sts | .snapshots.nodes[].filterResult | select(.hostname == $sts.nodeHostname and .unschedulable)' >/dev/null ; then
+        target_sts_index="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.stsIndex')"
         break
       fi
     done
   fi
 
   # Otherwise, find sts with not up-to-date storage class
-  if [ -z "$target_sts" ]; then
+  if [ -z "$target_sts_index" ]; then
     for i in $(context::jq -r '.snapshots.statefulsets | keys[]'); do
       if context::jq -e --argjson i "$i" --arg effective_storage_class "$effective_storage_class" '.snapshots.statefulsets[$i].filterResult | select(.storageClassName | tostring != $effective_storage_class)' >/dev/null ; then
-        target_sts="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.sts')"
+        target_sts_index="$(context::jq -r --argjson i "$i" '.snapshots.statefulsets[$i].filterResult.stsIndex')"
         break
       fi
     done
   fi
 
   # Otherwise, find sts which was not moved longest time
-  if [ -z "$target_sts" ]; then
+  if [ -z "$target_sts_index" ]; then
     # Check that PDB allows us to make a step
-    if ! context::jq -e '.snapshots.pdb[].filterResult.disruptionAllowed' >/dev/null; then
+    if ! context::jq -e '.snapshots.pdb[].filterResult.disruptionsAllowed' >/dev/null; then
       return 0
     fi
 
-    target_sts="$(context::jq -r '[.snapshots.pods[].filterResult] | min_by(.creationTimestamp).sts')"
+    target_sts_index="$(context::jq -r '[.snapshots.pods[].filterResult] | min_by(.creationTimestamp).stsIndex')"
 
     # Ignore, if it was moved less than N-1 cron schedule periods ago (where N is number of sts)
     pod_creation_timestamp="$(context::jq -r '[.snapshots.pods[].filterResult] | min_by(.creationTimestamp).creationTimestamp')"
@@ -267,13 +267,13 @@ function __on_group::main() {
     fi
   fi
 
-  echo "LOG: target_sts: $target_sts"
+  echo "LOG: target_sts_index: $target_sts_index"
 
   # Calculate the amount of statefulsets in zones
   zones_map=$(context::jq -r '([.snapshots.nodes[].filterResult.zone] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $zone_map | [.snapshots.statefulsets[].filterResult] | reduce .[] as $i ($zone_map; .[$i.zone] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')
 
   # Get sts zone
-  sts_zone="$(context::jq -r --arg sts "$target_sts" '.snapshots.statefulsets[].filterResult | select(.sts == $sts).zone')"
+  sts_zone="$(context::jq -r --arg sts "$target_sts_index" '.snapshots.statefulsets[].filterResult | select(.stsIndex == $sts).zone')"
 
   # Check, if zone still exists
   if context::jq -er --arg sts_zone "$sts_zone" '.snapshots.nodes | [.[] | select(.filterResult.zone == $sts_zone and .filterResult.ready == true and .filterResult.unschedulable == false)] | length < 1' >/dev/null ; then
@@ -290,39 +290,39 @@ function __on_group::main() {
 
       # if there are zones without sts, then select new zone
       if [ -n "$zones_without_sts" ]; then
-        sts_zone="$(sort -R <<< "$zones_without_sts" | head -n1)"
+        sts_zone="$(sort -R <<< "$zones_without_sts" | sed -n '1p')"
       fi
     fi
   else
     # Zone is not set, select new zone
     zones_with_min_sts="$(jq -r 'group_by(.sts_count)[0][].name' <<< "$zones_map")"
-    sts_zone="$(sort -R <<< "$zones_with_min_sts" | head -n1)"
+    sts_zone="$(sort -R <<< "$zones_with_min_sts" | sed -n '1p')"
   fi
 
   # Count sts per node (in zone)
-  nodes_map="$(context::jq -r --arg zone "$sts_zone" '([.snapshots.nodes[].filterResult | select(.zone == $zone and .ready == true and .unschedulable == false).hostname] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $node_map | [.snapshots.statefulsets[].filterResult | select(.zone == $zone)] | reduce .[] as $i ($node_map; .[$i.node_hostname] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')"
+  nodes_map="$(context::jq -r --arg zone "$sts_zone" '([.snapshots.nodes[].filterResult | select(.zone == $zone and .ready == true and .unschedulable == false).hostname] | unique | reduce .[] as $i ({}; . + {$i: 0})) as $node_map | [.snapshots.statefulsets[].filterResult | select(.zone == $zone)] | reduce .[] as $i ($node_map; .[$i.nodeHostname] += 1) | [to_entries[] | {"name": .key, "sts_count": .value}]')"
 
   # Select new node
   nodes_with_min_sts="$(jq -r 'group_by(.sts_count)[0][].name' <<< "$nodes_map")"
-  sts_node="$(sort -R <<< "$nodes_with_min_sts" | head -n1)"
+  sts_node="$(sort -R <<< "$nodes_with_min_sts" | sed -n '1p')"
 
   # Apply new values
-  values::set upmeter.internal.smokeMini.sts.${target_sts}.node "$sts_node"
-  values::set upmeter.internal.smokeMini.sts.${target_sts}.image "$(values::get global.modulesImages.registry)/upmeter/smoke-mini:$(values::get global.modulesImages.tags.upmeter.smokeMini)"
-  if [ "$(values::get upmeter.internal.smokeMini.sts.${target_sts}.zone)" != "$sts_zone" ] ; then
-    kubernetes::delete_if_exists::non_blocking "d8-upmeter" "persistentvolumeclaim/disk-smoke-mini-${target_sts}-0"
-    echo "!!! NOTICE: zone changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts}-0 !!!"
-    values::set upmeter.internal.smokeMini.sts.${target_sts}.zone "\"$sts_zone\""
+  values::set upmeter.internal.smokeMini.sts.${target_sts_index}.node "$sts_node"
+  values::set upmeter.internal.smokeMini.sts.${target_sts_index}.image "$(values::get global.modulesImages.registry)/upmeter/smoke-mini:$(values::get global.modulesImages.tags.upmeter.smokeMini)"
+  if [ "$(values::get upmeter.internal.smokeMini.sts.${target_sts_index}.zone)" != "$sts_zone" ] ; then
+    kubernetes::delete_if_exists::non_blocking "d8-upmeter" "persistentvolumeclaim/disk-smoke-mini-${target_sts_index}-0"
+    echo "!!! NOTICE: zone changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts_index}-0 !!!"
+    values::set upmeter.internal.smokeMini.sts.${target_sts_index}.zone "\"$sts_zone\""
   fi
 
-  storage_class_from_sts="$(values::get upmeter.internal.smokeMini.sts.${target_sts}.effectiveStorageClass)"
+  storage_class_from_sts="$(values::get upmeter.internal.smokeMini.sts.${target_sts_index}.effectiveStorageClass)"
   if [ "$storage_class_from_sts" != "$effective_storage_class" ] ; then
-    values::set upmeter.internal.smokeMini.sts.${target_sts}.effectiveStorageClass "$effective_storage_class"
+    values::set upmeter.internal.smokeMini.sts.${target_sts_index}.effectiveStorageClass "$effective_storage_class"
     if [ -n "$storage_class_from_sts" ]; then
-      kubernetes::delete_if_exists::non_blocking "d8-upmeter" "persistentvolumeclaim/disk-smoke-mini-${target_sts}-0"
-      echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts}-0 !!!"
-      kubernetes::delete_if_exists::non_blocking "d8-upmeter" "statefulset/smoke-mini-$target_sts"
-      echo "!!! NOTICE: storage class changed, deleting statefulset/smoke-mini-$target_sts !!!"
+      kubernetes::delete_if_exists::non_blocking "d8-upmeter" "persistentvolumeclaim/disk-smoke-mini-${target_sts_index}-0"
+      echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts_index}-0 !!!"
+      kubernetes::delete_if_exists::non_blocking "d8-upmeter" "statefulset/smoke-mini-$target_sts_index"
+      echo "!!! NOTICE: storage class changed, deleting statefulset/smoke-mini-$target_sts_index !!!"
     fi
   fi
 }
