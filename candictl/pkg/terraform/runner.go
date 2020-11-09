@@ -3,6 +3,7 @@ package terraform
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -288,6 +289,29 @@ func (r *Runner) Destroy() error {
 	})
 }
 
+func (r Runner) ResourcesQuantityInState() int {
+	if r.statePath == "" {
+		return 0
+	}
+
+	data, err := ioutil.ReadFile(r.statePath)
+	if err != nil {
+		log.ErrorLn(err)
+		return 0
+	}
+
+	var state struct {
+		Resources []json.RawMessage `json:"resources"`
+	}
+	err = json.Unmarshal(data, &state)
+	if err != nil {
+		log.ErrorLn(err)
+		return 0
+	}
+
+	return len(state.Resources)
+}
+
 func (r *Runner) getState() ([]byte, error) {
 	return ioutil.ReadFile(r.statePath)
 }
@@ -331,7 +355,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	}
 
 	err = <-waitCh
-	log.InfoF("Terraform runner \"%s\" process exited.\n", r.step)
+	log.InfoF("Terraform runner %q process exited.\n", r.step)
 
 	exitCode := r.cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != terraformHasChangesExitCode {
