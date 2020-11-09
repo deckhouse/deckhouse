@@ -6,6 +6,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
@@ -162,5 +163,7 @@ func ApplyLintRules(m types.Module, objectStore storage.UnstructuredObjectStore)
 		applyObjectRules(&objectStore, &lintRuleErrorsList, m, o)
 		applyContainerRules(&lintRuleErrorsList, o)
 	}
+
+	resources.ControllerMustHasVPA(m, objectStore, &lintRuleErrorsList)
 	return lintRuleErrorsList.ConvertToError()
 }

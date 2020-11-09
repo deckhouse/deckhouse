@@ -3,10 +3,7 @@ global:
     cloud:
       prefix: prefix
     clusterType: "Cloud"
-  enabledModules:
-    __ConstantChoices__:
-      - ["vertical-pod-autoscaler-crd"]
-      - []
+  enabledModules: ["vertical-pod-autoscaler-crd"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

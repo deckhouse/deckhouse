@@ -15,6 +15,7 @@ spec:
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

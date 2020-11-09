@@ -5,10 +5,7 @@ global:
         __ConstantChoices__: ["1", "3"]
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false, __EmptyItem__]
-  enabledModules:
-    __ConstantChoices__:
-      - ["vertical-pod-autoscaler-crd"]
-      - []
+  enabledModules: ["vertical-pod-autoscaler-crd"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

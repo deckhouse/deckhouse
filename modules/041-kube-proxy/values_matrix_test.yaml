@@ -2,6 +2,7 @@ kubeProxy:
   internal:
     clusterMasterAddresses: ["10.2.3.4", "10.5.6.7"]
 global:
+  enabledModules: ["vertical-pod-autoscaler-crd"]
   discovery:
     kubernetesVersion: 1.15.6
   modules:

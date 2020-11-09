@@ -70,7 +70,7 @@ func (w *Worker) Start(c *ModuleController) {
 
 			err := c.RunRender(task.values, &objectStore)
 			if err != nil {
-				w.errorsCh <- testsError(task.index, err, task.values, "")
+				w.errorsCh <- testsError(task.index, err, task.values)
 				return
 			}
 
@@ -149,7 +149,7 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 			var node map[string]interface{}
 			err := yaml.Unmarshal([]byte(d), &node)
 			if err != nil {
-				return fmt.Errorf("manifest unmarshal: %v\n--- Manifest:%s", err, d)
+				return fmt.Errorf(manifestErrorMessage, err, numerateManifestLines(d))
 			}
 
 			if node == nil {
@@ -166,13 +166,41 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 }
 
 func testsSuccessful(moduleName string, testCasesQuantity int) string {
-	return fmt.Sprintf("\n%sModule %s - %v test cases passed! ",
+	return fmt.Sprintf(
+		testsSuccessfulMessage,
 		emoji.Sprint(":see_no_evil:"),
 		color.New(color.FgBlue).SprintFunc()("["+moduleName+"]"),
 		testCasesQuantity,
 	)
 }
 
-func testsError(index int, errorHeader error, generatedValues, doc string) error {
-	return fmt.Errorf("test #%v failed: %s\n\n-----\n%s\n\n-----\n%s", index, errorHeader, generatedValues, doc)
+func testsError(index int, errorHeader error, generatedValues string) error {
+	return fmt.Errorf(testsErrorMessage, index, errorHeader, generatedValues)
 }
+
+func numerateManifestLines(manifest string) string {
+	manifestLines := strings.Split(manifest, "\n")
+	builder := strings.Builder{}
+
+	for index, line := range manifestLines {
+		builder.WriteString(fmt.Sprintf("%d\t%s\n", index+1, line))
+	}
+
+	return builder.String()
+}
+
+const (
+	manifestErrorMessage = `manifest unmarshal: %v
+
+--- Manifest:
+%s`
+	testsSuccessfulMessage = `
+%sModule %s - %v test cases passed!`
+	testsErrorMessage = `test #%v failed:
+--- Error:
+%s
+
+--- Values:
+%s
+`
+)

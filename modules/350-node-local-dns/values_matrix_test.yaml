@@ -3,8 +3,6 @@ global:
     __ConstantChoices__:
       - ["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]
       - ["vertical-pod-autoscaler-crd"]
-      - ["operator-prometheus-crd"]
-      - []
   discovery:
     clusterDomain:
       __ConstantChoices__: ["cluster.local", "cluster-hz1.local"]

@@ -1,4 +1,5 @@
 global:
+  enabledModules: ["vertical-pod-autoscaler-crd"]
   discovery:
     kubernetesVersion: 1.15.6
     clusterDNSAddress: 192.168.0.10

@@ -27,7 +27,7 @@ global:
   enabledModules:
     __ConstantChoices__:
       - ["vertical-pod-autoscaler-crd", "prometheus"]
-      - []
+      - ["vertical-pod-autoscaler-crd"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg
