@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 3d07f2ff..07c3d529 100644
+index eba919fa..1386806b 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -85,11 +85,12 @@ type password storage.Password
@@ -29,10 +29,10 @@ index 3d07f2ff..07c3d529 100644
  	if len(data.Hash) == 0 && len(data.HashFromEnv) > 0 {
  		data.Hash = os.Getenv(data.HashFromEnv)
 diff --git a/server/server.go b/server/server.go
-index 09292b16..b60640b3 100644
+index c37b4fdc..8812707d 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -355,6 +355,7 @@ type passwordDB struct {
+@@ -378,6 +378,7 @@ type passwordDB struct {
  }
 
  func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, password string) (connector.Identity, bool, error) {
@@ -40,7 +40,7 @@ index 09292b16..b60640b3 100644
  	p, err := db.s.GetPassword(email)
  	if err != nil {
  		if err != storage.ErrNotFound {
-@@ -370,11 +371,13 @@ func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, passw
+@@ -393,11 +394,13 @@ func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, passw
  	if err := bcrypt.CompareHashAndPassword(p.Hash, []byte(password)); err != nil {
  		return connector.Identity{}, false, nil
  	}
@@ -55,10 +55,10 @@ index 09292b16..b60640b3 100644
  }
 
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 5eda1781..01d0102b 100644
+index 41b14f37..05608b6f 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -323,7 +323,7 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
+@@ -362,7 +362,7 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
  	return req
  }
 
@@ -67,7 +67,7 @@ index 5eda1781..01d0102b 100644
  // Kubernetes type metadata.
  type Password struct {
  	k8sapi.TypeMeta   `json:",inline"`
-@@ -334,9 +334,10 @@ type Password struct {
+@@ -373,9 +373,10 @@ type Password struct {
  	// This field is IMMUTABLE. Do not change.
  	Email string `json:"email,omitempty"`
 
@@ -81,7 +81,7 @@ index 5eda1781..01d0102b 100644
  }
 
  // PasswordList is a list of Passwords.
-@@ -361,6 +362,7 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
+@@ -400,6 +401,7 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
  		Hash:     p.Hash,
  		Username: p.Username,
  		UserID:   p.UserID,
@@ -89,7 +89,7 @@ index 5eda1781..01d0102b 100644
  	}
  }
 
-@@ -370,6 +372,7 @@ func toStoragePassword(p Password) storage.Password {
+@@ -409,6 +411,7 @@ func toStoragePassword(p Password) storage.Password {
  		Hash:     p.Hash,
  		Username: p.Username,
  		UserID:   p.UserID,
@@ -98,10 +98,10 @@ index 5eda1781..01d0102b 100644
  }
 
 diff --git a/storage/sql/crud.go b/storage/sql/crud.go
-index e87dc56a..87668d56 100644
+index c804fc43..0e19b51d 100644
 --- a/storage/sql/crud.go
 +++ b/storage/sql/crud.go
-@@ -559,13 +559,13 @@ func (c *conn) CreatePassword(p storage.Password) error {
+@@ -588,13 +588,13 @@ func (c *conn) CreatePassword(p storage.Password) error {
  	p.Email = strings.ToLower(p.Email)
  	_, err := c.Exec(`
  		insert into password (
@@ -118,7 +118,7 @@ index e87dc56a..87668d56 100644
  	)
  	if err != nil {
  		if c.alreadyExistsCheck(err) {
-@@ -590,10 +590,10 @@ func (c *conn) UpdatePassword(email string, updater func(p storage.Password) (st
+@@ -619,10 +619,10 @@ func (c *conn) UpdatePassword(email string, updater func(p storage.Password) (st
  		_, err = tx.Exec(`
  			update password
  			set
@@ -132,7 +132,7 @@ index e87dc56a..87668d56 100644
  		)
  		if err != nil {
  			return fmt.Errorf("update password: %v", err)
-@@ -609,7 +609,7 @@ func (c *conn) GetPassword(email string) (storage.Password, error) {
+@@ -638,7 +638,7 @@ func (c *conn) GetPassword(email string) (storage.Password, error) {
  func getPassword(q querier, email string) (p storage.Password, err error) {
  	return scanPassword(q.QueryRow(`
  		select
@@ -141,7 +141,7 @@ index e87dc56a..87668d56 100644
  		from password where email = $1;
  	`, strings.ToLower(email)))
  }
-@@ -617,7 +617,7 @@ func getPassword(q querier, email string) (p storage.Password, err error) {
+@@ -646,7 +646,7 @@ func getPassword(q querier, email string) (p storage.Password, err error) {
  func (c *conn) ListPasswords() ([]storage.Password, error) {
  	rows, err := c.Query(`
  		select
@@ -150,7 +150,7 @@ index e87dc56a..87668d56 100644
  		from password;
  	`)
  	if err != nil {
-@@ -640,7 +640,7 @@ func (c *conn) ListPasswords() ([]storage.Password, error) {
+@@ -669,7 +669,7 @@ func (c *conn) ListPasswords() ([]storage.Password, error) {
 
  func scanPassword(s scanner) (p storage.Password, err error) {
  	err = s.Scan(
@@ -160,10 +160,10 @@ index e87dc56a..87668d56 100644
  	if err != nil {
  		if err == sql.ErrNoRows {
 diff --git a/storage/storage.go b/storage/storage.go
-index 5bbb2b3f..88351c7f 100644
+index 06f718e1..ed604fa9 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
-@@ -302,6 +302,9 @@ type Password struct {
+@@ -335,6 +335,9 @@ type Password struct {
 
  	// Randomly generated user ID. This is NOT the primary ID of the Password object.
  	UserID string `json:"userID"`
