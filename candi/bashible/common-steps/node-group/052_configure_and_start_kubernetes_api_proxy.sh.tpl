@@ -74,12 +74,9 @@ KillMode=mixed
 WantedBy=multi-user.target
 EOF
 
-if [ ! -n "$(grep -P '^127.0.0.1 kubernetes$' /etc/hosts)" ] ; then
-  echo '127.0.0.1 kubernetes' >> /etc/hosts
-fi
+# TODO - remove in future releases
+sed -i "/127.0.0.1 kubernetes/d" /etc/hosts
 
 if [ -f "/etc/cloud/templates/hosts.debian.tmpl" ] ; then
-  if [ ! -n "$(grep -P '^127.0.0.1 kubernetes$' /etc/cloud/templates/hosts.debian.tmpl)" ] ; then
-    echo '127.0.0.1 kubernetes' >> /etc/cloud/templates/hosts.debian.tmpl
-  fi
+  sed -i "/127.0.0.1 kubernetes/d" /etc/cloud/templates/hosts.debian.tmpl
 fi
