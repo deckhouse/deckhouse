@@ -14,7 +14,7 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Modules :: upmeter :: hooks :: update_selector ::", func() {
+var _ = Describe("Modules :: upmeter :: hooks :: smoke_mini_rescheduler ::", func() {
 	f := HookExecutionConfigInit(`{"upmeter":{"internal":{"smokeMini":{"sts":{"a":{},"b":{},"c":{}}}}}}`, `{}`)
 
 	Context("One node", func() {
