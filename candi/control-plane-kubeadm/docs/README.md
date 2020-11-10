@@ -19,7 +19,7 @@ candictl render kubeadm-config --config=/config.yaml
 Пример `config.yaml`:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
-kind: KubeadmTemplateData
+kind: KubeadmConfigTemplateData
 clusterConfiguration:
   cloud:
     prefix: pivot

@@ -94,20 +94,24 @@ func CheckBashibleBundle(sshClient *ssh.SSHClient) bool {
 			Sudo().WithTimeout(20 * time.Second)
 		var output string
 
-		err := bashibleCmd.WithStdoutHandler(func(l string) { output += l + "\n" }).Run()
+		err := bashibleCmd.WithStdoutHandler(func(l string) {
+			if output == "" {
+				output = l
+			} else {
+				return
+			}
+			switch {
+			case strings.Contains(output, "Can't acquire lockfile /var/lock/bashible."):
+				fallthrough
+			case strings.Contains(output, "Configuration is in sync, nothing to do."):
+				log.InfoF(bashibleInstalledMessage, output)
+				bashibleUpToDate = true
+			default:
+				log.InfoF(bashibleIsNotReadyMessage, output)
+			}
+		}).Run()
 		if err != nil {
 			log.DebugF("%v\n", err)
-		}
-
-		output = strings.TrimSuffix(output, "\n")
-		switch {
-		case strings.Contains(output, "Can't acquire lockfile /var/lock/bashible."):
-			fallthrough
-		case strings.Contains(output, "Configuration is in sync, nothing to do."):
-			log.InfoF(bashibleInstalledMessage, output)
-			bashibleUpToDate = true
-		default:
-			log.InfoF(bashibleIsNotReadyMessage, output)
 		}
 		return nil
 	})
@@ -174,7 +178,7 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.SSHClient) error {
 			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
-		if err := availabilityCheck.WithDelaySeconds(3).AwaitAvailability(); err != nil {
+		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil
@@ -205,7 +209,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 func StartKubernetesAPIProxy(sshClient *ssh.SSHClient) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Start Kubernetes API proxy", func() error {
-		if err := sshClient.Check().WithDelaySeconds(3).AwaitAvailability(); err != nil {
+		if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
 			return fmt.Errorf("await master available: %v", err)
 		}
 		err := retry.StartLoop("Kubernetes API proxy", 45, 5, func() error {
@@ -219,8 +223,7 @@ func StartKubernetesAPIProxy(sshClient *ssh.SSHClient) (*client.KubernetesClient
 			return err
 		}
 
-		<-time.After(time.Second) // tick to prevent first probable fail
-
+		time.Sleep(50 * time.Millisecond) // tick to prevent first probable fail
 		err = deckhouse.WaitForKubernetesAPI(kubeCl)
 		if err != nil {
 			return fmt.Errorf("wait kubernetes api: %v", err)

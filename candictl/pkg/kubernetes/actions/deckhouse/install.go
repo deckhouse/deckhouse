@@ -34,6 +34,7 @@ type Config struct {
 	KubeDNSAddress        string
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
+	StaticClusterConfig   []byte
 	TerraformState        []byte
 	NodesTerraformState   map[string][]byte
 	CloudDiscovery        []byte
@@ -210,6 +211,31 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 		})
 	}
 
+	if len(cfg.StaticClusterConfig) > 0 {
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `Secret "d8-static-cluster-configuration"`,
+			Manifest: func() interface{} {
+				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
+			},
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(manifest.(*apiv1.Secret))
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				data, err := json.Marshal(manifest.(*apiv1.Secret))
+				if err != nil {
+					return err
+				}
+				_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
+					"d8-static-cluster-configuration",
+					types.MergePatchType,
+					data,
+				)
+				return err
+			},
+		})
+	}
+
 	if len(cfg.UUID) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `ConfigMap "d8-cluster-uuid"`,
@@ -347,17 +373,23 @@ func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, erro
 	}
 
 	installConfig := Config{
-		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
-		DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
-		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-		ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
-		Bundle:                metaConfig.DeckhouseConfig.Bundle,
-		LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
-		DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
-		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
-		ClusterConfig:         clusterConfig,
-		ProviderClusterConfig: providerClusterConfig,
+		UUID:            metaConfig.UUID,
+		Registry:        metaConfig.DeckhouseConfig.ImagesRepo,
+		DockerCfg:       metaConfig.DeckhouseConfig.RegistryDockerCfg,
+		DevBranch:       metaConfig.DeckhouseConfig.DevBranch,
+		ReleaseChannel:  metaConfig.DeckhouseConfig.ReleaseChannel,
+		Bundle:          metaConfig.DeckhouseConfig.Bundle,
+		LogLevel:        metaConfig.DeckhouseConfig.LogLevel,
+		DeckhouseConfig: metaConfig.MergeDeckhouseConfig(),
+		KubeDNSAddress:  metaConfig.ClusterDNSAddress,
+		ClusterConfig:   clusterConfig,
+	}
+
+	switch metaConfig.ClusterType {
+	case "Static":
+		installConfig.StaticClusterConfig = providerClusterConfig
+	case "Cloud":
+		installConfig.ProviderClusterConfig = providerClusterConfig
 	}
 
 	return &installConfig, nil

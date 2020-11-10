@@ -143,7 +143,10 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		for nodeGroupName, nodeGroupStates := range nodesState {
-			cfg := metaConfig.DeepCopy().Prepare()
+			cfg, err := metaConfig.DeepCopy().Prepare()
+			if err != nil {
+				return fmt.Errorf("unable to prepare copied config: %v", err)
+			}
 			if nodeGroupStates.Settings != nil {
 				nodeGroupsSettings, err := json.Marshal([]json.RawMessage{nodeGroupStates.Settings})
 				if err != nil {

@@ -106,8 +106,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
 	}
 
-	metaConfig.Prepare()
-	return &metaConfig, nil
+	return metaConfig.Prepare()
 }
 
 func ParseConfigFromData(configData string) (*MetaConfig, error) {
@@ -145,6 +144,5 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 		}
 	}
 
-	metaConfig.Prepare()
-	return &metaConfig, nil
+	return metaConfig.Prepare()
 }

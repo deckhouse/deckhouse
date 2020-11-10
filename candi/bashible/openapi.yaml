@@ -28,8 +28,11 @@ apiVersions:
             type: string
           clusterDomain:
             type: string
-          nodeIP:
-            type: string
+          cloud:
+            type: object
+            properties:
+              nodeIP:
+                type: string
       nodeGroup:
         type: object
         required: [cloudInstances, instanceClass]

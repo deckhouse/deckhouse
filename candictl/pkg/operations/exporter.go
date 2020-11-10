@@ -28,9 +28,10 @@ type ConvergeExporter struct {
 }
 
 var (
-	clusterStatuses   = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus}
-	nodeGroupStatuses = []string{converge.OKStatus, converge.InsufficientStatus, converge.ExcessiveStatus}
-	nodeStatuses      = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus}
+	clusterStatuses      = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus}
+	nodeGroupStatuses    = []string{converge.OKStatus, converge.InsufficientStatus, converge.ExcessiveStatus}
+	nodeTemplateStatuses = []string{converge.OKStatus, converge.AbsentStatus, converge.ChangedStatus}
+	nodeStatuses         = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus}
 )
 
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
@@ -84,6 +85,17 @@ func (c *ConvergeExporter) registerMetrics() {
 	prometheus.MustRegister(nodeStateVec)
 	c.GaugeMetrics["node_status"] = nodeStateVec
 
+	nodeTemplateStateVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "candi",
+		Subsystem: "converge",
+		Name:      "node_template_status",
+		Help:      "State of nodeTemplate settings of NodeGroup",
+	},
+		[]string{"status", "name"},
+	)
+	prometheus.MustRegister(nodeTemplateStateVec)
+	c.GaugeMetrics["node_template_status"] = nodeTemplateStateVec
+
 	errorsVec := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "candi",
 		Subsystem: "converge",
@@ -129,6 +141,8 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 	c.getStatistic()
 
 	ticker := time.NewTicker(c.CheckInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -187,6 +201,16 @@ func (c *ConvergeExporter) getStatistic() {
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
+		}
+	}
+
+	for _, template := range statistic.NodeTemplates {
+		for _, status := range nodeTemplateStatuses {
+			if status == template.Status {
+				c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(1)
+				continue
+			}
+			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
 		}
 	}
 }

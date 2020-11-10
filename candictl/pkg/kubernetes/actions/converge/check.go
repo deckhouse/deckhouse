@@ -2,6 +2,7 @@ package converge
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/hashicorp/go-multierror"
 
@@ -18,6 +19,8 @@ const (
 
 	InsufficientStatus = "insufficient"
 	ExcessiveStatus    = "excessive"
+
+	AbsentStatus = "absent"
 )
 
 type ClusterCheckResult struct {
@@ -36,9 +39,10 @@ type NodeGroupCheckResult struct {
 }
 
 type Statistics struct {
-	Node       []NodeCheckResult      `json:"nodes,omitempty"`
-	NodeGroups []NodeGroupCheckResult `json:"node_groups,omitempty"`
-	Cluster    ClusterCheckResult     `json:"cluster,omitempty"`
+	Node          []NodeCheckResult      `json:"nodes,omitempty"`
+	NodeGroups    []NodeGroupCheckResult `json:"node_groups,omitempty"`
+	NodeTemplates []NodeGroupCheckResult `json:"node_templates,omitempty"`
+	Cluster       ClusterCheckResult     `json:"cluster,omitempty"`
 }
 
 func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (bool, error) {
@@ -77,9 +81,10 @@ func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOpti
 
 func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*Statistics, error) {
 	statistics := Statistics{
-		Node:       make([]NodeCheckResult, 0),
-		NodeGroups: make([]NodeGroupCheckResult, 0),
-		Cluster:    ClusterCheckResult{Status: OKStatus},
+		Node:          make([]NodeCheckResult, 0),
+		NodeGroups:    make([]NodeGroupCheckResult, 0),
+		NodeTemplates: make([]NodeGroupCheckResult, 0),
+		Cluster:       ClusterCheckResult{Status: OKStatus},
 	}
 
 	var allErrs *multierror.Error
@@ -95,11 +100,33 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 	nodesState, err := GetNodesStateFromCluster(kubeCl)
 	if err != nil {
 		allErrs = multierror.Append(allErrs, fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err))
+	}
+
+	nodeTemplates, err := GetNodeGroupTemplates(kubeCl)
+	if err != nil {
+		allErrs = multierror.Append(allErrs, fmt.Errorf("node goups in Kubernetes cluster not found: %w", err))
+	}
+
+	if allErrs != nil && allErrs.Len() > 0 {
 		return &statistics, allErrs.ErrorOrNil()
 	}
 
+	// We have no nodeTemplate settings for master nodes
+	statistics.NodeTemplates = append(statistics.NodeTemplates, NodeGroupCheckResult{Name: "master", Status: OKStatus})
+
 	var nodeGroupsWithStateInCluster []string
 	for _, group := range metaConfig.GetStaticNodeGroups() {
+		templateStatus := OKStatus
+
+		if template, ok := nodeTemplates[group.Name]; ok {
+			if !reflect.DeepEqual(template, group.NodeTemplate) {
+				templateStatus = ChangedStatus
+			}
+		} else {
+			templateStatus = AbsentStatus
+		}
+		statistics.NodeTemplates = append(statistics.NodeTemplates, NodeGroupCheckResult{Name: group.Name, Status: templateStatus})
+
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
@@ -113,7 +140,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		nodeGroupState := nodesState[nodeGroupName]
 		replicas := getReplicasByNodeGroupName(metaConfig, nodeGroupName)
-		step := GetStepByNodeGroupName(nodeGroupName)
+		step := getStepByNodeGroupName(nodeGroupName)
 
 		nodeGroupCheckResult := NodeGroupCheckResult{Name: nodeGroupName, Status: OKStatus}
 		if replicas > len(nodeGroupState.State) {
@@ -144,5 +171,6 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 			statistics.Node = append(statistics.Node, checkResult)
 		}
 	}
+
 	return &statistics, allErrs.ErrorOrNil()
 }

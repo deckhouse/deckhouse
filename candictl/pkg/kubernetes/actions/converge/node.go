@@ -59,20 +59,6 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 	})
 }
 
-func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
-	isExists := false
-	err := retry.StartLoop(fmt.Sprintf("Checking that single Node %q exists", nodeName), 100, 20, func() error {
-		_, err := kubeCl.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		isExists = true
-		return nil
-	})
-	return isExists, err
-}
-
 func WaitForSingleNodeBecomeReady(kubeCl *client.KubernetesClient, nodeName string) error {
 	return retry.StartLoop(fmt.Sprintf("Waiting for  Node %s to become Ready", nodeName), 100, 20, func() error {
 		node, err := kubeCl.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
@@ -127,4 +113,28 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName stri
 
 		return fmt.Errorf(strings.TrimSuffix(message, "\n"))
 	})
+}
+
+func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
+	nodeTemplates := make(map[string]map[string]interface{})
+	resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
+
+	err := retry.StartLoop("Get NodeGroups node template settings", 10, 5, func() error {
+		nodeGroups, err := kubeCl.Dynamic().Resource(resourceSchema).List(metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, group := range nodeGroups.Items {
+			var nodeTemplate map[string]interface{}
+			if spec, ok := group.Object["spec"].(map[string]interface{}); ok {
+				nodeTemplate, _ = spec["nodeTemplate"].(map[string]interface{})
+			}
+
+			nodeTemplates[group.GetName()] = nodeTemplate
+		}
+		return nil
+	})
+
+	return nodeTemplates, err
 }

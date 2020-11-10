@@ -3,7 +3,9 @@ touch /var/lib/bashible/discovered-node-ip
 
 {{- if ne .nodeGroup.nodeType "Static" }}
 # For Cloud or Hybrid node we try to discover IP from Node object
-
+ {{- if and (.clusterBootstrap.cloud .clusterBootstrap.cloud.nodeIP) }}
+/var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.cloud.nodeIP }}:6443
+  {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json 2> /dev/null)" ; then
     echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
@@ -12,15 +14,15 @@ if [ -f /etc/kubernetes/kubelet.conf ] ; then
     exit 1
   fi
 fi
+  {{- end }}
 {{- end }}
 
-{{- if and (eq .nodeGroup.nodeType "Static") (hasKey .nodeGroup "static") }}
-  {{- if not (hasKey .nodeGroup.static "internalNetworkCIDRs") }}
-# No .nodeGroup.static.internalNetworkCIDRs in Static node
-echo "" > /var/lib/bashible/discovered-node-ip
+{{- if eq .nodeGroup.nodeType "Static" }}
+  {{- if not (and (hasKey .nodeGroup "static") (hasKey .nodeGroup.static "internalNetworkCIDRs")) }}
+    >&2 echo "ERROR: nodeGroup.static.internalNetworkCIDRs must exist for static node"
+    exit 1
   {{- else }}
 # For Static node we use .nodeGroup.static.internalNetworkCIDRs
-
 function is_ip_in_cidr() {
   ip="$1"
   IFS="/" read net_address net_prefix <<< "$2"
@@ -51,11 +53,11 @@ for cidr in {{ .nodeGroup.static.internalNetworkCIDRs | join " " }}; do
   done
 done
   {{- end }}
+{{- end }}
 
-  {{- if eq .runType "ClusterBootstrap" }}
+{{- if eq .runType "ClusterBootstrap" }}
 if [ -z "$(cat /var/lib/bashible/discovered-node-ip)" ] ; then
   bb-log-error "Failed to discover node_ip but it's required for cluster bootstrap"
   exit 1
 fi
-  {{- end }}
 {{- end }}

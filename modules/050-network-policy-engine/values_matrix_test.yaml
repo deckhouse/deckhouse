@@ -6,6 +6,8 @@ global:
     tags:
       networkPolicyEngine:
         kubeRouter: hashstring
+  modules:
+    placement: {}
   discovery:
     clusterControlPlaneIsHighlyAvailable: true
     d8SpecificNodeCountByRole:

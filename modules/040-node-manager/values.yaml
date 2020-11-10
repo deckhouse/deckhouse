@@ -1,2 +1,3 @@
 nodeManager:
-  internal: {}
+  internal:
+    static: {}

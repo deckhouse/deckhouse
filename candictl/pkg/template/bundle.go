@@ -33,7 +33,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 }
 
 func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
-	kubeadmData := metaConfig.ConfigForKubeadmTemplates(nodeIP)
+	kubeadmData := metaConfig.ConfigForKubeadmTemplates("")
 	logTemplatesData("kubeadm", kubeadmData)
 
 	bashibleData := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
