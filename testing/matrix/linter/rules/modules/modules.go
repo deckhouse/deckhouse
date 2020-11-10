@@ -120,6 +120,64 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
+const commonTestGoContent = `package hooks
+
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+func Test(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "")
+}
+`
+
+func commonTestGoForHooks(name, path string) errors.LintRuleError {
+	if !isExistsOnFilesystem(path + "/hooks") {
+		return errors.EmptyRuleError
+	}
+
+	if matches, _ := filepath.Glob(path + "/hooks/*.go"); len(matches) == 0 {
+		return errors.EmptyRuleError
+	}
+
+	commonTestPath := filepath.Join(path, "hooks", "common_test.go")
+
+	if !isExistsOnFilesystem(commonTestPath) {
+		return errors.NewLintRuleError(
+			"MODULE001",
+			"module = "+name,
+			nil,
+			"Module does not contain %q file", commonTestPath,
+		)
+	}
+
+	contentBytes, err := ioutil.ReadFile(commonTestPath)
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MODULE001",
+			"module = "+name,
+			nil,
+			"Module does not contain %q file", commonTestPath,
+		)
+	}
+
+	if string(contentBytes) != commonTestGoContent {
+		return errors.NewLintRuleError(
+			"MODULE001",
+			"module = "+name,
+			nil,
+			"Module content of %q file is different from default\nContent should be equal to:\n%s",
+			commonTestPath, commonTestGoContent,
+		)
+	}
+
+	return errors.EmptyRuleError
+}
+
 func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 	var modules []types.Module
 
@@ -170,6 +228,7 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 		moduleName := parts[len(parts)-1]
 
 		lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
+		lintRuleErrorsList.Add(commonTestGoForHooks(moduleName, modulePath))
 
 		name, lintError := chartModuleRule(moduleName, modulePath)
 		lintRuleErrorsList.Add(lintError)

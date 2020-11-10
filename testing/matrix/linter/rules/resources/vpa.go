@@ -39,12 +39,24 @@ func ControllerMustHasVPA(m types.Module, objectStore storage.UnstructuredObject
 
 		specs, ok := object.Unstructured.Object["spec"].(map[string]interface{})
 		if !ok {
-			panic(ok)
+			lintRuleErrorsList.Add(errors.NewLintRuleError(
+				"VPA005",
+				object.Identity(),
+				false,
+				"No VPA specs is found for object",
+			))
+			continue
 		}
 
 		refsFromSpec, ok := specs["targetRef"].(map[string]interface{})
 		if !ok {
-			panic(ok)
+			lintRuleErrorsList.Add(errors.NewLintRuleError(
+				"VPA005",
+				object.Identity(),
+				false,
+				"No VPA specs targetRef is found for object",
+			))
+			continue
 		}
 
 		r.Name = refsFromSpec["name"].(string)

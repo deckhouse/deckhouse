@@ -3,18 +3,12 @@ package hooks
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 var _ = Describe("Cert Manager hooks :: generate selfsigned ca ::", func() {
 	f := HookExecutionConfigInit(`{"certManager":{"internal":{"selfSignedCA":{}}}}`, "")

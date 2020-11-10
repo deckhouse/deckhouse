@@ -1,18 +1,11 @@
 package hooks
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 var _ = Describe("Modules :: upmeter :: hooks :: smoke_mini_rescheduler ::", func() {
 	f := HookExecutionConfigInit(`{"upmeter":{"internal":{"smokeMini":{"sts":{"a":{},"b":{},"c":{}}}}}}`, `{}`)
