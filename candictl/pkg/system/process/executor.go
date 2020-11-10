@@ -429,7 +429,7 @@ func (e *Executor) ProcessWait() {
 
 	go func() {
 		if e.timeout > 0 {
-			<-time.After(e.timeout)
+			time.Sleep(e.timeout)
 			if e.stopCh != nil {
 				e.stopCh <- struct{}{}
 			}

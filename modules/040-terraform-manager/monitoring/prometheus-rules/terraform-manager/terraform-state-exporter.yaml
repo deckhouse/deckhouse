@@ -207,6 +207,26 @@
         To converge state of Kubernetes cluster use `candictl converge` command.
       summary: Terraform-state-exporter node state error
 
+  - alert: D8TerraformStateExporterNodeTemplateChanged
+    expr: |
+      max by(job) (candi_converge_node_template_status{status!="ok", job="terraform-state-exporter"} == 1)
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
+      description: |
+        Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup {{ $labels.name }}.
+        Node template is `{{ $labels.status }}`.
+
+        Use `candictl converge` command or manually adjust NodeGroup settings to fix the issue.
+      summary: Terraform-state-exporter node template changed
+
   - alert: D8TerraformStateExporterNodeGroupHasProblemWithReplicas
     expr: |
       max by(name, status) (candi_converge_node_group_status{status!="ok", job="terraform-state-exporter"} == 1)

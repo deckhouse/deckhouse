@@ -10,6 +10,7 @@ global:
     kubernetesVersion: 1.15.5
   modules:
     publicDomainTemplate: "%s.example.com"
+    placement: {}
     https:
       __ConstantChoices__:
         - certManager:

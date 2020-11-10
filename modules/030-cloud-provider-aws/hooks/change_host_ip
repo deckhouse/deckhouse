@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  common_hooks::handle_host_ip_change::config "d8-cloud-provider-aws" "cloud-controller-manager"
+}
+
+function __main__() {
+  common_hooks::handle_host_ip_change::main "d8-cloud-provider-aws"
+}
+
+hook::run $@

@@ -1,0 +1,53 @@
+#!/bin/bash
+### Migration 27.10.2020: Remove after release with this MR
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 15
+EOF
+}
+
+function __on_startup() {
+  # if StaticClusterConfuguration already configured
+  if kubectl get -n kube-system secret d8-static-cluster-configuration >/dev/null 2>/dev/null; then
+    return 0
+  fi
+  # if it is cloud-hosted cluster
+  if kubectl get -n kube-system secret d8-provider-cluster-configuration >/dev/null 2>/dev/null; then
+    return 0
+  fi
+  # if it is kops-powered cluster
+  if !kubectl get -n kube-system secret d8-cluster-configuration >/dev/null 2>/dev/null; then
+    return 0
+  fi
+
+  ip_addresses=$(kubectl get nodes -o json | jq -r '.items[] | .status.addresses[] | select(.type == "InternalIP") | .address ')
+
+  cidrs=$(for address in "$ip_addresses"; do
+    ipcalc $address | grep Network | awk '{ print "- " $2 }';
+  done | sort | uniq)
+
+  config=$(cat <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+${cidrs}
+EOF)
+
+  cat <<EOF | kubernetes::replace_or_create_yaml
+apiVersion: v1
+data:
+  static-cluster-configuration.yaml: $(base64 -w0 <<< ${config})
+kind: Secret
+metadata:
+  labels:
+    heritage: deckhouse
+  name: d8-static-cluster-configuration
+  namespace: kube-system
+type: Opaque
+EOF
+}
+
+hook::run $@

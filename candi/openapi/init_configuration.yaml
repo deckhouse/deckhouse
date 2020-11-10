@@ -29,7 +29,7 @@ apiVersions:
             type: string
           bundle:
             type: string
-            enum: [Minimal, Default]
+            enum: [Minimal, Managed, Default]
             default: Default
           logLevel:
             type: string

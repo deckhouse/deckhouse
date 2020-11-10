@@ -188,7 +188,7 @@ func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.M
 
 func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraformState) error {
 	replicas := getReplicasByNodeGroupName(c.config, nodeGroupName)
-	step := GetStepByNodeGroupName(nodeGroupName)
+	step := getStepByNodeGroupName(nodeGroupName)
 
 	nodeCloudConfig, err := GetCloudConfig(c.client, nodeGroupName)
 	if err != nil {
@@ -320,7 +320,10 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 		if err != nil {
 			log.ErrorLn(err)
 		} else {
-			cfg = c.config.DeepCopy().Prepare()
+			cfg, err = c.config.DeepCopy().Prepare()
+			if err != nil {
+				return fmt.Errorf("unable to prepare copied config: %v", err)
+			}
 			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
 	}
@@ -378,7 +381,7 @@ func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName str
 	return replicas
 }
 
-func GetStepByNodeGroupName(nodeGroupName string) string {
+func getStepByNodeGroupName(nodeGroupName string) string {
 	step := "static-node"
 	if nodeGroupName == masterNodeGroupName {
 		step = "master-node"

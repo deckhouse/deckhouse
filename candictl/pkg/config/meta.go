@@ -34,36 +34,72 @@ type MetaConfig struct {
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare() *MetaConfig {
-	_ = json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType)
-	_ = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
+func (m *MetaConfig) Prepare() (*MetaConfig, error) {
+	if len(m.ClusterConfig) > 0 {
+		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
+			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
+		}
 
-	var serviceSubnet string
-	_ = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet)
-	m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
-
-	if m.ClusterType != CloudClusterType {
-		return m
+		var serviceSubnet string
+		if err := json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
+		}
+		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
 	}
 
-	_ = json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout)
+	if len(m.InitClusterConfig) > 0 {
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		}
+	}
+
+	if len(m.ProviderClusterConfig) == 0 {
+		return m, nil
+	}
+
+	if m.ClusterType != CloudClusterType {
+		return m, nil
+	}
+
+	if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal layout from cluster configuration: %v", err)
+	}
 	m.Layout = strcase.ToKebab(m.Layout)
 
 	var cloud ClusterConfigCloudSpec
-	_ = json.Unmarshal(m.ClusterConfig["cloud"], &cloud)
+	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+	}
 
 	m.ProviderName = strings.ToLower(cloud.Provider)
 	m.OriginalProviderName = cloud.Provider
 	m.ClusterPrefix = cloud.Prefix
 
-	_ = json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &m.MasterNodeGroupSpec)
+	if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &m.MasterNodeGroupSpec); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+	}
+
 	m.StaticNodeGroupSpecs = []StaticNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
-		_ = json.Unmarshal(nodeGroups, &m.StaticNodeGroupSpecs)
+		if err := json.Unmarshal(nodeGroups, &m.StaticNodeGroupSpecs); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
+		}
 	}
 
-	return m
+	return m, nil
+}
+
+func (m *MetaConfig) Sufficient() error {
+	if len(m.ProviderClusterConfig) == 0 {
+		return fmt.Errorf("provider or static cluster configuration doesn't found in config")
+	}
+
+	if len(m.ClusterConfig) == 0 {
+		return fmt.Errorf("cluster configuration doesn't found in config")
+	}
+
+	return nil
 }
 
 // MergeDeckhouseConfig returns deckhouse config merged from different sources
@@ -117,11 +153,47 @@ func (m *MetaConfig) FindStaticNodeGroup(nodeGroupName string) []byte {
 	return nil
 }
 
+func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {
+	static := make(map[string]interface{})
+
+	if m.ClusterType != StaticClusterType {
+		return static
+	}
+
+	var internalNetworkCIDRs []string
+	if data, ok := m.ProviderClusterConfig["internalNetworkCIDRs"]; ok {
+		err := json.Unmarshal(data, &internalNetworkCIDRs)
+		if err != nil {
+			log.DebugF("unmarshalling internalNetworkCIDRs: %v", err)
+			return static
+		}
+	}
+
+	static["internalNetworkCIDRs"] = internalNetworkCIDRs
+	return static
+}
+
 // MasterNodeGroupManifest prepares NodeGroup custom resource for master nodes
 func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
-	nodeType := "Hybrid"
+	spec := map[string]interface{}{
+		"nodeType": "Hybrid",
+		"disruptions": map[string]interface{}{
+			"approvalMode": "Manual",
+		},
+		"nodeTemplate": map[string]interface{}{
+			"labels": map[string]interface{}{
+				"node-role.kubernetes.io/master": "",
+			},
+			"taints": []map[string]interface{}{
+				{
+					"key":    "node-role.kubernetes.io/master",
+					"effect": "NoSchedule",
+				},
+			},
+		},
+	}
 	if m.ClusterType == StaticClusterType {
-		nodeType = "Static"
+		spec["nodeType"] = "Static"
 	}
 
 	return map[string]interface{}{
@@ -130,23 +202,7 @@ func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 		"metadata": map[string]interface{}{
 			"name": "master",
 		},
-		"spec": map[string]interface{}{
-			"nodeType": nodeType,
-			"disruptions": map[string]interface{}{
-				"approvalMode": "Manual",
-			},
-			"nodeTemplate": map[string]interface{}{
-				"labels": map[string]interface{}{
-					"node-role.kubernetes.io/master": "",
-				},
-				"taints": []map[string]interface{}{
-					{
-						"key":    "node-role.kubernetes.io/master",
-						"effect": "NoSchedule",
-					},
-				},
-			},
-		},
+		"spec": spec,
 	}
 }
 
@@ -196,11 +252,14 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) map[string]interfa
 	result := map[string]interface{}{
 		"extraArgs":            make(map[string]interface{}),
 		"clusterConfiguration": data,
+		// bashible will use this as a placeholder on envsubst call, address will be discovered in one of bashible steps
+		"nodeIP": "$MY_IP",
 	}
 
 	if nodeIP != "" {
 		result["nodeIP"] = nodeIP
 	}
+
 	return result
 }
 
@@ -219,23 +278,30 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) map[
 	}
 
 	if nodeIP != "" {
-		clusterBootstrap["nodeIP"] = nodeIP
+		clusterBootstrap["cloud"] = map[string]interface{}{"nodeIP": nodeIP}
+	}
+
+	nodeGroup := map[string]interface{}{
+		"name":     "master",
+		"nodeType": "Hybrid",
+		"cloudInstances": map[string]interface{}{
+			"classReference": map[string]string{
+				"name": "master",
+			},
+		},
+	}
+
+	if m.ClusterType == StaticClusterType {
+		nodeGroup["nodeType"] = "Static"
+		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
 	return map[string]interface{}{
 		"runType":           "ClusterBootstrap",
 		"bundle":            bundle,
 		"kubernetesVersion": data["kubernetesVersion"],
-		"nodeGroup": map[string]interface{}{
-			"name":     "master",
-			"nodeType": m.ClusterType,
-			"cloudInstances": map[string]interface{}{
-				"classReference": map[string]string{
-					"name": "master",
-				},
-			},
-		},
-		"clusterBootstrap": clusterBootstrap,
+		"nodeGroup":         nodeGroup,
+		"clusterBootstrap":  clusterBootstrap,
 	}
 }
 

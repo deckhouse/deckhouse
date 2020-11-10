@@ -128,6 +128,10 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 
 func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *config.Resources) error {
 	endChannel := time.After(15 * time.Minute)
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		err := CreateResources(kubeCl, resources)
 		if err != nil {
@@ -141,7 +145,7 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *config.Reso
 		select {
 		case <-endChannel:
 			return fmt.Errorf("creating resources failed after 15m waiting")
-		case <-time.After(10 * time.Second):
+		case <-ticker.C:
 		}
 	}
 }

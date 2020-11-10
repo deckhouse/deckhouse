@@ -83,7 +83,7 @@ func PrintDeckhouseLogs(ctx context.Context, kubeCl *client.KubernetesClient) (b
 				return true, nil
 			}
 
-			<-time.After(time.Second)
+			time.Sleep(time.Second)
 			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &currentTime}
 		}

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    kubernetes:
+    - name: static_cluster_configuration
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Secret
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      nameSelector:
+        matchNames: [d8-static-cluster-configuration]
+      jqFilter: |
+        .data."static-cluster-configuration.yaml" | @base64d
+EOF
+}
+
+function __main__() {
+  if ! context::has snapshots.static_cluster_configuration.0; then
+    return 0
+  fi
+
+  static_config=$(context::get snapshots.static_cluster_configuration.0.filterResult \
+    | deckhouse-controller helper cluster-configuration | jq -re '.providerClusterConfiguration')
+  values::set nodeManager.internal.static.internalNetworkCIDRs "$(jq -rc .internalNetworkCIDRs <<< "$static_config")"
+}
+
+hook::run "$@"

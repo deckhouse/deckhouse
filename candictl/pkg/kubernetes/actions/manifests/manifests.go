@@ -327,6 +327,15 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 	return generateSecret("d8-provider-cluster-configuration", "kube-system", data, nil)
 }
 
+func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
+	data := make(map[string][]byte)
+	if configData != nil {
+		data["static-cluster-configuration.yaml"] = configData
+	}
+
+	return generateSecret("d8-static-cluster-configuration", "kube-system", data, nil)
+}
+
 func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {

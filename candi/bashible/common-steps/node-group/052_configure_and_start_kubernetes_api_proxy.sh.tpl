@@ -34,14 +34,9 @@ bb-event-on 'bb-sync-file-changed' '_on_kubernetes_api_proxy_service_changed'
 _on_kubernetes_api_proxy_service_changed() {
   if [ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
     mkdir -p /etc/kubernetes/kubernetes-api-proxy
-
 {{- if eq .runType "ClusterBootstrap" }}
-  {{- if .clusterBootstrap.nodeIP }}
-    /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.nodeIP }}:6443
-  {{- else }}
     discovered_node_ip=$(cat /var/lib/bashible/discovered-node-ip)
     /var/lib/bashible/kubernetes-api-proxy-configurator.sh "${discovered_node_ip:-127.0.0.1}":6443
-  {{- end }}
 {{- else }}
     /var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .normal.apiserverEndpoints | join " " }}
 {{- end }}

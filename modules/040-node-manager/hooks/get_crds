@@ -175,6 +175,13 @@ function __main__() {
     ng="$(context::get snapshots.ngs.$i.filterResult.spec)"
     ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
 
+    if jq -e '.nodeType == "Static"' <<< "$ng" > /dev/null; then
+      if values::has nodeManager.internal.static.internalNetworkCIDRs ; then
+        cidrs=$(values::get nodeManager.internal.static)
+        ng=$(jq -r --argjson cidrs "$cidrs" '.static = $cidrs' <<< "$ng")
+      fi
+    fi
+
     # If nodeType is "Cloud" and cloud provider exists
     if (jq -e '.nodeType == "Cloud"' <<< "$ng" > /dev/null) && [ -n "$instance_class_kind" ]; then
       instance_classes="$(context::jq -r '

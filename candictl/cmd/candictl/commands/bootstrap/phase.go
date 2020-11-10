@@ -40,15 +40,21 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 		}
 
 		installConfig := deckhouse.Config{
-			Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
-			DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
-			DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-			ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
-			Bundle:                metaConfig.DeckhouseConfig.Bundle,
-			LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
-			ClusterConfig:         clusterConfig,
-			ProviderClusterConfig: providerClusterConfig,
-			DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
+			Registry:        metaConfig.DeckhouseConfig.ImagesRepo,
+			DockerCfg:       metaConfig.DeckhouseConfig.RegistryDockerCfg,
+			DevBranch:       metaConfig.DeckhouseConfig.DevBranch,
+			ReleaseChannel:  metaConfig.DeckhouseConfig.ReleaseChannel,
+			Bundle:          metaConfig.DeckhouseConfig.Bundle,
+			LogLevel:        metaConfig.DeckhouseConfig.LogLevel,
+			ClusterConfig:   clusterConfig,
+			DeckhouseConfig: metaConfig.MergeDeckhouseConfig(),
+		}
+
+		switch metaConfig.ClusterType {
+		case "Static":
+			installConfig.StaticClusterConfig = providerClusterConfig
+		case "Cloud":
+			installConfig.ProviderClusterConfig = providerClusterConfig
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()
@@ -92,6 +98,10 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
 		if err != nil {
 			return err
+		}
+
+		if err := metaConfig.Sufficient(); err != nil {
+			return fmt.Errorf("parsing config: %v", err)
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()
