@@ -208,6 +208,7 @@ git:
   - modules/*/template_tests
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml
+  - global-hooks/**/*.go
 import:
 - artifact: deckhouse-controller
   add: /deckhouse-controller/deckhouse-controller
