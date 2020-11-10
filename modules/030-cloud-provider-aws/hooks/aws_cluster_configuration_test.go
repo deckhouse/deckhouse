@@ -3,7 +3,6 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
-	"testing"
 
 	"github.com/onsi/gomega/gbytes"
 
@@ -12,11 +11,6 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 var _ = Describe("Modules :: cloud-provider-aws :: hooks :: aws_cluster_configuration ::", func() {
 	const (

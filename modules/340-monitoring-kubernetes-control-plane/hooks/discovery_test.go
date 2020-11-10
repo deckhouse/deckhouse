@@ -1,8 +1,6 @@
 package hooks
 
 import (
-	"testing"
-
 	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
@@ -10,11 +8,6 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 const (
 	etcdByManifest = `
