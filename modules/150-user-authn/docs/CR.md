@@ -149,4 +149,5 @@ title: "Модуль user-authn: Custom Resources"
   * **Важно!** При использовании совместно с модулем [user-authz](/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
 * `password` — хэшированный пароль пользователя
   * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`
+  * Или с помощью [онлайн-сервиса](https://bcrypt-generator.com/)
 * `groups` — массив групп, в которых у пользователя есть членство
