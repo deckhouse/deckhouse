@@ -37,6 +37,14 @@ global:
           - "test-2/master"
 
 nodeManager:
+  allowedBundles:
+    __ConstantChoices__:
+    - __EmptyItem__
+    - ["ubuntu-lts"]
+  allowKubernetesVersions:
+    __ConstantChoices__:
+    - __EmptyItem__
+    - ["1.16"]
   internal:
     instancePrefix:
       __ConstantChoices__:

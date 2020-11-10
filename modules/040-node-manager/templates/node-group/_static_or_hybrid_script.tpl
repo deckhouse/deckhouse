@@ -47,6 +47,7 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- $_ := set $bashible_bootstrap_script_tpl_context "nodeGroup" $ng }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Template" $context.Template }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Files" $context.Files }}
+  {{- $_ := set $bashible_bootstrap_script_tpl_context "allowedBundles" $context.Values.nodeManager.allowedBundles }}
 cat > /var/lib/bashible/bootstrap.sh <<"END"
 {{ if $adopt }}
   {{- include "node_group_bashible_bootstrap_script_noninteractive" $bashible_bootstrap_script_tpl_context }}

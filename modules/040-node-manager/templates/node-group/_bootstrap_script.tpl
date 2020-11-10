@@ -110,7 +110,7 @@ function detect_bundle() {
 {{ tpl ($context.Files.Get "candi/bashible/detect_bundle.sh") $context | indent 2 }}
 }
 
-  {{- range $bundle := list "ubuntu-lts" "centos-7" }}
+  {{- range $bundle := $context.allowedBundles }}
 function basic_bootstrap_{{ $bundle }} {
 {{ tpl ($context.Files.Get (printf "candi/bashible/bundles/%s/bootstrap.sh.tpl" $bundle)) $context | indent 2 }}
 }
