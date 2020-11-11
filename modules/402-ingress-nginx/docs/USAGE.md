@@ -12,14 +12,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "0.33"
   hsts: true
-  config:
-    gzip-level: "4"
-    worker-processes: "8"
-  additionalHeaders:
-    X-Different-Name: "true"
-    Host: "$proxy_host"
   acceptRequestsFrom:
   - 1.2.3.4/24
   resourcesRequests:

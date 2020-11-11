@@ -61,7 +61,7 @@ ingressNginx:
                     cpu: {}
                     memory: {}
               ingressClass: nginx
-              controllerVersion: "0.25"
+              controllerVersion: "0.26"
               inlet: LoadBalancer
               loadBalancer: {}
               loadBalancerWithProxyProtocol: {}
