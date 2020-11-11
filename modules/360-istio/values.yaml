@@ -1,7 +1,0 @@
-istio:
-  tlsMode: "Off"
-  disableMixerTelemetry: false
-  enableAuthorizationGlobally: false
-  sidecarInjectorPolicy: enabled
-  sidecar:
-    zipkinAddress: false
