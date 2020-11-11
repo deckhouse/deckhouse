@@ -22,13 +22,9 @@ cp -f /etc/kube-flannel/cni-conf.json /etc/cni/net.d/10-flannel.conflist
 
 # remove after 20.18 release
 IPTABLES_SAVE="$(iptables-save -t nat | grep -vE "comment|docker0" | grep '^\-A POSTROUTING')"
-if [ "$(grep "\-A POSTROUTING ! -s .*/16 -d .*/16 -j MASQUERADE" <<< "$IPTABLES_SAVE" | wc -l)" -gt 1 ]; then
-  DELETE_RULE="$(grep "\-A POSTROUTING ! -s .*/16 -d .*/16 -j MASQUERADE" <<< "$IPTABLES_SAVE" | head -n1 | sed 's/-A/-D/')"
-  iptables -t nat $DELETE_RULE
-fi
-if [ "$(grep "\-A POSTROUTING -s .*/16 ! -d .*/4 -j MASQUERADE" <<< "$IPTABLES_SAVE" | wc -l)" -gt 1 ]; then
-  DELETE_RULE="$(grep "\-A POSTROUTING -s .*/16 ! -d .*/4 -j MASQUERADE" <<< "$IPTABLES_SAVE" | head -n1 | sed 's/-A/-D/')"
-  iptables -t nat $DELETE_RULE
-fi
+echo -e "---\n${IPTABLES_SAVE}\n---"
+echo "$IPTABLES_SAVE" | grep "^-A POSTROUTING ! -s .*/16 -d .*/16 -j MASQUERADE$" | awk '{print "iptables -t nat "$0}' | sed 's/-A/-D/' | bash
+echo "$IPTABLES_SAVE" | grep "^-A POSTROUTING -s .*/16 ! -d .*/4 -j MASQUERADE$" | awk '{print "iptables -t nat "$0}' | sed 's/-A/-D/' | bash
+echo -e "---\n$(iptables-save -t nat | grep -vE "comment|docker0" | grep '^\-A POSTROUTING')\n---"
 
 exec /opt/bin/flanneld $@ $ifaces

@@ -87,6 +87,8 @@ function __main__() {
     kubernetes::delete_if_exists::non_blocking "" "ClusterRole/flannel"
     kubernetes::delete_if_exists::non_blocking "" "PodSecurityPolicy/psp.flannel.unprivileged"
 
+    kubectl -n kube-system delete pods -l app=flannel
+
     fltr='. | .data.cniFlannelEnabled = "true"'
     kubernetes::patch_jq d8-system configmap/deckhouse "$fltr"
   fi
