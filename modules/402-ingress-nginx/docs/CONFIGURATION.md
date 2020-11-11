@@ -10,7 +10,7 @@ ingressNginxEnabled: "false"
 ## Параметры
 
 * `defaultControllerVersion` — версия контроллера ingress-nginx, которая будет использоваться для всех контроллеров по умолчанию, если небыл задан параметр `controllerVersion` в IngressNginxController CR.
-    * По умолчанию `0.25`,
+    * По умолчанию `0.33`,
     * Доступные варианты: `0.25`, `0.26`, `0.33`.
 
 

@@ -166,7 +166,6 @@ metadata:
 spec:
   inlet: HostPort
   ingressClass: nginx
-  controllerVersion: '0.26'
   hostPort:
     httpPort: 80
     httpsPort: 443
