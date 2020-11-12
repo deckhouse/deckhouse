@@ -81,10 +81,16 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, no node selector or toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.ingressnginxcontrollers.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.ingressnginxcontrollers.0.filterResult").String()).To(MatchJSON(`
+ {
+  "kind": "IngressNginxController",
+  "name": "main-0",
+  "usedNodeSelectorsAndTolerations": []
+}
+`))
 		})
 	})
 
@@ -94,10 +100,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.ingressnginxcontrollers.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"IngressNginxController","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.ingressnginxcontrollers.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "IngressNginxController",
+  "name": "main",
+  "usedNodeSelectorsAndTolerations": [
+	"frontend"
+  ]
+}
+`))
 		})
 	})
 
@@ -107,10 +121,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.ingressnginxcontrollers.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"IngressNginxController","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.ingressnginxcontrollers.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "IngressNginxController",
+  "name": "main",
+  "usedNodeSelectorsAndTolerations": [
+	"frontend"
+  ]
+}
+`))
 		})
 	})
 

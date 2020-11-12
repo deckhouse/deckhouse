@@ -37,12 +37,12 @@ metadata:
 apiVersion: v1
 kind: Node
 metadata:
-  name: stateful
+  name: database
 spec:
   taints:
   - effect: NoExecute
     key: dedicated.deckhouse.io
-    value: stateful
+    value: database
 `
 	)
 	f := HookExecutionConfigInit(
@@ -67,10 +67,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, labels and taints should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Array()).Should(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult").String()).To(MatchJSON(`
+{
+  "name": "system",
+  "usedLabelsAndTaints": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -80,10 +88,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, labels should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult.labels").String()).To(MatchJSON(`{"name":"stateful"}`))
+			Expect(f.BindingContexts.Array()).Should(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult").String()).To(MatchJSON(`
+{
+  "name": "stateful",
+  "usedLabelsAndTaints": [
+	"stateful"
+  ]
+}
+`))
 		})
 	})
 
@@ -93,10 +109,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, taints should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult.labels").String()).To(MatchJSON(`{"name":"stateful"}`))
+			Expect(f.BindingContexts.Array()).Should(HaveLen(1))
+			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult").String()).To(MatchJSON(`
+{
+  "name": "database",
+  "usedLabelsAndTaints": [
+	"database"
+  ]
+}
+`))
 		})
 	})
 

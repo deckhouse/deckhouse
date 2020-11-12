@@ -3,8 +3,6 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
-
   cat << EOF
     configVersion: v1
     kubernetes:
@@ -15,37 +13,37 @@ function __config__() {
       kind: Node
       keepFullObjectsInMemory: false
       jqFilter: |
-        if
-        (
-          [
-            .metadata.labels // {} | keys[] |
-            select(. | startswith("node-role.deckhouse.io")) | split("/")[1] |
-            select(. // empty | test("^(${modules})$") | not)
-          ] +
-          [
-            .spec.taints // [] | .[] |
-            select(.key=="dedicated.deckhouse.io" and (.value // empty | test("^(${modules})$") | not))
-          ]
-          | length > 0
-        )
-        then
         {
-          "name": "reserved_domain_nodes",
-          "group": "/modules/$(module::name::kebab_case)/reserved_domain_alert#reserved_domain_nodes",
-          "set": 1,
-          "labels":
-          {
-            "name": .metadata.name
-          }
+          "name": .metadata.name,
+          "usedLabelsAndTaints":
+            (
+              [.metadata.labels // {} | to_entries[] | select((.key | startswith("node-role.deckhouse.io/")) and .value == "") | .key | split("/")[1] | select(. // empty)] +
+              [.spec.taints // [] | .[] | select(.key=="dedicated.deckhouse.io" and (.value // empty)) | .value]
+            ) | unique
         }
-        else null end
 EOF
 }
 
 function __main__() {
-  context::jq -c '.. | .filterResult? | select(.)' >> $METRICS_PATH
-  # Used to hack metrics deletion
+  reserved="$(values::get global.enabledModules | jq -r '. + ["monitoring", "system", "frontend"] | join("|")')"
   group="/modules/$(module::name::kebab_case)/reserved_domain_alert#reserved_domain_nodes"
+
+  context::jq -c --arg reserved "$reserved" --arg group "$group" '
+    .. | .filterResult? | select(.) |
+    if ([.usedLabelsAndTaints[] | select(.| test("^(\($reserved))$") | not)] | length > 0) then
+      {
+        "name": "reserved_domain_nodes",
+        "group": "\($group)",
+        "set": 1,
+        "labels":
+        {
+          "name": .name
+        }
+      }
+    else empty end
+    ' >> $METRICS_PATH
+
+  # Used to hack metrics deletion
   jq -c --arg group "$group" '.group = $group' <<< '{"name": "reserved_domain_nodes", "set": 0, "labels": {"name": "none"}}' >> $METRICS_PATH
 }
 

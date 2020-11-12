@@ -5,8 +5,6 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
-
   cat << EOF
     configVersion: v1
     kubernetes:
@@ -17,36 +15,37 @@ function __config__() {
       kind: NodeGroup
       keepFullObjectsInMemory: false
       jqFilter: |
-        if
-        (
-          [
-            .spec.nodeTemplate.labels // {} | to_entries[] |
-            select((.key | test("^node-role\\\.flant\\\.com/(${modules})$")) and .value == "")
-          ] +
-          [
-            .spec.nodeTemplate.taints // [] | .[] |
-            select(.key=="dedicated.flant.com" and (.value // "" | test("^(${modules}|)$")))
-          ]
-          | length > 0
-        )
-        then
         {
-          "name": "migrate_domain_nodegroups",
-          "group": "/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_nodegroups",
-          "set": 1,
-          "labels":
-          {
-            "name": .metadata.name
-          }
+          "name": .metadata.name,
+          "usedLabelsAndTaints":
+            (
+              [.spec.nodeTemplate.labels // {} | to_entries[] | select((.key | startswith("node-role.flant.com/")) and .value == "") | .key | split("/")[1] | select(. // empty)] +
+              [.spec.nodeTemplate.taints // [] | .[] | select(.key=="dedicated.flant.com" and (.value // empty)) | .value]
+            ) | unique
         }
-        else null end
 EOF
 }
 
 function __main__() {
-  context::jq -c '.. | .filterResult? | select(.)' >> $METRICS_PATH
-  # Used to hack metrics deletion
+  reserved="$(values::get global.enabledModules | jq -r '. + ["monitoring", "system", "frontend"] | join("|")')"
   group="/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_nodegroups"
+
+  context::jq -c --arg reserved "$reserved" --arg group "$group" '
+    .. | .filterResult? | select(.) |
+    if ([.usedLabelsAndTaints[] | select(.| test("^(\($reserved))$"))] | length > 0) then
+      {
+        "name": "migrate_domain_nodegroups",
+        "group": "\($group)",
+        "set": 1,
+        "labels":
+        {
+          "name": .name
+        }
+      }
+    else empty end
+    ' >> $METRICS_PATH
+
+  # Used to hack metrics deletion
   jq -c --arg group "$group" '.group = $group' <<< '{"name": "migrate_domain_nodegroups", "set": 0, "labels": {"name": "none"}}' >> $METRICS_PATH
 }
 

@@ -15,19 +15,18 @@ EOF
 }
 
 function __main__() {
-  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
-
+  reserved="$(values::get global.enabledModules | jq -r '. + ["monitoring", "system", "frontend"] + ["_wildcard_"] | join("|")')"
   configmap=$(kubectl -n d8-system get cm deckhouse -o json | jq -rc '.data | to_entries | .[].value | select(. | test(":"))' | yq r - --tojson)
 
-  old_domain_found="$(jq --arg modules "$modules" '(
+  old_domain_found="$(jq --arg reserved "$reserved" '(
           [
             (.. | select(type=="object" and has("nodeSelector")) | .nodeSelector) // {} | keys[] |
             select(. | startswith("node-role.flant.com")) | split("/")[1] |
-            select(. // empty | test("^(\($modules))$"))
+            select(. // empty | test("^(\($reserved))$"))
           ] +
           [
             (.. | select(type=="object" and has("tolerations")) | .tolerations) // [] | .[] |
-            select(.key=="dedicated.flant.com" and (.value // empty | test("^(\($modules))$")))
+            select(.key=="dedicated.flant.com" and (.value // "_wildcard_" | test("^(\($reserved))$")))
           ]
           | length > 0
         )' <<< "$configmap")"

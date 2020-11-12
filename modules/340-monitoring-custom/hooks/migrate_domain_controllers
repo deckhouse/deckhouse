@@ -5,8 +5,6 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
-
   cat << EOF
     configVersion: v1
     kubernetes:
@@ -22,35 +20,17 @@ function __config__() {
           operator: NotIn
           values: ["deckhouse"]
       jqFilter: &filter |
-        if
-        (
-          [
-            .spec.template.spec.nodeSelector // {} | to_entries[] |
-            select((.key | test("^node-role\\\.flant\\\.com/(${modules})$")) and .value == "")
-          ] +
-          [
-            (.spec.template.spec.affinity.nodeAffinity | .. | .matchExpressions? // []) | .[] |
-            select(.key | test("^node-role\\\.flant\\\.com/(${modules})$"))
-          ] +
-          [
-            (.spec.template.spec.tolerations // []) | .[] |
-            select(.key=="dedicated.flant.com" and (.value // "" | test("^(${modules}|)$")))
-          ]
-          | length > 0
-        )
-        then
         {
-          "name": "migrate_domain_controllers",
-          "group": "/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_controllers",
-          "set": 1,
-          "labels":
-          {
-            "name": .metadata.name,
-            "controller": .kind,
-            "namespace": .metadata.namespace
-          }
+          "name": .metadata.name,
+          "kind": .kind,
+          "namespace": .metadata.namespace,
+          "usedNodeSelectorsAndTolerations":
+            (
+              [.spec.template.spec.nodeSelector // {} | to_entries[] | select((.key | startswith("node-role.flant.com/")) and .value == "") | .key | split("/")[1] | select(. // empty)] +
+              [(.spec.template.spec.affinity.nodeAffinity | .. | .matchExpressions? // []) | .[] | select(.key | startswith("node-role.flant.com/")) | .key | split("/")[1] | select(. // empty)] +
+              [.spec.template.spec.tolerations // [] | .[] | select(.key=="dedicated.flant.com") | .value // "_wildcard_"]
+            ) | unique
         }
-        else null end
     - name: daemonsets
       group: main
       queue: /modules/$(module::name::kebab_case)
@@ -79,9 +59,27 @@ EOF
 }
 
 function __main__() {
-  context::jq -c '.. | .filterResult? | select(.)' >> $METRICS_PATH
-  # Used to hack metrics deletion
+  reserved="$(values::get global.enabledModules | jq -r '. + ["monitoring", "system", "frontend"] + ["_wildcard_"] | join("|")')"
   group="/modules/$(module::name::kebab_case)/migrate_domain_alert#migrate_domain_controllers"
+
+  context::jq -c --arg reserved "$reserved" --arg group "$group" '
+    .. | .filterResult? | select(.) |
+    if ([.usedNodeSelectorsAndTolerations[] | select(.| test("^(\($reserved))$"))] | length > 0) then
+      {
+        "name": "migrate_domain_controllers",
+        "group": "\($group)",
+        "set": 1,
+        "labels":
+        {
+          "name": .name,
+          "controller": .kind,
+          "namespace": .namespace
+        }
+      }
+    else empty end
+    ' >> $METRICS_PATH
+
+  # Used to hack metrics deletion
   jq -c --arg group "$group" '.group = $group' <<< '{"name": "migrate_domain_controllers", "set": 0, "labels": {"name": "none", "controller": "none", "namespace": "none"}}' >> $METRICS_PATH
 }
 

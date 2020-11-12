@@ -232,6 +232,19 @@ spec:
       nodeSelector:
         node-role.flant.com/system: ""
 `
+		stateDeploymentWhichToleratesAll = `
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: all-toleration-application
+  namespace: default
+spec:
+  template:
+    spec:
+      tolerations:
+      - key: dedicated.flant.com
+`
 	)
 	f := HookExecutionConfigInit(
 		`{"monitoringKubernetes":{"internal":{}},"global":{"enabledModules":[]}}`,
@@ -257,10 +270,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"production"
+  ]
+}
+`))
 		})
 	})
 
@@ -270,10 +292,17 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": []
+}
+`))
 		})
 	})
 
@@ -283,10 +312,17 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": []
+}
+`))
 		})
 	})
 
@@ -296,10 +332,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-label-application","controller":"StatefulSet","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "old-label-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -309,10 +354,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-toleration-application","controller":"StatefulSet","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "old-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -322,11 +376,29 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector and toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-label-application","controller":"StatefulSet","namespace":"default"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.1.filterResult.labels").String()).To(MatchJSON(`{"name":"old-toleration-application","controller":"StatefulSet","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "old-label-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.statefulsets.1.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "StatefulSet",
+  "name": "old-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -338,10 +410,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "DaemonSet",
+  "name": "application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"production"
+  ]
+}
+`))
 		})
 	})
 
@@ -351,10 +432,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-label-application","controller":"DaemonSet","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "DaemonSet",
+  "name": "old-label-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -364,10 +454,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-toleration-application","controller":"DaemonSet","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "DaemonSet",
+  "name": "old-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -377,11 +476,29 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector and toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-label-application","controller":"DaemonSet","namespace":"default"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.1.filterResult.labels").String()).To(MatchJSON(`{"name":"old-toleration-application","controller":"DaemonSet","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "DaemonSet",
+  "name": "old-label-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.daemonsets.1.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "DaemonSet",
+  "name": "old-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -393,10 +510,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"production"
+  ]
+}
+`))
 		})
 	})
 
@@ -406,10 +532,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, label should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-label-application","controller":"Deployment","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "old-label-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -419,10 +554,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-toleration-application","controller":"Deployment","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "old-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -432,11 +576,29 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, labels and tolerations should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-label-application","controller":"Deployment","namespace":"default"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.1.filterResult.labels").String()).To(MatchJSON(`{"name":"old-toleration-application","controller":"Deployment","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "old-label-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.1.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "old-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -448,10 +610,19 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "proper-selector-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"production"
+  ]
+}
+`))
 		})
 	})
 
@@ -461,10 +632,41 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult.labels").String()).To(MatchJSON(`{"name":"old-selector-application","controller":"Deployment","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "old-selector-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+    "system"
+  ]
+}
+`))
+		})
+	})
+
+	Context("Cluster with Deployment which tolerates all", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeploymentWhichToleratesAll))
+			f.RunHook()
+		})
+
+		It("Hook must not fail, all toleration should be selected", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.BindingContexts.Get("0.snapshots.deployments.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Deployment",
+  "name": "all-toleration-application",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+    "_wildcard_"
+  ]
+}
+`))
 		})
 	})
 

@@ -100,7 +100,7 @@ Status:
 
 Для того, чтобы форсированно перекатить все Machines, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `kubectl annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
 
-## Как выделить узлы под специфические нагрузки
+## Как выделить узлы под специфические нагрузки?
 
 > ⛔ Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов **Deckhouse**. Отдайте предпочтение в пользу ключей `dedicated` или `dedicated.client.com`. 
 
@@ -112,3 +112,30 @@ Status:
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
 
+## Как выделить узлы под системные компоненты?
+
+### Фронтенд 
+Для **Ingress**-контроллеров используйте `NodeGroup` со следующей конфигурацией:
+
+```yaml
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/frontend: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
+```
+
+### Системные
+`NodeGroup` для компонентов подсистем Deckhouse, будут с такими параметрами:
+
+```yaml
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+```

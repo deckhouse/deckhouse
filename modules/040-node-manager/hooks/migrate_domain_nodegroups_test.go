@@ -120,10 +120,15 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, no labels or taints should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.0.filterResult").String()).To(MatchJSON(`
+{
+  "name": "frontend",
+  "usedLabelsAndTaints": []
+}
+`))
 		})
 	})
 
@@ -133,11 +138,25 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, labels should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.0.filterResult.labels").String()).To(MatchJSON(`{"name":"frontend"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.1.filterResult.labels").String()).To(MatchJSON(`{"name":"system"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.0.filterResult").String()).To(MatchJSON(`
+{
+  "name": "frontend",
+  "usedLabelsAndTaints": [
+	"frontend"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.1.filterResult").String()).To(MatchJSON(`
+{
+  "name": "system",
+  "usedLabelsAndTaints": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -147,11 +166,25 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, taints should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.0.filterResult.labels").String()).To(MatchJSON(`{"name":"frontend"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.1.filterResult.labels").String()).To(MatchJSON(`{"name":"system"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.0.filterResult").String()).To(MatchJSON(`
+{
+  "name": "frontend",
+  "usedLabelsAndTaints": [
+	"frontend"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.nodegroups.1.filterResult").String()).To(MatchJSON(`
+{
+  "name": "system",
+  "usedLabelsAndTaints": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 

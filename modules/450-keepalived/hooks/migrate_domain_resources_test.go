@@ -67,10 +67,16 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, no node selector and toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.keepalivedinstances.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.keepalivedinstances.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "KeepalivedInstance",
+  "name": "main",
+  "usedNodeSelectorsAndTolerations": []
+}
+`))
 		})
 	})
 
@@ -80,10 +86,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selector should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.keepalivedinstances.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"KeepalivedInstance","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.keepalivedinstances.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "KeepalivedInstance",
+  "name": "main",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -93,10 +107,18 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.keepalivedinstances.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"KeepalivedInstance","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.keepalivedinstances.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "KeepalivedInstance",
+  "name": "main",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 

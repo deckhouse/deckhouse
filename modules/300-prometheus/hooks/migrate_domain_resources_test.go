@@ -139,11 +139,25 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, no metrics should be selected", func() {
+		It("Hook must not fail, no node selector or toleration should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.alertmanagers.0.filterResult.labels").Exists()).To(BeFalse())
-			Expect(f.BindingContexts.Get("0.snapshots.prometheuses.0.filterResult.labels").Exists()).To(BeFalse())
+			Expect(f.BindingContexts.Get("0.snapshots.alertmanagers.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Alertmanager",
+  "name": "main",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": []
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.prometheuses.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Prometheus",
+  "name": "main-0",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": []
+}
+`))
 		})
 	})
 
@@ -153,11 +167,29 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, node selectors should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.alertmanagers.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"Alertmanager","namespace":"default"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.prometheuses.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"Prometheus","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.alertmanagers.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Alertmanager",
+  "name": "main",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.prometheuses.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Prometheus",
+  "name": "main",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 
@@ -167,11 +199,29 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, metrics must render", func() {
+		It("Hook must not fail, tolerations should be selected", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.alertmanagers.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"Alertmanager","namespace":"default"}`))
-			Expect(f.BindingContexts.Get("0.snapshots.prometheuses.0.filterResult.labels").String()).To(MatchJSON(`{"name":"main","kind":"Prometheus","namespace":"default"}`))
+			Expect(f.BindingContexts.Get("0.snapshots.alertmanagers.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Alertmanager",
+  "name": "main",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
+			Expect(f.BindingContexts.Get("0.snapshots.prometheuses.0.filterResult").String()).To(MatchJSON(`
+{
+  "kind": "Prometheus",
+  "name": "main",
+  "namespace": "default",
+  "usedNodeSelectorsAndTolerations": [
+	"system"
+  ]
+}
+`))
 		})
 	})
 

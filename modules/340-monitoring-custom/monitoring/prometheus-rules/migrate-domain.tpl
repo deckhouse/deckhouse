@@ -46,8 +46,8 @@
       summary: "{{`{{ $labels.controller }}`}} {{`{{ $labels.name }}`}} needs migration"
       description: |-
         {{`{{ $labels.controller }}`}} {{`{{ $labels.name }}`}} in Namespace {{`{{ $labels.namespace }}`}} uses:
-        - old `nodeSelector` *node-role.flant.com/`(system|frontend|monitoring|deckhouse-module-name)`*
-        - or old `tolerations` *dedicated.flant.com*  with values `(system|frontend|monitoring|deckhouse-module-name)`
+        - old `nodeSelector` *node-role.flant.com/`(system|frontend|monitoring|_deckhouse_module_name_)`*
+        - or old `tolerations` *dedicated.flant.com*  with values `(system|frontend|monitoring|_deckhouse_module_name_|_wildcard_)`
 
         Domain `flant.com` in this keys is going to be changed to `deckhouse.io`.
 
@@ -69,8 +69,8 @@
       summary: "{{`{{ $labels.kind }}`}} {{`{{ $labels.name }}`}} needs migration"
       description: |-
         {{`{{ $labels.kind }}`}} {{`{{ $labels.name }}`}} in Namespace {{`{{ $labels.namespace }}`}} (`none` means global resource) uses:
-        - old `nodeSelector` *node-role.flant.com/`(system|frontend|monitoring|deckhouse-module-name)`*
-        - or old `tolerations` *dedicated.flant.com*  with values `(system|frontend|monitoring|deckhouse-module-name)`
+        - old `nodeSelector` *node-role.flant.com/`(system|frontend|monitoring|_deckhouse_module_name_)`*
+        - or old `tolerations` *dedicated.flant.com*  with values `(system|frontend|monitoring|_deckhouse_module_name_|_wildcard_)`
 
         Domain `flant.com` in this keys is going to be changed to `deckhouse.io`.
 
@@ -92,8 +92,8 @@
       summary: "NodeGroup {{`{{ $labels.name }}`}} needs migration"
       description: |-
         NodeGroup {{`{{ $labels.name }}`}} uses:
-        - old `nodeTemplate.labels` *node-role.flant.com/`(system|frontend|monitoring|deckhouse-module-name)`*
-        - or old `nodeTemplate.taints` *dedicated.flant.com*  with values `(system|frontend|monitoring|deckhouse-module-name)`
+        - old `nodeTemplate.labels` *node-role.flant.com/`(system|frontend|monitoring|_deckhouse_module_name_)`*
+        - or old `nodeTemplate.taints` *dedicated.flant.com*  with values `(system|frontend|monitoring|_deckhouse_module_name_)`
 
         Domain `flant.com` in this keys is going to be changed to `deckhouse.io`.
 
@@ -115,8 +115,8 @@
       summary: "ConfigMap {{`{{ $labels.name }}`}} needs migration"
       description: |-
         ConfigMap {{`{{ $labels.name }}`}} in Namespace {{`{{ $labels.namespace }}`}} has module with parameters:
-        - old `nodeSelector` *node-role.flant.com/`(system|frontend|monitoring|deckhouse-module-name)`*
-        - or old `tolerations` *dedicated.flant.com*  with values `(system|frontend|monitoring|deckhouse-module-name)`
+        - old `nodeSelector` *node-role.flant.com/`(system|frontend|monitoring|_deckhouse_module_name_)`*
+        - or old `tolerations` *dedicated.flant.com*  with values `(system|frontend|monitoring|_deckhouse_module_name_|_wildcard_)`
 
         Domain `flant.com` in this keys is going to be changed to `deckhouse.io`.
 
