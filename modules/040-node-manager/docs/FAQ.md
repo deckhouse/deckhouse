@@ -40,6 +40,41 @@ kubectl annotate node <node_name> node.deckhouse.io/configuration-checksum- upda
 kubectl label node <node_name> node.deckhouse.io/group-
 ```
 
+## Как зачистить ноду для последующего ввода в кластер?
+
+1. Установим kubeadm нужной версии и выполним reset.
+
+    ```shell
+    apt install kubeadm=1.16* -y
+    kubeadm reset
+    ```
+
+2. Остановим все сервисы и удалим все директории.
+
+    ```shell
+    systemctl disable --now kubernetes-api-proxy
+    systemctl disable --now bashible.timer
+    systemctl disable --now bashible
+    systemctl disable --now kubelet
+    systemctl disable --now kubelet-face-slapper.timer
+    systemctl disable --now kubelet-face-slapper.service
+    rm -rf /var/lib/bashible/ /etc/kubernetes/deckhouse/ /etc/kubernetes/kubernetes-api-proxy/ /etc/systemd/system/kubernetes-api-proxy.service
+    systemctl daemon-reload
+    systemctl restart kubernetes-api-proxy
+    ```
+
+3. [Запустим](#как-автоматически-добавить-статичный-узел-в-кластер) `bootstrap.sh`.
+4. Включим все сервисы обратно.
+
+    ```shell
+    systemctl enable --now kubernetes-api-proxy
+    systemctl enable --now bashible.timer
+    systemctl enable --now bashible
+    systemctl enable --now kubelet
+    systemctl enable --now kubelet-face-slapper.timer
+    systemctl enable --now kubelet-face-slapper.service
+    ```
+
 ## Как понять, что что-то пошло не так?
 
 Модуль `node-manager` создает на каждой ноде сервис `bashible`, и его логи можно посмотреть при помощи: `journalctl -fu bashible`.
@@ -102,7 +137,7 @@ Status:
 
 ## Как выделить узлы под специфические нагрузки?
 
-> ⛔ Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов **Deckhouse**. Отдайте предпочтение в пользу ключей `dedicated` или `dedicated.client.com`. 
+> ⛔ Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов **Deckhouse**. Отдайте предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
 
 Для решений данной задачи существуют два механизма:
 - Установка меток в `NodeGroup` `spec.nodeTemplate.labels`, для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает какие именно ноды будут выбраны планировщиком для запуска целевого приложения
@@ -114,7 +149,7 @@ Status:
 
 ## Как выделить узлы под системные компоненты?
 
-### Фронтенд 
+### Фронтенд
 Для **Ingress**-контроллеров используйте `NodeGroup` со следующей конфигурацией:
 
 ```yaml
