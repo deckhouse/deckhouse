@@ -54,7 +54,7 @@ title: "Модуль nginx-ingress"
     * Список строк - именно **YAML list**, а не строка со значениями через запятую!
     * **Важно!** Данный параметр является обязательным, если указан любой из других `customErrors` параметров.
     * **Важно!** Добавление, удаление или изменение параметра приводит к рестарту nginx'ов.
-* `enableIstioSidecar` — добавить к подам контроллера sidecar для контролирования трафика средствами Istio. Будут добавлены две аннотации: `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`, а непосредственно добавление контейнера в под осуществит [sidecar-injector от Istio](/modules/360-istio/usage.html#ingress).
+* `enableIstioSidecar` — добавить к подам контроллера sidecar для контролирования трафика средствами Istio. Будут добавлены две аннотации: `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`, а непосредственно добавление контейнера в под осуществит `sidecar-injector` от Istio.
     * **Важно!** Так как в режиме `Direct` pod'ы работают в host network, то механизм идентификации трафика для заворачивания в Istio, который основан на Service CIDR, несёт потенциальную опасность для других сервисов с ClusterIP. Для подобных inlet'ов поддержка Istio отключена.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).

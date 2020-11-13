@@ -320,18 +320,6 @@ entries:
           url: /modules/350-node-local-dns/usage.html
         - title: Настройки модуля
           url: /modules/350-node-local-dns/configuration.html
-      - title: istio
-        folders:
-        - title: Описание модуля
-          url: /modules/360-istio/
-        - title: Примеры конфигурации
-          url: /modules/360-istio/usage.html
-        - title: Справка
-          folders:
-          - title: Настройки модуля
-            url: /modules/360-istio/configuration.html
-          - title: Custom Resources
-            url: /modules/360-istio/cr.html
       - title: openvpn
         folders:
         - title: Описание модуля
