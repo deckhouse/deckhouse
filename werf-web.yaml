@@ -123,6 +123,7 @@ import:
 
 image: web/saml-authenticator
 from: "registry.flant.com/images/ubuntu:16.04"
+fromCacheVersion: 2020-11-11.1
 docker:
   WORKDIR: /app
 ansible:
