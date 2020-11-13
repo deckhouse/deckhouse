@@ -1,24 +1,24 @@
 #!/bin/bash
 # Overview:
 #   1. All system components require resource requests, managed by vpa.
-#   2. Sum of all resource requests should not exceed manually configured resources limits, or if manually configured limits are not set, allocatable resources on nodes.
+#   2. Sum of all resource requests should not exceed manually configured resources limits.
 #   3. We expect that resources limits to be allocated fairly between vpa requests.
 # We have 3 groups of resources:
 #   1. ControlPlane - resources for pods in control-plane (kube-controller-manager, kube-scheduler, kube-apiserver, etcd).
 #   2. Master - vpa resources, working on master nodes (label "workload-resource-policy.deckhouse.io: master").
-#   3. AnyNode - vpa resources, working on any node (label "workload-resource-policy.deckhouse.io: any-node").
+#   3. EveryNode - vpa resources, working on every node (label "workload-resource-policy.deckhouse.io: every-node").
 # Calculate steps:
-#   1. Get allocatable values from global values.
-#   2. We calculate sum of uncappedTargets requests for all vpa resources in Master group, and proportionally sets MaxAllowed values for this resources,
-#      based on calculated resources for Master group.
-#   3. We calculate sum of uncappedTargets requests for all vpa resources in AnyNode group, and proportionally sets MaxAllowed values for this resources,
-#      based on calculated resources for AnyNode group.
+#   1. We calculate sum of uncappedTargets requests for all vpa resources in Master group, and proportionally sets MaxAllowed values for this resources,
+#      based on allocatable resources from global config for Master group.
+#   2. We calculate sum of uncappedTargets requests for all vpa resources in EveryNode group, and proportionally sets MaxAllowed values for this resources,
+#      based on allocatable resources from global config for EveryNode group.
 
 source /deckhouse/shell_lib.sh
 
 function __config__() {
     cat << "EOF"
     configVersion: v1
+    beforeHelm: 20
     schedule:
     - name: vpacrontab
       group: vpa
@@ -55,17 +55,16 @@ EOF
 }
 
 function __main__() {
-  # get global values for master
-  allocatable_millicpu_master="$(values::get global.allocatableMilliCpuMaster )"
-  allocatable_memory_master="$(values::get global.allocatableMemoryMaster )"
-  # get global values for any node
-  allocatable_millicpu_any_node="$(values::get global.allocatableMilliCpuAnyNode )"
-  allocatable_memory_any_node="$(values::get global.allocatableMemoryAnyNode )"
+
+  allocatable_millicpu_master="$(values::get --required "global.allocatableResources.internal.milliCpuMaster")"
+  allocatable_memory_master="$(values::get --required "global.allocatableResources.internal.memoryMaster")"
+  allocatable_millicpu_every_node="$(values::get --required "global.allocatableResources.internal.milliCpuEveryNode")"
+  allocatable_memory_every_node="$(values::get --required "global.allocatableResources.internal.memoryEveryNode")"
 
   # Parse vpa resources
   # shellcheck disable=SC2016
   jq_result="$(context::jq -r '.snapshots.vpa[] |
-  select(.filterResult and (.filterResult.labels."workload-resource-policy.deckhouse.io" == "any-node" or
+  select(.filterResult and (.filterResult.labels."workload-resource-policy.deckhouse.io" == "every-node" or
   .filterResult.labels."workload-resource-policy.deckhouse.io" == "master")) |
   .filterResult | .namespace as $namespace | .name as $name | .labels."workload-resource-policy.deckhouse.io" as $lbvalue |
   .recommendation.containerRecommendations[]? |
@@ -87,23 +86,23 @@ function __main__() {
    memory_array[$i]="$(tools::dk_convert "${memory_array[$i]}")"
   done
 
-  # Get summary requests for master group and any-node group
+  # Get summary requests for master group and every-node group
   for ((i=0; i<${#container_name_array[@]}; i++)); do
     case ${label_array[$i]} in
       master)
         cpu_expr_master+=${cpu_array[$i]}" "
         memory_expr_master+=${memory_array[$i]}" "
         ;;
-      any-node)
-        cpu_expr_any_node+=${cpu_array[$i]}" "
-        memory_expr_any_node+=${memory_array[$i]}" "
+      every-node)
+        cpu_expr_every_node+=${cpu_array[$i]}" "
+        memory_expr_every_node+=${memory_array[$i]}" "
         ;;
     esac
   done
   summary_millicpu_master="$(jq -sre 'join("+")' <<< "$cpu_expr_master" | bc)"
   summary_memory_master="$(jq -sre 'join("+")' <<< "$memory_expr_master" | bc)"
-  summary_millicpu_any_node="$(jq -sre 'join("+")' <<< "$cpu_expr_any_node" | bc)"
-  summary_memory_any_node="$(jq -sre 'join("+")' <<< "$memory_expr_any_node" | bc)"
+  summary_millicpu_every_node="$(jq -sre 'join("+")' <<< "$cpu_expr_every_node" | bc)"
+  summary_memory_every_node="$(jq -sre 'join("+")' <<< "$memory_expr_every_node" | bc)"
 
   # patch vpa resources
   declare -A jq_patch
@@ -115,9 +114,9 @@ function __main__() {
         vpa_millicpu="$(bc <<< "$allocatable_millicpu_master * ${cpu_array[$i]} / $summary_millicpu_master" )"
         vpa_memory="$(bc <<< "$allocatable_memory_master * ${memory_array[$i]} / $summary_memory_master" )"
         ;;
-      any-node)
-        vpa_millicpu="$(bc <<< "$allocatable_millicpu_any_node * ${cpu_array[$i]} / $summary_millicpu_any_node" )"
-        vpa_memory="$(bc <<< "$allocatable_memory_any_node * ${memory_array[$i]} / $summary_memory_any_node" )"
+      every-node)
+        vpa_millicpu="$(bc <<< "$allocatable_millicpu_every_node * ${cpu_array[$i]} / $summary_millicpu_every_node" )"
+        vpa_memory="$(bc <<< "$allocatable_memory_every_node * ${memory_array[$i]} / $summary_memory_every_node" )"
         ;;
     esac
 

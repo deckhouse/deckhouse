@@ -16,8 +16,6 @@ var exceptions = map[string]func(r *storage.ResourceIndex) bool{
 		}
 		return false
 	},
-	// Not Implemented
-	"upmeter": func(_ *storage.ResourceIndex) bool { return true },
 }
 
 func ControllerMustHasVPA(m types.Module, objectStore storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) errors.LintRuleError {

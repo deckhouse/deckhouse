@@ -1,5 +1,9 @@
 global:
   enabledModules: [ "vertical-pod-autoscaler-crd" ]
+  allocatableResources:
+    internal:
+      milliCpuControlPlane: 1024
+      memoryControlPlane: 536870912
   discovery:
     d8SpecificNodeCountByRole:
       master:
