@@ -2,9 +2,11 @@
 touch /var/lib/bashible/discovered-node-ip
 
 {{- if ne .nodeGroup.nodeType "Static" }}
+
+  {{- if and .clusterBootstrap.cloud .clusterBootstrap.cloud.nodeIP }}
+echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
+
 # For Cloud or Hybrid node we try to discover IP from Node object
- {{- if and (.clusterBootstrap.cloud .clusterBootstrap.cloud.nodeIP) }}
-/var/lib/bashible/kubernetes-api-proxy-configurator.sh {{ .clusterBootstrap.cloud.nodeIP }}:6443
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json 2> /dev/null)" ; then
