@@ -146,7 +146,7 @@ layout: default
           <div class="card-benefits__header">
               <a href="/modules/050-network-policy-engine"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Extended Networking Collection</h3></a>
           <div class="text card-benefits__text">
-            <p>Доступ в кластер через VPN, сетевые политики доступа, ускорение работы с DNS, а также Istio.</p>
+            <p>Доступ в кластер через VPN, сетевые политики доступа, ускорение работы с DNS (скоро еще и Istio).</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
 <!--            <ul class="main-page__usercases-list">-->
 <!--            <li>Настройка доступа в кластер по VPN.</li>-->
