@@ -14,8 +14,8 @@
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "apiserver" dict }}
-{{- $_ := set $tpl_context "allocatableMilliCpuControlPlane" .Values.global.allocatableMilliCpuControlPlane }}
-{{- $_ := set $tpl_context "allocatableMemoryControlPlane" .Values.global.allocatableMemoryControlPlane }}
+{{- $_ := set $tpl_context "allocatableMilliCpuControlPlane" .Values.global.allocatableResources.internal.milliCpuControlPlane }}
+{{- $_ := set $tpl_context "allocatableMemoryControlPlane" .Values.global.allocatableResources.internal.memoryControlPlane }}
 
 {{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
   {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}

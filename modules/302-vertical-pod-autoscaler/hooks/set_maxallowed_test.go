@@ -1,15 +1,3 @@
-/*
-User-stories:
-1. Empty cluster (must fail)
-2. Cluster with two nodes, but without vpa resources (must fail)
-3. Cluster with two nodes, two vpa resources, but without global variables
-   controlPlaneRequestsCpu, controlPlaneRequestsMemory, everyNodesRequestsCpu,
-   everyNodesRequestsMemory is set (must be ok)
-4. Cluster with two nodes, two vpa resources, and with global variables
-   controlPlaneRequestsCpu, controlPlaneRequestsMemory, everyNodesRequestsCpu,
-   everyNodesRequestsMemory is set (must be ok)
-*/
-
 package hooks
 
 import (
@@ -45,7 +33,7 @@ kind: VerticalPodAutoscaler
 metadata:
   labels:
     heritage: deckhouse
-    workload-resource-policy.deckhouse.io: any-node
+    workload-resource-policy.deckhouse.io: every-node
   name: node-exporter
   namespace: d8-monitoring
 spec:
@@ -85,7 +73,7 @@ kind: VerticalPodAutoscaler
 metadata:
   labels:
     heritage: deckhouse
-    workload-resource-policy.deckhouse.io: any-node
+    workload-resource-policy.deckhouse.io: every-node
   name: node-exporter
   namespace: d8-monitoring
 spec:
@@ -122,13 +110,24 @@ status:
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("autoscaling.k8s.io", "v1", "VerticalPodAutoscaler", true)
 
+	Context("Cluster without global.allocatableResources.internal variables", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Hook should fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+
+	})
 	Context("Cluster with two VPAs without container recommendations", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.allocatableMilliCpuMaster", "1024")
-			f.ValuesSet("global.allocatableMemoryMaster", "520093696")
-			f.ValuesSet("global.allocatableMilliCpuAnyNode", "1024")
-			f.ValuesSet("global.allocatableMemoryAnyNode", "520093696")
 			f.BindingContexts.Set(f.KubeStateSet(TwoVpasWithoutRecommendations))
+			f.ValuesSet("global.allocatableResources.internal.milliCpuMaster", "1024")
+			f.ValuesSet("global.allocatableResources.internal.memoryMaster", "520093696")
+			f.ValuesSet("global.allocatableResources.internal.milliCpuEveryNode", "1024")
+			f.ValuesSet("global.allocatableResources.internal.memoryEveryNode", "520093696")
 			f.RunHook()
 		})
 
@@ -138,12 +137,12 @@ status:
 
 	})
 
-	Context("Cluster with two VPAs", func() {
+	Context("Cluster with two VPAs and set of global.allocatableResources.internal variables", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.allocatableMilliCpuMaster", "1024")
-			f.ValuesSet("global.allocatableMemoryMaster", "520093696")
-			f.ValuesSet("global.allocatableMilliCpuAnyNode", "1024")
-			f.ValuesSet("global.allocatableMemoryAnyNode", "520093696")
+			f.ValuesSet("global.allocatableResources.internal.milliCpuMaster", "1024")
+			f.ValuesSet("global.allocatableResources.internal.memoryMaster", "520093696")
+			f.ValuesSet("global.allocatableResources.internal.milliCpuEveryNode", "1024")
+			f.ValuesSet("global.allocatableResources.internal.memoryEveryNode", "520093696")
 			f.BindingContexts.Set(f.KubeStateSet(TwoVpas))
 			f.RunHook()
 		})
@@ -179,13 +178,13 @@ status:
 
 	})
 
-	Context("Cluster with with two VPAs, and another set of config variables", func() {
+	Context("Cluster with two VPAs, and another set of global.allocatableResources.internal variables", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(TwoVpas))
-			f.ValuesSet("global.allocatableMilliCpuMaster", "4096")
-			f.ValuesSet("global.allocatableMemoryMaster", "8589934592")
-			f.ValuesSet("global.allocatableMilliCpuAnyNode", "300")
-			f.ValuesSet("global.allocatableMemoryAnyNode", "134217728")
+			f.ValuesSet("global.allocatableResources.internal.milliCpuMaster", "4096")
+			f.ValuesSet("global.allocatableResources.internal.memoryMaster", "8589934592")
+			f.ValuesSet("global.allocatableResources.internal.milliCpuEveryNode", "300")
+			f.ValuesSet("global.allocatableResources.internal.memoryEveryNode", "134217728")
 			f.RunHook()
 		})
 

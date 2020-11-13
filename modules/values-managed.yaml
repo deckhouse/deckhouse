@@ -1,4 +1,8 @@
 global:
+  allocatableResources:
+    everyNode:
+      cpu: 300m
+      memory: 512Mi
   discovery: {}
   modulesImages: {}
   modules:

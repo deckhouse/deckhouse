@@ -9,7 +9,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: speaker
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "speaker" "workload-resource-policy.deckhouse.io" "any-node")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "speaker" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"

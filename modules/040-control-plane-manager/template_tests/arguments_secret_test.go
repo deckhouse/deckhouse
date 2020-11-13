@@ -10,6 +10,10 @@ import (
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
 
 	const globalValues = `
+  allocatableResources:
+    internal:
+      milliCpuControlPlane: 1024
+      memoryControlPlane: 536870912
   clusterConfiguration:
     kubernetesVersion: 1.16.15
     clusterType: Cloud

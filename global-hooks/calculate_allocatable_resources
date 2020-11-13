@@ -1,0 +1,120 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+    cat << "EOF"
+    configVersion: v1
+    beforeAll: 20
+    kubernetes:
+    - name: nodes_resources
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchExpressions:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+      jqFilter: |
+        {
+          allocatableCPU: .status.allocatable.cpu,
+          allocatableMemory: .status.allocatable.memory
+        }
+EOF
+}
+
+control_plane_percent="50"
+# Set hard upper limit allocatable resources in millicpu and memory bytes
+hard_limit_millicpu=$(( 4 * 1000 ))                       # 4 Cpu
+hard_limit_memory=$(( 8 * 1024 * 1024 * 1024 ))           # 8G ram
+
+# min of val1 and val2
+function min() {
+  local val1="$1"
+  local val2="$2"
+  if [ "$val1" -lt "$val2" ]; then
+    echo "$val1"
+  else
+    echo "$val2"
+  fi
+}
+
+function __main__() {
+
+# Get requests parameters from config for everyNode and set corresponding internal variables
+  config_millicpu_every_node="$(tools::dk_convert --milli "$(values::get --required "global.allocatableResources.everyNode.cpu")" )"
+  if [ "$config_millicpu_every_node" -le 0 ]; then
+    >&2 echo "ERROR: global.allocatableResources.everyNode.cpu must be greater 0"
+    return 1
+  fi
+  config_memory_every_node="$(tools::dk_convert "$(values::get --required "global.allocatableResources.everyNode.memory")" )"
+  if [ "$config_memory_every_node" -le 0 ]; then
+    >&2 echo "ERROR: global.allocatableResources.everyNode.memory must be greater 0"
+    return 1
+  fi
+
+ # Get minimal cpu and memory allocatable on master nodes and convert it to milli for cpu and bytes for memory
+  discovery_millicpu_master="$(tools::dk_convert --milli "$(context::jq -re '
+  .snapshots.nodes_resources |
+  sort_by(.filterResult.allocatableCPU | tonumber) |
+  first |.filterResult.allocatableCPU')" )"
+  discovery_memory_master="$(tools::dk_convert "$(context::jq -re '
+  .snapshots.nodes_resources |
+  sort_by(.filterResult.allocatableMemory | tonumber) |
+  first |.filterResult.allocatableMemory')" )"
+
+  # Get requests parameters from config for masterNode or calculate if absent
+  if values::has "global.allocatableResources.masterNode.cpu"; then
+    millicpu_master="$(tools::dk_convert --milli "$(values::get "global.allocatableResources.masterNode.cpu")" )"
+  else
+    min_millicpu="$(min "$discovery_millicpu_master" "$hard_limit_millicpu")"
+    millicpu_master="$(( min_millicpu - config_millicpu_every_node ))"
+  fi
+  if values::has "global.allocatableResources.masterNode.memory"; then
+    memory_master="$(tools::dk_convert "$(values::get "global.allocatableResources.masterNode.memory")" )"
+  else
+    min_memory="$(min "$discovery_memory_master" "$hard_limit_memory")"
+    memory_master="$(( min_memory - config_memory_every_node ))"
+   fi
+
+  # millicpu_master must be greater than 0
+  if [ "$millicpu_master" -le 0 ]; then
+    >&2 echo "ERROR: CPU resources for allocating on master nodes must be greater than 0"
+    return 1
+  fi
+  # memory_master must be greater than 0
+  if [ "$memory_master" -le 0 ]; then
+    >&2 echo "ERROR: Memory resources for allocating on master nodes must be greater than 0"
+    return 1
+  fi
+  # Check if master + everynode can be placed on minimal master node
+  if [ "$(( millicpu_master + config_millicpu_every_node ))" -gt "$discovery_millicpu_master" ]; then
+    >&2 echo "ERROR: everyNode CPU + masterNode CPU must be less than discovered minimal master node CPU"
+    return 1
+  fi
+  if [ "$(( memory_master + config_memory_every_node ))" -gt "$discovery_memory_master" ]; then
+    >&2 echo "ERROR: everyNode memory + masterNode memory must be less than discovered minimal master node memory"
+    return 1
+  fi
+
+  # set allocatable values for control-plane
+  millicpu_control_plane="$(bc <<< "$millicpu_master * $control_plane_percent / 100" )"
+  memory_control_plane="$(bc <<< "$memory_master * $control_plane_percent / 100" )"
+  # set allocatable values for master
+  millicpu_master="$(bc <<< "$millicpu_master * (100 - $control_plane_percent) / 100" )"
+  memory_master="$(bc <<< "$memory_master * (100 - $control_plane_percent) / 100" )"
+
+  # Set global internal variables
+  if ! values::has "global.allocatableResources.internal"; then
+    values::set "global.allocatableResources.internal" "{}"
+  fi
+  values::set "global.allocatableResources.internal.milliCpuEveryNode" "$config_millicpu_every_node"
+  values::set "global.allocatableResources.internal.memoryEveryNode" "$config_memory_every_node"
+  values::set "global.allocatableResources.internal.milliCpuControlPlane" "$millicpu_control_plane"
+  values::set "global.allocatableResources.internal.memoryControlPlane" "$memory_control_plane"
+  values::set "global.allocatableResources.internal.milliCpuMaster" "$millicpu_master"
+  values::set "global.allocatableResources.internal.memoryMaster" "$memory_master"
+}
+
+hook::run "$@"
