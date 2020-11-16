@@ -19,7 +19,6 @@
 - key: node.kubernetes.io/disk-pressure
 {{- end }}
 
-
 {{- define "helm_lib_node_selector" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_node_selector_strategy" }}
@@ -88,6 +87,20 @@ nodeSelector:
   {{- end }}
 {{- end }}
 
+{{- define "_helm_lib_cloud_or_hybrid_cluster" }}
+  {{- if .Values.global.clusterConfiguration }}
+    {{- if eq .Values.global.clusterConfiguration.clusterType "Cloud" }}
+      "not empty string"
+    {{- /* We consider non-cloud clusters with enabled cloud-provider-.* module as Hybrid clusters */ -}}
+    {{- /* For now, only VSphere and OpenStack support hybrid installations */ -}}
+    {{- else if ( .Values.global.enabledModules | has "cloud-provider-vsphere") }}
+      "not empty string"
+    {{- else if ( .Values.global.enabledModules | has "cloud-provider-openstack") }}
+      "not empty string"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }}
@@ -109,12 +122,10 @@ tolerations:
 - key: node.deckhouse.io/uninitialized
   operator: "Exists"
   effect: "NoSchedule"
-    {{- if $context.Values.global.clusterConfiguration }}
-      {{- if ne $context.Values.global.clusterConfiguration.clusterType "Static" }}
+    {{- if include "_helm_lib_cloud_or_hybrid_cluster" $context }}
 - key: node.deckhouse.io/csi-not-bootstrapped
   operator: "Exists"
   effect: "NoSchedule"
-      {{- end }}
     {{- end }}
 {{ include "_helm_lib_any_node_tolerations" $context }}
 
