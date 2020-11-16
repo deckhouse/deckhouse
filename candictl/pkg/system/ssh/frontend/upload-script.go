@@ -103,8 +103,10 @@ func (u *UploadScript) ExecuteBundle(parentDir string, bundleDir string) (stdout
 
 	// Buffers to implement output handler logic
 	lastStep := ""
+	failsCounter := 0
 
-	err = bundleCmd.WithStdoutHandler(bundleOutputHandler(&lastStep)).CaptureStdout(nil).Run()
+	handler := bundleOutputHandler(bundleCmd, &lastStep, &failsCounter)
+	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).Run()
 	if err != nil {
 		if lastStep != "" {
 			logboek.LogProcessFail(log.BoldFailOptions())
@@ -118,7 +120,7 @@ func (u *UploadScript) ExecuteBundle(parentDir string, bundleDir string) (stdout
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
-func bundleOutputHandler(lastStep *string) func(string) {
+func bundleOutputHandler(cmd *Command, lastStep *string, failsCounter *int) func(string) {
 	return func(l string) {
 		if l == "===" {
 			return
@@ -128,10 +130,20 @@ func bundleOutputHandler(lastStep *string) func(string) {
 			stepName := match[1]
 
 			if *lastStep == stepName {
+				*failsCounter++
+				if *failsCounter > 10 {
+					if cmd != nil {
+						// Force kill bashible
+						_ = cmd.cmd.Process.Kill()
+					}
+					return
+				}
+
 				logboek.LogProcessFail(log.BoldFailOptions())
-				stepName = "Retry " + stepName
+				stepName = fmt.Sprintf("%s, retry attempt #%d of 10", stepName, *failsCounter)
 			} else if *lastStep != "" {
 				logboek.LogProcessEnd(log.BoldEndOptions())
+				*failsCounter = 0
 			}
 
 			logboek.LogProcessStart("Run step "+stepName, log.BoldStartOptions())
