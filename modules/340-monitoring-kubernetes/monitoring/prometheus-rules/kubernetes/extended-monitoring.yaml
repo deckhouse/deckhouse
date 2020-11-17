@@ -16,7 +16,7 @@
         * перегрузка CPU в подах (пропустим throttling в контейнерах),
         * 500-е на ingress-ах (пропустим всплеск 500-х на приложении),
         * целостность контроллеров (не узнаем о выпадении реплик из Deployment, StatefulSet, Daemonset)
-        * и [пр](https://github.com/deckhouse/deckhouse/tree/master/modules/350-extended-monitoring).
+        * и [пр](https://early.deckhouse.io/modules/340-extended-monitoring/).
 
         Куда смотреть:
         1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`

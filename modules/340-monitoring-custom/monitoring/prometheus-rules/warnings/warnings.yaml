@@ -16,7 +16,7 @@
         Для поиска можно воспользоваться командой: `kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse`
 
         Необходимо отказаться от их использования в пользу существующих в Deckhouse решений по кастомизации проекта.
-        Как собирать метрики с приложений в вашем проекте подробно [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+        Как собирать метрики с приложений в вашем проекте подробно [описано в документации](https://early.deckhouse.io/modules/300-prometheus/faq.html#как-собирать-метрики-с-приложений-в-вашем-проекте).
       summary: >
         В кластере используются ServiceMonitor'ы, которые не были созданы Deckhouse.
 
@@ -36,7 +36,7 @@
         Для поиска можно воспользоваться командой: `kubectl get podmonitors --all-namespaces -l heritage!=deckhouse`
 
         Необходимо отказаться от их использования в пользу существующих в Deckhouse решений по кастомизации проекта.
-        Как собирать метрики с приложений в вашем проекте подробно [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+        Как собирать метрики с приложений в вашем проекте подробно [описано в документации](https://early.deckhouse.io/modules/300-prometheus/faq.html#как-собирать-метрики-с-приложений-в-вашем-проекте).
       summary: >
         В кластере используются PodMonitor'ы, которые не были созданы Deckhouse.
 
@@ -56,7 +56,7 @@
         Для поиска можно воспользоваться командой: `kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse`
 
         Необходимо отказаться от их использования в пользу нового объекта - `CustomPrometheusRules`.
-        Как добавить алерты и/или recording правила [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+        Как добавить алерты и/или recording правила [описано в документации](https://early.deckhouse.io/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
       summary: >
         В кластере используются PrometheusRule'ы, которые не были созданы Deckhouse.
 
@@ -76,7 +76,7 @@
         Для поиска можно воспользоваться командой: `kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target`
 
         Формат изменился. Необходимо изменить label `prometheus-custom-target` на `prometheus.deckhouse.io/custom-target`.
-        Подробнее [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
+        Подробнее [описано в документации](https://early.deckhouse.io/modules/300-prometheus/faq.html#как-собирать-метрики-с-приложений-в-вашем-проекте).
       summary: >
         В кластере используются Service'ы с label'ом `prometheus-custom-target` для сбора метрик.
 

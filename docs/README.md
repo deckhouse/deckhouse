@@ -29,8 +29,6 @@ Deckhouse является расширением [addon-operator](https://githu
 
 ## Использование и конфигурирование Deckhouse
 
-Гайд по установке [концентрируется в knowledge base](https://fox.flant.com/docs/kb/blob/master/rfc/rfc-antiopa.md).
-
 ### Как конфигурируется Deckhouse?
 
 Конфиг *Deckhouse* расположен в ConfigMap с названием deckhouse в namespace d8-system:
@@ -121,7 +119,7 @@ global: |
 
 ### Параметры
 
-* `project` (обязательно) — имя проекта, как в [bush](https://bush.flant.com).
+* `project` (обязательно) — имя проекта.
 * `clusterName` (обязательно) — имя кластера (должно соответствовать имени кластера в `***REMOVED***_registry`).
 * `modules` — параметры для служебных компонентов;
   * `publicDomainTemplate` (желательно) — шаблон c ключом "%s" в качестве динамической части строки. Будет использоваться для образования служебных доменов (например, `%s.kube.domain.my`). Если параметр не указан, то ingress-ресурсы создаваться не будут.
