@@ -4,7 +4,7 @@ FROM $BASE_GOLANG_ALPINE
 WORKDIR /src/
 COPY old_certs.patch /
 RUN apk add --no-cache make bash git mercurial patch rsync && \
-    wget https://github.com/kubernetes/kubernetes/archive/v1.17.14.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+    wget https://github.com/kubernetes/kubernetes/archive/v1.19.4.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
     patch -p0 < /old_certs.patch && \
     make all WHAT=cmd/kube-apiserver
 

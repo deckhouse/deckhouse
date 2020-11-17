@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 
-ARG KUBERNETES_VERSION=v1.18.8
+ARG KUBERNETES_VERSION=v1.18.12
 
 ENV DEBIAN_FRONTEND=noninteractive \
     container=docker \

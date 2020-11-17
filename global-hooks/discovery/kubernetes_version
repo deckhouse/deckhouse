@@ -64,15 +64,17 @@ function __main__() {
     kubernetes_versions+=( "$v" )
   done
 
+  # shellcheck disable=SC2128
   if [ -n "$kubernetes_versions" ]; then
     kubernetes_version_min="$(semver::get_min "${kubernetes_versions[@]}")"
 
     if [ -n "$kubernetes_version_min" ]; then
       values::set global.discovery.kubernetesVersion "$kubernetes_version_min"
+      echo "$kubernetes_version_min" > /tmp/kubectl_version
     fi
 
     values::set global.discovery.kubernetesVersions "$(echo -ne "${kubernetes_versions[@]}" | jq -rRs '[split(" ")[] | select(length > 0)]')"
   fi
 }
 
-hook::run $@
+hook::run "$@"

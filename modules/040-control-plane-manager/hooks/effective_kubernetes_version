@@ -5,6 +5,7 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    beforeHelm: 50
     kubernetes:
     - name: control_plane_versions
       group: versions

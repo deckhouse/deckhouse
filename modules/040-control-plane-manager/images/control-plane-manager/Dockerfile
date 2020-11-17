@@ -19,7 +19,7 @@ RUN cd kubernetes-1.16 && \
   patch -p1 < /patch/v1.16/08-preserve-order-of-user-specified-apiserver.patch && \
   make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.16
 
-RUN mkdir /src/kubernetes-1.17 && wget https://github.com/kubernetes/kubernetes/archive/v1.17.11.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.17
+RUN mkdir /src/kubernetes-1.17 && wget https://github.com/kubernetes/kubernetes/archive/v1.17.14.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.17
 RUN cd kubernetes-1.17 && \
   patch -p1 < /patch/v1.17/04-remove-cluster-status-dependency.patch && \
   patch -p1 < /patch/v1.17/05-upgrade-path-from-cluster-status-to-annotations.patch && \
@@ -27,10 +27,15 @@ RUN cd kubernetes-1.17 && \
   patch -p1 < /patch/v1.17/07-local-init-configuration.patch && \
   make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.17
 
-RUN mkdir /src/kubernetes-1.18 && wget https://github.com/kubernetes/kubernetes/archive/v1.18.8.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.18
+RUN mkdir /src/kubernetes-1.18 && wget https://github.com/kubernetes/kubernetes/archive/v1.18.12.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.18
 RUN cd kubernetes-1.18 && \
   patch -p1 < /patch/v1.18/07-local-init-configuration.patch && \
   make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.18
+
+RUN mkdir /src/kubernetes-1.19 && wget https://github.com/kubernetes/kubernetes/archive/v1.19.4.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.19
+RUN cd kubernetes-1.19 && \
+  patch -p1 < /patch/v1.19/07-local-init-configuration.patch && \
+  make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.19
 
 FROM $BASE_ALPINE
 RUN apk add --no-cache jq curl bash gettext grep
@@ -45,6 +50,7 @@ ADD control-plane-manager /control-plane-manager
 COPY --from=kubeadm_builder /kubeadm-1.16 /usr/local/bin/
 COPY --from=kubeadm_builder /kubeadm-1.17 /usr/local/bin/
 COPY --from=kubeadm_builder /kubeadm-1.18 /usr/local/bin/
+COPY --from=kubeadm_builder /kubeadm-1.19 /usr/local/bin/
 
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 

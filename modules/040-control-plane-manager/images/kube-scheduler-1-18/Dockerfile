@@ -1,2 +1,2 @@
-FROM k8s.gcr.io/kube-scheduler:v1.18.8
+FROM k8s.gcr.io/kube-scheduler:v1.18.12
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
