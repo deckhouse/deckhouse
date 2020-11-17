@@ -75,7 +75,7 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
 fi
 
 # verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.15"]="1.16" ["1.16"]="1.16" ["1.17"]="1.17" ["1.18"]="1.18")
+declare -A supported_kubernetes_versions=( ["1.15"]="1.16" ["1.16"]="1.16" ["1.17"]="1.17" ["1.18"]="1.18" ["1.19"]="1.19")
 if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
   echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
   exit 1
@@ -289,8 +289,10 @@ function converge_component() {
   tmp_manifest=$TMP_ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml
   checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/kustomize/999-${component}-checksum.yaml
   if [[ "$component" != "etcd" ]] ; then
+    # TODO Switch to "--experimental-patches" once deckhouse stops supporting Kubernetes <1.19
     kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
   else
+    # TODO Switch to "--experimental-patches" once deckhouse stops supporting Kubernetes <1.19
     kubeadm_cmd="$kubeadm_binary init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
     kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
   fi

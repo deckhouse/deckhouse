@@ -1,5 +1,5 @@
-{{- $kubeImageRepoSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "-" }}
-{{- $kubeImageTagSuffix := .Values.global.clusterConfiguration.kubernetesVersion | replace "." "" }}
+{{- $kubeImageRepoSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "-" }}
+{{- $kubeImageTagSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "" }}
 
 {{- $images := dict }}
 {{- range $component := list (list "kubeApiserver" "kube-apiserver") (list "kubeControllerManager" "kube-controller-manager") (list "kubeScheduler" "kube-scheduler") }}

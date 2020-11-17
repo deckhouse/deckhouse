@@ -63,10 +63,24 @@ ansible:
       dest: /usr/local/bin/yq
       mode: +x
 
-  - name: "Install kubectl"
+  - name: "Install kubectl 1.16.15"
     get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.14.10/bin/linux/amd64/kubectl
-      checksum: "sha256:7729c6612bec76badc7926a79b26e0d9b06cc312af46dbb80ea7416d1fce0b36"
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.16.15/bin/linux/amd64/kubectl
+      checksum: "sha256:e8913069293156ddf55f243814a22d2384fc18b165efb6200606fdeaad146605"
+      dest: /usr/local/bin/kubectl-1.16
+      mode: +x
+
+  - name: "Install kubectl 1.19.4"
+    get_url:
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.19.4/bin/linux/amd64/kubectl
+      checksum: "sha256:7df333f1fc1207d600139fe8196688303d05fbbc6836577808cda8fe1e3ea63f"
+      dest: /usr/local/bin/kubectl-1.19
+      mode: +x
+
+  - name: "Install kubectl wrapper"
+    copy:
+      content: |
+{{ .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | indent 8 }}
       dest: /usr/local/bin/kubectl
       mode: +x
 
@@ -85,9 +99,9 @@ ansible:
   - name: "Install etcdctl"
     unarchive:
       extra_opts:
-        - etcd-v3.3.10-linux-amd64/etcdctl
+        - etcd-v3.4.13-linux-amd64/etcdctl
         - --strip-components=1
-      src: https://github.com/etcd-io/etcd/releases/download/v3.3.10/etcd-v3.3.10-linux-amd64.tar.gz
+      src: https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz
       remote_src: yes
       dest: /usr/local/bin
 
@@ -127,7 +141,7 @@ ansible:
       dest: /root/.vimrc
 
   - name: "Shell comfort: kubectl completion"
-    shell: kubectl completion bash > /root/.kubectl_completion.sh
+    shell: kubectl-1.19 completion bash > /root/.kubectl_completion.sh
 
   - name: "Shell comfort: history search"
     shell: |

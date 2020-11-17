@@ -8,9 +8,10 @@
 | --- | --- | --- |
 | 1.14 | 1.14.10 | `final` |
 | 1.15 | 1.15.12 | `final` |
-| 1.16 | <s>1.16.10</s> | **1.16.15** |
-| 1.17 | <s>1.17.6</s> | **1.17.11** |
-| 1.18 | <s>1.18.3</s> | **1.18.8** |
+| 1.16 | 1.16.15 |         |
+| 1.17 | 1.17.14 |         |
+| 1.18 | 1.18.12 |         |
+| 1.19 | 1.19.4  |         |
 
 Патч версии компонентов захардкожены в следующих `.tpl` и `Dockerfile`:
 
@@ -61,18 +62,21 @@ kubernetesVersion: 1.16.patch
 - [modules/040-control-plane-manager/images/kube-apiserver-1-16/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-16/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-apiserver-1-17/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-17/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-apiserver-1-18/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-18/Dockerfile)
+- [modules/040-control-plane-manager/images/kube-apiserver-1-19/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-19/Dockerfile)
 
 ### controller-manager
 - [modules/040-control-plane-manager/images/kube-controller-manager-1-15/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-15/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-controller-manager-1-16/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-16/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-controller-manager-1-17/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-17/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-controller-manager-1-18/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-18/Dockerfile)
+- [modules/040-control-plane-manager/images/kube-controller-manager-1-19/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-19/Dockerfile)
 
 ### scheduler
 - [modules/040-control-plane-manager/images/kube-scheduler-1-15/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-15/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-scheduler-1-16/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-16/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-scheduler-1-17/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-17/Dockerfile)
 - [modules/040-control-plane-manager/images/kube-scheduler-1-18/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-18/Dockerfile)
+- [modules/040-control-plane-manager/images/kube-scheduler-1-19/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-19/Dockerfile)
 
 ### proxy
 - [modules/041-kube-proxy/images/kube-proxy-1-14/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-14/Dockerfile)
@@ -80,3 +84,4 @@ kubernetesVersion: 1.16.patch
 - [modules/041-kube-proxy/images/kube-proxy-1-16/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-16/Dockerfile)
 - [modules/041-kube-proxy/images/kube-proxy-1-17/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-17/Dockerfile)
 - [modules/041-kube-proxy/images/kube-proxy-1-18/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-18/Dockerfile)
+- [modules/041-kube-proxy/images/kube-proxy-1-19/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-19/Dockerfile)

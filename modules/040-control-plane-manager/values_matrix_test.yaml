@@ -13,7 +13,7 @@ global:
     podSubnetCIDR: 10.244.0.0/16
     serviceSubnetCIDR: 192.168.0.0/16
     kubernetesVersion:
-      __ConstantChoices__: ["1.15", "1.16", "1.17", "1.18"]
+      __ConstantChoices__: ["1.15", "1.16", "1.17", "1.18", "1.19"]
     clusterDomain: test
     clusterType:
       __ConstantChoices__: ["Cloud", "Static"]
@@ -62,7 +62,7 @@ controlPlaneManager:
   internal:
     pkiChecksum: test
     effectiveKubernetesVersion:
-      __ConstantChoices__: ["1.15", "1.16", "1.17", "1.18"]
+      __ConstantChoices__: ["1.15", "1.16", "1.17", "1.18", "1.19"]
     etcdServers:
     - 1.2.3.4
     - 4.3.2.1

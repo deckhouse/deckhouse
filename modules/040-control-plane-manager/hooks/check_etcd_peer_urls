@@ -35,12 +35,12 @@ EOF
 }
 
 function etcdctl() {
-  kubectl -n kube-system exec ${1} -- etcdctl \
-    --ca-file /etc/kubernetes/pki/etcd/ca.crt \
-    --cert-file /etc/kubernetes/pki/etcd/ca.crt \
-    --key-file /etc/kubernetes/pki/etcd/ca.key \
+  kubectl -n kube-system exec ${1} -- sh -c "ETCDCTL_API=3 etcdctl \
+    --cacert /etc/kubernetes/pki/etcd/ca.crt \
+    --cert /etc/kubernetes/pki/etcd/ca.crt \
+    --key /etc/kubernetes/pki/etcd/ca.key \
     --endpoints https://127.0.0.1:2379/ \
-    ${2}
+    ${2}"
 }
 
 function etcdctl_member_list() {
@@ -56,7 +56,7 @@ function etcdctl_member_update() {
     values::set controlPlaneManager.internal.testEtcdMemberUpdated "true"
     return 0
   fi
-  etcdctl ${1} "member update ${2} ${3}"
+  etcdctl ${1} "member update ${2} --peer-urls ${3}"
 }
 
 function __main__() {

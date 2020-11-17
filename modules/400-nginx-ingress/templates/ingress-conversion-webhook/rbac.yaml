@@ -6,7 +6,7 @@ metadata:
   namespace: d8-system
 {{ include "helm_lib_module_labels" (list . (dict "app" "ingress-conversion-webhook")) | indent 2 }}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kube-nginx-ingress-ingress-conversion-webhook
@@ -16,7 +16,7 @@ rules:
     resources: ["ingresses"]
     verbs: ["*"]
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kube-nginx-ingress-ingress-conversion-webhook

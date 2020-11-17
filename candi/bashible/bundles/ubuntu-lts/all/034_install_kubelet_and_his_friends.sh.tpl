@@ -1,13 +1,21 @@
 {{ if eq .kubernetesVersion "1.14" }}
 kubernetes_version="1.14.10-00"
+kubernetes_cni_version="0.8.6-00"
 {{ else if eq .kubernetesVersion "1.15" }}
 kubernetes_version="1.15.12-00"
+kubernetes_cni_version="0.8.6-00"
 {{ else if eq .kubernetesVersion "1.16" }}
 kubernetes_version="1.16.15-00"
+kubernetes_cni_version="0.8.6-00"
 {{ else if eq .kubernetesVersion "1.17" }}
-kubernetes_version="1.17.11-00"
+kubernetes_version="1.17.14-00"
+kubernetes_cni_version="0.8.7-00"
 {{ else if eq .kubernetesVersion "1.18" }}
-kubernetes_version="1.18.8-00"
+kubernetes_version="1.18.12-00"
+kubernetes_cni_version="0.8.7-00"
+{{ else if eq .kubernetesVersion "1.19" }}
+kubernetes_version="1.19.4-00"
+kubernetes_cni_version="0.8.7-00"
 {{ else }}
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
 {{ end }}
@@ -23,7 +31,7 @@ if dpkg -S kubelet >/dev/null 2>&1; then
 fi
 
 bb-apt-remove kubeadm
-bb-apt-install "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" kubernetes-cni=0.8.6-00
+bb-apt-install "kubelet=${kubernetes_version}" "kubectl=${kubernetes_version}" "kubernetes-cni=${kubernetes_cni_version}"
 
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
   # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations

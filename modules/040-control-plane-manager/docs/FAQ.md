@@ -38,7 +38,7 @@ title: "Управление control plane: FAQ"
   ```
 2. Выполнить команду.
   ```shell
-  etcdctl --ca-file /etc/kubernetes/pki/etcd/ca.crt --cert-file /etc/kubernetes/pki/etcd/ca.crt --key-file /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list
+  ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list
   ```
 
 ## Что делать, если что-то пошло не так?
