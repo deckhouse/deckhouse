@@ -86,4 +86,30 @@ status:
 			Expect(pod.Field(`metadata.annotations.node\.deckhouse\.io\/initial-host-ip`).String()).To(Equal("1.2.3.4"))
 		})
 	})
+
+	Context("With empty host ip", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ccm-test
+  namespace: d8-cloud-provider-openstack
+  labels:
+    app: deckhouse
+  annotations:
+    node.deckhouse.io/initial-host-ip: "1.2.3.4"
+status: {}
+`, 1))
+			f.RunHook()
+		})
+
+		It("Should leave the pod as it is", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			pod := f.KubernetesResource("Pod", "d8-cloud-provider-openstack", "ccm-test")
+			Expect(pod.Exists()).To(BeTrue())
+			Expect(pod.Field(`metadata.annotations.node\.deckhouse\.io\/initial-host-ip`).String()).To(Equal("1.2.3.4"))
+		})
+	})
 })
