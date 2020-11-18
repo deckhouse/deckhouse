@@ -48,6 +48,11 @@ function __config__() {
       apiVersion: v1
       kind: Namespace
       executeHookOnEvent: [Added]
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["upmeter"]
       jqFilter: |
         {
           "name": .metadata.name,
