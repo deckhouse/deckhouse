@@ -32,6 +32,13 @@ metadata:
   name: ns3t
 status:
   phase: Terminating
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns4u
+  labels:
+    heritage: upmeter
 `
 		stateSecretsNeutral = `
 ---
@@ -167,6 +174,9 @@ data:
 			Expect(f.KubernetesResource("Secret", "ns3t", "s1").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "ns3t", "s2").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "ns3t", "s3").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "ns4u", "s1").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "ns4u", "s2").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "ns4u", "s3").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Secret", "ns1", "s1").Field("data.supersecret").String()).To(Equal("s1data"))
 			Expect(f.KubernetesResource("Secret", "ns1", "s2").Field("data.supersecret").String()).To(Equal("s2data"))
@@ -199,6 +209,9 @@ data:
 			Expect(f.KubernetesResource("Secret", "ns3t", "s1").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "ns3t", "s2").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "ns3t", "s3").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "ns4u", "s1").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "ns4u", "s2").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "ns4u", "s3").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Secret", "ns1", "s1").Field("data.supersecret").String()).To(Equal("s1data"))
 			Expect(f.KubernetesResource("Secret", "ns1", "s2").Field("data.supersecret").String()).To(Equal("s2data"))
