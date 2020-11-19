@@ -6,8 +6,8 @@ require (
 	flant/candictl v0.0.0 // use non-existent version for replace
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20200903110707-96173c9d9321 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.12.0.20201008134655-e1b0fec1a34c // branch: binding-context-generator-timeouts
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20201119104511-16f2a7a80615 // branch: master
+	github.com/flant/shell-operator v1.0.0-beta.13 // feature: exponential backoff
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.4.0
