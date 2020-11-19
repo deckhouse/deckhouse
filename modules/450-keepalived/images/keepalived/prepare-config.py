@@ -9,6 +9,7 @@ KEEPALIVED_CONFIG_TEMPLATE = """
 global_defs {
   preempt_delay 300
   advert_int 1
+  vrrp_garp_master_refresh 30
 }
 
 %(vrrp_instances)s
