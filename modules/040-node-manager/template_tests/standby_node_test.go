@@ -19,7 +19,7 @@ var _ = Describe("Module :: node-manager :: helm template :: standby node", func
 		It("should render correctly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			da := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "standby-standby-absolute")
+			da := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "standby-holder-standby-absolute")
 			Expect(da.Exists()).To(BeTrue())
 			Expect(da.Field("spec.replicas").String()).To(Equal("2"))
 			Expect(da.Field("spec.template.spec.priorityClassName").String()).To(Equal("standby"))
@@ -31,7 +31,7 @@ var _ = Describe("Module :: node-manager :: helm template :: standby node", func
   effect: NoExecute
 `))
 
-			dp := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "standby-standby-percent")
+			dp := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "standby-holder-standby-percent")
 			Expect(dp.Exists()).To(BeTrue())
 			Expect(dp.Field("spec.replicas").String()).To(Equal("12"))
 			Expect(dp.Field("spec.template.spec.priorityClassName").String()).To(Equal("standby"))

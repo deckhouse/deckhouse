@@ -9,9 +9,9 @@
 #   3. EveryNode - vpa resources, working on every node (label "workload-resource-policy.deckhouse.io: every-node").
 # Calculate steps:
 #   1. We calculate sum of uncappedTargets requests for all vpa resources in Master group, and proportionally sets MaxAllowed values for this resources,
-#      based on allocatable resources from global config for Master group.
+#      based on resources requests from global config for Master group.
 #   2. We calculate sum of uncappedTargets requests for all vpa resources in EveryNode group, and proportionally sets MaxAllowed values for this resources,
-#      based on allocatable resources from global config for EveryNode group.
+#      based on resources requests from global config for EveryNode group.
 
 source /deckhouse/shell_lib.sh
 
@@ -56,10 +56,10 @@ EOF
 
 function __main__() {
 
-  allocatable_millicpu_master="$(values::get --required "global.allocatableResources.internal.milliCpuMaster")"
-  allocatable_memory_master="$(values::get --required "global.allocatableResources.internal.memoryMaster")"
-  allocatable_millicpu_every_node="$(values::get --required "global.allocatableResources.internal.milliCpuEveryNode")"
-  allocatable_memory_every_node="$(values::get --required "global.allocatableResources.internal.memoryEveryNode")"
+  resources_requests_millicpu_master="$(values::get --required "global.modules.resourcesRequests.internal.milliCpuMaster")"
+  resources_requests_memory_master="$(values::get --required "global.modules.resourcesRequests.internal.memoryMaster")"
+  resources_requests_millicpu_every_node="$(values::get --required "global.modules.resourcesRequests.internal.milliCpuEveryNode")"
+  resources_requests_memory_every_node="$(values::get --required "global.modules.resourcesRequests.internal.memoryEveryNode")"
 
   # Parse vpa resources
   # shellcheck disable=SC2016
@@ -111,12 +111,12 @@ function __main__() {
    # Compute limits for VPA
     case ${label_array[$i]} in
       master)
-        vpa_millicpu="$(bc <<< "$allocatable_millicpu_master * ${cpu_array[$i]} / $summary_millicpu_master" )"
-        vpa_memory="$(bc <<< "$allocatable_memory_master * ${memory_array[$i]} / $summary_memory_master" )"
+        vpa_millicpu="$(bc <<< "$resources_requests_millicpu_master * ${cpu_array[$i]} / $summary_millicpu_master" )"
+        vpa_memory="$(bc <<< "$resources_requests_memory_master * ${memory_array[$i]} / $summary_memory_master" )"
         ;;
       every-node)
-        vpa_millicpu="$(bc <<< "$allocatable_millicpu_every_node * ${cpu_array[$i]} / $summary_millicpu_every_node" )"
-        vpa_memory="$(bc <<< "$allocatable_memory_every_node * ${memory_array[$i]} / $summary_memory_every_node" )"
+        vpa_millicpu="$(bc <<< "$resources_requests_millicpu_every_node * ${cpu_array[$i]} / $summary_millicpu_every_node" )"
+        vpa_memory="$(bc <<< "$resources_requests_memory_every_node * ${memory_array[$i]} / $summary_memory_every_node" )"
         ;;
     esac
 

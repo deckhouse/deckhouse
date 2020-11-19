@@ -1,5 +1,5 @@
-{{- $millicpu := $.allocatableMilliCpuControlPlane | default 512 -}}
-{{- $memory := $.allocatableMemoryControlPlane | default 536870912 -}}
+{{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
+{{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 -}}
 ---
 apiVersion: v1
 kind: Pod

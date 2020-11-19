@@ -17,6 +17,7 @@ function __config__() {
           "name": .metadata.name,
           "maxInstances": ((.spec.cloudInstances.zones // ["defaultZone"] | length) * (.spec.cloudInstances.maxPerZone // 1)),
           "standby": (.spec.cloudInstances.standby // null),
+          "standbyNotHeldResources": (.spec.cloudInstances.standbyHolder.notHeldResources // {}),
           "taints": (.spec.nodeTemplate.taints // [])
         }
     - name: nodes
@@ -44,7 +45,7 @@ function __config__() {
         - key: app
           operator: In
           values:
-          - node-standby
+          - standby-holder
       namespace:
         nameSelector:
           matchNames: [d8-cloud-instance-manager]
@@ -57,7 +58,7 @@ EOF
 }
 
 
-# $1 — CIG name
+# $1 — NG name
 # $2 — standby nodes count or empty
 function _set_ng_standby_status() {
   if [ -n "$2" ]; then
@@ -106,29 +107,42 @@ function __main__() {
       desired_standby=1
     fi
 
-    allocatable_cpu=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableCPU) | .allocatableCPU] | sort | first // 0 ')
-    reserve_cpu="$(tools::dk_convert --milli "$allocatable_cpu")"
-    # Keep 500m of CPU for node purposes.
-    reserve_cpu=$((reserve_cpu-500))
-    # For Nodes with unknown cpu amount or less than 500m - request 10m of cpu (e.g. disable reservation by cpu).
-    if (( reserve_cpu < 10 )); then
-      reserve_cpu="10"
+    allocatable_cpu="$(tools::dk_convert --milli "$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableCPU) | .allocatableCPU] | sort | first // 0')")"
+    resources_requests_every_node_cpu="$(tools::dk_convert --milli "$(values::get --required "global.modules.resourcesRequests.everyNode.cpu")")"
+    standby_not_held_resources_cpu="$(tools::dk_convert --milli "$(jq -r '.standbyNotHeldResources.cpu // 0' <<< "$ng")")"
+    standby_request_cpu=$(( allocatable_cpu - (resources_requests_every_node_cpu + standby_not_held_resources_cpu) ))
+    # Request at least 10m of cpu.
+    if (( standby_request_cpu < 10 )); then
+      standby_request_cpu="10"
     fi
-    reserve_cpu="${reserve_cpu}m"
+    standby_request_cpu="${standby_request_cpu}m"
 
-    allocatable_memory=$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableMemory) | .allocatableMemory] | sort | first // 0')
-    reserve_memory="$(tools::dk_convert "$allocatable_memory")"
-    # Keep 1Gi of CPU for node purposes.
-    reserve_memory=$((reserve_memory-(1024*1024*1024)))
+    allocatable_memory="$(tools::dk_convert "$(context::jq -r --arg ng_name "$ng_name" '[.snapshots.nodes[].filterResult | select(.group == $ng_name and .allocatableMemory) | .allocatableMemory] | sort | first // 0')")"
+    resources_requests_every_node_memory="$(tools::dk_convert "$(values::get --required "global.modules.resourcesRequests.everyNode.memory")")"
+    standby_not_held_resources_memory="$(tools::dk_convert "$(jq -r '.standbyNotHeldResources.memory // 0' <<< "$ng")")"
+    standby_request_memory=$(( allocatable_memory - (resources_requests_every_node_memory + standby_not_held_resources_memory) ))
     # Convert to Mi.
-    reserve_memory=$((reserve_memory/1024/1024))
-    # For Nodes with unknown memory amount or less than 1Gi - request 10Mi of memory (e.g. disable reservation by memory).
-    if (( reserve_memory < 10 )); then
-      reserve_memory="10"
+    standby_request_memory=$((standby_request_memory/1024/1024))
+    # Request at least 10Mi of memory.
+    if (( standby_request_memory < 10 )); then
+      standby_request_memory="10"
     fi
-    reserve_memory="${reserve_memory}Mi"
+    standby_request_memory="${standby_request_memory}Mi"
 
-    standby_node_groups="$(jq --argjson ng "$ng" --arg desired_standby "$desired_standby" --arg reserve_cpu "$reserve_cpu" --arg reserve_memory "$reserve_memory" '. + [$ng | {"name": .name, "standby": $desired_standby | tonumber, "reserveCPU": $reserve_cpu, "reserveMemory": $reserve_memory, "taints": .taints}]' <<< $standby_node_groups)"
+    standby_node_groups="$(jq \
+      --argjson ng "$ng" \
+      --arg desired_standby "$desired_standby" \
+      --arg standby_request_cpu "$standby_request_cpu" \
+      --arg standby_request_memory "$standby_request_memory" '
+      . + [$ng |
+        {
+          "name": .name,
+          "standby": $desired_standby | tonumber,
+          "reserveCPU": $standby_request_cpu,
+          "reserveMemory": $standby_request_memory,
+          "taints": .taints
+        }
+      ]' <<< $standby_node_groups)"
   done
 
   values::set nodeManager.internal.standbyNodeGroups "$standby_node_groups"
