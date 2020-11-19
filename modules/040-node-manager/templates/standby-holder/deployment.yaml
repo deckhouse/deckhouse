@@ -3,13 +3,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: standby-{{ $ng.name }}
+  name: standby-holder-{{ $ng.name }}
   namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list $ (dict "app" "node-standby")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "standby-holder")) | indent 2 }}
 spec:
   selector:
     matchLabels:
-      app: node-standby
+      app: standby-holder
       ng: {{ $ng.name }}
   revisionHistoryLimit: 0
   replicas: {{ $ng.standby }}
@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       labels:
-        app: node-standby
+        app: standby-holder
         ng: {{ $ng.name }}
     spec:
       imagePullSecrets:
@@ -28,7 +28,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                app: node-standby
+                app: standby-holder
                 ng: {{ $ng.name }}
             topologyKey: kubernetes.io/hostname
       nodeSelector:

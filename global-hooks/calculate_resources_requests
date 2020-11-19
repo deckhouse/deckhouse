@@ -43,14 +43,14 @@ function min() {
 function __main__() {
 
 # Get requests parameters from config for everyNode and set corresponding internal variables
-  config_millicpu_every_node="$(tools::dk_convert --milli "$(values::get --required "global.allocatableResources.everyNode.cpu")" )"
+  config_millicpu_every_node="$(tools::dk_convert --milli "$(values::get --required "global.modules.resourcesRequests.everyNode.cpu")" )"
   if [ "$config_millicpu_every_node" -le 0 ]; then
-    >&2 echo "ERROR: global.allocatableResources.everyNode.cpu must be greater 0"
+    >&2 echo "ERROR: global.modules.resourcesRequests.everyNode.cpu must be greater 0"
     return 1
   fi
-  config_memory_every_node="$(tools::dk_convert "$(values::get --required "global.allocatableResources.everyNode.memory")" )"
+  config_memory_every_node="$(tools::dk_convert "$(values::get --required "global.modules.resourcesRequests.everyNode.memory")" )"
   if [ "$config_memory_every_node" -le 0 ]; then
-    >&2 echo "ERROR: global.allocatableResources.everyNode.memory must be greater 0"
+    >&2 echo "ERROR: global.modules.resourcesRequests.everyNode.memory must be greater 0"
     return 1
   fi
 
@@ -65,14 +65,14 @@ function __main__() {
   first |.filterResult.allocatableMemory')" )"
 
   # Get requests parameters from config for masterNode or calculate if absent
-  if values::has "global.allocatableResources.masterNode.cpu"; then
-    millicpu_master="$(tools::dk_convert --milli "$(values::get "global.allocatableResources.masterNode.cpu")" )"
+  if values::has "global.modules.resourcesRequests.masterNode.cpu"; then
+    millicpu_master="$(tools::dk_convert --milli "$(values::get "global.modules.resourcesRequests.masterNode.cpu")" )"
   else
     min_millicpu="$(min "$discovery_millicpu_master" "$hard_limit_millicpu")"
     millicpu_master="$(( min_millicpu - config_millicpu_every_node ))"
   fi
-  if values::has "global.allocatableResources.masterNode.memory"; then
-    memory_master="$(tools::dk_convert "$(values::get "global.allocatableResources.masterNode.memory")" )"
+  if values::has "global.modules.resourcesRequests.masterNode.memory"; then
+    memory_master="$(tools::dk_convert "$(values::get "global.modules.resourcesRequests.masterNode.memory")" )"
   else
     min_memory="$(min "$discovery_memory_master" "$hard_limit_memory")"
     memory_master="$(( min_memory - config_memory_every_node ))"
@@ -98,23 +98,23 @@ function __main__() {
     return 1
   fi
 
-  # set allocatable values for control-plane
+  # set resources requests for control-plane
   millicpu_control_plane="$(bc <<< "$millicpu_master * $control_plane_percent / 100" )"
   memory_control_plane="$(bc <<< "$memory_master * $control_plane_percent / 100" )"
-  # set allocatable values for master
+  # set resources requests for master
   millicpu_master="$(bc <<< "$millicpu_master * (100 - $control_plane_percent) / 100" )"
   memory_master="$(bc <<< "$memory_master * (100 - $control_plane_percent) / 100" )"
 
   # Set global internal variables
-  if ! values::has "global.allocatableResources.internal"; then
-    values::set "global.allocatableResources.internal" "{}"
+  if ! values::has "global.modules.resourcesRequests.internal"; then
+    values::set "global.modules.resourcesRequests.internal" "{}"
   fi
-  values::set "global.allocatableResources.internal.milliCpuEveryNode" "$config_millicpu_every_node"
-  values::set "global.allocatableResources.internal.memoryEveryNode" "$config_memory_every_node"
-  values::set "global.allocatableResources.internal.milliCpuControlPlane" "$millicpu_control_plane"
-  values::set "global.allocatableResources.internal.memoryControlPlane" "$memory_control_plane"
-  values::set "global.allocatableResources.internal.milliCpuMaster" "$millicpu_master"
-  values::set "global.allocatableResources.internal.memoryMaster" "$memory_master"
+  values::set "global.modules.resourcesRequests.internal.milliCpuEveryNode" "$config_millicpu_every_node"
+  values::set "global.modules.resourcesRequests.internal.memoryEveryNode" "$config_memory_every_node"
+  values::set "global.modules.resourcesRequests.internal.milliCpuControlPlane" "$millicpu_control_plane"
+  values::set "global.modules.resourcesRequests.internal.memoryControlPlane" "$memory_control_plane"
+  values::set "global.modules.resourcesRequests.internal.milliCpuMaster" "$millicpu_master"
+  values::set "global.modules.resourcesRequests.internal.memoryMaster" "$memory_master"
 }
 
 hook::run "$@"

@@ -185,11 +185,31 @@ spec:
                   minimum: 0
                 standby:
                   description: |
-                    Amount of overprovisioned nodes for this NodeGroup.
+                    Amount of overprovisioned Nodes for this NodeGroup.
                     The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
                     The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
-                  type: string
                   pattern: '^[0-9]+%?$'
+                  x-kubernetes-int-or-string: true
+                standbyHolder:
+                  type: object
+                  properties:
+                    notHeldResources:
+                      description: |
+                        Describes the amount of resources, that will not be held by standby holder.
+                      type: object
+                      properties:
+                        cpu:
+                          description: |
+                            Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+                            The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
+                          pattern: '^[0-9]+m?$'
+                          x-kubernetes-int-or-string: true
+                        memory:
+                          description: |
+                            Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+                            The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
+                          pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                          x-kubernetes-int-or-string: true
                 classReference:
                   type: object
                   properties:

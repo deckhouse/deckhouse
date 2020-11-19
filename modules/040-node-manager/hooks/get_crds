@@ -132,7 +132,7 @@ function __on_kubernetes::cloud_provider_secrets() {
   fi
 }
 
-# $1 — CIG name
+# $1 — NG name
 # $2 — error message or empty string
 function _set_ng_error_status() {
   if [ -n "$2" ]; then
