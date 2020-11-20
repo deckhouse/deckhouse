@@ -170,6 +170,7 @@ tags:
                 "ec2:DeleteTags",
                 "ec2:DeleteVolume",
                 "ec2:DeleteVpc",
+                "ec2:DescribeAccountAttributes",
                 "ec2:DescribeAddresses",
                 "ec2:DescribeAvailabilityZones",
                 "ec2:DescribeImages",
