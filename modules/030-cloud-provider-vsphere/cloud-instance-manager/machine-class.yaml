@@ -20,7 +20,7 @@ spec:
   {{- end }}
 {{- end }}
   datastore: {{ .nodeGroup.instanceClass.datastore | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.datastore | quote }}
-{{- /* Откатить после окончания ***REMOVED***а */ -}}
+{{- /* TODO: remove once all clusters are migrated to the "resourcePool" field */ -}}
 {{- if or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePool }}
   resourcePool: {{ or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePool | quote }}
 {{- end }}
