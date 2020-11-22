@@ -111,10 +111,10 @@ data:
 
 ```yaml
 global: |
-  project: someproject
+  project: projectname
   clusterName: main
   modules:
-    publicDomainTemplate: "%s.kube.domain.my"
+    publicDomainTemplate: "%s.kube.company.my"
 ```
 
 ### Параметры
@@ -122,12 +122,13 @@ global: |
 * `project` (обязательно) — имя проекта.
 * `clusterName` (обязательно) — имя кластера (должно соответствовать имени кластера в `***REMOVED***_registry`).
 * `modules` — параметры для служебных компонентов;
-  * `publicDomainTemplate` (желательно) — шаблон c ключом "%s" в качестве динамической части строки. Будет использоваться для образования служебных доменов (например, `%s.kube.domain.my`). Если параметр не указан, то ingress-ресурсы создаваться не будут.
-  * `ingressClass` — класс ingress контроллера, который используется для служебных компонентов.
+  * `publicDomainTemplate` (желательно) — шаблон c ключом "%s" в качестве динамической части строки. Будет использоваться для образования служебных доменов (например, `%s.kube.domain.my`). Если параметр не указан, то Ingress-ресурсы создаваться не будут.
+  * `ingressClass` — класс Ingress-контроллера, который используется для служебных компонентов.
     * По умолчанию `nginx`.
   * `placement` — настройки, определяющие расположение компонентов Deckhouse.
     * `customTolerationKeys` — список ключей пользовательских taint'ов, необходимо указывать, чтобы позволить выезжать на выделенные ноды критическим add-on'ам, таким как например cni и csi.
       * Пример:
+
         ```yaml
         customTolerationKeys:
         - dedicated.example.com
