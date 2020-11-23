@@ -1,4 +1,7 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- if hasKey .Values.global.modulesImages.tags.cloudProviderYandex $ccmImageName }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -13,7 +16,7 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -38,33 +41,36 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
-{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
       hostNetwork: true
       securityContext:
         runAsUser: 1001
       serviceAccountName: cloud-controller-manager
       containers:
         - name: yandex-cloud-controller-manager
-          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderYandex.cloudControllerManager }}
-          command:
-            - /bin/yandex-cloud-controller-manager
-            - --cloud-provider=yandex
-            - --cluster-name={{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
-            - --allocate-node-cidrs=true
-            - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
-            - --v=4
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-yandex/cloud-controller-manager-{{ $kubernetesSemVer.Major }}-{{ $kubernetesSemVer.Minor }}:{{ index .Values.global.modulesImages.tags.cloudProviderYandex $ccmImageName }}
+          args:
+          - --leader-elect=true
+          - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          - --allocate-node-cidrs=true
+          - --configure-cloud-routes=true
+          - --cloud-provider=yandex
+          - --cluster-name={{ .Values.global.discovery.clusterUUID | sha256sum | trunc 24 }}
+          - --bind-address=0.0.0.0
+          - --secure-port=10871
+          - --v=2
           ports:
-          - name: ccm
-            containerPort: 10258
+          - name: https
+            containerPort: 10871
           livenessProbe:
             httpGet:
               path: /healthz
-              port: ccm
+              port: https
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /healthz
-              port: ccm
+              port: https
               scheme: HTTPS
           env:
             - name: YANDEX_CLUSTER_NAME
@@ -84,3 +90,4 @@ spec:
               value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
             - name: YANDEX_CLOUD_ROUTE_TABLE_ID
               value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
+{{- end }}

@@ -1,0 +1,298 @@
+Index: pkg/cloudprovider/vsphere/nodemanager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
+--- a/pkg/cloudprovider/vsphere/nodemanager.go	(revision 684c9881ac5eb22ffd211c2e180cccef35904930)
++++ b/pkg/cloudprovider/vsphere/nodemanager.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
+@@ -190,6 +190,23 @@
+ 		klog.Warningf("Unable to find vcInstance for %s. Defaulting to ipv4.", tenantRef)
+ 	}
+ 
++	internalNetworkMap := make(map[string]struct{})
++	externalNetworkMap := make(map[string]struct{})
++	if vcInstance != nil {
++		if vcInstance.Cfg.InternalNetworkNames != "" && vcInstance.Cfg.ExternalNetworkNames != "" {
++			for _, intName := range strings.Split(strings.TrimSpace(vcInstance.Cfg.InternalNetworkNames), ",") {
++				internalNetworkMap[intName] = struct{}{}
++			}
++			for _, extName := range strings.Split(strings.TrimSpace(vcInstance.Cfg.ExternalNetworkNames), ",") {
++				externalNetworkMap[extName] = struct{}{}
++			}
++		} else {
++			klog.V(2).Infof("\"internal-network-name\" or \"external-network-name\" not specified, skipping networkName-based IP address detection")
++		}
++	} else {
++		klog.V(2).Infof("Unable to find vcInstance for %s, skipping networkName-based IP address detection", tenantRef)
++	}
++
+ 	found := false
+ 	addrs := []v1.NodeAddress{}
+ 	for _, v := range oVM.Guest.Net {
+@@ -198,29 +215,70 @@
+ 			continue
+ 		}
+ 
++		if (len(internalNetworkMap) > 0) && (len(externalNetworkMap) > 0) && v.Network == "" {
++			klog.V(4).Info("Skipping device because networkName-based IP address detection is enabled and the \"Network\" field is not set on vNIC")
++			continue
++		}
++
+ 		// Only return a single IP address based on the preference of IPFamily
+ 		// Must break out of loop in the event of ipv6,ipv4 where the NIC does
+ 		// contain a valid IPv6 and IPV4 address
+ 		for _, family := range ipFamily {
+ 			ips := returnIPsFromSpecificFamily(family, v.IpAddress)
+ 
+-			for _, ip := range ips {
+-				klog.V(2).Infof("Adding IP: %s", ip)
+-				v1helper.AddToNodeAddresses(&addrs,
+-					v1.NodeAddress{
+-						Type:    v1.NodeExternalIP,
+-						Address: ip,
+-					}, v1.NodeAddress{
+-						Type:    v1.NodeInternalIP,
+-						Address: ip,
+-					}, v1.NodeAddress{
+-						Type:    v1.NodeHostName,
+-						Address: oVM.Guest.HostName,
+-					},
+-				)
+-
+-				found = true
+-				break
++			if (len(internalNetworkMap) > 0) && (len(externalNetworkMap) > 0) {
++				klog.V(2).Infof("Adding Hostname")
++				v1helper.AddToNodeAddresses(&addrs,
++					v1.NodeAddress{
++						Type:    v1.NodeHostName,
++						Address: oVM.Guest.HostName,
++					},
++				)
++
++				if _, ok := internalNetworkMap[v.Network]; ok {
++					for _, ip := range ips {
++						klog.V(2).Infof("Adding Internal IP: %s", ip)
++						v1helper.AddToNodeAddresses(&addrs,
++							v1.NodeAddress{
++								Type:    v1.NodeInternalIP,
++								Address: ip,
++							},
++						)
++						found = true
++						break
++					}
++				}
++				if _, ok := externalNetworkMap[v.Network]; ok {
++					for _, ip := range ips {
++						klog.V(2).Infof("Adding External IP: %s", ip)
++						v1helper.AddToNodeAddresses(&addrs,
++							v1.NodeAddress{
++								Type:    v1.NodeExternalIP,
++								Address: ip,
++							},
++						)
++						found = true
++						break
++					}
++				}
++			} else {
++				for _, ip := range ips {
++					klog.V(2).Infof("Adding IP: %s", ip)
++					v1helper.AddToNodeAddresses(&addrs,
++						v1.NodeAddress{
++							Type:    v1.NodeExternalIP,
++							Address: ip,
++						}, v1.NodeAddress{
++							Type:    v1.NodeInternalIP,
++							Address: ip,
++						}, v1.NodeAddress{
++							Type:    v1.NodeHostName,
++							Address: oVM.Guest.HostName,
++						},
++					)
++					found = true
++					break
++				}
+ 			}
+ 
+ 			if found {
+Index: pkg/common/config/config.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/config/config.go b/pkg/common/config/config.go
+--- a/pkg/common/config/config.go	(revision 684c9881ac5eb22ffd211c2e180cccef35904930)
++++ b/pkg/common/config/config.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
+@@ -227,6 +227,15 @@
+ 				ipFamily = cfg.Global.IPFamily
+ 			}
+ 
++			_, internalNetworkNames, errInternalNetworkNames := getEnvKeyValue("VCENTER_"+id+"_INTERNAL_NETWORK_NAMES", false)
++			if errInternalNetworkNames != nil {
++				internalNetworkNames = cfg.Global.InternalNetworkNames
++			}
++			_, externalNetworkNames, errExternalNetworkNames := getEnvKeyValue("VCENTER_"+id+"_EXTERNAL_NETWORK_NAMES", false)
++			if errExternalNetworkNames != nil {
++				externalNetworkNames = cfg.Global.ExternalNetworkNames
++			}
++
+ 			// If server is explicitly set, that means the vcenter value above is the TenantRef
+ 			vcenterIP := vcenter
+ 			tenantRef := vcenter
+@@ -236,40 +245,44 @@
+ 			}
+ 
+ 			cfg.VirtualCenter[tenantRef] = &VirtualCenterConfig{
+-				User:              username,
+-				Password:          password,
+-				TenantRef:         tenantRef,
+-				VCenterIP:         vcenterIP,
+-				VCenterPort:       port,
+-				InsecureFlag:      insecureFlag,
+-				Datacenters:       datacenters,
+-				RoundTripperCount: roundtrip,
+-				CAFile:            caFile,
+-				Thumbprint:        thumbprint,
+-				SecretRef:         secretRef,
+-				SecretName:        secretName,
+-				SecretNamespace:   secretNamespace,
+-				IPFamily:          ipFamily,
++				User:                 username,
++				Password:             password,
++				TenantRef:            tenantRef,
++				VCenterIP:            vcenterIP,
++				VCenterPort:          port,
++				InsecureFlag:         insecureFlag,
++				Datacenters:          datacenters,
++				RoundTripperCount:    roundtrip,
++				CAFile:               caFile,
++				Thumbprint:           thumbprint,
++				SecretRef:            secretRef,
++				SecretName:           secretName,
++				SecretNamespace:      secretNamespace,
++				IPFamily:             ipFamily,
++				InternalNetworkNames: internalNetworkNames,
++				ExternalNetworkNames: externalNetworkNames,
+ 			}
+ 		}
+ 	}
+ 
+ 	if cfg.Global.VCenterIP != "" && cfg.VirtualCenter[cfg.Global.VCenterIP] == nil {
+ 		cfg.VirtualCenter[cfg.Global.VCenterIP] = &VirtualCenterConfig{
+-			User:              cfg.Global.User,
+-			Password:          cfg.Global.Password,
+-			TenantRef:         cfg.Global.VCenterIP,
+-			VCenterIP:         cfg.Global.VCenterIP,
+-			VCenterPort:       cfg.Global.VCenterPort,
+-			InsecureFlag:      cfg.Global.InsecureFlag,
+-			Datacenters:       cfg.Global.Datacenters,
+-			RoundTripperCount: cfg.Global.RoundTripperCount,
+-			CAFile:            cfg.Global.CAFile,
+-			Thumbprint:        cfg.Global.Thumbprint,
+-			SecretRef:         DefaultCredentialManager,
+-			SecretName:        cfg.Global.SecretName,
+-			SecretNamespace:   cfg.Global.SecretNamespace,
+-			IPFamily:          cfg.Global.IPFamily,
++			User:                 cfg.Global.User,
++			Password:             cfg.Global.Password,
++			TenantRef:            cfg.Global.VCenterIP,
++			VCenterIP:            cfg.Global.VCenterIP,
++			VCenterPort:          cfg.Global.VCenterPort,
++			InsecureFlag:         cfg.Global.InsecureFlag,
++			Datacenters:          cfg.Global.Datacenters,
++			RoundTripperCount:    cfg.Global.RoundTripperCount,
++			CAFile:               cfg.Global.CAFile,
++			Thumbprint:           cfg.Global.Thumbprint,
++			SecretRef:            DefaultCredentialManager,
++			SecretName:           cfg.Global.SecretName,
++			SecretNamespace:      cfg.Global.SecretNamespace,
++			IPFamily:             cfg.Global.IPFamily,
++			InternalNetworkNames: cfg.Global.InternalNetworkNames,
++			ExternalNetworkNames: cfg.Global.ExternalNetworkNames,
+ 		}
+ 	}
+ 
+@@ -335,21 +348,23 @@
+ 	// VirtualCenter does not already exist in the map
+ 	if cfg.Global.VCenterIP != "" && cfg.VirtualCenter[cfg.Global.VCenterIP] == nil {
+ 		vcConfig := &VirtualCenterConfig{
+-			User:              cfg.Global.User,
+-			Password:          cfg.Global.Password,
+-			TenantRef:         cfg.Global.VCenterIP,
+-			VCenterIP:         cfg.Global.VCenterIP,
+-			VCenterPort:       cfg.Global.VCenterPort,
+-			InsecureFlag:      cfg.Global.InsecureFlag,
+-			Datacenters:       cfg.Global.Datacenters,
+-			RoundTripperCount: cfg.Global.RoundTripperCount,
+-			CAFile:            cfg.Global.CAFile,
+-			Thumbprint:        cfg.Global.Thumbprint,
+-			SecretRef:         DefaultCredentialManager,
+-			SecretName:        cfg.Global.SecretName,
+-			SecretNamespace:   cfg.Global.SecretNamespace,
+-			IPFamily:          cfg.Global.IPFamily,
+-			IPFamilyPriority:  ipFamilyPriority,
++			User:                 cfg.Global.User,
++			Password:             cfg.Global.Password,
++			TenantRef:            cfg.Global.VCenterIP,
++			VCenterIP:            cfg.Global.VCenterIP,
++			VCenterPort:          cfg.Global.VCenterPort,
++			InsecureFlag:         cfg.Global.InsecureFlag,
++			Datacenters:          cfg.Global.Datacenters,
++			RoundTripperCount:    cfg.Global.RoundTripperCount,
++			CAFile:               cfg.Global.CAFile,
++			Thumbprint:           cfg.Global.Thumbprint,
++			SecretRef:            DefaultCredentialManager,
++			SecretName:           cfg.Global.SecretName,
++			SecretNamespace:      cfg.Global.SecretNamespace,
++			IPFamily:             cfg.Global.IPFamily,
++			IPFamilyPriority:     ipFamilyPriority,
++			InternalNetworkNames: cfg.Global.InternalNetworkNames,
++			ExternalNetworkNames: cfg.Global.ExternalNetworkNames,
+ 		}
+ 		cfg.VirtualCenter[cfg.Global.VCenterIP] = vcConfig
+ 	}
+@@ -433,6 +448,13 @@
+ 		if !insecure {
+ 			vcConfig.InsecureFlag = cfg.Global.InsecureFlag
+ 		}
++
++		if vcConfig.InternalNetworkNames == "" {
++			vcConfig.InternalNetworkNames = cfg.Global.InternalNetworkNames
++		}
++		if vcConfig.ExternalNetworkNames == "" {
++			vcConfig.ExternalNetworkNames = cfg.Global.ExternalNetworkNames
++		}
+ 	}
+ 
+ 	return nil
+Index: pkg/common/config/types.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/config/types.go b/pkg/common/config/types.go
+--- a/pkg/common/config/types.go	(revision 684c9881ac5eb22ffd211c2e180cccef35904930)
++++ b/pkg/common/config/types.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
+@@ -59,6 +59,10 @@
+ 		// ipv4 - IPv4 addresses only (Default)
+ 		// ipv6 - IPv6 addresses only
+ 		IPFamily string `gcfg:"ip-family"`
++		// VirtualMachine network interfaces backed by the following vSphere Networks
++		// will be used in respective status.addresses fields. Comma-separated.
++		InternalNetworkNames string `gcfg:"internal-network-names"`
++		ExternalNetworkNames string `gcfg:"external-network-names"`
+ 	}
+ 
+ 	// Virtual Center configurations
+@@ -113,4 +117,8 @@
+ 	IPFamily string `gcfg:"ip-family"`
+ 	// IPFamilyPriority (intentionally not exposed via the config) the list/priority of IP versions
+ 	IPFamilyPriority []string
++	// VirtualMachine network interfaces backed by the following vSphere Networks
++	// will be used in respective status.addresses fields. Comma-separated.
++	InternalNetworkNames string `gcfg:"internal-network-names"`
++	ExternalNetworkNames string `gcfg:"external-network-names"`
+ }

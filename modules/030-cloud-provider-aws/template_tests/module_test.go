@@ -40,7 +40,8 @@ const globalValues = `
         csiNodeDriverRegistrar: imagehash
         csiLivenessProbe: imagehash
         ebsCsiPlugin: imagehash
-        cloudControllerManager: imagehash
+        cloudControllerManager116: imagehash
+        cloudControllerManager119: imagehash
         nodeTerminationHandler: imagehash
   discovery:
     d8SpecificNodeCountByRole:
@@ -50,7 +51,7 @@ const globalValues = `
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.15.4
+    kubernetesVersion: 1.16.4
 `
 
 const moduleValues = `
@@ -173,6 +174,20 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ebsSnapshotterCR.Exists()).To(BeTrue())
 			Expect(ebsSnapshotterCRB.Exists()).To(BeTrue())
 			Expect(ebsStorageClass.Exists()).To(BeTrue())
+		})
+
+		Context("Unsupported Kubernetes version", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
+				f.HelmRender()
+			})
+
+			It("CCM should not be present on unsupported Kubernetes versions", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-controller-manager").Exists()).To(BeFalse())
+			})
 		})
 	})
 })

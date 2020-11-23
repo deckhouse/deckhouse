@@ -1,4 +1,7 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- if hasKey .Values.global.modulesImages.tags.cloudProviderGcp $ccmImageName }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -13,7 +16,7 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -45,29 +48,41 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: gcp-cloud-controller-manager
-          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderGcp.cloudControllerManager }}
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-gcp/cloud-controller-manager-{{ $kubernetesSemVer.Major }}-{{ $kubernetesSemVer.Minor }}:{{ index .Values.global.modulesImages.tags.cloudProviderGcp $ccmImageName }}
           command:
-            - /usr/local/bin/cloud-controller-manager
-            - --v=2
-            - --use-service-account-credentials=true
-            - --allocate-node-cidrs=true
-            - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
-            - --leader-elect=true
-            - --cloud-config=/etc/cloud-config
-            - --cloud-provider=gce
-            - --bind-address=127.0.0.1
-            - --secure-port=10871
+          - /usr/local/bin/cloud-controller-manager
+          - --leader-elect=true
+          - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          - --allocate-node-cidrs=true
+          - --configure-cloud-routes=true
+          - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
+          - --cloud-provider=gce
+          - --bind-address=0.0.0.0
+          - --secure-port=10871
+          - --v=2
           env:
           - name: GOOGLE_APPLICATION_CREDENTIALS
             value: "/etc/credentials.json"
+          ports:
+          - name: https
+            containerPort: 10871
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
           volumeMounts:
             - mountPath: /etc/kubernetes/pki
               name: k8s-certs
               readOnly: true
-            - mountPath: /etc/cloud-config
+            - mountPath: /etc/cloud-contoller-manager-config
               name: cloud-config
               readOnly: true
-              subPath: cloud-config
             - mountPath: /etc/credentials.json
               name: cloud-credentials
               readOnly: true
@@ -83,3 +98,4 @@ spec:
       - name: cloud-credentials
         secret:
           secretName: cloud-credentials
+{{- end }}

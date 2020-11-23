@@ -67,6 +67,16 @@ rules:
   - watch
   - update
 - apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
   - ""
   resources:
   - configmaps
