@@ -1,0 +1,4 @@
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-user-authn" "ingress-tls") }}
+{{ if and (.Values.userAuthn.publishAPI.enable) (eq .Values.userAuthn.publishAPI.https.mode "Global") -}}
+  {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-user-authn" "kubernetes-tls") -}}
+{{- end -}}

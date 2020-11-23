@@ -21,23 +21,12 @@ global:
     kubernetesVersion: 1.15.5
   modules:
     publicDomainTemplate: "%s.example.com"
-    https:
-      __ConstantChoices__:
-      - certManager:
-          clusterIssuerName: letsencrypt
-        mode: CertManager
-      - mode: Disabled
-      - mode: OnlyInURI
-      - mode: CustomCertificate
-        customCertificate:
-          secretName: plainstring
     placement:
       __ConstantChoices__:
       - {}
       - customTolerationKeys:
           - "test-1"
           - "test-2/master"
-
 prometheus:
   auth:
     __ConstantChoices__:
@@ -49,7 +38,20 @@ prometheus:
     customPlugins:
     - grafana-image-renderer
     storageClass: ceph-ssd
+  https:
+    __ConstantChoices__:
+      - certManager:
+          clusterIssuerName: letsencrypt
+        mode: CertManager
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: plainstring
   internal:
+    customCertificateData:
+      tls.crt: plainstring
+      tls.key: plainstring
     alertmanagers:
       __ConstantChoices__:
       - {}
@@ -120,4 +122,3 @@ prometheus:
       longtermMaxMemory: 2Mi
       maxCPU: 1
       maxMemory: 2Mi
-

@@ -26,7 +26,7 @@ metadata:
 spec:
   applicationDomain: "$(module::public_domain dashboard)"
   sendAuthorizationHeader: true
-  applicationIngressCertificateSecretName: "ingress-tls"
+  applicationIngressCertificateSecretName: "$(module::https_secret_name "ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else

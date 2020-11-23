@@ -36,3 +36,17 @@ deckhouseWeb:
         authSignInURL: https://$host/dex-authenticator/sign_in
         authURL: https://deckhouse-web-dex-authenticator.d8-system.svc.cluster.local/dex-authenticator/auth
     - whitelistSourceRanges: ["1.1.1.1/32"]
+  https:
+    __ConstantChoices__:
+      - certManager:
+          clusterIssuerName: letsencrypt
+        mode: CertManager
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: plainstring
+  internal:
+    customCertificateData:
+      tls.crt: plainstring
+      tls.key: plainstring

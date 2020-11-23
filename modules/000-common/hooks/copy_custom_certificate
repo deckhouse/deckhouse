@@ -1,4 +1,5 @@
 #!/bin/bash
+# for tests only
 
 source /deckhouse/shell_lib.sh
 

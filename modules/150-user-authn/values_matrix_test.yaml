@@ -48,6 +48,9 @@ userAuthn:
   idTokenTTL:
     __ConstantChoices__: [10000m, __EmptyItem__]
   internal:
+    customCertificateData:
+      tls.crt: plainstring
+      tls.key: plainstring
     selfSignedCA:
       cert: test
       key: test
@@ -184,3 +187,13 @@ userAuthn:
                 operator: Equal
                 value: bar
           allowAccessToKubernetes: null
+  https:
+    __ConstantChoices__:
+      - certManager:
+          clusterIssuerName: letsencrypt
+        mode: CertManager
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: plainstring

@@ -27,7 +27,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "status") }}
-    secretName: ingress-tls-status
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-status") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "status") }}
@@ -72,7 +72,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "status") }}
-    secretName: ingress-tls-status
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-status") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "status") }}

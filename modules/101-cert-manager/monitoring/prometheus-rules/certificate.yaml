@@ -23,3 +23,16 @@
       plk_incident_initial_status: "todo"
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
       summary: Certificate expired
+
+- name: kubernetes.certmanager.orphan_certificate
+  rules:
+    - alert: D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
+      expr: max by (namespace, secret_name) (d8_orphan_secrets_without_corresponding_certificate_resources==1)
+      labels:
+        severity: warning
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_incident_initial_status: "todo"
+        description: Secret {{$labels.namespace}}/{{$labels.secret_name}} without corresponding Certificate CR
+        summary: Secret without corresponding Certificate CR

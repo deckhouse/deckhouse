@@ -47,7 +47,7 @@ spec:
 {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
       - name: ca-certificates
         secret:
-          secretName: ingress-tls
+          secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
           items:
           - key: tls.crt
             path: idp-ca.crt
