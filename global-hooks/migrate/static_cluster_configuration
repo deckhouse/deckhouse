@@ -31,7 +31,7 @@ function __on_startup() {
   cidrs=$(jq --argjson ng "$networks_from_ng" -rc \
     '$ng + . | .[] | "- \(.)"' <<< ${networks_from_annotations})
 
-  if jq -rce '. | length == 0' <<< ${cidrs} >/dev/null 2>&1; then
+  if [[ "x$cidrs" == "x" ]]; then
     return 0
   fi
 
