@@ -29,10 +29,27 @@
     - alert: D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
       expr: max by (namespace, secret_name) (d8_orphan_secrets_without_corresponding_certificate_resources==1)
       labels:
-        severity: warning
+        severity_level: 8
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
         plk_incident_initial_status: "todo"
+        plk_grouped_by__main: "D8CertmanagerOrphanSecretsChecksFailed,tier=cluster,prometheus=deckhouse"
         description: Secret {{$labels.namespace}}/{{$labels.secret_name}} without corresponding Certificate CR
         summary: Secret without corresponding Certificate CR
+
+    - alert: D8CertmanagerOrphanSecretsChecksFailed
+      expr: count(ALERTS{alertname=~"D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources", alertstate="firing"})
+      labels:
+        tier: cluster
+        d8_module: cert-manager
+        d8_component: cert-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_alert_type: "group"
+        description: |
+          Cert-manager found the difference between Secrets and Certificate requests.
+
+          To reach the problem, check grouped alerts.
+        summary: Cert-manager found the difference between Secrets and Certificate requests.
