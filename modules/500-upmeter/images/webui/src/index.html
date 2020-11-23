@@ -6,65 +6,15 @@
   <title>Upmeter</title>
   <meta name="description" content="">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="stylesheet" href="./vendor/bootstrap-4.5.2.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
-  <!-- <link rel="stylesheet" href="./vendor/flatly-bootstrap.min.css" crossorigin="anonymous"> -->
-
 </head>
 
-<body class="text-center">
+<body>
 
-<div class="container">
-
-  <div class="row justify-content-center">
-  <!-- buttons -->
-  <div class="btn-toolbar btn-toolbar-status-graph" role="toolbar" aria-label="Toolbar with button groups">
-    <button class="btn btn-secondary" id="step-indicator"> Step: 20m
-    </button>
-
-    <button class="btn btn-primary btn-now active" data-action="now">
-      <i class="fas fa-user-clock"></i> Now
-    </button>
-
-    <div class="btn-group btn-group-step mr-2" role="group" aria-label="step">
-      <button class="btn btn-primary active" data-time-range="3hr">
-        <i class="fas fa-clock"></i> 3 hours
-      </button>
-      <button class="btn btn-primary" data-time-range="day" data-step="2,hours" data-count="12">
-        <i class="fas fa-calendar-day"></i> Day
-      </button>
-      <button class="btn btn-primary" data-time-range="week" data-step="1,day" data-count="12">
-        <i class="fas fa-calendar-week"></i> Week
-      </button>
-      <button class="btn btn-primary" data-time-range="month" data-step="3,days" data-count="10">
-        <i class="fas fa-calendar-alt"></i> Month
-      </button>
-      <button class="btn btn-primary" data-time-range="quarter" data-step="1,week" data-count="12" data-tick-format="" data-ticks-between="true">
-        <i class="fas fa-calendar-plus"></i> Quarter
-      </button>
-      <button class="btn btn-primary" data-time-range="year" data-step="1,month" data-count="12">
-        <i class="fas fa-calendar"></i> Year
-      </button>
-    </div>
-
-    <div class="btn-group btn-group-toggle btn-group-mutetype mr-2" role="group" aria-label="Mute types">
-      <button class="btn btn-secondary" id="mt-accident" data-mute-type="Acd">
-        <i class="fas fa-square"></i> Accident
-      </button>
-      <button class="btn btn-secondary active" id="mt-maintenance" data-mute-type="Mnt">
-        <i class="fas fa-check-square"></i> Maintenance
-      </button>
-      <button class="btn btn-secondary active" id="mt-infra-accid" data-mute-type="InfAcd">
-        <i class="fas fa-check-square"></i> Infra Accid
-      </button>
-      <button class="btn btn-secondary active" id="mt-infra-maint" data-mute-type="InfMnt">
-        <i class="fas fa-check-square"></i> Infra Maint
-      </button>
-    </div>
-  </div>
-  </div>
-
-  <svg id="graph"></svg>
+<div class="top-container">
+ <div class="upmeter-container">
+    <div id="topNavBar"></div>
+    <div id="graph"></div>
+ </div>
 </div>
 
 </body>

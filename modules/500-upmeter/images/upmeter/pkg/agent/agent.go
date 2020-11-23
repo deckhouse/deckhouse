@@ -8,10 +8,10 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
+	"upmeter/pkg/agent/executor"
+	"upmeter/pkg/agent/manager"
+	"upmeter/pkg/agent/sender"
 	"upmeter/pkg/app"
-	"upmeter/pkg/probe/executor"
-	"upmeter/pkg/probe/manager"
-	"upmeter/pkg/probe/sender"
 )
 
 type Agent struct {
@@ -50,6 +50,10 @@ func NewDefaultAgent(ctx context.Context) *Agent {
 	// Probe manager
 	a.Manager = manager.NewProbeManager()
 	a.Manager.Init() // Create instances for each prober.
+
+	for _, prober := range a.Manager.ProberList {
+		log.Infof("Register probe %s", prober.ProbeId())
+	}
 
 	a.UpmeterClient = sender.CreateUpmeterClient(app.UpmeterHost, app.UpmeterPort)
 

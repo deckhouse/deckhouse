@@ -41,7 +41,7 @@ func NewNeighborProber() types.Prober {
 
 		smokeIPs, failed := ResolveSmokeMiniIps(SmokeMiniAddr, nghDnsTimeout)
 		if failed {
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 			return
 		}
 

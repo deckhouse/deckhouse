@@ -9,267 +9,166 @@ import (
 	"upmeter/pkg/probe/types"
 )
 
-func Test_CalculateStatuses(t *testing.T) {
+func Test_CalculateStatuses_success_only(t *testing.T) {
 	g := NewWithT(t)
 
 	episodes := []types.DowntimeEpisode{
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       0,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       300,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       600,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       900,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 300, 0, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 300, 300, 0, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 600, 300, 0, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 900, 300, 0, 0, 0),
 	}
 
-	incidents := []types.DowntimeIncident{}
-
 	// simple case with minimal step
+	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "testProbe")
 
-	s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "testProbe")
+	ExpectStatuses(g, s, "testGroup", "testProbe", 3)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][0], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][1], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][2], 300, 0, 0, 0, 0)
 
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("testProbe"))
-	g.Expect(s["testGroup"]["testProbe"]).Should(HaveLen(3))
-	g.Expect(s["testGroup"]["testProbe"][0].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][1].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][2].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][0].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][1].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][2].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][0].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][1].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][2].Down).Should(BeEquivalentTo(0))
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 300).Ranges, "testGroup", "testProbe")
 
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "__total__")
+	ExpectStatuses(g, s, "testGroup", "testProbe", 4)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][0], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][1], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][2], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][3], 300, 0, 0, 0, 0)
 
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-	g.Expect(s["testGroup"]["__total__"]).Should(HaveLen(3))
-	totalInfo := s["testGroup"]["__total__"][0]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-	totalInfo = s["testGroup"]["__total__"][1]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-	totalInfo = s["testGroup"]["__total__"][2]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
+	// simple case, total seconds for group
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "__total__")
+
+	ExpectStatuses(g, s, "testGroup", "__total__", 3)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 300, 0, 0, 0, 0)
+
+	// simple case, total seconds for group
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 300).Ranges, "testGroup", "__total__")
+
+	ExpectStatuses(g, s, "testGroup", "__total__", 4)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][3], 300, 0, 0, 0, 0)
 
 	// 2x step
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "testProbe")
 
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 600).Ranges, "testGroup", "testProbe")
-
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("testProbe"))
-	g.Expect(s["testGroup"]["testProbe"]).Should(HaveLen(2))
-	info := s["testGroup"]["testProbe"][0]
-	g.Expect(info.TimeSlot).Should(BeEquivalentTo(0))
-	g.Expect(info.Up).Should(BeEquivalentTo(600))
-	g.Expect(info.Down).Should(BeEquivalentTo(0))
-	g.Expect(info.Unknown).Should(BeEquivalentTo(0))
-	info = s["testGroup"]["testProbe"][1]
-	g.Expect(info.TimeSlot).Should(BeEquivalentTo(600))
-	g.Expect(info.Up).Should(BeEquivalentTo(600))
-	g.Expect(info.Down).Should(BeEquivalentTo(0))
-	g.Expect(info.Unknown).Should(BeEquivalentTo(0))
+	ExpectStatuses(g, s, "testGroup", "testProbe", 2)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][0], 600, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][1], 600, 0, 0, 0, 0)
 
 	// 3x step with grouping
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 900).Ranges, "testGroup", "__total__")
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 900).Ranges, "testGroup", "__total__")
 
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-	g.Expect(s["testGroup"]["__total__"]).Should(HaveLen(1))
-	totalInfo = s["testGroup"]["__total__"][0]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(900))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-
-	//g.Expect(s["testGroup"]["__total__"][0].Up).Should(BeEquivalentTo(900))
-	//g.Expect(s["testGroup"]["__total__"][1].Up).Should(BeEquivalentTo(300))
-	//totalInfo = s["testGroup"]["__total__"][1]
-
-	// incidents!
+	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 900, 0, 0, 0, 0)
 }
 
 func Test_CalculateStatuses_with_incidents(t *testing.T) {
 	g := NewWithT(t)
 
 	episodes := []types.DowntimeEpisode{
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       0,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       300,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       600,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       900,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 300, 0, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 300, 300, 0, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 600, 0, 200, 100, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 900, 300, 0, 0, 0),
 	}
 
 	incidents := []types.DowntimeIncident{
-		{
-			Start:        250,
-			End:          400,
-			Duration:     0,
-			Type:         "Maintenance",
-			Description:  "test",
-			Affected:     []string{"testGroup"},
-			DowntimeName: "",
-		},
-		{
-			Start:        800,
-			End:          900,
-			Duration:     0,
-			Type:         "Maintenance",
-			Description:  "test",
-			Affected:     []string{"testGroup"},
-			DowntimeName: "",
-		},
+		NewDowntimeIncident(250, 400, "testGroup"),
+		NewDowntimeIncident(600, 800, "testGroup"), // mute duration is 200 to mute unknown and a half of down
 	}
 
 	// 2x step with muting
-	s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 600).Ranges, "testGroup", "__total__")
+	s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
 
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-	g.Expect(s["testGroup"]["__total__"]).Should(HaveLen(2))
-	// incidents should not  decrease Up seconds
-	g.Expect(s["testGroup"]["__total__"][0].Up).Should(BeEquivalentTo(600))
-	g.Expect(s["testGroup"]["__total__"][1].Up).Should(BeEquivalentTo(600))
+	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	// All Up is not muted
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 600, 0, 0, 0, 0)
+	// unknown and down should be muted
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 100, 0, 200, 0)
 
-	// 2x step with muting Down seconds
-	episodes = []types.DowntimeEpisode{
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "probe_1",
-			},
-			TimeSlot:       0,
-			FailSeconds:    100,
-			SuccessSeconds: 100,
-			Unknown:        100,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "probe_2",
-			},
-			TimeSlot:       0,
-			FailSeconds:    100,
-			SuccessSeconds: 100,
-			Unknown:        100,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "probe_1",
-			},
-			TimeSlot:       300,
-			FailSeconds:    100,
-			SuccessSeconds: 200,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "probe_1",
-			},
-			TimeSlot:       600,
-			FailSeconds:    100,
-			SuccessSeconds: 100,
-			Unknown:        100,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "probe_1",
-			},
-			TimeSlot:       900,
-			FailSeconds:    100,
-			SuccessSeconds: 200,
-		},
+}
+
+// Test UpdateMute with Nodata in episodes
+func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
+	g := NewWithT(t)
+
+	episodes := []types.DowntimeEpisode{
+		NewDowntimeEpisode("testGroup", "testProbe", 300, 100, 0, 200, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 900, 100, 100, 100, 0),
 	}
 
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 600).Ranges, "testGroup", "__total__")
+	// 2x step with nodata
+	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
 
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-	g.Expect(s["testGroup"]["__total__"]).Should(HaveLen(2))
+	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 200, 0, 300)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 100, 100, 0, 300)
+
+	incidents := []types.DowntimeIncident{
+		NewDowntimeIncident(250, 400, "testGroup"),
+		NewDowntimeIncident(800, 950, "testGroup"),
+	}
+
+	// 2x step with muting
+	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
+
+	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+
 	// incidents should not  decrease Up seconds
-	info := s["testGroup"]["__total__"][0]
-	secondsSum := info.Up + info.Down + info.Muted + info.Unknown
-	g.Expect(secondsSum).Should(BeEquivalentTo(600))
-	g.Expect(info.Up).Should(BeEquivalentTo(100), "info=%+v", info) // 300 for probe_1 and 100 for probe_2 == 100
-	g.Expect(info.Down).Should(BeEquivalentTo(250))                 // 500 known seconds for probe_1 - 100 up - 150 muted.
-	g.Expect(info.Muted).Should(BeEquivalentTo(100 + 50))           // 50 and 100 muted from inc[0]
-	g.Expect(info.Unknown).Should(BeEquivalentTo(100))              // 100 unknown from ep[0]
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 50, 150, 300)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 50, 0, 150, 300)
 
-	//g.Expect(s.Statuses["testGroup"]["__total__"][1].Up).Should(BeEquivalentTo(600))
+	// Increase incidents to test NoData decreasing
+	incidents = []types.DowntimeIncident{
+		NewDowntimeIncident(100, 600, "testGroup"),
+		NewDowntimeIncident(700, 1400, "testGroup"),
+	}
+
+	// 2x step with muting
+	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
+
+	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	// incidents should decrease NoData if mute is more than KnownSeconds and should not decrease Up seconds
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 0, 400, 100)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 0, 0, 400, 100)
+}
+
+// Test CalculateTotalForStepRange
+func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
+	g := NewWithT(t)
+
+	var episodes []types.DowntimeEpisode
+	var s map[string]map[string][]StatusInfo
+
+	// Only success and unknown should not emit down seconds
+	episodes = []types.DowntimeEpisode{
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 50, 0, 250, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 300, 50, 0, 250, 0),
+		NewDowntimeEpisode("testGroup", "testProbe2", 0, 100, 0, 200, 0),
+		NewDowntimeEpisode("testGroup", "testProbe2", 300, 100, 0, 200, 0),
+	}
+
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 600, 600).Ranges, "testGroup", "__total__")
+
+	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 500, 0, 0)
+
+	// Only success and nodata should not emit down seconds
+	episodes = []types.DowntimeEpisode{
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 50, 0, 0, 250),
+		NewDowntimeEpisode("testGroup", "testProbe", 300, 50, 0, 0, 250),
+		NewDowntimeEpisode("testGroup", "testProbe2", 0, 100, 0, 0, 200),
+		NewDowntimeEpisode("testGroup", "testProbe2", 300, 100, 0, 0, 200),
+	}
+
+	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 600, 600).Ranges, "testGroup", "__total__")
+
+	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 100, 0, 400)
 
 }
 
@@ -466,170 +365,67 @@ func Test_CalculateStatuses_multi_episodes(t *testing.T) {
 	g := NewWithT(t)
 
 	episodes := []types.DowntimeEpisode{
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       0,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       0,
-			FailSeconds:    200,
-			SuccessSeconds: 100,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       0,
-			FailSeconds:    25,
-			SuccessSeconds: 50,
-			Unknown:        300 - 50 - 25,
-		},
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 300, 0, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 100, 200, 0, 0),
+		NewDowntimeEpisode("testGroup", "testProbe", 0, 50, 25, 300-50-25, 0),
 	}
 
 	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 300, 300).Ranges, "testGroup", "__total__")
 
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-
-	info := s["testGroup"]["__total__"][0]
-
-	// Expect combined episode for timeslot=0
-	g.Expect(info.Up).Should(BeEquivalentTo(300))
-	g.Expect(info.Down).Should(BeEquivalentTo(0))
-	g.Expect(info.Unknown).Should(BeEquivalentTo(0))
-	g.Expect(info.NoData).Should(BeEquivalentTo(0))
+	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 300, 0, 0, 0, 0)
 }
 
-// Catch problem with last episode
-func Test_CalculateStatuses_combine_last_5mepisode_into_last_range_bucket(t *testing.T) {
-	g := NewWithT(t)
+// Helpers
 
-	episodes := []types.DowntimeEpisode{
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       0,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
+func NewDowntimeEpisode(group, probe string, ts, success, fail, unknown, nodata int64) types.DowntimeEpisode {
+	return types.DowntimeEpisode{
+		ProbeRef: types.ProbeRef{
+			Group: group,
+			Probe: probe,
 		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       300,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       600,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
-		{
-			ProbeRef: types.ProbeRef{
-				Group: "testGroup",
-				Probe: "testProbe",
-			},
-			TimeSlot:       900,
-			FailSeconds:    0,
-			SuccessSeconds: 300,
-		},
+		TimeSlot:       ts,
+		SuccessSeconds: success,
+		FailSeconds:    fail,
+		Unknown:        unknown,
+		NoData:         nodata,
+	}
+}
+
+func NewDowntimeIncident(start, end int64, affected ...string) types.DowntimeIncident {
+	return types.DowntimeIncident{
+		Start:        start,
+		End:          end,
+		Duration:     0,
+		Type:         "Maintenance",
+		Description:  "test",
+		Affected:     affected,
+		DowntimeName: "",
+	}
+}
+
+func ExpectStatusInfo(g *WithT, status StatusInfo, up, down, unknown, muted, nodata int64) {
+	if up >= 0 {
+		g.Expect(status.Up).Should(BeEquivalentTo(up), "Check info.Up, info: %+v", status)
+	}
+	if down >= 0 {
+		g.Expect(status.Down).Should(BeEquivalentTo(down), "Check info.Down, info: %+v", status)
+	}
+	if unknown >= 0 {
+		g.Expect(status.Unknown).Should(BeEquivalentTo(unknown), "Check info.Unknown, info: %+v", status)
+	}
+	if muted >= 0 {
+		g.Expect(status.Muted).Should(BeEquivalentTo(muted), "Check info.Muted, info: %+v", status)
+	}
+	if nodata >= 0 {
+		g.Expect(status.NoData).Should(BeEquivalentTo(nodata), "Check info.NoData, info: %+v", status)
 	}
 
-	incidents := []types.DowntimeIncident{}
+}
 
-	// simple case with minimal step
-
-	s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "testProbe")
-
+func ExpectStatuses(g *WithT, s map[string]map[string][]StatusInfo, group, probe string, len int) {
 	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("testProbe"))
-	g.Expect(s["testGroup"]["testProbe"]).Should(HaveLen(4))
-	g.Expect(s["testGroup"]["testProbe"][0].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][1].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][2].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][3].Up).Should(BeEquivalentTo(300))
-	g.Expect(s["testGroup"]["testProbe"][0].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][1].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][2].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][3].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][0].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][1].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][2].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][3].Down).Should(BeEquivalentTo(0))
-
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "__total__")
-
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-	g.Expect(s["testGroup"]["__total__"]).Should(HaveLen(4))
-	totalInfo := s["testGroup"]["__total__"][0]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-	totalInfo = s["testGroup"]["__total__"][1]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-	totalInfo = s["testGroup"]["__total__"][2]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-	totalInfo = s["testGroup"]["__total__"][3]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(300))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-
-	// 2x step
-
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 600).Ranges, "testGroup", "testProbe")
-
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("testProbe"))
-	g.Expect(s["testGroup"]["testProbe"]).Should(HaveLen(2))
-	g.Expect(s["testGroup"]["testProbe"][0].Up).Should(BeEquivalentTo(600))
-	g.Expect(s["testGroup"]["testProbe"][0].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][0].Unknown).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][1].Up).Should(BeEquivalentTo(600))
-	g.Expect(s["testGroup"]["testProbe"][1].Down).Should(BeEquivalentTo(0))
-	g.Expect(s["testGroup"]["testProbe"][1].Unknown).Should(BeEquivalentTo(0))
-
-	// 3x step with grouping
-	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 900, 900).Ranges, "testGroup", "__total__")
-
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey("testGroup"))
-	g.Expect(s["testGroup"]).Should(HaveKey("__total__"))
-	g.Expect(s["testGroup"]["__total__"]).Should(HaveLen(2))
-	totalInfo = s["testGroup"]["__total__"][0]
-	g.Expect(totalInfo.Up).Should(BeEquivalentTo(900))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(0))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
-
-	g.Expect(s["testGroup"]["__total__"][0].Up).Should(BeEquivalentTo(900))
-	g.Expect(s["testGroup"]["__total__"][1].Up).Should(BeEquivalentTo(300))
-	totalInfo = s["testGroup"]["__total__"][1]
-
-	// incidents!
+	g.Expect(s).Should(HaveKey(group))
+	g.Expect(s[group]).Should(HaveKey(probe))
+	g.Expect(s[group][probe]).Should(HaveLen(len))
 }

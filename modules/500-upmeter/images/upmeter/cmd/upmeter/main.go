@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"upmeter/pkg/probers/util"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -45,7 +46,7 @@ func main() {
 	agCmd := kpApp.Command("agent", "Start upmeter agent").
 		Action(func(c *kingpin.ParseContext) error {
 			sh_app.SetupLogging()
-			log.Info("Start upmeter agent")
+			log.Infof("Start upmeter agent. Id=%s", util.AgentUniqueId())
 			upmeterAgent := agent.NewDefaultAgent(context.Background())
 			err := upmeterAgent.Start()
 			if err != nil {

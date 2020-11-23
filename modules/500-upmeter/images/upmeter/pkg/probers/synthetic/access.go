@@ -41,7 +41,7 @@ func NewAccessProber() types.Prober {
 
 		smokeIPs, failed := ResolveSmokeMiniIps(SmokeMiniAddr, accessDnsTimeout)
 		if failed {
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 			return
 		}
 

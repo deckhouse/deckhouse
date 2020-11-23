@@ -34,6 +34,12 @@ func NewBasicProber() types.Prober {
 
 	pr.RunFn = func(start int64) {
 		log := pr.LogEntry()
+
+		// Set Unknown result if API server is unavailable
+		if !CheckApiAvailable(pr) {
+			return
+		}
+
 		cmName := util.RandomIdentifier("upmeter-basic")
 		cm := &v1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -54,27 +60,35 @@ func NewBasicProber() types.Prober {
 			},
 		}
 
-		var errors = 0
+		if !GarbageCollect(pr, cm.Kind, cm.Labels) {
+			return
+		}
+
 		util.DoWithTimer(basicProbeTimeout, func() {
 			_, err := pr.KubernetesClient.CoreV1().ConfigMaps(app.Namespace).Create(cm)
 			if err != nil {
-				errors++
 				log.Errorf("Create cm/%s: %v", cmName, err)
+				pr.ResultCh <- pr.Result(types.ProbeUnknown)
+				return
 			}
-			if errors == 0 {
-				err = pr.KubernetesClient.CoreV1().ConfigMaps(app.Namespace).Delete(cm.Name, &metav1.DeleteOptions{})
-				if err != nil {
-					// Check failed
-					errors++
-					log.Errorf("Delete cm/%s: %v", cmName, err)
-				}
+			err = pr.KubernetesClient.CoreV1().ConfigMaps(app.Namespace).Delete(cm.Name, &metav1.DeleteOptions{})
+			if err != nil {
+				log.Errorf("Delete cm/%s: %v", cmName, err)
+				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				return
 			}
+
+			if !WaitForObjectDeletion(pr, basicProbeTimeout, cm.Kind, cm.Name) {
+				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				return
+			}
+
+			pr.ResultCh <- pr.Result(types.ProbeSuccess)
 		}, func() {
 			log.Infof("Exceeds timeout when create/delete cm/%s", cmName)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 		})
 
-		pr.ResultCh <- pr.Result(errors == 0)
 	}
 
 	return pr

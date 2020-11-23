@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"upmeter/pkg/crd"
 	"upmeter/pkg/probe/types"
-	"upmeter/pkg/upmeter/db"
+	"upmeter/pkg/upmeter/db/dao"
 	"upmeter/pkg/upmeter/entity"
 )
 
@@ -78,7 +78,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	episodes, err := db.Downtime5m.ListEpisodesByRange(stepRanges.From, stepRanges.To, groupName, probeName)
+	episodes, err := dao.Downtime5m.ListEpisodesByRange(stepRanges.From, stepRanges.To, groupName, probeName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
@@ -90,11 +90,11 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	statuses := entity.CalculateStatuses(episodes, incidents, stepRanges.Ranges, groupName, probeName)
 
 	out, err := json.Marshal(&StatusResponse{
-		Statuses:  statuses,
-		Step:      stepRanges.Step,
-		From:      stepRanges.From,
-		To:        stepRanges.To,
-		Episodes:  episodes,
+		Statuses: statuses,
+		Step:     stepRanges.Step,
+		From:     stepRanges.From,
+		To:       stepRanges.To,
+		//Episodes:  episodes, // To much data, only for debug.
 		Incidents: incidents,
 	})
 	if err != nil {

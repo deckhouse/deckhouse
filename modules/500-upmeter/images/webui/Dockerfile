@@ -1,11 +1,13 @@
 FROM node:14-alpine3.12 as builder
-RUN apk add python3 vips make build-base
+# dependencies for favicon generator
+RUN apk add python2 python3 vips make build-base
 RUN mkdir -p /app
 WORKDIR /app
-COPY package*.json /app/
-RUN npm ci
+COPY package.json /app/
+COPY yarn.lock /app/
+RUN yarn install
 COPY . /app
-RUN npm run build
+RUN yarn run build
 
 FROM nginx:1.15-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
