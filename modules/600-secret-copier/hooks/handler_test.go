@@ -62,6 +62,7 @@ metadata:
   namespace: default
   labels:
     secret-copier.deckhouse.io/enabled: ""
+    certmanager.k8s.io/certificate-name: certname
 data:
   supersecret: s1data
 ---
@@ -184,6 +185,9 @@ data:
 			Expect(f.KubernetesResource("Secret", "ns2", "s1").Field("data.supersecret").String()).To(Equal("s1data"))
 			Expect(f.KubernetesResource("Secret", "ns2", "s2").Field("data.supersecret").String()).To(Equal("s2data"))
 			Expect(f.KubernetesResource("Secret", "ns2", "s3").Field("data.supersecret").String()).To(Equal("s3data"))
+
+			Expect(f.KubernetesResource("Secret", "ns1", "s1").Field("metadata.labels").Map()).ToNot(HaveKey("certmanager.k8s.io/certificate-name"))
+			Expect(f.KubernetesResource("Secret", "ns2", "s1").Field("metadata.labels").Map()).ToNot(HaveKey("certmanager.k8s.io/certificate-name"))
 		})
 	})
 

@@ -18,7 +18,7 @@ function __config__() {
           antiopa-secret-copier: "yes"
       jqFilter: |
         {
-          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"])))),
+          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"]))) | del(.labels."certmanager.k8s.io/certificate-name")),
           "type": .type,
           "data": .data
         }
@@ -35,7 +35,7 @@ function __config__() {
           secret-copier.deckhouse.io/enabled: ""
       jqFilter: |
         {
-          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"])))),
+          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"]))) | del(.labels."certmanager.k8s.io/certificate-name")),
           "type": .type,
           "data": .data
         }
