@@ -372,24 +372,24 @@ func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, erro
 		return nil, fmt.Errorf("marshal provider config: %v", err)
 	}
 
-	installConfig := Config{
-		UUID:            metaConfig.UUID,
-		Registry:        metaConfig.DeckhouseConfig.ImagesRepo,
-		DockerCfg:       metaConfig.DeckhouseConfig.RegistryDockerCfg,
-		DevBranch:       metaConfig.DeckhouseConfig.DevBranch,
-		ReleaseChannel:  metaConfig.DeckhouseConfig.ReleaseChannel,
-		Bundle:          metaConfig.DeckhouseConfig.Bundle,
-		LogLevel:        metaConfig.DeckhouseConfig.LogLevel,
-		DeckhouseConfig: metaConfig.MergeDeckhouseConfig(),
-		KubeDNSAddress:  metaConfig.ClusterDNSAddress,
-		ClusterConfig:   clusterConfig,
+	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("marshal static config: %v", err)
 	}
 
-	switch metaConfig.ClusterType {
-	case "Static":
-		installConfig.StaticClusterConfig = providerClusterConfig
-	case "Cloud":
-		installConfig.ProviderClusterConfig = providerClusterConfig
+	installConfig := Config{
+		UUID:                  metaConfig.UUID,
+		Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
+		DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
+		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
+		ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
+		Bundle:                metaConfig.DeckhouseConfig.Bundle,
+		LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
+		DeckhouseConfig:       metaConfig.MergeDeckhouseConfig(),
+		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
+		ProviderClusterConfig: providerClusterConfig,
+		StaticClusterConfig:   staticClusterConfig,
+		ClusterConfig:         clusterConfig,
 	}
 
 	return &installConfig, nil

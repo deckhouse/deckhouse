@@ -1,6 +1,7 @@
 nodeManager:
   internal:
-    static: {}
+    static:
+      internalNetworkCIDRs: []
   allowedBundles:
   - "ubuntu-lts"
   - "centos-7"

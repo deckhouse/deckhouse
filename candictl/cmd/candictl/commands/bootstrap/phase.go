@@ -100,10 +100,6 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		if err := metaConfig.Sufficient(); err != nil {
-			return fmt.Errorf("parsing config: %v", err)
-		}
-
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err

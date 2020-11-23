@@ -94,6 +94,7 @@ func main() {
 		{
 			commands.DefineEditClusterConfigurationCommand(editCmd)
 			commands.DefineEditProviderClusterConfigurationCommand(editCmd)
+			commands.DefineEditStaticClusterConfigurationCommand(editCmd)
 		}
 	}
 

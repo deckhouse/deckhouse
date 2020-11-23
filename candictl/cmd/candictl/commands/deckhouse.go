@@ -85,29 +85,13 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		clusterConfig, err := metaConfig.ClusterConfigYAML()
+		installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
 		if err != nil {
-			return fmt.Errorf("marshal cluster config: %v", err)
-		}
-
-		providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
-		if err != nil {
-			return fmt.Errorf("marshal provider config: %v", err)
-		}
-
-		installConfig := deckhouse.Config{
-			Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
-			DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
-			DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-			ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
-			Bundle:                metaConfig.DeckhouseConfig.Bundle,
-			LogLevel:              metaConfig.DeckhouseConfig.LogLevel,
-			ClusterConfig:         clusterConfig,
-			ProviderClusterConfig: providerClusterConfig,
+			return err
 		}
 
 		if DryRun {
-			manifest := deckhouse.CreateDeckhouseDeploymentManifest(&installConfig)
+			manifest := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
 			out, err := yaml.Marshal(manifest)
 			if err != nil {
 				return err
@@ -123,7 +107,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.CreateDeckhouseDeployment(kubeCl, &installConfig)
+			err = deckhouse.CreateDeckhouseDeployment(kubeCl, installConfig)
 			if err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}

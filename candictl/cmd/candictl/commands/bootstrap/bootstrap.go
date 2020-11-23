@@ -82,10 +82,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		if err := metaConfig.Sufficient(); err != nil {
-			return fmt.Errorf("parsing config: %v", err)
-		}
-
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
@@ -205,8 +201,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		staticNodeGroups := metaConfig.GetStaticNodeGroups()
-		if err := operations.BootstrapStaticNodes(kubeCl, metaConfig, staticNodeGroups); err != nil {
+		terraNodeGroups := metaConfig.GetTerraNodeGroups()
+		if err := operations.BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups); err != nil {
 			return err
 		}
 
@@ -214,8 +210,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
 				return err
 			}
-			for _, staticNodeGroup := range staticNodeGroups {
-				if err := converge.WaitForNodesBecomeReady(kubeCl, staticNodeGroup.Name, staticNodeGroup.Replicas); err != nil {
+			for _, terraNodeGroup := range terraNodeGroups {
+				if err := converge.WaitForNodesBecomeReady(kubeCl, terraNodeGroup.Name, terraNodeGroup.Replicas); err != nil {
 					return err
 				}
 			}

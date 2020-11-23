@@ -21,14 +21,15 @@ type MetaConfig struct {
 	ClusterPrefix        string `json:"-"`
 	ClusterDNSAddress    string `json:"-"`
 
-	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
-	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
-	StaticNodeGroupSpecs []StaticNodeGroupSpec  `json:"-"`
+	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
+	TerraNodeGroupSpecs []TerraNodeGroupSpec   `json:"-"`
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration"`
+	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration"`
 
 	UUID string `json:"clusterUUID,omitempty"`
 }
@@ -53,11 +54,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 	}
 
-	if len(m.ProviderClusterConfig) == 0 {
-		return m, nil
-	}
-
-	if m.ClusterType != CloudClusterType {
+	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
 		return m, nil
 	}
 
@@ -79,27 +76,15 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
-	m.StaticNodeGroupSpecs = []StaticNodeGroupSpec{}
+	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
-		if err := json.Unmarshal(nodeGroups, &m.StaticNodeGroupSpecs); err != nil {
+		if err := json.Unmarshal(nodeGroups, &m.TerraNodeGroupSpecs); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
 		}
 	}
 
 	return m, nil
-}
-
-func (m *MetaConfig) Sufficient() error {
-	if len(m.ProviderClusterConfig) == 0 {
-		return fmt.Errorf("provider or static cluster configuration doesn't found in config")
-	}
-
-	if len(m.ClusterConfig) == 0 {
-		return fmt.Errorf("cluster configuration doesn't found in config")
-	}
-
-	return nil
 }
 
 // MergeDeckhouseConfig returns deckhouse config merged from different sources
@@ -134,20 +119,20 @@ func (m *MetaConfig) MergeDeckhouseConfig(configs ...[]byte) map[string]interfac
 	return firstConfig
 }
 
-func (m *MetaConfig) GetStaticNodeGroups() []StaticNodeGroupSpec {
-	return m.StaticNodeGroupSpecs
+func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
+	return m.TerraNodeGroupSpecs
 }
 
-func (m *MetaConfig) FindStaticNodeGroup(nodeGroupName string) []byte {
-	for index, ng := range m.StaticNodeGroupSpecs {
+func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
+	for index, ng := range m.TerraNodeGroupSpecs {
 		if ng.Name == nodeGroupName {
-			var staticNodeGroups []json.RawMessage
-			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &staticNodeGroups)
+			var terraNodeGroups []json.RawMessage
+			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &terraNodeGroups)
 			if err != nil {
 				log.ErrorLn(err)
 				return nil
 			}
-			return staticNodeGroups[index]
+			return terraNodeGroups[index]
 		}
 	}
 	return nil
@@ -156,12 +141,12 @@ func (m *MetaConfig) FindStaticNodeGroup(nodeGroupName string) []byte {
 func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {
 	static := make(map[string]interface{})
 
-	if m.ClusterType != StaticClusterType {
+	if len(m.StaticClusterConfig) == 0 {
 		return static
 	}
 
 	var internalNetworkCIDRs []string
-	if data, ok := m.ProviderClusterConfig["internalNetworkCIDRs"]; ok {
+	if data, ok := m.StaticClusterConfig["internalNetworkCIDRs"]; ok {
 		err := json.Unmarshal(data, &internalNetworkCIDRs)
 		if err != nil {
 			log.DebugF("unmarshalling internalNetworkCIDRs: %v", err)
@@ -207,28 +192,35 @@ func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 }
 
 // NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
-func (m *MetaConfig) NodeGroupManifest(staticNodeGroup StaticNodeGroupSpec) map[string]interface{} {
-	if staticNodeGroup.NodeTemplate == nil {
-		staticNodeGroup.NodeTemplate = make(map[string]interface{})
+func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]interface{} {
+	if terraNodeGroup.NodeTemplate == nil {
+		terraNodeGroup.NodeTemplate = make(map[string]interface{})
 	}
 	return map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]interface{}{
-			"name": staticNodeGroup.Name,
+			"name": terraNodeGroup.Name,
 		},
 		"spec": map[string]interface{}{
 			"nodeType": "Hybrid",
 			"disruptions": map[string]interface{}{
 				"approvalMode": "Manual",
 			},
-			"nodeTemplate": staticNodeGroup.NodeTemplate,
+			"nodeTemplate": terraNodeGroup.NodeTemplate,
 		},
 	}
 }
 
-func (m *MetaConfig) MarshalConfig() []byte {
+func (m *MetaConfig) MarshalFullConfig() []byte {
 	data, _ := json.Marshal(m)
+	return data
+}
+
+func (m *MetaConfig) MarshalConfig() []byte {
+	newM := m.DeepCopy()
+	newM.StaticClusterConfig = nil
+	data, _ := json.Marshal(newM)
 	return data
 }
 
@@ -238,6 +230,10 @@ func (m *MetaConfig) ClusterConfigYAML() ([]byte, error) {
 
 func (m *MetaConfig) ProviderClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.ProviderClusterConfig)
+}
+
+func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
+	return yaml.Marshal(m.StaticClusterConfig)
 }
 
 func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) map[string]interface{} {
@@ -355,6 +351,14 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 			config[k] = v
 		}
 		out.ProviderClusterConfig = config
+	}
+
+	if m.StaticClusterConfig != nil {
+		config := make(map[string]json.RawMessage, len(m.StaticClusterConfig))
+		for k, v := range m.StaticClusterConfig {
+			config[k] = v
+		}
+		out.StaticClusterConfig = config
 	}
 
 	if m.ClusterType != "" {

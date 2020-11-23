@@ -58,7 +58,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 	runFunc := func(sshClient *ssh.SSHClient) error {
 		var err error
-		if err := cache.Init(sshClient.Check().String()); err != nil {
+
+		stateCache, err := cache.NewTempStateCache(sshClient.Check().String())
+		if err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
@@ -77,8 +79,8 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var metaConfig *config.MetaConfig
-		if cache.Global().InCache("cluster-config") && retry.AskForConfirmation("Do you want to continue with Cluster configuration from local cache") {
-			if err := cache.Global().LoadStruct("cluster-config", &metaConfig); err != nil {
+		if stateCache.InCache("cluster-config") && retry.AskForConfirmation("Do you want to continue with Cluster configuration from local cache") {
+			if err := stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
 				return err
 			}
 		} else {
@@ -95,16 +97,16 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 
-			err := cache.Global().SaveStruct("cluster-config", metaConfig)
+			err := stateCache.SaveStruct("cluster-config", metaConfig)
 			if err != nil {
 				return err
 			}
 		}
-		cache.Global().AddToClean("cluster-config")
+		stateCache.AddToClean("cluster-config")
 
 		var nodesState map[string]converge.NodeGroupTerraformState
-		if cache.Global().InCache("nodes-state") && retry.AskForConfirmation("Do you want to continue with Nodes state from local cache") {
-			if err := cache.Global().LoadStruct("nodes-state", &nodesState); err != nil {
+		if stateCache.InCache("nodes-state") && retry.AskForConfirmation("Do you want to continue with Nodes state from local cache") {
+			if err := stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 				return err
 			}
 		} else {
@@ -115,16 +117,16 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			if err != nil {
 				return err
 			}
-			err := cache.Global().SaveStruct("nodes-state", nodesState)
+			err := stateCache.SaveStruct("nodes-state", nodesState)
 			if err != nil {
 				return err
 			}
 		}
-		cache.Global().AddToClean("nodes-state")
+		stateCache.AddToClean("nodes-state")
 
 		var clusterState []byte
-		if cache.Global().InCache("cluster-state") && retry.AskForConfirmation("Do you want to continue with Cluster state from local cache") {
-			clusterState = cache.Global().Load("cluster-state")
+		if stateCache.InCache("cluster-state") && retry.AskForConfirmation("Do you want to continue with Cluster state from local cache") {
+			clusterState = stateCache.Load("cluster-state")
 		} else {
 			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
 				return err
@@ -133,9 +135,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			if err != nil {
 				return err
 			}
-			cache.Global().Save("cluster-state", clusterState)
+			stateCache.Save("cluster-state", clusterState)
 		}
-		cache.Global().AddToClean("cluster-state")
+		stateCache.AddToClean("cluster-state")
 
 		// Stop proxy because we have already gotten all info from kubernetes-api
 		if kubeCl != nil {
@@ -162,13 +164,14 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 
 			for name, state := range nodeGroupStates.State {
-				if !cache.Global().InCache(name) {
-					cache.Global().Save(name, state)
+				if !stateCache.InCache(name) {
+					stateCache.Save(name, state)
 				}
 
 				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, step).
 					WithVariables(metaConfig.NodeGroupConfig(nodeGroupName, 0, "")).
-					WithStatePath(cache.Global().ObjectPath(name)).
+					WithCache(stateCache).
+					WithStatePath(stateCache.ObjectPath(name)).
 					WithAutoApprove(app.SanityCheck)
 
 				tomb.RegisterOnShutdown(nodeRunner.Stop)
@@ -180,13 +183,14 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
-		if !cache.Global().InCache("base-infrastructure") {
-			cache.Global().Save("base-infrastructure", clusterState)
+		if !stateCache.InCache("base-infrastructure") {
+			stateCache.Save("base-infrastructure", clusterState)
 		}
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
-			WithStatePath(cache.Global().ObjectPath("base-infrastructure")).
+			WithCache(stateCache).
+			WithStatePath(stateCache.ObjectPath("base-infrastructure")).
 			WithAutoApprove(app.SanityCheck)
 		tomb.RegisterOnShutdown(baseRunner.Stop)
 
@@ -194,7 +198,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		cache.Global().Clean()
+		stateCache.Clean()
 		return nil
 	}
 

@@ -28,8 +28,9 @@ function __main__() {
   fi
 
   static_config=$(context::get snapshots.static_cluster_configuration.0.filterResult \
-    | deckhouse-controller helper cluster-configuration | jq -re '.providerClusterConfiguration')
-  values::set nodeManager.internal.static.internalNetworkCIDRs "$(jq -rc .internalNetworkCIDRs <<< "$static_config")"
+    | deckhouse-controller helper cluster-configuration | jq -re '.staticClusterConfiguration')
+
+  values::set nodeManager.internal.static.internalNetworkCIDRs "$(jq -rc '.internalNetworkCIDRs // []' <<< "$static_config")"
 }
 
 hook::run "$@"

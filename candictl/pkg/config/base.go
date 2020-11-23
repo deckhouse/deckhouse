@@ -139,6 +139,8 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 			metaConfig.InitClusterConfig = data
 		case index.Kind == "ClusterConfiguration":
 			metaConfig.ClusterConfig = data
+		case index.Kind == "StaticClusterConfiguration":
+			metaConfig.StaticClusterConfig = data
 		case strings.HasSuffix(index.Kind, "ClusterConfiguration"):
 			metaConfig.ProviderClusterConfig = data
 		}

@@ -1,0 +1,30 @@
+- name: d8.node-group-static-internal-network-cidr
+  rules:
+  - alert: NodeGroupHasStaticInternalNetworkCIDRsField
+    expr: |
+      max by (name) (d8_node_group_internal_network_cidrs) > 0
+    for: 5m
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_grouped_by__main: "NodeGroupsDeprecationAlerts,tier=cluster,prometheus=deckhouse"
+      summary: NodeGroup {{ $labels.name }} has deprecated filed spec.static.internalNetworkCIDRs
+      description: |
+        Internal network CIDRs setting now located in the static cluster configuration.
+        Delete this field from NodeGroup {{ $labels.name }} to fix this alert.
+        Do not worry, it has been already migrated to another place.
+
+  - alert: NodeGroupsDeprecationAlerts
+    expr: count(max by (node_group) (ALERTS{alertname="NodeGroupHasStaticInternalNetworkCidrsField", alertstate="firing"})) > 0
+    labels:
+      tier: cluster
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_alert_type: "group"
+      summary: Some NodeGroup functional is deprecated
+      description: |
+        Examine groupped alerts to find the cause.

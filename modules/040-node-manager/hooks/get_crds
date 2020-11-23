@@ -170,12 +170,28 @@ function __main__() {
   fi
 
   final_node_groups="[]"
+
+  metrics_group="/modules/$(module::name::kebab_case)/internal_network_cidrs"
+
+  # Hack to allow metrics deletion
+  jq -c --arg group "$metrics_group" '.group = $group' \
+    <<< '{"name": "d8_node_group_internal_network_cidrs", "set": 0, "labels": {"name": "__fake_ng__"}}' \
+    >> $METRICS_PATH
+
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
     ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
     ng="$(context::get snapshots.ngs.$i.filterResult.spec)"
     ng="$(jq --arg name "${ng_name}" '.name = $name' <<< "$ng")"
 
     if jq -e '.nodeType == "Static"' <<< "$ng" > /dev/null; then
+      # Metric for deprecation alert
+      if jq -rce '.static' <<< "$ng" > /dev/null; then
+        jq -c --arg group "$metrics_group" --arg ng_name "$ng_name" \
+          '.group = $group | .labels = {"name": $ng_name}' \
+          <<< '{"name": "d8_node_group_internal_network_cidrs", "set": 1}' \
+          >> $METRICS_PATH
+      fi
+
       if values::has nodeManager.internal.static.internalNetworkCIDRs ; then
         cidrs=$(values::get nodeManager.internal.static)
         ng=$(jq -r --argjson cidrs "$cidrs" '.static = $cidrs' <<< "$ng")
