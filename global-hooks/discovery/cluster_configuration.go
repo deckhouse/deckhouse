@@ -119,6 +119,17 @@ func (c *ClusterDiscoveryHook) Main(input *sdk.BindingInput) (*sdk.BindingOutput
 			return nil, fmt.Errorf("no serviceSubnetCIDR field in clusterConfiguration")
 		}
 
+		clusterDomain, ok := metaConfig.ClusterConfig["clusterDomain"]
+		if ok {
+			ops = append(ops, &utils.ValuesPatchOperation{
+				Op:    "add",
+				Path:  "/global/discovery/clusterDomain",
+				Value: clusterDomain,
+			})
+		} else {
+			return nil, fmt.Errorf("no clusterDomain field in clusterConfiguration")
+		}
+
 		out.MemoryValuesPatches.Operations = ops
 	} else {
 		// no cluster configuration — unset global value if there is one.
