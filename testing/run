@@ -4,6 +4,7 @@ CONTAINER_NAME="deckhouse-testing"
 export BASE_ALPINE=${BASE_ALPINE:-"alpine:3.12.1"}
 export BASE_GOLANG_ALPINE=${BASE_GOLANG_ALPINE:-"golang:1.15.3-alpine3.12"}
 export BASE_GOLANG_BUSTER=${BASE_GOLANG_BUSTER:-"golang:1.15.3-buster"}
+export BASE_SHELL_OPERATOR=${BASE_SHELL_OPERATOR:-"flant/shell-operator:v1.0.0-beta.12-alpine3.11"}
 
 if [[ "$1" == "--debug" ]]; then
   DEBUG=yes

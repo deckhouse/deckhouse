@@ -1,0 +1,57 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 100
+    schedule:
+    - group: main
+      queue: /modules/$(module::name::kebab_case)
+      crontab: "*/20 * * * *"
+EOF
+}
+
+function get_value_from_metrics() {
+  if [[ $1 == "" ]]; then
+    return 0
+  fi
+  echo "$1" | jq -r '.data.result[0].value[1] // 0'
+}
+
+function __main__() {
+  if [ -z "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    curl_args=(-s --connect-timeout 10 --max-time 10 -k -XGET -G -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)")
+    prom_url="https://prometheus.d8-monitoring:9090/api/v1/query"
+  fi
+
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    prom_result='{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1,"100"]}]}}'
+  else
+    if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode  'query=count(resource_versions_compatibility > 0)')"; then
+      prom_result=""
+    fi
+  fi
+  values::set flantPricing.internal.deprecatedResourcesInHelmReleases "$(get_value_from_metrics "$prom_result")"
+
+  if [[ $(values::jq -er '.global.enabledModules[] | select(. == "terraform-manager")') ]]; then
+    if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+      prom_result='{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1,"1"]}]}}'
+    else
+      if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode 'query=count(ALERTS{alertname="D8TerraformStateExporterChecksFailed", alertstate="firing"})')"; then
+        prom_result=""
+      fi
+    fi
+    converge_is_completed=true
+
+    if [[ "x$(get_value_from_metrics $prom_result)" != "x0" ]]; then
+      converge_is_completed=false
+    fi
+    values::set flantPricing.internal.convergeIsCompleted $converge_is_completed
+  else
+    values::set flantPricing.internal.convergeIsCompleted true
+  fi
+}
+
+hook::run "$@"

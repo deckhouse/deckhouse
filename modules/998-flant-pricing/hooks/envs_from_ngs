@@ -1,0 +1,27 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: ngs
+      group: ngs
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: deckhouse.io/v1alpha1
+      kind: NodeGroup
+      jqFilter: .status.nodes == .status.upToDate
+EOF
+}
+
+function __main__() {
+  if ! context::has snapshots.ngs.0; then
+    return 0
+  fi
+
+  values::set flantPricing.internal.allManagedNodesUpToDate "$(context::jq -r '[.snapshots.ngs[].filterResult] | sort | .[0]')"
+}
+
+hook::run "$@"
