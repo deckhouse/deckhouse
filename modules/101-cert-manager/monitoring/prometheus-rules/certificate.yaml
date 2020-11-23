@@ -29,7 +29,7 @@
     - alert: D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources
       expr: max by (namespace, secret_name) (d8_orphan_secrets_without_corresponding_certificate_resources==1)
       labels:
-        severity_level: 8
+        severity_level: "8"
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
