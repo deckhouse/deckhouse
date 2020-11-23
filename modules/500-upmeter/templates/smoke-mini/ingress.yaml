@@ -19,7 +19,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
-    secretName: ingress-tls-smoke-mini
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-smoke-mini") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
@@ -38,7 +38,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "smoke-mini")) | indent 2 }}
 spec:
-  secretName: ingress-tls-smoke-mini
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-smoke-mini") }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "smoke-mini") }}
   acme:

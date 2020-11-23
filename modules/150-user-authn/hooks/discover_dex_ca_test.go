@@ -8,7 +8,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"controlPlaneConfigurator":{}},"controlPlaneConfigurator":{"enabled":true}}}`, "")
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"controlPlaneConfigurator":{}}, "controlPlaneConfigurator":{"enabled":true}, "https": {"mode":"CertManager"}}}`, "")
 
 	Context("With FromIngressSecret option and empty cluster", func() {
 		BeforeEach(func() {
@@ -38,27 +38,6 @@ data:
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 			})
-		})
-	})
-
-	Context("With FromIngressSecret option and secret", func() {
-		BeforeEach(func() {
-			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "FromIngressSecret")
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ingress-tls
-  namespace: d8-user-authn
-data:
-  ca.crt: dGVzdA==
-`, 1))
-			f.RunHook()
-		})
-
-		It("Should add ca for OIDC provider", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 		})
 	})
 

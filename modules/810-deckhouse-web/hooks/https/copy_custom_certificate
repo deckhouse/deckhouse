@@ -3,11 +3,11 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  legacy::common_hooks::https::copy_custom_certificate::config "d8-system"
+  common_hooks::https::copy_custom_certificate::config
 }
 
 function __main__() {
-  legacy::common_hooks::https::copy_custom_certificate::main "d8-system" "ingress-tls"
+   common_hooks::https::copy_custom_certificate::main
 }
 
 hook::run "$@"

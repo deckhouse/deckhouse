@@ -24,7 +24,7 @@ metadata:
    app: dex-authenticator
 spec:
   applicationDomain: "$(module::public_domain deckhouse)"
-  applicationIngressCertificateSecretName: "ingress-tls"
+  applicationIngressCertificateSecretName: "$(module::https_secret_name "ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else

@@ -30,7 +30,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
-    secretName: ingress-tls
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
@@ -49,7 +49,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
-  secretName: ingress-tls
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
   acme:

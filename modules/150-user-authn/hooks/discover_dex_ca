@@ -14,11 +14,15 @@ function __config__() {
      kind: Secret
      executeHookOnEvent: ["Added", "Modified"]
      nameSelector:
-       matchNames: ["ingress-tls"]
+       matchNames: ["ingress-tls", "ingress-tls-customcertificate"]
      namespace:
        nameSelector:
          matchNames: ["d8-user-authn"]
-     jqFilter: '.data | ."ca.crt" // ."tls.crt" // "" | @base64d'
+     jqFilter: |
+       {
+         name: .metadata.name,
+         data: (.data."ca.crt" // .data."tls.crt" // "") | @base64d
+       }
 EOF
 }
 
@@ -28,7 +32,6 @@ function __main__(){
     values::unset userAuthn.internal.discoveredDexCA
     return 0
   fi
-
   dex_ca_mode=$(values::get userAuthn.controlPlaneConfigurator.dexCAMode)
   dex_ca=""
   case ${dex_ca_mode} in
@@ -37,10 +40,12 @@ function __main__(){
     ;;
     FromIngressSecret)
       if context::has snapshots.ca_secret.0 ; then
-        dex_ca=$(context::get snapshots.ca_secret.0.filterResult)
+        secret_name="$(module::https_secret_name "ingress-tls")"
+        # shellcheck disable=SC2016
+        dex_ca="$(context::jq -r --arg secret_name "$secret_name" '.snapshots.ca_secret[] | select(.filterResult.name==$secret_name) | .filterResult.data')"
       fi
       if [[ "$dex_ca" == "" ]]; then
-        >&2 echo "WARNING: Can't get ca.crt or tls.crt from secret 'ingress-tls'. This is a common behavior for the first installation with FromIngressSecret control plane configurator CA discovery mode."
+        >&2 echo "WARNING: Can't get ca.crt or tls.crt from secret $(module::https_secret_name "ingress-tls"). This is a common behavior for the first installation with FromIngressSecret control plane configurator CA discovery mode."
         values::unset userAuthn.internal.discoveredDexCA
         return 0
       fi
@@ -58,4 +63,4 @@ function __main__(){
 }
 
 
-hook::run $@
+hook::run "$@"

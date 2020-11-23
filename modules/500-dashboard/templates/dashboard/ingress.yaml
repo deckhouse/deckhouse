@@ -43,7 +43,7 @@ spec:
   tls:
   - hosts:
       - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
-    secretName: ingress-tls
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
@@ -54,7 +54,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | indent 2 }}
 spec:
-  secretName: ingress-tls
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "dashboard") }}
   acme:

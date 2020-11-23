@@ -7,28 +7,35 @@ function __config__() {
    configVersion: v1
    kubernetes:
    - name: secret
+     group: main
      keepFullObjectsInMemory: false
      apiVersion: v1
      kind: Secret
      executeHookOnEvent: ["Added", "Modified"]
      nameSelector:
-       matchNames: ["kubernetes-tls"]
+       matchNames: ["kubernetes-tls", "kubernetes-tls-customcertificate"]
      namespace:
        nameSelector:
          matchNames: ["d8-user-authn"]
-     jqFilter: ".data.\"ca.crt\" | @base64d"
+     jqFilter: |
+       {
+         name: .metadata.name,
+         data: (.data."ca.crt" // "") | @base64d
+       }
 EOF
 }
 
-function __on_kubernetes::secret::synchronization() {
-  if context::has objects.0; then
-    values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$(context::get objects.0.filterResult)"
+function __main__() {
+  if context::has snapshots.secret.0; then
+    secret_name="$(module::https_secret_name "kubernetes-tls")"
+    # shellcheck disable=SC2016
+    data="$(context::jq -r --arg secret_name "$secret_name" '.snapshots.secret[] | select(.filterResult.name==$secret_name) | .filterResult.data')"
+    if [ -n "$data" ]; then
+      values::set "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA" "$data"
+    else
+      values::unset "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA"
+    fi
   fi
 }
 
-function __on_kubernetes::secret::added_or_modified() {
-  values::set userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA "$(context::get filterResult)"
-}
-
-
-hook::run $@
+hook::run "$@"

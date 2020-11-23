@@ -102,3 +102,41 @@ certManager:
     not empty string
   {{- end -}}
 {{- end -}}
+
+{{- /* Usage: {{ include "helm_lib_module_https_copy_custom_certificate" (list . "namespace" "secret_name_prefix") }} */ -}}
+{{- define "helm_lib_module_https_copy_custom_certificate" -}}
+  {{- $context := index . 0 -}}
+  {{- $namespace := index . 1  -}}
+  {{- $secret_name_prefix := index . 2 -}}
+  {{- $mode := include "helm_lib_module_https_mode" $context -}}
+  {{- if eq $mode "CustomCertificate" -}}
+    {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+    {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secret_name }}
+  namespace: {{ $namespace }}
+{{ include "helm_lib_module_labels" (list $context) | indent 2 }}
+type: kubernetes.io/tls
+data:
+{{ $module_values.internal.customCertificateData | toYaml | indent 2 }}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Usage: {{ include "helm_lib_module_https_secret_name (list . "secret_name_prefix") }} */ -}}
+{{- define "helm_lib_module_https_secret_name" -}}
+  {{- $context := index . 0 -}}
+  {{- $secret_name_prefix := index . 1  -}}
+  {{- $mode := include "helm_lib_module_https_mode" $context -}}
+  {{- if eq $mode "CertManager" -}}
+    {{- $secret_name_prefix -}}
+  {{- else -}}
+    {{- if eq $mode "CustomCertificate" -}}
+      {{- printf "%s-customcertificate" $secret_name_prefix -}}
+    {{- else -}}
+      {{- fail "https.mode must be CustomCertificate or CertManager" -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

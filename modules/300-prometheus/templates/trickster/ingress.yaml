@@ -34,7 +34,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
-    secretName: ingress-tls
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}

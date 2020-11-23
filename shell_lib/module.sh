@@ -36,3 +36,21 @@ function module::ingress_class() {
     echo "nginx"
   fi
 }
+
+module::https_secret_name() {
+  prefix_name="$1"
+  module_name=$(module::name::camel_case)
+  https_mode="$(values::get_first_defined "${module_name}.https.mode" "global.modules.https.mode" )" || true
+  case $https_mode in
+    "CustomCertificate")
+      echo "${prefix_name}-customcertificate"
+      ;;
+    "CertManager")
+      echo "${prefix_name}"
+      ;;
+    *)
+      >&2 echo "ERROR: https.mode must be in [Certmanager, CustomCertificate]"
+      return 1
+      ;;
+  esac
+}

@@ -17,7 +17,7 @@ spec:
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "api") }}
-    secretName: kubernetes-tls
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "kubernetes-tls") }}
   {{- end }}
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
