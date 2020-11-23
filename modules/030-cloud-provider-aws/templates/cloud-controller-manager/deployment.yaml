@@ -1,4 +1,7 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- if hasKey .Values.global.modulesImages.tags.cloudProviderAws $ccmImageName }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -13,7 +16,7 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -45,17 +48,17 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: aws-cloud-controller-manager
-          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderAws.cloudControllerManager }}
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/cloud-controller-manager-{{ $kubernetesSemVer.Major }}-{{ $kubernetesSemVer.Minor }}:{{ index .Values.global.modulesImages.tags.cloudProviderAws $ccmImageName }}
           args:
-          - --v=2
+          - --leader-elect=true
+          - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
           - --allocate-node-cidrs=true
           - --configure-cloud-routes=true
-          - --leader-elect=true
           - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
           - --cloud-provider=aws
-          - --bind-address=127.0.0.1
+          - --bind-address=0.0.0.0
           - --secure-port=10871
-          - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          - --v=2
           env:
           - name: AWS_ACCESS_KEY_ID
             valueFrom:
@@ -67,6 +70,19 @@ spec:
               secretKeyRef:
                 name: cloud-controller-manager
                 key: aws-secret-access-key
+          ports:
+          - name: https
+            containerPort: 10871
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
           volumeMounts:
           - mountPath: /etc/kubernetes/pki
             name: k8s-certs
@@ -85,3 +101,4 @@ spec:
           items:
           - key: cloud-config
             path: cloud-config
+{{- end }}

@@ -1,4 +1,7 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- if hasKey .Values.global.modulesImages.tags.cloudProviderOpenstack $ccmImageName }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -45,15 +48,30 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: openstack-cloud-controller-manager
-          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderOpenstack.cloudControllerManager }}
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-openstack/cloud-controller-manager-{{ $kubernetesSemVer.Major }}-{{ $kubernetesSemVer.Minor }}:{{ index .Values.global.modulesImages.tags.cloudProviderOpenstack $ccmImageName }}
           args:
-            - --v=4
-            - --leader-elect=true
-            - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
-            - --cloud-provider=openstack
-            - --use-service-account-credentials=true
-            - --bind-address=127.0.0.1
-            - --secure-port=10871
+          - --leader-elect=true
+          - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          - --allocate-node-cidrs=true
+          - --configure-cloud-routes=true
+          - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
+          - --cloud-provider=openstack
+          - --bind-address=0.0.0.0
+          - --secure-port=10871
+          - --v=2
+          ports:
+          - name: https
+            containerPort: 10871
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
           volumeMounts:
             - mountPath: /etc/kubernetes/pki
               name: k8s-certs
@@ -69,3 +87,4 @@ spec:
       - name: config
         secret:
           secretName: cloud-controller-manager
+{{- end }}

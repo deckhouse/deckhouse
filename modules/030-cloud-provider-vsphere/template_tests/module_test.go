@@ -39,7 +39,8 @@ const globalValues = `
         nodeRegistrar: imagehash
         provisioner: imagehash
         vsphereCsi: imagehash
-        cloudControllerManager: imagehash
+        cloudControllerManager116: imagehash
+        cloudControllerManager119: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
@@ -47,7 +48,7 @@ const globalValues = `
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.15.4
+    kubernetesVersion: 1.16.4
 `
 
 const moduleValuesA = `
@@ -216,6 +217,20 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.vsphere").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+		})
+
+		Context("Unsupported Kubernetes version", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
+				f.HelmRender()
+			})
+
+			It("CCM should not be present on unsupported Kubernetes versions", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager").Exists()).To(BeFalse())
+			})
 		})
 	})
 })

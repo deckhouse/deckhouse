@@ -38,7 +38,8 @@ const globalValues = `
         csiSnapshotter: imagehash
         csiResizer: imagehash
         csiNodeDriverRegistrar: imagehash
-        cloudControllerManager: imagehash
+        cloudControllerManager116: imagehash
+        cloudControllerManager119: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       master: 3
@@ -46,7 +47,7 @@ const globalValues = `
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.15.4
+    kubernetesVersion: 1.16.4
     defaultStorageClass: fastssd
 `
 
@@ -257,6 +258,20 @@ storageclass.kubernetes.io/is-default-class: "true"
 		It("Test should fail", func() {
 			Expect(f.RenderError).Should(HaveOccurred())
 			Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
+		})
+	})
+
+	Context("Unsupported Kubernetes version", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
+			f.HelmRender()
+		})
+
+		It("CCM should not be present on unsupported Kubernetes versions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager").Exists()).To(BeFalse())
 		})
 	})
 })

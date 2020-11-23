@@ -1,0 +1,274 @@
+From af05017a45ccf76ed32a576cab2d0a8bf31e8839 Mon Sep 17 00:00:00 2001
+From: Andrey Klimentyev <andrey.klimentyev@flant.com>
+Date: Thu, 12 Nov 2020 15:06:58 +0300
+Subject: [PATCH] Clean-up Kubernetes dependencies
+
+1. Move away from unreadable "replace" directives in the go.mod
+2. Provide a script that simplifies "replace" directives generation in the future
+---
+ go.mod                         | 92 +++++++++++++++++++++-------------
+ go.sum                         | 76 +++++++++++++++-------------
+ hack/update-kubernetes-deps.sh | 22 ++++++++
+ 3 files changed, 120 insertions(+), 70 deletions(-)
+ create mode 100755 hack/update-kubernetes-deps.sh
+
+diff --git a/go.mod b/go.mod
+index c805b8daec..d2018c2041 100644
+--- a/go.mod
++++ b/go.mod
+@@ -2,48 +2,70 @@ module k8s.io/cloud-provider-aws
+ 
+ go 1.15
+ 
+-replace (
+-	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/apiextensions-apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/cli-runtime => k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/client-go => k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/cloud-provider => k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/cluster-bootstrap => k8s.io/kubernetes/staging/src/k8s.io/cluster-bootstrap v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/code-generator => k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/component-base => k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/cri-api => k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/csi-translation-lib => k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/kube-aggregator => k8s.io/kubernetes/staging/src/k8s.io/kube-aggregator v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/kube-controller-manager => k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/kube-proxy => k8s.io/kubernetes/staging/src/k8s.io/kube-proxy v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20201023141757-9e8ad8ce9d8a
+-	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20201023141757-9e8ad8ce9d8a
+-)
+-
+ require (
+ 	github.com/aws/aws-sdk-go v1.28.2
+ 	github.com/golang/mock v1.3.1
+ 	github.com/google/go-cmp v0.4.0
+-	github.com/google/uuid v1.1.1
+ 	github.com/spf13/cobra v1.0.0
+ 	github.com/spf13/pflag v1.0.5
+ 	github.com/stretchr/testify v1.4.0
+-	gopkg.in/gcfg.v1 v1.2.0
+-	k8s.io/api v0.0.0
+-	k8s.io/apimachinery v0.0.0
+-	k8s.io/apiserver v0.0.0
+-	k8s.io/client-go v0.0.0
+-	k8s.io/cloud-provider v0.0.0
+-	k8s.io/component-base v0.0.0
++	k8s.io/api v0.19.3
++	k8s.io/apimachinery v0.19.3
++	k8s.io/apiserver v0.19.3
++	k8s.io/cloud-provider v0.19.3
++	k8s.io/code-generator v0.19.3
++	k8s.io/component-base v0.19.3
+ 	k8s.io/klog v1.0.0
+-	k8s.io/klog/v2 v2.2.0
+-	k8s.io/kubernetes v0.0.0-20201023141757-9e8ad8ce9d8a
++	k8s.io/klog/v2 v2.4.0
++	k8s.io/kubernetes v1.19.3
+ 	k8s.io/legacy-cloud-providers v0.0.0
+-	k8s.io/utils v0.0.0-20201015054608-420da100c033
++	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+ )
++
++replace k8s.io/api => k8s.io/api v0.19.3
++
++replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.3
++
++replace k8s.io/apimachinery => k8s.io/apimachinery v0.19.3
++
++replace k8s.io/apiserver => k8s.io/apiserver v0.19.3
++
++replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.3
++
++replace k8s.io/client-go => k8s.io/client-go v0.19.3
++
++replace k8s.io/cloud-provider => k8s.io/cloud-provider v0.19.3
++
++replace k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.19.3
++
++replace k8s.io/code-generator => k8s.io/code-generator v0.19.3
++
++replace k8s.io/component-base => k8s.io/component-base v0.19.3
++
++replace k8s.io/controller-manager => k8s.io/controller-manager v0.19.3
++
++replace k8s.io/cri-api => k8s.io/cri-api v0.19.3
++
++replace k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.19.3
++
++replace k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.3
++
++replace k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.19.3
++
++replace k8s.io/kube-proxy => k8s.io/kube-proxy v0.19.3
++
++replace k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.19.3
++
++replace k8s.io/kubectl => k8s.io/kubectl v0.19.3
++
++replace k8s.io/kubelet => k8s.io/kubelet v0.19.3
++
++replace k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.19.3
++
++replace k8s.io/metrics => k8s.io/metrics v0.19.3
++
++replace k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.19.3
++
++replace k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.19.3
++
++replace k8s.io/sample-controller => k8s.io/sample-controller v0.19.3
+diff --git a/go.sum b/go.sum
+index b1418e6abe..cc7f02437b 100644
+--- a/go.sum
++++ b/go.sum
+@@ -642,6 +642,7 @@ golang.org/x/mod v0.0.0-20190513183733-4bf6d317e70e/go.mod h1:mXi4GBBbnImb6dmsKG
+ golang.org/x/mod v0.1.0/go.mod h1:0QHyrYULN0/3qlju5TqG8bIK38QM8yzMo5ekMj3DlcY=
+ golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee/go.mod h1:QqPTAvyqsEbceGzBzNggFXnrqF1CaUcvgkdR5Ot7KZg=
+ golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
++golang.org/x/mod v0.3.0 h1:RM4zey1++hCTbCVQfnWeKs9/IEsaBLA8vTkd0WVtmH4=
+ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+ golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+@@ -659,6 +660,7 @@ golang.org/x/net v0.0.0-20190328230028-74de082e2cca/go.mod h1:t9HGtf8HONx5eT2rtn
+ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
+ golang.org/x/net v0.0.0-20190501004415-9ce7a6920f09/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
+ golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
++golang.org/x/net v0.0.0-20190522155817-f3200d17e092 h1:4QSRKanuywn15aTZvI/mIDEgPQpswuFndXpOj3rKEco=
+ golang.org/x/net v0.0.0-20190522155817-f3200d17e092/go.mod h1:HSz+uSET+XFnRR8LxR5pz3Of3rY3CfYBVs4xY44aLks=
+ golang.org/x/net v0.0.0-20190603091049-60506f45cf65/go.mod h1:HSz+uSET+XFnRR8LxR5pz3Of3rY3CfYBVs4xY44aLks=
+ golang.org/x/net v0.0.0-20190613194153-d28f0bde5980 h1:dfGZHvZk057jK2MCeWus/TowKpJ8y4AmooUzdBSR9GU=
+@@ -773,6 +775,7 @@ golang.org/x/tools v0.0.0-20191012152004-8de300cfc20a/go.mod h1:b+2E5dAYhXwXZwtn
+ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20191125144606-a911d9008d1f/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20191227053925-7b8e75db28f4/go.mod h1:TB2adYChydJhpapKDTa4BR/hXlZSLoq2Wpct/0txZ28=
++golang.org/x/tools v0.0.0-20200616133436-c1934b75d054 h1:HHeAlu5H9b71C+Fx0K+1dGgVFN1DM1/wz4aoGOA5qS8=
+ golang.org/x/tools v0.0.0-20200616133436-c1934b75d054/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
+ golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+@@ -876,7 +879,28 @@ honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWh
+ honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+ honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
++k8s.io/api v0.19.3 h1:GN6ntFnv44Vptj/b+OnMW7FmzkpDoIDLZRvKX3XH9aU=
++k8s.io/api v0.19.3/go.mod h1:VF+5FT1B74Pw3KxMdKyinLo+zynBaMBiAfGMuldcNDs=
++k8s.io/apiextensions-apiserver v0.19.3/go.mod h1:igVEkrE9TzInc1tYE7qSqxaLg/rEAp6B5+k9Q7+IC8Q=
++k8s.io/apimachinery v0.19.3 h1:bpIQXlKjB4cB/oNpnNnV+BybGPR7iP5oYpsOTEJ4hgc=
++k8s.io/apimachinery v0.19.3/go.mod h1:DnPGDnARWFvYa3pMHgSxtbZb7gpzzAZ1pTfaUNDVlmA=
++k8s.io/apiserver v0.19.3 h1:H7KUbLD74rh8NOPMLBJPSEG3Djqcv6Zxn5Ud0AL5u/k=
++k8s.io/apiserver v0.19.3/go.mod h1:bx6dMm+H6ifgKFpCQT/SAhPwhzoeIMlHIaibomUDec0=
++k8s.io/cli-runtime v0.19.3/go.mod h1:q+l845i5/uWzcUpCrl+L4f3XLaJi8ZeLVQ/decwty0A=
++k8s.io/client-go v0.19.3 h1:ctqR1nQ52NUs6LpI0w+a5U+xjYwflFwA13OJKcicMxg=
++k8s.io/client-go v0.19.3/go.mod h1:+eEMktZM+MG0KO+PTkci8xnbCZHvj9TqR6Q1XDUIJOM=
++k8s.io/cloud-provider v0.19.3 h1:IFH+8L4rgg2l1cVbyJnVtwE0RZPweZ3azgXCow0bPMo=
++k8s.io/cloud-provider v0.19.3/go.mod h1:B9wpsK3As1WwAW0rcGmMjloaLk3nJD6+ZyDxLLD78uM=
++k8s.io/cluster-bootstrap v0.19.3/go.mod h1:yZPVza5jZABN+xe4y6By4DnZI+UF9TxYj80etnDzZ5w=
++k8s.io/code-generator v0.19.3 h1:fTrTpJ8PZog5oo6MmeZtveo89emjQZHiw0ieybz1RSs=
++k8s.io/code-generator v0.19.3/go.mod h1:moqLn7w0t9cMs4+5CQyxnfA/HV8MF6aAVENF+WZZhgk=
++k8s.io/component-base v0.19.3 h1:c+DzDNAQFlaoyX+yv8YuWi8xmlQvvY5DnJGbaz5U74o=
++k8s.io/component-base v0.19.3/go.mod h1:WhLWSIefQn8W8jxSLl5WNiR6z8oyMe/8Zywg7alOkRc=
++k8s.io/cri-api v0.19.3/go.mod h1:UN/iU9Ua0iYdDREBXNE9vqCJ7MIh/FW3VIL0d8pw7Fw=
++k8s.io/csi-translation-lib v0.19.3 h1:V+ekutp6xR8GJNwOpBky8jL/RTlqRO5Mk5HOp6YQA4o=
++k8s.io/csi-translation-lib v0.19.3/go.mod h1:9/DxcmqzkTDF6oezqYE/IVx11g3iW1xXbf24z2u1vdk=
+ k8s.io/gengo v0.0.0-20200413195148-3a45101e95ac/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
++k8s.io/gengo v0.0.0-20200428234225-8167cfdcfc14 h1:t4L10Qfx/p7ASH3gXCdIUtPbbIuegCoUJf3TMSFekjw=
+ k8s.io/gengo v0.0.0-20200428234225-8167cfdcfc14/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
+ k8s.io/heapster v1.2.0-beta.1/go.mod h1:h1uhptVXMwC8xtZBYsPXKVi8fpdlYkTs6k949KozGrM=
+ k8s.io/klog v1.0.0 h1:Pt+yjF5aB1xDSVbau4VsWe+dQNzA0qv1LlXdC2dF6Q8=
+@@ -884,47 +908,29 @@ k8s.io/klog v1.0.0/go.mod h1:4Bi6QPql/J/LkTDqv7R/cd3hPo4k2DG6Ptcz060Ez5I=
+ k8s.io/klog/v2 v2.0.0/go.mod h1:PBfzABfn139FHAV07az/IF9Wp1bkk3vpT2XSJ76fSDE=
+ k8s.io/klog/v2 v2.2.0 h1:XRvcwJozkgZ1UQJmfMGpvRthQHOvihEhYtDfAaxMz/A=
+ k8s.io/klog/v2 v2.2.0/go.mod h1:Od+F08eJP+W3HUb4pSrPpgp9DGU4GzlpG/TmITuYh/Y=
++k8s.io/klog/v2 v2.4.0 h1:7+X0fUguPyrKEC4WjH8iGDg3laWgMo5tMnRTIGTTxGQ=
++k8s.io/klog/v2 v2.4.0/go.mod h1:Od+F08eJP+W3HUb4pSrPpgp9DGU4GzlpG/TmITuYh/Y=
++k8s.io/kube-aggregator v0.19.3/go.mod h1:5KTkDBxx4YiAYUuqTGmwjH7v54hRdrykqzcPiF8hPJc=
++k8s.io/kube-controller-manager v0.19.3 h1:Cj/icVr6thpxoXFqt5G5S/ZMLhJvXTwFkPWtwrzy1J4=
++k8s.io/kube-controller-manager v0.19.3/go.mod h1:KOwGP13h7FuFVldpunTEjLCAMVbDQODjl0qInCSUMiA=
+ k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6 h1:+WnxoVtG8TMiudHBSEtrVL1egv36TkkJm+bA8AxicmQ=
+ k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6/go.mod h1:UuqjUnNftUyPE5H64/qeyjQoUZhGpeFDVdxjTeEVN2o=
+-k8s.io/kubernetes v0.0.0-20201023141757-9e8ad8ce9d8a h1:uAU9n6UBa4coDhrOEQ7iCEHrYXAlm39VcI4asrBOkLA=
+-k8s.io/kubernetes v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:yhT1/ltQajQsha3tnYc9QPFYSumGM45nlZdjf7WqE1A=
+-k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20201023141757-9e8ad8ce9d8a h1:8ilXcbfDzt4rC/OVgFPIwW69aT5K/s1pPz415xSEctA=
+-k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:Y4VjjNur38HL6/QxaTVK2yno1zjEQlvcvwbbRQs2DtQ=
+-k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:BvtZU215FgO19Oy19K6h8qwajFfjxYqGewgjuYHWGRw=
+-k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20201023141757-9e8ad8ce9d8a h1:aA1ABMciJFSVW1goSQyWMtZFE0ZfK/LD9zBsufsjl5Q=
+-k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:4qgwPPTQvmc3E4Ub+c6I9LSsdbujYP3pIQEGuIVy8oQ=
+-k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20201023141757-9e8ad8ce9d8a h1:rUoFc7OSO1DLTKVGM39sDtfjHlRUezbBFV+St6HmkJQ=
+-k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:lpK+uXhJTVOwW6SDiSQiL0LaQaBktrM23VG489uC/U0=
+-k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:twd45pbv7psOvyGxI8eABhpeoXWW3bCX6aB5NVS6TXs=
+-k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20201023141757-9e8ad8ce9d8a h1:e3/SI9gycjmNBmTlGv/xdnqNFGnXMkeOINHb7OnhfLU=
+-k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:RHmuC9yMUmS4ypsaBCH2s9PoG2BD29/60QU9yywYWPo=
+-k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20201023141757-9e8ad8ce9d8a h1:HElK4nJcMiXaW4wEQCyHPBpIog76X6spRr+HiMskaYQ=
+-k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:vXBe7m69RSxIR/m6bm820O+WYUJHP9OXtEyTZf3twRo=
+-k8s.io/kubernetes/staging/src/k8s.io/cluster-bootstrap v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:kEUR4nHaGTacDcHrY2P4IriUdykXxPuwBg7picxa+gk=
+-k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20201023141757-9e8ad8ce9d8a h1:51faxHeSlfSIZcOmqauWiJ0DhD3iSOS+Gczum92uFWg=
+-k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:CqfZDv+BcdomYCAbV0kiIw9wyBW1Fnf/iDHBd0jEWW8=
+-k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20201023141757-9e8ad8ce9d8a h1:fG6M7zjAnwTkcC0ufuS2jksxPPeYzAhRI8+h1DFafz0=
+-k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:jR+bJp7erYNUmcS7lWDm404aFVonltWE56LV8CuqKyg=
+-k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:5fTlfaqG0oYYb80kk4fHpqinBBSFEZb3EqHwdvNdiGQ=
+-k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20201023141757-9e8ad8ce9d8a h1:J7+bRsIJbfLXDvAl3+zjRZ1PhcI7h1F82iMkwUtJreM=
+-k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:adA9bBHXD+K7tPn7kTpjQ3VcUzK6PFgAdNEofr4fEx4=
+-k8s.io/kubernetes/staging/src/k8s.io/kube-aggregator v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:2k5w33TDDiX5MW45QFLk1KqByb4Su/g73InDkoC1xls=
+-k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20201023141757-9e8ad8ce9d8a h1:G3j6UnBi/a7mwQLzkdyC/TZgvm4293/UGLV5XPlHQbA=
+-k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:6CzB8GMVD+ZlCXZjHiqccHpC9FFlRTCz+rHd176Lxfc=
+-k8s.io/kubernetes/staging/src/k8s.io/kube-proxy v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:PWMBqO9xuXWJS8REJ8QWiouJzbiOwVVVT81ZTwYb2Nk=
+-k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:23iT4D9thFRxYGZ9DOa7zQ4ZyrFHyp+Bz5dXiruHNwI=
+-k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:jF57QafZUIyhkboHp3NUlPdpozl8NA4uvyG5FdjbEbU=
+-k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:xgsxxK8T8eljLwrh87vAyytjDFMbBsrM95vgHrf1OUg=
+-k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20201023141757-9e8ad8ce9d8a h1:86YN0kfBUS3aw96uiwz8lT9IW1D2FXt0ZOGjzyH3XDA=
+-k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:iv4u51XYDkRdyvp7BBP+KuQ+ZHjEjoCECFVzMJBDGZA=
+-k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:HZHgmugH8oA4ZxTPt9R8HYJBWEeLDegmaGoPo3HDK3I=
+-k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20201023141757-9e8ad8ce9d8a/go.mod h1:tl3x2SPSVsIqnioD4z87jXFemilbRh1EYDm3KirMsjI=
++k8s.io/kube-proxy v0.19.3/go.mod h1:ZM9t3p+YkwOt/D8gnXOeu9MeVVgbzE0JGnqSnNmwsPY=
++k8s.io/kube-scheduler v0.19.3/go.mod h1:E/JO0m9xwbbo2qqo13OZupXOvHTrbOFscLSnOMC5TBM=
++k8s.io/kubectl v0.19.3/go.mod h1:t5cscfrAuHUvEGNyNJjPKt+rGlaJzk8jrKYHXxEsANE=
++k8s.io/kubelet v0.19.3/go.mod h1:gRjfQnN+WlckrkPU1s2wGyFE/sV9hmI/ejeQ8XqlhS4=
++k8s.io/kubernetes v1.19.3 h1:V6ohBHSxTkrPRyfVp8tbdEsgi9nfVN49xlUVkQseass=
++k8s.io/kubernetes v1.19.3/go.mod h1:yhT1/ltQajQsha3tnYc9QPFYSumGM45nlZdjf7WqE1A=
++k8s.io/legacy-cloud-providers v0.19.3 h1:pT84xf/3Y4TFLdjuY/eBF3I72m9TKOVj3NF5yi5BfZA=
++k8s.io/legacy-cloud-providers v0.19.3/go.mod h1:zMs0R9Td5XXSWA4TmPpXlQOeHBTJBzZOy2HAhIl6pQs=
++k8s.io/metrics v0.19.3/go.mod h1:Eap/Lk1FiAIjkaArFuv41v+ph6dbDpVGwAg7jMI+4vg=
++k8s.io/sample-apiserver v0.19.3/go.mod h1:lCFCWx71mTeqnj/DioYoSGwC0Ce/KSPFtvt41OKpcMQ=
+ k8s.io/system-validators v1.1.2/go.mod h1:bPldcLgkIUK22ALflnsXk8pvkTEndYdNuaHH6gRrl0Q=
+ k8s.io/utils v0.0.0-20200414100711-2df71ebbae66/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+ k8s.io/utils v0.0.0-20200729134348-d5654de09c73 h1:uJmqzgNWG7XyClnU/mLPBWwfKKF1K8Hf8whTseBgJcg=
+ k8s.io/utils v0.0.0-20200729134348-d5654de09c73/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+-k8s.io/utils v0.0.0-20201015054608-420da100c033 h1:Pqyrvq79s/H2+6GSEIfeVHifPjJ03sVEggHnXw9KRMs=
+-k8s.io/utils v0.0.0-20201015054608-420da100c033/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
++k8s.io/utils v0.0.0-20201110183641-67b214c5f920 h1:CbnUZsM497iRC5QMVkHwyl8s2tB3g7yaSHkYPkpgelw=
++k8s.io/utils v0.0.0-20201110183641-67b214c5f920/go.mod h1:jPW/WVKK9YHAvNhRxK0md/EJ228hCsBRufyofKtW8HA=
+ modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
+ modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=
+ modernc.org/mathutil v1.0.0/go.mod h1:wU0vUrJsVWBZ4P6e7xtFJEhFSNsfRLJ8H458uRjg03k=
+diff --git a/hack/update-kubernetes-deps.sh b/hack/update-kubernetes-deps.sh
+new file mode 100755
+index 0000000000..a1c07abd88
+--- /dev/null
++++ b/hack/update-kubernetes-deps.sh
+@@ -0,0 +1,22 @@
++#!/bin/bash
++
++set -euo pipefail
++
++VERSION=${1#"v"}
++if [ -z "$VERSION" ]; then
++    echo "Must specify version!"
++    exit 1
++fi
++
++MODS=($(
++    curl -sS https://raw.githubusercontent.com/kubernetes/kubernetes/v${VERSION}/go.mod |
++    sed -n 's|.*k8s.io/\(.*\) => ./staging/src/k8s.io/.*|k8s.io/\1|p'
++))
++
++for MOD in "${MODS[@]}"; do
++    go mod edit "-replace=${MOD}=${MOD}@v0${VERSION:1}"
++done
++
++go get "k8s.io/kubernetes@v${VERSION}"
++
++go mod tidy
