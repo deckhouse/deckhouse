@@ -35,7 +35,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		return err
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, cfg.FindStaticNodeGroup(nodeGroupName))
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, cfg.FindTerraNodeGroup(nodeGroupName))
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 	}
 
 	var nodeGroupsWithStateInCluster []string
-	for _, group := range metaConfig.GetStaticNodeGroups() {
+	for _, group := range metaConfig.GetTerraNodeGroups() {
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
@@ -143,7 +143,7 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 	})
 }
 
-func createPreviouslyNotExistedNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, group config.StaticNodeGroupSpec) error {
+func createPreviouslyNotExistedNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, group config.TerraNodeGroupSpec) error {
 	return log.Process("converge", fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
 		err := CreateNodeGroup(kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
 		if err != nil {
@@ -281,7 +281,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		return err
 	}
 
-	nodeGroupSettingsFromConfig := c.config.FindStaticNodeGroup(nodeGroup.Name)
+	nodeGroupSettingsFromConfig := c.config.FindTerraNodeGroup(nodeGroup.Name)
 	err = SaveNodeTerraformState(c.client, nodeName, nodeGroup.Name, outputs.TerraformState, nodeGroupSettingsFromConfig)
 	if err != nil {
 		return err
@@ -369,7 +369,7 @@ func getIndexFromNodeName(name string) (int64, bool) {
 func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName string) int {
 	replicas := 0
 	if nodeGroupName != masterNodeGroupName {
-		for _, group := range metaConfig.GetStaticNodeGroups() {
+		for _, group := range metaConfig.GetTerraNodeGroups() {
 			if group.Name == nodeGroupName {
 				replicas = group.Replicas
 				break

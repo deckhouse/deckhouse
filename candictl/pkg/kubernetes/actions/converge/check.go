@@ -115,7 +115,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 	statistics.NodeTemplates = append(statistics.NodeTemplates, NodeGroupCheckResult{Name: "master", Status: OKStatus})
 
 	var nodeGroupsWithStateInCluster []string
-	for _, group := range metaConfig.GetStaticNodeGroups() {
+	for _, group := range metaConfig.GetTerraNodeGroups() {
 		templateStatus := OKStatus
 
 		if template, ok := nodeTemplates[group.Name]; ok {

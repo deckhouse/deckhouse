@@ -106,12 +106,11 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 			}
 		}
 
-		var output []byte
+		output := metaConfig.MarshalFullConfig()
 		switch app.ParseOutput {
 		case "yaml":
-			output, _ = yaml.Marshal(metaConfig)
+			output, _ = yaml.JSONToYAML(output)
 		case "json":
-			output = metaConfig.MarshalConfig()
 		default:
 			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
 		}

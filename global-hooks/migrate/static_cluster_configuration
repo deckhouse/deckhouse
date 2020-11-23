@@ -10,24 +10,30 @@ EOF
 }
 
 function __on_startup() {
-  # if StaticClusterConfuguration already configured
+  # if StaticClusterConfiguration already configured
   if kubectl get -n kube-system secret d8-static-cluster-configuration >/dev/null 2>/dev/null; then
     return 0
   fi
-  # if it is cloud-hosted cluster
-  if kubectl get -n kube-system secret d8-provider-cluster-configuration >/dev/null 2>/dev/null; then
+
+  internal_network_cidrs=$(kubectl get nodes -o json \
+    | jq -r '[.items[] | .metadata.annotations."node.deckhouse.io/internal-network-cidr" | select(.)]')
+
+  networks_from_ng=$(kubectl get ng -o json | \
+    jq -rc '[.items[] | .spec.static // {} | .internalNetworkCIDRs // [] | add | select(.) ] | unique')
+
+  networks_from_annotations=$(for key in $(jq -rc 'keys[]' <<< ${internal_network_cidrs}); do
+    addr=$(jq -rc --arg key "$key" '.[$key | tonumber]' <<< ${internal_network_cidrs});
+    export $(ipcalc -np "$addr")
+
+    echo "\"$NETWORK/$PREFIX\""
+  done | sort | uniq | jq -rcs '.')
+
+  cidrs=$(jq --argjson ng "$networks_from_ng" -rc \
+    '$ng + . | .[] | "- \(.)"' <<< ${networks_from_annotations})
+
+  if jq -rce '. | length == 0' <<< ${cidrs} >/dev/null 2>&1; then
     return 0
   fi
-  # if it is kops-powered cluster
-  if !kubectl get -n kube-system secret d8-cluster-configuration >/dev/null 2>/dev/null; then
-    return 0
-  fi
-
-  ip_addresses=$(kubectl get nodes -o json | jq -r '.items[] | .status.addresses[] | select(.type == "InternalIP") | .address ')
-
-  cidrs=$(for address in "$ip_addresses"; do
-    ipcalc $address | grep Network | awk '{ print "- " $2 }';
-  done | sort | uniq)
 
   config=$(cat <<EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -48,6 +54,8 @@ metadata:
   namespace: kube-system
 type: Opaque
 EOF
+
+  kubectl annotate node node.deckhouse.io/internal-network-cidr- --all
 }
 
 hook::run $@

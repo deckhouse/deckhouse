@@ -39,7 +39,7 @@ type MasterNodeGroupSpec struct {
 	Replicas int `json:"replicas"`
 }
 
-type StaticNodeGroupSpec struct {
+type TerraNodeGroupSpec struct {
 	Replicas     int                    `json:"replicas"`
 	Name         string                 `json:"name"`
 	NodeTemplate map[string]interface{} `json:"nodeTemplate"`

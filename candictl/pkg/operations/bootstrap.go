@@ -153,20 +153,25 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 func DetermineBundleName(sshClient *ssh.SSHClient) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
-		// run detect bundle type
-		detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
-		stdout, err := detectCmd.Execute()
-		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
-				return fmt.Errorf("script '%s' error: %v\nstderr: %s", "detect_bundle.sh", err, string(ee.Stderr))
+		return retry.StartSilentLoop("Get bundle", 3, 1, func() error {
+			// run detect bundle type
+			detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
+			stdout, err := detectCmd.Execute()
+			if err != nil {
+				if ee, ok := err.(*exec.ExitError); ok {
+					return fmt.Errorf("detect_bundle.sh: %v, %s", err, string(ee.Stderr))
+				}
+				return fmt.Errorf("detect_bundle.sh: %v", err)
 			}
-			return fmt.Errorf("script '%s' error: %v", "detect_bundle.sh", err)
-		}
 
-		bundleName = strings.Trim(string(stdout), "\n ")
-		log.InfoF("Detected bundle: %s\n", bundleName)
+			bundleName = strings.Trim(string(stdout), "\n ")
+			if bundleName == "" {
+				return fmt.Errorf("detect_bundle.sh: empty bundle was detected")
+			}
 
-		return nil
+			log.InfoF("Detected bundle: %s\n", bundleName)
+			return nil
+		})
 	})
 	return bundleName, err
 }
@@ -261,8 +266,8 @@ func RebootMaster(sshClient *ssh.SSHClient) error {
 	})
 }
 
-func BootstrapStaticNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, staticNodeGroups []config.StaticNodeGroupSpec) error {
-	for _, ng := range staticNodeGroups {
+func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec) error {
+	for _, ng := range terraNodeGroups {
 		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
 			err := converge.CreateNodeGroup(kubeCl, ng.Name, metaConfig.NodeGroupManifest(ng))
 			if err != nil {
