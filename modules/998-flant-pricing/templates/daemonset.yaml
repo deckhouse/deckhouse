@@ -1,0 +1,114 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: {{ .Chart.Name }}
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include "grafana_agent_config" . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: {{ .Chart.Name }}
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.global.modulesImages.registry }}/flant-pricing/flant-pricing:{{ .Values.global.modulesImages.tags.flantPricing.flantPricing }}
+        env:
+        - name: FP_PROJECT
+          value: {{ .Values.global.project | quote }}
+        - name: FP_CLUSTER
+          value: {{ .Values.global.clusterName | quote }}
+        - name: FP_RELEASE_CHANNEL
+          value: {{ .Values.flantPricing.internal.releaseChannel | quote }}
+        - name: FP_BUNDLE
+          value: {{ .Values.flantPricing.internal.bundle | quote }}
+        - name: FP_CLOUD_PROVIDER
+          value: {{ .Values.flantPricing.internal.cloudProvider | quote }}
+        - name: FP_CONTROL_PLANE_VERSION
+          value: {{ .Values.flantPricing.internal.controlPlaneVersion | quote }}
+        - name: FP_MINIMAL_KUBELET_VERSION
+          value: {{ .Values.flantPricing.internal.minimalKubeletVersion | quote }}
+        - name: FP_PLAN
+          value: {{ .Values.flantPricing.plan | quote }}
+        - name: FP_CLUSTER_TYPE
+          value: {{ .Values.flantPricing.internal.clusterType | quote }}
+        - name: FP_MASTERS_COUNT
+          value: {{ .Values.flantPricing.internal.mastersCount | quote }}
+        - name: FP_KOPS
+          value: {{ .Values.flantPricing.internal.kops | int | quote }}
+        - name: FP_ALL_MANAGED_NODES_UP_TO_DATE
+          value: {{ .Values.flantPricing.internal.allManagedNodesUpToDate | default 0 | int | quote }}
+        - name: FP_CONVERGE_IS_COMPLETED
+          value: {{ .Values.flantPricing.internal.convergeIsCompleted | int | quote }}
+        - name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
+          value: {{ .Values.flantPricing.internal.deprecatedResourcesInHelmReleases | quote }}
+        - name: FP_MASTER_IS_DEDICATED
+          value: {{ .Values.flantPricing.internal.masterIsDedicated | int | quote }}
+        - name: FP_MASTER_MIN_CPU
+          value: {{ .Values.flantPricing.internal.masterMinCPU | quote }}
+        - name: FP_MASTER_MIN_MEMORY
+          value: {{ .Values.flantPricing.internal.masterMinMemory | quote }}
+        - name: FP_PLAN_IS_BOUGHT_AS_BUNDLE
+          value: {{ .Values.flantPricing.planIsBoughtAsBundle | int | quote }}
+        - name: FP_DO_NOT_CHARGE_FOR_ROCK_SOLID
+          value: {{ .Values.flantPricing.doNotChargeForRockSolid | quote | int | quote }}
+        - name: FP_CONTACTS
+          value: {{ .Values.flantPricing.contacts | quote }}
+        ports:
+        - containerPort: 9115
+          name: http-metrics
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: http-metrics
+          periodSeconds: 60
+      - name: grafana-agent
+        image: {{ .Values.global.modulesImages.registry }}/flant-pricing/grafana-agent:{{ .Values.global.modulesImages.tags.flantPricing.grafanaAgent }}
+        volumeMounts:
+        - name: agent-data
+          mountPath: /data/agent
+        - name: agent-config
+          mountPath: /etc/agent-config
+        command:
+        - /bin/agent
+        - -config.file=/etc/agent-config/agent-scraping-service.yaml
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 80
+          periodSeconds: 30
+      volumes:
+      - name: agent-data
+        hostPath:
+          path: /var/lib/docker/volumes/flant-pricing-grafana-agent-data
+      - name: agent-config
+        secret:
+          secretName: grafana-agent-config

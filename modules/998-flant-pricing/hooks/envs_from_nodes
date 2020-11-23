@@ -1,0 +1,59 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: master_nodes
+      group: master_nodes
+      queue: /modules/$(module::name::kebab_case)
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Node
+      labelSelector:
+        matchLabels:
+          node-role.kubernetes.io/master: ""
+      jqFilter: '
+        {
+          "isDedicated": (.spec.taints | if (. | length > 0) then .[].key=="node-role.kubernetes.io/master" else false end),
+          "cpu": .status.allocatable.cpu,
+          "memory": .status.allocatable.memory
+        }'
+    - name: node_versions
+      group: node_versions
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Node
+      jqFilter: '.status.nodeInfo.kubeletVersion[1:] | split(".")[0:2] | join(".")'
+EOF
+}
+
+function __on_group::master_nodes() {
+  if ! context::has snapshots.master_nodes.0; then
+    return 0
+  fi
+
+  master_nodes=$(context::get snapshots.master_nodes)
+  values::set flantPricing.internal.mastersCount "$(echo "$master_nodes" | jq -r '. | length')"
+  values::set flantPricing.internal.masterIsDedicated "$(echo "$master_nodes" | jq -r '[.[].filterResult.isDedicated] | sort | .[0]')"
+  values::set flantPricing.internal.masterMinCPU "$(echo "$master_nodes" | jq -r '[.[].filterResult.cpu | tonumber ] | sort | .[0]')"
+  values::set flantPricing.internal.masterMinMemory "$(echo "$master_nodes" | jq -r '[.[].filterResult.memory | tonumber] | sort | .[0]')"
+}
+
+function __on_group::node_versions() {
+  if ! context::has snapshots.node_versions.0; then
+    return 0
+  fi
+  readarray -t -d $'\n' node_versions < <(context::jq -r '.snapshots.node_versions[].filterResult')
+  for i in "${node_versions[@]}"; do
+    semver::assert "$i" "node_version"
+  done
+  min_node_version="$(semver::get_min "${node_versions[@]}")"
+  values::set flantPricing.internal.minimalKubeletVersion "$min_node_version"
+}
+
+
+hook::run "$@"

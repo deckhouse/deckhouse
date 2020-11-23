@@ -1,0 +1,11 @@
+flantPricing:
+  contacts: 0
+  doNotChargeForRockSolid: false
+  plan: "Standard"
+  planIsBoughtAsBundle: false
+  internal: {}
+  promscale:
+    url: https://kulkulator.flant.com/write
+    basic_auth:
+      username: flant-pricing
+      password: FHVOq2RjpTnC2mixCl3WbxmikdrIsz

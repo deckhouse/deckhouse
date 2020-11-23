@@ -1,0 +1,41 @@
+- name: d8.flant-pricing
+  rules:
+  - alert: D8FlantPricingUnknownNode
+    expr: |
+      sum by(label_node_deckhouse_io_group,node) ((flant_pricing_node_info{pricing="Unknown"}) * on(node) group_left(label_node_deckhouse_io_group) (kube_node_labels)) > 0
+    labels:
+      tier: cluster
+      d8_module: flant-pricing
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Node {{ $labels.node }} has Unknown pricing type
+      description: |
+        You have to specify pricing type for NodeGroup {{ $labels.label_node_deckhouse_io_group }} or Node {{ $labels.node }}.
+
+        Examples:
+        To specify that whole NodeGroup has pricing type, for exmaple Hard
+        ```
+        kubectl patch ng {{ $labels.label_node_deckhouse_io_group }} --patch '{"spec":{"nodeTemplate":{"annotations":{"pricing.flant.com/nodeType":"Hard"}}}}' --type=merge
+        ```
+
+        To specify that specific Node has pricing type, for example Hard
+        ```
+          kubectl annotate node {{ $labels.node }} pricing.flant.com/nodeType=Hard
+        ```
+
+        You can find information about pricing types in [the flant-pricing module documentation](https://early.deckhouse.io/modules/998-flant-pricing/).
+  - alert: D8FlantPricingUnknownNodesInCluster
+    expr: |
+      count(ALERTS{alertname=~"D8FlantPricingUnknownNode", alertstate="firing"})
+    labels:
+      tier: cluster
+      d8_module: flant-pricing
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_alert_type: "group"
+      plk_group_for__flant_pricing_unknown_node: D8FlantPricingUnknownNode,prometheus=deckhouse
+      summary: Nodes in cluster have Unknown pricing type
+      description: |
+        Examine groupped alerts.

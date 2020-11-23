@@ -41,6 +41,7 @@ args:
   BASE_ALPINE: {{ env "BASE_ALPINE" }}
   BASE_GOLANG_ALPINE: {{ env "BASE_GOLANG_ALPINE" }}
   BASE_GOLANG_BUSTER: {{ env "BASE_GOLANG_BUSTER" }}
+  BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
   CI_JOB_TOKEN: {{ env "CI_JOB_TOKEN" }}
 {{- else }}
 {{ tpl .ImageBuildData . }}

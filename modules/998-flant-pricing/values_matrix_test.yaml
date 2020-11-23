@@ -1,0 +1,46 @@
+global:
+  project: my_project
+  clusterName: my_cluster
+  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-pricing"]
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: cfg
+    tags:
+      flantPricing:
+        flantPricing: tagstring
+        grafanaAgent: tagstring
+  discovery:
+    prometheusScrapeInterval: 30s
+    clusterControlPlaneIsHighlyAvailable: true
+    clusterMasterCount: 3
+    d8SpecificNodeCountByRole:
+      system: 1
+  modules:
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+        - "test-1"
+        - "test-2/master"
+flantPricing:
+  internal:
+    __ConstantChoices__:
+    - {}
+    - releaseChannel: Alpha
+      bundle: Default
+      cloudProvider: AWS
+      controlPlaneVersion: 1.16
+      minimalKubeletVersion: 1.5
+      plan: Standard
+      clusterType: Cloud
+      mastersCount: 3
+      kops: false
+      allManagedNodesUpToDate: false
+      convergeIsCompleted: false
+      deprecatedResourcesInHelmReleases: 100
+      masterIsDedicated: false
+      masterMinCPU: 4
+      masterMinMemory: 800000
+      planIsBoughtAsBundle: false
+      doNotChargeForRockSolid: false
+      contacts: 10

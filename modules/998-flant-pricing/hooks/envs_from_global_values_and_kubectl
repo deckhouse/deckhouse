@@ -1,0 +1,47 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  cloud_provider="none"
+  fltr='[.global.enabledModules[] | select(startswith("cloud-provider-"))][0] | split("cloud-provider-")[1]'
+  if provider_from_values=$(values::jq -er "$fltr"); then
+    cloud_provider="$provider_from_values"
+  fi
+  values::set flantPricing.internal.cloudProvider "$cloud_provider"
+
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    control_plane_version="1.16"
+  else
+    control_plane_version=$(kubectl version -o json | jq '.serverVersion.major + "." + .serverVersion.minor')
+  fi
+  values::set flantPricing.internal.controlPlaneVersion "$control_plane_version"
+
+  cluster_type="Cloud"
+  kops=false
+  static_nodes_count=$(values::jq -r '.global.discovery.nodeCountByType.static // 0')
+  if values::has global.clusterConfiguration ; then
+    cluster_type=$(values::get global.clusterConfiguration.clusterType)
+    if { [[ $cluster_type == "Static" ]] && [[ $cloud_provider != "none" ]]; } || { [[ $cluster_type == "Cloud" ]] && [[ $static_nodes_count -gt 0 ]]; } then
+      cluster_type="Hybrid"
+    fi
+  else
+    if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+      control_plane_version="1.14"
+    fi
+    if semver::lt "$control_plane_version" "1.15"; then
+      kops=true
+    fi
+  fi
+  values::set flantPricing.internal.clusterType "$cluster_type"
+  values::set flantPricing.internal.kops $kops
+}
+
+hook::run "$@"

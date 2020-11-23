@@ -1,0 +1,40 @@
+{{- define "grafana_agent_config" }}
+server:
+  log_level: debug
+prometheus:
+  wal_directory: /data/agent/wal
+  global:
+    scrape_interval: 1m
+  configs:
+  - name: agent
+    host_filter: false
+    scrape_configs:
+    - job_name: 'deckhouse'
+      params:
+        module: [http_2xx]  # Look for a HTTP 200 response.
+      static_configs:
+      - targets:
+        - 127.0.0.1:9115
+      metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'flant_pricing_.+'
+        action: keep
+      - source_labels: [job]
+        target_label: cluster_uuid
+        replacement: {{ $.Values.global.discovery.clusterUUID }}
+    remote_write:
+    - url: {{ .Values.flantPricing.promscale.url }}
+      basic_auth:
+        username: {{ .Values.flantPricing.promscale.basic_auth.username }}
+        password: {{ .Values.flantPricing.promscale.basic_auth.password }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-agent-config
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+data:
+  agent-scraping-service.yaml: {{ include "grafana_agent_config" . | b64enc }}
+
