@@ -15,11 +15,15 @@ function __on_startup() {
     return 0
   fi
 
+  # NodeGroups not found in cluster, probably it's a first bootstrap or a kops cluster
+  if ! nodegroups=$(kubectl get ng -o json); then
+    return 0
+  fi
+
+  networks_from_ng=$(jq -rc '[.items[] | .spec.static // {} | .internalNetworkCIDRs // [] | add | select(.) ] | unique' <<< "$nodegroups")
+
   internal_network_cidrs=$(kubectl get nodes -o json \
     | jq -r '[.items[] | .metadata.annotations."node.deckhouse.io/internal-network-cidr" | select(.)]')
-
-  networks_from_ng=$(kubectl get ng -o json | \
-    jq -rc '[.items[] | .spec.static // {} | .internalNetworkCIDRs // [] | add | select(.) ] | unique')
 
   networks_from_annotations=$(for key in $(jq -rc 'keys[]' <<< ${internal_network_cidrs}); do
     addr=$(jq -rc --arg key "$key" '.[$key | tonumber]' <<< ${internal_network_cidrs});
