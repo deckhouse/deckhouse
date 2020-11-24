@@ -33,7 +33,7 @@ function __on_startup() {
   done | sort | uniq | jq -rcs '.')
 
   cidrs=$(jq --argjson ng "$networks_from_ng" -rc \
-    '$ng + . | .[] | "- \(.)"' <<< ${networks_from_annotations})
+    '$ng + . | unique | .[] | "- \(.)"' <<< ${networks_from_annotations})
 
   if [[ "x$cidrs" == "x" ]]; then
     return 0
