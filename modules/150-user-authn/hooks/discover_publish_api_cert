@@ -28,9 +28,11 @@ EOF
 function __main__() {
   if context::has snapshots.secret.0; then
     secret_name="$(module::https_secret_name "kubernetes-tls")"
+
     # shellcheck disable=SC2016
     data="$(context::jq -r --arg secret_name "$secret_name" \
       '[.snapshots.secret[] | select(.filterResult.name==$secret_name)][0] | .filterResult.data')"
+
     if [ -n "$data" ]; then
       values::set "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA" "$data"
     else
