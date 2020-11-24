@@ -15,7 +15,7 @@ function __on_after_helm() {
 
   if [[ "$(semver compare $cluster_version 1.11.0)" -ne "-1" ]] ; then
     # Необходимо проставить priorityClassName антиопе
-    fltr='. | .spec.template.spec.priorityClassName = "cluster-medium"'
+    fltr='. | .spec.template.spec.priorityClassName = "cluster-critical"'
     kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
   fi
 }
