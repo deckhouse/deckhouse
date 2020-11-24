@@ -229,10 +229,16 @@ func (m *MetaConfig) ClusterConfigYAML() ([]byte, error) {
 }
 
 func (m *MetaConfig) ProviderClusterConfigYAML() ([]byte, error) {
+	if m.ProviderClusterConfig == nil {
+		return []byte{}, nil
+	}
 	return yaml.Marshal(m.ProviderClusterConfig)
 }
 
 func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
+	if m.StaticClusterConfig == nil {
+		return []byte{}, nil
+	}
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 

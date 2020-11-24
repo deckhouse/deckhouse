@@ -29,32 +29,9 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		clusterConfig, err := metaConfig.ClusterConfigYAML()
+		installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
 		if err != nil {
-			return fmt.Errorf("marshal cluster config: %v", err)
-		}
-
-		providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
-		if err != nil {
-			return fmt.Errorf("marshal provider config: %v", err)
-		}
-
-		installConfig := deckhouse.Config{
-			Registry:        metaConfig.DeckhouseConfig.ImagesRepo,
-			DockerCfg:       metaConfig.DeckhouseConfig.RegistryDockerCfg,
-			DevBranch:       metaConfig.DeckhouseConfig.DevBranch,
-			ReleaseChannel:  metaConfig.DeckhouseConfig.ReleaseChannel,
-			Bundle:          metaConfig.DeckhouseConfig.Bundle,
-			LogLevel:        metaConfig.DeckhouseConfig.LogLevel,
-			ClusterConfig:   clusterConfig,
-			DeckhouseConfig: metaConfig.MergeDeckhouseConfig(),
-		}
-
-		switch metaConfig.ClusterType {
-		case "Static":
-			installConfig.StaticClusterConfig = providerClusterConfig
-		case "Cloud":
-			installConfig.ProviderClusterConfig = providerClusterConfig
+			return err
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()
@@ -73,7 +50,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 				return err
 			}
 
-			if err := operations.InstallDeckhouse(kubeCl, &installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
+			if err := operations.InstallDeckhouse(kubeCl, installConfig, metaConfig.MasterNodeGroupManifest()); err != nil {
 				return err
 			}
 			return nil
