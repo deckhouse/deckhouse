@@ -27,7 +27,6 @@ function __config__() {
       group: main
       keepFullObjectsInMemory: false
       waitForSynchronization: false
-      executeHookOnSynchronization: false
       apiVersion: v1
       kind: Secret
       labelSelector:
@@ -44,7 +43,6 @@ function __config__() {
       group: main
       keepFullObjectsInMemory: false
       waitForSynchronization: false
-      executeHookOnSynchronization: false
       apiVersion: v1
       kind: Namespace
       executeHookOnEvent: [Added]
