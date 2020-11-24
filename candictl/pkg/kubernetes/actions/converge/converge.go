@@ -243,6 +243,8 @@ func (c *Controller) addNewNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 	count := len(nodeGroup.State)
 	index := 0
 
+	var nodesToWait []string
+
 	for nodeGroup.Replicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, nodeGroup.Name, index)
 		if _, ok := nodeGroup.State[candidateName]; !ok {
@@ -256,10 +258,12 @@ func (c *Controller) addNewNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 				return err
 			}
 			count++
+			nodesToWait = append(nodesToWait, candidateName)
 		}
 		index++
 	}
-	return WaitForNodesBecomeReady(c.client, nodeGroup.Name, nodeGroup.Replicas)
+
+	return WaitForNodesListBecomeReady(c.client, nodesToWait)
 }
 
 func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {
@@ -276,15 +280,29 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		WithName(nodeName)
 	tomb.RegisterOnShutdown(nodeRunner.Stop)
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, terraform.OnlyState)
+	pipelineForMaster := nodeGroup.Step == "master-node"
+
+	updateFunc := terraform.OnlyState
+	if pipelineForMaster {
+		updateFunc = terraform.GetMasterNodeResult
+	}
+
+	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, updateFunc)
 	if err != nil {
 		return err
 	}
 
-	nodeGroupSettingsFromConfig := c.config.FindTerraNodeGroup(nodeGroup.Name)
-	err = SaveNodeTerraformState(c.client, nodeName, nodeGroup.Name, outputs.TerraformState, nodeGroupSettingsFromConfig)
-	if err != nil {
-		return err
+	if pipelineForMaster {
+		err = SaveMasterNodeTerraformState(c.client, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+		if err != nil {
+			return err
+		}
+	} else {
+		nodeGroupSettingsFromConfig := c.config.FindTerraNodeGroup(nodeGroup.Name)
+		err = SaveNodeTerraformState(c.client, nodeName, nodeGroup.Name, outputs.TerraformState, nodeGroupSettingsFromConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	return WaitForSingleNodeBecomeReady(c.client, nodeName)
