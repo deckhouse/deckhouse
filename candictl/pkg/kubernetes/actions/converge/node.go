@@ -115,6 +115,49 @@ func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName stri
 	})
 }
 
+func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string) error {
+	return retry.StartLoop("Waiting for nodes to become Ready", 100, 20, func() error {
+		desiredReadyNodes := len(nodes)
+		var nodesList apiv1.NodeList
+
+		for _, nodeName := range nodes {
+			node, err := kubeCl.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			nodesList.Items = append(nodesList.Items, *node)
+		}
+
+		readyNodes := make(map[string]struct{})
+
+		for _, node := range nodesList.Items {
+			for _, c := range node.Status.Conditions {
+				if c.Type == apiv1.NodeReady {
+					if c.Status == apiv1.ConditionTrue {
+						readyNodes[node.Name] = struct{}{}
+					}
+				}
+			}
+		}
+
+		message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+		for _, node := range nodesList.Items {
+			condition := "NotReady"
+			if _, ok := readyNodes[node.Name]; ok {
+				condition = "Ready"
+			}
+			message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+		}
+
+		if len(readyNodes) >= desiredReadyNodes {
+			log.InfoLn(message)
+			return nil
+		}
+
+		return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+	})
+}
+
 func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
 	nodeTemplates := make(map[string]map[string]interface{})
 	resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
