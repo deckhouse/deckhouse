@@ -18,7 +18,7 @@ cloudProviderGcp: |
   - kube
   disableExternalIP: false
   sshKey: "ssh-rsa testetestest"
-  serviceAccountKey: |
+  serviceAccountJSON: |
     {
       "type": "service_account",
       "project_id": "test",

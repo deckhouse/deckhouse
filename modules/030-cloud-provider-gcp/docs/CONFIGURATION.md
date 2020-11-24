@@ -20,7 +20,7 @@ title: "Сloud provider — GCP: настройки"
     * Опциональный параметр.
 * `sshKey` — публичный SSH ключ.
     * Формат — строка, как из `~/.ssh/id_rsa.pub`.
-* `serviceAccountKey` — ключ к Service Account'у с правами Project Admin.
+* `serviceAccountJSON` — ключ к Service Account'у с правами Project Admin.
     * Формат — строка c JSON.
     * [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys).
 * `disableExternalIP` — прикреплять ли внешний IPv4-адрес к заказанным instances. Если выставлен `true`, то необходимо создать [Cloud NAT](https://cloud.google.com/nat/docs/overview) в GCP.
