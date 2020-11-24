@@ -13,6 +13,11 @@ function common_hooks::https::copy_custom_certificate::config() {
       namespace:
         nameSelector:
           matchNames: [d8-system]
+      labelSelector:
+        matchExpressions:
+        - key: owner
+          operator: NotIn
+          values: ["helm"]
       jqFilter: |
         {
           "name": .metadata.name,
