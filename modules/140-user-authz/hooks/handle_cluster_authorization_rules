@@ -7,6 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: ccr
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: ["ccr"]
       keepFullObjectsInMemory: true
       kind: ClusterRole
@@ -16,6 +17,7 @@ function __config__() {
           .metadata.annotations."user-authz.deckhouse.io/access-level" == ("User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin")
         ) | .metadata.annotations."user-authz.deckhouse.io/access-level" as \$accessLevel | ((\$accessLevel[0:1] | ascii_downcase) + \$accessLevel[1:])
     - name: car
+      queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: ["car"]
       keepFullObjectsInMemory: true
       apiVersion: deckhouse.io/v1alpha1
