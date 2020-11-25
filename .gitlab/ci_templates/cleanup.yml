@@ -13,7 +13,7 @@
 .Cleanup modules registry template:
   stage: cleanup_registry
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-modules-images
   script:
   - ./modules_images_werf cleanup
   only:
