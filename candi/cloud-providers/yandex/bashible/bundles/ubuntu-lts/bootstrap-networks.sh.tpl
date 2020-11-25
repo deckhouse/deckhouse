@@ -14,7 +14,7 @@ for i in /sys/class/net/!($primary_ifname); do
   ifname=$(basename "$i")
   mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
 
-  cat > /etc/netplan/100-cim-"$ifname".yaml <<EOF
+  cat > /etc/netplan/100-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
   version: 2
   ethernets:
@@ -25,7 +25,7 @@ network:
         use-routes: false
       match:
         macaddress: $mac
-EOF
+BOOTSTRAP_NETWORK_EOF
 done
 
 netplan generate
