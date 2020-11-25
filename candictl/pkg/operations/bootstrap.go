@@ -314,21 +314,20 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 }
 
 func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache cache.Cache) (map[string]map[int]string, error) {
-	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)$", metaConfig.ClusterPrefix)
+	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)\\.tfstate$", metaConfig.ClusterPrefix)
 	groupsReg, _ := regexp.Compile(nodeGroupRegex)
 
 	nodesFromCache := make(map[string]map[int]string)
-	walkFunc := func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() || strings.HasSuffix(path, ".backup") {
-			return nil
-		}
 
-		if strings.HasPrefix(info.Name(), "base-infrastructure") || strings.HasPrefix(info.Name(), "uuid") {
-			return nil
-		}
-
-		name := strings.TrimSuffix(info.Name(), ".tfstate")
-		if !groupsReg.MatchString(name) {
+	err := stateCache.Iterate(func(name string, content []byte) error {
+		switch {
+		case strings.HasSuffix(name, ".backup"):
+			fallthrough
+		case strings.HasPrefix(name, "base-infrastructure"):
+			fallthrough
+		case strings.HasPrefix(name, "uuid"):
+			fallthrough
+		case !groupsReg.MatchString(name):
 			return nil
 		}
 
@@ -346,13 +345,8 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache cache.
 			nodesFromCache[nodeGroupName] = make(map[int]string)
 		}
 
-		nodesFromCache[nodeGroupName][index] = name
+		nodesFromCache[nodeGroupName][index] = strings.TrimSuffix(name, ".tfstate")
 		return nil
-	}
-
-	if err := filepath.Walk(stateCache.GetDir(), walkFunc); err != nil {
-		return nil, fmt.Errorf("can't iterate the cache: %v", err)
-	}
-
-	return nodesFromCache, nil
+	})
+	return nodesFromCache, err
 }

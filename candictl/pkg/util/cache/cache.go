@@ -2,14 +2,12 @@ package cache
 
 import (
 	"bytes"
-	"encoding/base32"
+	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
-	"hash/fnv"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"flant/candictl/pkg/app"
@@ -18,25 +16,34 @@ import (
 
 var once sync.Once
 
-type Cache interface {
-	Save(string, []byte)
-	SaveByPath(string, string)
-	InCache(string) bool
-	AddToClean(string)
-	Clean()
-	Delete(string)
-	Load(string) []byte
-	LoadStruct(string, interface{}) error
-	SaveStruct(string, interface{}) error
-	ObjectPath(string) string
-	GetDir() string
-	Teardown()
+func encode(input string) string {
+	// TODO: declare hasher once
+	hasher := sha256.New()
+
+	hasher.Write([]byte(input))
+
+	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
-type StateCache struct {
-	dir          string
-	stateToClear []string
+type Cache interface {
+	Save(string, []byte)
+	SaveStruct(string, interface{}) error
+
+	Load(string) []byte
+	LoadStruct(string, interface{}) error
+
+	Delete(string)
+	Clean()
+
+	GetPath(string) string
+	Iterate(func(string, []byte) error) error
+	InCache(string) bool
 }
+
+var (
+	_ Cache = &StateCache{}
+	_ Cache = &DummyCache{}
+)
 
 var globalCache Cache = &DummyCache{}
 
@@ -48,158 +55,135 @@ func initCache(dir string) error {
 	return err
 }
 
+func Init(dir string) error {
+	return initCache(dir)
+}
+
 func Global() Cache {
 	return globalCache
 }
 
-var (
-	_ Cache = &StateCache{}
-	_ Cache = &DummyCache{}
-)
+type StateCache struct {
+	dir string
+}
 
-func NewTempStateCache(dir string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.TerraformStateDir, encode(dir))
+// NewTempStateCache creates new cache instance in tmp directory
+func NewTempStateCache(identity string) (*StateCache, error) {
+	cacheDir := filepath.Join(app.TerraformStateDir, encode(identity))
 	return NewStateCache(cacheDir)
 }
 
+// NewTempStateCache creates new cache instance in specified directory
 func NewStateCache(dir string) (*StateCache, error) {
-	_ = os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("can't create cache directory: %w", err)
+	}
+
 	_, err := os.Stat(filepath.Join(dir, ".tombstone"))
 	if os.IsNotExist(err) {
 		return &StateCache{dir: dir}, nil
 	}
+
 	return nil, fmt.Errorf("cache %s marked as exhausted", dir)
 }
 
+// SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) {
-	if err := ioutil.WriteFile(s.ObjectPath(name), content, 0600); err != nil {
+	if err := ioutil.WriteFile(s.GetPath(name), content, 0600); err != nil {
 		log.ErrorF("Can't save terraform state in cache: %v", err)
 	}
 }
 
-func (s *StateCache) SaveByPath(name, path string) {
-	content, err := ioutil.ReadFile(path)
+// SaveStruct saves go struct into the cache as a blob
+func (s *StateCache) SaveStruct(name string, v interface{}) error {
+	b := new(bytes.Buffer)
+	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
-		log.ErrorF("Can't load terraform state in cache: %v", err)
-		return
+		return err
 	}
 
-	s.Save(name, content)
+	s.Save(name, b.Bytes())
+	return nil
 }
 
+// InCache checks is file in cache or not
 func (s *StateCache) InCache(name string) bool {
-	info, err := os.Stat(s.ObjectPath(name))
+	info, err := os.Stat(s.GetPath(name))
 	if os.IsNotExist(err) {
 		return false
 	}
 	return !info.IsDir()
 }
 
-func (s *StateCache) AddToClean(name string) {
-	s.stateToClear = append(s.stateToClear, s.ObjectPath(name))
-}
-
 func (s *StateCache) Clean() {
-	for _, state := range s.stateToClear {
-		_ = os.Remove(state)
+	_ = os.RemoveAll(s.dir)
+	if err := os.MkdirAll(s.dir, 0755); err != nil {
+		return
 	}
+
 	_, err := os.Create(filepath.Join(s.dir, ".tombstone"))
 	if err != nil {
-		log.Warning("Can't mark the cache as exhausted ...\n")
+		log.Warning(fmt.Sprintf("Can't mark the cache as exhausted: %s ...\n", err))
 	}
 }
 
 func (s *StateCache) Delete(name string) {
 	if s.InCache(name) {
-		_ = os.Remove(s.ObjectPath(name))
+		_ = os.Remove(s.GetPath(name))
 	}
 }
 
 func (s *StateCache) Load(name string) []byte {
-	content, err := ioutil.ReadFile(s.ObjectPath(name))
+	content, err := ioutil.ReadFile(s.GetPath(name))
 	if err != nil {
 		log.ErrorLn(err.Error())
 	}
 	return content
 }
 
+// LoadStruct loads go struct from the cache
 func (s *StateCache) LoadStruct(name string, v interface{}) error {
 	d := s.Load(name)
 	if d == nil {
-		return nil
+		return fmt.Errorf("can't load struct")
 	}
-	return unmarshal(d, v)
+
+	return gob.NewDecoder(bytes.NewBuffer(d)).Decode(v)
 }
 
-func (s *StateCache) SaveStruct(name string, v interface{}) error {
-	d, err := marshal(v)
-	if err != nil {
-		return err
+func (s *StateCache) GetPath(name string) string {
+	return filepath.Join(s.dir, name)
+}
+
+func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
+	walkFunc := func(path string, info os.FileInfo, _ error) error {
+		if info == nil || info.IsDir() {
+			return nil
+		}
+
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("can't read file %s: %w", path, err)
+		}
+
+		return iterFunc(info.Name(), content)
 	}
-	s.Save(name, d)
+
+	if err := filepath.Walk(s.dir, walkFunc); err != nil {
+		return fmt.Errorf("can't iterate the cache: %w", err)
+	}
 	return nil
 }
 
-func (s *StateCache) ObjectPath(name string) string {
-	return filepath.Join(s.dir, fmt.Sprintf("%s.tfstate", name))
-}
-
-func (s *StateCache) GetDir() string {
-	return s.dir
-}
-
-func (s *StateCache) Teardown() {
-	_ = os.RemoveAll(s.dir)
-}
-
-func Init(dir string) error {
-	return initCache(dir)
-}
-
-var encoding = base32.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZ134567")
-
-func encode(input string) string {
-	toDecodeString := []byte(input)
-	return strings.TrimRight(encoding.EncodeToString(fnv.New32().Sum(toDecodeString)), "=")
-}
-
-func marshal(v interface{}) ([]byte, error) {
-	b := new(bytes.Buffer)
-	err := gob.NewEncoder(b).Encode(v)
-	if err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
-}
-
-func unmarshal(data []byte, v interface{}) error {
-	b := bytes.NewBuffer(data)
-	return gob.NewDecoder(b).Decode(v)
-}
-
-func RemoveEverythingFromCache(cacheDir string) {
-	cacheDir = filepath.Join(app.TerraformStateDir, encode(cacheDir))
-	dir, err := ioutil.ReadDir(cacheDir)
-	if err != nil {
-		log.ErrorLn(err)
-		return
-	}
-	for _, d := range dir {
-		_ = os.RemoveAll(filepath.Join([]string{cacheDir, d.Name()}...))
-	}
-}
-
+// DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
 func (d *DummyCache) Save(n string, c []byte)                  {}
-func (d *DummyCache) SaveByPath(n string, k string)            {}
 func (d *DummyCache) InCache(n string) bool                    { return false }
-func (d *DummyCache) AddToClean(n string)                      {}
 func (d *DummyCache) Clean()                                   {}
 func (d *DummyCache) Delete(n string)                          {}
 func (d *DummyCache) Load(n string) []byte                     { return nil }
 func (d *DummyCache) LoadStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) SaveStruct(n string, v interface{}) error { return nil }
-func (d *DummyCache) ObjectPath(n string) string               { return "" }
-func (d *DummyCache) GetDir() string                           { return "" }
-func (d *DummyCache) Teardown()                                {}
+func (d *DummyCache) GetPath(n string) string                  { return "" }
+func (d *DummyCache) Iterate(func(string, []byte) error) error { return nil }

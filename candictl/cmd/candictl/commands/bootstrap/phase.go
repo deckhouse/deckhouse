@@ -208,10 +208,9 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 					WithVariables(metaConfig.NodeGroupConfig(nodeGroup, index, "")).
 					WithName(nodeName).
 					WithCache(stateCache).
-					WithStatePath(stateCache.ObjectPath(nodeName)).
+					WithAllowedCachedState(true).
 					WithAutoApprove(app.SanityCheck)
 				tomb.RegisterOnShutdown(nodeRunner.Stop)
-				stateCache.AddToClean(nodeName)
 
 				if err := terraform.DestroyPipeline(nodeRunner, nodeName); err != nil {
 					return err
@@ -225,11 +224,10 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 					WithVariables(metaConfig.NodeGroupConfig("master", index, "")).
 					WithName(nodeName).
 					WithCache(stateCache).
-					WithStatePath(stateCache.ObjectPath(nodeName)).
+					WithAllowedCachedState(true).
 					WithAutoApprove(app.SanityCheck)
 				tomb.RegisterOnShutdown(masterRunner.Stop)
 
-				stateCache.AddToClean(nodeName)
 				if err := terraform.DestroyPipeline(masterRunner, nodeName); err != nil {
 					return err
 				}
@@ -239,18 +237,17 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
 			WithCache(stateCache).
-			WithStatePath(stateCache.ObjectPath("base-infrastructure")).
+			WithAllowedCachedState(true).
 			WithAutoApprove(app.SanityCheck)
 		tomb.RegisterOnShutdown(baseRunner.Stop)
 
-		stateCache.AddToClean("base-infrastructure")
 		if err := terraform.DestroyPipeline(baseRunner, "Kubernetes cluster"); err != nil {
 			return err
 		}
 
-		stateCache.AddToClean("uuid")
 		stateCache.Clean()
-		stateCache.Teardown()
+		// Allow to reuse cache because cluster will be bootstrapped again (probably)
+		stateCache.Delete(".tombstone")
 		return nil
 	}
 
@@ -286,24 +283,27 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 		}
 
 		cachePath := metaConfig.CachePath()
-		if err = cache.Init(cachePath); err != nil {
+
+		stateCache, err := cache.NewTempStateCache(cachePath)
+		if err != nil {
 			// TODO: it's better to ask for confirmation here
 			return fmt.Errorf(cacheMessage, cachePath, err)
 		}
 
 		if app.DropCache {
-			cache.RemoveEverythingFromCache(metaConfig.CachePath())
+			stateCache.Clean()
+			stateCache.Delete(".tombstone")
 		}
 
 		clusterUUID, err := generateClusterUUID()
 		if err != nil {
 			return err
 		}
-		cache.Global().AddToClean("uuid")
 		metaConfig.UUID = clusterUUID
 
 		return log.Process("bootstrap", "Cloud infrastructure", func() error {
 			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+				WithCache(stateCache).
 				WithVariables(metaConfig.MarshalConfig()).
 				WithAutoApprove(true)
 			tomb.RegisterOnShutdown(baseRunner.Stop)

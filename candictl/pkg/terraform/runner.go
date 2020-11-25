@@ -42,8 +42,9 @@ type Runner struct {
 	planPath      string
 	variablesPath string
 
-	autoApprove   bool
-	changesInPlan bool
+	autoApprove        bool
+	allowedCachedState bool
+	changesInPlan      bool
 
 	stateCache cache.Cache
 
@@ -114,8 +115,13 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 	return r
 }
 
-func (r *Runner) WithAutoApprove(autoApprove bool) *Runner {
-	r.autoApprove = autoApprove
+func (r *Runner) WithAutoApprove(flag bool) *Runner {
+	r.autoApprove = flag
+	return r
+}
+
+func (r *Runner) WithAllowedCachedState(flag bool) *Runner {
+	r.allowedCachedState = flag
 	return r
 }
 
@@ -126,9 +132,10 @@ func (r *Runner) Init() error {
 
 	if r.statePath == "" {
 		// Save state directly in the cache to prevent state loss
-		r.statePath = r.stateCache.ObjectPath(r.name)
+		stateName := fmt.Sprintf("%s.tfstate", r.name)
+		r.statePath = r.stateCache.GetPath(stateName)
 
-		if r.stateCache.InCache(r.name) {
+		if r.stateCache.InCache(stateName) && !r.allowedCachedState {
 			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
 			if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cache") {
 				return fmt.Errorf(terraformPipelineAbortedMessage)
@@ -253,7 +260,6 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 		return nil, fmt.Errorf("can't get terraform output for %q\n%v", output, err)
 	}
 
-	r.stateCache.AddToClean(r.name)
 	return result, nil
 }
 
@@ -262,7 +268,6 @@ func (r *Runner) Destroy() error {
 		return fmt.Errorf("no state found, try to run terraform apply first")
 	}
 
-	r.stateCache.SaveByPath(r.name, r.statePath)
 	if !r.autoApprove {
 		if !retry.AskForConfirmation("Do you want to DELETE objects from the cloud") {
 			return fmt.Errorf("terraform destroy aborted")
@@ -284,7 +289,6 @@ func (r *Runner) Destroy() error {
 			return err
 		}
 
-		r.stateCache.Delete(r.name)
 		return nil
 	})
 }

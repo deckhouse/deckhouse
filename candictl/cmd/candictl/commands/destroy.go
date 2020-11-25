@@ -102,7 +102,6 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		}
-		stateCache.AddToClean("cluster-config")
 
 		var nodesState map[string]converge.NodeGroupTerraformState
 		if stateCache.InCache("nodes-state") && retry.AskForConfirmation("Do you want to continue with Nodes state from local cache") {
@@ -122,11 +121,13 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		}
-		stateCache.AddToClean("nodes-state")
 
 		var clusterState []byte
 		if stateCache.InCache("cluster-state") && retry.AskForConfirmation("Do you want to continue with Cluster state from local cache") {
 			clusterState = stateCache.Load("cluster-state")
+			if len(clusterState) == 0 {
+				return fmt.Errorf("can't load cluster state from cache")
+			}
 		} else {
 			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
 				return err
@@ -137,7 +138,6 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 			stateCache.Save("cluster-state", clusterState)
 		}
-		stateCache.AddToClean("cluster-state")
 
 		// Stop proxy because we have already gotten all info from kubernetes-api
 		if kubeCl != nil {
@@ -164,14 +164,16 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 
 			for name, state := range nodeGroupStates.State {
-				if !stateCache.InCache(name) {
-					stateCache.Save(name, state)
+				stateName := fmt.Sprintf("%s.tfstate", name)
+				if !stateCache.InCache(stateName) {
+					stateCache.Save(stateName, state)
 				}
 
 				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, step).
 					WithVariables(metaConfig.NodeGroupConfig(nodeGroupName, 0, "")).
+					WithName(name).
 					WithCache(stateCache).
-					WithStatePath(stateCache.ObjectPath(name)).
+					WithAllowedCachedState(true).
 					WithAutoApprove(app.SanityCheck)
 
 				tomb.RegisterOnShutdown(nodeRunner.Stop)
@@ -183,14 +185,14 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
-		if !stateCache.InCache("base-infrastructure") {
-			stateCache.Save("base-infrastructure", clusterState)
+		if !stateCache.InCache("base-infrastructure.tfstate") {
+			stateCache.Save("base-infrastructure.tfstate", clusterState)
 		}
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
 			WithCache(stateCache).
-			WithStatePath(stateCache.ObjectPath("base-infrastructure")).
+			WithAllowedCachedState(true).
 			WithAutoApprove(app.SanityCheck)
 		tomb.RegisterOnShutdown(baseRunner.Stop)
 
@@ -198,7 +200,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		stateCache.Clean()
+		// stateCache.Clean()
 		return nil
 	}
 

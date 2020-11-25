@@ -101,7 +101,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		if app.DropCache {
-			cache.RemoveEverythingFromCache(metaConfig.CachePath())
+			cache.Global().Clean()
+			cache.Global().Delete(".tombstone")
 		}
 
 		var resourcesToCreate *config.Resources
@@ -118,7 +119,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		cache.Global().AddToClean("uuid")
 		metaConfig.UUID = clusterUUID
 
 		deckhouseInstallConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
