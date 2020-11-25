@@ -157,13 +157,13 @@ func objectAPIVersion(object storage.StoreObject) errors.LintRuleError {
 	}
 }
 
-func ApplyLintRules(m types.Module, objectStore storage.UnstructuredObjectStore) error {
+func ApplyLintRules(m types.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
 	var lintRuleErrorsList errors.LintRuleErrorsList
 	for _, o := range objectStore.Storage {
-		applyObjectRules(&objectStore, &lintRuleErrorsList, m, o)
+		applyObjectRules(objectStore, &lintRuleErrorsList, m, o)
 		applyContainerRules(&lintRuleErrorsList, o)
 	}
 
-	resources.ControllerMustHasVPA(m, objectStore, &lintRuleErrorsList)
+	resources.ControllerMustHasVPA(m, values, objectStore, &lintRuleErrorsList)
 	return lintRuleErrorsList.ConvertToError()
 }

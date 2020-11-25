@@ -3,12 +3,14 @@ package resources
 import (
 	"strings"
 
+	"github.com/ghodss/yaml"
+
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
 )
 
-var exceptions = map[string]func(r *storage.ResourceIndex) bool{
+var exclusions = map[string]func(r *storage.ResourceIndex) bool{
 	// Controllers VPA is configured through cr settings
 	"ingress-nginx": func(r *storage.ResourceIndex) bool {
 		if r.Kind == "DaemonSet" && r.Namespace == "d8-ingress-nginx" && strings.HasPrefix(r.Name, "controller-") {
@@ -18,10 +20,31 @@ var exceptions = map[string]func(r *storage.ResourceIndex) bool{
 	},
 }
 
-func ControllerMustHasVPA(m types.Module, objectStore storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) errors.LintRuleError {
-	exceptionFunc := exceptions[m.Name]
+func checkVPAEnabled(values string) bool {
+	var v struct {
+		Global struct{ EnabledModules []string }
+	}
+	err := yaml.Unmarshal([]byte(values), &v)
+	if err != nil {
+		panic("unable to parse global.enabledModules values section")
+	}
+
+	for _, module := range v.Global.EnabledModules {
+		if module == "vertical-pod-autoscaler-crd" {
+			return true
+		}
+	}
+	return false
+}
+
+func ControllerMustHasVPA(m types.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
+	exceptionFunc := exclusions[m.Name]
 	if exceptionFunc == nil {
 		exceptionFunc = func(r *storage.ResourceIndex) bool { return false }
+	}
+
+	if !checkVPAEnabled(values) {
+		return
 	}
 
 	vpaTargets := make(map[storage.ResourceIndex]struct{})
@@ -80,6 +103,4 @@ func ControllerMustHasVPA(m types.Module, objectStore storage.UnstructuredObject
 			}
 		}
 	}
-
-	return errors.LintRuleError{}
 }

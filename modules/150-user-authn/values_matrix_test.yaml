@@ -187,13 +187,3 @@ userAuthn:
                 operator: Equal
                 value: bar
           allowAccessToKubernetes: null
-  https:
-    __ConstantChoices__:
-      - certManager:
-          clusterIssuerName: letsencrypt
-        mode: CertManager
-      - mode: Disabled
-      - mode: OnlyInURI
-      - mode: CustomCertificate
-        customCertificate:
-          secretName: plainstring
