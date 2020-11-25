@@ -33,6 +33,28 @@ title: "Cloud provider — AWS: Развертывание"
     * `diskSizeGb`
   * `zones` — ограниченный набор зон, в которых разрешено создавать ноды. Опциональный параметр.
   * `additionalTags` — дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
+  * `nodeTemplate` — настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
+    * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
+      * Пример:
+        ```yaml
+        labels:
+          environment: production
+          app: warp-drive-ai
+        ```
+    * `annotations` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.annotations`
+      * Пример:
+        ```yaml
+        annotations:
+          ai.fleet.com/discombobulate: "true"
+        ```
+    * `taints` — аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+      * Пример:
+        ```yaml
+        taints:
+        - effect: NoExecute
+          key: ship-class
+          value: frigate
+        ```
 * `vpcNetworkCIDR` — подсеть, которая будет указана в созданном VPC.
   * обязательный параметр если не указан параметр для развёртывания в уже созданном VPC `existingVPCID` (см. ниже).
 * `existingVPCID` — ID существующего VPC, в котором будет развёрнута схема.
@@ -41,6 +63,11 @@ title: "Cloud provider — AWS: Развертывание"
   * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC.
   * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
   * Необязательный, но рекомендованный параметр. По умолчанию — соответствует целому диапазону адресов VPC.
+> Если при создании кластера создаётся новая VPC и не указан `vpcNetworkCIDR`, то VPC будет создана с диапазоном, указанным в `nodeNetworkCIDR`,
+> таким образом вся VPC будет выделена под сети кластера, и соответственно не будет возможности добавить другие ресурсы в эту VPC.
+> 
+> Диапазон `nodeNetworkCIDR` распределяется по подсетям в зависимости от количества зон доступности в выбранном регионе. Например,
+> если указана `nodeNetworkCIDR: "10.241.1.0/20"` и в регионе 3 зоны доступности, то подсети будут созданы с маской `/22`.
 * `sshPublicKey` — публичный ключ для доступа на ноды.
 * `tags` — теги, которые будут присвоены всем созданным ресурсам.
 
@@ -81,7 +108,8 @@ nodeGroups:
       ami: ami-03818140b4ac9ae2b
     additionalTags:
       backup: me
-nodeNetworkCIDR: "10.222.0.0/16"
+vpcNetworkCIDR: "10.241.0.0/16"
+nodeNetworkCIDR: "10.241.32.0/20"
 sshPublicKey: ...
 tags:
   team: torpedo
@@ -118,7 +146,8 @@ nodeGroups:
       ami: ami-03818140b4ac9ae2b
     additionalTags:
       backup: me
-nodeNetworkCIDR: "10.222.0.0/16"
+vpcNetworkCIDR: "10.241.0.0/16"
+nodeNetworkCIDR: "10.241.32.0/20"
 sshPublicKey: ...
 tags:
   team: torpedo

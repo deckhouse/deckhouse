@@ -40,6 +40,28 @@ title: "Cloud provider — GCP: Развертывание"
         * **`disableExternalIP`** — параметр доступен только для layout `Standard`.
             * `true` —  значение по умолчанию. Узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
             * `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
+    * `nodeTemplate` — настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
+        * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
+          * Пример:
+            ```yaml
+            labels:
+              environment: production
+              app: warp-drive-ai
+            ```
+        * `annotations` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.annotations`
+          * Пример:
+            ```yaml
+            annotations:
+              ai.fleet.com/discombobulate: "true"
+            ```
+        * `taints` — аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+          * Пример:
+            ```yaml
+            taints:
+            - effect: NoExecute
+              key: ship-class
+              value: frigate
+            ```
 * `provider` — параметры подключения к API GCP.
     * `region` — имя региона в котором будут заказываться instances
     * `serviceAccountJSON` — `service account key` в json-формате. [Создание сервис-аккаунта](#создание-сервис-аккаунта)

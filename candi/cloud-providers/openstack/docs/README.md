@@ -74,6 +74,28 @@ title: "Cloud provider — Openstack: Развертывание"
   * `zones` — ограничение набора зон, в которых разрешено создавать ноды.
     * Опциональный параметр.
     * Формат — массив строк.
+  * `nodeTemplate` — настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
+    * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
+      * Пример:
+        ```yaml
+        labels:
+          environment: production
+          app: warp-drive-ai
+        ```
+    * `annotations` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.annotations`
+      * Пример:
+        ```yaml
+        annotations:
+          ai.fleet.com/discombobulate: "true"
+        ```
+    * `taints` — аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+      * Пример:
+        ```yaml
+        taints:
+        - effect: NoExecute
+          key: ship-class
+          value: frigate
+        ```
 * `sshPublicKey` — публичный ключ для доступа на ноды.
   * Обязательный параметр.
   * Формат — строкa.

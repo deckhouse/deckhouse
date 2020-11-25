@@ -82,6 +82,28 @@ apiVersions:
               type: string
             replicas:
               type: integer
+            nodeTemplate:
+              properties:
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                annotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                taints:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
             zones:
               type: array
               items:
