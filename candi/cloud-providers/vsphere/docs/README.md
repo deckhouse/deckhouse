@@ -62,6 +62,28 @@ title: Cloud provider - Vsphere
     * **`mainNetworkIPAddresses`** — список статических адресов (с CIDR префиксом), назначаемых (по-очереди) master нодам в основной сети (параметр `mainNetwork`).
       * Формат — список строк.
       * Опциональный параметр. По-умолчанию, включается DHCP клиент.
+  * `nodeTemplate` — настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
+    * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
+      * Пример:
+        ```yaml
+        labels:
+          environment: production
+          app: warp-drive-ai
+        ```
+    * `annotations` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.annotations`
+      * Пример:
+        ```yaml
+        annotations:
+          ai.fleet.com/discombobulate: "true"
+        ```
+    * `taints` — аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+      * Пример:
+        ```yaml
+        taints:
+        - effect: NoExecute
+          key: ship-class
+          value: frigate
+        ```
 * `internalNetworkCIDR` — подсеть для master нод во внутренней сети. Адреса выделяются с десятого адреса. Например, для подсети `192.168.199.0/24` будут использованы адреса начиная с `192.168.199.10`. Будет использоваться при использовании `additionalNetworks` в `masterInstanceClass`.
 * `vmFolderPath` — путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
   * Пример — `dev/test`
