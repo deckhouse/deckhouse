@@ -2,12 +2,13 @@ package template
 
 import (
 	"bytes"
-	"flant/candictl/pkg/log"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"flant/candictl/pkg/log"
 )
 
 const (

@@ -21,7 +21,7 @@ import (
 	"flant/candictl/pkg/util/retry"
 )
 
-func BootstrapMaster(sshClient *ssh.SSHClient, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
 		if err := template.PrepareBootstrap(controller, nodeIP, bundleName, metaConfig); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
@@ -61,7 +61,7 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 	})
 }
 
-func ExecuteBashibleBundle(sshClient *ssh.SSHClient, tmpDir string) error {
+func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
 	return log.Process("bootstrap", "Execute Bashible Bundle", func() error {
 		bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
 		parentDir := tmpDir + "/var/lib"
@@ -87,7 +87,7 @@ const (
 `
 )
 
-func CheckBashibleBundle(sshClient *ssh.SSHClient) bool {
+func CheckBashibleBundle(sshClient *ssh.Client) bool {
 	var bashibleUpToDate bool
 	_ = log.Process("bootstrap", "Check Bashible", func() error {
 		bashibleCmd := sshClient.Command("/var/lib/bashible/bashible.sh", "--local").
@@ -118,7 +118,7 @@ func CheckBashibleBundle(sshClient *ssh.SSHClient) bool {
 	return bashibleUpToDate
 }
 
-func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
 	bundleName, err := DetermineBundleName(sshClient)
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 	return nil
 }
 
-func DetermineBundleName(sshClient *ssh.SSHClient) (string, error) {
+func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
 		return retry.StartSilentLoop("Get bundle", 3, 1, func() error {
@@ -176,7 +176,7 @@ func DetermineBundleName(sshClient *ssh.SSHClient) (string, error) {
 	return bundleName, err
 }
 
-func WaitForSSHConnectionOnMaster(sshClient *ssh.SSHClient) error {
+func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
 		_ = log.Process("default", "Connection string", func() error {
@@ -211,7 +211,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 	})
 }
 
-func StartKubernetesAPIProxy(sshClient *ssh.SSHClient) (*client.KubernetesClient, error) {
+func StartKubernetesAPIProxy(sshClient *ssh.Client) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Start Kubernetes API proxy", func() error {
 		if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
@@ -245,7 +245,7 @@ func StartKubernetesAPIProxy(sshClient *ssh.SSHClient) (*client.KubernetesClient
 
 const rebootExitCode = 255
 
-func RebootMaster(sshClient *ssh.SSHClient) error {
+func RebootMaster(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Reboot Master️", func() error {
 		rebootCmd := sshClient.Command("sudo", "reboot").Sudo().
 			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")

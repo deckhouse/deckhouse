@@ -20,7 +20,7 @@ import (
 	"flant/candictl/pkg/util/tomb"
 )
 
-func getClientOnce(sshClient *ssh.SSHClient, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
+func getClientOnce(sshClient *ssh.Client, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
 	var err error
 	if kubeCl == nil {
 		kubeCl, err = operations.StartKubernetesAPIProxy(sshClient)
@@ -56,7 +56,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSanityFlags(cmd)
 	app.DefineSkipResourcesFlags(cmd)
 
-	runFunc := func(sshClient *ssh.SSHClient) error {
+	runFunc := func(sshClient *ssh.Client) error {
 		var err error
 
 		stateCache, err := cache.NewTempStateCache(sshClient.Check().String())

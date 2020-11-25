@@ -50,9 +50,8 @@ func (a *SSHAgent) Start() error {
 		if err != nil {
 			log.ErrorF("SSH-agent process exited, now stop. Wait error: %v\n", err)
 			return
-		} else {
-			log.InfoF("SSH-agent process exited, now stop.\n")
 		}
+		log.InfoF("SSH-agent process exited, now stop.\n")
 	})
 
 	err := a.Executor.Start()

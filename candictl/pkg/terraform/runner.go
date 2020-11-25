@@ -293,7 +293,7 @@ func (r *Runner) Destroy() error {
 	})
 }
 
-func (r Runner) ResourcesQuantityInState() int {
+func (r *Runner) ResourcesQuantityInState() int {
 	if r.statePath == "" {
 		return 0
 	}

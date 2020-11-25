@@ -4,8 +4,13 @@ run:
 issues:
   exclude:
     - ST1005.*
+    - "error strings should not be.*"
 
 linters-settings:
+  goimports:
+    local-prefixes: flant/candictl
+  golint:
+    min-confidence: 0
   errcheck:
     ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
 
@@ -15,11 +20,15 @@ linters:
     - bodyclose
     - deadcode
     - depguard
+    - dogsled
     - dupl
     - errcheck
+    - exhaustive
+    - exportloopref
     - gocritic
     - gofmt
     - goimports
+    - golint
     - gosec
     - gosimple
     - govet
@@ -27,12 +36,16 @@ linters:
     - interfacer
     - misspell
     - nakedret
+    - nolintlint
     - prealloc
+    - rowserrcheck
     - staticcheck
     - structcheck
     - stylecheck
+    - tparallel
     - typecheck
     - unconvert
     - unparam
     - unused
     - varcheck
+    - whitespace
