@@ -97,7 +97,6 @@ spec:
           mountPath: "/etc/nginx/certs"
       {{- end }}
 
-
     {{- else if eq $component.name "KubeControllerManager"}}
       {{- $proxyListenPort := ($component.values.throughNode.proxyListenPort | toString) }}
       {{- $localPort := ($component.values.throughNode.localPort | toString) }}
@@ -200,6 +199,9 @@ spec:
           mountPath: "/etc/nginx/certs/client.key"
       {{- end }}
     {{- end }}
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
   {{- end }}
       volumes:
   {{- range $component := $instance.components }}

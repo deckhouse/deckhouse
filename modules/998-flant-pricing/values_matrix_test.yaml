@@ -9,6 +9,8 @@ global:
       flantPricing:
         flantPricing: tagstring
         grafanaAgent: tagstring
+      common:
+        alpine: tagstring
   discovery:
     prometheusScrapeInterval: 30s
     clusterControlPlaneIsHighlyAvailable: true

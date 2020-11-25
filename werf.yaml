@@ -250,6 +250,14 @@ ansible:
   - name: "Make symlink for deckhouse entrypoint in the right location"
     shell: ln -s /deckhouse/entrypoint.sh /deckhouse/deckhouse
 
+  - name: "Run deckhouse from nobody"
+    file:
+      path: /deckhouse/
+      state: directory
+      recurse: yes
+      owner: 65534
+      group: 65534
+
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules

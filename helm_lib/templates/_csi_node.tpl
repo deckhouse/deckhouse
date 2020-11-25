@@ -75,9 +75,11 @@ spec:
       - name: deckhouse-registry
 {{ include "helm_lib_priority_class" (tuple $context "cluster-critical") | indent 6 }}
 {{ include "helm_lib_tolerations" (tuple $context "any-node-with-no-csi") | indent 6 }}
+{{ include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       hostNetwork: true
       containers:
       - name: node-driver-registrar
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -93,6 +95,9 @@ spec:
           mountPath: /csi
         - name: registration-dir
           mountPath: /registration
+        resources:
+          requests:
+{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       - name: node
         securityContext:
           privileged: true
@@ -116,6 +121,9 @@ spec:
     {{- if $additionalNodeVolumeMounts }}
 {{ $additionalNodeVolumeMounts | toYaml | indent 8 }}
     {{- end }}
+        resources:
+          requests:
+{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       serviceAccount: ""
       serviceAccountName: ""
       volumes:

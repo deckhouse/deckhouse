@@ -15,7 +15,7 @@ import (
 
 var (
 	listenHost              = "0.0.0.0"
-	listenPort              = "80"
+	listenPort              = "8080"
 	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
@@ -184,7 +184,7 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 	errorCount := 0
 	for i := 0; i < len(targetServices); i++ {
 		if errorCount <= 2 {
-			resp, err := client.Get(fmt.Sprintf("http://smoke-mini-%s/", targetServices[i]))
+			resp, err := client.Get(fmt.Sprintf("http://smoke-mini-%s:8080/", targetServices[i]))
 			if err != nil {
 				log.Error(err)
 				errorCount++
@@ -214,7 +214,7 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 	maxErrors := 2
 	for i := 0; i < targetsCount; i++ {
 		if errorCount <= maxErrors {
-			resp, err := client.Get("http://smoke-mini/")
+			resp, err := client.Get("http://smoke-mini:8080/")
 			if err != nil {
 				log.Error(err)
 				errorCount++

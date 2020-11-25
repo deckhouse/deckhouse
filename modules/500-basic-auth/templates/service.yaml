@@ -6,10 +6,10 @@ metadata:
   namespace: kube-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 spec:
-  clusterIP: None
   selector:
     app: {{ .Chart.Name }}
   ports:
   - name: http
     port: 80
     protocol: TCP
+    targetPort: http

@@ -11,7 +11,7 @@ spec:
   clusterIP: None
   ports:
   - name: http
-    port: 80
+    port: 8080
     protocol: TCP
     targetPort: http
   selector:

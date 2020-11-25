@@ -73,12 +73,14 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       serviceAccountName: cluster-autoscaler
       terminationGracePeriodSeconds: 5
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: cluster-autoscaler
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/node-manager/cluster-autoscaler:{{ .Values.global.modulesImages.tags.nodeManager.clusterAutoscaler }}
         args:
         - --namespace=d8-cloud-instance-manager
@@ -112,10 +114,14 @@ spec:
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):443"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
@@ -137,13 +143,16 @@ spec:
                   subresource: prometheus-metrics
                   name: cluster-autoscaler
         ports:
-        - containerPort: 443
+        - containerPort: 8443
           name: https-metrics
         livenessProbe:
           tcpSocket:
-            port: 443
+            port: 8443
         readinessProbe:
           tcpSocket:
-            port: 443
+            port: 8443
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
   {{- end }}
 {{- end }}

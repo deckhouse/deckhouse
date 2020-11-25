@@ -131,6 +131,7 @@ spec:
         rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       tolerations:
       - effect: NoSchedule
         key: node-role.kubernetes.io/master
@@ -139,6 +140,7 @@ spec:
       serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/control-plane-manager/control-plane-manager:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
         volumeMounts:
         - mountPath: /var/lib/etcd
@@ -156,6 +158,8 @@ spec:
           name: root-kube
         - mountPath: /var/lib/kubelet/pki
           name: var-lib-kubelet-pki
+        - mountPath: /tmp
+          name: tmp
         env:
         - name: MY_IP
           valueFrom:
@@ -171,7 +175,10 @@ spec:
           exec:
             command:
             - cat
-            - /ready
+            - /tmp/ready
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
 {{- range $name, $image := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         image: {{ $image }}
@@ -203,3 +210,5 @@ spec:
         hostPath:
           path: /var/lib/kubelet/pki/
           type: DirectoryOrCreate
+      - name: tmp
+        emptyDir: {}

@@ -59,8 +59,10 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       containers:
       - name: face-slapper
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/monitoring-kubernetes-control-plane/kube-scheduler-face-slapper:{{ .Values.global.modulesImages.tags.monitoringKubernetesControlPlane.kubeSchedulerFaceSlapper }}
         env:
         - name: KUBE_SCHEDULER_IP
@@ -72,6 +74,9 @@ spec:
         volumeMounts:
         - name: prometheus-scraper-tls
           mountPath: "/etc/ssl/private/"
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       volumes:
       - name: prometheus-scraper-tls
         secret:

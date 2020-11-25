@@ -103,6 +103,68 @@ func (s *StoreObject) GetContainers() ([]v1.Container, error) {
 	return containers, nil
 }
 
+func (s *StoreObject) GetPodSecurityContext() (*v1.PodSecurityContext, error) {
+	converter := runtime.DefaultUnstructuredConverter
+
+	switch s.Unstructured.GetKind() {
+	case "Deployment":
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return nil, fmt.Errorf("convert Unstructured to Deployment failed: %v", err)
+		}
+
+		return deployment.Spec.Template.Spec.SecurityContext, nil
+	case "DaemonSet":
+		daemonSet := new(appsv1.DaemonSet)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), daemonSet)
+		if err != nil {
+			return nil, fmt.Errorf("convert Unstructured to DaemonSet failed: %v", err)
+		}
+
+		return daemonSet.Spec.Template.Spec.SecurityContext, nil
+	case "StatefulSet":
+		statefulSet := new(appsv1.StatefulSet)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), statefulSet)
+		if err != nil {
+			return nil, fmt.Errorf("convert Unstructured to StatefulSet failed: %v", err)
+		}
+
+		return statefulSet.Spec.Template.Spec.SecurityContext, nil
+	case "Pod":
+		pod := new(v1.Pod)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), pod)
+		if err != nil {
+			return nil, fmt.Errorf("convert Unstructured to Pod failed: %v", err)
+		}
+
+		return pod.Spec.SecurityContext, nil
+	case "Job":
+		job := new(batchv1.Job)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), job)
+		if err != nil {
+			return nil, fmt.Errorf("convert Unstructured to Job failed: %v", err)
+		}
+
+		return job.Spec.Template.Spec.SecurityContext, nil
+	case "CronJob":
+		cronJob := new(batchv1beta1.CronJob)
+
+		err := converter.FromUnstructured(s.Unstructured.UnstructuredContent(), cronJob)
+		if err != nil {
+			return nil, fmt.Errorf("convert Unstructured to CronJob failed: %v", err)
+		}
+
+		return cronJob.Spec.JobTemplate.Spec.Template.Spec.SecurityContext, nil
+	}
+	return nil, nil
+}
+
 func (s *StoreObject) ShortPath() string {
 	return strings.Join(strings.Split(s.Path, string(os.PathSeparator))[1:], string(os.PathSeparator))
 }

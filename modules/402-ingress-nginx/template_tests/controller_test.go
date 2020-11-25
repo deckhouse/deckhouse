@@ -182,6 +182,7 @@ key: teststring
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next").
 				Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`
 cpu: 50m
+ephemeral-storage: 150Mi
 memory: 200Mi`))
 			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-test-next").Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
 		})

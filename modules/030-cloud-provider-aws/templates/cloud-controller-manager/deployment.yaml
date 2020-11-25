@@ -54,12 +54,12 @@ spec:
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       hostNetwork: true
-      securityContext:
-        runAsUser: 1001
       serviceAccountName: cloud-controller-manager
       containers:
         - name: aws-cloud-controller-manager
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-aws/cloud-controller-manager-{{ $kubernetesSemVer.Major }}-{{ $kubernetesSemVer.Minor }}:{{ index .Values.global.modulesImages.tags.cloudProviderAws $ccmImageName }}
           args:
           - --leader-elect=true
@@ -102,6 +102,9 @@ spec:
           - mountPath: /etc/cloud-contoller-manager-config
             name: config
             readOnly: true
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
       volumes:
       - hostPath:
           path: /etc/kubernetes/pki

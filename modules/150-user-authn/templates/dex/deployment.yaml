@@ -37,6 +37,7 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dex")) | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: dex
@@ -49,6 +50,7 @@ spec:
             path: config.yaml
       containers:
       - name: dex
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/user-authn/dex:{{ .Values.global.modulesImages.tags.userAuthn.dex }}
         command: ["/usr/local/bin/dex", "serve", "/etc/dex/config.yaml"]
         ports:
@@ -68,3 +70,6 @@ spec:
         volumeMounts:
         - name: original-config
           mountPath: /etc/dex
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}

@@ -17,7 +17,6 @@ modulesImages:
       kubeCaAuthProxy: tagstring
       kubeRbacProxy: tagstring
     userAuthn:
-      busybox: tagstring
       cfssl: tagstring
       crowdBasicAuthProxy: tagstring
       dex: tagstring

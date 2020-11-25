@@ -37,10 +37,12 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" .Chart.Name)) | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: nginx
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}/basic-auth/nginx:{{ $.Values.global.modulesImages.tags.basicAuth.nginx }}
         lifecycle:
           preStop:
@@ -49,15 +51,15 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 80
+            port: 8080
             scheme: HTTP
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 80
+            port: 8080
             scheme: HTTP
         ports:
-        - containerPort: 80
+        - containerPort: 8080
           name: http
           protocol: TCP
         volumeMounts:
@@ -68,6 +70,11 @@ spec:
         - name: htpasswd
           mountPath: /etc/nginx/htpasswd
           readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       volumes:
       - name: nginx-config
         configMap:
@@ -85,3 +92,5 @@ spec:
             path: {{ $location.location | trimPrefix "/" }}
   {{- end }}
 {{- end }}
+      - name: tmp
+        emptyDir: {}

@@ -506,6 +506,6 @@ echo
 
 
 echo "Successfully finished!!!"
-touch /ready
+touch /tmp/ready
 
 exec /pause

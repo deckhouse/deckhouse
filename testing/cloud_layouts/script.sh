@@ -152,7 +152,7 @@ fi
 
 for ((i=0; i<10; i++)); do
   for path in api disk dns prometheus; do
-    result="$(curl -m 5 -sS "${smoke_mini_addr}/${path}")"
+    result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")"
     printf -v "$path" "%s" "$result"
   done
 

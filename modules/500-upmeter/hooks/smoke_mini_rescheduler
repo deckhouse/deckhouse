@@ -309,6 +309,8 @@ function __on_group::main() {
   # Apply new values
   values::set upmeter.internal.smokeMini.sts.${target_sts_index}.node "$sts_node"
   values::set upmeter.internal.smokeMini.sts.${target_sts_index}.image "$(values::get global.modulesImages.registry)/upmeter/smoke-mini:$(values::get global.modulesImages.tags.upmeter.smokeMini)"
+  ### Migration 14.12.2020: Remove `.newImage` after this commit reaches RockSolid.
+  values::set upmeter.internal.smokeMini.sts.${target_sts_index}.newImage "true"
   if [ "$(values::get upmeter.internal.smokeMini.sts.${target_sts_index}.zone)" != "$sts_zone" ] ; then
     kubernetes::delete_if_exists::non_blocking "d8-upmeter" "persistentvolumeclaim/disk-smoke-mini-${target_sts_index}-0"
     echo "!!! NOTICE: zone changed, deleting persistentvolumeclaim/disk-smoke-mini-${target_sts_index}-0 !!!"

@@ -143,9 +143,10 @@ spec:
               command:
                 - /wait-shutdown
   {{- end }}
-  {{- if eq $crd.spec.resourcesRequests.mode "Static" }}
         resources:
           requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
+  {{- if eq $crd.spec.resourcesRequests.mode "Static" }}
             cpu: {{ $crd.spec.resourcesRequests.static.cpu | default "50m" | quote }}
             memory: {{ $crd.spec.resourcesRequests.static.memory | default "200Mi" | quote }}
   {{- end }}
@@ -193,6 +194,9 @@ spec:
           readOnly: true
       - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/protobuf-exporter:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}
         name: protobuf-exporter
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       - name: kube-rbac-proxy
         image: {{ $context.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
@@ -234,6 +238,7 @@ spec:
           requests:
             memory: 20Mi
             cpu: 10m
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       volumes:
       - name: client-body-temp-path
         emptyDir: {}

@@ -52,8 +52,10 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       containers:
         - name: agent
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
           image: {{ $.Values.global.modulesImages.registry }}/upmeter/upmeter:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}
           command:
             - /upmeter
@@ -75,6 +77,9 @@ spec:
             {{- end }}
           - name: UPMETER_DISABLED_PROBES
             value: {{ $disabledProbes | join "," | quote }}
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       enableServiceLinks: false

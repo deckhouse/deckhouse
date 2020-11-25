@@ -39,6 +39,7 @@ spec:
   listenLocal: true
   containers:
   - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 4 }}
     image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
@@ -67,14 +68,24 @@ spec:
               resource: prometheuses
               subresource: http
               name: longterm
-    securityContext:
-      runAsUser: 0
+    resources:
+      requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 8 }}
+  - name: rules-configmap-reloader
+    resources:
+      requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 8 }}
+  - name: prometheus-config-reloader
+    resources:
+      requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | indent 8 }}
   scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
   evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/longterm/
 {{- end }}
   securityContext:
+    runAsNonRoot: true
     fsGroup: 2000
     runAsUser: 1000
   serviceAccountName: prometheus
@@ -99,4 +110,7 @@ spec:
             storage: {{ .Values.prometheus.internal.prometheusLongterm.diskSizeGigabytes }}Gi
         storageClassName: {{ $storageClass }}
   {{- end }}
+  resources:
+    requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 6 }}
 {{- end }}

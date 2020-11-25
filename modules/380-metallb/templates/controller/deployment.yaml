@@ -34,6 +34,7 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
@@ -43,13 +44,12 @@ spec:
           image: {{ $.Values.global.modulesImages.registry }}/metallb/controller:{{ $.Values.global.modulesImages.tags.metallb.controller }}
           imagePullPolicy: IfNotPresent
           name: controller
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - all
-            readOnlyRootFilesystem: true
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
         - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
           image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
           args:
             - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7473"
@@ -76,8 +76,8 @@ spec:
                       resource: deployments
                       subresource: prometheus-metrics
                       name: metallb
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
       serviceAccountName: controller
       terminationGracePeriodSeconds: 0

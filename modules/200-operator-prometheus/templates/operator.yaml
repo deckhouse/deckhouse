@@ -35,6 +35,7 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       containers:
       - args:
         - --kubelet-service=kube-system/kubelet
@@ -45,12 +46,13 @@ spec:
         - --manage-crds=false
         image: {{ $.Values.global.modulesImages.registry }}/operator-prometheus/prometheus-operator:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusOperator }}
         name: prometheus-operator
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         ports:
         - containerPort: 8080
           name: http
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       serviceAccountName: operator-prometheus
       imagePullSecrets:
       - name: deckhouse-registry

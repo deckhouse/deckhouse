@@ -34,7 +34,7 @@ spec:
       - path: /
         backend:
           serviceName: webui
-          servicePort: webui
+          servicePort: http
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress

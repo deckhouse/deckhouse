@@ -74,6 +74,9 @@ spec:
         - mountPath: /etc/control-plane-configurator-oidc/
           name: control-plane-configurator-oidc
 {{- end }}
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       volumes:
       - name: etc-kubernetes
         hostPath:

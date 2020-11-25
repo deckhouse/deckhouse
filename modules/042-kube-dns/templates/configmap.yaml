@@ -6,7 +6,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | indent 2 }}
 data:
   Corefile: |
-    .:53 {
+    .:5353 {
         errors
         health
         ready

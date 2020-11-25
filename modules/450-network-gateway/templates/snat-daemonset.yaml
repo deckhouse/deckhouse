@@ -45,6 +45,7 @@ spec:
     spec:
       hostNetwork: true
 {{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       nodeSelector:
 {{ .Values.networkGateway.nodeSelector | toYaml | indent 8 }}
 {{- if (.Values.networkGateway.tolerations) }}
@@ -55,11 +56,9 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: snat
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW")) | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/network-gateway/snat:{{ .Values.global.modulesImages.tags.networkGateway.snat }}
         command: ["/iptables-loop.py"]
-        securityContext:
-          capabilities:
-            add: ["NET_ADMIN"]
         env:
         - name: POD_SUBNET
           value: {{ .Values.global.discovery.podSubnet }}
@@ -70,7 +69,17 @@ spec:
         volumeMounts:
         - name: network-gateway-config
           mountPath: /etc/network-gateway-config
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+          readOnly: false
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       volumes:
       - name: network-gateway-config
         configMap:
           name: network-gateway
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate

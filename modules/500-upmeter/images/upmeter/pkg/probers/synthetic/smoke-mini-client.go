@@ -34,7 +34,7 @@ func RequestSmokeMiniUrl(ctx context.Context, ip string, path string) ([]byte, i
 	if path == "" {
 		path = "/"
 	}
-	smokeUrl := fmt.Sprintf("http://%s%s", ip, path)
+	smokeUrl := fmt.Sprintf("http://%s:8080%s", ip, path)
 
 	req, err := http.NewRequest("GET", smokeUrl, nil)
 	if err != nil {
