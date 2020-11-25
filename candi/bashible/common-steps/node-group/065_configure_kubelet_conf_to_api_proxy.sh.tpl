@@ -1,29 +1,30 @@
 {{- if ne .runType "ClusterBootstrap" }}
+bb-event-on 'bb-sync-file-changed' 'bb-flag-set kubelet-need-restart'
 
-kubelet_kubeconfig_path="/etc/kubernetes/kubelet.conf"
+bb-sync-file /etc/kubernetes/kubelet.conf - << EOF
+apiVersion: v1
+kind: Config
 
-if [ ! -f $kubelet_kubeconfig_path ]; then
-  exit 0
-fi
+clusters:
+- cluster:
+    certificate-authority-data: $(cat /etc/kubernetes/pki/ca.crt | base64 -w0)
+    server: https://127.0.0.1:6445
+  name: d8-cluster
 
-kubelet_certificate_path="/var/lib/kubelet/pki/kubelet-client-current.pem"
-kubelet_kubeconfig_user=$(kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.users[].name' -r)
+users:
+- name: d8-user
+  user:
+    client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem
+    client-key: /var/lib/kubelet/pki/kubelet-client-current.pem
 
-# Reconfigure kubelet if it doesn't use kubernetes-api-proxy
-if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq '.clusters[].cluster.server' -r | grep 'https://127.0.0.1:6445' -q ; then
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set clusters.kubernetes.server https://127.0.0.1:6445
-  bb-flag-set kubelet-need-restart
-fi
+contexts:
+- context:
+    cluster: d8-cluster
+    namespace: default
+    user: d8-user
+  name: d8-context
 
-# If kubelet use incorrect certs, reconfigure to use certs that are auto-renewed
-if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq --arg user ${kubelet_kubeconfig_user} '.users[] | select(.name == $user) | .user."client-certificate"' -r | grep ${kubelet_certificate_path} -q ; then
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set   users.${kubelet_kubeconfig_user}.client-certificate ${kubelet_certificate_path}
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config unset users.${kubelet_kubeconfig_user}.client-certificate-data
-  bb-flag-set kubelet-need-restart
-fi
-if ! kubectl --kubeconfig ${kubelet_kubeconfig_path} config view -o json | jq --arg user ${kubelet_kubeconfig_user} '.users[] | select(.name == $user) | .user."client-key"' -r | grep ${kubelet_certificate_path} -q ; then
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config set   users.${kubelet_kubeconfig_user}.client-key ${kubelet_certificate_path}
-  kubectl --kubeconfig ${kubelet_kubeconfig_path} config unset users.${kubelet_kubeconfig_user}.client-key-data
-  bb-flag-set kubelet-need-restart
-fi
+current-context: d8-context
+preferences: {}
+EOF
 {{- end }}
