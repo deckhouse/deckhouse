@@ -17,7 +17,7 @@ import (
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/util"
+	"flant/candictl/pkg/util/cache"
 	"flant/candictl/pkg/util/tomb"
 )
 
@@ -30,7 +30,7 @@ func main() {
 	tomb.RegisterOnShutdown(
 		traceCancel,
 		process.DefaultSession.Stop,
-		util.ClearTMPDir,
+		cache.ClearTMPDir,
 		restoreTerminal(),
 	)
 

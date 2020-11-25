@@ -1,4 +1,4 @@
-package util
+package cache
 
 import (
 	"os"
@@ -14,6 +14,10 @@ func ClearTMPDir() {
 	}
 
 	_ = filepath.Walk(app.TmpDirName, func(path string, info os.FileInfo, err error) error {
+		// If tmp folder doesn't exist
+		if info == nil {
+			return nil
+		}
 		if info.IsDir() {
 			if path != app.TmpDirName {
 				return filepath.SkipDir
