@@ -4,6 +4,8 @@ from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
 - add: /candictl
   to: /candictl
+  excludePaths:
+  - "**/*.md"
   stageDependencies:
     install:
     - go.mod
@@ -42,6 +44,8 @@ git:
   to: /deckhouse
   includePaths:
   - candi
+  excludePaths:
+  - "candi/docs"
 ansible:
   install:
   - name: "Install terraform"
