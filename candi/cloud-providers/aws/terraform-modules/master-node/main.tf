@@ -65,7 +65,8 @@ resource "aws_instance" "master" {
 
   lifecycle {
     ignore_changes = [
-      user_data
+      user_data,
+      ebs_optimized
     ]
   }
 }
