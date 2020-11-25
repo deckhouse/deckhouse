@@ -122,8 +122,6 @@ Cleanup registry:
 
 Cleanup modules registry:
   extends: .Cleanup modules registry template
-  variables:
-    WERF_STAGES_STORAGE: ${CI_REGISTRY_IMAGE}/stages-modules-images
   tags:
     - werf-distributed
   retry: 2
