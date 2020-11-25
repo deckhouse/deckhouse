@@ -1,4 +1,9 @@
 {{- if ne .runType "ClusterBootstrap" }}
+
+# Do nothing, if kubelet wasn't bootstraped yet
+if [ ! -f /etc/kubernetes/kubelet.conf ] ; then exit 0 ; fi
+if [ ! -f /var/lib/kubelet/pki/kubelet-client-current.pem ] ; then exit 0 ; fi
+
 bb-event-on 'bb-sync-file-changed' 'bb-flag-set kubelet-need-restart'
 
 bb-sync-file /etc/kubernetes/kubelet.conf - << EOF
