@@ -135,9 +135,8 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
 				return fmt.Errorf("script '%s' error: %w stderr: %s", ScriptPath, err, string(ee.Stderr))
-			} else {
-				return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 			}
+			return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 		}
 		log.InfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
 		log.InfoF("Got %d symbols\n", len(stdout))
@@ -179,9 +178,8 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
 				return fmt.Errorf("bundle '%s' error: %w\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
-			} else {
-				return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 			}
+			return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 		}
 		log.InfoF("Got %d symbols\n", len(stdout))
 		return nil

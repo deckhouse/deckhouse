@@ -20,7 +20,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
 
-	runFunc := func(sshClient *ssh.SSHClient) error {
+	runFunc := func(sshClient *ssh.Client) error {
 		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
 		if err != nil {
 			return err

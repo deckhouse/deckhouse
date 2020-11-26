@@ -108,10 +108,7 @@ func (s *SSH) Cmd() *exec.Cmd {
 	args = append(args, s.Session.Host)
 
 	if s.CommandName != "" {
-		// Add command and arguments
-		args = append(args, "--")
-		// args = append(args, cmd.Path)
-		args = append(args, s.CommandName)
+		args = append(args, "--" /* cmd.Path */, s.CommandName)
 		args = append(args, s.CommandArgs...)
 	}
 

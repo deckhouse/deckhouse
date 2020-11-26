@@ -1,10 +1,10 @@
 package template
 
 import (
-	"flant/candictl/pkg/log"
 	"path/filepath"
 
 	"flant/candictl/pkg/config"
+	"flant/candictl/pkg/log"
 )
 
 const bootstrapDir = "/bootstrap"

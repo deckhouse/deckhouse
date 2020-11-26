@@ -17,7 +17,7 @@ import (
 
 type KubernetesClient struct {
 	sh_kube.KubernetesClient
-	SSHClient *ssh.SSHClient
+	SSHClient *ssh.Client
 	KubeProxy *frontend.KubeProxy
 }
 
@@ -29,7 +29,7 @@ func NewFakeKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{KubernetesClient: sh_kube.NewFakeKubernetesClient()}
 }
 
-func (k *KubernetesClient) WithSSHClient(client *ssh.SSHClient) *KubernetesClient {
+func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 	k.SSHClient = client
 	return k
 }
