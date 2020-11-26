@@ -181,7 +181,6 @@ function main() {
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
 
   echo "$CONFIGURATION_CHECKSUM" > $CONFIGURATION_CHECKSUM_FILE
-  rm -f /var/lib/bashible/first_run
 {{ end }}
 }
 
