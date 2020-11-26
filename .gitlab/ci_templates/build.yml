@@ -5,7 +5,7 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - ./modules_images_werf bp
   except:
   - schedules
@@ -27,7 +27,7 @@
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
   - export DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
   - export DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:

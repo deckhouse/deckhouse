@@ -4,7 +4,7 @@
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
   script:
   - pwd
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - werf run tests
@@ -30,7 +30,7 @@
   - git submodule update --init --recursive
   script:
   - pwd
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - werf run tests
@@ -56,7 +56,7 @@
   - git submodule update --init --recursive
   script:
   - pwd
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - rm -rf testing/kcov-report
@@ -116,7 +116,7 @@
   before_script:
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - ./modules_images_werf test_web_links
   - type multiwerf && source <(multiwerf use 1.1 early-access)
   - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
@@ -149,7 +149,7 @@
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
   script:
   - pwd
-  - test "${WERF_STAGES_STORAGE_REPO_IMPLEMENTATION}" = "harbor" && docker login -u ${HARBOR_USER} -p ${HARBOR_PASSWORD} ${WERF_STAGES_STORAGE}
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - type multiwerf && source <(multiwerf use 1.1 early-access)
   - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
   - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
