@@ -332,24 +332,39 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 
 	stdout, err := r.cmd.StdoutPipe()
 	if err != nil {
-		return 1, fmt.Errorf("can't open stdout pipe: %v", err)
+		return 1, fmt.Errorf("stdout pipe: %v", err)
 	}
 
-	var errBuf bytes.Buffer
-	r.cmd.Stderr = &errBuf
-	r.cmd.Stdin = os.Stdin
+	stderr, err := r.cmd.StderrPipe()
+	if err != nil {
+		return 1, fmt.Errorf("stderr pipe: %v", err)
+	}
 
+	r.cmd.Stdin = os.Stdin
 	r.cmd.Env = append(r.cmd.Env, "TF_IN_AUTOMATION=yes")
+	if app.IsDebug {
+		r.cmd.Env = append(r.cmd.Env, "TF_LOG=DEBUG")
+	}
 
 	log.DebugF(r.cmd.String() + "\n")
 	err = r.cmd.Start()
 	if err != nil {
-		log.ErrorF("%s\n%v\n", errBuf.String(), err)
+		log.ErrorLn(err)
 		return r.cmd.ProcessState.ExitCode(), err
 	}
 
+	var errBuf bytes.Buffer
 	waitCh := make(chan error)
 	go func() {
+		e := bufio.NewScanner(stderr)
+		for e.Scan() {
+			if app.IsDebug {
+				log.DebugF(e.Text() + "\n")
+			} else {
+				errBuf.WriteString(e.Text() + "\n")
+			}
+		}
+
 		waitCh <- r.cmd.Wait()
 	}()
 
@@ -365,8 +380,15 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	if err != nil && exitCode != terraformHasChangesExitCode {
 		log.ErrorLn(err)
 		err = fmt.Errorf(errBuf.String())
+		if app.IsDebug {
+			err = fmt.Errorf("terraform has failed in DEBUG mode, search in the output above for an error")
+		}
 	}
 	r.cmd = nil
+
+	if exitCode == 0 {
+		err = nil
+	}
 	return exitCode, err
 }
 

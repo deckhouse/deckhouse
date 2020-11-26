@@ -72,6 +72,7 @@ func (k *KubernetesClient) Init(configSrc string) error {
 	if err != nil {
 		return fmt.Errorf("initialize kube client: %s", err)
 	}
+
 	k.KubernetesClient = kubeClient
 	return nil
 }

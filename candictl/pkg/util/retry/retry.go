@@ -17,7 +17,7 @@ func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error
 		for i := 1; i <= attemptsQuantity; i++ {
 			select {
 			case <-tomb.Ctx().Done():
-				return fmt.Errorf("Loop was canceled.\n")
+				return fmt.Errorf("loop was canceled")
 			default:
 				err := task()
 				if err == nil {
@@ -31,7 +31,7 @@ func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error
 				time.Sleep(time.Duration(waitSeconds) * time.Second)
 			}
 		}
-		return fmt.Errorf("timeout while %s", name)
+		return fmt.Errorf("loop %q timed out", name)
 	})
 }
 

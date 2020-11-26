@@ -1,16 +1,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"runtime/trace"
 
 	"github.com/fatih/color"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"k8s.io/klog"
 
 	"flant/candictl/cmd/candictl/commands"
 	"flant/candictl/cmd/candictl/commands/bootstrap"
@@ -40,15 +37,6 @@ func main() {
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp)
 
-	// Mute Shell-Operator logs
-	logrus.SetLevel(logrus.PanicLevel)
-	if app.IsDebug {
-		// Enable shell-operator log, because it captures klog output
-		// todo: capture output of klog with default logger instead
-		logrus.SetLevel(logrus.DebugLevel)
-		klog.InitFlags(nil)
-		_ = flag.CommandLine.Parse([]string{"-v=10"})
-	}
 	// kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
