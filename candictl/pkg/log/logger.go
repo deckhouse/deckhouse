@@ -3,12 +3,15 @@ package log
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/flant/logboek"
 	"github.com/sirupsen/logrus"
+	"k8s.io/klog"
 
 	"flant/candictl/pkg/app"
 )
@@ -30,6 +33,19 @@ func InitLogger(loggerType string) {
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
+
+	// Mute Shell-Operator logs
+	logrus.SetLevel(logrus.PanicLevel)
+	if app.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		logrus.SetLevel(logrus.DebugLevel)
+		klog.InitFlags(nil)
+		_ = flag.CommandLine.Parse([]string{"-v=10"})
+
+		// Wrap them with our default logger
+		logrus.SetOutput(defaultLogger)
+	}
 }
 
 type Logger interface {
@@ -47,12 +63,17 @@ type Logger interface {
 	LogFail(string)
 
 	LogJSON([]byte)
+
+	Write([]byte) (int, error)
 }
 
 var (
-	_ Logger = &PrettyLogger{}
-	_ Logger = &SimpleLogger{}
-	_ Logger = &DummyLogger{}
+	_ Logger    = &PrettyLogger{}
+	_ Logger    = &SimpleLogger{}
+	_ Logger    = &DummyLogger{}
+	_ io.Writer = &PrettyLogger{}
+	_ io.Writer = &SimpleLogger{}
+	_ io.Writer = &DummyLogger{}
 )
 
 type styleEntry struct {
@@ -127,6 +148,11 @@ func (d *PrettyLogger) LogWarnLn(l string) {
 
 func (d *PrettyLogger) LogJSON(content []byte) {
 	d.LogInfoLn(prettyJSON(content))
+}
+
+func (d *PrettyLogger) Write(content []byte) (int, error) {
+	d.LogInfoF(string(content))
+	return len(content), nil
 }
 
 func prettyJSON(content []byte) string {
@@ -210,6 +236,11 @@ func (d *SimpleLogger) LogJSON(content []byte) {
 	d.logger.Infoln(string(content))
 }
 
+func (d *SimpleLogger) Write(content []byte) (int, error) {
+	d.logger.Infof(string(content))
+	return len(content), nil
+}
+
 type DummyLogger struct{}
 
 func (d *DummyLogger) LogProcess(_ string, t string, run func() error) error {
@@ -257,6 +288,11 @@ func (d *DummyLogger) LogJSON(content []byte) {
 	fmt.Println(string(content))
 }
 
+func (d *DummyLogger) Write(content []byte) (int, error) {
+	fmt.Print(string(content))
+	return len(content), nil
+}
+
 func Process(p string, t string, run func() error) error {
 	return defaultLogger.LogProcess(p, t, run)
 }
@@ -295,4 +331,8 @@ func Warning(l string) {
 
 func JSON(content []byte) {
 	defaultLogger.LogJSON(content)
+}
+
+func Write(buf []byte) (int, error) {
+	return defaultLogger.Write(buf)
 }

@@ -43,7 +43,7 @@ func (c *teardownCallbacks) registerOnShutdown(cbs []func()) {
 	defer c.mutex.Unlock()
 
 	c.data = append(c.data, cbs...)
-	log.DebugF("Callback added: %T\n", cbs)
+	log.DebugF("callback added, callbacks in queue: %d\n", len(c.data))
 }
 
 func (c *teardownCallbacks) shutdown() {
@@ -51,17 +51,17 @@ func (c *teardownCallbacks) shutdown() {
 	defer c.mutex.Unlock()
 
 	// FIFO order to shutdown fundamental things last
-	log.DebugF("Teardown started, queue length: %d\n", len(c.data))
+	log.DebugF("teardown started, queue length: %d\n", len(c.data))
 	// FIFO order to shutdown fundamental things last
 
 	for i := len(c.data) - 1; i >= 0; i-- {
 		cb := c.data[i]
 		cb()
 		c.data[i] = func() {}
-		log.DebugF("Callback called: %d\n", i)
+		log.DebugF("callback called: %d\n", i)
 	}
 
-	log.DebugF("Teardown stopped\n")
+	log.DebugF("teardown stopped\n")
 	c.exhausted = true
 	c.waitCh <- struct{}{}
 }
