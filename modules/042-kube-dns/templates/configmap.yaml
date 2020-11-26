@@ -18,7 +18,7 @@ data:
           fallthrough
         }
 {{- end }}
-        kubernetes {{ .Values.kubeDns.clusterDomain | required ".Values.kubeDns.clusterDomain is required" }} in-addr.arpa ip6.arpa {
+        kubernetes {{ .Values.global.discovery.clusterDomain | required ".Values.global.discovery.clusterDomain is required" }} in-addr.arpa ip6.arpa {
           pods insecure
           fallthrough in-addr.arpa ip6.arpa
           ttl 30

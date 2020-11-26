@@ -41,12 +41,12 @@ EOF
 function __main__() {
   cluster_domain="cluster.local"
 
-  if ! context::is_null snapshots.cm.0.filterResult; then
+  if values::has global.discovery.clusterDomain; then
+    cluster_domain=$(values::get global.discovery.clusterDomain)
+  elif ! context::is_null snapshots.cm.0.filterResult; then
     cluster_domain="$(context::get snapshots.cm.0.filterResult)"
   elif ! context::is_null snapshots.pod.0.filterResult; then
     cluster_domain="$(context::get snapshots.pod.0.filterResult)"
-  elif values::has global.discovery.clusterDomain; then
-    cluster_domain=$(values::get global.discovery.clusterDomain)
   fi
 
   values::set global.discovery.clusterDomain "${cluster_domain}"

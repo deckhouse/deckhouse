@@ -81,6 +81,19 @@ spec:
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
+	Context("Cluster with pods and a domain in discovery", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(statePod))
+			f.ValuesSet("global.discovery.clusterDomain", "test-cluster.local")
+			f.RunHook()
+		})
+
+		It("global.discovery.clusterDomain must be 'test-cluster.local'", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test-cluster.local"))
+		})
+	})
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -90,6 +103,12 @@ spec:
 		It("global.discovery.clusterDomain must be 'cluster.local'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("cluster.local"))
+		})
+	})
+
+	Context("Empty cluster", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
 		})
 
 		Context("coredns CM created", func() {
