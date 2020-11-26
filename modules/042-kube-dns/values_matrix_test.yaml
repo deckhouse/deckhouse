@@ -3,6 +3,7 @@ global:
   discovery:
     kubernetesVersion: 1.15.6
     clusterDNSAddress: 192.168.0.10
+    clusterDomain: example.cluster.local
   modulesImages:
     registry: registry.flant.com
     tags:
@@ -11,7 +12,6 @@ global:
       kubeDns:
         coredns: tag
 kubeDns:
-  clusterDomain: example.cluster.local
   stubZones:
     __ConstantChoices__:
     - []

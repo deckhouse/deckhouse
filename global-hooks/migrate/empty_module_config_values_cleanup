@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: d8cm
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      executeHookOnSynchronization: true
+      executeHookOnEvent: []
+      group: main
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames: [d8-system]
+      nameSelector:
+        matchNames: [deckhouse]
+      jqFilter: '.data'
+EOF
+}
+
+function __main__() {
+  if ! context::has snapshots.d8cm.0; then
+    return 0
+  fi
+
+  clean_data=$(context::jq -rc '[
+    .snapshots.d8cm.[0].filterResult
+    | to_entries[]
+    | select(.value != "{}\n")
+  ] | from_entries')
+  kubernetes::patch_jq "d8-system" "configmap/deckhouse" ".data = $clean_data"
+}
+
+hook::run $@
