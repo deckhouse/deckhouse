@@ -302,4 +302,11 @@ $probe-cell-border-radius: 0;
   box-shadow: none !important;
 }
 
+// graph-cell under 'Total' labels
+.graph-row .graph-cell:last-child {
+ // width of top-tick and graph-cell is 67px, so 67 / 2 to align a graph-cell to a 'Total' label
+  padding-left: 34px;
+}
+
+
 /* purgecss end ignore */

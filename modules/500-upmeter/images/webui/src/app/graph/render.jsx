@@ -173,6 +173,11 @@ export function updateTicks(dataset, settings) {
       .text(tick.text);
   });
 
+  // 'Total' label
+  root.append("div")
+    .attr("class", "top-tick total-tick")
+    .append("span")
+    .text("Total");
 }
 
 export function renderGroupData(dataset, settings, group, data) {

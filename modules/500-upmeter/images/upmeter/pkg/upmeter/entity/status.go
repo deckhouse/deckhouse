@@ -31,11 +31,18 @@ func NewEmptyStatusInfo(stepRange []int64) *StatusInfo {
 	}
 }
 
-func (s *StatusInfo) Add(episode types.DowntimeEpisode) {
+func (s *StatusInfo) AddEpisode(episode types.DowntimeEpisode) {
 	s.Up += episode.SuccessSeconds
 	s.Down += episode.FailSeconds
 	s.Unknown += episode.Unknown
 	s.NoData -= episode.SuccessSeconds + episode.FailSeconds + episode.Unknown
+}
+
+func (s *StatusInfo) Add(info *StatusInfo) {
+	s.Up += info.Up
+	s.Down += info.Down
+	s.Unknown += info.Unknown
+	s.NoData += info.NoData
 }
 
 func (s *StatusInfo) SetSeconds(up int64, down int64, unknown int64, nodata int64) {
@@ -56,9 +63,17 @@ func (s *StatusInfo) Avail() int64 {
 // ByTimeSlot implements sort.Interface based on the TimeSlot field.
 type ByTimeSlot []StatusInfo
 
-func (a ByTimeSlot) Len() int           { return len(a) }
-func (a ByTimeSlot) Less(i, j int) bool { return a[i].TimeSlot < a[j].TimeSlot }
-func (a ByTimeSlot) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTimeSlot) Len() int      { return len(a) }
+func (a ByTimeSlot) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByTimeSlot) Less(i, j int) bool {
+	if a[i].TimeSlot == -1 {
+		return false
+	}
+	if a[j].TimeSlot == -1 {
+		return true
+	}
+	return a[i].TimeSlot < a[j].TimeSlot
+}
 
 const totalProbeName = "__total__"
 
@@ -108,12 +123,14 @@ func CalculateStatuses(
 				continue
 			}
 
-			statuses[episode.ProbeRef.Group][episode.ProbeRef.Probe][stepRange[0]].Add(episode)
+			statuses[episode.ProbeRef.Group][episode.ProbeRef.Probe][stepRange[0]].AddEpisode(episode)
 		}
 		CalculateTotalForStepRange(statuses, stepRange)
 	}
 
 	UpdateMute(statuses, incidents, stepRanges)
+
+	CalculateTotalForPeriod(statuses, stepRanges)
 
 	return TransformTimestampedMapsToSortedArrays(statuses, groupName, probeName)
 }
@@ -257,6 +274,26 @@ func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents 
 					}
 				}
 			}
+		}
+	}
+}
+
+func CalculateTotalForPeriod(statuses map[string]map[string]map[int64]*StatusInfo, stepRanges [][]int64) {
+	start := stepRanges[0][0]
+	end := stepRanges[len(stepRanges)-1][1]
+	for groupName := range statuses {
+		for probeName := range statuses[groupName] {
+			totalStatus := &StatusInfo{
+				TimeSlot:  -1, // -1 indicates it is a total
+				StartDate: time.Unix(start, 0).Format(time.RFC3339),
+				EndDate:   time.Unix(end, 0).Format(time.RFC3339),
+			}
+
+			for _, info := range statuses[groupName][probeName] {
+				totalStatus.Add(info)
+			}
+
+			statuses[groupName][probeName][-1] = totalStatus
 		}
 	}
 }

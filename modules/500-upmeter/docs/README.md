@@ -41,10 +41,10 @@ title: "Модуль upmeter"
             * `OnlyInURI` — smoke-mini будет работать по http (подразумевая, что перед ним стоит внешний https-балансер, который терминирует https).
         * `certManager`
           * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для smoke-mini (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
-            * По-умолчанию `letsencrypt`.
+            * По умолчанию `letsencrypt`.
         * `customCertificate`
           * `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для smoke-mini (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-            * По-умолчанию `false`.
+            * По умолчанию `false`.
 
 
 ## Агенты upmeter
