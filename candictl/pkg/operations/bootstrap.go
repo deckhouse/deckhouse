@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/kubernetes/actions/converge"
 	"flant/candictl/pkg/kubernetes/actions/deckhouse"
@@ -19,6 +20,7 @@ import (
 	"flant/candictl/pkg/template"
 	"flant/candictl/pkg/util/cache"
 	"flant/candictl/pkg/util/retry"
+	"flant/candictl/pkg/util/tomb"
 )
 
 func BootstrapMaster(sshClient *ssh.SSHClient, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
@@ -141,6 +143,12 @@ func RunBashiblePipeline(sshClient *ssh.SSHClient, cfg *config.MetaConfig, nodeI
 	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
 	}
+	tomb.RegisterOnShutdown(func() {
+		if !app.IsDebug {
+			_ = os.RemoveAll(templateController.TmpDir)
+		}
+	})
+
 	if err := ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
 		return err
 	}

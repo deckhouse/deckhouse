@@ -16,7 +16,7 @@ import (
 func TestBootstrapGetNodesFromCache(t *testing.T) {
 	log.InitLogger("simple")
 	dir, err := ioutil.TempDir(os.TempDir(), "candictl-test-bootstrap-*")
-	defer os.Remove(dir)
+	defer os.RemoveAll(dir)
 
 	require.NoError(t, err)
 

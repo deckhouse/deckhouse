@@ -28,8 +28,8 @@ type MetaConfig struct {
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 
-	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration"`
-	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration"`
+	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
+	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
 	UUID string `json:"clusterUUID,omitempty"`
 }

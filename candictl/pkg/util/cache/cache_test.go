@@ -19,7 +19,7 @@ func TestNewTempStateCache(t *testing.T) {
 	require.NoError(t, err)
 	app.TerraformStateDir = dir
 
-	defer os.Remove(dir)
+	defer os.RemoveAll(dir)
 
 	t.Run("Save load delete operations", func(t *testing.T) {
 		stateCache, err := NewTempStateCache("test-identity")
