@@ -59,10 +59,11 @@ function __main__() {
   .snapshots.nodes_resources |
   sort_by(.filterResult.allocatableCPU | tonumber) |
   first |.filterResult.allocatableCPU')" )"
-  discovery_memory_master="$(tools::dk_convert "$(context::jq -re '
-  .snapshots.nodes_resources |
-  sort_by(.filterResult.allocatableMemory | tonumber) |
-  first |.filterResult.allocatableMemory')" )"
+
+  memoryAllocatable=$(context::jq -re '.snapshots.nodes_resources[] | .filterResult.allocatableMemory')
+  discovery_memory_master=$(for allocatableMemory in "$memoryAllocatable"; do
+    tools::dk_convert "$allocatableMemory"
+  done | sort | head -1)
 
   # Get requests parameters from config for masterNode or calculate if absent
   if values::has "global.modules.resourcesRequests.masterNode.cpu"; then
