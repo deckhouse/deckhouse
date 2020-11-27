@@ -128,4 +128,38 @@ status:
 
 	})
 
+	Context("Correctly set with Ki in memory, global.modules.resourcesRequests.masterNode set)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: sandbox-21-master
+  labels:
+    node-role.kubernetes.io/master: ""
+status:
+  allocatable:
+    cpu: "4"
+    memory: "8589934592Ki"
+`))
+			f.ValuesSet("global.modules.resourcesRequests.everyNode.cpu", "500m")
+			f.ValuesSet("global.modules.resourcesRequests.everyNode.memory", "1Gi")
+			f.ValuesSet("global.modules.resourcesRequests.masterNode.cpu", "1")
+			f.ValuesSet("global.modules.resourcesRequests.masterNode.memory", "1Gi")
+			f.RunHook()
+		})
+
+		It("Hook should run and set global internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuControlPlane").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryControlPlane").Int()).To(Equal(int64(536870912)))
+			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuMaster").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryMaster").Int()).To(Equal(int64(536870912)))
+			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.milliCpuEveryNode").Int()).To(Equal(int64(500)))
+			Expect(f.ValuesGet("global.modules.resourcesRequests.internal.memoryEveryNode").Int()).To(Equal(int64(1 * 1024 * 1024 * 1024)))
+		})
+
+	})
+
 })
