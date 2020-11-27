@@ -20,7 +20,7 @@ function __on_startup() {
     return 0
   fi
 
-  networks_from_ng=$(jq -rc '[.items[] | .spec.static // {} | .internalNetworkCIDRs // [] | add | select(.) ] | unique' <<< "$nodegroups")
+  networks_from_ng=$(jq -rc '[.items[].spec.static // {} | .internalNetworkCIDRs // [] | select(.)] | add | unique' <<< "$nodegroups")
 
   internal_network_cidrs=$(kubectl get nodes -o json \
     | jq -r '[.items[] | .metadata.annotations."node.deckhouse.io/internal-network-cidr" | select(.)]')
