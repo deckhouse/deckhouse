@@ -18,6 +18,7 @@ function __config__() {
         matchNames: [d8-cluster-is-bootstraped]
     - name: not_master_and_ready_nodes
       includeSnapshotsFrom: ["is_bootstraped_cm", "not_master_and_ready_nodes"]
+      group: main
       keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Node

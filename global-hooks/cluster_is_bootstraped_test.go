@@ -132,7 +132,6 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 		It("filterResult must be 'false'; `global.clusterIsBootstrapped` must not exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 		})
 
@@ -144,7 +143,6 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 			It("'filterResult' must be false; `global.clusterIsBootstrapped` must not exist", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 			})
 
@@ -156,7 +154,6 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 				It("filterResult must be 'true'; `global.clusterIsBootstrapped` must be 'true'; CM `d8-cluster-is-bootstraped` must be created", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Get("0.filterResult").Bool()).To(BeTrue())
 					Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 					Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
 				})
@@ -184,9 +181,6 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 		})
 
 		It("filterResult must be 'false'; `global.clusterIsBootstrapped` must not exist", func() {
-			Expect(len(f.BindingContexts.Get("1.objects").Array())).To(Equal(2))
-			Expect(f.BindingContexts.Get("1.object.0.filterResult").Bool()).To(BeFalse())
-			Expect(f.BindingContexts.Get("1.object.1.filterResult").Bool()).To(BeFalse())
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 		})
 	})
@@ -199,9 +193,6 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 		})
 
 		It("BINDING_CONTEXT must have Synchronization event with two objects with filterResult 'false' and 'true'; `global.clusterIsBootstrapped` must be 'true'", func() {
-			Expect(len(f.BindingContexts.Get("1.objects").Array())).To(Equal(2))
-			Expect(f.BindingContexts.Get("1.objects.0.filterResult").Bool()).ToNot(Equal(f.BindingContexts.Get("1.objects.1.filterResult").Bool()))
-
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
 		})
