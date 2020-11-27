@@ -74,7 +74,7 @@ func (w *Worker) Start(c *ModuleController) {
 				return
 			}
 
-			err = rules.ApplyLintRules(c.Module, objectStore)
+			err = rules.ApplyLintRules(c.Module, task.values, &objectStore)
 			if err != nil {
 				w.errorsCh <- err
 				return
