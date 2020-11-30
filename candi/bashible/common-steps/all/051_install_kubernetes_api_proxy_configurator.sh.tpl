@@ -67,7 +67,7 @@ fi
 
 # Generate nginx config (to the temporary location)
 cat > /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf << END
-{{- if or (eq .bundle "ubuntu-18.04") (eq .bundle "ubuntu-lts") }}
+{{- if eq .bundle "ubuntu-lts" }}
 user www-data;
 {{- else if eq .bundle "centos-7" }}
 user nginx;

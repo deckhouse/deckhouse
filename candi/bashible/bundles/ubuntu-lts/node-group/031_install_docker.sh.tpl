@@ -23,7 +23,9 @@ if bb-apt-package? docker.io ; then
   exit 0
 fi
 
-if bb-is-ubuntu-version? 18.04 ; then
+if bb-is-ubuntu-version? 20.04 ; then
+  package="docker-ce=5:19.03.13~3-0~ubuntu-focal"
+elif bb-is-ubuntu-version? 18.04 ; then
   package="docker-ce=5:18.09.7~3-0~ubuntu-bionic"
 elif bb-is-ubuntu-version? 16.04 ; then
   package="docker-ce=5:18.09.7~3-0~ubuntu-xenial"

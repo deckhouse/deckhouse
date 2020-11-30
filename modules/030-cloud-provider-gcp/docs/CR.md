@@ -12,7 +12,7 @@ title: "Сloud provider — GCP: custom resource"
     * GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) не стандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
 * `image` — образ, который поставится в заказанные instance'ы.
     * Формат — строка, полный путь до образа, пример: `projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20200129a`.
-    * **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04/Centos 7.
+    * **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04/Ubuntu 20.04/Centos 7.
     * Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
     * Опциональный параметр.
 * `preemptible` — Заказывать ли preemptible instance.
