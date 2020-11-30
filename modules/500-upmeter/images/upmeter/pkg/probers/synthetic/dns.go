@@ -95,7 +95,7 @@ func NewDnsProberInternalDomainCheck() types.Prober {
 	}
 
 	pr.RunFn = func(start int64) {
-		_, failed := ResolveSmokeMiniIps("kubernetes", dnsKubeDnsTimeout)
+		_, failed := ResolveSmokeMiniIps("kubernetes.default", dnsKubeDnsTimeout)
 		pr.ResultCh <- pr.CheckResult("internal", !failed)
 	}
 

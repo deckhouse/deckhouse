@@ -126,7 +126,7 @@ func GarbageCollect(pr *types.CommonProbe, kind string, labels map[string]string
 func ListObjects(pr *types.CommonProbe, kind string, listOpts metav1.ListOptions) ([]string, error) {
 	fn, ok := listFns[strings.ToLower(kind)]
 	if !ok {
-		return nil, fmt.Errorf("Possible bug!!! No list function for kind='%s'")
+		return nil, fmt.Errorf("Possible bug!!! No list function for kind='%s'", kind)
 	}
 	return fn(pr.KubernetesClient, listOpts)
 }
@@ -134,7 +134,7 @@ func ListObjects(pr *types.CommonProbe, kind string, listOpts metav1.ListOptions
 func DeleteObjects(pr *types.CommonProbe, kind string, names []string) error {
 	fn, ok := delFns[strings.ToLower(kind)]
 	if !ok {
-		return fmt.Errorf("Possible bug!!! No delete function for kind='%s'")
+		return fmt.Errorf("Possible bug!!! No delete function for kind='%s'", kind)
 	}
 	for _, name := range names {
 		err := fn(pr.KubernetesClient, name)

@@ -18,6 +18,10 @@ const _calculateTopTicks = function(dataset, topTicks, settings) {
   dataset.data.forEach(function(item, i){
     if (item["statuses"] && item["statuses"].length > 0) {
       item["statuses"].forEach(function(info, j) {
+        // ignore total for period
+        if (info.ts === -1) {
+          return
+        }
         if (!meta[info.ts]) {
           meta[info.ts] = {
             hasData: 0
