@@ -1,0 +1,36 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: system-a
+spec:
+  chaos:
+    mode: Disabled
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: system
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - ru-central1-a
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+  nodeType: Cloud
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: YandexInstanceClass
+metadata:
+  name: system
+spec:
+  cores: 2
+  diskSizeGB: 20
+  diskType: network-ssd
+  memory: 8192

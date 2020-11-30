@@ -39,3 +39,9 @@ kcov-report
 
 *-tfstate/
 .terraform/
+
+testing/cloud_layouts/**/tmp
+testing/cloud_layouts/**/bootstrap.log
+testing/cloud_layouts/**/configuration.yaml
+testing/cloud_layouts/**/sshkey*
+layouts-tests-tmp/

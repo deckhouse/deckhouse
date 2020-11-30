@@ -51,6 +51,20 @@ Candictl Tests:
   tags:
     - werf-distributed
 
+Cloud layouts Tests (manual):
+  extends: .Cloud layouts Tests template
+  tags:
+    - cloud-layouts
+  when: manual
+
+Cloud layouts Tests (scheduled):
+  extends: .Cloud layouts Tests template
+  tags:
+    - cloud-layouts
+  only:
+    variables:
+    - $CLOUD_LAYOUTS_SCHEDULE
+
 Hooks Configuration Tests:
   extends: .Hooks Configuration Tests template
   tags:

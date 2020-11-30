@@ -12,6 +12,7 @@ import (
 
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/util/input"
 	"flant/candictl/pkg/util/retry"
 )
 
@@ -85,24 +86,6 @@ func DeleteServices(kubeCl *client.KubernetesClient) error {
 				return err
 			}
 			log.InfoF("%s/%s\n", service.Namespace, service.Name)
-		}
-		return nil
-	})
-}
-
-func DeletePV(kubeCl *client.KubernetesClient) error {
-	return retry.StartLoop("Delete PersistentVolume", 45, 5, func() error {
-		volumes, err := kubeCl.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		for _, volume := range volumes.Items {
-			err := kubeCl.CoreV1().PersistentVolumes().Delete(volume.Name, &metav1.DeleteOptions{})
-			if err != nil {
-				return err
-			}
-			log.InfoLn(volume.Name)
 		}
 		return nil
 	})
@@ -227,11 +210,25 @@ func WaitForPVDeletion(kubeCl *client.KubernetesClient) error {
 
 		count := len(resources.Items)
 		if count != 0 {
-			builder := strings.Builder{}
+			var (
+				pvsWithnonDeleteReclaimPolicy strings.Builder
+				remainingPVs                  strings.Builder
+			)
+
 			for _, item := range resources.Items {
-				builder.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				if item.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
+					pvsWithnonDeleteReclaimPolicy.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				}
+
+				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
 			}
-			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
+
+			if pvsWithnonDeleteReclaimPolicy.Len() != 0 {
+				return fmt.Errorf("%d PersistentVolumes with reclaimPolicy other than Delete in the cluster. Set their reclaim policy to Delete or remove them manually\n%s",
+					count, strings.TrimSuffix(remainingPVs.String(), "\n"))
+			}
+
+			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
 		log.InfoLn("All PersistentVolumes are deleted from the cluster")
 		return nil
@@ -304,7 +301,7 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 
 	if err != nil {
 		log.Warning(fmt.Sprintf("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v\n", err))
-		if retry.AskForConfirmation("Machines weren't deleted from the cluster. Do you want to continue") {
+		if input.AskForConfirmation("Machines weren't deleted from the cluster. Do you want to continue", true) {
 			return nil
 		}
 		return fmt.Errorf("Machines deletion aborted.\n")

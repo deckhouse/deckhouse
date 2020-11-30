@@ -16,7 +16,7 @@ import (
 	"flant/candictl/pkg/system/ssh"
 	"flant/candictl/pkg/terraform"
 	"flant/candictl/pkg/util/cache"
-	"flant/candictl/pkg/util/retry"
+	"flant/candictl/pkg/util/input"
 	"flant/candictl/pkg/util/tomb"
 )
 
@@ -79,7 +79,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var metaConfig *config.MetaConfig
-		if stateCache.InCache("cluster-config") && retry.AskForConfirmation("Do you want to continue with Cluster configuration from local cache") {
+		if stateCache.InCache("cluster-config") && input.AskForConfirmation("Do you want to continue with Cluster configuration from local cache", true) {
 			if err := stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
 				return err
 			}
@@ -104,7 +104,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var nodesState map[string]converge.NodeGroupTerraformState
-		if stateCache.InCache("nodes-state") && retry.AskForConfirmation("Do you want to continue with Nodes state from local cache") {
+		if stateCache.InCache("nodes-state") && input.AskForConfirmation("Do you want to continue with Nodes state from local cache", true) {
 			if err := stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 				return err
 			}
@@ -123,7 +123,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var clusterState []byte
-		if stateCache.InCache("cluster-state") && retry.AskForConfirmation("Do you want to continue with Cluster state from local cache") {
+		if stateCache.InCache("cluster-state") && input.AskForConfirmation("Do you want to continue with Cluster state from local cache", true) {
 			clusterState = stateCache.Load("cluster-state")
 			if len(clusterState) == 0 {
 				return fmt.Errorf("can't load cluster state from cache")
@@ -244,11 +244,6 @@ func deleteEntities(kubeCl *client.KubernetesClient) error {
 	}
 
 	err = deckhouse.DeletePVC(kubeCl)
-	if err != nil {
-		return err
-	}
-
-	err = deckhouse.DeletePV(kubeCl)
 	if err != nil {
 		return err
 	}
