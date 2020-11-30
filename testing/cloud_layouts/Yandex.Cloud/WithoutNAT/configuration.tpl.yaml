@@ -1,0 +1,44 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: Yandex
+  prefix: 'a${PREFIX}'
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: '${KUBERNETES_VERSION}'
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.flant.com/sys/antiopa
+  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  devBranch: '${DEV_BRANCH}'
+  configOverrides:
+    prometheusMadisonIntegrationEnabled: false
+    global:
+      clusterName: smoke
+      project: dev-rnd
+      modules:
+        publicDomainTemplate: "%s.k8s.smoke.flant.com"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: YandexClusterConfiguration
+sshPublicKey: '${SSH_PUBLIC_KEY}'
+layout: WithoutNAT
+nodeNetworkCIDR: 10.100.0.0/21
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: fd8vqk0bcfhn31stn2ts
+    diskSizeGB: 50
+    externalIPAddresses:
+    - Auto
+provider:
+  cloudID: '${CLOUD_ID}'
+  folderID: '${FOLDER_ID}'
+  serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'

@@ -6,5 +6,6 @@ if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
   instance_name=$(/usr/local/bin/ec2_describe_tags -query_meta | grep -Po '(?<=Name=).+')
   hostnamectl set-hostname "$instance_name"
   rm /usr/local/bin/ec2_describe_tags
+  mkdir -p /var/lib/bashible
   touch /var/lib/bashible/hosname-set-as-in-aws
 fi

@@ -15,7 +15,7 @@ import (
 	"flant/candictl/pkg/config"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/util/cache"
-	"flant/candictl/pkg/util/retry"
+	"flant/candictl/pkg/util/input"
 )
 
 const (
@@ -137,7 +137,7 @@ func (r *Runner) Init() error {
 
 		if r.stateCache.InCache(stateName) && !r.allowedCachedState {
 			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
-			if !retry.AskForConfirmation("Do you want to continue with Terraform state from local cache") {
+			if !input.AskForConfirmation("Do you want to continue with Terraform state from local cache", true) {
 				return fmt.Errorf(terraformPipelineAbortedMessage)
 			}
 		}
@@ -170,7 +170,7 @@ func (r *Runner) Apply() error {
 
 	return log.Process("default", "terraform apply ...", func() error {
 		if !r.autoApprove && r.changesInPlan {
-			if !retry.AskForConfirmation("Do you want to CHANGE objects state in the cloud") {
+			if !input.AskForConfirmation("Do you want to CHANGE objects state in the cloud", false) {
 				return fmt.Errorf("terraform apply aborted")
 			}
 		}
@@ -269,7 +269,7 @@ func (r *Runner) Destroy() error {
 	}
 
 	if !r.autoApprove {
-		if !retry.AskForConfirmation("Do you want to DELETE objects from the cloud") {
+		if !input.AskForConfirmation("Do you want to DELETE objects from the cloud", false) {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}

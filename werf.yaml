@@ -568,6 +568,38 @@ ansible:
         CGO_ENABLED: "0"
 
 ---
+artifact: terraform-provider-gcp
+fromImage: base-for-go
+git:
+  - url: https://github.com/flant/terraform-provider-google
+    add: /
+    to: /terraform-provider-gcp
+    tag: v{{ env "TF_GCP_VERSION" }}-flant.1
+    stageDependencies:
+      install:
+        - "**/*"
+ansible:
+  beforeInstall:
+    - apk:
+        name:
+        - git
+        - ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - command: go mod download
+      args:
+        chdir: /terraform-provider-gcp
+
+  setup:
+    - command: go build -o terraform-provider-gcp
+      args:
+        chdir: /terraform-provider-gcp
+      environment:
+        CGO_ENABLED: "0"
+
+---
 image: dev/install
 fromImage: dev
 import:
@@ -579,6 +611,10 @@ import:
   add: /terraform-provider-vsphere/terraform-provider-vsphere
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_VSPHERE_NAMESPACE" }}/{{ env "TF_VSPHERE_TYPE" }}/{{ env "TF_VSPHERE_VERSION" }}/linux_amd64/terraform-provider-vsphere
   before: setup
+- artifact: terraform-provider-gcp
+  add: /terraform-provider-gcp/terraform-provider-gcp
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
+  before: setup
 ansible:
   beforeInstall:
 
@@ -588,7 +624,7 @@ ansible:
 
   - name: "Install dependencies"
     apk:
-      name: [openssh-client]
+      name: [openssh-client, gettext]
 
   - name: "Install terraform"
     unarchive:
@@ -617,17 +653,6 @@ ansible:
       src: https://releases.hashicorp.com/terraform-provider-aws/{{ env "TF_AWS_VERSION" }}/terraform-provider-aws_{{ env "TF_AWS_VERSION" }}_linux_amd64.zip
       remote_src: yes
       dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
-      mode: +x
-
-  - name: "Create a directory for terraform provider google"
-    file:
-      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
-      state: directory
-  - name: "Install terraform provider google"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-google/{{ env "TF_GCP_VERSION" }}/terraform-provider-google_{{ env "TF_GCP_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
       mode: +x
 
   - name: "Create a directory for terraform provider openstack"

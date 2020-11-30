@@ -1,18 +1,49 @@
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
+import:
+- artifact: terraform-provider-gcp
+  add: /terraform-provider-gcp/terraform-provider-gcp
+  to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
+  before: setup
 ansible:
   install:
-  - name: "Create a directory for terraform provider google"
+  - name: "Create a directory for terraform provider gcp"
     file:
       path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
       state: directory
-  - name: "Install terraform provider google"
-    unarchive:
-      src: https://releases.hashicorp.com/terraform-provider-google/{{ env "TF_GCP_VERSION" }}/terraform-provider-google_{{ env "TF_GCP_VERSION" }}_linux_amd64.zip
-      remote_src: yes
-      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64
-      mode: +x
   - apk:
       name: ca-certificates
       update_cache: yes
   - command: rm -rf /var/cache/apk/*
+---
+artifact: terraform-provider-gcp
+from: {{ env "BASE_GOLANG_ALPINE" }}
+git:
+  - url: https://github.com/flant/terraform-provider-google
+    add: /
+    to: /terraform-provider-gcp
+    tag: v{{ env "TF_GCP_VERSION" }}-flant.1
+    stageDependencies:
+      install:
+        - "**/*"
+ansible:
+  beforeInstall:
+    - apk:
+        name:
+        - git
+        - ca-certificates
+        update_cache: yes
+    - command: rm -rf /var/cache/apk/*
+
+  install:
+    - command: go mod download
+      args:
+        chdir: /terraform-provider-gcp
+
+  setup:
+    - command: go build -o terraform-provider-gcp
+      args:
+        chdir: /terraform-provider-gcp
+      environment:
+        CGO_ENABLED: "0"

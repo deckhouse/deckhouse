@@ -163,3 +163,69 @@
   needs:
   - "Build"
   - "Build Modules Images"
+
+.Cloud layouts Tests template:
+  stage: testing
+  before_script:
+  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  script:
+  - pwd
+  - eval "${STAGES_STORAGE_LOGIN_CMD}"
+  - type multiwerf && source <(multiwerf use 1.1 early-access)
+  - source <(werf ci-env gitlab --config werf-web.yaml --verbose)
+  - mkdir -p layouts-tests-tmp
+  - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - chmod -R 777 .
+  - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} -v $(pwd):/deckhouse -v "/mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp" --user 999:999 --volume="/etc/group:/etc/group:ro" --volume="/etc/passwd:/etc/passwd:ro" --volume="/etc/shadow:/etc/shadow:ro" -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
+  after_script:
+  - |
+    if [[ ("$CI_COMMIT_REF_NAME" == "master") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
+      curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+        -H 'Content-Type: application/json' \
+        -d "{
+        \"labels\": {
+          \"severity_level\": 7,
+          \"trigger\": \"CloudLayoutTestFailed\",
+          \"provider\": \"$PROVIDER\",
+          \"layout\": \"$LAYOUT\",
+          \"kubernetes_version\": \"$KUBERNETES_VERSION\"
+        },
+        \"annotations\": {
+          \"summary\": \"Scheduled Cloud Layout test failed\",
+          \"description\": \"Check GitLab Job log for more information\",
+          \"plk_protocol_version\": \"1\",
+          \"plk_link_url/job\": \"$CI_JOB_URL\",
+          \"plk_link_title_en/job\": \"GitLab Job\"
+        }
+      }"
+    fi
+  parallel:
+    matrix:
+    - PROVIDER: AWS
+      LAYOUT:
+      - WithoutNAT
+      KUBERNETES_VERSION:
+      - "1.16"
+      - "1.19"
+    - PROVIDER: GCP
+      LAYOUT:
+      - WithoutNAT
+      KUBERNETES_VERSION:
+      - "1.16"
+      - "1.19"
+    - PROVIDER: Yandex.Cloud
+      LAYOUT:
+      - WithoutNAT
+      KUBERNETES_VERSION:
+      - "1.16"
+      - "1.19"
+  artifacts:
+    when: always
+    paths:
+    - testing/cloud_layouts
+    - layouts-tests-tmp
+    expire_in: 30 days
+  needs:
+  - "Build"
+  - "Build Modules Images"

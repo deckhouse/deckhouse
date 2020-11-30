@@ -1,0 +1,42 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: GCP
+  prefix: 'a${PREFIX}'
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: '${KUBERNETES_VERSION}'
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  devBranch: '${DEV_BRANCH}'
+  imagesRepo: registry.flant.com/sys/antiopa
+  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  configOverrides:
+    prometheusMadisonIntegrationEnabled: false
+    global:
+      clusterName: smoke
+      project: dev-rnd
+      modules:
+        publicDomainTemplate: "%s.k8s.smoke.flant.com"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: GCPClusterConfiguration
+layout: WithoutNAT
+sshKey: '${SSH_PUBLIC_KEY}'
+subnetworkCIDR: 10.36.0.0/24
+masterNodeGroup:
+  replicas: 1
+  zones:
+  - europe-west3-b
+  instanceClass:
+    machineType: n1-standard-4
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
+    diskSizeGb: 20
+provider:
+  region: europe-west3
+  serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'

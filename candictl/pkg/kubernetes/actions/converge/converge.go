@@ -13,7 +13,7 @@ import (
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/log"
 	"flant/candictl/pkg/terraform"
-	"flant/candictl/pkg/util/retry"
+	"flant/candictl/pkg/util/input"
 	"flant/candictl/pkg/util/tomb"
 )
 
@@ -86,7 +86,7 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 	}
 
 	if len(nodesState) == 0 {
-		if !retry.AskForConfirmation("Cluster has no nodes created by Terraform. Do you want to continue and create nodes") {
+		if !input.AskForConfirmation("Cluster has no nodes created by Terraform. Do you want to continue and create nodes", false) {
 			log.InfoLn("Aborted")
 			return nil
 		}

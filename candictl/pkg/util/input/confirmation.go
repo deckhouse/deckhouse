@@ -1,4 +1,4 @@
-package retry
+package input
 
 import (
 	"bufio"
@@ -6,10 +6,16 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/crypto/ssh/terminal"
+
 	"flant/candictl/pkg/log"
 )
 
-func AskForConfirmation(s string) bool {
+func AskForConfirmation(s string, defaultAnswer bool) bool {
+	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+		return defaultAnswer
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		log.Warning(fmt.Sprintf("%s? [y/n]: ", s))
