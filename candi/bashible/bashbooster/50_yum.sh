@@ -44,7 +44,9 @@ bb-yum-install() {
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
 
         for PACKAGE in ${PACKAGES_TO_INSTALL[@]}; do
-            PACKAGE_NAME="$(sed -E -e 's/[-.0-9]+$//' <<< $PACKAGE)"
+            # nfs-utils-1.3.0-0.68.el7.x86_64 -> nfs-utils
+            # nfs-utils -> nfs-utils
+            PACKAGE_NAME="${PACKAGE%-*-*}"
             bb-yum-versionlock-delete $PACKAGE_NAME
         done
 
