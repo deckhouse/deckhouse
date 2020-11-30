@@ -87,4 +87,26 @@ data:
 			Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("test"))
 		})
 	})
+
+	Context("Cluster with secret with OnlyInURI mode", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-tls
+  namespace: d8-user-authn
+data:
+  ca.crt: dGVzdA==
+`, 2))
+			f.ValuesSet("userAuthn.https.mode", "OnlyInURI")
+			f.RunHook()
+		})
+
+		It("Should not add values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(""))
+		})
+	})
 })

@@ -48,8 +48,11 @@ module::https_secret_name() {
     "CertManager")
       echo "${prefix_name}"
       ;;
+    "OnlyInURI")
+      echo ""
+      ;;
     *)
-      >&2 echo "ERROR: https.mode must be in [Certmanager, CustomCertificate]"
+      >&2 echo "ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI]"
       return 1
       ;;
   esac
