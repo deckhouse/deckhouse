@@ -14,7 +14,7 @@ var _ = Describe("Modules :: cloud-provider-vsphere :: hooks :: vsphere_cluster_
 	const (
 		initValuesStringA = `
 global:
-  discovery": {}
+  discovery: {}
 cloudProviderVsphere:
   internal: {}
 `

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
+}
+
+function __main__() {
+  storage_classes="$(jq '
+    [.[] |
+      {
+        "type": .,
+        "name": .
+      }
+    ]
+    ' <<< '["network-hdd","network-ssd"]')"
+  if values::has cloudProviderYandex.storageClass.exclude; then
+    storage_classes="$(jq --arg exclude "$(values::get cloudProviderYandex.storageClass.exclude | jq -r 'join("|")')" '
+      map(select(.name | test("^(\($exclude))$") | not))
+      ' <<< "$storage_classes")"
+  fi
+  values::set cloudProviderYandex.internal.storageClasses "$storage_classes"
+
+  if values::has cloudProviderYandex.storageClass.default; then
+    values::set cloudProviderYandex.internal.defaultStorageClass "$(values::get cloudProviderYandex.storageClass.default)"
+  else
+    values::unset cloudProviderYandex.internal.defaultStorageClass
+  fi
+}
+
+hook::run "$@"

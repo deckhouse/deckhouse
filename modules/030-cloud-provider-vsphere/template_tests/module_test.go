@@ -3,7 +3,7 @@
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
 2. There are applications which must be deployed — cloud-controller-manager, csi.
-3. There is list of datastores in values.yaml. StorageClass must be created for every datastore. Datastore mentioned in value `defaultDatastore` must be annotated as default.
+3. There is list of datastores in values.yaml. StorageClass must be created for every datastore. Datastore mentioned in value `.storageClass.default` must be annotated as default.
 
 */
 
@@ -53,7 +53,7 @@ const globalValues = `
 
 const moduleValuesA = `
     internal:
-      datastores:
+      storageClasses:
       - name: mydsname1
         path: /my/ds/path/mydsname1
         zones: ["zonea", "zoneb"]
@@ -81,7 +81,7 @@ const moduleValuesA = `
 
 const moduleValuesB = `
     internal:
-      datastores:
+      storageClasses:
       - name: mydsname1
         path: /my/ds/path/mydsname1
         zones: ["zonea", "zoneb"]
@@ -184,8 +184,16 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
 			// user story #3
-			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname1").Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("StorageClass", "mydsname2").Exists()).To(BeTrue())
+			scMydsname1 := f.KubernetesGlobalResource("StorageClass", "mydsname1")
+			scMydsname2 := f.KubernetesGlobalResource("StorageClass", "mydsname2")
+
+			Expect(scMydsname1.Exists()).To(BeTrue())
+			Expect(scMydsname2.Exists()).To(BeTrue())
+
+			Expect(scMydsname1.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(scMydsname2.Field("metadata.annotations").Exists()).To(BeFalse())
 		})
 	})
 
@@ -231,6 +239,30 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager").Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("Vsphere with default StorageClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
+			f.ValuesSetFromYaml("cloudProviderVsphere.internal.defaultStorageClass", `mydsname2`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			scMydsname1 := f.KubernetesGlobalResource("StorageClass", "mydsname1")
+			scMydsname2 := f.KubernetesGlobalResource("StorageClass", "mydsname2")
+
+			Expect(scMydsname1.Exists()).To(BeTrue())
+			Expect(scMydsname2.Exists()).To(BeTrue())
+
+			Expect(scMydsname1.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(scMydsname2.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
 		})
 	})
 })

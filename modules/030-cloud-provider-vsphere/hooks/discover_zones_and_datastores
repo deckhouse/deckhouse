@@ -29,21 +29,38 @@ function __main__() {
   VSPHERE_ZONE_TAG_CATEGORY_NAME="$(values::get --required cloudProviderVsphere.internal.zoneTagCategory)"
   export VSPHERE_ZONE_TAG_CATEGORY_NAME
 
-  if values::get --required cloudProviderVsphere.internal.datacenter >/dev/null 2>&1 ||
-        values::get --required cloudProviderVsphere.internal.zones >/dev/null 2>&1 ||
-        values::get --required cloudProviderVsphere.internal.datastores >/dev/null 2>&1 ; then
-    result="$(timeout -s ABRT -k 5 30 deckhouse-controller helper vsphere get-zones-datastores)" || { echo 'vsphere-cli-helper exited by timeout, preserving old discovery information' && exit 0; }
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    result='{"datacenter":"DCTEST","zones":["ZONE-TEST"],"datastores":[{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_Lun102","name":"test-1-lun102-0403073a","datastoreType":"Datastore"},{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_Lun101","name":"test-1-lun101-b39d82fa","datastoreType":"Datastore"},{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_k8s","name":"test-1-k8s-3cf5ce84","datastoreType":"DatastoreCluster"}]}'
+  else
+    if values::get --required cloudProviderVsphere.internal.datacenter >/dev/null 2>&1 ||
+       values::get --required cloudProviderVsphere.internal.zones >/dev/null 2>&1 ||
+       values::get --required cloudProviderVsphere.internal.storage_classes >/dev/null 2>&1 ; then
+      result="$(timeout -s ABRT -k 5 30 deckhouse-controller helper vsphere get-zones-datastores)" || { echo 'vsphere-cli-helper exited by timeout, preserving old discovery information' && exit 0; }
     else
-    result="$(timeout -s ABRT -k 5 30 deckhouse-controller helper vsphere get-zones-datastores)"
+      result="$(timeout -s ABRT -k 5 30 deckhouse-controller helper vsphere get-zones-datastores)"
+    fi
   fi
 
   datacenter="$(echo "$result" | jq -re '.datacenter')"
-  datastores="$(echo "$result" | jq -re '.datastores')"
+  storage_classes="$(echo "$result" | jq -re '.datastores')"
   zones="$(echo "$result" | jq -re '.zones')"
 
   values::set cloudProviderVsphere.internal.datacenter "$datacenter"
   values::set cloudProviderVsphere.internal.zones "$zones"
-  values::set cloudProviderVsphere.internal.datastores "$datastores"
+
+  if values::has cloudProviderVsphere.storageClass.exclude; then
+    storage_classes="$(jq --arg exclude "$(values::get cloudProviderVsphere.storageClass.exclude | jq -r 'join("|")')" '
+      map(select(.name | test("^(\($exclude))$") | not))
+      ' <<< "$storage_classes")"
+  fi
+  storage_classes="$(jq 'sort_by(.name)' <<< "$storage_classes")"
+  values::set cloudProviderVsphere.internal.storageClasses "$storage_classes"
+
+  if values::has cloudProviderVsphere.storageClass.default; then
+    values::set cloudProviderVsphere.internal.defaultStorageClass "$(values::get cloudProviderVsphere.storageClass.default)"
+  else
+    values::unset cloudProviderVsphere.internal.defaultStorageClass
+  fi
 }
 
 hook::run "$@"

@@ -1,0 +1,50 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
+}
+
+function __main__() {
+  storage_classes='[
+    {
+      "name": "pd-standard-not-replicated",
+      "type": "pd-standard",
+      "replicationType": "none"
+    },
+    {
+      "name": "pd-standard-replicated",
+      "type": "pd-standard",
+      "replicationType": "regional-pd"
+    },
+    {
+      "name": "pd-ssd-not-replicated",
+      "type": "pd-ssd",
+      "replicationType": "none"
+    },
+    {
+      "name": "pd-ssd-replicated",
+      "type": "pd-ssd",
+      "replicationType": "regional-pd"
+    }
+  ]'
+
+  if values::has cloudProviderGcp.storageClass.exclude; then
+    storage_classes="$(jq --arg exclude "$(values::get cloudProviderGcp.storageClass.exclude | jq -r 'join("|")')" '
+      map(select(.name | test("^(\($exclude))$") | not))
+      ' <<< "$storage_classes")"
+  fi
+  values::set cloudProviderGcp.internal.storageClasses "$storage_classes"
+
+  if values::has cloudProviderGcp.storageClass.default; then
+    values::set cloudProviderGcp.internal.defaultStorageClass "$(values::get cloudProviderGcp.storageClass.default)"
+  else
+    values::unset cloudProviderGcp.internal.defaultStorageClass
+  fi
+}
+
+hook::run "$@"

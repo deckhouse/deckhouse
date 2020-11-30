@@ -12,10 +12,32 @@ title: "Сloud provider — Yandex.Cloud: настройки"
 
 ## Storage
 
-Storage настраивать не нужно, модуль автоматически создаст 2 StorageClass'а, покрывающие все варианты дисков в Yandex: hdd или ssd.
+Модуль автоматически создаёт StorageClasses, покрывающие все варианты дисков в Yandex:
 
-1. `network-hdd`
-2. `network-ssd`
+| Тип | Имя StorageClass |
+|---|---|
+| network-hdd | network-hdd |
+| network-ssd | network-ssd |
+
+А также позволяет отфильтровать ненужные StorageClass, указанием их в параметре `exclude`.
+
+* `exclude` — полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+  * Формат — массив строк.
+  * Опциональный параметр.
+* `default` — имя StorageClass, который будет использоваться в кластере по умолчанию.
+  * Формат — строка.
+  * Опциональный параметр.
+  * Если параметр не задан, фактическим StorageClass по умолчанию будет либо: 
+    * Присутствующий в кластере произвольный StorageClass с default аннотацией.
+    * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
+
+```yaml
+cloudProviderYandex: |
+  storageClass:
+    exclude: 
+    - .*-hdd
+    default: network-ssd
+```
 
 ### Важная информация об увеличении размера PVC
 
