@@ -56,6 +56,14 @@ const globalValues = `
 
 const moduleValues = `
   internal:
+    storageClasses:
+      - name: gp2
+        type: gp2
+      - name: st1
+        type: st1
+      - name: iops-foo
+        type: io1
+        iopsPerGB: 5
     zoneToSubnetIdMap:
       zonea: aaa
       zoneb: bbb
@@ -174,6 +182,37 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ebsSnapshotterCR.Exists()).To(BeTrue())
 			Expect(ebsSnapshotterCRB.Exists()).To(BeTrue())
 			Expect(ebsStorageClass.Exists()).To(BeTrue())
+			Expect(ebsStorageClass.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+		})
+	})
+
+	Context("AWS with default StorageClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderAws.internal.defaultStorageClass", `iops-foo`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			gp2StorageClass := f.KubernetesGlobalResource("StorageClass", "gp2")
+			st1StorageClass := f.KubernetesGlobalResource("StorageClass", "st1")
+			iopsStorageClass := f.KubernetesGlobalResource("StorageClass", "iops-foo")
+
+			Expect(gp2StorageClass.Exists()).To(BeTrue())
+			Expect(st1StorageClass.Exists()).To(BeTrue())
+			Expect(iopsStorageClass.Exists()).To(BeTrue())
+
+			Expect(gp2StorageClass.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(st1StorageClass.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(iopsStorageClass.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(iopsStorageClass.Field("parameters.iopsPerGB").String()).Should(Equal(`5`))
 		})
 
 		Context("Unsupported Kubernetes version", func() {
@@ -190,4 +229,5 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			})
 		})
 	})
+
 })

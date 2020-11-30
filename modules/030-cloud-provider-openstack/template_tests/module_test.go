@@ -53,9 +53,11 @@ const globalValues = `
 
 const moduleValues = `
   internal:
-    volumeTypes:
-    - Fast SSD
-    - Slow HDD
+    storageClasses:
+      - name: fastssd
+        type: Fast HDD
+      - name: slowhdd
+        type: Slow HDD
     connection:
       authURL: http://my.cloud.lalla/123/
       username: myuser
@@ -245,6 +247,30 @@ floating-network-id = "my-floating-network-id"`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 			Expect(scSlow.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Openstack with default StorageClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			scFast := f.KubernetesGlobalResource("StorageClass", "fastssd")
+			scSlow := f.KubernetesGlobalResource("StorageClass", "slowhdd")
+
+			Expect(scFast.Exists()).To(BeTrue())
+			Expect(scSlow.Exists()).To(BeTrue())
+
+			Expect(scFast.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(scSlow.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
 		})
 	})
 

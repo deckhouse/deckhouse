@@ -43,8 +43,32 @@ function __main__() {
     export OS_CACERT
   fi
 
-  result=$(deckhouse-controller helper openstack get-volume-types)
-  values::set cloudProviderOpenstack.internal.volumeTypes "$result"
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    openstack_volume_types='["__DEFAULT__","some-foo","bar","other-bar"]'
+  else
+    openstack_volume_types="$(deckhouse-controller helper openstack get-volume-types)"
+  fi
+  storage_classes="$(jq '
+    [.[] |
+      {
+        "type": .,
+        # Rewrite Openstack volume type to RFC 1123 compatible StorageClass name.
+        "name": (. | gsub("(\\s|_)"; "") | . |= ascii_downcase)
+      }
+    ]
+    ' <<< "$openstack_volume_types")"
+  if values::has cloudProviderOpenstack.storageClass.exclude; then
+    storage_classes="$(jq --arg exclude "$(values::get cloudProviderOpenstack.storageClass.exclude | jq -r 'join("|")')" '
+      map(select(.name | test("^(\($exclude))$") | not))
+      ' <<< "$storage_classes")"
+  fi
+  values::set cloudProviderOpenstack.internal.storageClasses "$storage_classes"
+
+  if values::has cloudProviderOpenstack.storageClass.default; then
+    values::set cloudProviderOpenstack.internal.defaultStorageClass "$(values::get cloudProviderOpenstack.storageClass.default)"
+  else
+    values::unset cloudProviderOpenstack.internal.defaultStorageClass
+  fi
 }
 
 hook::run "$@"

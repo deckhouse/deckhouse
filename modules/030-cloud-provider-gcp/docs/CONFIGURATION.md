@@ -27,9 +27,34 @@ title: "Сloud provider — GCP: настройки"
     * Формат — bool. Опциональный параметр.
     * По умолчанию `true`.
 
-Storage настраивать не нужно, модуль автоматически создаст 4 StorageClass'а, покрывающие все варианты дисков в GCP: standard или ssd, region-replicated или not-region-replicated.
+## Storage
 
-1. `pd-standard-not-replicated`
-2. `pd-standard-replicated`
-3. `pd-ssd-not-replicated`
-4. `pd-ssd-replicated`
+Модуль автоматически создаёт StorageClasses, покрывающие все варианты дисков в GCP: 
+
+| Тип | Репликация | Имя StorageClass |
+|---|---|---|
+| standard | none | pd-standard-not-replicated |
+| standard | regional | pd-standard-replicated |
+| ssd | none | pd-ssd-not-replicated |
+| ssd | regional | pd-ssd-replicated |
+
+А также позволяет отфильтровать ненужные StorageClass, указанием их в параметре `exclude`.
+
+* `exclude` — полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+  * Формат — массив строк.
+  * Опциональный параметр.
+* `default` — имя StorageClass, который будет использоваться в кластере по умолчанию.
+  * Формат — строка.
+  * Опциональный параметр.
+  * Если параметр не задан, фактическим StorageClass по умолчанию будет либо: 
+    * Присутствующий в кластере произвольный StorageClass с default аннотацией.
+    * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
+
+```yaml
+cloudProviderGcp: |
+  storageClass:
+    exclude: 
+    - "pd-standard.*"
+    - pd-ssd-replicated
+    default: pd-ssd-not-replicated
+```

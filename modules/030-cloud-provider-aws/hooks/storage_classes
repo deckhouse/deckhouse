@@ -1,0 +1,43 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
+}
+
+function __main__() {
+  storage_classes="$(jq '
+    [.[] |
+      {
+        "type": .,
+        "name": .
+      }
+    ]
+    ' <<< '["gp2","sc1","st1"]')"
+
+  if values::has cloudProviderAws.storageClass.provision; then
+    storage_classes="$(jq --argjson provision "$(values::get cloudProviderAws.storageClass.provision)" '
+      . + $provision
+      ' <<< "$storage_classes")"
+  fi
+
+  if values::has cloudProviderAws.storageClass.exclude; then
+    storage_classes="$(jq --arg exclude "$(values::get cloudProviderAws.storageClass.exclude | jq -r 'join("|")')" '
+      map(select(.name | test("^(\($exclude))$") | not))
+      ' <<< "$storage_classes")"
+  fi
+  storage_classes="$(jq 'sort_by(.name)' <<< "$storage_classes")"
+  values::set cloudProviderAws.internal.storageClasses "$storage_classes"
+
+  if values::has cloudProviderAws.storageClass.default; then
+    values::set cloudProviderAws.internal.defaultStorageClass "$(values::get cloudProviderAws.storageClass.default)"
+  else
+    values::unset cloudProviderAws.internal.defaultStorageClass
+  fi
+}
+
+hook::run "$@"

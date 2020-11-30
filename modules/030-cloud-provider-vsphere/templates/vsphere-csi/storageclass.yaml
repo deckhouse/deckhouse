@@ -1,22 +1,15 @@
-{{- range $ds := .Values.cloudProviderVsphere.internal.datastores }}
+{{- range $index, $storageClass := .Values.cloudProviderVsphere.internal.storageClasses }}
 ---
-kind: StorageClass
 apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: {{ $ds.name }}
-  {{- if $.Values.cloudProviderVsphere.defaultDatastore }}
-    {{- if $ds.path | hasSuffix $.Values.cloudProviderVsphere.defaultDatastore }}
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "true"
-    {{- end }}
-  {{- end }}
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
+{{ include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) | indent 2 }}
+  name: {{ $storageClass.name | quote }}
 provisioner: vsphere.csi.vmware.com
-volumeBindingMode: Immediate
-allowVolumeExpansion: true
 parameters:
-  parent_type: {{ $ds.datastoreType | quote }}
-  parent_name: {{ $ds.path | quote }}
+  parent_type: {{ $storageClass.datastoreType | quote }}
+  parent_name: {{ $storageClass.path | quote }}
 allowedTopologies:
 - matchLabelExpressions:
   - key: failure-domain.beta.kubernetes.io/region
@@ -24,7 +17,9 @@ allowedTopologies:
     - {{ $.Values.cloudProviderVsphere.internal.region }}
   - key: failure-domain.beta.kubernetes.io/zone
     values:
-  {{- range $ds.zones}}
+  {{- range $storageClass.zones}}
     - {{ . }}
   {{- end }}
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
 {{- end }}

@@ -57,6 +57,19 @@ const globalValues = `
 
 const moduleValues = `
   internal:
+    storageClasses:
+    - name: pd-standard-not-replicated
+      type: pd-standard
+      replicationType: none
+    - name: pd-standard-replicated
+      type: pd-standard
+      replicationType: regional-pd
+    - name: pd-ssd-not-replicated
+      type: pd-ssd
+      replicationType: none
+    - name: pd-ssd-replicated
+      type: pd-ssd
+      replicationType: regional-pd
     providerClusterConfiguration:
       sshKey: mysshkey
       subnetworkCIDR: 10.0.0.0/24
@@ -183,6 +196,10 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(pdCSISSDNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDReplicatedSC.Exists()).To(BeTrue())
 
+			Expect(pdCSIStandardNotReplicatedSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 		})
@@ -201,4 +218,35 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			})
 		})
 	})
+
+	Context("GCP with default StorageClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderGcp.internal.defaultStorageClass", `pd-ssd-replicated`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			pdCSIStandardNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-not-replicated")
+			pdCSIStandardReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-replicated")
+			pdCSISSDNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-not-replicated")
+			pdCSISSDReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-replicated")
+
+			Expect(pdCSIStandardNotReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSIStandardReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSISSDNotReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSISSDReplicatedSC.Exists()).To(BeTrue())
+
+			Expect(pdCSIStandardNotReplicatedSC.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(pdCSIStandardReplicatedSC.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(pdCSISSDNotReplicatedSC.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(pdCSISSDReplicatedSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+		})
+	})
+
 })

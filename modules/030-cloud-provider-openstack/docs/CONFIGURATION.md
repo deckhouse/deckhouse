@@ -26,3 +26,26 @@ cloudProviderOpenstack: |
   additionalExternalNetworkNames:
   - some-bgp-network
 ```
+
+## Storage
+
+Модуль автоматически создаёт StorageClasses, которые есть в OpenStack. А также позволяет отфильтровать ненужные, указанием их в параметре `exclude`.
+
+* `exclude` — полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+  * Формат — массив строк.
+  * Опциональный параметр.
+* `default` — имя StorageClass, который будет использоваться в кластере по умолчанию.
+  * Формат — строка.
+  * Опциональный параметр.
+  * Если параметр не задан, фактическим StorageClass по умолчанию будет либо: 
+    * Присутствующий в кластере произвольный StorageClass с default аннотацией.
+    * Первый StorageClass из создаваемых модулем (в порядке из OpenStack).
+
+```yaml
+cloudProviderOpenstack: |
+  storageClass:
+    exclude:
+    - .*-hdd
+    - iscsi-fast
+    default: ceph-ssd
+```

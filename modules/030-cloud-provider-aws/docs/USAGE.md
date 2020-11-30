@@ -16,28 +16,6 @@ spec:
   diskType:  gp2
 ```
 
-## Storage
-
-По умолчанию создаётся один (default) StorageClass с именем `gp2` и типом диска `gp2`.
-
-Создать StorageClass с типом диска `io1` можно, например, так:
-
-```yaml
----
-apiVersion: storage.k8s.io/v1beta1
-kind: StorageClass
-metadata:
-  name: io1
-provisioner: ebs.csi.aws.com
-parameters:
-  type: io1
-  iopsPerGB: "20"
-allowVolumeExpansion: true
-volumeBindingMode: WaitForFirstConsumer # обязательно!
-```
-
-Список всех возможных `parameters` для EBS CSI драйвера представлен в его [документации](https://github.com/kubernetes-sigs/aws-ebs-csi-driver).
-
 ## LoadBalancer
 
 ### Аннотации объекта Service

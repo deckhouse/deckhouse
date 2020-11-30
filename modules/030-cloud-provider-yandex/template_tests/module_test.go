@@ -54,6 +54,11 @@ const globalValues = `
 
 const moduleValues = `
   internal:
+    storageClasses:
+    - name: network-hdd
+      type: network-hdd
+    - name: network-ssd
+      type: network-ssd
     providerDiscoveryData:
       zones: ["zonea", "zoneb"]
       zoneToSubnetIdMap:
@@ -169,6 +174,10 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
 
+			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())
 			Expect(ccmCRB.Exists()).To(BeTrue())
@@ -191,4 +200,29 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			})
 		})
 	})
+
+	Context("Yabdex with default StorageClass specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderYandex.internal.defaultStorageClass", `network-ssd`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
+			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
+
+			Expect(csiHDDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSC.Exists()).To(BeTrue())
+
+			Expect(csiHDDSC.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(csiSSDSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+		})
+	})
+
 })

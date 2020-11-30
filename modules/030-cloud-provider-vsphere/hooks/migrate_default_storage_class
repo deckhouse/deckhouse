@@ -1,0 +1,81 @@
+#!/bin/bash
+
+### Migration 17.11.2020: Remove after this commit been reached rock-solid.
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: manual_storageclasses
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+      jqFilter: &filter |
+        {
+          "name": .metadata.name,
+          "isDefault": (
+            (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
+            (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
+          ),
+          "isVsphere": (.provisioner == "vsphere.csi.vmware.com"),
+          "parentName": (.parameters.parent_name // null),
+          "parentType": (.parameters.parent_type // null)
+        }
+    - name: module_storageclasses
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: In
+          values: ["deckhouse"]
+      jqFilter: *filter
+EOF
+}
+
+function __main__() {
+  # Continue if only a single manually deployed default StorageClass exists in the cluster.
+  if context::jq -er '([.snapshots.manual_storageclasses[].filterResult | select(.isDefault == true and .isVsphere == true)] | length) != 1'; then
+    exit 0
+  fi
+
+  # Continue if no default StorageClasses, deployed by module, exists in the cluster.
+  if context::jq -er '([.snapshots.module_storageclasses[].filterResult | select(.isDefault == true and .isVsphere == true)] | length) != 0'; then
+    exit 0
+  fi
+
+  manual_default_storageclass="$(context::jq '.snapshots.manual_storageclasses[].filterResult | select(.isDefault == true and .isVsphere == true)')"
+  manual_default_storageclass_name=$(jq -r '.name' <<< "$manual_default_storageclass")
+  manual_default_storageclass_parent_name=$(jq -r '.parentName' <<< "$manual_default_storageclass")
+  manual_default_storageclass_parent_type=$(jq -r '.parentType' <<< "$manual_default_storageclass")
+
+  # Continue if candidate StorageClasses found in the cluster.
+  if ! module_candidate_storage_class_name=$(context::jq -er \
+    --arg suffix "$manual_default_storageclass_parent_name" \
+    --arg type "$manual_default_storageclass_parent_type" '
+    .snapshots.module_storageclasses[].filterResult |
+    select(.isDefault == false and .isVsphere == true and (.parentName | endswith($suffix)) and .parentType == $type) |
+    .name
+    '); then
+    exit 0
+  fi
+
+  if ! values::has --config cloudProviderVsphere.storageClass ; then
+    values::set --config cloudProviderVsphere.storageClass '{}'
+  fi
+  values::set --config cloudProviderVsphere.storageClass.default "$module_candidate_storage_class_name"
+
+  kubernetes::delete_if_exists::non_blocking "" "storageclass/$manual_default_storageclass_name"
+}
+
+hook::run "$@"
