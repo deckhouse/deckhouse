@@ -4,7 +4,7 @@
 Правила CoreOS для Prometheus в Kubernetes
 ==========================================
 
-Эти правила аккуратно вытащены из [helm-чартов](https://github.com/coreos/prometheus-operator/tree/v0.17.0/helm) лежащих вместе с prometheus-opertor (на данный момент из тега `v0.17.0`).
+Эти правила аккуратно вытащены из [helm-чартов](https://github.com/coreos/prometheus-operator/tree/v0.17.0/helm) лежащих вместе с prometheus-operator (на данный момент из тега `v0.17.0`).
 
 Список файлов с указанием источника:
 * [general.yml](https://github.com/coreos/prometheus-operator/blob/v0.17.0/helm/d8-system/templates/general.rules.yaml)
@@ -18,5 +18,5 @@
 
 При обновлении нужно (о ужас) для каждого файла отдельно:
 * Посмотреть в репе prometheus-operator, что изменилось (с тега v0.17.0 до того тега, до которого синхронизируемся).
-* Посмотреть у нас что изменилось (с комита, в котором написано `upstream:v0.17.0`).
+* Посмотреть у нас что изменилось (с коммита, в котором написано `upstream:v0.17.0`).
 * Руками внести изменения.

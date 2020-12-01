@@ -162,7 +162,7 @@ global: |
      
 ### Включение и отключение модулей
 
-Deckhouse устанавливает только включённые [модули](https://github.com/flant/addon-operator/blob/master/MODULES.md). Смотри подробнее про алгоритм определения включённости модуля [тут](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery).
+Deckhouse устанавливает только включённые [модули](https://github.com/flant/addon-operator/blob/master/MODULES.md). Смотри подробнее про алгоритм определения включенности модуля [тут](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery).
 
 # Разворачивание и управление узлами в кластерах Kubernetes
 Для создания новых кластеров и управления узлами используется подсистема [candi (Cluster and Infrastructure)](/candi/). Ключевые преимущества:

@@ -26,12 +26,12 @@ title: "Модуль user-authz: Custom Resources"
         * Если список указан, то разрешаем доступ только по нему.
         * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
     * Опция доступна только с включённым параметром `enableMultiTenancy`.
-* `allowAccessToSystemNamespaces` — разрешить пользователю доступ в служебные namespace (`["antiopa", "kube-.*", "d8-.*", "loghouse", "default"]`).
+* `allowAccessToSystemNamespaces` — разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
     * По умолчанию доступа в служебные namespace у пользователей нет.
     * Опция доступна только с включённым параметром `enableMultiTenancy`.
 * `additionalRoles` — какие дополнительные роли необходимо выдать для заданных `subjects`.
     * Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать `accessLevel`.
-    * Фомат:
+    * Формат:
     ```yaml
     additionalRoles:
     - apiGroup: rbac.authorization.k8s.io

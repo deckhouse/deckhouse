@@ -35,5 +35,5 @@ search: prometheus
   * Обязательный параметр.
 * `spec.basicAuth` — параметры базовой авторизации для отправки данных.
   * Необязательный параметр.
-* `spec.writeRelabelConfigs` — параметры для relabel'инга данных для отпрваки (например удалить лишние метрики, или произвести релейбл данных). [Спецификация данного параметра](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig).
+* `spec.writeRelabelConfigs` — параметры для relabel'инга данных для отправки (например, удалить лишние метрики или произвести релейбл данных). [Спецификация данного параметра](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#relabelconfig).
   * Необязательный параметр.

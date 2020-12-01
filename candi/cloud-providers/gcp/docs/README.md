@@ -215,7 +215,7 @@ Network Management Admin
 
 Роли можно прикрепить на этапе создания сервис-аккаунта, либо изменить список на [странице](https://console.cloud.google.com/iam-admin/iam).
 
-Чтобы получить `service account key` в JSON-формате, на [странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке Actions необходимо кликнуть на три вертитикальные точки и выбрать Create key, тип ключа JSON.
+Чтобы получить `service account key` в JSON-формате, на [странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке Actions необходимо кликнуть на три вертикальные точки и выбрать Create key, тип ключа JSON.
 
 ### gcloud command-line tool
 

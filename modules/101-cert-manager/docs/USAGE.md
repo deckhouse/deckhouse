@@ -239,7 +239,7 @@ spec:
     kind: ClusterIssuer                      # ссылка на "выдаватель" сертификатов, см. подробнее ниже
     name: selfsigned
   commonName: example.com                    # основной домен сертификата
-  dnsNames:                                  # дополнительыне домены сертификата, указывать не обязательно
+  dnsNames:                                  # дополнительные домены сертификата, указывать не обязательно
   - www.example.com
   - admin.example.com
   acme:
