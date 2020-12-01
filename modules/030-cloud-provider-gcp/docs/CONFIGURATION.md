@@ -11,7 +11,7 @@ title: "Сloud provider — GCP: настройки"
 > **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `GCPInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/faq.html#как-перекатить-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
 * `networkName` — имя VPC network в GCP, где будут заказываться instances.
-* `subnetworkName` — имя subnet в VPC netwok `networkName`, где будут заказываться instances.
+* `subnetworkName` — имя subnet в VPC network `networkName`, где будут заказываться instances.
 * `region` — имя GCP региона, в котором будут заказываться instances.
 * `zones` — Список зон из `region`, где будут заказываться instances. Является значением по умолчанию для поля zones в [NodeGroup](/modules/040-node-manager/cr.html#nodegroup) объекте.
     * Формат — массив строк.

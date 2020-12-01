@@ -29,7 +29,7 @@ title: "Сloud provider — VMware vSphere: Custom Resources"
 
 * `datastore` — путь до Datastore, на котором будет созданы склонированные виртуальные машины.
     * Пример — `lun-1201`
-* `resourcePool` — путь до Resource Pool, в котором будут созданые склонированные виртуальные машины.
+* `resourcePool` — путь до Resource Pool, в котором будут созданные склонированные виртуальные машины.
     * Пример — `prod`
     * Опциональный параметр.
 * `resourcePoolForNewNodes` — полный аналог опции `resourcePool`, при изменении параметра **не происходит** перекат нод.

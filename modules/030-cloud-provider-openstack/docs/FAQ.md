@@ -194,7 +194,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 2. Подготавливаем OpenStack RC (openrc) файл, который содержит credentials для обращения к api openstack.
 
-    > Интерфейс получения openrc файла может отличаться в зависмости от провайдера OpenStack. Если провайдер предоставляет
+    > Интерфейс получения openrc файла может отличаться в зависимости от провайдера OpenStack. Если провайдер предоставляет
     > стандартный интерфейс для OpenStack, то скачать openrc файл можно по [инструкции](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
 
 3. Либо устанавливаем OpenStack cli по [инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).

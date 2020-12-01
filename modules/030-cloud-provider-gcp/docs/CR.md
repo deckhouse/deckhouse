@@ -26,7 +26,7 @@ title: "Сloud provider — GCP: custom resource"
     * Формат — integer. В ГиБ.
     * По умолчанию `50` ГиБ.
     * Опциональный параметр.
-* `additionalNetworkTags` — список дополнительных тегов. К примеру, теги позволяют применять правила фаервола к инстансам. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+* `additionalNetworkTags` — список дополнительных тегов. К примеру, теги позволяют применять правила firewall'а к инстансам. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
     * Формат — массив строк.
     * Опциональный параметр.
 * `additionalLabels` — список дополнительных лейблов. Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
