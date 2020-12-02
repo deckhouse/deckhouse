@@ -33,26 +33,3 @@
 {{- end }}
       summary: >
         Unsupported version of Docker {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}
-- name: kubernetes.version
-  rules:
-  - alert: ControlPlaneAndKubeletVersionsDiffer
-{{- if semverCompare ">=1.19" .Values.global.discovery.kubernetesVersion }}
-    expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{git_version!~"v{{ .Values.global.discovery.kubernetesVersion | trunc 4 }}.+", job!~"kube-dns|coredns"})
-{{- else }}
-    expr: sum by (node, gitVersion, instance, job) (kubernetes_build_info{gitVersion!~"v{{ .Values.global.discovery.kubernetesVersion | trunc 4 }}.+", job!~"kube-dns|coredns"})
-{{- end }}
-    for: 20m
-    labels:
-      impact: negligible
-      likelihood: certain
-      tier: cluster
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      plk_incident_initial_status: "todo"
-      description: |-
-        kube-apiserver is at version {{ .Values.global.discovery.kubernetesVersion }}, but cluster component {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} is at version {{`{{$labels.gitVersion}}`}}.
-        1. Check it: `kubectl get nodes`
-        2. Correct {{`{{$labels.job}}`}} version or control plane version on kubernetes master static pod manifests
-      summary: >
-        Different version of {{`{{$labels.job}}`}} on {{`{{$labels.node}}`}} node and kubernetes apiserver version
