@@ -1,4 +1,5 @@
-FROM python:3.7.9-alpine3.12
+ARG BASE_PYTHON_ALPINE
+FROM $BASE_PYTHON_ALPINE
 
 RUN apk add curl git gcc libc-dev linux-headers npm openssl
 

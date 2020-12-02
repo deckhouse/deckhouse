@@ -39,9 +39,13 @@ context: ./modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName 
 dockerfile: ./modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/Dockerfile
 args:
   BASE_ALPINE: {{ env "BASE_ALPINE" }}
+  BASE_DEBIAN: {{ env "BASE_DEBIAN" }}
   BASE_GOLANG_ALPINE: {{ env "BASE_GOLANG_ALPINE" }}
   BASE_GOLANG_BUSTER: {{ env "BASE_GOLANG_BUSTER" }}
+  BASE_NGINX_ALPINE:  {{ env "BASE_NGINX_ALPINE" }}
+  BASE_PYTHON_ALPINE:  {{ env "BASE_PYTHON_ALPINE" }}
   BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
+  BASE_UBUNTU: {{ env "BASE_UBUNTU" }}
   CI_JOB_TOKEN: {{ env "CI_JOB_TOKEN" }}
 {{- else }}
 {{ tpl .ImageBuildData . }}

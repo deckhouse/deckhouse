@@ -13,9 +13,13 @@ variables:
   WERF_STAGES_STORAGE_REPO_IMPLEMENTATION: default
   STAGES_STORAGE_LOGIN_CMD: "docker login -u ${REGISTRY_STAGES_USER} -p ${REGISTRY_STAGES_PASSWORD} ${WERF_STAGES_REPO_BASE}"
   BASE_ALPINE: "alpine:3.12.1"
+  BASE_DEBIAN: "debian:buster"
   BASE_GOLANG_ALPINE: "golang:1.15.3-alpine3.12"
   BASE_GOLANG_BUSTER: "golang:1.15.3-buster"
+  BASE_NGINX_ALPINE: "nginx:1.15-alpine"
+  BASE_PYTHON_ALPINE: "python:3.7.9-alpine3.12"
   BASE_SHELL_OPERATOR: "flant/shell-operator:v1.0.0-beta.12-alpine3.11"
+  BASE_UBUNTU: "ubuntu:18.04"
 
 stages:
   - build_modules_images

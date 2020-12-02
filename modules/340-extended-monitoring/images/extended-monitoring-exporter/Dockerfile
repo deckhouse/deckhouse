@@ -1,4 +1,5 @@
-FROM python:3.7.9-alpine3.12
+ARG BASE_PYTHON_ALPINE
+FROM $BASE_PYTHON_ALPINE
 WORKDIR /app
 ADD src /app
 RUN apk add --no-cache --virtual .build-deps build-base libffi-dev openssl-dev && \

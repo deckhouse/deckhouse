@@ -1,10 +1,12 @@
 package modules
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -19,8 +21,28 @@ const (
 )
 
 var (
-	toHelmignore = []string{"hooks", "crds", "enabled"}
+	toHelmignore  = []string{"hooks", "crds", "enabled"}
+	regexPatterns = map[string]string{
+		`$BASE_ALPINE`:         imageRegexp(`alpine:[\d.]+`),
+		`$BASE_DEBIAN`:         imageRegexp(`debian:[\d.]+`),
+		`$BASE_GOLANG_ALPINE`:  imageRegexp(`golang:[\d.]+-alpine`),
+		`$BASE_GOLANG_BUSTER`:  imageRegexp(`golang:[\d.]+-buster`),
+		`$BASE_NGINX_ALPINE`:   imageRegexp(`nginx:[\d.]+-alpine`),
+		`$BASE_PYTHON_ALPINE`:  imageRegexp(`python:[\d.]+-alpine`),
+		`$BASE_SHELL_OPERATOR`: imageRegexp(`shell-operator:v[\d.]+`),
+		`$BASE_UBUNTU`:         imageRegexp(`ubuntu:[\d.]+`),
+	}
 )
+
+func skipModuleImageNameIfNeeded(filePath string) bool {
+	switch filePath {
+	case
+		// Kube-apiserver 1.15 needs golang 1.12 to build, so we don't use $BASE_GOLANG_ALPINE image for building
+		"/deckhouse/modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile":
+		return true
+	}
+	return false
+}
 
 func skipModuleIfNeeded(name string) bool {
 	switch name {
@@ -178,6 +200,98 @@ func commonTestGoForHooks(name, path string) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
+func imageRegexp(s string) string {
+	return fmt.Sprintf("^(from:|FROM)(\\s+)(%s)", s)
+}
+
+func isImageNameUnacceptable(imageName string) (bool, string) {
+	for ciVariable, pattern := range regexPatterns {
+		matched, _ := regexp.MatchString(pattern, imageName)
+		if matched {
+			return true, ciVariable
+		}
+	}
+	return false, ""
+}
+
+func checkImageNamesInDockerAndWerfFiles(name, path string, lintRuleErrorsList *errors.LintRuleErrorsList) {
+	var filePaths []string
+	imagesPath := filepath.Join(path, "images")
+
+	if !isExistsOnFilesystem(imagesPath) {
+		return
+	}
+
+	err := filepath.Walk(imagesPath, func(fullPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		switch filepath.Base(fullPath) {
+		case "werf.inc.yaml",
+			"Dockerfile":
+			filePaths = append(filePaths, fullPath)
+		}
+		return nil
+	})
+
+	if err != nil {
+		lintRuleErrorsList.Add(errors.NewLintRuleError(
+			"MODULE001",
+			"module = "+name,
+			imagesPath,
+			"Cannot read directory structure:%s",
+			err,
+		))
+		return
+	}
+	for _, filePath := range filePaths {
+		if skipModuleImageNameIfNeeded(filePath) {
+			continue
+		}
+		file, err := os.Open(filePath)
+		if err != nil {
+			lintRuleErrorsList.Add(errors.NewLintRuleError(
+				"MODULE001",
+				"module = "+name,
+				filePath,
+				"Error opening file:%s",
+				err,
+			))
+			continue
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		linePos := 0
+		relativeFilePath, err := filepath.Rel(imagesPath, filePath)
+		if err != nil {
+			lintRuleErrorsList.Add(errors.NewLintRuleError(
+				"MODULE001",
+				"module = "+name,
+				filePath,
+				"Error calculating relative file path:%s",
+				err,
+			))
+			continue
+		}
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			linePos++
+			result, ciVariable := isImageNameUnacceptable(line)
+			if result {
+				lintRuleErrorsList.Add(errors.NewLintRuleError(
+					"MODULE001",
+					fmt.Sprintf("module = %s, image = %s, line = %d", name, relativeFilePath, linePos),
+					line,
+					"Please use %s as an image name", ciVariable,
+				))
+			}
+		}
+	}
+}
+
 func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 	var modules []types.Module
 
@@ -229,6 +343,7 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 
 		lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
 		lintRuleErrorsList.Add(commonTestGoForHooks(moduleName, modulePath))
+		checkImageNamesInDockerAndWerfFiles(moduleName, modulePath, &lintRuleErrorsList)
 
 		name, lintError := chartModuleRule(moduleName, modulePath)
 		lintRuleErrorsList.Add(lintError)

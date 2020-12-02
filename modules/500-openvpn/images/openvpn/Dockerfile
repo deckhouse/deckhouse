@@ -1,4 +1,5 @@
-FROM python:3.7.9-alpine3.12
+ARG BASE_PYTHON_ALPINE
+FROM $BASE_PYTHON_ALPINE
 RUN apk update && \
     apk add bash iptables bind-tools netcat-openbsd && \
     apk add openssl easy-rsa openvpn && \
