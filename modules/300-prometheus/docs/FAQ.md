@@ -163,6 +163,7 @@ spec:
   basicAuthUser: foo
   jsonData:
     timeInterval: 30s
+    httpMethod: POST
   secureJsonData:
     basicAuthPassword: bar
 ```
