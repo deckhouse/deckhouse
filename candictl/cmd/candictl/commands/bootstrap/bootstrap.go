@@ -82,6 +82,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
+		if len(metaConfig.ProviderClusterConfig) == 0 && len(metaConfig.StaticClusterConfig) == 0 {
+			return fmt.Errorf("StaticClusterConfiguration must present for static-cluster bootstrap.")
+		}
+
 		sshClient, err := ssh.NewClientFromFlags().Start()
 		if err != nil {
 			return err
