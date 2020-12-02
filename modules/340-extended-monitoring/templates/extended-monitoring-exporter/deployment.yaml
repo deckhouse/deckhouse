@@ -43,10 +43,6 @@ spec:
       containers:
       - name: extended-monitoring
         image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring-exporter:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoringExporter }}
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "32Mi"
         args:
         - "/app/extended-monitoring.py"
         - "127.0.0.1"

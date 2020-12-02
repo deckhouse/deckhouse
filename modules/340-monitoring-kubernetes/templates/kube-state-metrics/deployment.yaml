@@ -75,10 +75,6 @@ spec:
         ports:
         - containerPort: 8080
           name: https-metrics
-        resources:
-          requests:
-            memory: 20Mi
-            cpu: 10m
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           value: "0.0.0.0"

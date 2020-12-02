@@ -48,10 +48,6 @@ spec:
         ports:
         - containerPort: 8080
           name: http
-        resources:
-          requests:
-            cpu: 100m
-            memory: 300Mi
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534

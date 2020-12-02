@@ -80,8 +80,4 @@ spec:
           mountPath: "/usr/local/share/ca-certificates/"
           readOnly: true
 {{- end }}
-        resources:
-          requests:
-            cpu: 50m
-            memory: 128Mi
 {{- end }}

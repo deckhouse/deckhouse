@@ -58,10 +58,6 @@ spec:
             path: /trickster/trickster/health/main
             port: 443
             scheme: HTTPS
-        resources:
-          requests:
-            memory: 100Mi
-            cpu: 100m
       - name: kube-rbac-proxy
         image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:

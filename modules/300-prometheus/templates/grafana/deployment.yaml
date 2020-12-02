@@ -90,10 +90,6 @@ spec:
           subPath: grafana-dashboard-definitions.yaml
         - name: shared-dashboards-folder
           mountPath: /etc/grafana-dashboard-definitions
-        resources:
-          requests:
-            memory: 100Mi
-            cpu: 100m
         readinessProbe:
           httpGet:
             path: /api/health
@@ -102,10 +98,6 @@ spec:
           initialDelaySeconds: 10
       - name: dashboard-provisioner
         image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana-dashboard-provisioner:{{ $.Values.global.modulesImages.tags.prometheus.grafanaDashboardProvisioner }}
-        resources:
-          requests:
-            memory: 100Mi
-            cpu: 100m
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/lib/grafana-storage
@@ -156,10 +148,6 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 443
-        resources:
-          requests:
-            memory: 50Mi
-            cpu: 25m
       volumes:
       - name: shared-dashboards-folder
         emptyDir: {}
