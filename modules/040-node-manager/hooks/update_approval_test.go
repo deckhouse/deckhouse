@@ -299,7 +299,7 @@ data:
 												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).Exists()).To(BeFalse())
 											})
 
-											By(fmt.Sprintf("%s must not have /disruption-required, which might be left, because node was approved manualy", nodeName), func() {
+											By(fmt.Sprintf("%s must not have /disruption-required, which might be left, because node was approved manually", nodeName), func() {
 												Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
 											})
 

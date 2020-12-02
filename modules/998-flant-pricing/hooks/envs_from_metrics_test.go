@@ -24,7 +24,8 @@ global:
     clusterType: Static
 flantPricing:
   internal: {}
-`)
+`
+	)
 
 	f := HookExecutionConfigInit(initValuesTerraformManagerEnabled, `{}`)
 

@@ -20,7 +20,7 @@ var _ = Describe("Global hooks :: discovery/cluster_type ::", func() {
 	)
 
 	const (
-		state_ByComponent_Command_External = `
+		stateByComponentCommandExternal = `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -42,7 +42,7 @@ spec:
     - www
 `
 
-		state_ByK8SApp_Command_AWS = `
+		stateByK8SAppCommandAWS = `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -66,7 +66,7 @@ spec:
       --use-service-account-credentials=true --v=2 > /tmp/pipe 2>&1
 `
 
-		state_ByComponent_Args_GCE = `
+		stateByComponentArgsGCE = `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -88,7 +88,7 @@ spec:
     - www
 `
 
-		state_ByK8SApp_Args_ACS = `
+		stateByK8SAppArgsACS = `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -104,7 +104,7 @@ spec:
     - "--aaa --bbb --cloud-provider=azure"
 `
 
-		state_NoCloudProvider = `
+		stateNoCloudProvider = `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -130,7 +130,7 @@ spec:
 
 	Context("controller-manager has label 'component:', arg in command[], --cloud-provider=external", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state_ByComponent_Command_External))
+			f.BindingContexts.Set(f.KubeStateSet(stateByComponentCommandExternal))
 			f.RunHook()
 		})
 
@@ -148,7 +148,7 @@ spec:
 
 	Context("controller-manager has label 'k8s-app:', arg in command[], --cloud-provider=aws", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state_ByK8SApp_Command_AWS))
+			f.BindingContexts.Set(f.KubeStateSet(stateByK8SAppCommandAWS))
 			f.RunHook()
 		})
 
@@ -166,7 +166,7 @@ spec:
 
 	Context("controller-manager has label 'component:', arg in args[], --cloud-provider=gce", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state_ByComponent_Args_GCE))
+			f.BindingContexts.Set(f.KubeStateSet(stateByComponentArgsGCE))
 			f.RunHook()
 		})
 
@@ -184,7 +184,7 @@ spec:
 
 	Context("controller-manager has label 'k8s-app:', arg in args[], --cloud-provider=azure", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state_ByK8SApp_Args_ACS))
+			f.BindingContexts.Set(f.KubeStateSet(stateByK8SAppArgsACS))
 			f.RunHook()
 		})
 
@@ -202,7 +202,7 @@ spec:
 
 	Context("controller-manager has label 'component:', there is no --cloud-provider= arg", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state_NoCloudProvider))
+			f.BindingContexts.Set(f.KubeStateSet(stateNoCloudProvider))
 			f.RunHook()
 		})
 

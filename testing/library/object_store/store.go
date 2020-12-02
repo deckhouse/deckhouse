@@ -2,13 +2,13 @@ package object_store
 
 import (
 	"encoding/json"
-	yaml "gopkg.in/yaml.v2"
 	"regexp"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/testing/library"
-
 	"github.com/tidwall/gjson"
+	yaml "gopkg.in/yaml.v2"
+
+	"github.com/deckhouse/deckhouse/testing/library"
 )
 
 type ErrObjectNotFound struct {

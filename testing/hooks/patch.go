@@ -25,7 +25,7 @@ type KubernetesPatchOperation struct {
 	Resource     string `json:"resource,omitempty"`
 	ResourceSpec string `json:"resourceSpec,omitempty"`
 	JQFilter     string `json:"jqFilter,omitempty"`
-	ApiVersion   string `json:"apiVersion,omitempty"`
+	APIVersion   string `json:"apiVersion,omitempty"`
 	Kind         string `json:"kind,omitempty"`
 	ResourceName string `json:"resourceName,omitempty"`
 	NewStatus    string `json:"newStatus,omitempty"`
@@ -74,7 +74,7 @@ func (kpo *KubernetesPatchOperation) Apply(objectStore object_store.ObjectStore)
 		dec := yaml.NewDecoder(strings.NewReader(kpo.ResourceSpec))
 		err = dec.Decode(&t)
 		if err != nil {
-			return object_store.ObjectStore{}, fmt.Errorf("operation \"Create\", failed to decode YAML: %s\n", err)
+			return object_store.ObjectStore{}, fmt.Errorf(`operation "Create", failed to decode YAML: %v`, err)
 		}
 		if t == nil {
 			return object_store.ObjectStore{}, errors.New("kubernetes Create operation should contain pure YAML")

@@ -65,7 +65,7 @@ metadata:
 spec:
   nodeType: Hybrid
 `
-		stateNGProperManualRolloutId = `
+		stateNGProperManualRolloutID = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
@@ -320,7 +320,7 @@ metadata:
 
 	Context("With manual-rollout-id", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProperManualRolloutId + stateICProper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProperManualRolloutID + stateICProper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 

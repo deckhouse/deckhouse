@@ -33,7 +33,7 @@ func ListTreeObjects(path string) ([]TreeObject, error) {
 		parsedObjects := parseLsTreeOutput(bytes.NewReader(output))
 		return parsedObjects, nil
 	default:
-		return nil, fmt.Errorf("unknown error occured while reading images: %v", err)
+		return nil, fmt.Errorf("unknown error occurred while reading images: %v", err)
 	}
 }
 

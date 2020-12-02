@@ -54,7 +54,7 @@ cloudProviderOpenstack:
     aaa: bbb
     ccc: ddd
 `
-	initValuesStringC = `
+		initValuesStringC = `
 global:
   discovery: {}
 cloudProviderOpenstack:

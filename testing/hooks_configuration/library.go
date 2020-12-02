@@ -106,7 +106,7 @@ func (h *Hook) ExecuteGetConfig() error {
 
 	h.Session.Wait(10)
 	if h.Session.ExitCode() != 0 {
-		return fmt.Errorf("Hook execution failed with exit code %d", h.Session.ExitCode())
+		return fmt.Errorf("hook execution failed with exit code %d", h.Session.ExitCode())
 	}
 
 	out := h.Session.Out.Contents()

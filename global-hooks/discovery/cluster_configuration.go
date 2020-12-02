@@ -75,7 +75,7 @@ func (c *ClusterDiscoveryHook) Main(input *sdk.BindingInput) (*sdk.BindingOutput
 		var err error
 
 		// FilterResult is a YAML encoded as a JSON string. Unmarshal it.
-		configYaml, err := JsonStringToGoString(s[0].FilterResult)
+		configYaml, err := JSONStringToGoString(s[0].FilterResult)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,6 @@ func (c *ClusterDiscoveryHook) Main(input *sdk.BindingInput) (*sdk.BindingOutput
 
 		ops := []*utils.ValuesPatchOperation{}
 
-		//clusterConfigurationJson, _ := json.Marshal(metaConfig.ClusterConfig)
 		ops = append(ops, &utils.ValuesPatchOperation{
 			Op:    "add",
 			Path:  "/global/clusterConfiguration",
@@ -147,7 +146,7 @@ func (c *ClusterDiscoveryHook) Main(input *sdk.BindingInput) (*sdk.BindingOutput
 	return out, nil
 }
 
-func JsonStringToGoString(jsonString string) (string, error) {
+func JSONStringToGoString(jsonString string) (string, error) {
 	var res string
 	err := json.Unmarshal([]byte(jsonString), &res)
 	if err != nil {

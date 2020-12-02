@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"encoding/json"
+
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -120,11 +121,6 @@ func MergeAlertManagers(input *sdk.BindingInput) (interface{}, error) {
 		}
 		alertmanagers[alertmanagerService.Prometheus] = append(alertmanagers[alertmanagerService.Prometheus], alertmanagerService.Service)
 	}
-
-	//out, err := json.Marshal(alertmanagers)
-	//if err != nil {
-	//	return "", err
-	//}
 
 	return alertmanagers, nil
 }

@@ -164,6 +164,29 @@
   - "Build"
   - "Build Modules Images"
 
+.GolangCI Lint template:
+  stage: testing
+  before_script:
+    - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  script:
+    - pwd
+    - eval "${STAGES_STORAGE_LOGIN_CMD}"
+    - type multiwerf && source <(multiwerf use 1.1 early-access)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests
+      --docker-options="-v $(pwd):/deckhouse -w /deckhouse -e "TERM=xterm-256color""
+      -- golangci-lint run
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"
+
 .Cloud layouts Tests template:
   stage: testing
   before_script:

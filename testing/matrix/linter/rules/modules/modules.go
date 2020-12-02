@@ -194,7 +194,7 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 	} else {
 		err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				return fmt.Errorf("error access '%s': %v\n", path, err)
+				return fmt.Errorf("error access '%s': %v", path, err)
 			}
 
 			// Continue if got top path

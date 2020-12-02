@@ -52,7 +52,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			data, err := base64.StdEncoding.DecodeString(configmap.Field("data.config\\.yaml").String())
 			Expect(err).To(BeNil())
 
-			data, err = ConvertYamlToJson(data)
+			data, err = ConvertYAMLToJSON(data)
 			Expect(err).To(BeNil())
 
 			connector := gjson.GetBytes(data, "connectors.0")
@@ -89,7 +89,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			data, err := base64.StdEncoding.DecodeString(configmap.Field("data.config\\.yaml").String())
 			Expect(err).To(BeNil())
 
-			data, err = ConvertYamlToJson(data)
+			data, err = ConvertYAMLToJSON(data)
 			Expect(err).To(BeNil())
 
 			connector := gjson.GetBytes(data, "connectors.0")
@@ -141,7 +141,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			data, err := base64.StdEncoding.DecodeString(configmap.Field("data.config\\.yaml").String())
 			Expect(err).To(BeNil())
 
-			data, err = ConvertYamlToJson(data)
+			data, err = ConvertYAMLToJSON(data)
 			Expect(err).To(BeNil())
 
 			githubConnector := gjson.GetBytes(data, "connectors.0")

@@ -62,9 +62,9 @@ metadata:
 			It("Hook must not fail", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				current_time := time.Now().UTC()
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.lastHeartbeatTime").Time()).Should(BeTemporally("~", current_time, time.Minute))
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.lastTransitionTime").Time()).Should(BeTemporally("~", current_time, time.Minute))
+				currentTime := time.Now().UTC()
+				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.lastHeartbeatTime").Time()).Should(BeTemporally("~", currentTime, time.Minute))
+				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.lastTransitionTime").Time()).Should(BeTemporally("~", currentTime, time.Minute))
 
 				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.message").String()).To(Equal("Status NotReady was set by node_lease_handler hook of node-manager Deckhouse module during bashible reboot step (candi/bashible/common-steps/all/099_reboot.sh)"))
 				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.reason").String()).To(Equal("KubeletReady"))
