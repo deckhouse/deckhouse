@@ -35,13 +35,8 @@ var (
 )
 
 func skipModuleImageNameIfNeeded(filePath string) bool {
-	switch filePath {
-	case
-		// Kube-apiserver 1.15 needs golang 1.12 to build, so we don't use $BASE_GOLANG_ALPINE image for building
-		"/deckhouse/modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile":
-		return true
-	}
-	return false
+	// Kube-apiserver 1.15 needs golang 1.12 to build, so we don't use $BASE_GOLANG_ALPINE image for building
+	return filePath == "/deckhouse/modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile"
 }
 
 func skipModuleIfNeeded(name string) bool {
