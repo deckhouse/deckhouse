@@ -54,9 +54,5 @@ spec:
         - --recommender-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --stderrthreshold=0
         - --v=4
-        resources:
-          requests:
-            cpu: 50m
-            memory: 200Mi
         ports:
         - containerPort: 8080

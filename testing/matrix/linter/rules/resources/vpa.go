@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -38,6 +39,7 @@ func checkVPAEnabled(values string) bool {
 }
 
 func ControllerMustHasVPA(m types.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
+
 	exceptionFunc := exclusions[m.Name]
 	if exceptionFunc == nil {
 		exceptionFunc = func(r *storage.ResourceIndex) bool { return false }
@@ -99,6 +101,32 @@ func ControllerMustHasVPA(m types.Module, values string, objectStore *storage.Un
 					object.Identity(),
 					false,
 					"No VPA is found for object",
+				))
+				continue
+			}
+
+			containers, err := object.GetContainers()
+			if err != nil {
+				lintRuleErrorsList.Add(errors.NewLintRuleError(
+					"VPA005",
+					object.Identity(),
+					false,
+					"Get containers list for the object failed: %v",
+					err,
+				))
+				continue
+			}
+			for _, container := range containers {
+				res := container.Resources.Requests
+				if res.Cpu().IsZero() && res.Memory().IsZero() {
+					continue
+				}
+
+				lintRuleErrorsList.Add(errors.NewLintRuleError(
+					"VPA005",
+					object.Identity()+"; container = "+container.Name,
+					fmt.Sprintf("cpu = %s, memory = %s", res.Cpu().String(), res.Memory().String()),
+					"The container must not have resources requests, because resources are managed by VPA",
 				))
 			}
 		}

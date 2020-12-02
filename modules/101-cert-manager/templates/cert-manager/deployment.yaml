@@ -51,10 +51,6 @@ spec:
           - --webhook-dns-names=cert-manager-webhook,cert-manager-webhook.$(POD_NAMESPACE),cert-manager-webhook.$(POD_NAMESPACE).svc
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
           env:
           - name: POD_NAMESPACE
             valueFrom:

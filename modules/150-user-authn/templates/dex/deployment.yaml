@@ -68,7 +68,3 @@ spec:
         volumeMounts:
         - name: original-config
           mountPath: /etc/dex
-        resources:
-          requests:
-            memory: 128Mi
-            cpu: 50m

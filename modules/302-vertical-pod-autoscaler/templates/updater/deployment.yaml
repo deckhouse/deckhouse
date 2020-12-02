@@ -52,9 +52,5 @@ spec:
         - --stderrthreshold=0
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --v=4
-        resources:
-          requests:
-            cpu: 50m
-            memory: 50Mi
         ports:
         - containerPort: 8080

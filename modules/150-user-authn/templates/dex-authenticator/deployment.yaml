@@ -159,10 +159,6 @@ spec:
             path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
         ports:
         - containerPort: 443
           protocol: TCP
@@ -175,8 +171,4 @@ spec:
           - "no"
           - "--bind"
           - "127.0.0.1"
-        resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
 {{- end }}
