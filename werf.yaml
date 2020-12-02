@@ -313,6 +313,10 @@ ansible:
     args:
       chdir: /deckhouse
 
+  - shell: |
+      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+        | sh -s -- -b $(go env GOPATH)/bin v1.32.2
+
 docker:
   ENV:
     ADDON_OPERATOR_NAMESPACE: tests

@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ConvertYamlToJson(yamlBytes []byte) ([]byte, error) {
+func ConvertYAMLToJSON(yamlBytes []byte) ([]byte, error) {
 	var obj interface{}
 
 	err := yaml.Unmarshal(yamlBytes, &obj)
@@ -22,7 +22,7 @@ func ConvertYamlToJson(yamlBytes []byte) ([]byte, error) {
 	return jsonBytes, nil
 }
 
-func ConvertJsonToYaml(jsonBytes []byte) ([]byte, error) {
+func ConvertJSONToYAML(jsonBytes []byte) ([]byte, error) {
 	var obj interface{}
 
 	err := json.Unmarshal(jsonBytes, &obj)

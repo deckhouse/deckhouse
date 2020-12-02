@@ -19,7 +19,7 @@ type successfulExecutionMatcher struct {
 func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bool, err error) {
 	hec, ok := actual.(*HookExecutionConfig)
 	if !ok {
-		return false, fmt.Errorf("ExecuteSuccessfully matcher expects a *HookExecutionConfig")
+		return false, fmt.Errorf("matcher ExecuteSuccessfully expects a *HookExecutionConfig")
 	}
 
 	// There is no Session for go hooks, so this matcher is just ignored

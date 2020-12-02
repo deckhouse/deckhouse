@@ -18,34 +18,34 @@ import (
 	"github.com/deckhouse/deckhouse/testing/util/helm"
 )
 
-type HelmConfig struct {
+type Config struct {
 	modulePath  string
 	objectStore object_store.ObjectStore
 	values      *values_store.ValuesStore
 	RenderError error
 }
 
-func (hec HelmConfig) ValuesGet(path string) library.KubeResult {
+func (hec Config) ValuesGet(path string) library.KubeResult {
 	return hec.values.Get(path)
 }
 
-func (hec *HelmConfig) ValuesSet(path string, value interface{}) {
+func (hec *Config) ValuesSet(path string, value interface{}) {
 	hec.values.SetByPath(path, value)
 }
 
-func (hec *HelmConfig) ValuesSetFromYaml(path, value string) {
-	hec.values.SetByPathFromYaml(path, []byte(value))
+func (hec *Config) ValuesSetFromYaml(path, value string) {
+	hec.values.SetByPathFromYAML(path, []byte(value))
 }
 
-func (hec *HelmConfig) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
+func (hec *Config) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
 	return hec.objectStore.KubernetesGlobalResource(kind, name)
 }
 
-func (hec *HelmConfig) KubernetesResource(kind, namespace, name string) object_store.KubeObject {
+func (hec *Config) KubernetesResource(kind, namespace, name string) object_store.KubeObject {
 	return hec.objectStore.KubernetesResource(kind, namespace, name)
 }
 
-func SetupHelmConfig(values string) *HelmConfig {
+func SetupHelmConfig(values string) *Config {
 	_, path, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("can't execute runtime.Caller")
@@ -58,16 +58,16 @@ func SetupHelmConfig(values string) *HelmConfig {
 		panic(err)
 	}
 
-	config := new(HelmConfig)
+	config := new(Config)
 	config.modulePath = modulePath
 
-	initialValuesJson, err := json.Marshal(initialValues)
+	initialValuesJSON, err := json.Marshal(initialValues)
 	if err != nil {
 		panic(err)
 	}
 
 	BeforeEach(func() {
-		config.values = values_store.NewStoreFromRawJson(initialValuesJson)
+		config.values = values_store.NewStoreFromRawJSON(initialValuesJSON)
 
 		// set some common values
 		config.values.SetByPath("global.discovery.kubernetesVersion", "1.17.0")
@@ -77,7 +77,7 @@ func SetupHelmConfig(values string) *HelmConfig {
 	return config
 }
 
-func (hec *HelmConfig) HelmRender() {
+func (hec *Config) HelmRender() {
 	hec.objectStore = make(object_store.ObjectStore)
 
 	yamlValuesBytes := hec.values.GetAsYaml()

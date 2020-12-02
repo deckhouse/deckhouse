@@ -44,7 +44,7 @@ global:
 flantPricing:
   internal: {}
 `
-		)
+	)
 
 	a := HookExecutionConfigInit(initValuesHybridWithCloudProvider, `{}`)
 

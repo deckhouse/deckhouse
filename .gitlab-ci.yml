@@ -51,6 +51,11 @@ Candictl Tests:
   tags:
     - werf-distributed
 
+GolangCI Lint:
+  extends: .GolangCI Lint template
+  tags:
+    - werf-distributed
+
 Cloud layouts Tests (manual):
   extends: .Cloud layouts Tests template
   tags:

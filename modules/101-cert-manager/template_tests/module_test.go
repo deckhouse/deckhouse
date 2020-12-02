@@ -134,7 +134,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
 			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
-			cert_manager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -156,9 +156,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
-			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
-			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(certManager.Exists()).To(BeTrue())
+			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
+			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
@@ -172,9 +172,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Equal
   value: "system"
 `))
-			Expect(cert_manager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(cert_manager.Field("spec.strategy").Exists()).To(BeFalse())
-			Expect(cert_manager.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
+			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
+			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
+			Expect(certManager.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 		})
 	})
 
@@ -192,7 +192,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
 			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
-			cert_manager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -224,9 +224,9 @@ podAntiAffinity:
         app: cainjector
     topologyKey: kubernetes.io/hostname
 `))
-			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
-			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(certManager.Exists()).To(BeTrue())
+			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
+			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
@@ -240,14 +240,14 @@ podAntiAffinity:
   operator: Equal
   value: "system"
 `))
-			Expect(cert_manager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
-			Expect(cert_manager.Field("spec.strategy").String()).To(MatchYAML(`
+			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate
 rollingUpdate:
   maxSurge: 0
   maxUnavailable: 1
 `))
-			Expect(cert_manager.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
+			Expect(certManager.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
 podAntiAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
   - labelSelector:
@@ -272,7 +272,7 @@ podAntiAffinity:
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
 			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
-			cert_manager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -293,9 +293,9 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.strategy").Exists()).To(BeTrue())
 			Expect(cainjector.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
-			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
-			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(certManager.Exists()).To(BeTrue())
+			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
+			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
@@ -309,9 +309,9 @@ podAntiAffinity:
   operator: Equal
   value: "system"
 `))
-			Expect(cert_manager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(cert_manager.Field("spec.strategy").Exists()).To(BeFalse())
-			Expect(cert_manager.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
+			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
+			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
+			Expect(certManager.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 		})
 	})
 
@@ -329,7 +329,7 @@ podAntiAffinity:
 			registrySecret := f.KubernetesResource("Secret", "d8-cert-manager", "deckhouse-registry")
 
 			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
-			cert_manager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			certManager := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -361,9 +361,9 @@ podAntiAffinity:
         app: cainjector
     topologyKey: kubernetes.io/hostname
 `))
-			Expect(cert_manager.Exists()).To(BeTrue())
-			Expect(cert_manager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
-			Expect(cert_manager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(certManager.Exists()).To(BeTrue())
+			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
+			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.flant.com
   operator: Equal
   value: "cert-manager"
@@ -377,14 +377,14 @@ podAntiAffinity:
   operator: Equal
   value: "system"
 `))
-			Expect(cert_manager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
-			Expect(cert_manager.Field("spec.strategy").String()).To(MatchYAML(`
+			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate
 rollingUpdate:
   maxSurge: 0
   maxUnavailable: 1
 `))
-			Expect(cert_manager.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
+			Expect(certManager.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
 podAntiAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
   - labelSelector:

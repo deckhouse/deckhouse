@@ -35,7 +35,7 @@ spec:
     virtualIPAddresses:
     - address: 1.2.2.2/32
 `
-	keepalivedInstanceWithNotUniqueId = `
+	keepalivedInstanceWithNotUniqueID = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: KeepalivedInstance
@@ -160,7 +160,7 @@ var _ = Describe("Keepalived hooks :: keepalived instance handler ::", func() {
 
 	Context("Two keepalived instances with non-unique vrrpInstances[].id", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(keepalivedInstance + keepalivedInstanceWithNotUniqueId))
+			f.BindingContexts.Set(f.KubeStateSet(keepalivedInstance + keepalivedInstanceWithNotUniqueID))
 			f.RunHook()
 		})
 

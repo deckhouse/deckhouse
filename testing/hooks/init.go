@@ -117,11 +117,11 @@ func (hec *HookExecutionConfig) ConfigValuesDelete(path string) {
 }
 
 func (hec *HookExecutionConfig) ValuesSetFromYaml(path string, value []byte) {
-	hec.values.SetByPathFromYaml(path, value)
+	hec.values.SetByPathFromYAML(path, value)
 }
 
 func (hec *HookExecutionConfig) ConfigValuesSetFromYaml(path string, value []byte) {
-	hec.configValues.SetByPathFromYaml(path, value)
+	hec.configValues.SetByPathFromYAML(path, value)
 }
 
 func (hec *HookExecutionConfig) AddHookEnv(env string) {
@@ -326,8 +326,8 @@ func (hec *HookExecutionConfig) RunHook() {
 
 		ValuesFile                *os.File
 		ConfigValuesFile          *os.File
-		ValuesJsonPatchFile       *os.File
-		ConfigValuesJsonPatchFile *os.File
+		ValuesJSONPatchFile       *os.File
+		ConfigValuesJSONPatchFile *os.File
 		BindingContextFile        *os.File
 		KubernetesPatchSetFile    *os.File
 		MetricsFile               *os.File
@@ -355,7 +355,7 @@ func (hec *HookExecutionConfig) RunHook() {
 
 	if os.Getenv("KCOV_DISABLED") != "yes" {
 		// let's re-run --config again, but this time with kcov wrapper
-		// it is required since kcov quitely eats all the stdout
+		// it is required since kcov quietly eats all the stdout
 		kcovConfigCmd := &exec.Cmd{
 			Path: hec.HookPath,
 			Args: []string{hec.HookPath, "--config"},
@@ -374,9 +374,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	var parsedConfig json.RawMessage
 	Expect(yaml.Unmarshal(out, &parsedConfig)).To(Succeed())
 
-	Expect(hec.values.JsonRepr).ToNot(BeEmpty())
+	Expect(hec.values.JSONRepr).ToNot(BeEmpty())
 
-	Expect(hec.configValues.JsonRepr).ToNot(BeEmpty())
+	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -391,13 +391,13 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(err).ShouldNot(HaveOccurred())
 	hookEnvs = append(hookEnvs, "CONFIG_VALUES_PATH="+ConfigValuesFile.Name())
 
-	ValuesJsonPatchFile, err = TempFileWithPerms(tmpDir, "", 0o777)
+	ValuesJSONPatchFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
-	hookEnvs = append(hookEnvs, "VALUES_JSON_PATCH_PATH="+ValuesJsonPatchFile.Name())
+	hookEnvs = append(hookEnvs, "VALUES_JSON_PATCH_PATH="+ValuesJSONPatchFile.Name())
 
-	ConfigValuesJsonPatchFile, err = TempFileWithPerms(tmpDir, "", 0o777)
+	ConfigValuesJSONPatchFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
-	hookEnvs = append(hookEnvs, "CONFIG_VALUES_JSON_PATCH_PATH="+ConfigValuesJsonPatchFile.Name())
+	hookEnvs = append(hookEnvs, "CONFIG_VALUES_JSON_PATCH_PATH="+ConfigValuesJSONPatchFile.Name())
 
 	BindingContextFile, err = TempFileWithPerms(tmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -419,8 +419,8 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	options := []sandbox_runner.SandboxOption{
-		sandbox_runner.WithFile(ValuesFile.Name(), hec.values.JsonRepr),
-		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JsonRepr),
+		sandbox_runner.WithFile(ValuesFile.Name(), hec.values.JSONRepr),
+		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JSONRepr),
 		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContexts.JSON)),
 	}
 	if os.Getenv("KCOV_DISABLED") != "yes" {
@@ -430,30 +430,30 @@ func (hec *HookExecutionConfig) RunHook() {
 
 	hec.Session = sandbox_runner.Run(hookCmd, options...)
 
-	valuesJsonPatchBytes, err := ioutil.ReadAll(ValuesJsonPatchFile)
+	valuesJSONPatchBytes, err := ioutil.ReadAll(ValuesJSONPatchFile)
 	Expect(err).ShouldNot(HaveOccurred())
-	configValuesJsonPatchBytes, err := ioutil.ReadAll(ConfigValuesJsonPatchFile)
+	configValuesJSONPatchBytes, err := ioutil.ReadAll(ConfigValuesJSONPatchFile)
 	Expect(err).ShouldNot(HaveOccurred())
 	kubernetesPatchBytes, err := ioutil.ReadAll(KubernetesPatchSetFile)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	// TODO: take a closer look and refactor into a function
-	if len(valuesJsonPatchBytes) != 0 {
-		patch, err := addonutils.JsonPatchFromBytes(valuesJsonPatchBytes)
+	if len(valuesJSONPatchBytes) != 0 {
+		patch, err := addonutils.JsonPatchFromBytes(valuesJSONPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		patchedValuesBytes, err := patch.Apply(hec.values.JsonRepr)
+		patchedValuesBytes, err := patch.Apply(hec.values.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
-		hec.values = values_store.NewStoreFromRawJson(patchedValuesBytes)
+		hec.values = values_store.NewStoreFromRawJSON(patchedValuesBytes)
 	}
 
-	if len(configValuesJsonPatchBytes) != 0 {
-		patch, err := addonutils.JsonPatchFromBytes(configValuesJsonPatchBytes)
+	if len(configValuesJSONPatchBytes) != 0 {
+		patch, err := addonutils.JsonPatchFromBytes(configValuesJSONPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		patchedConfigValuesBytes, err := patch.Apply(hec.configValues.JsonRepr)
+		patchedConfigValuesBytes, err := patch.Apply(hec.configValues.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
-		hec.configValues = values_store.NewStoreFromRawJson(patchedConfigValuesBytes)
+		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
 	}
 
 	if len(kubernetesPatchBytes) != 0 {
@@ -480,14 +480,14 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	err = hec.KubeStateToKubeObjects()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	Expect(hec.values.JsonRepr).ToNot(BeEmpty())
+	Expect(hec.values.JSONRepr).ToNot(BeEmpty())
 
-	Expect(hec.configValues.JsonRepr).ToNot(BeEmpty())
+	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
-	values, err := addonutils.NewValuesFromBytes(hec.values.JsonRepr)
+	values, err := addonutils.NewValuesFromBytes(hec.values.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JsonRepr)
+	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	hookInput := &sdk.HookInput{
@@ -506,15 +506,15 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	if out.MemoryValuesPatches != nil {
-		patchedValuesBytes, err := out.MemoryValuesPatches.Apply(hec.values.JsonRepr)
+		patchedValuesBytes, err := out.MemoryValuesPatches.Apply(hec.values.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
-		hec.values = values_store.NewStoreFromRawJson(patchedValuesBytes)
+		hec.values = values_store.NewStoreFromRawJSON(patchedValuesBytes)
 	}
 
 	if out.ConfigValuesPatches != nil {
-		patchedConfigValuesBytes, err := out.ConfigValuesPatches.Apply(hec.configValues.JsonRepr)
+		patchedConfigValuesBytes, err := out.ConfigValuesPatches.Apply(hec.configValues.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
-		hec.configValues = values_store.NewStoreFromRawJson(patchedConfigValuesBytes)
+		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
 	}
 
 	hec.GoHookOut = out

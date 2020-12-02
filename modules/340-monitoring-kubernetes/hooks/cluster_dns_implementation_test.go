@@ -16,7 +16,7 @@ import (
 
 var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: cluster_dns_implementation ::", func() {
 	const (
-		coreDnsDeployment = `
+		coreDNSDeployment = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,7 +41,7 @@ spec:
         name: coredns
         resources: {}
 `
-		kubeDnsDeployment = `
+		kubeDNSDeployment = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -73,7 +73,7 @@ spec:
 
 	Context("Cluster with kube-dns", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(kubeDnsDeployment))
+			f.BindingContexts.Set(f.KubeStateSet(kubeDNSDeployment))
 			f.RunHook()
 		})
 
@@ -85,7 +85,7 @@ spec:
 
 	Context("Cluster with coredns", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(coreDnsDeployment))
+			f.BindingContexts.Set(f.KubeStateSet(coreDNSDeployment))
 			f.RunHook()
 		})
 
@@ -97,7 +97,7 @@ spec:
 
 	Context("KubeDNS module enabled with kube-dns deployment", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(kubeDnsDeployment))
+			f.BindingContexts.Set(f.KubeStateSet(kubeDNSDeployment))
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["kube-dns"]`))
 			f.RunHook()
 		})

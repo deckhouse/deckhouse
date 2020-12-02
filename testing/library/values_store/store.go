@@ -15,83 +15,83 @@ import (
 
 type ValuesStore struct {
 	Values   map[string]interface{} // since we aren't operating on concrete types yet, this field remains unused
-	JsonRepr []byte
+	JSONRepr []byte
 }
 
 func NewStoreFromRawYaml(rawYaml []byte) (*ValuesStore, error) {
-	jsonRaw, err := ConvertYamlToJson(rawYaml)
+	jsonRaw, err := ConvertYAMLToJSON(rawYaml)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ValuesStore{
-		JsonRepr: jsonRaw,
+		JSONRepr: jsonRaw,
 	}, nil
 }
 
-func NewStoreFromRawJson(rawJson []byte) *ValuesStore {
+func NewStoreFromRawJSON(rawJSON []byte) *ValuesStore {
 	return &ValuesStore{
-		JsonRepr: rawJson,
+		JSONRepr: rawJSON,
 	}
 }
 
 func (store *ValuesStore) Get(path string) library.KubeResult {
-	gjsonResult := gjson.GetBytes(store.JsonRepr, path)
+	gjsonResult := gjson.GetBytes(store.JSONRepr, path)
 	kubeResult := library.KubeResult{Result: gjsonResult}
 	return kubeResult
 }
 
 func (store *ValuesStore) GetAsYaml() []byte {
-	yamlRaw, err := ConvertJsonToYaml(store.JsonRepr)
+	yamlRaw, err := ConvertJSONToYAML(store.JSONRepr)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	return yamlRaw
 }
 
 func (store *ValuesStore) SetByPath(path string, value interface{}) {
-	newValues, err := sjson.SetBytes(store.JsonRepr, path, value)
+	newValues, err := sjson.SetBytes(store.JSONRepr, path, value)
 	if err != nil {
-		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to set values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JsonRepr)
+		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to set values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JSONRepr)
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 
-	store.JsonRepr = newValues
+	store.JSONRepr = newValues
 
 }
 
-func (store *ValuesStore) SetByPathFromYaml(path string, yamlRaw []byte) {
-	jsonRaw, err := ConvertYamlToJson(yamlRaw)
+func (store *ValuesStore) SetByPathFromYAML(path string, yamlRaw []byte) {
+	jsonRaw, err := ConvertYAMLToJSON(yamlRaw)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
-	newValues, err := sjson.SetRawBytes(store.JsonRepr, path, jsonRaw)
+	newValues, err := sjson.SetRawBytes(store.JSONRepr, path, jsonRaw)
 	if err != nil {
-		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to set values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JsonRepr)
+		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to set values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JSONRepr)
 	}
 
-	store.JsonRepr = newValues
+	store.JSONRepr = newValues
 }
 
-func (store *ValuesStore) SetByPathFromJson(path string, jsonRaw []byte) {
-	newValues, err := sjson.SetRawBytes(store.JsonRepr, path, jsonRaw)
+func (store *ValuesStore) SetByPathFromJSON(path string, jsonRaw []byte) {
+	newValues, err := sjson.SetRawBytes(store.JSONRepr, path, jsonRaw)
 	if err != nil {
-		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to set values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JsonRepr)
+		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to set values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JSONRepr)
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 
-	store.JsonRepr = newValues
+	store.JSONRepr = newValues
 }
 
 func (store *ValuesStore) DeleteByPath(path string) {
-	newValues, err := sjson.DeleteBytes(store.JsonRepr, path)
+	newValues, err := sjson.DeleteBytes(store.JSONRepr, path)
 	if err != nil {
-		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to delete values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JsonRepr)
+		_, _ = fmt.Fprintf(ginkgo.GinkgoWriter, "failed to delete values by path \"%s\": %s\n\nin JSON:\n%s", path, err, store.JSONRepr)
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 
-	store.JsonRepr = newValues
+	store.JSONRepr = newValues
 }
 
-func ConvertYamlToJson(yamlBytes []byte) ([]byte, error) {
+func ConvertYAMLToJSON(yamlBytes []byte) ([]byte, error) {
 	var obj interface{}
 
 	err := yaml.Unmarshal(yamlBytes, &obj)
@@ -107,7 +107,7 @@ func ConvertYamlToJson(yamlBytes []byte) ([]byte, error) {
 	return jsonBytes, nil
 }
 
-func ConvertJsonToYaml(jsonBytes []byte) ([]byte, error) {
+func ConvertJSONToYAML(jsonBytes []byte) ([]byte, error) {
 	var obj interface{}
 
 	err := json.Unmarshal(jsonBytes, &obj)

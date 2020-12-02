@@ -1,10 +1,12 @@
 package hooks
 
 import (
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func Test(t *testing.T) {

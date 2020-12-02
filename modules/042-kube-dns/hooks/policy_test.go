@@ -13,6 +13,7 @@ package hooks
 
 import (
 	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -47,7 +48,7 @@ metadata:
 		}
 		return result
 	}
-	kubeDnsNodes := func(quantity int) string {
+	kubeDNSNodes := func(quantity int) string {
 		result := ``
 		for i := 1; i <= quantity; i++ {
 			result += fmt.Sprintf(`---
@@ -82,7 +83,7 @@ metadata:
 
 	Context("With 2 Master nodes and 2 specific nodes in a cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(kubeMasterNodes(3) + kubeDnsNodes(1)))
+			f.BindingContexts.Set(f.KubeStateSet(kubeMasterNodes(3) + kubeDNSNodes(1)))
 			f.RunHook()
 		})
 
@@ -98,7 +99,7 @@ metadata:
 
 	Context("With Master node and 4 specific nodes in a cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(kubeMasterNodes(1) + kubeDnsNodes(4)))
+			f.BindingContexts.Set(f.KubeStateSet(kubeMasterNodes(1) + kubeDNSNodes(4)))
 			f.RunHook()
 		})
 

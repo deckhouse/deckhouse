@@ -9,15 +9,14 @@ User-stories:
 package hooks
 
 import (
+	"github.com/flant/addon-operator/sdk"
+	_ "github.com/flant/addon-operator/sdk/registry"
+	hook "github.com/flant/shell-operator/pkg/hook/binding_context"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
-
-	"github.com/flant/addon-operator/sdk"
-	_ "github.com/flant/addon-operator/sdk/registry"
-	"github.com/flant/shell-operator/pkg/hook/binding_context"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 )
 
 var _ = Describe("Prometheus hooks :: alertmanager discovery ::", func() {
@@ -171,7 +170,6 @@ var _ = Describe("Prometheus hooks :: alertmanager discovery :: go funcs ::", fu
 			m := out.(map[string][]interface{})
 			Expect(m["long-term"]).Should(HaveLen(1))
 			Expect(m["prom-one"]).Should(HaveLen(2))
-			//`{"long-term":[{"name":"srvLongTerm","namespace":"nsOne","pathPrefix":"/long-prom","port":9090}],"prom-one":[{"name":"srvOne","namespace":"nsOne","pathPrefix":"/prom","port":12},{"name":"srvTwo","namespace":"nsTwo","pathPrefix":"/prom-two","port":"prom-port"}]}`))
 		})
 	})
 })

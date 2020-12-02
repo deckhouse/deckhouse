@@ -51,7 +51,7 @@ const testCRDsWithAllowAccessToSystemNamespaces = `---
       name: cluster-write-all
 `
 
-const testCRDsWithCrdsKey = `---
+const testCRDsWithCRDsKey = `---
 crds:
   - name: testenev
     spec:
@@ -69,7 +69,7 @@ crds:
         name: cluster-write-all
 `
 
-var testCRDsWithCrdsKeyJson, _ = ConvertYamlToJson([]byte(testCRDsWithCrdsKey))
+var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCRDsWithCRDsKey))
 
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -159,7 +159,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("Secret", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCrdsKeyJson))
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
 		})
 	})
 

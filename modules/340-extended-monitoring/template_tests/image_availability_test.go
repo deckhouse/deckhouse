@@ -14,7 +14,7 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-func checkImageAvailabilityObjects(hec *HelmConfig, exist bool) {
+func checkImageAvailabilityObjects(hec *Config, exist bool) {
 	matcher := BeFalse()
 	if exist {
 		matcher = BeTrue()

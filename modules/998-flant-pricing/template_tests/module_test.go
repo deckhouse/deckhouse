@@ -66,8 +66,8 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 			f.ValuesSetFromYaml("flantPricing", moduleValues)
 			f.HelmRender()
 		})
-		nsName:="d8-flant-pricing"
-		chartName:="flant-pricing"
+		nsName := "d8-flant-pricing"
+		chartName := "flant-pricing"
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
@@ -79,8 +79,8 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 			ds := f.KubernetesResource("DaemonSet", nsName, chartName)
 			s := f.KubernetesResource("Secret", nsName, "grafana-agent-config")
 			pm := f.KubernetesResource("PodMonitor", nsName, chartName)
-			cr := f.KubernetesGlobalResource("ClusterRole", "d8:" + chartName + ":flant-pricing")
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:" + chartName + ":flant-pricing")
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":flant-pricing")
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":flant-pricing")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())

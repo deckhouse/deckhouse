@@ -160,20 +160,21 @@ spec:
 	}
   }
 ]
-`))})
+`))
 				})
+			})
 
-				Context("With deleting PrometheusRemoteWrite CR", func() {
-					BeforeEach(func() {
-						f.BindingContexts.Set(f.KubeStateSet(""))
-						f.RunHook()
-					})
-					It("Should delete entry from internal values", func() {
-						Expect(f).To(ExecuteSuccessfully())
-						Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-						Expect(f.ValuesGet("prometheus.internal.remoteWrite").String()).To(Equal("[]"))
-					})
+			Context("With deleting PrometheusRemoteWrite CR", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(""))
+					f.RunHook()
+				})
+				It("Should delete entry from internal values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+					Expect(f.ValuesGet("prometheus.internal.remoteWrite").String()).To(Equal("[]"))
 				})
 			})
 		})
 	})
+})
