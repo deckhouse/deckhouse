@@ -1,4 +1,5 @@
-FROM ubuntu:18.04
+ARG BASE_UBUNTU
+FROM $BASE_UBUNTU
 
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 

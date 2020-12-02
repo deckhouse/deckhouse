@@ -6,7 +6,6 @@ global:
     registryDockercfg: registry.example.com
     tags:
       userAuthn:
-        busybox: tagstring
         cfssl: tagstring
         crowdBasicAuthProxy: tagstring
         dex: tagstring

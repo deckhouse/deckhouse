@@ -1,4 +1,5 @@
 ARG BASE_ALPINE
+ARG BASE_DEBIAN
 FROM grafana/build-container:1.2.19
 RUN mkdir -p /go/src/github.com/grafana/grafana && \
     curl -LSs https://github.com/grafana/grafana/archive/v7.0.6.tar.gz | tar -xz --strip-components=1 -C /go/src/github.com/grafana/grafana
@@ -18,7 +19,7 @@ RUN apk add --no-cache git && \
     cd /plugin && \
     git clone --branch v0.3.0 https://github.com/flant/grafana-statusmap.git .
 
-FROM debian:9
+FROM $BASE_DEBIAN
 COPY --from=0 /grafana.deb /
 COPY --from=1 /plugin/dist /plugin-dist
 RUN apt-get update && \
