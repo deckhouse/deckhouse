@@ -53,8 +53,8 @@ deckhouse:
 | InitConfiguration              | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
 | StaticClusterConfiguration     | Конфигурация статического кластера Kubernetes | [candi/openapi/static_cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/static_cluster_configuration.yaml)|
 | OpenStackClusterConfiguration  | Конфигурации кластера Kubernetes в OpenStack | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
-| AWSClusterConfiguration   | Конфигурации кластера Kubernetes в AWS | [candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/aws/openapi/cluster_configuration.yaml) |
-| GCPClusterConfiguration   | Конфигурации кластера Kubernetes в GCP | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
+| AWSClusterConfiguration        | Конфигурации кластера Kubernetes в AWS | [candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/aws/openapi/cluster_configuration.yaml) |
+| GCPClusterConfiguration        | Конфигурации кластера Kubernetes в GCP | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
 | VsphereClusterConfiguration    | Конфигурации кластера Kubernetes в VSphere | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
 | YandexClusterConfiguration     | Конфигурации кластера Kubernetes в Yandex | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
 | BashibleTemplateData           | Данные для компиляции Bashible Bundle (используется только для candictl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
@@ -80,6 +80,21 @@ deckhouse:
 > State terraform'а будет сохранен в secret в namespace'е d8-system после каждой фазы
 
 **Внимание!!** для bare metal кластеров terraform не выполняется, вместо этого обязательным становится параметр командной строки `--ssh-host`, чтобы candictl знал, куда ему нужно подключиться.
+
+
+#### Static-cluster
+При первоначальной настройке статического кластера terraform не используется. Данные, которые при использовании облачных 
+провайдеров мы получаем из terraform, для статических кластеров необходимо указывать в специальной конфигурации - StaticCusterConfiguration.
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.0.0/24
+```
+
+В качестве `internalNetworkCIDRs` необходимо указать список сетей, адреса из которых будут использоваться  как внутренние адреса нод (InternalIP).
 
 #### Подготовительный этап
 Во время подготовительного этапа происходит:
@@ -122,7 +137,7 @@ Bundle представляет собой tar-архив со всеми нео
  
  Состояние `Ready` - сигнал для `candictl`, что можно создать в кластере объект `NodeGroup` для master-узлов.
  
-#### Создание дополнительных master-узлов и статических узлов
+#### Создание дополнительных master-узлов и stateful-узлов
 При создании дополнительных узлов candictl взаимодействует с API Kubernetes. 
 * Создает необходимые NodeGroup объекты
 * Дожидается появления Secret'ов, содержащих cloud-config для создания узлов в этой группе
