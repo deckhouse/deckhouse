@@ -32,6 +32,7 @@ data:
        version: 1
        isDefault: true
        jsonData:
+         httpMethod: POST
          timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
 {{- if ne (int .Values.prometheus.longtermRetentionDays) 0 }}
      - name: longterm
@@ -41,6 +42,7 @@ data:
        url: /trickster/longterm
        version: 1
        jsonData:
+         httpMethod: POST
          timeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- end }}
 {{- if (include "helm_lib_ha_enabled" .) }}
@@ -51,6 +53,7 @@ data:
        url: /prometheus-main-0
        version: 1
        jsonData:
+         httpMethod: POST
          timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
      - name: main-uncached-1
        type: prometheus
@@ -59,6 +62,7 @@ data:
        url: /prometheus-main-1
        version: 1
        jsonData:
+         httpMethod: POST
          timeInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
 {{- end }}
 {{ if .Values.prometheus.internal.grafana.additionalDatasources }}
