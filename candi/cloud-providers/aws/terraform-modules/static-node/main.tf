@@ -54,3 +54,17 @@ resource "aws_instance" "node" {
     ]
   }
 }
+
+resource "aws_eip" "eip" {
+  count = var.associate_public_ip_address ? 1 : 0
+  vpc = true
+  tags = merge(var.tags, {
+    Name = "${var.prefix}-${var.node_group.name}-${var.node_index}"
+  })
+}
+
+resource "aws_eip_association" "eip" {
+  count = var.associate_public_ip_address ? 1 : 0
+  instance_id = aws_instance.node.id
+  allocation_id = aws_eip.eip[0].id
+}

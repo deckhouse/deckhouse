@@ -114,7 +114,8 @@ apiVersions:
         properties:
           associatePublicIPToMasters:
             type: boolean
-            default: true
+          associatePublicIPToNodes:
+            type: boolean
       withoutNAT:
         type: object
         additionalProperties: false

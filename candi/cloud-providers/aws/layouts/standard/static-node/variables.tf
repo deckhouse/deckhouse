@@ -27,6 +27,7 @@ data "aws_availability_zones" "available" {}
 
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
+  associate_public_ip_to_nodes = lookup(var.providerClusterConfiguration.standard, "associatePublicIPToNodes", false)
   node_groups = lookup(var.providerClusterConfiguration, "nodeGroups", [])
   node_group = [for i in local.node_groups: i if i.name == var.nodeGroupName][0]
   root_volume_size = lookup(local.node_group.instanceClass, "diskSizeGb", 20)
