@@ -7,7 +7,8 @@ title: "Cloud provider — AWS: Развертывание"
 * `layout` — архитектура расположения ресурсов в облаке.
   * Варианты — `Standard` или `WithoutNAT` (описание ниже).
 * `standard` — настройки для лейаута `Standard`.
-  * `associatePublicIPToMasters` — выдать ли мастерам публичные IP. По умолчанию — `true`.
+  * `associatePublicIPToMasters` — выдать ли мастерам публичные IP. По умолчанию — `false`.
+  * `associatePublicIPToNodes` — выдать ли нодам публичные IP. По умолчанию — `false`.
 * `provider` — параметры подключения к API AWS.
   * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
   * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
@@ -73,7 +74,7 @@ title: "Cloud provider — AWS: Развертывание"
 
 ### Standard
 
-В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway. Исключение — master, который опционально может получить публичный IP.
+В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway. Все узлы, созданные с помощью candi, опционально могут получить публичный IP (ElasticIP).
 
 > Если используется master без белого IP и bastion находится в другой VPC, то в процессе установки после создания base-infrastructure
 > необходимо будет вручную настроить peering между VPC с bastion'ом и VPC кластера. Чтобы избежать этой проблемы,
@@ -92,6 +93,7 @@ provider:
   region: eu-central-1
 standard:
   associatePublicIPToMasters: true # Выделить ли мастерам белые IP. Если не выделять, то потребуется вручную поднимать бастион.
+  associatePublicIPToNodes: true # Выделить ли нодам белые IP.
 masterNodeGroup:
   replicas: 1 # Если будет больше одного мастера, то etcd-кластер соберётся автоматически.
   instanceClass:
@@ -117,7 +119,7 @@ tags:
 
 ### WithoutNAT
 
-В данной схеме каждой ноде присваивается публичный IP. NAT не используется совсем.
+В данной схеме каждой ноде присваивается публичный IP (ElasticIP). NAT не используется совсем.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQDR2iRcFO3Ra3hmdrYCuoHPP6m3DCArtZjmbQGMJL00xmR-F94IMJKx2jKqeiwe-KvbykqtCEjsR9c/pub?w=812&h=655)
 <!--- Исходник: https://docs.google.com/drawings/d/1JDmeSY12EoZ3zBfanEDY-QvSgLekzw6Tzjj2pgY8giM/edit --->
