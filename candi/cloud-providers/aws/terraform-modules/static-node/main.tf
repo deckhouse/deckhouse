@@ -17,10 +17,6 @@ locals {
   zone = element(local.zones, var.node_index)
 }
 
-data "aws_security_group" "ssh-accessible" {
-  name = "${var.prefix}-ssh-accessible"
-}
-
 data "aws_security_group" "node" {
   name = "${var.prefix}-node"
 }
@@ -30,7 +26,7 @@ resource "aws_instance" "node" {
   instance_type   = var.node_group.instanceClass.instanceType
   key_name        = var.prefix
   subnet_id       = local.zone_to_subnet_id_map[local.zone]
-  vpc_security_group_ids = concat([data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id], var.additional_security_groups)
+  vpc_security_group_ids = concat([data.aws_security_group.node.id], var.additional_security_groups)
   source_dest_check = false
   associate_public_ip_address = var.associate_public_ip_address
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)

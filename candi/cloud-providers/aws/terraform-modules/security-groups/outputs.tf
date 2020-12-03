@@ -1,5 +1,5 @@
 output "additional_security_groups" {
-  value = [aws_security_group.node.id, aws_security_group.ssh-accessible.id]
+  value = [aws_security_group.node.id]
 }
 
 output "load_balancer_security_group" {
