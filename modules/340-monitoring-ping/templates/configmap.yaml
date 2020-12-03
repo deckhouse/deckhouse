@@ -7,4 +7,4 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | indent 2 }}
 data:
   targets.json: >
-    {{ .Values.monitoringPing.targets | toJson }}
+    {{ .Values.monitoringPing.internal.targets | toJson }}

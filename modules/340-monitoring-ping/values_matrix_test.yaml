@@ -20,10 +20,11 @@ global:
           - "test-2/master"
 
 monitoringPing:
-  externalTargets:
-    __ConstantChoices__:
-    - []
-    -
+  internal:
+    externalTargets:
+      __ConstantChoices__:
+      - []
+      -
       - name: google-primary
         host: 8.8.8.8
       - name: yaru

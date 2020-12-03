@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: v1
+      kind: Node
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "ipAddress": (.status.addresses | map(select(.type=="InternalIP").address) | sort | first)
+        }
+EOF
+}
+
+function __main__() {
+  external_targets="$(values::jq --config -rc '.monitoringPing.externalTargets // [] | sort ')"
+  # shellcheck disable=SC2016
+  targets="$(context::jq -rc --argjson external_targets "$external_targets" '{cluster_targets: (.snapshots.nodes | map(.filterResult) | sort), external_targets: $external_targets}')"
+  values::set monitoringPing.internal.targets "$targets"
+}
+
+hook::run "$@"

@@ -1,1 +1,2 @@
-monitoringPing: {}
+monitoringPing:
+  internal: {}
