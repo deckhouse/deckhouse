@@ -1,6 +1,5 @@
 adal==1.2.0
 asn1crypto==0.24.0
-better-exchook==1.20190103.160956
 cachetools==3.0.0
 certifi==2018.11.29
 cffi==1.11.5
