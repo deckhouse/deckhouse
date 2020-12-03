@@ -45,5 +45,5 @@ func StartSilentLoop(name string, attemptsQuantity, waitSeconds int, task func()
 
 		return nil
 	}
-	return fmt.Errorf("timeout while %s: last error: %v", name, err)
+	return fmt.Errorf("timeout while %q: last error: %v", name, err)
 }

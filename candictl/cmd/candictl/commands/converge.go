@@ -19,9 +19,10 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
+	app.DefineKubeFlags(cmd)
 
 	runFunc := func(sshClient *ssh.Client) error {
-		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
 			return err
 		}
@@ -49,12 +50,18 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
-		if err := operations.AskBecomePassword(); err != nil {
-			return err
+		var sshClient *ssh.Client
+		var err error
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
+
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
 		return runFunc(sshClient)

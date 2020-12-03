@@ -149,7 +149,7 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 	if data, ok := m.StaticClusterConfig["internalNetworkCIDRs"]; ok {
 		err := json.Unmarshal(data, &internalNetworkCIDRs)
 		if err != nil {
-			log.DebugF("unmarshalling internalNetworkCIDRs: %v", err)
+			log.DebugF("unmarshalling internalNetworkCIDRs: %v\n", err)
 			return static
 		}
 	}
@@ -397,7 +397,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 func getDNSAddress(serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		log.DebugF("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		log.DebugLn("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
 		return ""
 	}
 

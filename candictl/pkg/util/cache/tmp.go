@@ -7,7 +7,16 @@ import (
 	"flant/candictl/pkg/app"
 )
 
-func ClearTMPDir() {
+func ClearTerraformDir() {
+	// do not clean tmp dir, because user may need temporary files to debug terraform
+	if app.IsDebug {
+		return
+	}
+
+	_ = os.RemoveAll(filepath.Join(app.TmpDirName, "tf_candictl"))
+}
+
+func ClearTemporaryDirs() {
 	// do not clean tmp dir, because user may need temporary files to debug terraform
 	if app.IsDebug {
 		return

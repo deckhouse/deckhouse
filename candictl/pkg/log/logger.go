@@ -53,13 +53,17 @@ type Logger interface {
 
 	LogInfoF(format string, a ...interface{})
 	LogInfoLn(a ...interface{})
+
 	LogErrorF(format string, a ...interface{})
 	LogErrorLn(a ...interface{})
 
 	LogDebugF(format string, a ...interface{})
+	LogDebugLn(a ...interface{})
+
+	LogWarnF(format string, a ...interface{})
+	LogWarnLn(a ...interface{})
 
 	LogSuccess(string)
-	LogWarnLn(string)
 	LogFail(string)
 
 	LogJSON([]byte)
@@ -92,6 +96,8 @@ func NewPrettyLogger() *PrettyLogger {
 	}
 	logboek.SetLevel(logboek.Info)
 	logboek.SetWidth(logboek.DefaultWidth)
+	// Adds fixed width ↵ , but breaks copy-pasta and tabs
+	// logboek.EnableFitMode()
 
 	return &PrettyLogger{
 		processTitles: map[string]styleEntry{
@@ -134,6 +140,12 @@ func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
 	}
 }
 
+func (d *PrettyLogger) LogDebugLn(a ...interface{}) {
+	if app.IsDebug {
+		logboek.LogInfoLn(a...)
+	}
+}
+
 func (d *PrettyLogger) LogSuccess(l string) {
 	d.LogInfoF("🎉 %s", l)
 }
@@ -142,8 +154,14 @@ func (d *PrettyLogger) LogFail(l string) {
 	d.LogInfoF("️⛱️️ %s", l)
 }
 
-func (d *PrettyLogger) LogWarnLn(l string) {
-	d.LogInfoF(color.New(color.Bold, color.FgHiWhite).Sprintf("❗❗  %s", l))
+func (d *PrettyLogger) LogWarnLn(a ...interface{}) {
+	a = append([]interface{}{"❗❗ "}, a...)
+	d.LogInfoLn(color.New(color.Bold, color.FgHiWhite).Sprint(a...))
+}
+
+func (d *PrettyLogger) LogWarnF(format string, a ...interface{}) {
+	line := color.New(color.Bold, color.FgHiWhite).Sprintf("❗❗ "+format, a...)
+	d.LogInfoF(line)
 }
 
 func (d *PrettyLogger) LogJSON(content []byte) {
@@ -220,6 +238,12 @@ func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
 	}
 }
 
+func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
+	if app.IsDebug {
+		d.logger.Debugln(a...)
+	}
+}
+
 func (d *SimpleLogger) LogSuccess(l string) {
 	d.logger.WithField("status", "SUCCESS").Infoln(l)
 }
@@ -228,8 +252,12 @@ func (d *SimpleLogger) LogFail(l string) {
 	d.logger.WithField("status", "FAIL").Errorln(l)
 }
 
-func (d *SimpleLogger) LogWarnLn(l string) {
-	d.logger.Warnln(l)
+func (d *SimpleLogger) LogWarnF(format string, a ...interface{}) {
+	d.logger.Warnf(format, a...)
+}
+
+func (d *SimpleLogger) LogWarnLn(a ...interface{}) {
+	d.logger.Warnln(a...)
 }
 
 func (d *SimpleLogger) LogJSON(content []byte) {
@@ -272,6 +300,12 @@ func (d *DummyLogger) LogDebugF(format string, a ...interface{}) {
 	}
 }
 
+func (d *DummyLogger) LogDebugLn(a ...interface{}) {
+	if app.IsDebug {
+		fmt.Println(a...)
+	}
+}
+
 func (d *DummyLogger) LogSuccess(l string) {
 	fmt.Println(l)
 }
@@ -280,8 +314,12 @@ func (d *DummyLogger) LogFail(l string) {
 	fmt.Println(l)
 }
 
-func (d *DummyLogger) LogWarnLn(l string) {
-	fmt.Println(l)
+func (d *DummyLogger) LogWarnLn(a ...interface{}) {
+	fmt.Println(a...)
+}
+
+func (d *DummyLogger) LogWarnF(format string, a ...interface{}) {
+	fmt.Printf(format, a...)
 }
 
 func (d *DummyLogger) LogJSON(content []byte) {
@@ -317,6 +355,10 @@ func DebugF(format string, a ...interface{}) {
 	defaultLogger.LogDebugF(format, a...)
 }
 
+func DebugLn(a ...interface{}) {
+	defaultLogger.LogDebugLn(a...)
+}
+
 func Success(l string) {
 	defaultLogger.LogSuccess(l)
 }
@@ -325,8 +367,12 @@ func Fail(l string) {
 	defaultLogger.LogFail(l)
 }
 
-func Warning(l string) {
-	defaultLogger.LogWarnLn(l)
+func WarnF(format string, a ...interface{}) {
+	defaultLogger.LogWarnF(format, a...)
+}
+
+func WarnLn(a ...interface{}) {
+	defaultLogger.LogWarnLn(a...)
 }
 
 func JSON(content []byte) {

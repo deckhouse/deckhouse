@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
@@ -20,23 +19,25 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 	cmd := parent.Command("remove-deployment", "Delete deckhouse deployment.")
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
+		sshClient := ssh.NewClientFromFlags()
+		if sshClient != nil {
+			if _, err := sshClient.Start(); err != nil {
+				return err
+			}
 		}
 
-		err = operations.AskBecomePassword()
+		err := operations.AskBecomePassword()
 		if err != nil {
 			return err
 		}
 
 		err = log.Process("default", "Remove Deckhouse️", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
+			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 			// auto init
-			err = kubeCl.Init("")
+			err = kubeCl.Init()
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
@@ -62,27 +63,30 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 
 	var DryRun bool
 	cmd.Flag("dry-run", "Output deployment yaml").
 		BoolVar(&DryRun)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
-
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
 		// Load deckhouse config
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
 		if err != nil {
 			return err
+		}
+
+		var sshClient *ssh.Client
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
+
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
 		installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)
@@ -103,7 +107,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-			if err := kubeCl.Init(""); err != nil {
+			if err := kubeCl.Init(); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 

@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -21,23 +20,26 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 	cmd := parent.Command("kubernetes-api-connection", "Test connection to kubernetes api via ssh or directly.")
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
+		var sshClient *ssh.Client
+		var err error
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
+
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
-		// app.AskBecomePass = true
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
-		kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
+		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 		// auto init
-		err = kubeCl.Init("")
+		err = kubeCl.Init()
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
@@ -73,7 +75,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 	cmd := parent.Command("deployment-ready", "Wait while deployment is ready.")
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 
 	var Namespace string
 	var Name string
@@ -84,20 +86,24 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		StringVar(&Name)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
+		var sshClient *ssh.Client
+		var err error
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
 
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
 		err = log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshCl)
+			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 			// auto init
-			err = kubeCl.Init("")
+			err = kubeCl.Init()
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}

@@ -31,6 +31,8 @@ func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineO
 			return err
 		}
 
+		defer func() { extractedData, err = extractFn(r) }()
+
 		err = r.Apply()
 		if err != nil {
 			return err

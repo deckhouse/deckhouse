@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,6 +31,10 @@ const (
 Terraform pipeline aborted.
 If you want to drop the cache and continue, please run candictl with "--yes-i-want-to-drop-cache" flag.
 `
+)
+
+var (
+	ErrRunnerStopped = errors.New("Terraform runner was stopped.")
 )
 
 type Runner struct {
@@ -127,7 +132,7 @@ func (r *Runner) WithAllowedCachedState(flag bool) *Runner {
 
 func (r *Runner) Init() error {
 	if r.stopped {
-		return fmt.Errorf("runner is stopped")
+		return ErrRunnerStopped
 	}
 
 	if r.statePath == "" {
@@ -165,7 +170,7 @@ func (r *Runner) Init() error {
 
 func (r *Runner) Apply() error {
 	if r.stopped {
-		return fmt.Errorf("runner is stopped")
+		return ErrRunnerStopped
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
@@ -204,7 +209,7 @@ func (r *Runner) Apply() error {
 
 func (r *Runner) Plan() error {
 	if r.stopped {
-		return fmt.Errorf("runner is stopped")
+		return ErrRunnerStopped
 	}
 
 	return log.Process("default", "terraform plan ...", func() error {
@@ -239,7 +244,7 @@ func (r *Runner) Plan() error {
 
 func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 	if r.stopped {
-		return nil, fmt.Errorf("runner is stopped")
+		return nil, ErrRunnerStopped
 	}
 
 	if r.statePath == "" {
@@ -341,12 +346,16 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	}
 
 	r.cmd.Stdin = os.Stdin
-	r.cmd.Env = append(r.cmd.Env, "TF_IN_AUTOMATION=yes")
+	r.cmd.Env = append(
+		r.cmd.Env,
+		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_candictl"),
+	)
 	if app.IsDebug {
+		// Debug mode is deprecated, however trace produces more useless information
 		r.cmd.Env = append(r.cmd.Env, "TF_LOG=DEBUG")
 	}
 
-	log.DebugF(r.cmd.String() + "\n")
+	log.DebugLn(r.cmd.String())
 	err = r.cmd.Start()
 	if err != nil {
 		log.ErrorLn(err)
@@ -359,7 +368,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 		e := bufio.NewScanner(stderr)
 		for e.Scan() {
 			if app.IsDebug {
-				log.DebugF(e.Text() + "\n")
+				log.DebugLn(e.Text())
 			} else {
 				errBuf.WriteString(e.Text() + "\n")
 			}

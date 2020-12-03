@@ -88,7 +88,7 @@ func (a *SSHAgent) Start() error {
 
 	// save auth sock in session to access it from other cmds and frontends
 	a.Session.AuthSock = a.AuthSock
-	tomb.RegisterOnShutdown(func() {
+	tomb.RegisterOnShutdown("Delete SSH agent temporary directory", func() {
 		_ = os.RemoveAll(filepath.Dir(a.AuthSock))
 	})
 	return nil

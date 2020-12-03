@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
@@ -18,7 +17,7 @@ import (
 
 func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
@@ -33,7 +32,7 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 
 func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
@@ -41,16 +40,20 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.InfoLn("Check started ...\n")
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
+		var sshClient *ssh.Client
+		var err error
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
+
+			if err := operations.AskBecomePassword(); err != nil {
+				return err
+			}
 		}
 
-		if err := operations.AskBecomePassword(); err != nil {
-			return err
-		}
-
-		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
 			return err
 		}

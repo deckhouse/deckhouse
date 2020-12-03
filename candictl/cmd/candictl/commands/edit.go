@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,23 +20,28 @@ import (
 
 func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, manifest func([]byte) *apiv1.Secret) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
-	sh_app.DefineKubeClientFlags(cmd)
+	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineEditorConfigFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
+		var sshClient *ssh.Client
+		var err error
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
+
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
-		if err := operations.AskBecomePassword(); err != nil {
-			return err
-		}
-
-		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
 			return err
 		}

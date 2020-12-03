@@ -81,6 +81,10 @@ func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error)
 }
 
 func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte) error {
+	if len(tfState) == 0 {
+		return fmt.Errorf("Terraform state is not found in outputs.")
+	}
+
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 		Manifest: func() interface{} {
@@ -99,6 +103,10 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 }
 
 func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
+	if len(tfState) == 0 {
+		return fmt.Errorf("Terraform state is not found in outputs.")
+	}
+
 	getTerraformStateManifest := func() interface{} {
 		return manifests.SecretWithNodeTerraformState(nodeName, masterNodeGroupName, tfState, nil)
 	}
@@ -153,6 +161,10 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 }
 
 func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
+	if outputs == nil || len(outputs.TerraformState) == 0 {
+		return fmt.Errorf("Terraform state is not found in outputs.")
+	}
+
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
 		Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },

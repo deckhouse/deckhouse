@@ -18,7 +18,7 @@ func AskForConfirmation(s string, defaultAnswer bool) bool {
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		log.Warning(fmt.Sprintf("%s? [y/n]: ", s))
+		log.WarnF(fmt.Sprintf("%s? [y/n]: ", s))
 		line, _, err := reader.ReadLine()
 		if err != nil {
 			log.ErrorF("can't read from stdin: %v\n", err)
