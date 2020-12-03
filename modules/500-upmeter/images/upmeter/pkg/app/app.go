@@ -1,6 +1,8 @@
 package app
 
-import "os"
+import (
+	"os"
+)
 
 var Namespace = "d8-upmeter"
 var UpmeterHost = "localhost"

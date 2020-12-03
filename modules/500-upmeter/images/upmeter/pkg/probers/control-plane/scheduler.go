@@ -1,6 +1,7 @@
 package control_plane
 
 import (
+	"os"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -31,12 +32,13 @@ func NewSchedulerProber() types.Prober {
 	const schCreatePodTimeout = time.Second * 5
 	const schSchedulerReactionTimeout = time.Second * 20
 	const schDeletePodTimeout = time.Second * 5
-	const deleteGarbageTimeout = 10 * time.Second
 
 	pr := &types.CommonProbe{
 		ProbeRef: &schProbeRef,
 		Period:   schProbePeriod,
 	}
+
+	nodeAffinity := GetControlPlaneSchedulerNodeAffinity()
 
 	pr.RunFn = func(start int64) {
 		log := pr.LogEntry()
@@ -76,6 +78,9 @@ func NewSchedulerProber() types.Prober {
 				RestartPolicy: v1.RestartPolicyNever,
 				Tolerations: []v1.Toleration{
 					{Operator: v1.TolerationOpExists},
+				},
+				Affinity: &v1.Affinity{
+					NodeAffinity: nodeAffinity,
 				},
 			},
 		}
@@ -151,4 +156,24 @@ func NewSchedulerProber() types.Prober {
 	}
 
 	return pr
+}
+
+func GetControlPlaneSchedulerNodeAffinity() *v1.NodeAffinity {
+	nodeName := os.Getenv("NODE_NAME")
+
+	return &v1.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{
+				{
+					MatchExpressions: []v1.NodeSelectorRequirement{
+						{
+							Key:      "kubernetes.io/hostname",
+							Operator: "In",
+							Values:   []string{nodeName},
+						},
+					},
+				},
+			},
+		},
+	}
 }
