@@ -16,6 +16,11 @@ function __config__() {
       namespace:
         nameSelector:
           matchNames: [d8-system]
+      labelSelector:
+        matchExpressions:
+        - key: owner
+          operator: NotIn
+          values: ["helm"]
       jqFilter: |
         {
           "name": .metadata.name,
@@ -271,4 +276,4 @@ function __main__ {
   values::set monitoringKubernetesControlPlane.internal.proxy.instances "$proxy_merged_instances"
 }
 
-hook::run $@
+hook::run "$@"
