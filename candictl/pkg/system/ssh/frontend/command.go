@@ -74,7 +74,7 @@ func (c *Command) Sudo() *Command {
 		if pattern == "SudoPassword" {
 			if !passSent {
 				// send pass through stdin
-				log.DebugF("Send become pass to cmd\n")
+				log.DebugLn("Send become pass to cmd")
 				_, _ = c.Executor.Stdin.Write([]byte(app.BecomePass + "\n"))
 				passSent = true
 			} else {
@@ -85,7 +85,7 @@ func (c *Command) Sudo() *Command {
 			return "reset"
 		}
 		if pattern == "SUDO-SUCCESS" {
-			log.DebugF("Got SUCCESS\n")
+			log.DebugLn("Got SUCCESS")
 			if c.onCommandStart != nil {
 				c.onCommandStart()
 			}

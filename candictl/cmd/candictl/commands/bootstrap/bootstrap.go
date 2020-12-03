@@ -71,8 +71,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineTerraformFlags(cmd)
-	app.DefineResourcesFlags(cmd, false)
 	app.DefineDropCacheFlags(cmd)
+	app.DefineResourcesFlags(cmd, false)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
@@ -133,7 +133,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 					WithVariables(metaConfig.MarshalConfig()).
 					WithAutoApprove(true)
-				tomb.RegisterOnShutdown(baseRunner.Stop)
+				tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 				baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 				if err != nil {
@@ -145,7 +145,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
 					WithName(masterNodeName).
 					WithAutoApprove(true)
-				tomb.RegisterOnShutdown(masterRunner.Stop)
+				tomb.RegisterOnShutdown(masterNodeName, masterRunner.Stop)
 
 				masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 				if err != nil {
@@ -184,7 +184,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		if err := operations.RunBashiblePipeline(sshClient, metaConfig, nodeIP, devicePath); err != nil {
 			return err
 		}
-		kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
 			return err
 		}
@@ -197,7 +197,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return nil
 		}
 
-		if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+		if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
 			return err
 		}
 
@@ -232,7 +232,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().Clean()
-			log.Warning("Next run of \"candictl bootstrap\" will create a new Kubernetes cluster.\n")
+			log.WarnLn(`Next run of "candictl bootstrap" will create a new Kubernetes cluster.`)
 			return nil
 		})
 

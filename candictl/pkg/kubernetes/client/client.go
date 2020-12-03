@@ -3,8 +3,9 @@ package client
 import (
 	"fmt"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
+	// oidc allows using oidc provider in kubeconfig
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
 	"flant/candictl/pkg/app"
 	"flant/candictl/pkg/log"
@@ -14,7 +15,6 @@ import (
 
 // KubernetesClient is a wrapper around KubernetesClient from shell-operator which is a wrapper around kubernetes.Interface
 // KubernetesClient adds ability to connect to API server through ssh tunnel and kubectl proxy.
-
 type KubernetesClient struct {
 	sh_kube.KubernetesClient
 	SSHClient *ssh.Client
@@ -34,37 +34,22 @@ func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 	return k
 }
 
-// InitKubernetesClient initializes kubernetes client from KUBECONFIG or from ssh tunnel
-func (k *KubernetesClient) Init(configSrc string) error {
-	startProxy := false
-
-	switch configSrc {
-	case "SSH":
-		if app.SSHHost == "" {
-			return fmt.Errorf("no ssh-host to connect to kubernetes via ssh tunnel")
-		}
-		startProxy = true
-	case "KUBECONFIG":
-	default:
-		// auto detect
-		if app.SSHHost != "" {
-			startProxy = true
-		}
-	}
-
+// Init initializes kubernetes client
+func (k *KubernetesClient) Init() error {
 	kubeClient := sh_kube.NewKubernetesClient()
-	kubeClient.WithRateLimiterSettings(sh_app.KubeClientQps, sh_app.KubeClientBurst)
+	kubeClient.WithRateLimiterSettings(5, 10)
 
-	if startProxy {
+	switch {
+	case app.KubeConfigInCluster:
+	case app.KubeConfig != "":
+		kubeClient.WithContextName(app.KubeConfigContext)
+		kubeClient.WithConfigPath(app.KubeConfig)
+	default:
 		port, err := k.StartKubernetesProxy()
 		if err != nil {
 			return err
 		}
 		kubeClient.WithServer("http://localhost:" + port)
-	} else {
-		kubeClient.WithContextName(sh_app.KubeContext)
-		kubeClient.WithConfigPath(sh_app.KubeConfig)
-		kubeClient.WithServer(sh_app.KubeServer)
 	}
 
 	// Initialize kube client for kube events hooks.
@@ -77,6 +62,7 @@ func (k *KubernetesClient) Init(configSrc string) error {
 	return nil
 }
 
+// StartKubernetesProxy initializes kubectl-proxy on remote host and establishes ssh tunnel to it
 func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 	if k.SSHClient == nil {
 		k.SSHClient, err = ssh.NewClientFromFlags().Start()

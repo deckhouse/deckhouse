@@ -27,7 +27,7 @@ func GetClusterInfo(kubeCl *client.KubernetesClient) string {
 		return globalData
 	}
 
-	log.DebugF(globalData + "\n")
+	log.DebugLn(globalData)
 	var clusterInfo struct {
 		ClusterName string `yaml:"clusterName,omitempty"`
 		Project     string `yaml:"project,omitempty"`

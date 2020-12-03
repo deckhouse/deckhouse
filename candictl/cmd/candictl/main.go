@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime/trace"
 
-	"github.com/fatih/color"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -22,22 +21,18 @@ func main() {
 	_ = os.Mkdir(app.TmpDirName, 0755)
 
 	exitCode := 0
-	traceCancel := EnableTrace()
 
-	tomb.RegisterOnShutdown(
-		traceCancel,
-		process.DefaultSession.Stop,
-		cache.ClearTMPDir,
-		restoreTerminal(),
-	)
+	tomb.RegisterOnShutdown("Trace", EnableTrace())
+	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
+	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
+	tomb.RegisterOnShutdown("Clear candictl temporary directory", cache.ClearTemporaryDirs)
+	tomb.RegisterOnShutdown("Clear terraform data temporary directory", cache.ClearTerraformDir)
 
 	go tomb.WaitForProcessInterruption()
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp)
-
-	// kpApp.UsageTemplate(kingpin.CompactUsageTemplate)
 
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
 		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
@@ -111,12 +106,10 @@ func main() {
 
 	waitCh := make(chan struct{}, 1)
 	go func() {
-		_, err := kpApp.Parse(os.Args[1:])
+		command, err := kpApp.Parse(os.Args[1:])
 		if err != nil {
-			_, err = color.New(color.FgRed).Fprintf(os.Stderr, "\n%v\n", err)
-			if err != nil {
-				panic(err)
-			}
+			log.DebugLn(command)
+			log.ErrorLn(err)
 			exitCode = 1
 		}
 		waitCh <- struct{}{}

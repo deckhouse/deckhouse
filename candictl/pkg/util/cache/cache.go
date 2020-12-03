@@ -123,7 +123,7 @@ func (s *StateCache) Clean() {
 
 	_, err := os.Create(filepath.Join(s.dir, ".tombstone"))
 	if err != nil {
-		log.Warning(fmt.Sprintf("Can't mark the cache as exhausted: %s ...\n", err))
+		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
 	}
 }
 

@@ -23,7 +23,7 @@ import (
 func getClientOnce(sshClient *ssh.Client, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
 	var err error
 	if kubeCl == nil {
-		kubeCl, err = operations.StartKubernetesAPIProxy(sshClient)
+		kubeCl, err = operations.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +44,6 @@ const (
 `
 	destroyApprovalsMessage = `You will be asked for approve multiple times.
 If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
-
 `
 )
 
@@ -176,7 +175,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 					WithAllowedCachedState(true).
 					WithAutoApprove(app.SanityCheck)
 
-				tomb.RegisterOnShutdown(nodeRunner.Stop)
+				tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
 				err := terraform.DestroyPipeline(nodeRunner, name)
 				if err != nil {
@@ -194,7 +193,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			WithCache(stateCache).
 			WithAllowedCachedState(true).
 			WithAutoApprove(app.SanityCheck)
-		tomb.RegisterOnShutdown(baseRunner.Stop)
+		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 		if err = terraform.DestroyPipeline(baseRunner, "Kubernetes cluster"); err != nil {
 			return err
@@ -206,7 +205,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
-			log.Warning(destroyApprovalsMessage)
+			log.WarnLn(destroyApprovalsMessage)
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()

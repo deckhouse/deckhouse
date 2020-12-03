@@ -47,6 +47,7 @@ spec:
         - "converge-exporter"
         - "--logger-type=json"
         - "--check-interval=10m"
+        - "--kube-client-from-cluster"
         image: {{ .Values.global.modulesImages.registry }}/terraform-manager/{{ include "terraform_manager_image" . }}
         livenessProbe:
           httpGet:

@@ -29,7 +29,7 @@ func init() {
 }
 
 func GlobalFlags(cmd *kingpin.Application) {
-	cmd.Flag("logger-type", "Format output of a candictl in different ways.").
+	cmd.Flag("logger-type", "Format logs output of a candictl in different ways.").
 		Envar(configEnvName("LOGGER_TYPE")).
 		Default("pretty").
 		EnumVar(&LoggerType, "pretty", "simple", "json")

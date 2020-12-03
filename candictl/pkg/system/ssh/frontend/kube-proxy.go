@@ -68,7 +68,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 		waitCh <- err
 	})
 
-	log.DebugF("Start proxy process\n")
+	log.DebugLn("Start proxy process")
 	err = k.proxy.Start()
 	if err != nil {
 		return "", fmt.Errorf("start kubectl proxy: %v", err)
@@ -148,7 +148,7 @@ func (k *KubeProxy) Start() (port string, err error) {
 				return
 			}
 
-			log.DebugF("Kubectl proxy restarted\n")
+			log.DebugLn("Kubectl proxy restarted")
 		}
 	}()
 	return fmt.Sprintf("%d", localPort), nil

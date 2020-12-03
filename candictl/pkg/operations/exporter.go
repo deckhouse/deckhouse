@@ -13,6 +13,7 @@ import (
 	"flant/candictl/pkg/kubernetes/actions/converge"
 	"flant/candictl/pkg/kubernetes/client"
 	"flant/candictl/pkg/log"
+	"flant/candictl/pkg/system/ssh"
 	"flant/candictl/pkg/util/cache"
 )
 
@@ -35,8 +36,17 @@ var (
 )
 
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
-	kubeCl := client.NewKubernetesClient()
-	if err := kubeCl.Init(""); err != nil {
+	var sshClient *ssh.Client
+	var err error
+	if app.SSHHost != "" {
+		sshClient, err = ssh.NewClientFromFlags().Start()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+	if err := kubeCl.Init(); err != nil {
 		panic(err)
 	}
 
@@ -146,7 +156,7 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			cache.ClearTMPDir()
+			cache.ClearTemporaryDirs()
 			c.getStatistic()
 		case <-stopCh:
 			log.ErrorLn("Stop exporter...")

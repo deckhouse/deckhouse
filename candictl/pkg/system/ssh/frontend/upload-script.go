@@ -88,7 +88,7 @@ func (u *UploadScript) ExecuteBundle(parentDir string, bundleDir string) (stdout
 		return nil, fmt.Errorf("tar bundle: %v", err)
 	}
 
-	tomb.RegisterOnShutdown(func() { _ = os.Remove(bundleLocalFilepath) })
+	tomb.RegisterOnShutdown("Delete bashible bundle folder", func() { _ = os.Remove(bundleLocalFilepath) })
 
 	// upload to /tmp
 	err = NewFile(u.Session).Upload(bundleLocalFilepath, "/tmp")

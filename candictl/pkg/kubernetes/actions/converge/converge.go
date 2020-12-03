@@ -27,8 +27,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		WithVariables(nodeConfig).
 		WithName(nodeName).
 		WithAutoApprove(true)
-
-	tomb.RegisterOnShutdown(runner.Stop)
+	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
@@ -51,8 +50,7 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		WithVariables(nodeConfig).
 		WithName(nodeName).
 		WithAutoApprove(true)
-
-	tomb.RegisterOnShutdown(runner.Stop)
+	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
@@ -127,8 +125,7 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
 			WithState(clusterState)
-
-		tomb.RegisterOnShutdown(baseRunner.Stop)
+		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
@@ -278,7 +275,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithState(state).
 		WithName(nodeName)
-	tomb.RegisterOnShutdown(nodeRunner.Stop)
+	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
 	pipelineForMaster := nodeGroup.Step == "master-node"
 
@@ -359,7 +356,7 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 			WithState(state).
 			WithName(name).
 			WithAutoApprove(true)
-		tomb.RegisterOnShutdown(nodeRunner.Stop)
+		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
 		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))

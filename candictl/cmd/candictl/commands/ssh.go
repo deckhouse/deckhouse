@@ -53,14 +53,14 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("data", "data to test uploadbytes method").StringVar(&Data)
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		log.DebugF("scp: start ssh-agent\n")
+		log.DebugLn("scp: start ssh-agent")
 		sshCl, err := ssh.NewClientFromFlags().Start()
 
 		if err != nil {
 			return err
 		}
 
-		log.DebugF("scp: start\n")
+		log.DebugLn("scp: start")
 
 		success := false
 		if Direction == "up" {

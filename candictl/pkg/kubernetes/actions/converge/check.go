@@ -59,7 +59,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		WithVariables(metaConfig.MarshalConfig()).
 		WithState(clusterState).
 		WithAutoApprove(true)
-	tomb.RegisterOnShutdown(baseRunner.Stop)
+	tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 	return terraform.CheckPipeline(baseRunner, "Kubernetes cluster")
 }
@@ -74,7 +74,7 @@ func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOpti
 		WithVariables(metaConfig.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithState(nodeGroup.State[nodeName]).
 		WithName(nodeName)
-	tomb.RegisterOnShutdown(nodeRunner.Stop)
+	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
 	return terraform.CheckPipeline(nodeRunner, nodeName)
 }

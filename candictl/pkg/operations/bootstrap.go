@@ -113,7 +113,7 @@ func CheckBashibleBundle(sshClient *ssh.Client) bool {
 			}
 		}).Run()
 		if err != nil {
-			log.DebugF("%v\n", err)
+			log.DebugLn(err.Error())
 		}
 		return nil
 	})
@@ -143,7 +143,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
 	}
-	tomb.RegisterOnShutdown(func() {
+	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
 		if !app.IsDebug {
 			_ = os.RemoveAll(templateController.TmpDir)
 		}
@@ -219,15 +219,18 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 	})
 }
 
-func StartKubernetesAPIProxy(sshClient *ssh.Client) (*client.KubernetesClient, error) {
+func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
-	err := log.Process("common", "Start Kubernetes API proxy", func() error {
-		if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
-			return fmt.Errorf("await master available: %v", err)
+	err := log.Process("common", "Connect to Kubernetes API", func() error {
+		if sshClient != nil {
+			if err := sshClient.Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
+				return fmt.Errorf("await master available: %v", err)
+			}
 		}
-		err := retry.StartLoop("Kubernetes API proxy", 45, 5, func() error {
+
+		err := retry.StartLoop("Get Kubernetes API client", 45, 5, func() error {
 			kubeCl = client.NewKubernetesClient().WithSSHClient(sshClient)
-			if err := kubeCl.Init(""); err != nil {
+			if err := kubeCl.Init(); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 			return nil
@@ -302,14 +305,14 @@ func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.Met
 	return nil
 }
 
-func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, replicas int) error {
+func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
 	return log.Process("bootstrap", "Create master NodeGroup", func() error {
 		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, "master")
 		if err != nil {
 			return err
 		}
 
-		for i := 1; i < replicas; i++ {
+		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
 			outputs, err := converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig)
 			if err != nil {
 				return err

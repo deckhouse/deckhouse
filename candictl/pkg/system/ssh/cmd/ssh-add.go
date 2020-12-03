@@ -65,7 +65,7 @@ func (s *SSHAdd) AddKeys(keys []string) error {
 	}
 
 	if app.IsDebug {
-		log.DebugF("list added keys\n")
+		log.DebugLn("list added keys")
 		env := []string{
 			s.Session.AuthSockEnv(),
 		}

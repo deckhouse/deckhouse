@@ -24,9 +24,14 @@ func init() {
 	}
 }
 
+type callback struct {
+	Name string
+	Do   func()
+}
+
 type teardownCallbacks struct {
 	mutex sync.RWMutex
-	data  []func()
+	data  []callback
 
 	exhausted        bool
 	notInterruptable bool
@@ -38,11 +43,11 @@ type teardownCallbacks struct {
 	Cancel context.CancelFunc
 }
 
-func (c *teardownCallbacks) registerOnShutdown(cbs []func()) {
+func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.data = append(c.data, cbs...)
+	c.data = append(c.data, callback{Name: name, Do: cb})
 	log.DebugF("callback added, callbacks in queue: %d\n", len(c.data))
 }
 
@@ -56,12 +61,12 @@ func (c *teardownCallbacks) shutdown() {
 
 	for i := len(c.data) - 1; i >= 0; i-- {
 		cb := c.data[i]
-		cb()
-		c.data[i] = func() {}
-		log.DebugF("callback called: %d\n", i)
+		cb.Do()
+		c.data[i] = callback{Name: "Stub", Do: func() {}}
+		log.DebugF("callback called: %s %d\n", cb.Name, i)
 	}
 
-	log.DebugF("teardown stopped\n")
+	log.DebugLn("teardown stopped")
 	c.exhausted = true
 	c.waitCh <- struct{}{}
 }
@@ -70,8 +75,8 @@ func (c *teardownCallbacks) wait() {
 	<-c.waitCh
 }
 
-func RegisterOnShutdown(cbs ...func()) {
-	callbacks.registerOnShutdown(cbs)
+func RegisterOnShutdown(process string, cb func()) {
+	callbacks.registerOnShutdown(process, cb)
 }
 
 func Shutdown() {
@@ -114,9 +119,16 @@ Select:
 			os.Exit(1)
 		}()
 		callbacks.Cancel()
+
 		StopCh() <- struct{}{}
+		callbacks.data = append([]callback{{
+			Name: "Shutdown message",
+			Do: func() {
+				log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
+			},
+		}}, callbacks.data...)
+
 		Shutdown()
-		log.Warning(fmt.Sprintf("Graceful shutdown by %q signal ...\n", s.String()))
 	default:
 		os.Exit(1)
 	}

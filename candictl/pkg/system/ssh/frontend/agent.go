@@ -33,13 +33,13 @@ func (a *Agent) Start() error {
 		Session: a.Session,
 	}
 
-	log.DebugF("agent: start ssh-agent\n")
+	log.DebugLn("agent: start ssh-agent")
 	err := a.Agent.Start()
 	if err != nil {
 		return fmt.Errorf("start ssh-agent: %v", err)
 	}
 
-	log.DebugF("agent: run ssh-add for keys\n")
+	log.DebugLn("agent: run ssh-add for keys")
 	err = a.AddKeys()
 	if err != nil {
 		return fmt.Errorf("add keys: %v", err)
@@ -69,7 +69,7 @@ func (a *Agent) AddKeys() error {
 	}
 
 	if app.IsDebug {
-		log.DebugF("list added keys\n")
+		log.DebugLn("list added keys")
 		listCmd := cmd.NewSSHAdd(a.Session).ListCmd()
 
 		output, err := listCmd.CombinedOutput()

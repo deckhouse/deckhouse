@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"flant/candictl/pkg/config"
@@ -353,7 +352,7 @@ func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
 
 func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Waiting for Kubernetes API to become Ready", 45, 5, func() error {
-		_, err := kubeCl.CoreV1().Namespaces().Get("kube-system", metav1.GetOptions{})
+		_, err := kubeCl.Discovery().ServerVersion()
 		if err == nil {
 			return nil
 		}

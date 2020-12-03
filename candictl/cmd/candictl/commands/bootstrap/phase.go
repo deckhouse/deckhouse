@@ -22,6 +22,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineSSHFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
+	app.DefineKubeFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -34,18 +35,21 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
+		var sshClient *ssh.Client
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
 
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
 		return log.Process("bootstrap", "Install Deckhouse", func() error {
-			kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+			kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
 			if err != nil {
 				return err
 			}
@@ -106,6 +110,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineResourcesFlags(cmd, true)
+	app.DefineKubeFlags(cmd)
 
 	runFunc := func() error {
 		var resourcesToCreate *config.Resources
@@ -119,25 +124,26 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 		}
 
 		if resourcesToCreate == nil || len(resourcesToCreate.Items) == 0 {
-			log.Warning("Resources to create were not found.\n")
+			log.WarnLn("Resources to create were not found.")
 			return nil
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
-		}
+		var sshClient *ssh.Client
+		var err error
+		if app.SSHHost != "" {
+			sshClient, err = ssh.NewClientFromFlags().Start()
+			if err != nil {
+				return err
+			}
 
-		err = operations.AskBecomePassword()
-		if err != nil {
-			return err
+			err = operations.AskBecomePassword()
+			if err != nil {
+				return err
+			}
 		}
 
 		return log.Process("bootstrap", "Create resources", func() error {
-			if err := operations.WaitForSSHConnectionOnMaster(sshClient); err != nil {
-				return err
-			}
-			kubeCl, err := operations.StartKubernetesAPIProxy(sshClient)
+			kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
 			if err != nil {
 				return err
 			}
@@ -161,7 +167,6 @@ const (
 `
 	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
 If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
-
 `
 )
 
@@ -210,7 +215,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 					WithCache(stateCache).
 					WithAllowedCachedState(true).
 					WithAutoApprove(app.SanityCheck)
-				tomb.RegisterOnShutdown(nodeRunner.Stop)
+				tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
 				if err := terraform.DestroyPipeline(nodeRunner, nodeName); err != nil {
 					return err
@@ -226,7 +231,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 					WithCache(stateCache).
 					WithAllowedCachedState(true).
 					WithAutoApprove(app.SanityCheck)
-				tomb.RegisterOnShutdown(masterRunner.Stop)
+				tomb.RegisterOnShutdown(nodeName, masterRunner.Stop)
 
 				if err := terraform.DestroyPipeline(masterRunner, nodeName); err != nil {
 					return err
@@ -239,7 +244,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			WithCache(stateCache).
 			WithAllowedCachedState(true).
 			WithAutoApprove(app.SanityCheck)
-		tomb.RegisterOnShutdown(baseRunner.Stop)
+		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 		if err := terraform.DestroyPipeline(baseRunner, "Kubernetes cluster"); err != nil {
 			return err
@@ -253,7 +258,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
-			log.Warning(bootstrapAbortCheckMessage)
+			log.WarnLn(bootstrapAbortCheckMessage)
 		}
 
 		return log.Process("bootstrap", "Abort", func() error { return runFunc() })
@@ -306,7 +311,7 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 				WithCache(stateCache).
 				WithVariables(metaConfig.MarshalConfig()).
 				WithAutoApprove(true)
-			tomb.RegisterOnShutdown(baseRunner.Stop)
+			tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
 			_, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 			return err
