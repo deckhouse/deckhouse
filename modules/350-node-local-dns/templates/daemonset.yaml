@@ -12,7 +12,7 @@ spec:
     kind: DaemonSet
     name: node-local-dns
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Initial"
 {{- end }}
 ---
 apiVersion: apps/v1
