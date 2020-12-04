@@ -7,10 +7,6 @@ import statistics
 import os, sys
 import json
 import glob
-import better_exchook
-import datetime
-
-better_exchook.install()
 
 FPING_CMDLINE = "/usr/sbin/fping -p 1000 -C 30 -B 1 -q -r 1".split(" ")
 FPING_REGEX = re.compile(r"^(\S*)\s*: (.*)$", re.MULTILINE)
