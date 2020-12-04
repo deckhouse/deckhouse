@@ -35,6 +35,9 @@ while true; do
 
   podcidr="$(echo "$node_object" | jq .spec.podCIDR -r)"
 
+  default_iface="$(ip r get 0.0.0.1 | awk '/ dev /{print $5}')"
+  mtu="$(ip link show "$default_iface" | awk '/ mtu /{print $5}')"
+
   if echo "$podcidr" | grep -P '^\d+.\d+.\d+.\d+/\d+$' > /dev/null ; then
     echo "$podcidr is assigned to $NODE_NAME"
 
@@ -63,6 +66,7 @@ while true; do
       "type": "bridge",
       "bridge": "cni0",
       "isDefaultGateway": true,
+      "mtu": $mtu,
       "hairpinMode": true,
       "forceAddress": false,
       "ipam": {
