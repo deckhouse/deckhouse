@@ -86,6 +86,11 @@ function __main__() {
    memory_array[$i]="$(tools::dk_convert "${memory_array[$i]}")"
   done
 
+  cpu_expr_master=""
+  memory_expr_master=""
+  cpu_expr_every_node=""
+  memory_expr_every_node=""
+
   # Get summary requests for master group and every-node group
   for ((i=0; i<${#container_name_array[@]}; i++)); do
     case ${label_array[$i]} in

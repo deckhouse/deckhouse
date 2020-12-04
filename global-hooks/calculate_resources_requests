@@ -28,6 +28,9 @@ control_plane_percent="50"
 # Set hard upper limit allocatable resources in millicpu and memory bytes
 hard_limit_millicpu=$(( 4 * 1000 ))                       # 4 Cpu
 hard_limit_memory=$(( 8 * 1024 * 1024 * 1024 ))           # 8G ram
+# hard limit if master nodes absent (managed cluster)
+managed_hard_limit_millicpu=1000                          # 1 Cpu
+managed_hard_limit_memory=$(( 1 * 1024 * 1024 * 1024 ))   # 1G ram
 
 # min of val1 and val2
 function min() {
@@ -41,6 +44,11 @@ function min() {
 }
 
 function __main__() {
+  # values for managed cluster
+  discovery_millicpu_master=$managed_hard_limit_millicpu
+  discovery_memory_master=$managed_hard_limit_memory
+  millicpu_control_plane=0
+  memory_control_plane=0
 
 # Get requests parameters from config for everyNode and set corresponding internal variables
   config_millicpu_every_node="$(tools::dk_convert --milli "$(values::get --required "global.modules.resourcesRequests.everyNode.cpu")" )"
@@ -54,16 +62,19 @@ function __main__() {
     return 1
   fi
 
- # Get minimal cpu and memory allocatable on master nodes and convert it to milli for cpu and bytes for memory
-  discovery_millicpu_master="$(tools::dk_convert --milli "$(context::jq -re '
-  .snapshots.nodes_resources |
-  sort_by(.filterResult.allocatableCPU | tonumber) |
-  first |.filterResult.allocatableCPU')" )"
+  is_master_nodes_found="$(context::jq -r '.snapshots.nodes_resources | length > 0')"
+  if [ "$is_master_nodes_found" == true ]; then
+    # Get minimal cpu and memory allocatable on master nodes and convert it to milli for cpu and bytes for memory
+    cpuAllocatable=$(context::jq -re '.snapshots.nodes_resources[] | .filterResult.allocatableCPU')
+    discovery_millicpu_master=$(for allocatableCPU in $cpuAllocatable; do
+      tools::dk_convert --milli "$allocatableCPU"
+    done | sort | head -1)
 
-  memoryAllocatable=$(context::jq -re '.snapshots.nodes_resources[] | .filterResult.allocatableMemory')
-  discovery_memory_master=$(for allocatableMemory in "$memoryAllocatable"; do
-    tools::dk_convert "$allocatableMemory"
-  done | sort | head -1)
+    memoryAllocatable=$(context::jq -re '.snapshots.nodes_resources[] | .filterResult.allocatableMemory')
+    discovery_memory_master=$(for allocatableMemory in $memoryAllocatable; do
+      tools::dk_convert "$allocatableMemory"
+    done | sort | head -1)
+  fi
 
   # Get requests parameters from config for masterNode or calculate if absent
   if values::has "global.modules.resourcesRequests.masterNode.cpu"; then
@@ -99,12 +110,14 @@ function __main__() {
     return 1
   fi
 
-  # set resources requests for control-plane
-  millicpu_control_plane="$(bc <<< "$millicpu_master * $control_plane_percent / 100" )"
-  memory_control_plane="$(bc <<< "$memory_master * $control_plane_percent / 100" )"
-  # set resources requests for master
-  millicpu_master="$(bc <<< "$millicpu_master * (100 - $control_plane_percent) / 100" )"
-  memory_master="$(bc <<< "$memory_master * (100 - $control_plane_percent) / 100" )"
+  if [ "$is_master_nodes_found" == true ]; then
+    # set resources requests for control-plane
+    millicpu_control_plane="$(bc <<< "$millicpu_master * $control_plane_percent / 100" )"
+    memory_control_plane="$(bc <<< "$memory_master * $control_plane_percent / 100" )"
+    # set resources requests for master
+    millicpu_master="$(bc <<< "$millicpu_master * (100 - $control_plane_percent) / 100" )"
+    memory_master="$(bc <<< "$memory_master * (100 - $control_plane_percent) / 100" )"
+  fi
 
   # Set global internal variables
   if ! values::has "global.modules.resourcesRequests.internal"; then
