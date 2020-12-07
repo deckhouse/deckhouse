@@ -35,7 +35,8 @@
         plk_protocol_version: "1"
         plk_incident_initial_status: "todo"
         plk_grouped_by__main: "D8CertmanagerOrphanSecretsChecksFailed,tier=cluster,prometheus=deckhouse"
-        description: Secret {{$labels.namespace}}/{{$labels.secret_name}} without corresponding Certificate CR
+        description: |
+          Secret {{$labels.namespace}}/{{$labels.secret_name}} has link to non-existent Certificate resource. It is probably garbage. Either delete the secret or remove the `certmanager.k8s.io/certificate-name` label.
         summary: Secret without corresponding Certificate CR
 
     - alert: D8CertmanagerOrphanSecretsChecksFailed
@@ -49,7 +50,7 @@
         plk_markup_format: "markdown"
         plk_alert_type: "group"
         description: |
-          Cert-manager found the difference between Secrets and Certificate requests.
+          There are Secrets with links to non-existent Certificate resource.
 
-          To reach the problem, check grouped alerts.
+          Check grouped alerts.
         summary: Cert-manager found the difference between Secrets and Certificate requests.
