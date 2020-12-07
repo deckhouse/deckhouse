@@ -18,7 +18,7 @@ function __config__() {
           antiopa-secret-copier: "yes"
       jqFilter: |
         {
-          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"]))) | del(.labels."certmanager.k8s.io/certificate-name")),
+          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"])))),
           "type": .type,
           "data": .data
         }
@@ -34,7 +34,7 @@ function __config__() {
           secret-copier.deckhouse.io/enabled: ""
       jqFilter: |
         {
-          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"]))) | del(.labels."certmanager.k8s.io/certificate-name")),
+          "metadata": (.metadata | with_entries(select([.key] | inside(["name", "namespace", "labels"])))),
           "type": .type,
           "data": .data
         }
@@ -75,7 +75,7 @@ function __main__() {
       .manifest = {
         "apiVersion": "v1",
         "kind": "Secret",
-        "metadata": .filterResult.metadata,
+        "metadata": (.filterResult.metadata | del(.labels."certmanager.k8s.io/certificate-name")),
         "type": .filterResult.type,
         "data": .filterResult.data,
       } |
