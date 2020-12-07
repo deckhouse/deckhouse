@@ -14,6 +14,13 @@ post-install() {
 }
 {{- end }}
 
+metapackages="$(
+  dpkg --get-selections | grep -E '^(linux|linux-image)-(gcp|azure|aws|generic)\s+(install|hold)' | awk '{print $1}' || true
+)"
+if [ -n "$metapackages" ]; then
+  bb-apt-remove $metapackages
+fi
+
 if bb-is-ubuntu-version? 20.04 ; then
   desired_version="5.4.0-54-generic"
 elif bb-is-ubuntu-version? 18.04 ; then
