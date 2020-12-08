@@ -1,0 +1,189 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: csi-azuredisk-controller
+  namespace: d8-cloud-provider-azure
+{{ include "helm_lib_module_labels" (list . (dict "app" "csi-azuredisk-controller" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: csi-azuredisk-controller
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: csi-azuredisk-controller
+  namespace: d8-cloud-provider-azure
+{{ include "helm_lib_module_labels" (list . (dict "app" "csi-azuredisk-controller")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+  selector:
+    matchLabels:
+      app: csi-azuredisk-controller
+  template:
+    metadata:
+      labels:
+        app: csi-azuredisk-controller
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+      hostNetwork: true
+      serviceAccountName: csi-controller
+      containers:
+        - name: csi-provisioner
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-provisioner:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiProvisioner }}
+          args:
+            - "--feature-gates=Topology=true"
+            - "--csi-address=$(ADDRESS)"
+            - "--v=5"
+            - "--timeout=120s"
+            - "--enable-leader-election"
+            - "--leader-election-type=leases"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - name: csi-attacher
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiAttacher }}
+          args:
+            - "-v=5"
+            - "-csi-address=$(ADDRESS)"
+            - "-timeout=120s"
+            - "-leader-election"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - name: csi-snapshotter
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-snapshotter:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiSnapshotter }}
+          args:
+            - "-csi-address=$(ADDRESS)"
+            - "-leader-election"
+            - "--v=5"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - name: csi-resizer
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiResizer }}
+          args:
+            - "-csi-address=$(ADDRESS)"
+            - "-v=5"
+            - "-leader-election"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - name: liveness-probe
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/livenessprobe:{{ .Values.global.modulesImages.tags.cloudProviderAzure.livenessprobe }}
+          args:
+            - --csi-address=/csi/csi.sock
+            - --connection-timeout=3s
+            - --health-port=29602
+            - --v=5
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - name: azuredisk
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/azuredisk-csi:{{ .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--v=5"
+            - "--endpoint=$(CSI_ENDPOINT)"
+          ports:
+            - containerPort: 29602
+              name: healthz
+              protocol: TCP
+            - containerPort: 29604
+              name: metrics
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+          env:
+            - name: AZURE_CREDENTIAL_FILE
+              value: "/etc/csi-cloud-credentials/cloud-config"
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /var/lib/waagent/ManagedIdentity-Settings
+              readOnly: true
+              name: msi
+            - name: cloud-config
+              readOnly: true
+              mountPath: "/etc/csi-cloud-credentials"
+          resources:
+            limits:
+              cpu: 200m
+              memory: 200Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+      volumes:
+        - name: socket-dir
+          emptyDir: {}
+        - name: msi
+          hostPath:
+            path: /var/lib/waagent/ManagedIdentity-Settings
+        - name: cloud-config
+          secret:
+            secretName: cloud-controller-manager

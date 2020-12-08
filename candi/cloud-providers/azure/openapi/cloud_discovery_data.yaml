@@ -1,0 +1,38 @@
+kind: AzureCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, resourceGroupName, vnetName, subnetName, zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [AzureCloudDiscoveryData]
+      resourceGroupName:
+        type: string
+      vnetName:
+        type: string
+      subnetName:
+        type: string
+      zones:
+        type: array
+        minItems: 1
+        items:
+          type: string
+      instances:
+        type: object
+        additionalProperties: false
+        required: [urn, diskType]
+        properties:
+          urn:
+            type: string
+          diskType:
+            type: string
+          additionalTags:
+            type: object
+            additionalProperties:
+              type: string

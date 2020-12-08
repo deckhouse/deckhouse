@@ -1,0 +1,49 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+EOF
+}
+
+function __main__() {
+  storage_classes='[
+    {
+      "name": "managed-standard-ssd",
+      "type": "StandardSSD_LRS"
+    },
+    {
+      "name": "managed-standard",
+      "type": "Standard_LRS"
+    },
+    {
+      "name": "managed-premium",
+      "type": "Premium_LRS"
+    }
+  ]'
+
+  if values::has cloudProviderAzure.storageClass.exclude; then
+    storage_classes="$(jq --arg exclude "$(values::get cloudProviderAzure.storageClass.exclude | jq -r 'join("|")')" '
+      map(select(.name | test("^(\($exclude))$") | not))
+      ' <<< "$storage_classes")"
+  fi
+
+  if values::has cloudProviderAzure.storageClass.provision; then
+    storage_classes="$(jq --argjson provision "$(values::get cloudProviderAzure.storageClass.provision)" '
+      . + [$provision[] | .type="UltraSSD_LRS"]
+      ' <<< "$storage_classes")"
+  fi
+
+  values::set cloudProviderAzure.internal.storageClasses "$storage_classes"
+
+  if values::has cloudProviderAzure.storageClass.default; then
+    values::set cloudProviderAzure.internal.defaultStorageClass "$(values::get cloudProviderAzure.storageClass.default)"
+  else
+    values::unset cloudProviderAzure.internal.defaultStorageClass
+  fi
+}
+
+hook::run "$@"

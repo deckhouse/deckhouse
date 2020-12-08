@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: azureinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-azure
+spec:
+  group: deckhouse.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  scope: Cluster
+  names:
+    plural: azureinstanceclasses
+    singular: azureinstanceclass
+    kind: AzureInstanceClass
+    categories:
+    - cloudinstanceclasses
+  validation:
+    openAPIV3Schema:
+      type: object
+      description: AzureInstanceClass defines Azure-specific properties for to-be-provisioned Instances.
+      required:
+      - spec
+      properties:
+        spec:
+          type: object
+          required: [machineSize]
+          properties:
+            machineSize:
+              type: string
+              example: Standard_F4
+            urn:
+              type: string
+            diskSizeGb:
+              description: Instance disk size in gigabytes.
+              example: 40
+              type: integer
+            diskType:
+              type: string
+            additionalTags:
+              type: object
+              additionalProperties:
+                type: string

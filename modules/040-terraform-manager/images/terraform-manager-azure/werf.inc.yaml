@@ -1,0 +1,18 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+ansible:
+  install:
+  - name: "Create a directory for terraform provider azurerm"
+    file:
+      path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
+      state: directory
+  - name: "Install terraform provider azurerm"
+    unarchive:
+      src: https://releases.hashicorp.com/terraform-provider-azurerm/{{ env "TF_AZURE_VERSION" }}/terraform-provider-azurerm_{{ env "TF_AZURE_VERSION" }}_linux_amd64.zip
+      remote_src: yes
+      dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
+      mode: +x
+  - apk:
+      name: ca-certificates
+      update_cache: yes
+  - command: rm -rf /var/cache/apk/*

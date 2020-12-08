@@ -1,0 +1,4 @@
+azureClientId: {{ .Values.nodeManager.internal.cloudProvider.azure.clientId | b64enc }}
+azureClientSecret: {{ .Values.nodeManager.internal.cloudProvider.azure.clientSecret | b64enc }}
+azureSubscriptionId: {{ .Values.nodeManager.internal.cloudProvider.azure.subscriptionId | b64enc }}
+azureTenantId: {{ .Values.nodeManager.internal.cloudProvider.azure.tenantId | b64enc }}

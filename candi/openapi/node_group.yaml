@@ -221,6 +221,7 @@ spec:
                       - VsphereInstanceClass
                       - AWSInstanceClass
                       - YandexInstanceClass
+                      - AzureInstanceClass
                     name:
                       type: string
             nodeTemplate:
