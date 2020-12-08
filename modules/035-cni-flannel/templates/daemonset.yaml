@@ -35,6 +35,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
+      terminationGracePeriodSeconds: 5
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
@@ -50,6 +51,8 @@ spec:
         securityContext:
           privileged: true
         env:
+        - name: POD_NETWORK_MODE
+          value: {{ .Values.cniFlannel.internal.podNetworkMode }}
         - name: POD_NAME
           valueFrom:
             fieldRef:

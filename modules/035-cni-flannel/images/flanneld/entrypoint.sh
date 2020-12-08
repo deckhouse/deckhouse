@@ -20,11 +20,9 @@ fi
 
 cp -f /etc/kube-flannel/cni-conf.json /etc/cni/net.d/10-flannel.conflist
 
-# remove after 20.18 release
-IPTABLES_SAVE="$(iptables-save -t nat | grep -vE "comment|docker0" | grep '^\-A POSTROUTING')"
-echo -e "---\n${IPTABLES_SAVE}\n---"
-echo "$IPTABLES_SAVE" | grep "^-A POSTROUTING ! -s .*/16 -d .*/16 -j MASQUERADE$" | awk '{print "iptables -t nat "$0}' | sed 's/-A/-D/' | bash
-echo "$IPTABLES_SAVE" | grep "^-A POSTROUTING -s .*/16 ! -d .*/4 -j MASQUERADE$" | awk '{print "iptables -t nat "$0}' | sed 's/-A/-D/' | bash
-echo -e "---\n$(iptables-save -t nat | grep -vE "comment|docker0" | grep '^\-A POSTROUTING')\n---"
+if [ "$POD_NETWORK_MODE" == "host-gw" ] && grep -q flannel <<< "$(ip link)"; then
+  iface_name="$(awk '/flannel/{gsub(/:/, ""); print $2}' <<< "$(ip link)")"
+  ip link del "$iface_name"
+fi
 
 exec /opt/bin/flanneld $@ $ifaces
