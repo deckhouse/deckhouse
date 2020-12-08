@@ -1,0 +1,41 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: d8_deployment
+      keepFullObjectsInMemory: false
+      apiVersion: apps/v1
+      kind: Deployment
+      executeHookOnEvent: ["Added", "Modified"]
+      namespace:
+        nameSelector:
+          matchNames: ["d8-system"]
+      nameSelector:
+        matchNames: ["deckhouse"]
+      allowFailure: true
+      jqFilter: |
+          {
+            "tag": (.spec.template.spec.containers[0].image | split(":")[1]),
+            "version": (.metadata.annotations."core.deckhouse.io/version" // "unknown")
+          }
+EOF
+}
+
+function __on_kubernetes::d8_deployment() {
+
+  if context::has objects.0; then
+    if [[ "$(values::get deckhouseWeb.deckhouseTag)" != "$(context::get objects.0.filterResult.tag)" ]] ; then
+      values::set deckhouseWeb.deckhouseTag "$(context::get objects.0.filterResult.tag)"
+    fi
+    if [[ "$(values::get deckhouseWeb.deckhouseVersion)" != "$(context::get objects.0.filterResult.version)" ]] ; then
+      values::set deckhouseWeb.deckhouseVersion "$(context::get objects.0.filterResult.version)"
+    fi
+  fi
+
+}
+
+hook::run $@

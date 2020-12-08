@@ -240,6 +240,12 @@ ansible:
 {{ .Files.Get "modules/images_tags.json" | indent 8 }}
       dest: /deckhouse/modules/images_tags.json
 
+  - name: "Add version info"
+    copy:
+      content: |
+{{ env "CI_COMMIT_TAG" | default "dev" | indent 8}}
+      dest: /deckhouse/version
+
   # Because of https://github.com/flant/werf/issues/1741 just make symlink for the entry point
   - name: "Make symlink for deckhouse entrypoint in the right location"
     shell: ln -s /deckhouse/entrypoint.sh /deckhouse/deckhouse
