@@ -7,8 +7,10 @@
   font-size: 1.1em;
   line-height: 20px;
   margin: 5px 10px;
-  position: relative;
+  position: absolute;
   top: 5px;
+  max-width: 250px;
+  width: auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -18,10 +20,10 @@
     overflow: visible !important;
     z-index: 10;
     white-space: normal;
-    width: fit-content;
+    width: max-content;
+    max-width: 400px;
     position: absolute;
-    left: 200px;
-    word-break: break-all;
+    word-break: break-word;
 }
 
 .updatechannel__content.disable {
