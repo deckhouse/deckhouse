@@ -1,0 +1,44 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: Azure
+  prefix: 'candi-${PREFIX}'
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: '${KUBERNETES_VERSION}'
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  devBranch: '${DEV_BRANCH}'
+  imagesRepo: registry.flant.com/sys/antiopa
+  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  configOverrides:
+    prometheusMadisonIntegrationEnabled: false
+    global:
+      clusterName: smoke
+      project: dev-rnd
+      modules:
+        publicDomainTemplate: "%s.k8s.smoke.flant.com"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AzureClusterConfiguration
+layout: Standard
+sshPublicKey: '${SSH_PUBLIC_KEY}'
+vNetCIDR: 10.50.0.0/16
+subnetCIDR: 10.50.0.0/24
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    machineSize: Standard_F2
+    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
+    enableExternalIP: true
+provider:
+  subscriptionId: '${SUBSCRIPTION_ID}'
+  clientId: '${CLIENT_ID}'
+  clientSecret: '${CLIENT_SECRET}'
+  tenantId: '${TENANT_ID}'
+  location: "westeurope"

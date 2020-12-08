@@ -200,7 +200,7 @@
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - chmod -R 777 .
   - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-  - werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} -v $(pwd):/deckhouse -v "/mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp" --user 999:999 --volume="/etc/group:/etc/group:ro" --volume="/etc/passwd:/etc/passwd:ro" --volume="/etc/shadow:/etc/shadow:ro" -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
+  - werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} -v $(pwd):/deckhouse -v "/mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp" --user 999:999 --volume="/etc/group:/etc/group:ro" --volume="/etc/passwd:/etc/passwd:ro" --volume="/etc/shadow:/etc/shadow:ro" -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script:
   - |
     if [[ ("$CI_COMMIT_REF_NAME" == "master") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
@@ -228,6 +228,12 @@
     - PROVIDER: AWS
       LAYOUT:
       - WithoutNAT
+      KUBERNETES_VERSION:
+      - "1.16"
+      - "1.19"
+    - PROVIDER: Azure
+      LAYOUT:
+      - Standard
       KUBERNETES_VERSION:
       - "1.16"
       - "1.19"

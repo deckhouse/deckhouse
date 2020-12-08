@@ -12,7 +12,7 @@ metadata:
   name: {{ $ng.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
   {{- end }}
   annotations:
-    zone: {{ $zone_name }}
+    zone: {{ $zone_name | quote }}
   # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible.
   {{- if hasKey $context.Values.nodeManager.internal.bashibleChecksumMigration $ng.name }}
     {{- $migrationData := (pluck $ng.name $context.Values.nodeManager.internal.bashibleChecksumMigration | first) }}

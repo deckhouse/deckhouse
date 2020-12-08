@@ -3,6 +3,9 @@ variables:
   TF_AWS_NAMESPACE: hashicorp
   TF_AWS_TYPE: aws
   TF_AWS_VERSION: 3.6.0
+  TF_AZURE_NAMESPACE: hashicorp
+  TF_AZURE_TYPE: azurerm
+  TF_AZURE_VERSION: 2.36.0
   TF_GCP_NAMESPACE: hashicorp
   TF_GCP_TYPE: google
   TF_GCP_VERSION: 3.48.0

@@ -92,6 +92,15 @@ elif [[ "$PROVIDER" == "AWS" ]]; then
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   ssh_user="ubuntu"
+elif [[ "$PROVIDER" == "Azure" ]]; then
+  # shellcheck disable=SC2016
+  env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
+      CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" SSH_PUBLIC_KEY="$ssh_public_key" \
+      KUBERNETES_VERSION="$KUBERNETES_VERSION" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${SSH_PUBLIC_KEY} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID}' \
+      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+  ssh_user="azureuser"
 else
   >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
   exit 1

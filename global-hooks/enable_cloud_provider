@@ -42,6 +42,9 @@ function __main__() {
   elif values::has --config cloudProviderYandex; then
     cloud_provider="Yandex"
 
+  elif values::has --config cloudProviderAzure; then
+    cloud_provider="Azure"
+
   fi
 
   declare -A providers; providers=( \
@@ -50,6 +53,7 @@ function __main__() {
       ["GCP"]="cloudProviderGcp"
       ["Yandex"]="cloudProviderYandex"
       ["vSphere"]="cloudProviderVsphere"
+      ["Azure"]="cloudProviderAzure"
   )
 
   for key in "${!providers[@]}"; do

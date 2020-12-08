@@ -1,0 +1,27 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AzureInstanceClass
+metadata:
+  name: worker
+spec:
+  machineSize: Standard_F2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AzureInstanceClass
+      name: worker
+    maxPerZone: 1
+    minPerZone: 1
+    zones: ["1"]
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/frontend: ""
+      node-role.deckhouse.io/system: ""
+  nodeType: Cloud

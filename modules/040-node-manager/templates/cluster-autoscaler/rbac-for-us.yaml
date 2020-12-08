@@ -27,6 +27,7 @@ rules:
   - openstackmachineclasses
   - vspheremachineclasses
   - yandexmachineclasses
+  - azuremachineclasses
   verbs:
   - get
   - list

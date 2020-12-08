@@ -38,7 +38,7 @@ fi
 mkdir -p /mnt/kubernetes-data
 
 if ! file -s $DATA_DEVICE | grep -q ext4; then
-  mkfs.ext4 -L kubernetes-data $DATA_DEVICE
+  mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
 fi
 
 if grep -qv kubernetes-data /etc/fstab; then

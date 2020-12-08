@@ -1,0 +1,78 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-azure
+{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-azure
+{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+  template:
+    metadata:
+      labels:
+        app: cloud-controller-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
+      hostNetwork: true
+      securityContext:
+        runAsUser: 1001
+      serviceAccountName: cloud-controller-manager
+      containers:
+        - name: azure-cloud-controller-manager
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderAzure.cloudControllerManager }}
+          command:
+            - /usr/local/bin/cloud-controller-manager
+            - --v=2
+            - --cloud-provider=azure
+            - --allocate-node-cidrs=true
+            - --cloud-config=/etc/cloud-contoller-manager-config/cloud-config
+            - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+            - --leader-elect=true
+            - --configure-cloud-routes=true
+            - --route-reconciliation-period=10s
+            - --bind-address=127.0.0.1
+            - --secure-port=10871
+          volumeMounts:
+            - mountPath: /etc/kubernetes
+              name: etc-kubernetes
+              readOnly: true
+            - mountPath: /etc/cloud-contoller-manager-config
+              name: config
+              readOnly: true
+          resources:
+            requests:
+              cpu: 200m
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes
+          type: DirectoryOrCreate
+        name: etc-kubernetes
+      - name: config
+        secret:
+          secretName: cloud-controller-manager
