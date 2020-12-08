@@ -17,6 +17,25 @@ resource "google_compute_subnetwork" "kube" {
   ip_cidr_range = local.subnetwork_cidr
 }
 
+resource "google_compute_router" "kube" {
+  count   = var.providerClusterConfiguration.layout == "Standard" ? 1 : 0
+  name    = local.prefix
+  network = google_compute_network.kube.self_link
+}
+
+resource "google_compute_router_nat" "kube" {
+  count                              = var.providerClusterConfiguration.layout == "Standard" ? 1 : 0
+  name                               = local.prefix
+  router                             = join("", google_compute_router.kube.*.name)
+  nat_ip_allocate_option             = length(local.cloud_nat_addresses) > 0 ? "MANUAL_ONLY" : "AUTO_ONLY"
+  nat_ips                            = length(local.cloud_nat_addresses) > 0 ? [for v in data.google_compute_address.reserved : v.self_link] : null
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
+  subnetwork {
+    name                    = google_compute_subnetwork.kube.self_link
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+  }
+}
+
 module "firewall" {
   source            = "../../../terraform-modules/firewall"
   prefix            = local.prefix
