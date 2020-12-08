@@ -4,13 +4,14 @@ global:
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
+        csiNodeDriverRegistrar: imagehash
       cloudProviderVsphere:
-        attacher: imagehash
-        externalResizer: imagehash
-        flanneld: imagehash
-        livenessprobe: imagehash
-        nodeRegistrar: imagehash
-        provisioner: imagehash
         vsphereCsi: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash

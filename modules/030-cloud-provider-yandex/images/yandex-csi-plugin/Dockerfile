@@ -1,1 +1,1 @@
-FROM flant/yandex-csi-plugin:v0.9.9
+FROM flant/yandex-csi-plugin:v0.9.10

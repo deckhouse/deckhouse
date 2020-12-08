@@ -1,0 +1,54 @@
+###
+### controller
+###
+{{- define "csi_controller_envs" }}
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+- name: X_CSI_MODE
+  value: "controller"
+- name: X_CSI_SPEC_REQ_VALIDATION
+  value: "false"
+- name: X_CSI_VSPHERE_CLOUD_CONFIG
+  value: "/etc/cloud/cloud-config"
+{{- end }}
+
+{{- define "csi_controller_volumes" }}
+- name: vsphere-config-volume
+  secret:
+    secretName: cloud-controller-manager
+{{- end }}
+
+{{- define "csi_controller_volume_mounts" }}
+- mountPath: /etc/cloud
+  name: vsphere-config-volume
+  readOnly: true
+{{- end }}
+
+{{- $csiControllerImage := (printf "%s/cloud-provider-vsphere/vsphere-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderVsphere.vsphereCsiPlugin)}}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+{{- define "csi_node_envs" }}
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+- name: X_CSI_MODE
+  value: "node"
+- name: X_CSI_SPEC_REQ_VALIDATION
+  value: "false"
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

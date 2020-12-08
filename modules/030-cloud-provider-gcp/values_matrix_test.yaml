@@ -8,12 +8,14 @@ global:
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
-      cloudProviderGcp:
-        csiProvisioner: imagehash
-        csiAttacher: imagehash
-        csiResizer: imagehash
-        csiSnapshotter: imagehash
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
         csiNodeDriverRegistrar: imagehash
+      cloudProviderGcp:
         simpleBridge: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
