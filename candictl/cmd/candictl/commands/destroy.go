@@ -199,7 +199,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		// stateCache.Clean()
+		stateCache.Clean()
 		return nil
 	}
 
