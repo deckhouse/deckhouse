@@ -10,6 +10,8 @@ config.conf: |
     contentType: application/vnd.kubernetes.protobuf
     kubeconfig: /var/lib/kube-proxy/kubeconfig.conf
     qps: 5
+  conntrack:
+    maxPerCore: 0
 
 kubeconfig.conf: |
   apiVersion: v1
