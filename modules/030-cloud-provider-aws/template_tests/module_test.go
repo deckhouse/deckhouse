@@ -32,13 +32,14 @@ const globalValues = `
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
-      cloudProviderAws:
-        csiProvisioner: imagehash
-        csiAttacher: imagehash
-        csiResizer: imagehash
-        csiSnapshotter: imagehash
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
         csiNodeDriverRegistrar: imagehash
-        csiLivenessProbe: imagehash
+      cloudProviderAws:
         ebsCsiPlugin: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
@@ -107,23 +108,16 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			ccmClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-aws", "cloud-controller-manager")
 
-			ebsControllerPluginStatefulSet := f.KubernetesResource("StatefulSet", "d8-cloud-provider-aws", "ebs-csi-controller")
+			ebsControllerPluginStatefulSet := f.KubernetesResource("StatefulSet", "d8-cloud-provider-aws", "csi-controller")
 			ebsCSIDriver := f.KubernetesGlobalResource("CSIDriver", "ebs.csi.aws.com")
-			ebsCredentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-aws", "credentials")
-			ebsNodePluginDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-aws", "ebs-csi-node")
-			ebsNodePluginServiceAccount := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "ebs-csi-node")
-			ebsNodeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "ebs-csi-node")
-			ebsControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "ebs-csi-controller")
-			ebsRegistrarCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:ebs-csi:node")
-			ebsRegistrarCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:ebs-csi:node")
-			ebsProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:ebs-csi:controller:external-provisioner")
-			ebsProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:ebs-csi:controller:external-provisioner")
-			ebsAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:ebs-csi:controller:external-attacher")
-			ebsAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:ebs-csi:controller:external-attacher")
-			ebsResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:ebs-csi:controller:external-resizer")
-			ebsResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:ebs-csi:controller:external-resizer")
-			ebsSnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:ebs-csi:controller:external-snapshotter")
-			ebsSnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:ebs-csi:controller:external-snapshotter")
+			ebsNodePluginDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-aws", "csi-node")
+			ebsControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "csi")
+			ebsProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:csi:controller:external-provisioner")
+			ebsProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:csi:controller:external-provisioner")
+			ebsAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:csi:controller:external-attacher")
+			ebsAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:csi:controller:external-attacher")
+			ebsResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:csi:controller:external-resizer")
+			ebsResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:csi:controller:external-resizer")
 			ebsStorageClass := f.KubernetesGlobalResource("StorageClass", "gp2")
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-aws:user")
@@ -166,21 +160,14 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ccmSecret.Exists()).To(BeTrue())
 			Expect(ebsControllerPluginStatefulSet.Exists()).To(BeTrue())
 			Expect(ebsCSIDriver.Exists()).To(BeTrue())
-			Expect(ebsCredentialsSecret.Exists()).To(BeTrue())
 			Expect(ebsNodePluginDaemonSet.Exists()).To(BeTrue())
-			Expect(ebsNodePluginServiceAccount.Exists()).To(BeTrue())
-			Expect(ebsNodeSA.Exists()).To(BeTrue())
 			Expect(ebsControllerSA.Exists()).To(BeTrue())
-			Expect(ebsRegistrarCR.Exists()).To(BeTrue())
-			Expect(ebsRegistrarCRB.Exists()).To(BeTrue())
 			Expect(ebsProvisionerCR.Exists()).To(BeTrue())
 			Expect(ebsProvisionerCRB.Exists()).To(BeTrue())
 			Expect(ebsAttacherCR.Exists()).To(BeTrue())
 			Expect(ebsAttacherCRB.Exists()).To(BeTrue())
 			Expect(ebsResizerCR.Exists()).To(BeTrue())
 			Expect(ebsResizerCRB.Exists()).To(BeTrue())
-			Expect(ebsSnapshotterCR.Exists()).To(BeTrue())
-			Expect(ebsSnapshotterCRB.Exists()).To(BeTrue())
 			Expect(ebsStorageClass.Exists()).To(BeTrue())
 			Expect(ebsStorageClass.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"

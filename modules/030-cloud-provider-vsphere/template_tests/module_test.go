@@ -32,12 +32,14 @@ const globalValues = `
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
+        csiNodeDriverRegistrar: imagehash
       cloudProviderVsphere:
-        attacher: imagehash
-        externalResizer: imagehash
-        livenessprobe: imagehash
-        nodeRegistrar: imagehash
-        provisioner: imagehash
         vsphereCsi: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
@@ -120,14 +122,16 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
+			csiCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-vsphere", "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "vsphere.csi.vmware.com")
-			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "vsphere-csi-controller")
-			csiCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:vsphere-csi:controller")
-			csiCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:vsphere-csi:controller")
-			csiNodeVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-vsphere", "vsphere-csi-node")
-			csiNodeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "vsphere-csi-node")
-			csiDriverControllerVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-vsphere", "vsphere-csi-driver-controller")
-			csiDriverControllerSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-vsphere", "vsphere-csi-driver-controller")
+			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "csi-node")
+			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "csi")
+			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
+			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
+			csiAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-attacher")
+			csiAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-attacher")
+			csiResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-resizer")
+			csiResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-resizer")
 
 			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:cloud-controller-manager")
@@ -168,13 +172,17 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
+			Expect(csiNodePluginDS.Exists()).To(BeTrue())
 			Expect(csiSA.Exists()).To(BeTrue())
-			Expect(csiCR.Exists()).To(BeTrue())
-			Expect(csiCRB.Exists()).To(BeTrue())
-			Expect(csiNodeVPA.Exists()).To(BeTrue())
-			Expect(csiNodeDS.Exists()).To(BeTrue())
-			Expect(csiDriverControllerVPA.Exists()).To(BeTrue())
-			Expect(csiDriverControllerSS.Exists()).To(BeTrue())
+			Expect(csiCongrollerPluginSS.Exists()).To(BeTrue())
+			Expect(csiAttacherCR.Exists()).To(BeTrue())
+			Expect(csiAttacherCRB.Exists()).To(BeTrue())
+			Expect(csiProvisionerCR.Exists()).To(BeTrue())
+			Expect(csiProvisionerCRB.Exists()).To(BeTrue())
+			Expect(csiResizerCR.Exists()).To(BeTrue())
+			Expect(csiResizerCRB.Exists()).To(BeTrue())
+			Expect(csiResizerCR.Exists()).To(BeTrue())
+			Expect(csiResizerCRB.Exists()).To(BeTrue())
 
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())

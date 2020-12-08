@@ -1,0 +1,42 @@
+###
+### controller
+###
+{{- define "csi_controller_args" }}
+- "controller"
+{{- end }}
+
+{{- define "csi_controller_envs" }}
+- name: AWS_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: cloud-controller-manager
+      key: aws-access-key-id
+- name: AWS_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: cloud-controller-manager
+      key: aws-secret-access-key
+{{- end }}
+
+{{- $csiControllerImage := (printf "%s/cloud-provider-aws/ebs-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderAws.ebsCsiPlugin)}}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+{{- define "node_args" }}
+- "node"
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "node_args" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "ebs.csi.aws.com" }}
+
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

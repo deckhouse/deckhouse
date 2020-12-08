@@ -36,12 +36,14 @@ const globalValues = `
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
-      cloudProviderGcp:
-        csiProvisioner: imagehash
-        csiAttacher: imagehash
-        csiResizer: imagehash
-        csiSnapshotter: imagehash
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
         csiNodeDriverRegistrar: imagehash
+      cloudProviderGcp:
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
         pdCsiPlugin: imagehash
@@ -116,22 +118,16 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "cloud-controller-manager")
 
+			pdCSISS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-gcp", "csi-controller")
 			pdCSICSIDriver := f.KubernetesGlobalResource("CSIDriver", "pd.csi.storage.gke.io")
-			pdCSISS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-gcp", "pd-csi-controller")
-			pdCSIDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-gcp", "pd-csi-node")
-			pdCSINodeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "pd-csi-node")
-			pdCSIRegistrarCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:pd-csi:node")
-			pdCSIRegistrarCRD := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:node")
-			pdCSIControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "pd-csi-controller")
-			pdCSIProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:pd-csi:controller:external-provisioner")
-			pdCSIProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:controller:external-provisioner")
-			pdCSIAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:pd-csi:controller:external-attacher")
-			pdCSIAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:controller:external-attacher")
-			pdCSIResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:pd-csi:controller:external-resizer")
-			pdCSIResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:controller:external-resizer")
-			pdCSISnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:pd-csi:controller:external-snapshotter")
-			pdCSISnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:pd-csi:controller:external-snapshotter")
-			pdCSICredentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "cloud-credentials")
+			pdCSIDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-gcp", "csi-node")
+			pdCSIControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "csi")
+			pdCSIProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:csi:controller:external-provisioner")
+			pdCSIProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:csi:controller:external-provisioner")
+			pdCSIAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:csi:controller:external-attacher")
+			pdCSIAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:csi:controller:external-attacher")
+			pdCSIResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:csi:controller:external-resizer")
+			pdCSIResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:csi:controller:external-resizer")
 			pdCSIStandardNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-not-replicated")
 			pdCSIStandardReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-replicated")
 			pdCSISSDNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-not-replicated")
@@ -178,9 +174,6 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(pdCSICSIDriver.Exists()).To(BeTrue())
 			Expect(pdCSISS.Exists()).To(BeTrue())
 			Expect(pdCSIDS.Exists()).To(BeTrue())
-			Expect(pdCSINodeSA.Exists()).To(BeTrue())
-			Expect(pdCSIRegistrarCR.Exists()).To(BeTrue())
-			Expect(pdCSIRegistrarCRD.Exists()).To(BeTrue())
 			Expect(pdCSIControllerSA.Exists()).To(BeTrue())
 			Expect(pdCSIProvisionerCR.Exists()).To(BeTrue())
 			Expect(pdCSIProvisionerCRB.Exists()).To(BeTrue())
@@ -188,9 +181,6 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(pdCSIAttacherCRB.Exists()).To(BeTrue())
 			Expect(pdCSIResizerCR.Exists()).To(BeTrue())
 			Expect(pdCSIResizerCRB.Exists()).To(BeTrue())
-			Expect(pdCSISnapshotterCR.Exists()).To(BeTrue())
-			Expect(pdCSISnapshotterCRB.Exists()).To(BeTrue())
-			Expect(pdCSICredentialsSecret.Exists()).To(BeTrue())
 			Expect(pdCSIStandardNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSIStandardReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDNotReplicatedSC.Exists()).To(BeTrue())

@@ -106,7 +106,7 @@ certManager:
 {{- /* Usage: {{ include "helm_lib_module_https_copy_custom_certificate" (list . "namespace" "secret_name_prefix") }} */ -}}
 {{- define "helm_lib_module_https_copy_custom_certificate" -}}
   {{- $context := index . 0 -}}
-  {{- $namespace := index . 1  -}}
+  {{- $namespace := index . 1 -}}
   {{- $secret_name_prefix := index . 2 -}}
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CustomCertificate" -}}
@@ -128,7 +128,7 @@ data:
 {{- /* Usage: {{ include "helm_lib_module_https_secret_name (list . "secret_name_prefix") }} */ -}}
 {{- define "helm_lib_module_https_secret_name" -}}
   {{- $context := index . 0 -}}
-  {{- $secret_name_prefix := index . 1  -}}
+  {{- $secret_name_prefix := index . 1 -}}
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CertManager" -}}
     {{- $secret_name_prefix -}}

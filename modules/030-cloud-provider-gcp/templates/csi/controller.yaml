@@ -1,0 +1,86 @@
+###
+### controller
+###
+{{- define "csi_controller_envs" }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: "/etc/credentials.json"
+{{- end }}
+
+{{- define "csi_controller_volumes" }}
+- name: cloud-credentials
+  secret:
+    secretName: cloud-credentials
+{{- end }}
+
+{{- define "csi_controller_volume_mounts" }}
+- mountPath: /etc/credentials.json
+  name: cloud-credentials
+  readOnly: true
+  subPath: credentials.json
+{{- end }}
+
+{{- $csiControllerImage := (printf "%s/cloud-provider-gcp/pd-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderGcp.pdCsiPlugin)}}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+{{- define "csi_node_envs" }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: "/etc/credentials.json"
+{{- end }}
+
+{{- define "csi_node_volumes" }}
+# The following mounts are required to trigger host udevadm from container
+- name: udev-rules-etc
+  hostPath:
+    path: /etc/udev
+    type: Directory
+- name: udev-rules-lib
+  hostPath:
+    path: /lib/udev
+    type: Directory
+- name: udev-socket
+  hostPath:
+    path: /run/udev
+    type: Directory
+- name: sys
+  hostPath:
+    path: /sys
+    type: Directory
+- name: cloud-credentials
+  secret:
+    secretName: cloud-credentials
+{{- end }}
+
+{{- define "csi_node_volume_mounts" }}
+# The following mounts are required to trigger host udevadm from container
+- name: udev-rules-etc
+  mountPath: /etc/udev
+- name: udev-rules-lib
+  mountPath: /lib/udev
+- name: udev-socket
+  mountPath: /run/udev
+- name: sys
+  mountPath: /sys
+- mountPath: /etc/credentials.json
+  name: cloud-credentials
+  readOnly: true
+  subPath: credentials.json
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "pd.csi.storage.gke.io" }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

@@ -1,0 +1,48 @@
+###
+### controller
+###
+
+
+{{- define "csi_controller_args" }}
+- "--address=$(MY_POD_IP):12302"
+- {{ printf "--folder-id=%s" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | required "providerClusterConfiguration.provider.folderID is required") | quote }}
+{{- end }}
+
+{{- define "csi_controller_envs" }}
+- name: MY_POD_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.podIP
+- name: YANDEX_AUTH_KEYS
+  valueFrom:
+    secretKeyRef:
+      name: csi-credentials
+      key: serviceAccountJSON
+{{- end }}
+
+{{- $csiControllerImage := (printf "%s/cloud-provider-yandex/yandex-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderYandex.yandexCsiPlugin)}}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+{{- define "csi_node_envs" }}
+- name: YANDEX_AUTH_KEYS
+  valueFrom:
+    secretKeyRef:
+      name: csi-credentials
+      key: serviceAccountJSON
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "yandex.csi.flant.com" }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

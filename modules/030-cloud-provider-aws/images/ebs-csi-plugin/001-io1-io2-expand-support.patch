@@ -1,0 +1,27 @@
+https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/626
+
+From fbee5f69fc3b9585099fd2ca43ddd81fb567986f Mon Sep 17 00:00:00 2001
+From: Andrey Klimentyev <andrey.klimentyev@flant.com>
+Date: Tue, 1 Dec 2020 15:16:53 +0300
+Subject: [PATCH] Provider "Iops" field when resizing io1 and io2 volumes
+
+---
+ pkg/cloud/cloud.go | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/pkg/cloud/cloud.go b/pkg/cloud/cloud.go
+index 47d15b04..01795435 100644
+--- a/pkg/cloud/cloud.go
++++ b/pkg/cloud/cloud.go
+@@ -912,6 +912,11 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
+ 		Size:     aws.Int64(newSizeGiB),
+ 	}
+
++	switch aws.StringValue(volume.VolumeType) {
++	case VolumeTypeIO1, VolumeTypeIO2:
++		req.Iops = volume.Iops
++	}
++
+ 	klog.Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
+ 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
+ 	if err != nil {

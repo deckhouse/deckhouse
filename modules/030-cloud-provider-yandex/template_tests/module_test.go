@@ -31,13 +31,14 @@ const globalValues = `
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
-      cloudProviderYandex:
-        csiProvisioner: imagehash
-        csiAttacher: imagehash
-        csiResizer: imagehash
-        csiSnapshotter: imagehash
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
         csiNodeDriverRegistrar: imagehash
-        csiLivenessProbe: imagehash
+      cloudProviderYandex:
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
         yandexCsiPlugin: imagehash
@@ -102,18 +103,13 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
 			csiControllerSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-yandex", "csi-controller")
 			csiNodeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "csi-node")
-			csiNodeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "yandex-csi-node")
-			csiRegistrarCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:node")
-			csiRegistrarCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:node")
-			csiControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "yandex-csi-controller")
-			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-provisioner")
-			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-provisioner")
-			csiExternalAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-attacher")
-			csiExternalAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-attacher")
-			csiExternalResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-resizer")
-			csiExternalResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-resizer")
-			csiExternalSnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:yandex-csi:controller:external-snapshotter")
-			csiExternalSnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:yandex-csi:controller:external-snapshotter")
+			csiControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "csi")
+			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-provisioner")
+			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:csi:controller:external-provisioner")
+			csiExternalAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-attacher")
+			csiExternalAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:csi:controller:external-attacher")
+			csiExternalResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-resizer")
+			csiExternalResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:csi:controller:external-resizer")
 			csiCredentials := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "csi-credentials")
 			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
 			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
@@ -158,9 +154,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiControllerSS.Exists()).To(BeTrue())
 			Expect(csiNodeDS.Exists()).To(BeTrue())
-			Expect(csiNodeSA.Exists()).To(BeTrue())
-			Expect(csiRegistrarCR.Exists()).To(BeTrue())
-			Expect(csiRegistrarCRB.Exists()).To(BeTrue())
 			Expect(csiControllerSA.Exists()).To(BeTrue())
 			Expect(csiProvisionerCR.Exists()).To(BeTrue())
 			Expect(csiProvisionerCRB.Exists()).To(BeTrue())
@@ -168,8 +161,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiExternalAttacherCRB.Exists()).To(BeTrue())
 			Expect(csiExternalResizerCR.Exists()).To(BeTrue())
 			Expect(csiExternalResizerCRB.Exists()).To(BeTrue())
-			Expect(csiExternalSnapshotterCR.Exists()).To(BeTrue())
-			Expect(csiExternalSnapshotterCRB.Exists()).To(BeTrue())
 			Expect(csiCredentials.Exists()).To(BeTrue())
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())

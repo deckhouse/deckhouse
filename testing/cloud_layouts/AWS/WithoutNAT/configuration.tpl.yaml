@@ -35,7 +35,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     instanceType: m5.xlarge
-    ami: ami-092391a11f8aa4b7b
+    ami: ami-006a0174c6c25ac06
 nodeNetworkCIDR: "172.16.0.0/22"
 vpcNetworkCIDR: "172.16.0.0/16"
 sshPublicKey: '${SSH_PUBLIC_KEY}'

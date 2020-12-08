@@ -31,12 +31,14 @@ const globalValues = `
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
+        csiNodeDriverRegistrar: imagehash
       cloudProviderOpenstack:
-        cinderCsiPlugin: imagehash
-        csiProvisioner: imagehash
-        csiAttacher: imagehash
-        csiSnapshotter: imagehash
-        csiResizer: imagehash
         csiNodeDriverRegistrar: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
@@ -126,23 +128,16 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
+			cinderCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller")
 			cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
-			cinderNodePluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi-node")
-			cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-cinder-node-plugin")
-			cinterControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cinder-csi-controller")
-			cinderCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-cinder-controller-plugin")
-			cinderNodePluginCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cinder-csi:node")
-			cinderNodePluginCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cinder-csi:node")
-			cinderAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cinder-csi:controller:attacher")
-			cinderAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cinder-csi:controller:attacher")
-			cinderProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cinder-csi:controller:provisioner")
-			cinderProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cinder-csi:controller:provisioner")
-			cinderSnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cinder-csi:controller:snapshotter")
-			cinderSnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cinder-csi:controller:snapshotter")
-			cinderResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cinder-csi:controller:external-resizer")
-			cinderResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cinder-csi:controller:external-resizer")
-			cinderResizerR := f.KubernetesResource("Role", "d8-cloud-provider-openstack", "cinder-csi:controller")
-			cinderResizerRB := f.KubernetesResource("RoleBinding", "d8-cloud-provider-openstack", "cinder-csi:controller")
+			cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-node")
+			cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "csi")
+			cinderProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
+			cinderProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
+			cinderAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-attacher")
+			cinderAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-attacher")
+			cinderResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-resizer")
+			cinderResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-resizer")
 
 			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cloud-controller-manager")
@@ -191,22 +186,17 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 			// user story #2
 			Expect(cinderCSIDriver.Exists()).To(BeTrue())
-			Expect(cinderNodePluginSA.Exists()).To(BeTrue())
 			Expect(cinderNodePluginDS.Exists()).To(BeTrue())
-			Expect(cinterControllerPluginSA.Exists()).To(BeTrue())
+			Expect(cinderControllerPluginSA.Exists()).To(BeTrue())
 			Expect(cinderCongrollerPluginSS.Exists()).To(BeTrue())
-			Expect(cinderNodePluginCR.Exists()).To(BeTrue())
-			Expect(cinderNodePluginCRB.Exists()).To(BeTrue())
 			Expect(cinderAttacherCR.Exists()).To(BeTrue())
 			Expect(cinderAttacherCRB.Exists()).To(BeTrue())
 			Expect(cinderProvisionerCR.Exists()).To(BeTrue())
 			Expect(cinderProvisionerCRB.Exists()).To(BeTrue())
-			Expect(cinderSnapshotterCR.Exists()).To(BeTrue())
-			Expect(cinderSnapshotterCRB.Exists()).To(BeTrue())
 			Expect(cinderResizerCR.Exists()).To(BeTrue())
 			Expect(cinderResizerCRB.Exists()).To(BeTrue())
-			Expect(cinderResizerR.Exists()).To(BeTrue())
-			Expect(cinderResizerRB.Exists()).To(BeTrue())
+			Expect(cinderResizerCR.Exists()).To(BeTrue())
+			Expect(cinderResizerCRB.Exists()).To(BeTrue())
 
 			Expect(ccmSA.Exists()).To(BeTrue())
 			Expect(ccmCR.Exists()).To(BeTrue())
