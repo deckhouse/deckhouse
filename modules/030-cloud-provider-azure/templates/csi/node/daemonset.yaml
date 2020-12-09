@@ -50,13 +50,6 @@ spec:
             - --connection-timeout=3s
             - --health-port=29603
             - --v=5
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: node-driver-registrar
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-node-driver-registrar:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiNodeDriverRegistrar }}
           args:
@@ -77,13 +70,6 @@ spec:
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: azuredisk
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/azuredisk-csi:{{ .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi }}
           imagePullPolicy: IfNotPresent
@@ -137,13 +123,6 @@ spec:
               name: sys-devices-dir
             - mountPath: /sys/class/scsi_host/
               name: scsi-host-dir
-          resources:
-            limits:
-              cpu: 200m
-              memory: 200Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
       volumes:
         - hostPath:
             path: /var/lib/kubelet/plugins/disk.csi.azure.com

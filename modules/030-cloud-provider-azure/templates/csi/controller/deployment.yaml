@@ -54,13 +54,6 @@ spec:
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: csi-attacher
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-attacher:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiAttacher }}
           args:
@@ -74,13 +67,6 @@ spec:
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: csi-snapshotter
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-snapshotter:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiSnapshotter }}
           args:
@@ -93,13 +79,6 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: csi-resizer
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/csi-resizer:{{ .Values.global.modulesImages.tags.cloudProviderAzure.csiResizer }}
           args:
@@ -112,13 +91,6 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: liveness-probe
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/livenessprobe:{{ .Values.global.modulesImages.tags.cloudProviderAzure.livenessprobe }}
           args:
@@ -129,13 +101,6 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: azuredisk
           image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/azuredisk-csi:{{ .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi }}
           imagePullPolicy: IfNotPresent
@@ -171,13 +136,6 @@ spec:
             - name: cloud-config
               readOnly: true
               mountPath: "/etc/csi-cloud-credentials"
-          resources:
-            limits:
-              cpu: 200m
-              memory: 200Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
       volumes:
         - name: socket-dir
           emptyDir: {}
