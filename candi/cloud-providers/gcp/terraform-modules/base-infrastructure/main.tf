@@ -6,8 +6,8 @@ data "google_compute_address" "reserved" {
 }
 
 resource "google_compute_network" "kube" {
-  name                    = local.prefix
-  auto_create_subnetworks = false
+  name                      = local.prefix
+  auto_create_subnetworks   = false
   remove_routes_on_deletion = true
 }
 
@@ -30,6 +30,7 @@ resource "google_compute_router_nat" "kube" {
   nat_ip_allocate_option             = length(local.cloud_nat_addresses) > 0 ? "MANUAL_ONLY" : "AUTO_ONLY"
   nat_ips                            = length(local.cloud_nat_addresses) > 0 ? [for v in data.google_compute_address.reserved : v.self_link] : null
   source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
+  min_ports_per_vm                   = 1024
   subnetwork {
     name                    = google_compute_subnetwork.kube.self_link
     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
