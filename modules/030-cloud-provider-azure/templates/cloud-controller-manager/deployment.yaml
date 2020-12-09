@@ -65,9 +65,6 @@ spec:
             - mountPath: /etc/cloud-contoller-manager-config
               name: config
               readOnly: true
-          resources:
-            requests:
-              cpu: 200m
       volumes:
       - hostPath:
           path: /etc/kubernetes
