@@ -2,7 +2,7 @@
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.
-2. There are applications which must be deployed — cloud-controller-manager, pd-csi-driver, simple-bridge.
+2. There are applications which must be deployed — cloud-controller-manager, azure-csi-driver, simple-bridge.
 
 */
 
@@ -36,15 +36,18 @@ const globalValues = `
     registry: registry.flant.com
     registryDockercfg: cfg
     tags:
+      common:
+        csiExternalProvisioner116: imagehash
+        csiExternalAttacher116: imagehash
+        csiExternalProvisioner119: imagehash
+        csiExternalAttacher119: imagehash
+        csiExternalResizer: imagehash
+        csiNodeDriverRegistrar: imagehash
       cloudProviderAzure:
-        csiProvisioner: imagehash
-        csiAttacher: imagehash
-        csiResizer: imagehash
-        csiSnapshotter: imagehash
         csiNodeDriverRegistrar: imagehash
         simpleBridge: imagehash
         cloudControllerManager: imagehash
-        pdCsiPlugin: imagehash
+        azureCsiPlugin: imagehash
         livenessprobe: imagehash
         azurediskCsi: imagehash
   discovery:
@@ -111,29 +114,20 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:cloud-controller-manager")
 			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-azure", "cloud-controller-manager")
 
-			pdCSICSIDriver := f.KubernetesGlobalResource("CSIDriver", "disk.csi.azure.com")
-			pdCSISS := f.KubernetesResource("Deployment", "d8-cloud-provider-azure", "csi-azuredisk-controller")
-			pdCSIDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-azure", "csi-azuredisk-node")
+			azureCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-azure", "csi-controller")
+			azureCSIDriver := f.KubernetesGlobalResource("CSIDriver", "disk.csi.azure.com")
+			azureNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-azure", "csi-node")
+			azureControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-azure", "csi")
+			azureProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:external-provisioner")
+			azureProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:external-provisioner")
+			azureAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:external-attacher")
+			azureAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:external-attacher")
+			azureResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:external-resizer")
+			azureResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:external-resizer")
 
-			pdCSINodeSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-azure", "csi-node")
-			pdCSIRegistrarCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:node:secret")
-			pdCSIRegistrarCRD := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:node:secret")
-
-			pdCSIControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-azure", "csi-controller")
-			pdCSIProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:provisioner")
-			pdCSIProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:provisioner")
-			pdCSIAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:attacher")
-			pdCSIAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:attacher")
-			pdCSIResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:resizer")
-			pdCSIResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:resizer")
-			pdCSISnapshotterCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:snapshotter")
-			pdCSISnapshotterCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:snapshotter")
-			pdCSISecretCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-azure:csi:controller:secret")
-			pdCSISecretCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-azure:csi:controller:secret")
-
-			pdCSIaaaSC := f.KubernetesGlobalResource("StorageClass", "aaa")
-			pdCSIbbbSC := f.KubernetesGlobalResource("StorageClass", "bbb")
-			pdCSIcccSC := f.KubernetesGlobalResource("StorageClass", "ccc")
+			azureCSIaaaSC := f.KubernetesGlobalResource("StorageClass", "aaa")
+			azureCSIbbbSC := f.KubernetesGlobalResource("StorageClass", "bbb")
+			azureCSIcccSC := f.KubernetesGlobalResource("StorageClass", "ccc")
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-azure:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-azure:cluster-admin")
@@ -171,29 +165,22 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			Expect(ccmCRB.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
-			Expect(pdCSICSIDriver.Exists()).To(BeTrue())
-			Expect(pdCSISS.Exists()).To(BeTrue())
-			Expect(pdCSIDS.Exists()).To(BeTrue())
+			Expect(azureCSIDriver.Exists()).To(BeTrue())
+			Expect(azureNodePluginDS.Exists()).To(BeTrue())
+			Expect(azureControllerPluginSA.Exists()).To(BeTrue())
+			Expect(azureCongrollerPluginSS.Exists()).To(BeTrue())
+			Expect(azureAttacherCR.Exists()).To(BeTrue())
+			Expect(azureAttacherCRB.Exists()).To(BeTrue())
+			Expect(azureProvisionerCR.Exists()).To(BeTrue())
+			Expect(azureProvisionerCRB.Exists()).To(BeTrue())
+			Expect(azureResizerCR.Exists()).To(BeTrue())
+			Expect(azureResizerCRB.Exists()).To(BeTrue())
+			Expect(azureResizerCR.Exists()).To(BeTrue())
+			Expect(azureResizerCRB.Exists()).To(BeTrue())
 
-			Expect(pdCSINodeSA.Exists()).To(BeTrue())
-			Expect(pdCSIRegistrarCR.Exists()).To(BeTrue())
-			Expect(pdCSIRegistrarCRD.Exists()).To(BeTrue())
-
-			Expect(pdCSIControllerSA.Exists()).To(BeTrue())
-			Expect(pdCSIProvisionerCR.Exists()).To(BeTrue())
-			Expect(pdCSIProvisionerCRB.Exists()).To(BeTrue())
-			Expect(pdCSIAttacherCR.Exists()).To(BeTrue())
-			Expect(pdCSIAttacherCRB.Exists()).To(BeTrue())
-			Expect(pdCSIResizerCR.Exists()).To(BeTrue())
-			Expect(pdCSIResizerCRB.Exists()).To(BeTrue())
-			Expect(pdCSISnapshotterCR.Exists()).To(BeTrue())
-			Expect(pdCSISnapshotterCRB.Exists()).To(BeTrue())
-			Expect(pdCSISecretCR.Exists()).To(BeTrue())
-			Expect(pdCSISecretCRB.Exists()).To(BeTrue())
-
-			Expect(pdCSIaaaSC.Exists()).To(BeTrue())
-			Expect(pdCSIbbbSC.Exists()).To(BeTrue())
-			Expect(pdCSIcccSC.Exists()).To(BeTrue())
+			Expect(azureCSIaaaSC.Exists()).To(BeTrue())
+			Expect(azureCSIbbbSC.Exists()).To(BeTrue())
+			Expect(azureCSIcccSC.Exists()).To(BeTrue())
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())

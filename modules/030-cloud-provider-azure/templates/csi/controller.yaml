@@ -1,0 +1,94 @@
+###
+### controller
+###
+
+{{- define "csi_controller_envs" }}
+- name: AZURE_CREDENTIAL_FILE
+  value: "/etc/csi-cloud-credentials/cloud-config"
+{{- end }}
+
+{{- define "csi_controller_volumes" }}
+- name: msi
+  hostPath:
+    path: /var/lib/waagent/ManagedIdentity-Settings
+- name: cloud-config
+  secret:
+    secretName: cloud-controller-manager
+{{- end }}
+
+{{- define "csi_controller_volume_mounts" }}
+- mountPath: /var/lib/waagent/ManagedIdentity-Settings
+  readOnly: true
+  name: msi
+- name: cloud-config
+  readOnly: true
+  mountPath: "/etc/csi-cloud-credentials"
+{{- end }}
+
+{{- $csiControllerImage := (printf "%s/cloud-provider-azure/azuredisk-csi:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi)}}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+###
+### node
+###
+
+{{- define "csi_node_args" }}
+- "--nodeid=$(NODE_ID)"
+{{- end }}
+
+{{- define "csi_node_envs" }}
+- name: AZURE_CREDENTIAL_FILE
+  value: "/etc/csi-cloud-credentials/cloud-config"
+- name: KUBE_NODE_NAME
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: spec.nodeName
+{{- end }}
+
+{{- define "csi_node_volume_mounts" }}
+- name: cloud-config
+  readOnly: true
+  mountPath: "/etc/csi-cloud-credentials"
+- mountPath: /var/lib/waagent/ManagedIdentity-Settings
+  readOnly: true
+  name: msi
+- mountPath: /sys/bus/scsi/devices
+  name: sys-devices-dir
+- mountPath: /sys/class/scsi_host/
+  name: scsi-host-dir
+{{- end }}
+
+{{- define "csi_node_volumes" }}
+- hostPath:
+    path: /var/lib/waagent/ManagedIdentity-Settings
+  name: msi
+- hostPath:
+    path: /sys/bus/scsi/devices
+    type: Directory
+  name: sys-devices-dir
+- hostPath:
+    path: /sys/class/scsi_host/
+    type: Directory
+  name: scsi-host-dir
+- name: cloud-config
+  secret:
+    secretName: cloud-controller-manager
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "disk.csi.azure.com" }}
+{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
