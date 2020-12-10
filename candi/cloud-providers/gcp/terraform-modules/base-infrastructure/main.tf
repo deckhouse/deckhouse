@@ -45,25 +45,25 @@ module "firewall" {
 }
 
 locals {
-  peered_vpcs = toset(local.peered_vpcs_names)
+  peered_vpcs = local.peered_vpcs_names
 }
 
 # network peering
 data "google_compute_network" "other" {
-  for_each = local.peered_vpcs
-  name     = each.value
+  count = length(local.peered_vpcs)
+  name  = local.peered_vpcs[count.index]
 }
 
 resource "google_compute_network_peering" "kube-with-other" {
   count        = length(local.peered_vpcs)
-  name         = join("-with-", [local.prefix, local.peered_vpcs[count.index].name])
+  name         = join("-with-", [local.prefix, local.peered_vpcs[count.index]])
   network      = google_compute_network.kube.self_link
-  peer_network = local.peered_vpcs[count.index].self_link
+  peer_network = data.google_compute_network.other[count.index].self_link
 }
 
 resource "google_compute_network_peering" "other-with-kube" {
   count        = length(local.peered_vpcs)
-  name         = join("-with-", [local.peered_vpcs[count.index].name, local.prefix])
-  network      = local.peered_vpcs[count.index].self_link
+  name         = join("-with-", [local.peered_vpcs[count.index], local.prefix])
+  network      = data.google_compute_network.other[count.index].self_link
   peer_network = google_compute_network.kube.self_link
 }
