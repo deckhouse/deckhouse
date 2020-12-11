@@ -1,1 +1,1 @@
-bb-yum-install jq curl wget
+bb-yum-install jq curl wget virt-what
