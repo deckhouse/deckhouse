@@ -23,7 +23,8 @@ function __config__() {
         {
           "name": .metadata.name,
           "nodeGroup": .metadata.labels."node.deckhouse.io/group",
-          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType" // "Unknown")
+          "pricingNodeType": (.metadata.annotations."pricing.flant.com/nodeType" // "unknown"),
+          "virtualization": (.metadata.annotations."node.deckhouse.io/virtualization" // "unknown")
         }
     - name: ngs
       group: node_info
@@ -46,22 +47,25 @@ function __on_group::node_info() {
     node_name="$(jq -r '.name' <<< "$node_data")"
     node_group="$(jq -r '.nodeGroup' <<< "$node_data")"
     pricing_node_type="$(jq -r '.pricingNodeType' <<< "$node_data")"
+    virtualization="$(jq -r '.virtualization' <<< "$node_data")"
 
-    if ! ng_data="$(context::jq -er --arg node_group "$node_group" '.snapshots.ngs[] | select(.filterResult.name == $node_group) | .filterResult')"; then
+    if ! ng_data="$(context::jq -erc --arg node_group "$node_group" '.snapshots.ngs[] | select(.filterResult.name == $node_group) | .filterResult')"; then
       pricing="$pricing_node_type"
     else
       pricing="$(
-        jq -nr --arg pricing_node_type "$pricing_node_type" --argjson ng "$ng_data" '
-          if $pricing_node_type == "Unknown" and $ng.nodeType == "Cloud" then "Ephemeral"
-          elif $pricing_node_type == "Unknown" and $ng.nodeType == "Hybrid" then "VM"
-          else $pricing_node_type
+        jq -nr --arg pricing_node_type "$pricing_node_type" --arg virtualization "$virtualization" --argjson ng "$ng_data" '
+          if $pricing_node_type == "unknown" and $ng.nodeType == "Cloud" then "Ephemeral"
+          elif $pricing_node_type == "unknown" and $ng.nodeType == "Hybrid" then "VM"
+          elif $pricing_node_type == "unknown" and $virtualization != "unknown" then "VM"
+          elif $pricing_node_type != "unknown" then $pricing_node_type
+          else "Hard"
           end
       ')"
     fi
 
     metric_name="flant_pricing_node_info"
     jq -nc --arg metric_name $metric_name --arg node_name "$node_name" --arg pricing "$pricing" '
-        {"name": $metric_name, "group": "/modules/'$(module::name::kebab_case)'/metrics#'$metric_name'", "set": 1, "labels": {"node": $node_name, "pricing": $pricing}}
+        {"name": $metric_name, "group": "group_'$metric_name'", "set": 1, "labels": {"node": $node_name, "pricing": $pricing}}
         ' >> $METRICS_PATH
   done
 }

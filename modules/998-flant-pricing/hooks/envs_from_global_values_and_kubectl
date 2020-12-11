@@ -11,7 +11,7 @@ EOF
 
 function __main__() {
   cloud_provider="none"
-  fltr='[.global.enabledModules[] | select(startswith("cloud-provider-"))][0] | split("cloud-provider-")[1]'
+  fltr='[.global.enabledModules[] | select(startswith("cloud-provider-"))][0] // "" | split("cloud-provider-")[1]'
   if provider_from_values=$(values::jq -er "$fltr"); then
     cloud_provider="$provider_from_values"
   fi

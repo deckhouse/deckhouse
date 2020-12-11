@@ -1,1 +1,1 @@
-bb-apt-install jq curl wget
+bb-apt-install jq curl wget virt-what
