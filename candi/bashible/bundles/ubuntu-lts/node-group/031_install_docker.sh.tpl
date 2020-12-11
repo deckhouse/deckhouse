@@ -29,7 +29,7 @@ if bb-is-ubuntu-version? 20.04 ; then
 elif bb-is-ubuntu-version? 18.04 ; then
 {{- if eq .kubernetesVersion "1.19" }}
   desired_version="docker-ce=5:19.03.13~3-0~ubuntu-bionic"
-  allowed_versions_pattern=""
+  allowed_versions_pattern="docker-ce=5:18.09.7~3-0~ubuntu-bionic"
 {{- else }}
   desired_version="docker-ce=5:18.09.7~3-0~ubuntu-bionic"
   allowed_versions_pattern=""

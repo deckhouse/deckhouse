@@ -14,7 +14,7 @@ kubernetes_cni_version="0.8.7-0"
 kubernetes_version="1.18.12-0"
 kubernetes_cni_version="0.8.7-0"
 {{ else if eq .kubernetesVersion "1.19" }}
-kubernetes_version="1.19.4-0"
+kubernetes_version="1.19.5-0"
 kubernetes_cni_version="0.8.7-0"
 {{ else }}
   {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
