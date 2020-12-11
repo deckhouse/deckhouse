@@ -70,10 +70,10 @@ ansible:
       dest: /usr/local/bin/kubectl-1.16
       mode: +x
 
-  - name: "Install kubectl 1.19.4"
+  - name: "Install kubectl 1.19.5"
     get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.19.4/bin/linux/amd64/kubectl
-      checksum: "sha256:7df333f1fc1207d600139fe8196688303d05fbbc6836577808cda8fe1e3ea63f"
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.19.5/bin/linux/amd64/kubectl
+      checksum: "sha256:5f5a0bebde8a8782b2d9de9bd314dce722f9f960bee090b121ea5ac38cf4377d"
       dest: /usr/local/bin/kubectl-1.19
       mode: +x
 

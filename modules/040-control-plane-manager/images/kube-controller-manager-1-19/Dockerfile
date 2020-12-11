@@ -3,7 +3,7 @@ FROM $BASE_UBUNTU
 
 COPY --from=k8s.gcr.io/pause:3.1 /pause /pause
 
-ARG KUBERNETES_VERSION=v1.19.4
+ARG KUBERNETES_VERSION=v1.19.5
 
 ENV DEBIAN_FRONTEND=noninteractive \
     container=docker \

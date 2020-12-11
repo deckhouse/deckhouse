@@ -9,7 +9,7 @@ kubernetesVersion: 1.17.14
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.18" }}
 kubernetesVersion: 1.18.12
 {{- else if eq .clusterConfiguration.kubernetesVersion "1.19" }}
-kubernetesVersion: 1.19.4
+kubernetesVersion: 1.19.5
 {{- else }}
   {{- join (slice "Kubernetes version" .clusterConfiguration.kubernetesVersion "is not supported!") " "| fail }}
 {{- end }}

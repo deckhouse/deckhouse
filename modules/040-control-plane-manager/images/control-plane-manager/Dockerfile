@@ -32,7 +32,7 @@ RUN cd kubernetes-1.18 && \
   patch -p1 < /patch/v1.18/07-local-init-configuration.patch && \
   make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.18
 
-RUN mkdir /src/kubernetes-1.19 && wget https://github.com/kubernetes/kubernetes/archive/v1.19.4.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.19
+RUN mkdir /src/kubernetes-1.19 && wget https://github.com/kubernetes/kubernetes/archive/v1.19.5.tar.gz -O - | tar -xz --strip-components=1 -C /src/kubernetes-1.19
 RUN cd kubernetes-1.19 && \
   patch -p1 < /patch/v1.19/07-local-init-configuration.patch && \
   make all WHAT=cmd/kubeadm && mv _output/bin/kubeadm /kubeadm-1.19
