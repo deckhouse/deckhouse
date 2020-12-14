@@ -4,7 +4,7 @@ title: "Модуль user-authz: Custom Resources"
 
 ## ClusterAuthorizationRule
 
-* `subjects` — Пользователи и/или группы, которым вы хотите предоставить права. [Спецификация](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#subject-v1-rbac-authorization-k8s-io).
+* `subjects` — Пользователи и/или группы, которым вы хотите предоставить права. [Спецификация](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io).
     * **Важно!** При использовании совместно с модулем [user-authn](/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
 * `accessLevel` — `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterAdmin`, `SuperAdmin`. Не обязательный параметр.
     * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;

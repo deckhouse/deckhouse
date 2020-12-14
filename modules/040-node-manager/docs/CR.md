@@ -87,7 +87,7 @@ title: "Управление узлами: custom resources"
   * `manage` — автоматическое управление версией и параметрами docker.
     * По умолчанию `true`.
 * `nodeTemplate` — настройки Node объектов в Kubernetes, которые будут добавлены после регистрации ноды.
-  * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.labels`
+  * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`
     * Пример:
 
       ```yaml
@@ -95,7 +95,7 @@ title: "Управление узлами: custom resources"
         environment: production
         app: warp-drive-ai
 
-  * `annotations` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta) `metadata.annotations`
+  * `annotations` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`
     * Пример:
 
       ```yaml
@@ -103,7 +103,7 @@ title: "Управление узлами: custom resources"
         ai.fleet.com/discombobulate: "true"
       ```
 
-  * `taints` — аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+  * `taints` — аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
     * Пример:
 
       ```yaml

@@ -3,7 +3,7 @@ title: "Модуль prometheus-metrics-adapter: примеры конфигур
 search: autoscaler, HorizontalPodAutoscaler 
 ---
 
-Далее рассматривается только HPA с [apiVersion: autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#horizontalpodautoscalerspec-v2beta2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
+Далее рассматривается только HPA с [apiVersion: autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#horizontalpodautoscalerspec-v2beta2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
 
 В общем виде для настройки HPA требуется:
 * определить, что скейлим (`.spec.scaleTargetRef`),
