@@ -72,6 +72,16 @@ entries:
               url: /modules/030-cloud-provider-gcp/cr.html
           - title: FAQ
             url: /modules/030-cloud-provider-gcp/faq.html
+        - title: Microsoft Azure
+          folders:
+          - title: Описание
+            url: /modules/030-cloud-provider-azure/
+          - title: Справка
+            folders:
+            - title: Настройки
+              url: /modules/030-cloud-provider-azure/configuration.html
+            - title: Custom Resources
+              url: /modules/030-cloud-provider-azure/cr.html
         - title: Openstack
           folders:
           - title: Описание
