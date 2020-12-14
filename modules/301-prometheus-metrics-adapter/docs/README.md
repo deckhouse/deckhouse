@@ -9,7 +9,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 Это позволяет:
 - kubectl top брать метрики из Prometheus, через адаптер;
-- использовать [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#metricspec-v2beta2-autoscaling) для скейлинга приложений (HPA);
+- использовать [autoscaling/v2beta2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#metricspec-v2beta2-autoscaling) для скейлинга приложений (HPA);
 - получать информацию из prometheus средствами API kubernetes для других модулей (Vertical Pod Autoscaler, ...).
 
 Модуль позволяет производить скейлинг по следующим параметрам:
