@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"os/exec"
 	"strings"
 
@@ -13,7 +15,12 @@ import (
 )
 
 func calculateEpoch(ngName string, clusterUUID string) string {
-	epochCmd := exec.Command(`/bin/bash`, `-c`, `awk -v seed="`+clusterUUID+ngName+`" -v timestamp="1234567890" 'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'`)
+	h := md5.New()
+	b := []byte(clusterUUID + ngName + "\n")
+	h.Write(b)
+	seed := hex.EncodeToString(h.Sum(nil))
+
+	epochCmd := exec.Command(`/bin/bash`, `-c`, `awk -v seed="`+seed+`" -v timestamp="1234567890" 'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'`)
 	epochOut, err := epochCmd.Output()
 	if err != nil {
 		panic(err)
@@ -396,8 +403,8 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 		})
 	})
 
@@ -468,8 +475,8 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 		})
 	})
 
@@ -525,8 +532,8 @@ metadata:
 	`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 		})
 
 	})
@@ -585,8 +592,8 @@ metadata:
 
 			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Bad NodeGroup improper: Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
 		})
 	})
@@ -660,8 +667,8 @@ metadata:
 
 			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Bad NodeGroup improper: Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 		})
 	})
@@ -720,8 +727,8 @@ metadata:
 
 			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass."))
 		})
 	})
@@ -780,8 +787,8 @@ metadata:
 
 			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: unknown zones.`))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("unknown zones."))
 		})
 	})
@@ -855,8 +862,8 @@ metadata:
 
 			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(BeNil())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(BeNil())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 		})
 	})
