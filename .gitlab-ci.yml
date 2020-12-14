@@ -64,6 +64,9 @@ Cloud layouts Tests (manual):
   extends: .Cloud layouts Tests template
   tags:
     - cloud-layouts
+  except:
+    variables:
+    - $CLOUD_LAYOUTS_SCHEDULE
   when: manual
 
 Cloud layouts Tests (scheduled):
@@ -73,6 +76,7 @@ Cloud layouts Tests (scheduled):
   only:
     variables:
     - $CLOUD_LAYOUTS_SCHEDULE
+  when: always
 
 Hooks Configuration Tests:
   extends: .Hooks Configuration Tests template
