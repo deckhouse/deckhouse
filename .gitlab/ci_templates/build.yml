@@ -8,12 +8,14 @@
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - ./modules_images_werf bp
   except:
-  - schedules
-  - alpha
-  - beta
-  - early-access
-  - stable
-  - rock-solid
+    variables:
+    - $CI_PIPELINE_SOURCE == "schedule" && $CLOUD_LAYOUTS_SCHEDULE != "1"
+    refs:
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   interruptible: true
   artifacts:
     when: always
@@ -44,10 +46,12 @@
       docker image rmi $DESTINATION_INSTALL_IMAGE;
     fi
   except:
-  - schedules
-  - alpha
-  - beta
-  - early-access
-  - stable
-  - rock-solid
+    variables:
+    - $CI_PIPELINE_SOURCE == "schedule" && $CLOUD_LAYOUTS_SCHEDULE != "1"
+    refs:
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   interruptible: true
