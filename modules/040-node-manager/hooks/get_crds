@@ -135,11 +135,7 @@ function __on_kubernetes::cloud_provider_secrets() {
 # $1 — NG name
 # $2 — error message or empty string
 function _set_ng_error_status() {
-  if [ -n "$2" ]; then
-    status_patch="$(jq -n --arg msg "$2" '{"error": $msg}')"
-  else
-    status_patch="$(jq -n '{"error": null}')"
-  fi
+  status_patch="$(jq -n --arg msg "$2" '{"error": $msg}')"
   kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${status_patch}"
 }
 
@@ -285,7 +281,8 @@ function __main__() {
     ng="$(jq --arg effective_kubernetes_version "$effective_kubernetes_version" '.kubernetesVersion = $effective_kubernetes_version' <<< "$ng")"
 
     # Calculate update epoch
-    update_epoch=$(awk -v seed="$(values::get global.discovery.clusterUUID)${ng_name}" -v timestamp="$timestamp" \
+    seedMD5="$(md5sum <<< "$(values::get global.discovery.clusterUUID)${ng_name}" | cut -f1 -d" ")"
+    update_epoch=$(awk -v seed="$seedMD5" -v timestamp="$timestamp" \
       'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'
     )
     ng="$(jq --arg update_epoch "$update_epoch" '.updateEpoch = $update_epoch' <<< "$ng")"
