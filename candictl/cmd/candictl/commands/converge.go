@@ -18,7 +18,6 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	app.DefineTerraformFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	runFunc := func(sshClient *ssh.Client) error {

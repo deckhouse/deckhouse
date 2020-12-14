@@ -173,6 +173,7 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("abort", "Delete every node, which was created during bootstrap process.")
 	app.DefineConfigFlags(cmd)
+	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
 
 	runFunc := func() error {
@@ -274,7 +275,7 @@ You have to create it manually.
 func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("base-infra", "Create base infrastructure for Cloud Kubernetes cluster.")
 	app.DefineConfigFlags(cmd)
-	app.DefineTerraformFlags(cmd)
+	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 
 	runFunc := func() error {

@@ -17,7 +17,7 @@ func TestNewTempStateCache(t *testing.T) {
 
 	dir, err := ioutil.TempDir(os.TempDir(), "candictl-test-cache-*")
 	require.NoError(t, err)
-	app.TerraformStateDir = dir
+	app.CacheDir = dir
 
 	defer os.RemoveAll(dir)
 

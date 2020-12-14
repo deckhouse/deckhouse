@@ -8,11 +8,18 @@ import (
 )
 
 var (
-	TerraformStateDir = filepath.Join(os.TempDir(), "candictl")
+	CacheDir  = filepath.Join(os.TempDir(), "candictl")
+	DropCache = false
 )
 
-func DefineTerraformFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("terraform-state-dir", "Directory to store terraform state.").
-		Envar(configEnvName("TF_STATE_DIR")).
-		StringVar(&TerraformStateDir)
+func DefineCacheFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("cache-dir", "Directory to store the cache.").
+		Envar(configEnvName("CACHE_DIR")).
+		StringVar(&CacheDir)
+}
+
+func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
+		Default("false").
+		BoolVar(&DropCache)
 }
