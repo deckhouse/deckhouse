@@ -14,23 +14,36 @@ post-install() {
 {{- end }}
 }
 
-docker_package="docker-ce-18.09.9-3.el7.x86_64"
-docker_cli_package="docker-ce-cli-18.09.9-3.el7.x86_64"
+desired_version="docker-ce-18.09.9-3.el7.x86_64"
+allowed_versions_pattern=""
 
-if bb-yum-package? docker-ce; then
-  bb-flag-set there-was-docker-installed
+should_install_docker=true
+version_in_use="$(rpm -q docker-ce | head -1 || true)"
+if test -n "$allowed_versions_pattern" && if test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
+  should_install_docker=false
 fi
 
-if ! bb-yum-package? $docker_package; then
+if [[ "$version_in_use" == "$desired_version" ]]; then
+  should_install_docker=false
+fi
+
+if [[ "$should_install_docker" == true ]]; then
+  desired_version_cli="$(sed 's/docker-ce/docker-ce-cli/' <<< "$desired_version")"
+  container_selinux_package="container-selinux-2.119.2-1.911c772.el7_8"
+
+  if bb-yum-package? docker-ce; then
+    bb-flag-set there-was-docker-installed
+  fi
+
   bb-deckhouse-get-disruptive-update-approval
+
+  # RHEL 7 hack — docker-ce package requires container-selinux >= 2.9 but it doesn't exist in rhel repos.
+  . /etc/os-release
+  if [[ "${ID}" == "rhel" ]] && ! bb-yum-package? "$container_selinux_package"; then
+    yum install -y "http://mirror.centos.org/centos/7/extras/x86_64/Packages/$container_selinux_package.noarch.rpm"
+  fi
+
+  bb-yum-install $container_selinux_package $desired_version $desired_version_cli
 fi
 
-# RHEL 7 hack — docker-ce package requires container-selinux >= 2.9 but it doesn't exist in rhel repos.
-container_selinux_package="container-selinux-2.119.2-1.911c772.el7_8"
-. /etc/os-release
-if [[ "${ID}" == "rhel" ]] && ! bb-yum-package? "$container_selinux_package"; then
-  yum install -y "http://mirror.centos.org/centos/7/extras/x86_64/Packages/$container_selinux_package.noarch.rpm"
-fi
-
-bb-yum-install $container_selinux_package $docker_package $docker_cli_package
 {{- end }}

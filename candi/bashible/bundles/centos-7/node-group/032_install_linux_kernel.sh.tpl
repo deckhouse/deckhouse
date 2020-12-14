@@ -15,10 +15,28 @@ post-install() {
   {{- end }}
 
 desired_version="3.10.0-1127.8.2.el7.x86_64"
+allowed_versions_pattern=""
 
-if ! bb-yum-package? "kernel-${desired_version}"; then
+should_install_kernel=true
+version_in_use="$(uname -r)"
+if test -n "$allowed_versions_pattern" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
+  should_install_kernel=false
+fi
+
+if [[ "$version_in_use" == "$desired_version" ]]; then
+  should_install_kernel=false
+fi
+
+if [[ "$should_install_kernel" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
   bb-yum-install "kernel-${desired_version}"
+  packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$" || true)"
+else
+  packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${version_in_use}$" || true)"
+fi
+
+if [ -n "$packages_to_remove" ]; then
+  bb-yum-remove $packages_to_remove
 fi
 
 # Workaround for bug https://github.com/docker/for-linux/issues/841 - cannot allocate memory in /sys/fs/cgroup
@@ -29,14 +47,4 @@ if ! grep -q "cgroup.memory=nokmem" /etc/default/grub; then
   bb-flag-set reboot
 fi
 
-packages="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$" || true)"
-if [ -n "$packages" ]; then
-  bb-yum-remove $packages
-fi
-
-  {{- if ne .runType "ImageBuilding" }}
-if [[ "$(uname -r)" != "$desired_version" ]]; then
-  bb-flag-set reboot
-fi
-  {{- end }}
 {{- end }}

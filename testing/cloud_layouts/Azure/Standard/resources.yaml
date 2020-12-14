@@ -4,7 +4,7 @@ kind: AzureInstanceClass
 metadata:
   name: worker
 spec:
-  machineSize: Standard_F2
+  machineSize: Standard_D2_v2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
