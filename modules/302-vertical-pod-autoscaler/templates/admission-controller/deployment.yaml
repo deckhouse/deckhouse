@@ -47,10 +47,10 @@ spec:
         - --address=:8944
         - --tls-cert-file=/etc/tls-certs/serverCert.pem
         - --tls-private-key=/etc/tls-certs/serverKey.pem
-        - --client-ca-file=/etc/tls-certs/caCert.pem
         - --stderrthreshold=0
         - --logtostderr=true
         - --alsologtostderr=true
+        - --register-webhook=false
         - --v=4
         env:
         - name: NAMESPACE

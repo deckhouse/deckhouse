@@ -1,0 +1,43 @@
+diff --git a/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go b/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go
+index 3205cd0053..3876dbab7d 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go
++++ b/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go
+@@ -130,16 +130,19 @@ func buildAggregateContainerStateMap(vpa *model.Vpa, cluster *model.ClusterState
+ 	// checkpoint to avoid having multiple peaks in the same interval after the state is restored from
+ 	// the checkpoint. Therefore we are extracting the current peak from all containers.
+ 	// TODO: Avoid the nested loop over all containers for each VPA.
+-	for _, pod := range cluster.Pods {
+-		for containerName, container := range pod.Containers {
+-			aggregateKey := cluster.MakeAggregateStateKey(pod, containerName)
+-			if vpa.UsesAggregation(aggregateKey) {
+-				if aggregateContainerState, exists := aggregateContainerStateMap[containerName]; exists {
+-					subtractCurrentContainerMemoryPeak(aggregateContainerState, container, now)
++	if len(vpa.ContainersInitialAggregateState) != 0 {
++		for _, pod := range cluster.Pods {
++			for containerName, container := range pod.Containers {
++				aggregateKey := cluster.MakeAggregateStateKey(pod, containerName)
++				if vpa.UsesAggregation(aggregateKey) {
++					if aggregateContainerState, exists := aggregateContainerStateMap[containerName]; exists {
++						subtractCurrentContainerMemoryPeak(aggregateContainerState, container, now)
++					}
+ 				}
+ 			}
+ 		}
+ 	}
++
+ 	return aggregateContainerStateMap
+ }
+
+diff --git a/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go b/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go
+index 5ad843311..54eec33bb 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go
++++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go
+@@ -63,7 +63,7 @@ const (
+ 	DefaultMemoryAggregationIntervalCount = 8
+ 	// DefaultMemoryAggregationInterval is the default value for MemoryAggregationInterval.
+ 	// which the peak memory usage is computed.
+-	DefaultMemoryAggregationInterval = time.Hour * 24
++	DefaultMemoryAggregationInterval = time.Hour
+ 	// DefaultHistogramBucketSizeGrowth is the default value for HistogramBucketSizeGrowth.
+ 	DefaultHistogramBucketSizeGrowth = 0.05 // Make each bucket 5% larger than the previous one.
+ 	// DefaultMemoryHistogramDecayHalfLife is the default value for MemoryHistogramDecayHalfLife.

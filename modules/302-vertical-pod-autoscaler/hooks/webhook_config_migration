@@ -1,0 +1,23 @@
+#!/bin/bash
+
+### Migration 2020-12-08
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  if webhook_config="$(kubectl get mutatingwebhookconfigurations vpa-webhook-config -o json 2>/dev/null)" ; then
+    # Removing vpa-webhook-config if not managed by helm
+    if jq -e '.metadata.labels.heritage != "deckhouse"' > /dev/null  2>/dev/null <<< "$webhook_config" ; then
+      kubectl delete mutatingwebhookconfigurations vpa-webhook-config
+    fi
+  fi
+}
+
+hook::run $@
