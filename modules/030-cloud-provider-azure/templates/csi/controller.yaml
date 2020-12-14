@@ -46,7 +46,7 @@
 {{- define "csi_node_envs" }}
 - name: AZURE_CREDENTIAL_FILE
   value: "/etc/csi-cloud-credentials/cloud-config"
-- name: KUBE_NODE_NAME
+- name: NODE_ID
   valueFrom:
     fieldRef:
       apiVersion: v1
