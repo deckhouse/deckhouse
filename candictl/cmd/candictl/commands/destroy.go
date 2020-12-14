@@ -51,7 +51,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
 	app.DefineSSHFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	app.DefineTerraformFlags(cmd)
+	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
 	app.DefineSkipResourcesFlags(cmd)
 

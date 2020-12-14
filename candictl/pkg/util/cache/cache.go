@@ -69,7 +69,7 @@ type StateCache struct {
 
 // NewTempStateCache creates new cache instance in tmp directory
 func NewTempStateCache(identity string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.TerraformStateDir, encode(identity))
+	cacheDir := filepath.Join(app.CacheDir, encode(identity))
 	return NewStateCache(cacheDir)
 }
 

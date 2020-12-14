@@ -70,7 +70,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
-	app.DefineTerraformFlags(cmd)
+	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
 
