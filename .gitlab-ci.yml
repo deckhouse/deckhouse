@@ -67,6 +67,12 @@ Cloud layouts Tests (manual):
   except:
     variables:
     - $CLOUD_LAYOUTS_SCHEDULE
+    refs:
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
   when: manual
 
 Cloud layouts Tests (scheduled):
