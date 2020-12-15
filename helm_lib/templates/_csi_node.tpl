@@ -104,6 +104,8 @@ spec:
     {{- if $additionalNodeVolumeMounts }}
 {{ $additionalNodeVolumeMounts | toYaml | indent 8 }}
     {{- end }}
+      serviceAccount: ""
+      serviceAccountName: ""
       volumes:
       - name: registration-dir
         hostPath:
