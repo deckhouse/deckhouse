@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+### Migration 14.12.2020: remove after releasing deckhouse with this commit
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    kubernetes:
+    - name: old_scs
+      group: main
+      keepFullObjectsInMemory: false
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      apiVersion: storage.k8s.io/v1
+      kind: StorageClass
+      jqFilter: |
+        if .provisioner == "csi-cinderplugin" then .metadata.name else null end
+EOF
+}
+
+function __main__ {
+  if ! context::has snapshots.old_scs.0; then
+    return 0
+  fi
+
+  for sc in $(context::jq -r '[.snapshots.old_scs[].filterResult // empty] | join(" ")'); do
+    kubernetes::delete_if_exists "" "storageclass/$sc"
+  done
+}
+
+hook::run "$@"
