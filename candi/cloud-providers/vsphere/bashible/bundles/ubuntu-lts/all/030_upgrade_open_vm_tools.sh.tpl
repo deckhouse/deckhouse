@@ -1,4 +1,4 @@
-elif bb-is-ubuntu-version? 20.04 ; then
+if bb-is-ubuntu-version? 20.04 ; then
   bb-apt-install "open-vm-tools=2:11.1.5-1~ubuntu20.04.*"
 elif bb-is-ubuntu-version? 18.04 ; then
   bb-apt-install "open-vm-tools=2:11.0.5-4ubuntu0.*"
