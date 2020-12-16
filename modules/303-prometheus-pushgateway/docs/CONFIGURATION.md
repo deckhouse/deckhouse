@@ -9,15 +9,18 @@ title: "Модуль Prometheus Pushgateway: настройки"
 ```yaml
 data:
   prometheusPushgatewayEnabled: "true"
+  prometheusPushgateway: |
+    instances:
+    - example
 ```
 
 ## Параметры
 
 * `instances` — данный параметр содержит список PushGateway-ев для каждого из которых будет создан отдельный PushGateway.
+    * **Обязательный параметр**.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-
