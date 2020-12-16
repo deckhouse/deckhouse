@@ -25,10 +25,15 @@
   mountPath: "/etc/csi-cloud-credentials"
 {{- end }}
 
+{{- define "csi_controller_args" }}
+- "--endpoint=unix:///csi/csi.sock"
+{{- end }}
+
 {{- $csiControllerImage := (printf "%s/cloud-provider-azure/azuredisk-csi:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi)}}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
@@ -41,6 +46,7 @@
 
 {{- define "csi_node_args" }}
 - "--nodeid=$(NODE_ID)"
+- "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
 {{- define "csi_node_envs" }}

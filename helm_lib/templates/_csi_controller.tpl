@@ -101,7 +101,6 @@ spec:
   {{- if $additionalControllerArgs }}
 {{ $additionalControllerArgs | toYaml | indent 8 }}
   {{- end }}
-        - "--endpoint=unix:///csi/csi.sock"
   {{- if $additionalControllerEnvs }}
         env:
 {{ $additionalControllerEnvs | toYaml | indent 8 }}
