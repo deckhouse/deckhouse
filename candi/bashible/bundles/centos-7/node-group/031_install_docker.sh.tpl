@@ -19,7 +19,7 @@ allowed_versions_pattern=""
 
 should_install_docker=true
 version_in_use="$(rpm -q docker-ce | head -1 || true)"
-if test -n "$allowed_versions_pattern" && if test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
+if test -n "$allowed_versions_pattern" && test -n "$version_in_use" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
   should_install_docker=false
 fi
 
