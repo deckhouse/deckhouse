@@ -10,4 +10,4 @@ function __main__() {
   common_hooks::handle_host_ip_change::main "d8-system"
 }
 
-hook::run $@
+hook::run "$@"

@@ -1,5 +1,7 @@
 global:
   enabledModules: ["vertical-pod-autoscaler-crd", "flant-pricing"]
+  modules:
+    placement: {}
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg
@@ -8,3 +10,17 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     kubernetesVersion: 1.15.5
+deckhouse:
+  __ConstantChoices__:
+  -  internal:
+       currentReleaseImageName: "registry:testtag"
+     logLevel: "Info"
+  -  internal:
+       currentReleaseImageName: "registry:testtag"
+     logLevel: "Info"
+     nodeSelector:
+       testnode: ""
+     tolerations:
+       - key: foo
+         operator: Equal
+         value: bar

@@ -1,3 +1,4 @@
 deckhouse:
   logLevel: Info
   bundle: Default
+  internal: {}

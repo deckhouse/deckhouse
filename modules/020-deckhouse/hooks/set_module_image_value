@@ -1,0 +1,32 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: deckhouse_deployment
+      group: main
+      keepFullObjectsInMemory: false
+      waitForSynchronization: false
+      apiVersion: apps/v1
+      kind: Deployment
+      namespace:
+        nameSelector:
+          matchNames: ["d8-system"]
+      nameSelector:
+        matchNames: ["deckhouse"]
+      labelSelector:
+        matchLabels:
+          heritage: deckhouse
+      jqFilter: ".spec.template.spec.containers[0].image"
+EOF
+}
+
+function __main__() {
+  current_release_image_name="$(context::jq -r '.snapshots.deckhouse_deployment[0].filterResult')"
+  values::set deckhouse.internal.currentReleaseImageName "$current_release_image_name"
+}
+
+hook::run "$@"

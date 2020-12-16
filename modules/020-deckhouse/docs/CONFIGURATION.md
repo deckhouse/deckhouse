@@ -12,5 +12,11 @@ title: "Модуль deckhouse: настройки"
         * `Managed` - поставка для managed кластеров от облачных провайдеров, например Google Kubernetes Engine (GKE)
     * По умолчанию `Default`.
 * `releaseChannel` — канал обновлений Deckhouse.
-    * Возможные варианты в порядке возрастания стабильности обновлений: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`. 
-
+    * Возможные варианты в порядке возрастания стабильности обновлений: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+* `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
+    * Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+    * **Внимание!** Указание`node-role.kubernetes.io/master: ""` (или других лейблов, присутствующих на master-узлах) в качестве nodeSelector приведет к неверным результатам при автоматическом подсчете реквестов ресурсов для компонентов, расположенных на master-узлах.
+* `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
+    * Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+  
+**Внимание!** В случае, если в `nodeSelector` указан несуществующий label, или указаны неверные `tolerations`, Deckhouse перестанет работать. Для восстановления работоспособности необходимо изменить значения на правильные в configmap/deckhouse и в deployment/deckhouse. 
