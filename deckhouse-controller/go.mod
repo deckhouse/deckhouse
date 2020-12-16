@@ -9,8 +9,8 @@ require (
 	github.com/blang/semver v3.5.0+incompatible
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20201214091157-d94948b67938 // master
-	github.com/flant/shell-operator v1.0.0-beta.13.0.20201213124752-17d64f6e61d1 // master
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20201215101807-c124484f9956 // master
+	github.com/flant/shell-operator v1.0.0-beta.13.0.20201214204115-463c4ecd8214 // master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.12.0
 	github.com/sirupsen/logrus v1.4.2
