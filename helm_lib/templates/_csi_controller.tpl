@@ -74,6 +74,9 @@ spec:
         - "--csi-address=/csi/csi.sock"
         - "--feature-gates=Topology=true"
         - "--strict-topology"
+  {{- if semverCompare ">= 1.19" $context.Values.global.discovery.kubernetesVersion }}
+        - "--default-fstype=ext4"
+  {{- end }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
