@@ -5,6 +5,7 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/config/cloud-config"
 - "--cluster={{ .Values.global.discovery.clusterUUID }}"
+- "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -44,6 +45,7 @@
 {{- define "csi_node_args" }}
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/config/cloud-config"
+- "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
 {{- define "csi_node_envs" }}

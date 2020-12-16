@@ -5,6 +5,7 @@
 
 {{- define "csi_controller_args" }}
 - "--address=$(MY_POD_IP):12302"
+- "--endpoint=unix:///csi/csi.sock"
 - {{ printf "--folder-id=%s" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | required "providerClusterConfiguration.provider.folderID is required") | quote }}
 {{- end }}
 
@@ -32,6 +33,11 @@
 ###
 ### node
 ###
+
+{{- define "csi_node_args" }}
+- "--endpoint=unix:///csi/csi.sock"
+{{- end }}
+
 {{- define "csi_node_envs" }}
 - name: YANDEX_AUTH_KEYS
   valueFrom:
@@ -43,6 +49,7 @@
 {{- $csiNodeConfig := dict }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "yandex.csi.flant.com" }}
+{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
 
 {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

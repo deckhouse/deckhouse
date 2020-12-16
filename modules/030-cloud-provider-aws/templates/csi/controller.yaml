@@ -3,6 +3,7 @@
 ###
 {{- define "csi_controller_args" }}
 - "controller"
+- "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -32,6 +33,7 @@
 ###
 {{- define "node_args" }}
 - "node"
+- "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
 {{- $csiNodeConfig := dict }}

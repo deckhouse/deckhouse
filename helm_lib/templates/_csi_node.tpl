@@ -88,7 +88,6 @@ spec:
     {{- if $additionalNodeArgs }}
 {{ $additionalNodeArgs | toYaml | indent 8 }}
     {{- end }}
-        - "--endpoint=unix:///csi/csi.sock"
     {{- if $additionalNodeEnvs }}
         env:
 {{ $additionalNodeEnvs | toYaml | indent 8 }}
