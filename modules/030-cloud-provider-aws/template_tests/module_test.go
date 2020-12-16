@@ -213,6 +213,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("CCM should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-aws", "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})

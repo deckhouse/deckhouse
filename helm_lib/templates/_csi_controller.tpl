@@ -25,7 +25,8 @@
   {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common "csiExternalResizer" }}
   {{- $resizerImage := printf "%s/common/csi-external-resizer:%s" $context.Values.global.modulesImages.registry $resizerImageTag }}
 
-  {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if $provisionerImageTag }}
+    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -40,7 +41,7 @@ spec:
     name: csi-controller
   updatePolicy:
     updateMode: "Auto"
-  {{- end }}
+    {{- end }}
 ---
 kind: StatefulSet
 apiVersion: apps/v1
@@ -101,24 +102,25 @@ spec:
       - name: controller
         image: {{ $controllerImage | quote }}
         args:
-  {{- if $additionalControllerArgs }}
+    {{- if $additionalControllerArgs }}
 {{ $additionalControllerArgs | toYaml | indent 8 }}
-  {{- end }}
-  {{- if $additionalControllerEnvs }}
+    {{- end }}
+    {{- if $additionalControllerEnvs }}
         env:
 {{ $additionalControllerEnvs | toYaml | indent 8 }}
-  {{- end }}
+    {{- end }}
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
-  {{- if $additionalControllerVolumeMounts }}
+    {{- if $additionalControllerVolumeMounts }}
 {{ $additionalControllerVolumeMounts | toYaml | indent 8 }}
-  {{- end }}
+    {{- end }}
       volumes:
       - name: socket-dir
         emptyDir: {}
-  {{- if $additionalControllerVolumes }}
+    {{- if $additionalControllerVolumes }}
 {{ $additionalControllerVolumes | toYaml | indent 6 }}
+    {{- end }}
   {{- end }}
 {{- end }}
 
