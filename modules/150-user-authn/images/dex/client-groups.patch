@@ -1,5 +1,5 @@
 diff --git a/server/handlers.go b/server/handlers.go
-index 5a7244fa..5b13d3ce 100644
+index 5a7244fa..ea8b502b 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -21,6 +21,7 @@ import (
@@ -10,25 +10,27 @@ index 5a7244fa..5b13d3ce 100644
  	"github.com/dexidp/dex/server/internal"
  	"github.com/dexidp/dex/storage"
  )
-@@ -576,19 +577,27 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
- 		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
+@@ -577,18 +578,29 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
  		return
  	}
+
 +	client, err := s.storage.GetClient(authReq.ClientID)
 +	if err != nil {
 +		s.logger.Errorf("Failed to get client %q: %v", authReq.ClientID, err)
 +		s.renderError(r, w, http.StatusInternalServerError, "Failed to retrieve client.")
 +		return
 +	}
-
++
 +	if len(client.AllowedGroups) > 0 {
 +		authReq.Claims.Groups = groups.Filter(authReq.Claims.Groups, client.AllowedGroups)
++
 +		if len(authReq.Claims.Groups) == 0 {
-+			s.logger.Errorf("user not in allowed groups: %+v", client.AllowedGroups)
-+			s.renderError(r, w, http.StatusUnauthorized, "User not in allowed groups.")
++			s.logger.Errorf("user not in allowed groups: %v", client.AllowedGroups)
++			s.renderError(r, w, http.StatusInternalServerError, "User not in allowed groups.")
 +			return
 +		}
 +	}
++
  	switch r.Method {
  	case http.MethodGet:
  		if s.skipApproval {
@@ -45,7 +47,7 @@ index 5a7244fa..5b13d3ce 100644
  			s.logger.Errorf("Server template error: %v", err)
  		}
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 41b14f37..864fa86f 100644
+index 41b14f37..4ed11c4d 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -197,6 +197,8 @@ type Client struct {
@@ -57,6 +59,48 @@ index 41b14f37..864fa86f 100644
  }
 
  // ClientList is a list of Clients.
+@@ -216,25 +218,27 @@ func (cli *client) fromStorageClient(c storage.Client) Client {
+ 			Name:      cli.idToName(c.ID),
+ 			Namespace: cli.namespace,
+ 		},
+-		ID:           c.ID,
+-		Secret:       c.Secret,
+-		RedirectURIs: c.RedirectURIs,
+-		TrustedPeers: c.TrustedPeers,
+-		Public:       c.Public,
+-		Name:         c.Name,
+-		LogoURL:      c.LogoURL,
++		ID:            c.ID,
++		Secret:        c.Secret,
++		RedirectURIs:  c.RedirectURIs,
++		TrustedPeers:  c.TrustedPeers,
++		Public:        c.Public,
++		Name:          c.Name,
++		LogoURL:       c.LogoURL,
++		AllowedGroups: c.AllowedGroups,
+ 	}
+ }
+
+ func toStorageClient(c Client) storage.Client {
+ 	return storage.Client{
+-		ID:           c.ID,
+-		Secret:       c.Secret,
+-		RedirectURIs: c.RedirectURIs,
+-		TrustedPeers: c.TrustedPeers,
+-		Public:       c.Public,
+-		Name:         c.Name,
+-		LogoURL:      c.LogoURL,
++		ID:            c.ID,
++		Secret:        c.Secret,
++		RedirectURIs:  c.RedirectURIs,
++		TrustedPeers:  c.TrustedPeers,
++		Public:        c.Public,
++		Name:          c.Name,
++		LogoURL:       c.LogoURL,
++		AllowedGroups: c.AllowedGroups,
+ 	}
+ }
+
 diff --git a/storage/storage.go b/storage/storage.go
 index 06f718e1..552e4091 100644
 --- a/storage/storage.go
