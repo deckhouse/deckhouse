@@ -57,7 +57,7 @@ const globalValues = `
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.15.4
+    kubernetesVersion: 1.19.4
 `
 
 const moduleValues = `
@@ -184,6 +184,20 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+		})
+
+		Context("Unsupported Kubernetes version", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
+				f.HelmRender()
+			})
+
+			It("CSI controller should not be present on unsupported Kubernetes versions", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-azure", "csi-controller").Exists()).To(BeFalse())
+			})
 		})
 	})
 })

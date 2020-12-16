@@ -285,9 +285,10 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.HelmRender()
 		})
 
-		It("CCM should not be present on unsupported Kubernetes versions", func() {
+		It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller").Exists()).To(BeFalse())
 		})
 	})
 })
