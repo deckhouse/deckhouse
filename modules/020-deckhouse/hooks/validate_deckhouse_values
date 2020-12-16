@@ -10,17 +10,18 @@ EOF
 }
 
 function __main__() {
+  # TODO Remove this hook after adding OpenAPI validations
   deckhouse_bundle=$(values::get deckhouse.bundle)
   if [[ "$deckhouse_bundle" != "Default" ]] && [[ "$deckhouse_bundle" != "Minimal" ]] && [[ "$deckhouse_bundle" != "Managed" ]]; then
     echo "Deckhouse bundle \"$deckhouse_bundle\" doesn't exists."
     return 1
   fi
 
-  fltr='.'
-  fltr=$fltr" | if (any(.spec.template.spec.containers[0].env[]; .name == \"DECKHOUSE_BUNDLE\") | not) then .spec.template.spec.containers[0].env += [{\"name\":\"DECKHOUSE_BUNDLE\",\"value\":\"$deckhouse_bundle\"}]"
-  fltr=$fltr" else .spec.template.spec.containers[0].env |= (map((select(.name == \"DECKHOUSE_BUNDLE\") | .value) |= \"$deckhouse_bundle\")) end"
-
-  kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
+  log_level=$(values::get --required deckhouse.logLevel)
+  if [[ "$log_level" != "Debug" && "$log_level" != "Info" && "$log_level" != "Error" ]] ; then
+    >&2 echo "Bad deckhouse.logLevel value \"$log_level\", should be Debug, Info or Error."
+    return 1
+  fi
 }
 
 hook::run "$@"

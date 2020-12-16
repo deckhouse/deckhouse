@@ -33,6 +33,10 @@ metadata:
   namespace: d8-system
   labels:
     heritage: deckhouse
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: deckhouse
+    meta.helm.sh/release-namespace: d8-system
 spec:
   replicas: 1
   selector:
@@ -89,10 +93,6 @@ spec:
           # fail after 10 minutes
           periodSeconds: 5
           failureThreshold: 120
-        resources:
-          requests:
-            cpu: 50m
-            memory: 512Mi
         workingDir: /deckhouse
       hostNetwork: true
       dnsPolicy: Default
@@ -169,7 +169,12 @@ func DeckhouseServiceAccount() *apiv1.ServiceAccount {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "deckhouse",
 			Labels: map[string]string{
-				"heritage": "deckhouse",
+				"heritage":                     "deckhouse",
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "deckhouse",
+				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
 	}

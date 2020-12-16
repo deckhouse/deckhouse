@@ -1,0 +1,82 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
+{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | indent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deckhouse
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: deckhouse
+    spec:
+{{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
+{{- if .Values.deckhouse.nodeSelector }}
+      nodeSelector:
+{{ .Values.deckhouse.nodeSelector | toYaml | indent 8 }}
+{{- else }}
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- end }}
+{{- if .Values.deckhouse.tolerations }}
+      tolerations:
+{{ .Values.deckhouse.tolerations | toYaml | indent 8 }}
+{{- else }}
+{{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
+{{- end }}
+      containers:
+        - name: deckhouse
+          command:
+            - /deckhouse/deckhouse
+          image: {{ .Values.deckhouse.internal.currentReleaseImageName }}
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.deckhouse.logLevel }}
+            - name: DECKHOUSE_BUNDLE
+              value: {{ .Values.deckhouse.bundle }}
+            - name: DECKHOUSE_POD
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HELM_HOST
+              value: "127.0.0.1:44434"
+            - name: ADDON_OPERATOR_CONFIG_MAP
+              value: deckhouse
+            - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
+              value: deckhouse_
+            - name: ADDON_OPERATOR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ADDON_OPERATOR_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - containerPort: 9650
+              name: self
+            - containerPort: 9651
+              name: custom
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 9650
+            initialDelaySeconds: 5
+            # fail after 10 minutes
+            periodSeconds: 5
+            failureThreshold: 120
+          workingDir: /deckhouse
+      hostNetwork: true
+{{- if .Values.global.clusterIsBootstrapped }}
+      dnsPolicy: ClusterFirstWithHostNet
+{{- else }}
+      dnsPolicy: Default
+{{- end}}
+      serviceAccountName: deckhouse

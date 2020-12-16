@@ -29,7 +29,7 @@ function __main__() {
   fi
 
   # Get current release channel
-  current_release_channel_tag=$(kubectl -n d8-system get deploy/deckhouse -o json | jq -r '.spec.template.spec.containers[0].image' | awk -F ":" '{ print $2 }')
+  current_release_channel_tag="$(values::get deckhouse.internal.currentReleaseImageName | awk -F ":" '{ print $2 }')"
   if [[ ! ${release_channels_tags[$current_release_channel_tag]+_} ]]; then
     # Current image tag does not match any release channel, skip stabilization
     return 0
@@ -46,8 +46,8 @@ function __main__() {
 
   registry=$(values::get global.modulesImages.registry)
 
-  credentials=$(cat /etc/registrysecret/.dockerconfigjson | jq -r '.auths | to_entries[] | .value | "--username=" + .username + " --password=" + .password')
-  current_digest=$(reg digest $credentials "${registry}:${current_release_channel_tag}")
+  credentials=$(jq -re '.auths | to_entries[] | .value | "--username=" + .username + " --password=" + .password' < /etc/registrysecret/.dockerconfigjson)
+  current_digest=$(reg digest "$credentials" "${registry}:${current_release_channel_tag}")
 
   result_tag=$current_release_channel_tag
   index=${release_channels_order[${release_channels_tags[$current_release_channel_tag]}]}
@@ -57,7 +57,7 @@ function __main__() {
     while [[ "$index" -ne 0 ]]; do
       index=$(("$index" - 1))
       candidate_tag=${orders_to_tags[$index]}
-      candidate_digest=$(reg digest $credentials "${registry}:${candidate_tag}")
+      candidate_digest=$(reg digest "$credentials" "${registry}:${candidate_tag}")
       if [[ "$current_digest" != "$candidate_digest" ]] || [[ "$index" == "$desired_order" ]]; then
         result_tag=$candidate_tag
         break
@@ -68,7 +68,7 @@ function __main__() {
     while [[ "$index" -ne 4 ]]; do
       index=$(("$index" + 1))
       candidate_tag=${orders_to_tags[$index]}
-      candidate_digest=$(reg digest $credentials "${registry}:${candidate_tag}")
+      candidate_digest=$(reg digest "$credentials" "${registry}:${candidate_tag}")
       if [[ "$current_digest" != "$candidate_digest" ]]; then
         break
       fi
@@ -76,7 +76,7 @@ function __main__() {
     done
   fi
   if [[ "$result_tag" != "$current_release_channel_tag" ]]; then
-    kubernetes::patch_jq d8-system deployment/deckhouse ".spec.template.spec.containers[0].image = \"${registry}:${result_tag}\""
+    values::set deckhouse.internal.currentReleaseImageName "${registry}:${result_tag}"
   fi
 }
 
