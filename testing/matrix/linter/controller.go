@@ -5,13 +5,19 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
 
 	"github.com/fatih/color"
+	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
+	"github.com/iancoleman/strcase"
 	"github.com/kyokomi/emoji"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"helm.sh/helm/v3/pkg/chart"
@@ -23,11 +29,57 @@ import (
 	"github.com/deckhouse/deckhouse/testing/util/helm"
 )
 
+func init() {
+	// Mute Shell-Operator logs
+	logrus.SetLevel(logrus.PanicLevel)
+}
+
 var (
 	workersQuantity = runtime.NumCPU()
 
 	sep = regexp.MustCompile("(?:^|\\s*\n)---\\s*")
 )
+
+func loadOpenAPISchemas(m *types.Module) error {
+	openAPIDir := filepath.Join("deckhouse", "global", "openapi")
+	configBytes, valuesBytes, err := module_manager.ReadOpenAPISchemas(openAPIDir)
+	if err != nil {
+		return fmt.Errorf("read global openAPI schemas: %v", err)
+	}
+	if configBytes != nil {
+		err = validation.AddGlobalValuesSchema("config", configBytes)
+		if err != nil {
+			return fmt.Errorf("parse global config openAPI: %v", err)
+		}
+	}
+	if valuesBytes != nil {
+		err = validation.AddGlobalValuesSchema("memory", valuesBytes)
+		if err != nil {
+			return fmt.Errorf("parse global values openAPI: %v", err)
+		}
+	}
+
+	openAPIPath := filepath.Join(m.Path, "openapi")
+	valuesKey := strcase.ToLowerCamel(m.Name)
+	configBytes, valuesBytes, err = module_manager.ReadOpenAPISchemas(openAPIPath)
+	if err != nil {
+		return fmt.Errorf("module '%s' read openAPI schemas: %v", m.Name, err)
+	}
+	if configBytes != nil {
+		err = validation.AddModuleValuesSchema(valuesKey, "config", configBytes)
+		if err != nil {
+			return fmt.Errorf("module '%s' parse config openAPI: %v", m.Name, err)
+		}
+	}
+	if valuesBytes != nil {
+		err = validation.AddModuleValuesSchema(valuesKey, "memory", valuesBytes)
+		if err != nil {
+			return fmt.Errorf("module '%s' parse config openAPI: %v", m.Name, err)
+		}
+	}
+
+	return nil
+}
 
 type ModuleController struct {
 	Module types.Module
@@ -41,6 +93,11 @@ func NewModuleController(m types.Module, values []string) *ModuleController {
 	if err != nil {
 		panic(fmt.Errorf("chart load: %v", err))
 	}
+
+	if err := loadOpenAPISchemas(&m); err != nil {
+		panic(fmt.Errorf("schemas load: %v", err))
+	}
+
 	return &ModuleController{Module: m, Values: values, Chart: hc}
 }
 
@@ -66,9 +123,15 @@ func (w *Worker) Start(c *ModuleController) {
 	for {
 		select {
 		case task := <-w.tasksCh:
+			err := c.ValidateValues(task.values)
+			if err != nil {
+				w.errorsCh <- testsError(task.index, err, task.values)
+				return
+			}
+
 			objectStore := storage.NewUnstructuredObjectStore()
 
-			err := c.RunRender(task.values, &objectStore)
+			err = c.RunRender(task.values, &objectStore)
 			if err != nil {
 				w.errorsCh <- testsError(task.index, err, task.values)
 				return
@@ -160,6 +223,57 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 			if err != nil {
 				return fmt.Errorf("helm chart object already exists: %v", err)
 			}
+		}
+	}
+	return nil
+}
+
+func (c *ModuleController) ValidateValues(values string) error {
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(values), &obj)
+	if err != nil {
+		return err
+	}
+
+	valuesKey := strcase.ToLowerCamel(c.Module.Name)
+	schemaValidation := []struct {
+		schema *spec.Schema
+		key    string
+	}{
+		{
+			schema: validation.GetGlobalValuesSchema("memory"),
+			key:    "global",
+		},
+		{
+			schema: validation.GetGlobalValuesSchema("config"),
+			key:    "global",
+		},
+		{
+			schema: validation.GetModuleValuesSchema(c.Module.Name, "memory"),
+			key:    valuesKey,
+		},
+		{
+			schema: func() *spec.Schema {
+				s := validation.GetModuleValuesSchema(c.Module.Name, "config")
+				if s == nil {
+					return s
+				}
+				// Do not validate internal values with config schema
+				s.Properties["internal"] = spec.Schema{}
+				return s
+			}(),
+			key: valuesKey,
+		},
+	}
+
+	for _, ss := range schemaValidation {
+		if ss.schema == nil {
+			continue
+		}
+
+		err = validation.ValidateObject(obj[ss.key], ss.schema, ss.key)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

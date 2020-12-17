@@ -6,10 +6,11 @@ require (
 	flant/candictl v0.0.0 // use non-existent version for replace
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20201119104511-16f2a7a80615 // branch: master
-	github.com/flant/shell-operator v1.0.0-beta.13 // feature: exponential backoff
+	github.com/flant/addon-operator v1.0.0-beta.6.0.20201215101807-c124484f9956 // master
+	github.com/flant/shell-operator v1.0.0-beta.13.0.20201214204115-463c4ecd8214 // master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-openapi/spec v0.19.3
 	github.com/google/go-cmp v0.4.0
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.8
@@ -18,6 +19,7 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/otiai10/copy v1.0.2
+	github.com/sirupsen/logrus v1.4.2
 	github.com/tidwall/gjson v1.3.4
 	github.com/tidwall/sjson v1.0.4
 	golang.org/x/sys v0.0.0-20200113162924-86b910548bc1
