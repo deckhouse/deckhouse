@@ -16,11 +16,10 @@ webhooks:
     service:
       name: vpa-webhook
       namespace: kube-system
-      port: 443
   failurePolicy: Ignore
-  matchPolicy: Exact
   name: vpa.k8s.io
   namespaceSelector: {}
+{{- if semverCompare ">=1.16" .Values.global.discovery.kubernetesVersion }}
   objectSelector:
     matchExpressions:
     - key: app
@@ -29,7 +28,7 @@ webhooks:
       - vpa-admission-controller
       - vpa-recommender
       - vpa-updater
-  reinvocationPolicy: Never
+{{- end }}
   rules:
   - apiGroups:
     - ""
