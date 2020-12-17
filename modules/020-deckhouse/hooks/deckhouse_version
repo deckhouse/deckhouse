@@ -3,15 +3,16 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  cat << EOF
+  cat <<EOF
     configVersion: v1
     onStartup: 10
 EOF
 }
 
 function __on_startup() {
-  if [[ -f /deckhouse/version ]] ; then currentVersion=$(cat /deckhouse/version) ; else currentVersion="unknown"; fi
-  kubernetes::patch_jq d8-system deployment/deckhouse '.metadata.annotations."core.deckhouse.io/version" = "'${currentVersion}'"'
+  if [[ -f /deckhouse/version ]]; then currentVersion=$(cat /deckhouse/version); else currentVersion="unknown"; fi
+  fltr=".metadata.annotations.\"core.deckhouse.io/version\" = \"${currentVersion}\""
+  kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
 }
 
 hook::run $@

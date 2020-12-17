@@ -3,13 +3,14 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  cat << EOF
+  cat <<EOF
     configVersion: v1
     kubernetes:
     - name: d8_deployment
       keepFullObjectsInMemory: false
       apiVersion: apps/v1
       kind: Deployment
+      group: main
       executeHookOnEvent: ["Added", "Modified"]
       namespace:
         nameSelector:
@@ -25,14 +26,14 @@ function __config__() {
 EOF
 }
 
-function __on_kubernetes::d8_deployment() {
+function __main__() {
 
-  if context::has objects.0; then
-    if [[ "$(values::get deckhouseWeb.deckhouseTag)" != "$(context::get objects.0.filterResult.tag)" ]] ; then
-      values::set deckhouseWeb.deckhouseTag "$(context::get objects.0.filterResult.tag)"
+  if context::has snapshots.d8_deployment.0; then
+    if [[ "$(values::get deckhouseWeb.deckhouseTag)" != "$(context::get snapshots.d8_deployment.0.filterResult.tag)" ]]; then
+      values::set deckhouseWeb.deckhouseTag "$(context::get snapshots.d8_deployment.0.filterResult.tag)"
     fi
-    if [[ "$(values::get deckhouseWeb.deckhouseVersion)" != "$(context::get objects.0.filterResult.version)" ]] ; then
-      values::set deckhouseWeb.deckhouseVersion "$(context::get objects.0.filterResult.version)"
+    if [[ "$(values::get deckhouseWeb.deckhouseVersion)" != "$(context::get snapshots.d8_deployment.0.filterResult.version)" ]]; then
+      values::set deckhouseWeb.deckhouseVersion "\"$(context::get snapshots.d8_deployment.0.filterResult.version)\""
     fi
   fi
 
