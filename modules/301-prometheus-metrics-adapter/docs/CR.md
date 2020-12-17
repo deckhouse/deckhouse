@@ -27,7 +27,7 @@ search: autoscaler, HorizontalPodAutoscaler
 ### `DeploymentMetric`
 {{ cr_spec }}
 
-### `StatefulsetMetric`
+### `StatefulSetMetric`
 {{ cr_spec }}
 
 ### `NamespaceMetric`
@@ -51,7 +51,7 @@ search: autoscaler, HorizontalPodAutoscaler
 {{ cr_spec }}
 #### Пример
 
-### `ClusterStatefulsetMetric` (не доступен пользователям)
+### `ClusterStatefulSetMetric` (не доступен пользователям)
 {{ cr_spec }}
 #### Пример
 
