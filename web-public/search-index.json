@@ -1,12 +1,12 @@
 ---
 title: search
 layout: none
-search: exclude
+searchable: false
 ---
 [
-{%- assign searchedpages = site.pages | where: "search", true %}
+{%- assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
-{%- unless page.search == "exclude" %}
+{%- unless page.searchable == false %}
 "title": "{{ page.title | escape }}",
 "url": "/{{ page.url | remove_first: "/"}}",
 "content": {{ page.content | strip_html | strip_newlines | lstrip | rstrip | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | jsonify }}}

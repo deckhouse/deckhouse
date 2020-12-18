@@ -1,6 +1,6 @@
 ---
 title: "Поиск"
-search: exclude
+searchable: false
 permalink: /search.html
 toc: false
 ---
@@ -12,19 +12,21 @@ toc: false
 
 <script>
 var documents=[
-{%- assign searchedpages = site.pages | where: "search", true %}
+{%- assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
-{%- unless page.search == "exclude" %}{
+{%- unless page.searchable == false %}
+{
+{%- capture search_content %}{{ page.content |  newline_to_br | strip_html | lstrip | rstrip | jsonify }}{%- endcapture -%}
 "title": "{{ page.title | escape }}",
 "url": "/{{ page.url | remove_first: "/"}}",
-"content": {{ page.content | strip_html | strip_newlines | lstrip | rstrip | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | replace: "  ", " " | jsonify }}}
+"content": {% compact_string %}{{ search_content }}{% endcompact_string %} }
 {%- unless forloop.last %},{% endunless %}
 {%- endunless %}
-{%- endfor %}
+{%- endfor -%}
 ];
 </script>
-{% asset lunr.js %}
-{% asset lunr.stemmer.support.js %}
-{% asset lunr.multi.js %}
-{% asset lunr.ru.js %}
-{% asset search.js %}
+{%- asset lunr.js %}
+{%- asset lunr.stemmer.support.js %}
+{%- asset lunr.multi.js %}
+{%- asset lunr.ru.js %}
+{%- asset search.js %}

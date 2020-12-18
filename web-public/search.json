@@ -1,13 +1,13 @@
 ---
 title: search
 layout: none
-search: exclude
+searchable: false
 ---
 
 [
-{% assign searchedpages = site.pages | where: "search", true %}
+{% assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
-{%- unless page.search == "exclude" %}
+{%- unless page.search == false %}
 {
 "title": "{{ page.title | escape }}",
 "tags": "{{ page.tags }}",
