@@ -8,7 +8,7 @@
     annotations:
       plk_protocol_version: "1"
       description: The Kubelet on {{ $labels.node }} has not checked in with the API,
-        or has set itself to NotReady, for more than an hour
+        or has set itself to NotReady, for more than 10 minutes
       summary: Node status is NotReady
   - alert: K8SManyNodesNotReady
     expr: count(kube_node_status_condition{condition="Ready",status="true"} == 0)
