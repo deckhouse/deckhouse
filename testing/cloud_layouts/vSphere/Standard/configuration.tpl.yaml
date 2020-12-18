@@ -1,0 +1,76 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: vSphere
+  prefix: '${PREFIX}'
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: '${KUBERNETES_VERSION}'
+clusterDomain: "cluster.local"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.flant.com/sys/antiopa
+  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  devBranch: '${DEV_BRANCH}'
+  configOverrides:
+    prometheusMadisonIntegrationEnabled: false
+    global:
+      clusterName: smoke
+      project: dev-rnd
+      modules:
+        publicDomainTemplate: "%s.k8s.smoke.flant.com"
+    keepalivedEnabled: true
+    networkGatewayEnabled: true
+    networkGateway:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - operator: Exists
+      publicAddress: 10.220.203.240
+      subnet: 172.16.25.0/24
+      dns:
+        servers:
+        - 10.80.100.129
+        - 10.80.100.130
+        - 10.80.101.253
+        search:
+        - ${VSPHERE_BASE_DOMAIN}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VsphereClusterConfiguration
+sshPublicKey: '${SSH_PUBLIC_KEY}'
+layout: Standard
+vmFolderPath: 'flant-e2e-tests/${PREFIX}'
+regionTagCategory: k8s-region
+zoneTagCategory: k8s-zone
+region: X2
+zones:
+- X2-A
+externalNetworkNames:
+- msk3-k8s-1203
+internalNetworkNames:
+- DEVOPS_36
+internalNetworkCIDR: 172.16.25.0/24
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: Templates/ubuntu-bionic-18.04-deckhouse
+    mainNetwork: msk3-k8s-1203
+    additionalNetworks:
+    - DEVOPS_36
+    datastore: 3par_4_Lun103
+    resourcePool: kubernetes-dev/cloud-layout-tests
+    rootDiskSize: 20
+    runtimeOptions:
+      nestedHardwareVirtualization: false
+provider:
+  server: p-vc-3.${VSPHERE_BASE_DOMAIN}
+  username: dvadm@vsphere.local
+  password: '${VSPHERE_PASSWORD}'
+  insecure: true

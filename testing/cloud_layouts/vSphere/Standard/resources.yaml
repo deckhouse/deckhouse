@@ -1,0 +1,63 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KeepalivedInstance
+metadata:
+  name: master-gateway
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  tolerations:
+  - operator: Exists
+  vrrpInstances:
+  - id: 1
+    interface:
+      detectionStrategy: NetworkAddress
+      networkAddress: "172.16.25.0/24"
+    virtualIPAddresses:
+    - address: "172.16.25.1/24"
+    - address: "10.220.203.240/24"
+      interface:
+        detectionStrategy: DefaultRoute
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VsphereInstanceClass
+metadata:
+  name: system
+spec:
+  numCPUs: 4
+  memory: 8192
+  rootDiskSize: 20
+  mainNetwork: DEVOPS_36
+  datastore: 3par_4_Lun103
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: Cloud
+  cloudInstances:
+    zones:
+    - X2-A
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: VsphereInstanceClass
+      name: system
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+  chaos:
+    mode: Disabled
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
