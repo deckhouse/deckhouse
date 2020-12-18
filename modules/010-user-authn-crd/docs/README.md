@@ -1,8 +1,7 @@
 ---
+title: "Модуль user-authn-crd"
+searchable: false
 ---
-
-Модуль user-authn-crd
-=======================
 
 Модуль устанавливает CustomResourceDefinition'ы для модуля user-authn.
 

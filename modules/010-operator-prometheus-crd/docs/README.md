@@ -1,8 +1,7 @@
 ---
+title: "Модуль operator-prometheus-crd"
+searchable: false
 ---
-
-Модуль operator-prometheus-crd
-=======================
 
 Модуль устанавливает CustomResourceDefinition'ы для модуля operator-prometheus.
 

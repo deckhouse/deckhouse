@@ -41,7 +41,7 @@ defaults:
     values:
       layout: "page"
       comments: false
-      search: true
+      searchable: true
       topnav: topnav
       output: web
       sidebar: main
