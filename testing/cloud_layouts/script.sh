@@ -101,6 +101,22 @@ elif [[ "$PROVIDER" == "Azure" ]]; then
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   ssh_user="azureuser"
+elif [[ "$PROVIDER" == "OpenStack" ]]; then
+  # shellcheck disable=SC2016
+  env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
+  SSH_PUBLIC_KEY="$ssh_public_key" \
+      KUBERNETES_VERSION="$KUBERNETES_VERSION" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${SSH_PUBLIC_KEY} ${OS_PASSWORD}'  \
+      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+  ssh_user="ubuntu"
+elif [[ "$PROVIDER" == "vSphere" ]]; then
+  # shellcheck disable=SC2016
+  env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
+  SSH_PUBLIC_KEY="$ssh_public_key" \
+      KUBERNETES_VERSION="$KUBERNETES_VERSION" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${SSH_PUBLIC_KEY} ${VSPHERE_PASSWORD}'  \
+      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+  ssh_user="ubuntu"
 else
   >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
   exit 1

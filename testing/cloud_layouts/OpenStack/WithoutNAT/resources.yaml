@@ -1,0 +1,30 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: Cloud
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: OpenStackInstanceClass
+      name: system
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OpenStackInstanceClass
+metadata:
+  name: system
+spec:
+  flavorName: m1.large
+  imageName: ubuntu-18-04-cloud-amd64

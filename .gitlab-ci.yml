@@ -75,10 +75,34 @@ Cloud layouts Tests (manual):
     - rock-solid
   when: manual
 
+Cloud layouts Tests vSphere (manual):
+  extends: .Cloud layouts Tests vSphere template
+  tags:
+    - cloud-layouts-vsphere
+  except:
+    variables:
+    - $CLOUD_LAYOUTS_SCHEDULE
+    refs:
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  when: manual
+
 Cloud layouts Tests (scheduled):
   extends: .Cloud layouts Tests template
   tags:
     - cloud-layouts
+  only:
+    variables:
+    - $CLOUD_LAYOUTS_SCHEDULE
+  when: always
+
+Cloud layouts Tests vSphere (scheduled):
+  extends: .Cloud layouts Tests vSphere template
+  tags:
+    - cloud-layouts-vsphere
   only:
     variables:
     - $CLOUD_LAYOUTS_SCHEDULE
