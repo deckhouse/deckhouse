@@ -1,4 +1,5 @@
 deckhouse:
   logLevel: Info
   bundle: Default
-  internal: {}
+  internal:
+    currentVersion: unknown

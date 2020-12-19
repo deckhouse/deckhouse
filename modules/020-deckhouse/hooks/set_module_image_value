@@ -25,8 +25,24 @@ EOF
 }
 
 function __main__() {
+  if ! context::has snapshots.deckhouse_deployment.0; then
+    >&2 echo "ERROR: Deckhouse was not able to find an image of itself"
+    return 1
+  fi
+
   current_release_image_name="$(context::jq -r '.snapshots.deckhouse_deployment[0].filterResult')"
   values::set deckhouse.internal.currentReleaseImageName "$current_release_image_name"
+
+  repo="$(values::get global.modulesImages.registry)"
+  deckhouse_tags=("alpha" "beta" "early-access" "stable" "rock-solid")
+
+  result=1
+  actual_image=$(echo $current_release_image_name | grep -oP "^$repo[:,/]\K.*")
+  if [[ " ${deckhouse_tags[@]} " =~ " ${actual_image} " ]] ; then
+    result=0
+  fi
+
+  jq -rc '{"name":"d8_deckhouse_is_not_on_release_channel", "set": .}' <<< "$result" >> $METRICS_PATH
 }
 
 hook::run "$@"
