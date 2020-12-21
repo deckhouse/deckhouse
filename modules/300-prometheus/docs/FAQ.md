@@ -88,6 +88,40 @@ spec:
           containerPort: 443
 ```
 
+## Как собирать метрики с приложений, расположенных вне кластера?
+
+1. Сконфигурировать Service, по аналогии с сервисом для [сбора метрик с приложений внутри кластера](faq.html#как-собирать-метрики-с-приложений-в-вашем-проекте), но без указания параметра `spec.selector`.
+1. Создать Endpoints для этого Service, явно указав в них `IP:PORT`, по которым ваши приложения отдают метрики.
+> Важный момент: имена портов в Endpoints должны совпадать с именами этих портов в Service. 
+
+### Пример:
+Метрики приложения доступны без TLS, по адресу `http://10.182.10.5:9114/metrics`.
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+  namespace: my-namespace
+  labels:
+    prometheus.deckhouse.io/custom-target: my-app
+spec:
+  ports:
+  - name: http-metrics
+    port: 9114
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: my-app
+  namespace: my-namespace
+subsets:
+  - addresses:
+    - ip: 10.182.10.5
+    ports:
+    - name: http-metrics
+      port: 9114
+```
+
 ## Как добавить дополнительные dashboard'ы в вашем проекте?
 
 Добавление пользовательских dashboard'ов для Grafana в deckhouse реализовано при помощи подхода infrastructure as a code.
