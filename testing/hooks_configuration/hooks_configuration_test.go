@@ -28,6 +28,10 @@ var _ = Describe("Hooks configuration tests", func() {
 			It(hook.Path, func() {
 				ithook := <-hooksCH
 
+				By("Hook file should be executable", func() {
+					Expect(ithook.Executable).To(BeTrue())
+				})
+
 				err := ithook.ExecuteGetConfig()
 				By(ithook.Path+" --config must not fail", func() {
 					Expect(err).ToNot(HaveOccurred())

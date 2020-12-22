@@ -89,6 +89,11 @@ elif [[ $file =~ ^testing/matrix$ || $file =~ ^matrix$ ]]; then
   ginkgo_args="-v --slowSpecThreshold=30"
   tests="./testing/matrix/..."
   echo "Run all matrix tests"
+elif [[ $file =~ ^testing/hooks_configuration$ || $file =~ ^hooks_configuration$ || $file =~ ^testing/hooks_configuration/hooks_configuration_test.go$ ]]; then
+  docker_args="-w /deckhouse"
+  ginkgo_args="-v --slowSpecThreshold=30"
+  tests="./testing/hooks_configuration/"
+  echo "Run hooks configuration tests"
 elif [[ "$file" == "." ]]; then
   tests="./..."
   echo "Run tests in current directory"
