@@ -48,6 +48,8 @@ spec:
         args:
         - --ip-masq
         - --kube-subnet-mgr
+        # https://github.com/coreos/flannel/issues/1002 workaround
+        terminationGracePeriodSeconds: 0
         securityContext:
           privileged: true
         env:
