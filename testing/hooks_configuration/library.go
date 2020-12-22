@@ -16,6 +16,7 @@ import (
 
 type Hook struct {
 	Path       string
+	Executable bool
 	HookConfig HookConfig
 	Session    *gexec.Session
 }
@@ -66,17 +67,15 @@ func GetAllHooks() ([]Hook, error) {
 				return nil
 			}
 
-			// Ignore non executables.
-			if info.Mode()&0111 == 0 {
-				return nil
-			}
-
 			// Ignore subdirectories.
 			if info.IsDir() {
 				return nil
 			}
 
-			hooks = append(hooks, Hook{Path: path})
+			// Is hook executable.
+			executable := info.Mode()&0111 == 0111
+
+			hooks = append(hooks, Hook{Path: path, Executable: executable})
 			return nil
 		})
 	}
