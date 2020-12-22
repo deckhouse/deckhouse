@@ -19,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    core.deckhouse.io/version: 20.19-hotfix-2020-12-01.1
+    core.deckhouse.io/version: "20.20"
   name: deckhouse
   namespace: d8-system
 spec:
@@ -83,14 +83,14 @@ spec:
 		It("Hook must not fail, version and channel should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").String()).To(MatchJSON(`
+			Expect(f.BindingContexts.Get("0.snapshots.d8_deployment.0.filterResult").String()).To(MatchJSON(`
 {
 	"tag": "stable",
-	"version": "20.19-hotfix-2020-12-01.1"
+	"version": "20.20"
 }
 `))
 			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal("stable"))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal("20.19-hotfix-2020-12-01.1"))
+			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal("20.20"))
 		})
 	})
 
