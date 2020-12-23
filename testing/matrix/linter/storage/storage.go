@@ -115,7 +115,7 @@ func (s *StoreObject) Identity() string {
 	if namespace == "" {
 		return fmt.Sprintf("kind = %s ; name = %s", kind, name)
 	}
-	return fmt.Sprintf("kind = %s ; name =  %s ; namespace = %s", kind, name, namespace)
+	return fmt.Sprintf("kind = %s ; name = %s ; namespace = %s", kind, name, namespace)
 }
 
 type UnstructuredObjectStore struct {

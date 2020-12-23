@@ -2,62 +2,158 @@ package resources
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/ghodss/yaml"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
 )
 
-var exclusions = map[string]func(r *storage.ResourceIndex) bool{
-	// Controllers VPA is configured through cr settings
-	"ingress-nginx": func(r *storage.ResourceIndex) bool {
-		if r.Kind == "DaemonSet" && r.Namespace == "d8-ingress-nginx" && strings.HasPrefix(r.Name, "controller-") {
-			return true
+// parseTargetsAndTolerationGroups resolves target resource indexes
+func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceIndex]struct{}, map[storage.ResourceIndex]string) {
+	vpaTargets := make(map[storage.ResourceIndex]struct{})
+	vpaTolerationGroups := make(map[storage.ResourceIndex]string)
+
+	for _, object := range scope.Objects() {
+		objectKind := object.Unstructured.GetKind()
+		if objectKind != "VerticalPodAutoscaler" {
+			continue
 		}
-		return false
-	},
-	// Network gateway snat daemonset tolerations is configured through module values
-	"network-gateway": func(r *storage.ResourceIndex) bool {
-		if r.Kind == "DaemonSet" && r.Namespace == "d8-network-gateway" && r.Name == "snat" {
-			return true
+
+		target, ok := parseVPATarget(scope, object)
+		if !ok {
+			continue
 		}
-		return false
-	},
-	// Metal LB speaker daemonset tolerations is configured through module values
-	"metallb": func(r *storage.ResourceIndex) bool {
-		if r.Kind == "DaemonSet" && r.Namespace == "d8-metallb" && r.Name == "speaker" {
-			return true
+
+		vpaTargets[target] = struct{}{}
+
+		labels := object.Unstructured.GetLabels()
+		if label, ok := labels["workload-resource-policy.deckhouse.io"]; ok {
+			vpaTolerationGroups[target] = label
 		}
-		return false
-	},
+	}
+
+	return vpaTargets, vpaTolerationGroups
 }
 
-func checkVPAEnabled(values string) bool {
-	var v struct {
-		Global struct{ EnabledModules []string }
-	}
-	err := yaml.Unmarshal([]byte(values), &v)
-	if err != nil {
-		panic("unable to parse global.enabledModules values section")
+// parseVPATarget parses VPA target resource index, writes to the passed struct pointer
+func parseVPATarget(scope *lintingScope, vpaObject storage.StoreObject) (storage.ResourceIndex, bool) {
+	target := storage.ResourceIndex{}
+
+	specs, ok := vpaObject.Unstructured.Object["spec"].(map[string]interface{})
+	if !ok {
+		scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs is found for object")
+		return target, false
 	}
 
-	for _, module := range v.Global.EnabledModules {
-		if module == "vertical-pod-autoscaler-crd" {
-			return true
+	targetRef, ok := specs["targetRef"].(map[string]interface{})
+	if !ok {
+		scope.AddError("VPA005", vpaObject.Identity(), false, "No VPA specs targetRef is found for object")
+		return target, false
+	}
+
+	target.Namespace = vpaObject.Unstructured.GetNamespace()
+	target.Name = targetRef["name"].(string)
+	target.Kind = targetRef["kind"].(string)
+
+	return target, true
+}
+
+// ensureContainersWithoutRequests verifies containers don't have their own requests, adds linting error otherwise
+// returns true if linting passed, otherwise returns false
+func ensureContainersWithoutRequests(scope *lintingScope, object storage.StoreObject) bool {
+	containers, err := object.GetContainers()
+	if err != nil {
+		scope.AddError(
+			"VPA005",
+			object.Identity(),
+			false,
+			"Getting containers list for the object failed: %v",
+			err,
+		)
+		return false
+	}
+
+	for _, container := range containers {
+		res := container.Resources.Requests
+		if res.Cpu().IsZero() && res.Memory().IsZero() {
+			continue
+		}
+
+		scope.AddError(
+			"VPA005",
+			object.Identity()+"; container = "+container.Name,
+			fmt.Sprintf("cpu = %s, memory = %s", res.Cpu().String(), res.Memory().String()),
+			"The container must not have resources requests, because resources are managed by VPA",
+		)
+	}
+
+	return true
+}
+
+// returns true if linting passed, otherwise returns false
+func ensureTolerations(scope *lintingScope, vpaTolerationGroups map[storage.ResourceIndex]string, index storage.ResourceIndex, object storage.StoreObject) {
+	tolerations, err := getTolerationsList(object)
+
+	if err != nil {
+		scope.AddError(
+			"VPA005",
+			object.Identity(),
+			false,
+			"Get tolerations list for object failed: %v",
+			err,
+		)
+
+	}
+
+	isTolerationFound := false
+	for _, toleration := range tolerations {
+		if toleration.Key == "node-role.kubernetes.io/master" || (toleration.Key == "" && toleration.Operator == "Exists") {
+			isTolerationFound = true
+			break
 		}
 	}
-	return false
+
+	workloadLabelValue := vpaTolerationGroups[index]
+	if isTolerationFound && workloadLabelValue != "every-node" && workloadLabelValue != "master" {
+		scope.AddError(
+			"VPA005",
+			object.Identity(),
+			workloadLabelValue,
+			`Labels "workload-resource-policy.deckhouse.io" in corresponding VPA resource not found`,
+		)
+
+	}
+
+	if !isTolerationFound && workloadLabelValue != "" {
+		scope.AddError(
+			"VPA005",
+			object.Identity(),
+			workloadLabelValue,
+			`Labels "workload-resource-policy.deckhouse.io" in corresponding VPA resource found, but tolerations is not right`,
+		)
+	}
+}
+
+// returns true if linting passed, otherwise returns false
+func ensureVPAIsPresent(scope *lintingScope, vpaTargets map[storage.ResourceIndex]struct{}, index storage.ResourceIndex, object storage.StoreObject) bool {
+	_, ok := vpaTargets[index]
+	if !ok {
+		scope.AddError(
+			"VPA005",
+			object.Identity(),
+			false,
+			"No VPA is found for object",
+		)
+	}
+	return ok
 }
 
 func getTolerationsList(object storage.StoreObject) ([]v1.Toleration, error) {
 	var tolerations []v1.Toleration
 	converter := runtime.DefaultUnstructuredConverter
+
 	switch object.Unstructured.GetKind() {
 	case "Deployment":
 		deployment := new(appsv1.Deployment)
@@ -83,148 +179,6 @@ func getTolerationsList(object storage.StoreObject) ([]v1.Toleration, error) {
 		}
 		tolerations = statefulset.Spec.Template.Spec.Tolerations
 	}
+
 	return tolerations, nil
-}
-
-func ControllerMustHasVPA(m types.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
-
-	exceptionFunc := exclusions[m.Name]
-	if exceptionFunc == nil {
-		exceptionFunc = func(r *storage.ResourceIndex) bool { return false }
-	}
-
-	if !checkVPAEnabled(values) {
-		return
-	}
-
-	vpaTargets := make(map[storage.ResourceIndex]struct{})
-	vpaTolerationGroup := make(map[storage.ResourceIndex]string)
-	for index, object := range objectStore.Storage {
-		objectKind := object.Unstructured.GetKind()
-		if objectKind != "VerticalPodAutoscaler" {
-			continue
-		}
-
-		r := storage.ResourceIndex{}
-		r.Namespace = index.Namespace
-
-		specs, ok := object.Unstructured.Object["spec"].(map[string]interface{})
-		if !ok {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"VPA005",
-				object.Identity(),
-				false,
-				"No VPA specs is found for object",
-			))
-			continue
-		}
-
-		refsFromSpec, ok := specs["targetRef"].(map[string]interface{})
-		if !ok {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"VPA005",
-				object.Identity(),
-				false,
-				"No VPA specs targetRef is found for object",
-			))
-			continue
-		}
-
-		r.Name = refsFromSpec["name"].(string)
-		r.Kind = refsFromSpec["kind"].(string)
-
-		vpaTargets[r] = struct{}{}
-
-		if label, ok := object.Unstructured.GetLabels()["workload-resource-policy.deckhouse.io"]; ok {
-			vpaTolerationGroup[r] = label
-		}
-	}
-
-	for index, object := range objectStore.Storage {
-		if exceptionFunc(&index) {
-			continue
-		}
-
-		switch object.Unstructured.GetKind() {
-		case "Deployment", "DaemonSet", "StatefulSet":
-			if _, ok := vpaTargets[index]; !ok {
-				lintRuleErrorsList.Add(errors.NewLintRuleError(
-					"VPA005",
-					object.Identity(),
-					false,
-					"No VPA is found for object",
-				))
-				continue
-			}
-
-			containers, err := object.GetContainers()
-			if err != nil {
-				lintRuleErrorsList.Add(errors.NewLintRuleError(
-					"VPA005",
-					object.Identity(),
-					false,
-					"Get containers list for the object failed: %v",
-					err,
-				))
-				continue
-			}
-			for _, container := range containers {
-				res := container.Resources.Requests
-				if res.Cpu().IsZero() && res.Memory().IsZero() {
-					continue
-				}
-
-				lintRuleErrorsList.Add(errors.NewLintRuleError(
-					"VPA005",
-					object.Identity()+"; container = "+container.Name,
-					fmt.Sprintf("cpu = %s, memory = %s", res.Cpu().String(), res.Memory().String()),
-					"The container must not have resources requests, because resources are managed by VPA",
-				))
-			}
-		default:
-			continue
-		}
-		tolerations, err := getTolerationsList(object)
-
-		if err != nil {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"VPA005",
-				object.Identity(),
-				false,
-				"Get tolerations list for object failed: %v",
-				err,
-			))
-			continue
-		}
-
-		isTolerationFound := false
-		for _, toleration := range tolerations {
-			if toleration.Key == "node-role.kubernetes.io/master" || (toleration.Key == "" && toleration.Operator == "Exists") {
-				isTolerationFound = true
-				break
-			}
-		}
-
-		workloadLabelValue := vpaTolerationGroup[index]
-		if isTolerationFound && workloadLabelValue != "every-node" && workloadLabelValue != "master" {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"VPA005",
-				object.Identity(),
-				workloadLabelValue,
-				`Labels "workload-resource-policy.deckhouse.io" in corresponding VPA resource not found`,
-			))
-			continue
-		}
-
-		if !isTolerationFound && workloadLabelValue != "" {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"VPA005",
-				object.Identity(),
-				workloadLabelValue,
-				`Labels "workload-resource-policy.deckhouse.io" in corresponding VPA resource found, but tolerations is not right`,
-			))
-			continue
-		}
-
-	}
 }

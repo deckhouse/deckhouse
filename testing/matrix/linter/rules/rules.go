@@ -164,6 +164,6 @@ func ApplyLintRules(m types.Module, values string, objectStore *storage.Unstruct
 		applyContainerRules(&lintRuleErrorsList, o)
 	}
 
-	resources.ControllerMustHasVPA(m, values, objectStore, &lintRuleErrorsList)
+	resources.ControllerMustHaveVPAAndPDB(m, values, objectStore, &lintRuleErrorsList)
 	return lintRuleErrorsList.ConvertToError()
 }

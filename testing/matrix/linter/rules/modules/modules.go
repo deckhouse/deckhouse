@@ -39,7 +39,7 @@ func skipModuleImageNameIfNeeded(filePath string) bool {
 	return filePath == "/deckhouse/modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile"
 }
 
-func skipModuleIfNeeded(name string) bool {
+func shouldSkipModule(name string) bool {
 	switch name {
 	case "helm_lib",
 		"360-istio",
@@ -295,73 +295,91 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
 		modulesDir = defaultDeckhouseModulesDir
 	}
 
-	// Get all paths with Chart.yaml first.
-	// modulesDir can be a module directory or a directory that contains modules in subdirectories.
-	var chartYamlDirs = make([]string, 0)
-	if isExistsOnFilesystem(modulesDir, "Chart.yaml") {
-		chartYamlDirs = append(chartYamlDirs, modulesDir)
-	} else {
-		err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return fmt.Errorf("error access '%s': %v", path, err)
-			}
-
-			// Continue if got top path
-			if path == modulesDir {
-				return nil
-			}
-
-			// Check if first level subdirectory has a Chart.yaml
-			if info.IsDir() {
-				if skipModuleIfNeeded(filepath.Base(path)) {
-					return filepath.SkipDir
-				}
-
-				if isExistsOnFilesystem(path, "Chart.yaml") {
-					chartYamlDirs = append(chartYamlDirs, path)
-				}
-				return filepath.SkipDir
-			}
-
-			return nil
-		})
-		if err != nil {
-			return modules, fmt.Errorf("search modules with Chart.yaml: %v", err)
-		}
+	modulePaths, err := getModulePaths(modulesDir)
+	if err != nil {
+		return modules, fmt.Errorf("search modules with Chart.yaml: %v", err)
 	}
 
 	var lintRuleErrorsList errors.LintRuleErrorsList
-
-	for _, modulePath := range chartYamlDirs {
-		parts := strings.Split(modulePath, string(os.PathSeparator))
-		moduleName := parts[len(parts)-1]
-
-		lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
-		lintRuleErrorsList.Add(commonTestGoForHooks(moduleName, modulePath))
-		checkImageNamesInDockerAndWerfFiles(moduleName, modulePath, &lintRuleErrorsList)
-
-		name, lintError := chartModuleRule(moduleName, modulePath)
-		lintRuleErrorsList.Add(lintError)
-		if name == "" {
+	for _, modulePath := range modulePaths {
+		module, ok := lintModuleStructure(lintRuleErrorsList, modulePath)
+		if !ok {
 			continue
 		}
-
-		namespace, lintError := namespaceModuleRule(moduleName, modulePath)
-		lintRuleErrorsList.Add(lintError)
-		if namespace == "" {
-			continue
-		}
-
-		if isExistsOnFilesystem(modulePath, "crds") {
-			lintRuleErrorsList.Merge(crdsModuleRule(moduleName, modulePath+"/crds"))
-		}
-
-		modules = append(modules, types.Module{Name: name, Path: modulePath, Namespace: namespace})
+		modules = append(modules, module)
 	}
+
 	return modules, lintRuleErrorsList.ConvertToError()
 }
 
 func isExistsOnFilesystem(parts ...string) bool {
 	_, err := os.Stat(filepath.Join(parts...))
 	return err == nil
+}
+
+// getModulePaths returns all paths with Chart.yaml
+// modulesDir can be a module directory or a directory that contains modules in subdirectories.
+func getModulePaths(modulesDir string) ([]string, error) {
+	var chartDirs = make([]string, 0)
+
+	if isExistsOnFilesystem(modulesDir, "Chart.yaml") {
+		chartDirs = append(chartDirs, modulesDir)
+		return chartDirs, nil
+	}
+
+	// Here we find all dirs and check for Chart.yaml in them.
+	err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error access '%s': %v", path, err)
+		}
+
+		// Ignore root path and non-dirs
+		if path == modulesDir || !info.IsDir() {
+			return nil
+		}
+
+		if shouldSkipModule(filepath.Base(path)) {
+			return filepath.SkipDir
+		}
+
+		// Check if first level subdirectory has a Chart.yaml
+		if isExistsOnFilesystem(path, "Chart.yaml") {
+			chartDirs = append(chartDirs, path)
+		}
+		return filepath.SkipDir
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return chartDirs, nil
+}
+
+// lintModuleStructure collects linting errors
+// for helmignore, hooks, docker and werf files, namespace, and CRDs
+func lintModuleStructure(lintRuleErrorsList errors.LintRuleErrorsList, modulePath string) (types.Module, bool) {
+	moduleName := filepath.Base(modulePath)
+
+	lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
+	lintRuleErrorsList.Add(commonTestGoForHooks(moduleName, modulePath))
+	checkImageNamesInDockerAndWerfFiles(moduleName, modulePath, &lintRuleErrorsList)
+
+	name, lintError := chartModuleRule(moduleName, modulePath)
+	lintRuleErrorsList.Add(lintError)
+	if name == "" {
+		return types.Module{}, false
+	}
+
+	namespace, lintError := namespaceModuleRule(moduleName, modulePath)
+	lintRuleErrorsList.Add(lintError)
+	if namespace == "" {
+		return types.Module{}, false
+	}
+
+	if isExistsOnFilesystem(modulePath, "crds") {
+		lintRuleErrorsList.Merge(crdsModuleRule(moduleName, modulePath+"/crds"))
+	}
+
+	module := types.Module{Name: name, Path: modulePath, Namespace: namespace}
+	return module, true
 }
