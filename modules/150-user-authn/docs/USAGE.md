@@ -160,7 +160,7 @@ spec:
 
 Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
 
-Для этого необходимо перейти в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешить доступ только для `Account: Read`.
+Для этого необходимо перейти в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` указать адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешить доступ для `Account: Read` и `Workspace membership: Read`.
 
 Полученные `Key` и `Secret` необходимо указать в custom resource [DexProvider](cr.html#dexprovider).
 
