@@ -8,7 +8,13 @@ import (
 )
 
 var _ = Describe("Modules :: deckhouse :: hooks :: set module image value ::", func() {
-	f := HookExecutionConfigInit(`{deckhouse: {internal: {} }}`, `{}`)
+	f := HookExecutionConfigInit(`
+global:
+  modulesImages:
+    registry: registry.flant.com/sys/antiopa
+deckhouse:
+  internal: {}
+`, `{}`)
 
 	Context("With Deckhouse pod", func() {
 		BeforeEach(func() {

@@ -1,9 +1,24 @@
+{{- if $.Values.global.modulesImages.registryDockercfg }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
+{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: deckhouse-registry
   namespace: kube-system
+  annotations:
+    helm.sh/resource-policy: keep
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: kubernetes.io/dockerconfigjson
 data:
@@ -14,7 +29,10 @@ kind: Secret
 metadata:
   name: deckhouse-registry
   namespace: d8-monitoring
+  annotations:
+    helm.sh/resource-policy: keep
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
+{{- end }}

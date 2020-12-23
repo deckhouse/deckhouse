@@ -1,10 +1,32 @@
-kind: Deployment
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  {{- if .Values.deckhouse.nodeSelector }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | indent 2 }}
+  {{- else }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+  {{- end }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: deckhouse
+  updatePolicy:
+    updateMode: "Initial"
+{{- end }}
+---
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
   annotations:
     helm.sh/resource-policy: keep
+    core.deckhouse.io/version: {{ .Values.deckhouse.internal.currentVersion | quote }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | indent 2 }}
 spec:
   replicas: 1
@@ -17,6 +39,8 @@ spec:
     metadata:
       labels:
         app: deckhouse
+      annotations:
+        checksum/registry: {{ include (print $.Template.BasePath "/registry.yaml") . | sha256sum }}
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- if .Values.deckhouse.nodeSelector }}
@@ -73,6 +97,12 @@ spec:
             periodSeconds: 5
             failureThreshold: 120
           workingDir: /deckhouse
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+          - mountPath: /etc/registrysecret
+            name: registrysecret
+            readOnly: true
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -80,3 +110,11 @@ spec:
       dnsPolicy: Default
 {{- end}}
       serviceAccountName: deckhouse
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - name: registrysecret
+        secret:
+          defaultMode: 420
+          secretName: deckhouse-registry

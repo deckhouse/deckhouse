@@ -14,8 +14,11 @@ function __main__() {
   # Set labels and annotations for Helm
   kubernetes::patch_jq d8-system deployment/deckhouse ".metadata.labels += {\"app.kubernetes.io/managed-by\":\"Helm\"}"
   kubernetes::patch_jq d8-system serviceaccount/deckhouse ".metadata.labels += {\"app.kubernetes.io/managed-by\":\"Helm\"}"
+  kubernetes::patch_jq d8-system secret/deckhouse-registry ".metadata.labels += {\"app.kubernetes.io/managed-by\":\"Helm\"}"
+
   kubernetes::patch_jq d8-system deployment/deckhouse ".metadata.annotations += {\"meta.helm.sh/release-name\":\"deckhouse\", \"meta.helm.sh/release-namespace\":\"d8-system\"}"
   kubernetes::patch_jq d8-system serviceaccount/deckhouse ".metadata.annotations += {\"meta.helm.sh/release-name\":\"deckhouse\", \"meta.helm.sh/release-namespace\":\"d8-system\"}"
+  kubernetes::patch_jq d8-system secret/deckhouse-registry ".metadata.annotations += {\"meta.helm.sh/release-name\":\"deckhouse\", \"meta.helm.sh/release-namespace\":\"d8-system\"}"
 }
 
 hook::run "$@"

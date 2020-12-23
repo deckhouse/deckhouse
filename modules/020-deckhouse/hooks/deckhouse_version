@@ -10,9 +10,8 @@ EOF
 }
 
 function __on_startup() {
-  if [[ -f /deckhouse/version ]]; then currentVersion=$(cat /deckhouse/version); else currentVersion="unknown"; fi
-  fltr=".metadata.annotations.\"core.deckhouse.io/version\" = \"${currentVersion}\""
-  kubernetes::patch_jq d8-system deployment/deckhouse "$fltr"
+  if [[ -f /deckhouse/version ]] ; then currentVersion=$(cat /deckhouse/version) ; else currentVersion="unknown"; fi
+  values::set deckhouse.internal.currentVersion "$currentVersion"
 }
 
 hook::run $@
