@@ -35,7 +35,8 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
-      terminationGracePeriodSeconds: 5
+      # https://github.com/coreos/flannel/issues/1002 workaround
+      terminationGracePeriodSeconds: 0
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
@@ -48,8 +49,6 @@ spec:
         args:
         - --ip-masq
         - --kube-subnet-mgr
-        # https://github.com/coreos/flannel/issues/1002 workaround
-        terminationGracePeriodSeconds: 0
         securityContext:
           privileged: true
         env:
