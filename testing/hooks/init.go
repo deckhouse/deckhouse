@@ -32,6 +32,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/addon-operator/sdk/registry"
 
+	"github.com/deckhouse/deckhouse/testing/common"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
@@ -40,6 +41,7 @@ import (
 
 var (
 	globalTmpDir string
+	moduleName   string
 )
 
 const (
@@ -369,16 +371,16 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	out := hec.Session.Out.Contents()
-	By("Parsing config\n" + string(out))
-
 	var parsedConfig json.RawMessage
 	Expect(yaml.Unmarshal(out, &parsedConfig)).To(Succeed())
 
 	Expect(hec.values.JSONRepr).ToNot(BeEmpty())
-
 	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
-	Expect(err).ShouldNot(HaveOccurred())
+	By("Validating initial values")
+	Expect(common.ValidateValues(moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	By("Validating initial config values")
+	Expect(common.ValidateValues(moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 
 	tmpDir, err = TempDirWithPerms(globalTmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -456,6 +458,11 @@ func (hec *HookExecutionConfig) RunHook() {
 		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
 	}
 
+	By("Validating resulting values")
+	Expect(common.ValidateValues(moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	By("Validating resulting config values")
+	Expect(common.ValidateValues(moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
+
 	if len(kubernetesPatchBytes) != 0 {
 		kubePatch, err := NewKubernetesPatch(kubernetesPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -524,11 +531,24 @@ func (hec *HookExecutionConfig) RunGoHook() {
 }
 
 var _ = BeforeSuite(func() {
+	wd, err := os.Getwd()
+	Expect(err).To(BeNil())
+
+	var modulePath string
+	if !strings.Contains(wd, "global-hooks") {
+		modulePath = filepath.Dir(wd)
+
+		var err error
+		moduleName, err = common.GetModuleNameByPath(modulePath)
+		Expect(err).To(BeNil())
+	}
+
+	Expect(common.LoadOpenAPISchemas(moduleName, modulePath)).To(Succeed())
+
 	if os.Getenv("KCOV_DISABLED") == "yes" {
 		return
 	}
 	By("Initing temporary directories")
-	var err error
 	unix.Umask(0o000)
 	globalTmpDir, err = TempDirWithPerms("", "", 0o777)
 	Expect(err).ToNot(HaveOccurred())

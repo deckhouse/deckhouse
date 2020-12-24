@@ -2,8 +2,9 @@ package helm
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"path/filepath"
-	"runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/flant/shell-operator/pkg/utils/manifest/releaseutil"
 
+	"github.com/deckhouse/deckhouse/testing/common"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
@@ -46,16 +48,18 @@ func (hec *Config) KubernetesResource(kind, namespace, name string) object_store
 }
 
 func SetupHelmConfig(values string) *Config {
-	_, path, _, ok := runtime.Caller(1)
-	if !ok {
-		panic("can't execute runtime.Caller")
+	wd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	modulePath := filepath.Dir(filepath.Dir(path))
+	modulePath := filepath.Dir(wd)
 
 	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	config := new(Config)
@@ -63,7 +67,25 @@ func SetupHelmConfig(values string) *Config {
 
 	initialValuesJSON, err := json.Marshal(initialValues)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	moduleName, err := common.GetModuleNameByPath(modulePath)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err := common.LoadOpenAPISchemas(moduleName, modulePath); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = common.ValidateValues(moduleName, string(initialValuesJSON))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	BeforeEach(func() {
