@@ -1,4 +1,4 @@
-# Next lines are for local build only
+  # Next lines are for local build only
 entries:
 - title: Folders
   folders:
@@ -234,6 +234,18 @@ entries:
               url: /modules/340-monitoring-ping/
             - title: Примеры конфигурации
               url: /modules/340-monitoring-ping/usage.html
+          - title: monitoring-custom
+            folders:
+            - title: Описание модуля
+              url: /modules/340-monitoring-custom/
+            - title: Настройки модуля
+              url: /modules/340-monitoring-custom/configuration.html
+          - title: monitoring-kubernetes
+            folders:
+            - title: Описание модуля
+              url: /modules/340-monitoring-kubernetes/
+            - title: Настройки модуля
+              url: /modules/340-monitoring-kubernetes/configuration.html
           - title: operator-prometheus
             folders:
             - title: Описание модуля
