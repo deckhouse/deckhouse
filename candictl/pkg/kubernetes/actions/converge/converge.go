@@ -355,7 +355,7 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 			WithState(state).
 			WithName(name).
-			WithAutoApprove(true)
+			WithAllowedCachedState(true)
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
 		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
