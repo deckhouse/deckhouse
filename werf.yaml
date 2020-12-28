@@ -625,6 +625,9 @@ import:
   add: /terraform-provider-gcp/terraform-provider-gcp
   to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_GCP_NAMESPACE" }}/{{ env "TF_GCP_TYPE" }}/{{ env "TF_GCP_VERSION" }}/linux_amd64/terraform-provider-google
   before: setup
+docker:
+  ENV:
+    EDITOR: vim
 ansible:
   beforeInstall:
 
