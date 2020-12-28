@@ -26,7 +26,7 @@ locals {
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
   cores = local.master_instance_class.cores
   memory = local.master_instance_class.memory / 1024
-  disk_size_gb = lookup(local.master_instance_class, "diskSizeGb", 20)
+  disk_size_gb = lookup(local.master_instance_class, "diskSizeGB", 20)
   image_id = local.master_instance_class.imageID
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
   external_ip_addresses = lookup(local.master_instance_class, "externalIPAddresses", [])
