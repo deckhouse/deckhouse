@@ -66,7 +66,7 @@ title: "Cloud provider — AWS: Развертывание"
   * Необязательный, но рекомендованный параметр. По умолчанию — соответствует целому диапазону адресов VPC.
 > Если при создании кластера создаётся новая VPC и не указан `vpcNetworkCIDR`, то VPC будет создана с диапазоном, указанным в `nodeNetworkCIDR`,
 > таким образом вся VPC будет выделена под сети кластера, и соответственно не будет возможности добавить другие ресурсы в эту VPC.
-> 
+>
 > Диапазон `nodeNetworkCIDR` распределяется по подсетям в зависимости от количества зон доступности в выбранном регионе. Например,
 > если указана `nodeNetworkCIDR: "10.241.1.0/20"` и в регионе 3 зоны доступности, то подсети будут созданы с маской `/22`.
 * `sshPublicKey` — публичный ключ для доступа на ноды.
@@ -217,6 +217,7 @@ tags:
                 "ec2:DescribeSecurityGroups",
                 "ec2:DescribeSubnets",
                 "ec2:DescribeTags",
+                "ec2:DescribeVolumesModifications",
                 "ec2:DescribeVolumes",
                 "ec2:DescribeVpcAttribute",
                 "ec2:DescribeVpcClassicLink",
