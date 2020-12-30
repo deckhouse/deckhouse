@@ -161,11 +161,23 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	hec.KubeExtraCRDs = []CustomCRD{}
 
 	BeforeEach(func() {
+		defaultConfigValues := addonutils.Values{
+			addonutils.GlobalValuesKey:                   map[string]interface{}{},
+			addonutils.ModuleNameToValuesKey(moduleName): map[string]interface{}{},
+		}
+		configValues, err := addonutils.NewValuesFromBytes([]byte(initConfigValues))
+		if err != nil {
+			panic(err)
+		}
+		mergedConfigValuesYaml, err := (addonutils.MergeValues(defaultConfigValues, configValues)).YamlBytes()
+		if err != nil {
+			panic(err)
+		}
 		hec.values, err = values_store.NewStoreFromRawYaml([]byte(initValues))
 		if err != nil {
 			panic(err)
 		}
-		hec.configValues, err = values_store.NewStoreFromRawYaml([]byte(initConfigValues))
+		hec.configValues, err = values_store.NewStoreFromRawYaml(mergedConfigValuesYaml)
 		if err != nil {
 			panic(err)
 		}

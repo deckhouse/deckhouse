@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
@@ -56,22 +57,27 @@ func SetupHelmConfig(values string) *Config {
 
 	modulePath := filepath.Dir(wd)
 
+	moduleName, err := common.GetModuleNameByPath(modulePath)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	defaultConfigValues := addonutils.Values{
+		addonutils.GlobalValuesKey: map[string]interface{}{},
+		moduleName:                 map[string]interface{}{},
+	}
 	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	mergedConfigValues := addonutils.MergeValues(defaultConfigValues, initialValues)
 
 	config := new(Config)
 	config.modulePath = modulePath
 
-	initialValuesJSON, err := json.Marshal(initialValues)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	moduleName, err := common.GetModuleNameByPath(modulePath)
+	initialValuesJSON, err := json.Marshal(mergedConfigValues)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
