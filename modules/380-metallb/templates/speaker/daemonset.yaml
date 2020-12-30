@@ -19,6 +19,19 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: speaker
+  namespace: d8-metallb
+{{ include "helm_lib_module_labels" (list . (dict "app" "speaker")) | indent 2 }}
+spec:
+{{- /* TODO: change to "maxUnavailable: 10%" when PDB percentage will support daemonsets */}}
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: speaker
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

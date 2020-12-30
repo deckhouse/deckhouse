@@ -43,6 +43,18 @@ spec:
     updateMode: "Auto"
     {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: csi-controller
+  namespace: d8-{{ $context.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller"))  | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: csi-controller
+---
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:

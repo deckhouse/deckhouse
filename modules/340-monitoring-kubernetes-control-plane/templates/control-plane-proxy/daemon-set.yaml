@@ -17,6 +17,23 @@ spec:
     updateMode: "Auto"
   {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: control-plane-proxy-{{ $hash }}
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list $context (dict "app" "control-plane-proxy" "control-plane-proxy-instance" $hash)) | indent 2 }}
+spec:
+{{- /* TODO: change to "maxUnavailable: 10%" when PDB percentage will support daemonsets */}}
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: control-plane-proxy
+      control-plane-proxy-instance: {{ $hash }}
+  {{- range $component := $instance.components }}
+      control-plane-proxy-{{ $component.name | kebabcase }}: ""
+  {{- end }}
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

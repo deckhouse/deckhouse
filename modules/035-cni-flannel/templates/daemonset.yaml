@@ -15,6 +15,20 @@ spec:
     updateMode: "Initial"
 {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: flannel
+  namespace: d8-cni-flannel
+{{ include "helm_lib_module_labels" (list . (dict "app" "flannel" "tier" "node")) | indent 2 }}
+spec:
+{{- /* TODO: change to "maxUnavailable: 10%" when PDB percentage will support daemonsets */}}
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: flannel
+      tier: node
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

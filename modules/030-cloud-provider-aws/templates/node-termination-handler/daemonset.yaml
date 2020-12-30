@@ -15,6 +15,19 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: node-termination-handler
+  namespace: d8-cloud-provider-aws
+{{ include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | indent 2 }}
+spec:
+{{- /* TODO: change to "maxUnavailable: 10%" when PDB percentage will support daemonsets */}}
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: node-termination-handler
+---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
