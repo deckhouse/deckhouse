@@ -286,6 +286,12 @@ entries:
                 url: /modules/302-vertical-pod-autoscaler/cr.html
             - title: FAQ
               url: /modules/302-vertical-pod-autoscaler/faq.html
+          - title: upmeter
+            folders:
+            - title: Описание модуля
+              url: /modules/500-upmeter/
+            - title: Настройки модуля
+              url: /modules/500-upmeter/configuration.html
 #      - title: FAQ
 #        url: /features/marm-faq.html
     - title: Must Have Collection
