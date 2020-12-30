@@ -1,0 +1,54 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: storageclasses
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      apiVersion: storage.k8s.io/v1
+      kind: Storageclass
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "isCloud": (
+            (.provisioner == "ebs.csi.aws.com") or
+            (.provisioner == "disk.csi.azure.com") or
+            (.provisioner == "pd.csi.storage.gke.io") or
+            (.provisioner == "cinder.csi.openstack.org") or
+            (.provisioner == "vsphere.csi.vmware.com") or
+            (.provisioner == "yandex.csi.flant.com")
+          )
+        }
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values: ["deckhouse"]
+EOF
+}
+
+function __main__() {
+  group="/modules/$(module::name::kebab_case)/storage_class_cloud_manual"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+  if context::jq -er '([.snapshots.storageclasses[].filterResult | select(.isCloud == true)] | length) > 0'; then
+    context::jq -c --arg group "$group" '
+      .snapshots.storageclasses[].filterResult | select(.isCloud == true) |
+      {
+        "name": "storage_class_cloud_manual",
+        "group": "\($group)",
+        "set": 1,
+        "labels":
+        {
+          "name": .name
+        }
+      }
+      ' >> $METRICS_PATH
+  fi
+}
+
+hook::run $@

@@ -78,6 +78,11 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Cluster with module StorageClass", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(moduleStorageClass))
+
+			scManualDefault := f.KubernetesGlobalResource("StorageClass", "vsphere-main")
+			Expect(scManualDefault.Exists()).To(BeTrue())
+			Expect(scManualDefault.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Bool()).To(BeTrue())
+
 			f.RunHook()
 		})
 
@@ -97,11 +102,14 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		It("Hook must not fail, manual StorageClass should be deleted and module StorageClass should be set as default, in config as well", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			scManualDefault := f.KubernetesGlobalResource("StorageClass", "vsphere-main")
-			scManual := f.KubernetesGlobalResource("StorageClass", "test-lun001-02baf966")
 
-			Expect(scManualDefault.Exists()).To(BeFalse())
+			scManualDefault := f.KubernetesGlobalResource("StorageClass", "vsphere-main")
+			Expect(scManualDefault.Exists()).To(BeTrue())
+			Expect(scManualDefault.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+
+			scManual := f.KubernetesGlobalResource("StorageClass", "test-lun001-02baf966")
 			Expect(scManual.Exists()).To(BeTrue())
+			Expect(scManual.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Bool()).To(BeTrue())
 
 			Expect(f.ConfigValuesGet("cloudProviderVsphere.storageClass.default").String()).To(Equal(`test-lun001-02baf966`))
 		})

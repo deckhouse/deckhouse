@@ -75,7 +75,8 @@ function __main__() {
   fi
   values::set --config cloudProviderVsphere.storageClass.default "$module_candidate_storage_class_name"
 
-  kubernetes::delete_if_exists::non_blocking "" "storageclass/$manual_default_storageclass_name"
+  kubernetes::patch_jq "" "storageclass/$manual_default_storageclass_name" 'del(.metadata.annotations."storageclass.kubernetes.io/is-default-class")'
+  kubernetes::patch_jq "" "storageclass/$module_candidate_storage_class_name" '.metadata.annotations += {"storageclass.kubernetes.io/is-default-class": "true"}'
 }
 
 hook::run "$@"
