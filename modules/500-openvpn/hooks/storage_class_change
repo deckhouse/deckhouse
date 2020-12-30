@@ -128,7 +128,7 @@ function __main__() {
   else
     current_storage_class="emptydir"
   fi
-  
+
   if values::has --config openvpn.storageClass; then
     effective_storage_class="$(values::get --config openvpn.storageClass)"
   fi
@@ -143,6 +143,16 @@ function __main__() {
       echo "!!! NOTICE: storage class changed, deleting statefulset/certs-openvpn-0 !!!"
     fi
   fi
+
+  jq -nr --arg storage_class "$effective_storage_class" '
+    {
+      "name": "d8_emptydir_usage",
+      "set": (if $storage_class == "false" then 1 else 0 end),
+      "labels": {
+        "app": "openvpn"
+      }
+    }
+  ' >> $METRICS_PATH
 }
 
 hook::run $@
