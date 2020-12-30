@@ -12,8 +12,8 @@ data "vsphere_tag" "region_tag" {
 }
 
 data "vsphere_dynamic" "datacenter_id" {
-  filter     = [data.vsphere_tag.region_tag.id]
-  type       = "Datacenter"
+  filter                 = [data.vsphere_tag.region_tag.id]
+  type                   = "Datacenter"
   resolve_inventory_path = true
 }
 
@@ -23,8 +23,9 @@ data "vsphere_tag" "zone_tag" {
 }
 
 data "vsphere_dynamic" "cluster_id" {
-  filter     = [data.vsphere_tag.zone_tag.id]
-  type       = "ClusterComputeResource"
+  filter                 = [data.vsphere_tag.zone_tag.id]
+  type                   = "ClusterComputeResource"
+  resolve_inventory_path = true
 }
 
 data "vsphere_datastore" "datastore" {
@@ -33,8 +34,8 @@ data "vsphere_datastore" "datastore" {
 }
 
 data "vsphere_resource_pool" "resource_pool" {
-  count = length(local.resourcePool) == 0 ? 0 : 1
-  name          = local.resourcePool
+  count         = length(local.resourcePool) == 0 ? 0 : 1
+  name          = join("/", [data.vsphere_dynamic.cluster_id.inventory_path, "Resources", local.resourcePool])
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
 
@@ -44,7 +45,7 @@ data "vsphere_network" "main" {
 }
 
 data "vsphere_network" "internal" {
-  for_each = toset(local.additionalNetworks)
+  for_each      = toset(local.additionalNetworks)
   name          = each.value
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
@@ -55,16 +56,16 @@ data "vsphere_virtual_machine" "template" {
 }
 
 locals {
-  main_ip_addresses = lookup(local.ng, "mainNetworkIPAddresses", [])
-  external_ip = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
+  main_ip_addresses     = lookup(local.ng, "mainNetworkIPAddresses", [])
+  external_ip           = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
   first_interface_index = 192
 
   main_interface_configuration = local.external_ip != null ? "{\"addresses\": ${jsonencode([local.external_ip])}}" : "{\"dhcp4\": true}"
 
   additional_interface_configurations = {
     for i, v in local.additionalNetworks :
-      "ens${local.first_interface_index + 32 * (i + 1)}" =>
-        {dhcp4 = true}
+    "ens${local.first_interface_index + 32 * (i + 1)}" =>
+    { dhcp4 = true }
   }
 
   cloud_init_network = {
@@ -75,25 +76,25 @@ locals {
   }
 
   cloud_init_metadata = {
-    "local-hostname" = join("-", [local.prefix, "node", var.nodeIndex])
+    "local-hostname"   = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
     "public-keys-data" = var.providerClusterConfiguration.sshPublicKey
-    "network" = local.cloud_init_network
+    "network"          = local.cloud_init_network
   }
 
   timesync_extra_conf = lookup(var.providerClusterConfiguration, "disableTimesync", true) ? {
-    "time.synchronize.continue" = "0"
-    "time.synchronize.restore" = "0"
-    "time.synchronize.resume.disk" = "FALSE"
-    "time.synchronize.shrink" = "0"
+    "time.synchronize.continue"      = "0"
+    "time.synchronize.restore"       = "0"
+    "time.synchronize.resume.disk"   = "FALSE"
+    "time.synchronize.shrink"        = "0"
     "time.synchronize.tools.startup" = "FALSE"
-    "time.synchronize.tools.enable" = "FALSE"
-    "time.synchronize.resume.host" = "0"
+    "time.synchronize.tools.enable"  = "FALSE"
+    "time.synchronize.resume.host"   = "0"
   } : {}
 
   vm_extra_config_guestinfo = {
-    "guestinfo.metadata" = base64encode(jsonencode(local.cloud_init_metadata))
+    "guestinfo.metadata"          = base64encode(jsonencode(local.cloud_init_metadata))
     "guestinfo.metadata.encoding" = "base64"
-    "guestinfo.userdata" = var.cloudConfig
+    "guestinfo.userdata"          = var.cloudConfig
     "guestinfo.userdata.encoding" = "base64"
   }
 
@@ -101,10 +102,10 @@ locals {
 }
 
 resource "vsphere_virtual_machine" "node" {
-  name             = join("-", [local.prefix, "node", var.nodeIndex])
+  name             = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
   resource_pool_id = length(local.resourcePool) == 0 ? null : data.vsphere_resource_pool.resource_pool[0].id
   datastore_id     = data.vsphere_datastore.datastore.id
-  folder = var.providerClusterConfiguration.vmFolderPath
+  folder           = var.providerClusterConfiguration.vmFolderPath
 
   num_cpus = local.instance_class.numCPUs
   memory   = local.instance_class.memory
@@ -120,7 +121,7 @@ resource "vsphere_virtual_machine" "node" {
   dynamic "network_interface" {
     for_each = local.additionalNetworks
     content {
-      network_id = data.vsphere_network.internal[network_interface.value].id
+      network_id   = data.vsphere_network.internal[network_interface.value].id
       adapter_type = data.vsphere_virtual_machine.template.network_interface_types[0]
     }
   }
@@ -135,11 +136,11 @@ resource "vsphere_virtual_machine" "node" {
 
   enable_disk_uuid = true
 
-  nested_hv_enabled = lookup(local.runtime_options, "nestedHardwareVirtualization", null)
-  cpu_limit = lookup(local.runtime_options, "cpuLimit", null)
-  cpu_reservation = lookup(local.runtime_options, "cpuReservation", null)
-  cpu_share_count = lookup(local.runtime_options, "cpuShares", null)
-  memory_limit = lookup(local.runtime_options, "memoryLimit", null)
+  nested_hv_enabled  = lookup(local.runtime_options, "nestedHardwareVirtualization", null)
+  cpu_limit          = lookup(local.runtime_options, "cpuLimit", null)
+  cpu_reservation    = lookup(local.runtime_options, "cpuReservation", null)
+  cpu_share_count    = lookup(local.runtime_options, "cpuShares", null)
+  memory_limit       = lookup(local.runtime_options, "memoryLimit", null)
   memory_reservation = lookup(local.runtime_options, "memoryReservation", null)
   memory_share_count = lookup(local.runtime_options, "memoryShares", null)
 
