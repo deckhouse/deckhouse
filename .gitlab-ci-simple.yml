@@ -23,6 +23,7 @@ variables:
   BASE_PYTHON_ALPINE: "python:3.7.9-alpine3.12"
   BASE_SHELL_OPERATOR: "flant/shell-operator:v1.0.0-beta.12-alpine3.11"
   BASE_UBUNTU: "ubuntu:18.04"
+  TEST_TIMEOUT: "15m"
 
 Build Modules Images:
   extends: .Build Modules Images template

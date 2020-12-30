@@ -9,7 +9,7 @@
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-      -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/matrix/
+      -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/matrix/
   except:
   - schedules
   - alpha
@@ -35,7 +35,7 @@
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-      -- ginkgo -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
+      -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
   except:
   - schedules
   - alpha
@@ -71,7 +71,7 @@
     done
   - >
     werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
-    go test -vet=off ./modules/... ./global-hooks/...
+    go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
   - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
   after_script:
   - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse ${BASE_ALPINE} chmod -R 0777 /testing
