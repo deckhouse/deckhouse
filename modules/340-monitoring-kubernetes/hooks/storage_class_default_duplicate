@@ -24,8 +24,8 @@ EOF
 }
 
 function __main__() {
-  group="/modules/$(module::name::kebab_case)/storage_class_default_duplicate#storage_class_default_duplicate"
-
+  group="/modules/$(module::name::kebab_case)/storage_class_default_duplicate"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
   if context::jq -er '([.snapshots.storageclasses[].filterResult | select(.isDefault == true)] | length) > 1'; then
     context::jq -c --arg group "$group" '
       .snapshots.storageclasses[].filterResult | select(.isDefault == true) |
@@ -40,9 +40,6 @@ function __main__() {
       }
       ' >> $METRICS_PATH
   fi
-
-  # Used to hack metrics deletion
-  jq -c --arg group "$group" '.group = $group' <<< '{"name": "storage_class_default_duplicate", "set": 0, "labels": {"name": "none"}}' >> $METRICS_PATH
 }
 
 hook::run $@
