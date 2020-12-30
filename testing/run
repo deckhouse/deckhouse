@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 CONTAINER_NAME="deckhouse-testing"
+TEST_TIMEOUT="15m"
 export BASE_ALPINE=${BASE_ALPINE:-"alpine:3.12.1"}
 export BASE_GOLANG_ALPINE=${BASE_GOLANG_ALPINE:-"golang:1.15.3-alpine3.12"}
 export BASE_GOLANG_BUSTER=${BASE_GOLANG_BUSTER:-"golang:1.15.3-buster"}
@@ -135,10 +136,10 @@ if [[ "$DEBUG" == "yes" ]]; then
     sleep 0.1
   done
 else
-  echo "Running: docker exec $docker_args $CONTAINER_NAME bash -c \"ginkgo -vet=off $ginkgo_args $tests\""
+  cmd="ginkgo -vet=off -timeout=$TEST_TIMEOUT $ginkgo_args $tests"
+  echo "Running: docker exec $docker_args $CONTAINER_NAME bash -c \"$cmd\""
 
-  cmd="ginkgo -vet=off $ginkgo_args $tests &"
-  cmd="$cmd$(
+  cmd="$cmd &$(
     cat <<"END"
 pid=$!
 touch /test-is-not-stopped
