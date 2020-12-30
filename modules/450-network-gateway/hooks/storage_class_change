@@ -82,6 +82,16 @@ function __main__ {
     kubernetes::delete_if_exists::non_blocking "d8-network-gateway" "pod/dhcp-0"
     echo "!!! NOTICE: storage class changed, deleting pod/dhcp-0 !!!"
   fi
+
+  jq -nr --arg storage_class "$effective_storage_class" '
+    {
+      "name": "d8_emptydir_usage",
+      "set": (if $storage_class == "false" then 1 else 0 end),
+      "labels": {
+        "app": "dhcp"
+      }
+    }
+  ' >> $METRICS_PATH
 }
 
 hook::run $@
