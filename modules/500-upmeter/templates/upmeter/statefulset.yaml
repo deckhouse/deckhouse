@@ -33,6 +33,18 @@ spec:
       mode: Auto
 {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: upmeter
+  namespace: d8-upmeter
+{{ include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: upmeter
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

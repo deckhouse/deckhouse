@@ -34,6 +34,20 @@ spec:
     {{- end }}
   {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+spec:
+{{- /* TODO: change to "maxUnavailable: 10%" when PDB percentage will support daemonsets */}}
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:

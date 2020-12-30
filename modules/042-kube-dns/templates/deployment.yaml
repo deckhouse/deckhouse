@@ -15,6 +15,18 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+{{ include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

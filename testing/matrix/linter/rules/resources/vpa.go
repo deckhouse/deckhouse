@@ -2,13 +2,85 @@ package resources
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/ghodss/yaml"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
 )
+
+// ControllerMustHaveVPA fills linting error regarding VPA
+func ControllerMustHaveVPA(module types.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
+	if !isVPAEnabled(values) {
+		return
+	}
+
+	scope := newLintingScope(objectStore, lintRuleErrorsList)
+
+	vpaTargets, vpaTolerationGroups := parseTargetsAndTolerationGroups(scope)
+
+	for index, object := range scope.Objects() {
+		// Skip non-pod controllers and modules which control VPA themselves
+		if !isPodController(object.Unstructured.GetKind()) || shouldSkipModuleResource(module.Name, &index) {
+			continue
+		}
+
+		if !ensureVPAIsPresent(scope, vpaTargets, index, object) {
+			continue
+		}
+
+		if !ensureContainersWithoutRequests(scope, object) {
+			continue
+		}
+
+		ensureTolerations(scope, vpaTolerationGroups, index, object)
+	}
+}
+
+func isVPAEnabled(values string) bool {
+	var v struct {
+		Global struct{ EnabledModules []string }
+	}
+	err := yaml.Unmarshal([]byte(values), &v)
+	if err != nil {
+		panic("unable to parse global.enabledModules values section")
+	}
+
+	for _, module := range v.Global.EnabledModules {
+		if module == "vertical-pod-autoscaler-crd" {
+			return true
+		}
+	}
+	return false
+}
+
+func isPodController(kind string) bool {
+	return kind == "Deployment" || kind == "DaemonSet" || kind == "StatefulSet"
+}
+
+func shouldSkipModuleResource(moduleName string, r *storage.ResourceIndex) bool {
+	switch moduleName {
+	// Controllers VPA is configured through cr settings
+	case "ingress-nginx":
+		return r.Kind == "DaemonSet" && r.Namespace == "d8-ingress-nginx" && strings.HasPrefix(r.Name, "controller-")
+
+	// Network gateway snat daemonset tolerations is configured through module values
+	case "network-gateway":
+		return r.Kind == "DaemonSet" && r.Namespace == "d8-network-gateway" && r.Name == "snat"
+
+	// Metal LB speaker daemonset tolerations is configured through module values
+	case "metallb":
+		return r.Kind == "DaemonSet" && r.Namespace == "d8-metallb" && r.Name == "speaker"
+
+	default:
+		return false
+	}
+}
 
 // parseTargetsAndTolerationGroups resolves target resource indexes
 func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceIndex]struct{}, map[storage.ResourceIndex]string) {
@@ -16,29 +88,35 @@ func parseTargetsAndTolerationGroups(scope *lintingScope) (map[storage.ResourceI
 	vpaTolerationGroups := make(map[storage.ResourceIndex]string)
 
 	for _, object := range scope.Objects() {
-		objectKind := object.Unstructured.GetKind()
-		if objectKind != "VerticalPodAutoscaler" {
+		kind := object.Unstructured.GetKind()
+
+		if kind != "VerticalPodAutoscaler" {
 			continue
 		}
 
-		target, ok := parseVPATarget(scope, object)
-		if !ok {
-			continue
-		}
+		fillVPAMaps(scope, vpaTargets, vpaTolerationGroups, object)
 
-		vpaTargets[target] = struct{}{}
-
-		labels := object.Unstructured.GetLabels()
-		if label, ok := labels["workload-resource-policy.deckhouse.io"]; ok {
-			vpaTolerationGroups[target] = label
-		}
 	}
 
 	return vpaTargets, vpaTolerationGroups
 }
 
-// parseVPATarget parses VPA target resource index, writes to the passed struct pointer
-func parseVPATarget(scope *lintingScope, vpaObject storage.StoreObject) (storage.ResourceIndex, bool) {
+func fillVPAMaps(scope *lintingScope, vpaTargets map[storage.ResourceIndex]struct{}, vpaTolerationGroups map[storage.ResourceIndex]string, vpa storage.StoreObject) {
+	target, ok := parseVPATargetIndex(scope, vpa)
+	if !ok {
+		return
+	}
+
+	vpaTargets[target] = struct{}{}
+
+	labels := vpa.Unstructured.GetLabels()
+	if label, ok := labels["workload-resource-policy.deckhouse.io"]; ok {
+		vpaTolerationGroups[target] = label
+	}
+}
+
+// parseVPATargetIndex parses VPA target resource index, writes to the passed struct pointer
+func parseVPATargetIndex(scope *lintingScope, vpaObject storage.StoreObject) (storage.ResourceIndex, bool) {
 	target := storage.ResourceIndex{}
 
 	specs, ok := vpaObject.Unstructured.Object["spec"].(map[string]interface{})

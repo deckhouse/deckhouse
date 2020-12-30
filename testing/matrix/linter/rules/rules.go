@@ -157,13 +157,15 @@ func objectAPIVersion(object storage.StoreObject) errors.LintRuleError {
 	}
 }
 
-func ApplyLintRules(m types.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
+func ApplyLintRules(module types.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
 	var lintRuleErrorsList errors.LintRuleErrorsList
-	for _, o := range objectStore.Storage {
-		applyObjectRules(objectStore, &lintRuleErrorsList, m, o)
-		applyContainerRules(&lintRuleErrorsList, o)
+	for _, object := range objectStore.Storage {
+		applyObjectRules(objectStore, &lintRuleErrorsList, module, object)
+		applyContainerRules(&lintRuleErrorsList, object)
 	}
 
-	resources.ControllerMustHaveVPAAndPDB(m, values, objectStore, &lintRuleErrorsList)
+	resources.ControllerMustHaveVPA(module, values, objectStore, &lintRuleErrorsList)
+	resources.ControllerMustHavePDB(objectStore, &lintRuleErrorsList)
+
 	return lintRuleErrorsList.ConvertToError()
 }

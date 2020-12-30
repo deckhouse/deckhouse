@@ -78,26 +78,12 @@ func (w *Worker) Start(c *ModuleController) {
 	for {
 		select {
 		case task := <-w.tasksCh:
-			err := common.ValidateValues(c.Module.Name, task.values)
-			if err != nil {
-				w.errorsCh <- testsError(task.index, err, task.values)
-				return
-			}
-
-			objectStore := storage.NewUnstructuredObjectStore()
-
-			err = c.RunRender(task.values, &objectStore)
-			if err != nil {
-				w.errorsCh <- testsError(task.index, err, task.values)
-				return
-			}
-
-			err = rules.ApplyLintRules(c.Module, task.values, &objectStore)
-			if err != nil {
+			if err := lint(c, &task); err != nil {
 				w.errorsCh <- err
 				return
 			}
 			w.doneCh <- struct{}{}
+
 		case <-w.ctx.Done():
 			return
 		}
@@ -179,6 +165,27 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 				return fmt.Errorf("helm chart object already exists: %v", err)
 			}
 		}
+	}
+	return nil
+}
+
+func lint(c *ModuleController, task *Task) error {
+	err := common.ValidateValues(c.Module.Name, task.values)
+	if err != nil {
+		return testsError(task.index, err, task.values)
+	}
+
+	objectStore := storage.NewUnstructuredObjectStore()
+
+	err = c.RunRender(task.values, &objectStore)
+	if err != nil {
+		return testsError(task.index, err, task.values)
+	}
+
+	err = rules.ApplyLintRules(c.Module, task.values, &objectStore)
+	if err != nil {
+		return err
+
 	}
 	return nil
 }

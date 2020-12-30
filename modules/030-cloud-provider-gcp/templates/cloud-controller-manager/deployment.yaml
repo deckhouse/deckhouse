@@ -18,6 +18,18 @@ spec:
     updateMode: "Auto"
   {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-gcp
+{{ include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -28,6 +28,18 @@ spec:
     updateMode: "Auto"
   {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: crowd-basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "crowd-basic-auth-proxy")) | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: crowd-basic-auth-proxy
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

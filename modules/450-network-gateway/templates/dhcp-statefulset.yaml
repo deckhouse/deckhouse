@@ -16,6 +16,18 @@ spec:
     updateMode: "Auto"
 {{- end }}
 ---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: dhcp
+  namespace: d8-network-gateway
+{{ include "helm_lib_module_labels" (list . (dict "app" "dhcp")) | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: dhcp
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
