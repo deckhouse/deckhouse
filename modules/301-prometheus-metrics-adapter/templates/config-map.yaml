@@ -27,8 +27,8 @@ data:
               resource: pod
         containerLabel: container
       memory:
-        containerQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>, container!="POD"}) by (<<.GroupBy>>)
-        nodeQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+        containerQuery: sum(container_memory_working_set_bytes:without_kmem{<<.LabelMatchers>>, container!="POD"}) by (<<.GroupBy>>)
+        nodeQuery: sum(container_memory_working_set_bytes:without_kmem{<<.LabelMatchers>>}) by (<<.GroupBy>>)
         resources:
           overrides:
             node:
@@ -58,7 +58,7 @@ data:
         matches: ".*"
         as: "cpu_1m"
       metricsQuery: 'sum(irate(<<.Series>>{<<.LabelMatchers>>, container!="POD"}[5m])) by (<<.GroupBy>>)'
-    - seriesQuery: 'container_memory_working_set_bytes{namespace!="",pod!="",container!="POD"}'
+    - seriesQuery: 'container_memory_working_set_bytes:without_kmem{namespace!="",pod!="",container!="POD"}'
       resources:
         overrides:
           namespace: {resource: namespace}
@@ -86,7 +86,7 @@ data:
         matches: ".*"
         as: "cpu_{{ . }}"
       metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>, container!="POD"}[{{ . }}])) by (<<.GroupBy>>)'
-    - seriesQuery: 'container_memory_working_set_bytes{namespace!="",pod!="",container!="POD"}'
+    - seriesQuery: 'container_memory_working_set_bytes:without_kmem{namespace!="",pod!="",container!="POD"}'
       resources:
         overrides:
           namespace: {resource: namespace}
