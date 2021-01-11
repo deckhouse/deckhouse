@@ -42,38 +42,51 @@ kubectl label node <node_name> node.deckhouse.io/group-
 
 ## Как зачистить ноду для последующего ввода в кластер?
 
-1. Установим kubeadm нужной версии и выполним reset.
-
+1. Остановим все сервисы.
     ```shell
-    apt install kubeadm=1.16* -y
-    kubeadm reset
+    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
+    systemctl stop bashible.service bashible.timer
+    systemctl stop kubelet.service kubelet-face-slapper.service kubelet-face-slapper.timer
+    systemctl stop docker
     ```
-
-2. Остановим все сервисы и удалим все директории.
-
-    ```shell
-    systemctl disable --now kubernetes-api-proxy
-    systemctl disable --now bashible.timer
-    systemctl disable --now bashible
-    systemctl disable --now kubelet
-    systemctl disable --now kubelet-face-slapper.timer
-    systemctl disable --now kubelet-face-slapper.service
-    rm -rf /var/lib/bashible/ /etc/kubernetes/deckhouse/ /etc/kubernetes/kubernetes-api-proxy/ /etc/systemd/system/kubernetes-api-proxy.service
-    systemctl daemon-reload
-    systemctl restart kubernetes-api-proxy
-    ```
-
-3. [Запустим](#как-автоматически-добавить-статичный-узел-в-кластер) `bootstrap.sh`.
-4. Включим все сервисы обратно.
-
-    ```shell
-    systemctl enable --now kubernetes-api-proxy
-    systemctl enable --now bashible.timer
-    systemctl enable --now bashible
-    systemctl enable --now kubelet
-    systemctl enable --now kubelet-face-slapper.timer
-    systemctl enable --now kubelet-face-slapper.service
-    ```
+2. Удалим маунты.
+   ```shell
+   for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
+   ```
+3. Удалим директории и файлы.
+   ```shell
+   rm -rf /var/lib/bashible 
+   rm -rf /etc/kubernetes
+   rm -rf /var/lib/kubelet 
+   rm -rf /var/lib/docker 
+   rm -rf /etc/cni
+   rm -rf /var/lib/cni
+   rm -rf /var/lib/etcd
+   rm -rf /etc/systemd/system/kubernetes-api-proxy*
+   ```
+4. Удалим интерфейсы.
+   ```shell
+   ifconfig cni0 down
+   ifconfig flannel.1 down
+   ifconfig docker0 down
+   ip link delete cni0
+   ip link delete flannel.1
+   ```
+5. Создадим нужные директории.
+   ```shell
+   mkdir -p /etc/kubernetes/kubernetes-api-proxy/
+   ```
+6. Запустим обратно Docker.
+   ```shell
+   systemctl start docker
+   ```
+7. [Запустим](#как-автоматически-добавить-статичный-узел-в-кластер) `bootstrap.sh`.
+8. Включим все сервисы обратно.
+   ```shell
+   systemctl start kubelet.service kubelet-face-slapper.service kubelet-face-slapper.timer
+   systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
+   systemctl start bashible.service bashible.timer
+   ```
 
 ## Как понять, что что-то пошло не так?
 
