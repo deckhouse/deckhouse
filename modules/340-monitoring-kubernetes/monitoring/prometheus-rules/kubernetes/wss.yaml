@@ -1,0 +1,16 @@
+- name: kubernetes.wss_bytes
+  rules:
+  - record: container_memory:kmem
+    expr: |
+      container_memory_usage_bytes
+      -
+      (
+        container_memory_swap
+        +
+        container_memory_rss
+        +
+        container_memory_cache
+      )
+  - record: container_memory_working_set_bytes:without_kmem
+    expr: |
+      container_memory_working_set_bytes - container_memory:kmem

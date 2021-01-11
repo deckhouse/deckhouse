@@ -402,7 +402,7 @@
           "refId": "G"
         },
         {
-          "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__range]))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__range]))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -418,7 +418,7 @@
           "refId": "I"
         },
         {
-          "expr": "sum by (namespace)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n    ) > 0\n  )\nor\ncount(avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "sum by (namespace)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n    ) > 0\n  )\nor\ncount(avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -426,7 +426,7 @@
           "refId": "J"
         },
         {
-          "expr": "sum by (namespace)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n    )\n    > 0\n  )\nor count (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
+          "expr": "sum by (namespace)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__range]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__range]))\n    )\n    > 0\n  )\nor count (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}[$__range])) by (namespace) * 0",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -10412,14 +10412,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+          "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
           "refId": "A"
         },
         {
-          "expr": "sum (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+          "expr": "sum (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -10511,8 +10511,16 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "Working set bytes",
+          "alias": "Working set bytes without kmem",
           "color": "rgb(0, 0, 0)",
+          "dashes": true,
+          "fill": 0,
+          "linewidth": 2,
+          "stack": false
+        },
+        {
+          "alias": "Kmem",
+          "color": "rgb(255, 0, 0)",
           "dashes": true,
           "fill": 0,
           "linewidth": 2,
@@ -10547,13 +10555,19 @@
           "refId": "C"
         },
         {
-          "expr": "sum (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+          "expr": "sum (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Working set bytes",
+          "legendFormat": "Working set bytes without kmem",
           "refId": "D"
-        }
-      ],
+        },
+        {
+          "expr": "sum (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=~\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Kmem",
+          "refId": "E"
+        }      ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
@@ -10644,14 +10658,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    ) > 0\n  )",
+          "expr": "sum by (namespace)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    ) > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
           "refId": "A"
         },
         {
-          "expr": "sum\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    ) > 0\n  )",
+          "expr": "sum\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      -\n      sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    ) > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -10748,14 +10762,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (namespace)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    )\n    > 0\n  )",
+          "expr": "sum by (namespace)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    )\n    > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
           "refId": "A"
         },
         {
-          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    )\n    > 0\n  )",
+          "expr": "sum\n  (\n    (\n      (\n        sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx3]))\n      ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=~\"$namespace\"}[$__interval_sx3]))\n    )\n    > 0\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -10859,7 +10873,7 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
               "dashes": true,
               "fill": 0,
@@ -10867,6 +10881,13 @@
               "stack": false
             },
             {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },            {
               "alias": "VPA Target",
               "color": "#447ebc",
               "dashes": true,
@@ -10922,10 +10943,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -10948,6 +10969,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -11038,8 +11066,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -11101,10 +11137,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -11127,6 +11163,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -11217,8 +11260,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -11280,10 +11331,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -11306,6 +11357,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -11396,8 +11454,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -11459,10 +11525,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -11485,6 +11551,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -11583,6 +11656,14 @@
               "stack": false
             },
             {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
               "alias": "VPA Target",
               "color": "#447ebc",
               "dashes": true,
@@ -11638,10 +11719,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -11664,6 +11745,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -11754,8 +11842,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -11817,7 +11913,7 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Working set bytes",
@@ -11843,6 +11939,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -11933,8 +12036,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -11996,10 +12107,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -12022,6 +12133,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -12112,8 +12230,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -12175,10 +12301,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -12201,6 +12327,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -12291,8 +12424,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -12354,10 +12495,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -12380,6 +12521,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -12470,8 +12618,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -12533,10 +12689,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -12559,6 +12715,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -12649,8 +12812,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -12712,10 +12883,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -12738,6 +12909,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -12828,8 +13006,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -12891,10 +13077,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -12917,6 +13103,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -13007,13 +13200,22 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
               "stack": false
             },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+
             {
               "alias": "VPA Target",
               "color": "#447ebc",
@@ -13070,10 +13272,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -13096,6 +13298,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -13186,8 +13395,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -13249,10 +13466,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -13275,6 +13492,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -13365,8 +13589,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -13428,10 +13660,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -13454,6 +13686,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -13544,8 +13783,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -13607,10 +13854,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -13633,6 +13880,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -13723,8 +13977,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -13786,10 +14048,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -13812,6 +14074,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -13902,8 +14171,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -13965,10 +14242,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -13991,6 +14268,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -14081,8 +14365,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -14144,10 +14436,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -14170,6 +14462,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -14260,8 +14559,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -14323,10 +14630,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -14349,6 +14656,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -14439,8 +14753,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -14502,10 +14824,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -14528,6 +14850,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -14618,8 +14947,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -14681,10 +15018,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -14707,6 +15044,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -14797,8 +15141,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -14860,10 +15212,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -14886,6 +15238,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -14976,8 +15335,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -15039,10 +15406,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -15065,6 +15432,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -15155,8 +15529,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -15218,10 +15600,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -15244,6 +15626,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -15334,8 +15723,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -15397,10 +15794,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -15423,6 +15820,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -15513,8 +15917,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -15576,10 +15988,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -15602,6 +16014,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -15692,8 +16111,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -15755,10 +16182,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -15781,6 +16208,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -15871,8 +16305,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -15934,10 +16376,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -15960,6 +16402,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -16050,8 +16499,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -16113,10 +16570,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -16139,6 +16596,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -16229,8 +16693,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -16292,10 +16764,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -16318,6 +16790,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -16408,8 +16887,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -16471,10 +16958,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -16497,6 +16984,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -16587,8 +17081,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -16650,10 +17152,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -16676,6 +17178,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
@@ -16766,8 +17275,16 @@
           },
           "seriesOverrides": [
             {
-              "alias": "Working set bytes",
+              "alias": "Working set bytes without kmem",
               "color": "rgb(0, 0, 0)",
+              "dashes": true,
+              "fill": 0,
+              "linewidth": 2,
+              "stack": false
+            },
+            {
+              "alias": "Kmem",
+              "color": "rgb(255, 0, 0)",
               "dashes": true,
               "fill": 0,
               "linewidth": 2,
@@ -16829,10 +17346,10 @@
               "refId": "C"
             },
             {
-              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "expr": "sum by (namespace) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
-              "legendFormat": "Working set bytes",
+              "legendFormat": "Working set bytes without kmem",
               "refId": "D"
             },
             {
@@ -16855,6 +17372,13 @@
               "intervalFactor": 1,
               "legendFormat": "Limits",
               "refId": "G"
+            },
+            {
+              "expr": "sum by (namespace) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__interval_sx3]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "Kmem",
+              "refId": "H"
             }
           ],
           "thresholds": [],
