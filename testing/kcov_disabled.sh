@@ -7,6 +7,12 @@ function request_gitlab_api() {
 function main() {
   export KCOV_DISABLED=yes
 
+  if [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then
+    export KCOV_DISABLED=no
+    echo '"Current branch name is master. Enabling kcov.'
+    return 0
+  fi
+
   MERGE_REQUEST_ID=$(request_gitlab_api "merge_requests?state=opened" | jq -r --arg c ${CI_COMMIT_SHA} '.[]|select(.sha == $c) | .iid')
   if [[ "$MERGE_REQUEST_ID" == "" ]]; then
     echo "No merge request found for commit sha: ${CI_COMMIT_SHA}"
