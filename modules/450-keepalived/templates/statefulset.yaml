@@ -37,6 +37,7 @@ spec:
     spec:
       hostNetwork: true
 {{- include "helm_lib_priority_class" (tuple $ "cluster-high") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -54,6 +55,7 @@ spec:
       - name: deckhouse-registry
       initContainers:
       - name: init
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
         command: ['/prepare-config.py']
         image: {{ $.Values.global.modulesImages.registry }}/keepalived/keepalived:{{ $.Values.global.modulesImages.tags.keepalived.keepalived }}
         env:
@@ -68,16 +70,20 @@ spec:
           mountPath: /etc/keepalived-instance-config
         - name: auth-pass
           mountPath: /etc/keepalived-instance-secret
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       containers:
       - name: keepalived
+{{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | indent 8 }}
         command: ['/usr/sbin/keepalived', '-n', '-l']
         image: {{ $.Values.global.modulesImages.registry }}/keepalived/keepalived:{{ $.Values.global.modulesImages.tags.keepalived.keepalived }}
-        securityContext:
-          capabilities:
-            add: ["NET_ADMIN"]
         volumeMounts:
         - name: config
           mountPath: /etc/keepalived
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       volumes:
       - name: config
         emptyDir: {}

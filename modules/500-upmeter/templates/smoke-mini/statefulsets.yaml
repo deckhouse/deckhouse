@@ -59,13 +59,20 @@ spec:
                 - {{ $sts.node }}
 {{- include "helm_lib_tolerations" (tuple $context "any-node") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple $context "cluster-medium") | indent 6 }}
+{{/* ### Migration 14.12.2020: Remove `.newImage` condition and chown init container after this commit reaches RockSolid. */}}
+    {{- if hasKey $sts "newImage" }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $context | indent 6 }}
+      initContainers:
+{{ include "helm_lib_module_init_container_chown_nobody_volume" (tuple $context "disk") | indent 6 }}
+    {{- end }}
       containers:
       - name: smoke-mini
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | indent 8 }}
         image: {{ $sts.image }}
         command: [ '/smoke-mini' ]
         ports:
         - name: http
-          containerPort: 80
+          containerPort: 8080
           protocol: TCP
         env:
         - name: SMOKE_MINI_STS_LIST
@@ -77,6 +84,9 @@ spec:
         volumeMounts:
           - name: disk
             mountPath: /disk
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
     {{- $storageClass := $sts.effectiveStorageClass }}
     {{- if $storageClass }}
   volumeClaimTemplates:

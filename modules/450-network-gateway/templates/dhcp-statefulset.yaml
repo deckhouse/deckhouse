@@ -51,10 +51,12 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:
       - name: init
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
         command: ['/prepare-config.py']
         image: {{ .Values.global.modulesImages.registry }}/network-gateway/dnsmasq:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
         volumeMounts:
@@ -62,18 +64,22 @@ spec:
           mountPath: /etc/dnsmasq.d
         - name: network-gateway-config
           mountPath: /etc/network-gateway-config
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       containers:
       - name: dhcp
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_BIND_SERVICE" "NET_RAW")) | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/network-gateway/dnsmasq:{{ .Values.global.modulesImages.tags.networkGateway.dnsmasq }}
         command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
-        securityContext:
-          capabilities:
-            add: ["NET_ADMIN"]
         volumeMounts:
         - name: dhcp-config
           mountPath: /etc/dnsmasq.d
         - name: dhcp-data
           mountPath: /var/lib/dnsmasq/
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
       volumes:
       - name: dhcp-config
         emptyDir: {}

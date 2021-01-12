@@ -27,20 +27,17 @@ RUN apt-get update && \
     apt-get clean && \
     dpkg -i /grafana.deb && \
     rm /grafana.deb && \
-    curl -L https://github.com/tianon/gosu/releases/download/1.10/gosu-amd64 > /usr/sbin/gosu && \
-    chmod +x /usr/sbin/gosu && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* && \
     GF_INSTALL_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" && \
     GF_PATHS_PLUGINS="/var/lib/grafana/plugins" && \
     IFS="," && \
     for plugin in ${GF_INSTALL_PLUGINS}; do \
-    gosu grafana grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
+    grafana-cli --pluginsDir "${GF_PATHS_PLUGINS}" plugins install ${plugin}; \
     done && \
     mkdir -p /var/lib/grafana/plugins/flant-statusmap-panel && \
     mv /plugin-dist /var/lib/grafana/plugins/flant-statusmap-panel/ && \
-    chown -R grafana: /var/lib/grafana/plugins/flant-statusmap-panel
-VOLUME ["/var/lib/grafana", "/var/log/grafana", "/etc/grafana"]
+    chmod +r /etc/grafana/grafana.ini
 EXPOSE 3000
 COPY ./run.sh /run.sh
 WORKDIR /

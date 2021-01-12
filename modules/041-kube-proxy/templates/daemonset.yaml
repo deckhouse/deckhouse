@@ -52,23 +52,27 @@ spec:
       - name: deckhouse-registry
       priorityClassName: system-node-critical
 {{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       initContainers:
       - name: api-proxy-check
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/kube-proxy/api-proxy-check:{{ index .Values.global.modulesImages.tags.kubeProxy.apiProxyCheck }}
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config
         - mountPath: /var/lib/kube-proxy-cm
           name: kube-proxy-cm
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       containers:
       - name: kube-proxy
+{{- include "helm_lib_module_container_security_context_privileged" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/kube-proxy/kube-proxy-{{ $kubeVersion.Major }}-{{ $kubeVersion.Minor }}:{{ index .Values.global.modulesImages.tags.kubeProxy (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "") }}
         command:
         - /usr/local/bin/kube-proxy
         - --config=/var/lib/kube-proxy/config.conf
         - --hostname-override=$(NODE_NAME)
-        securityContext:
-          privileged: true
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config
@@ -83,6 +87,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       hostNetwork: true
       serviceAccountName: d8-kube-proxy
       volumes:

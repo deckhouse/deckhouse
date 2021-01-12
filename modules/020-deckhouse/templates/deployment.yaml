@@ -67,8 +67,10 @@ spec:
 {{- else }}
 {{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
 {{- end }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       containers:
         - name: deckhouse
+{{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | indent 10 }}
           command:
             - /deckhouse/deckhouse
           image: {{ .Values.deckhouse.internal.currentReleaseImageName }}
@@ -95,6 +97,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: DEBUG_UNIX_SOCKET
+              value: /tmp/shell-operator-debug.socket
           ports:
             - containerPort: 9650
               name: self
@@ -108,6 +112,9 @@ spec:
             # fail after 10 minutes
             periodSeconds: 5
             failureThreshold: 120
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 14 }}
           workingDir: /deckhouse
           volumeMounts:
           - mountPath: /tmp

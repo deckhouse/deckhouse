@@ -5,4 +5,4 @@ RUN rm -rf /etc/nginx
 
 COPY rootfs /
 
-CMD envsubst < /etc/nginx/nginx.tmpl > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'
+CMD envsubst < /etc/nginx/madison.tmpl > /tmp/madison.conf && exec nginx -g 'daemon off;'

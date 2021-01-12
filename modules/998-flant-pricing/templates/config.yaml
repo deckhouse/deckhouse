@@ -1,6 +1,7 @@
 {{- define "grafana_agent_config" }}
 server:
   log_level: debug
+  http_listen_port: 8080
 prometheus:
   wal_directory: /data/agent/wal
   global:

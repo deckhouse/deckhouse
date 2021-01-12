@@ -74,6 +74,7 @@ spec:
 {{- end }}
 {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator
       volumes:
@@ -81,6 +82,7 @@ spec:
         emptyDir: {}
       initContainers:
       - command: ["bash", "-c"]
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         args:
         - |
           ca=$(jo CN=dex-authenticator key="$(jo algo=ecdsa size=256)" ca="$(jo expirty=87600h)" | cfssl gencert -initca -)
@@ -99,8 +101,14 @@ spec:
         volumeMounts:
         - name: tls
           mountPath: "/certs"
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       containers:
-      - args:
+      - name: dex-authenticator
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticator }}
+        args:
         - --provider=oidc
         - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
@@ -118,6 +126,7 @@ spec:
         - --email-domain=*
         - --whitelist-domain={{ $crd.spec.applicationDomain }}
         - --upstream=file:///dev/null
+        - --https-address=0.0.0.0:8443
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
         - --tls-key-file=/opt/dex-authenticator/tls/tls.key
         - --skip-provider-button
@@ -143,26 +152,28 @@ spec:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
           readOnly: true
-        image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticator }}
-        name: dex-authenticator
         readinessProbe:
           httpGet:
-            port: 443
+            port: 8443
             scheme: HTTPS
             path: /ping
           initialDelaySeconds: 1
           periodSeconds: 5
         livenessProbe:
           httpGet:
-            port: 443
+            port: 8443
             scheme: HTTPS
             path: /ping
           initialDelaySeconds: 15
           periodSeconds: 10
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
         ports:
-        - containerPort: 443
+        - containerPort: 8443
           protocol: TCP
       - name: redis
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $context.Values.global.modulesImages.registry }}/user-authn/dex-authenticator-redis:{{ $context.Values.global.modulesImages.tags.userAuthn.dexAuthenticatorRedis }}
         args:
           - "--save"
@@ -171,4 +182,7 @@ spec:
           - "no"
           - "--bind"
           - "127.0.0.1"
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
 {{- end }}

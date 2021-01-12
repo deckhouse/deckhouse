@@ -26,6 +26,8 @@ modulesImages:
     flantPricing:
       flantPricing: tagstring
       grafanaAgent: tagstring
+    common:
+      alpine: tagstring
 discovery:
   prometheusScrapeInterval: 30s
   clusterControlPlaneIsHighlyAvailable: true
@@ -131,7 +133,9 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 - name: FP_DO_NOT_CHARGE_FOR_ROCK_SOLID
   value: "0"
 - name: FP_CONTACTS
-  value: "10"`
+  value: "10"
+- name: DEBUG_UNIX_SOCKET
+  value: /tmp/shell-operator-debug.socket`
 
 			Expect(ds.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(expectedEnvsDS))
 

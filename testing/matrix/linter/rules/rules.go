@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -11,6 +12,46 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
 )
+
+func skipObjectIfNeeded(o *storage.StoreObject) bool {
+	// Dynatrace module deprecated and will be removed
+	if o.Unstructured.GetKind() == "Deployment" && o.Unstructured.GetNamespace() == "d8-dynatrace" {
+		return true
+	}
+	// Control plane configurator module used only in kops clusters and will be removed
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-system" &&
+		o.Unstructured.GetName() == "control-plane-configurator" {
+		return true
+	}
+	// Control plane proxy uses `flant/kube-ca-auth-proxy` with nginx and should be refactored
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-monitoring" &&
+		strings.HasPrefix(o.Unstructured.GetName(), "control-plane-proxy") {
+		return true
+	}
+	// Ingress Nginx has a lot of hardcoded configuration, which makes it hard to get secured
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-ingress-nginx" &&
+		strings.HasPrefix(o.Unstructured.GetName(), "controller") {
+		return true
+	}
+
+	return false
+}
+
+func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
+	// Control plane manager image-holder containers run `/pause` and has no additional parameters
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "kube-system" &&
+		o.Unstructured.GetName() == "d8-control-plane-manager" &&
+		strings.HasPrefix(c.Name, "image-holder") {
+		return true
+	}
+	// Coredns listens :53 port in hostNetwork
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-system" &&
+		o.Unstructured.GetName() == "node-local-dns" && c.Name == "coredns" {
+		return true
+	}
+
+	return false
+}
 
 func applyContainerRules(lintRuleErrorsList *errors.LintRuleErrorsList, object storage.StoreObject) {
 	containers, err := object.GetContainers()
@@ -25,6 +66,12 @@ func applyContainerRules(lintRuleErrorsList *errors.LintRuleErrorsList, object s
 	lintRuleErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
 	lintRuleErrorsList.Add(containerImageTagLatest(object, containers))
 	lintRuleErrorsList.Add(containerImagePullPolicyIfNotPresent(object, containers))
+
+	if !skipObjectIfNeeded(&object) {
+		lintRuleErrorsList.Add(containerStorageEphemeral(object, containers))
+		lintRuleErrorsList.Add(containerSecurityContext(object, containers))
+		lintRuleErrorsList.Add(containerPorts(object, containers))
+	}
 }
 
 func containerNameDuplicates(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
@@ -87,8 +134,61 @@ func containerImagePullPolicyIfNotPresent(object storage.StoreObject, containers
 			"CONTAINER004",
 			object.Identity()+"; container = "+c.Name,
 			c.ImagePullPolicy,
-			"container imagePullPolicy should be unspecified or \"IfNotPresent\"",
+			"Container imagePullPolicy should be unspecified or \"IfNotPresent\"",
 		)
+	}
+	return errors.EmptyRuleError
+}
+
+func containerStorageEphemeral(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+	for _, c := range containers {
+		if skipObjectContainerIfNeeded(&object, &c) {
+			continue
+		}
+		if c.Resources.Requests.StorageEphemeral() == nil || c.Resources.Requests.StorageEphemeral().Value() == 0 {
+			return errors.NewLintRuleError(
+				"CONTAINER006",
+				object.Identity()+"; container = "+c.Name,
+				nil,
+				"Container StorageEphemeral is not defined in Resources.Requests",
+			)
+		}
+	}
+	return errors.EmptyRuleError
+}
+
+func containerSecurityContext(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+	for _, c := range containers {
+		if skipObjectContainerIfNeeded(&object, &c) {
+			continue
+		}
+		if c.SecurityContext == nil {
+			return errors.NewLintRuleError(
+				"CONTAINER005",
+				object.Identity()+"; container = "+c.Name,
+				nil,
+				"Container SecurityContext is not defined",
+			)
+		}
+	}
+	return errors.EmptyRuleError
+}
+
+func containerPorts(object storage.StoreObject, containers []v1.Container) errors.LintRuleError {
+	for _, c := range containers {
+		if skipObjectContainerIfNeeded(&object, &c) {
+			continue
+		}
+		for _, p := range c.Ports {
+			if p.ContainerPort <= 1024 {
+				return errors.NewLintRuleError(
+					"CONTAINER006",
+					object.Identity()+"; container = "+c.Name,
+					p.ContainerPort,
+					"Container uses port <= 1024",
+				)
+			}
+		}
 	}
 	return errors.EmptyRuleError
 }
@@ -100,6 +200,10 @@ func applyObjectRules(objectStore *storage.UnstructuredObjectStore, lintRuleErro
 	lintRuleErrorsList.Add(roles.ObjectDeckhouseClusterRoles(module, object))
 	lintRuleErrorsList.Add(roles.ObjectRBACPlacement(module, object))
 	lintRuleErrorsList.Add(roles.ObjectBindingSubjectServiceAccountCheck(module, object, objectStore))
+
+	if !skipObjectIfNeeded(&object) {
+		lintRuleErrorsList.Add(objectSecurityContext(object))
+	}
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
@@ -155,6 +259,80 @@ func objectAPIVersion(object storage.StoreObject) errors.LintRuleError {
 	default:
 		return errors.EmptyRuleError
 	}
+}
+
+func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
+	switch object.Unstructured.GetKind() {
+	case "Deployment", "DaemonSet", "StatefulSet", "Pod", "Job", "CronJob":
+	default:
+		return errors.EmptyRuleError
+	}
+
+	securityContext, err := object.GetPodSecurityContext()
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			fmt.Sprintf("GetPodSecurityContext failed: %v", err),
+		)
+	}
+
+	if securityContext == nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			"Object's SecurityContext is not defined",
+		)
+	}
+	if securityContext.RunAsNonRoot == nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			"Object's SecurityContext missing parameter RunAsNonRoot",
+		)
+	}
+
+	if securityContext.RunAsUser == nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			"Object's SecurityContext missing parameter RunAsUser",
+		)
+	}
+	if securityContext.RunAsGroup == nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			"Object's SecurityContext missing parameter RunAsGroup",
+		)
+	}
+	switch *securityContext.RunAsNonRoot {
+	case true:
+		if *securityContext.RunAsUser != 65534 || *securityContext.RunAsGroup != 65534 {
+			return errors.NewLintRuleError(
+				"MANIFEST003",
+				object.Identity(),
+				fmt.Sprintf("%d:%d", *securityContext.RunAsUser, *securityContext.RunAsGroup),
+				"Object's SecurityContext has `RunAsNonRoot: true`, but RunAsUser:RunAsGroup differs from 65534:65534",
+			)
+		}
+	case false:
+		if *securityContext.RunAsUser != 0 || *securityContext.RunAsGroup != 0 {
+			return errors.NewLintRuleError(
+				"MANIFEST003",
+				object.Identity(),
+				fmt.Sprintf("%d:%d", *securityContext.RunAsUser, *securityContext.RunAsGroup),
+				"Object's SecurityContext has `RunAsNonRoot: false`, but RunAsUser:RunAsGroup differs from 0:0",
+			)
+		}
+	}
+
+	return errors.EmptyRuleError
 }
 
 func ApplyLintRules(module types.Module, values string, objectStore *storage.UnstructuredObjectStore) error {

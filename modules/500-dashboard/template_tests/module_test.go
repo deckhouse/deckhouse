@@ -21,7 +21,7 @@ modulesImages:
   registryDockercfg: cfg
   tags:
     common:
-      kubeCaAuthProxy: tagstring
+      kubeRbacProxy: tagstring
     dashboard:
       dashboard: tagstring
       metricsScraper: tagstring
@@ -43,7 +43,7 @@ modulesImages:
   registryDockercfg: cfg
   tags:
     common:
-      kubeCaAuthProxy: tagstring
+      kubeRbacProxy: tagstring
     dashboard:
       dashboard: tagstring
       metricsScraper: tagstring
@@ -66,7 +66,7 @@ modulesImages:
   registryDockercfg: cfg
   tags:
     common:
-      kubeCaAuthProxy: tagstring
+      kubeRbacProxy: tagstring
     dashboard:
       dashboard: tagstring
       metricsScraper: tagstring
@@ -88,7 +88,7 @@ modulesImages:
   registryDockercfg: cfg
   tags:
     common:
-      kubeCaAuthProxy: tagstring
+      kubeRbacProxy: tagstring
     dashboard:
       dashboard: tagstring
       metricsScraper: tagstring

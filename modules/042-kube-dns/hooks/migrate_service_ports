@@ -1,0 +1,42 @@
+#!/bin/bash
+
+### Migration 11.12.2020: Remove after this commit reached RockSolid
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+    kubernetes:
+    - name: service
+      group: main
+      keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)/migrate_service_ports
+      executeHookOnEvent: ["Modified"]
+      waitForSynchronization: false
+      apiVersion: v1
+      kind: Service
+      nameSelector:
+        matchNames:
+        - d8-kube-dns
+      jqFilter: |
+        {
+          "isMigrated": ([.spec.ports // [] | .[] | select(.targetPort == 5353)] | length == 2)
+        }
+EOF
+}
+
+function __main__() {
+  if ! context::has snapshots.service.0; then
+    return 0
+  fi
+
+  if context::jq -er '.snapshots.service[0] | select(.filterResult.isMigrated == true)' >/dev/null; then
+    return 0
+  fi
+
+  kubernetes::patch_jq kube-system service/d8-kube-dns ".spec.ports[].targetPort = 5353"
+}
+
+hook::run "$@"

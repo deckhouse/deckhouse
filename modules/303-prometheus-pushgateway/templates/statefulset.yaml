@@ -37,10 +37,12 @@ spec:
 {{- include "helm_lib_node_selector" (tuple $ "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: prometheus-pushgateway
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | indent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}/prometheus-pushgateway/pushgateway:{{ $.Values.global.modulesImages.tags.prometheusPushgateway.pushgateway }}
         ports:
         - name: http-metrics
@@ -60,4 +62,7 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 10
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
 {{- end }}

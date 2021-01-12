@@ -51,8 +51,12 @@ spec:
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      initContainers:
+{{ include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "agent-data") | indent 6 }}
       containers:
       - name: {{ .Chart.Name }}
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/flant-pricing/flant-pricing:{{ .Values.global.modulesImages.tags.flantPricing.flantPricing }}
         env:
         - name: FP_PROJECT
@@ -95,6 +99,8 @@ spec:
           value: {{ .Values.flantPricing.doNotChargeForRockSolid | quote | int | quote }}
         - name: FP_CONTACTS
           value: {{ .Values.flantPricing.contacts | quote }}
+        - name: DEBUG_UNIX_SOCKET
+          value: /tmp/shell-operator-debug.socket
         ports:
         - containerPort: 9115
           name: http-metrics
@@ -103,7 +109,14 @@ spec:
             path: /metrics
             port: http-metrics
           periodSeconds: 60
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
       - name: grafana-agent
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/flant-pricing/grafana-agent:{{ .Values.global.modulesImages.tags.flantPricing.grafanaAgent }}
         volumeMounts:
         - name: agent-data
@@ -116,8 +129,11 @@ spec:
         livenessProbe:
           httpGet:
             path: /-/healthy
-            port: 80
+            port: 8080
           periodSeconds: 30
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       volumes:
       - name: agent-data
         hostPath:
@@ -125,3 +141,5 @@ spec:
       - name: agent-config
         secret:
           secretName: grafana-agent-config
+      - name: tmp
+        emptyDir: {}

@@ -38,10 +38,12 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metrics-scraper")) | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: metrics-scraper
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}/dashboard/metrics-scraper:{{ $.Values.global.modulesImages.tags.dashboard.metricsScraper }}
         ports:
         - containerPort: 8000
@@ -55,13 +57,11 @@ spec:
           timeoutSeconds: 30
         volumeMounts:
         - mountPath: /tmp
-          name: tmp-volume
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsUser: 1001
-          runAsGroup: 2001
+          name: tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       serviceAccountName: dashboard
       volumes:
-        - name: tmp-volume
+        - name: tmp
           emptyDir: {}

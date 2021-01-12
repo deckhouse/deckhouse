@@ -49,15 +49,15 @@ spec:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "cluster-critical") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
       hostNetwork: true
       serviceAccountName: {{ .Chart.Name }}
       containers:
       - name: simple-bridge
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/cni-simple-bridge/simple-bridge:{{ .Values.global.modulesImages.tags.cniSimpleBridge.simpleBridge }}
         command:
         - /bin/simple-bridge
-        securityContext:
-          privileged: true
         env:
         {{- if hasKey .Values.global "clusterConfiguration" }}
         - name: ROUTE_POD_NETWORK_TO_GW
@@ -74,6 +74,11 @@ spec:
           mountPath: /run
         - name: cni
           mountPath: /etc/cni/net.d
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       volumes:
       - name: run
         hostPath:
@@ -81,3 +86,5 @@ spec:
       - name: cni
         hostPath:
           path: /etc/cni/net.d
+      - name: tmp
+        emptyDir: {}

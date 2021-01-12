@@ -14,7 +14,7 @@ spec:
   clusterIP: None
   ports:
   - name: http
-    port: 80
+    port: 8080
     protocol: TCP
   selector:
     smoke-mini: {{ $k }}
@@ -31,7 +31,7 @@ spec:
   clusterIP: None
   ports:
   - name: http
-    port: 80
+    port: 8080
     protocol: TCP
   selector:
     app: smoke-mini

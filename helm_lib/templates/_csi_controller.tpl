@@ -77,9 +77,11 @@ spec:
 {{ include "helm_lib_priority_class" (tuple $context "cluster-critical") | indent 6 }}
 {{ include "helm_lib_node_selector" (tuple $context "master") | indent 6 }}
 {{ include "helm_lib_tolerations" (tuple $context "master") | indent 6 }}
+{{ include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       serviceAccountName: csi
       containers:
       - name: provisioner
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $provisionerImage | quote }}
         args:
         - "--timeout={{ $provisionerTimeout }}"
@@ -93,7 +95,11 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        resources:
+          requests:
+{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       - name: attacher
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $attacherImage | quote }}
         args:
         - "--timeout={{ $attacherTimeout }}"
@@ -102,7 +108,11 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        resources:
+          requests:
+{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       - name: resizer
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $resizerImage | quote }}
         args:
         - "--timeout={{ $resizerTimeout }}"
@@ -111,7 +121,11 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        resources:
+          requests:
+{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       - name: controller
+{{ include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $controllerImage | quote }}
         args:
     {{- if $additionalControllerArgs }}
@@ -124,12 +138,25 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        {{- /* For an unknown reason vSphere csi-controller won't start without `/tmp` directory */ -}}
+        {{- if eq $context.Chart.Name "cloud-provider-vsphere" }}
+        - name: tmp
+          mountPath: /tmp
+        {{- end }}
     {{- if $additionalControllerVolumeMounts }}
 {{ $additionalControllerVolumeMounts | toYaml | indent 8 }}
     {{- end }}
+        resources:
+          requests:
+{{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
       volumes:
       - name: socket-dir
         emptyDir: {}
+      {{- /* For an unknown reason vSphere csi-controller won't start without `/tmp` directory */ -}}
+      {{- if eq $context.Chart.Name "cloud-provider-vsphere" }}
+      - name: tmp
+        emptyDir: {}
+      {{- end }}
     {{- if $additionalControllerVolumes }}
 {{ $additionalControllerVolumes | toYaml | indent 6 }}
     {{- end }}

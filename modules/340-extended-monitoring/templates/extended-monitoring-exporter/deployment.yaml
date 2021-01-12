@@ -37,11 +37,13 @@ spec:
     spec:
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: extended-monitoring-exporter
       containers:
       - name: extended-monitoring
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/extended-monitoring/extended-monitoring-exporter:{{ .Values.global.modulesImages.tags.extendedMonitoring.extendedMonitoringExporter }}
         args:
         - "/app/extended-monitoring.py"
@@ -60,7 +62,11 @@ spec:
             scheme: HTTPS
             port: 8081
           timeoutSeconds: 5
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8081"
@@ -90,3 +96,6 @@ spec:
                   resource: deployments
                   subresource: prometheus-metrics
                   name: extended-monitoring-exporter
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}

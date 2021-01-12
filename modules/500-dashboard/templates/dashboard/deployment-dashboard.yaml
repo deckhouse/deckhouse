@@ -43,10 +43,12 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dashboard")) | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: dashboard
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}/dashboard/dashboard:{{ $.Values.global.modulesImages.tags.dashboard.dashboard }}
         args:
         - --port=8443
@@ -64,35 +66,47 @@ spec:
           initialDelaySeconds: 30
           timeoutSeconds: 30
           httpGet:
-            path: /
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
+            path: /config
             port: 8443
             scheme: HTTPS
-    {{- else }}
-            port: 3500
-    {{- end }}
         ports:
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443
     {{- end }}
         volumeMounts:
         - mountPath: /tmp
-          name: tmp-volume
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsUser: 1001
-          runAsGroup: 2001
+          name: tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
     {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
-      - name: ca-auth-proxy
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-ca-auth-proxy:{{ $.Values.global.modulesImages.tags.common.kubeCaAuthProxy }}
+      - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
-        - "--listen=8443"
-        - "--location=/"
-        - "--proxy-pass=http://127.0.0.1:8080/"
-        - "--user=nginx-ingress:.*"
-        - "--probe-proxy-pass=http://127.0.0.1:8080/"
-        - "--probe-listen=3500"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /config
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-dashboard
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: dashboard
         ports:
         - containerPort: 8443
           name: https
@@ -102,8 +116,11 @@ spec:
         readinessProbe:
           tcpSocket:
             port: 8443
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
     {{- end }}
       serviceAccountName: dashboard
       volumes:
-      - name: tmp-volume
+      - name: tmp
         emptyDir: {}
