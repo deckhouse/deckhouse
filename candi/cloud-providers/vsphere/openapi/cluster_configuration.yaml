@@ -184,6 +184,8 @@ apiVersions:
         items:
           type: string
         uniqueItems: true
+      baseResourcePool:
+        type: string
       layout:
         type: string
       provider:
