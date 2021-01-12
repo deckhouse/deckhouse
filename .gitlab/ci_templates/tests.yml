@@ -59,6 +59,7 @@
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - type multiwerf && source <(multiwerf use 1.1 early-access)
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+  - source ./testing/kcov_disabled.sh
   - rm -rf testing/kcov-report
   - chmod -R 0777 testing
   - |
@@ -70,9 +71,14 @@
     EOF
     done
   - >
-    werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
+    werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse --env KCOV_DISABLED=${KCOV_DISABLED}" --
     go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
-  - cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
+  - |
+    if [[ "$KCOV_DISABLED" != "yes" ]]; then
+      cat testing/kcov-report/kcov-merged/coverage.json | grep '  "percent_covered"'
+    else
+      mkdir testing/kcov-report && touch testing/kcov-report/disabled
+    fi
   after_script:
   - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse ${BASE_ALPINE} chmod -R 0777 /testing
   except:
