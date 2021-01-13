@@ -106,7 +106,7 @@ title: "Модуль ingress-nginx: Custom Resources"
     * По умолчанию HTTP/2 включен (`false`).
 * `geoIP2` — опции для включения GeoIP2 (работают только для версии контроллера `"0.33"` и выше):
     * `maxmindLicenseKey` — лицензионный ключ для скачивания базы данных GeoIP2. Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. Подробнее о получении ключа [читайте здесь](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/).
-    * `maxmindEditionIDs` — список ревизий баз данных, которые будут скачаны при старте. Чем отличаются, например, GeoIP2-City от GeoLite2-City можно ознакомиться [в этой статье](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2-databases/).
+    * `maxmindEditionIDs` — список ревизий баз данных, которые будут скачаны при старте. Чем отличаются, например, GeoIP2-City от GeoLite2-City можно ознакомиться [в этой статье](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2/).
         * По умолчанию `["GeoLite2-City", "GeoLite2-ASN"]`
         * Доступные варианты:
             * GeoIP2-Anonymous-IP
