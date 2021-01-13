@@ -53,11 +53,3 @@ spec:
       value: system
   chaos:
     mode: Disabled
----
-apiVersion: deckhouse.io/v1alpha1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
