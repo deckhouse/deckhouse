@@ -35,3 +35,13 @@ title: "Модуль upmeter: настройки"
 		* `customCertificate`
 			* `secretName` - указываем имя secret'а в namespace `d8-system`, который будет использоваться для smoke-mini (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
 				* По умолчанию `false`.
+* `auth` — опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу документации:
+    * `status`/`webui` - компонент, для которого настраиваются параметры аутентификации:
+		* `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+			* `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+			* `authSignInURL` - URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+		* `password` — пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+			* Используется если не включен параметр `externalAuthentication`.
+		* `allowedUserGroups` — массив групп, пользователям которых позволен доступ к просмотру интерфейса приложения.
+			* Используется если включен модуль `user-authn` или параметр `externalAuthentication`.
+			* **Внимание!** При использовании совместно с модулем user-authn необходимо так же добавить разрешенные группы в соответствующее поле в настройках DexProvider.

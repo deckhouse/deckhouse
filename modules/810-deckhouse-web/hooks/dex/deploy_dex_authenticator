@@ -10,8 +10,11 @@ EOF
 }
 
 function __main__() {
-
   if values::has deckhouseWeb.internal.deployDexAuthenticator && values::is_true global.clusterIsBootstrapped ; then
+    allowedGroups=""
+    if values::has deckhouseWeb.auth.allowedUserGroups ; then
+      allowedGroups="allowedGroups: $(values::get deckhouseWeb.auth.allowedUserGroups)"
+    fi
     cat <<EOF | kubectl apply -f -
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
@@ -26,6 +29,7 @@ spec:
   applicationDomain: "$(module::public_domain deckhouse)"
   applicationIngressCertificateSecretName: "$(module::https_secret_name "ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
+  $allowedGroups
 EOF
   else
     if kubectl -n d8-system get dexauthenticator deckhouse-web >/dev/null 2>/dev/null ; then
