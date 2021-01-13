@@ -6,7 +6,7 @@
   - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   script:
-  - werf cleanup --without-kube
+  - werf cleanup --without-kube --git-history-based-cleanup-v1.2=true
   only:
     variables:
     - $CLEANUP_SCHEDULE
@@ -16,7 +16,7 @@
   before_script:
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-modules-images
   script:
-  - ./modules_images_werf cleanup
+  - ./modules_images_werf cleanup --git-history-based-cleanup-v1.2=true
   only:
     variables:
     - $CLEANUP_SCHEDULE
