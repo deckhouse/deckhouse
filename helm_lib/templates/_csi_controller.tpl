@@ -207,6 +207,9 @@ rules:
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
 # Access to volumeattachments is only needed when the CSI driver
 # has the PUBLISH_UNPUBLISH_VOLUME controller capability.
 # In that case, external-provisioner will watch volumeattachments
