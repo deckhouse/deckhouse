@@ -58,27 +58,10 @@ data "vsphere_virtual_machine" "template" {
 locals {
   main_ip_addresses     = lookup(local.ng, "mainNetworkIPAddresses", [])
   external_ip           = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
-  first_interface_index = 192
-
-  main_interface_configuration = local.external_ip != null ? "{\"addresses\": ${jsonencode([local.external_ip])}}" : "{\"dhcp4\": true}"
-
-  additional_interface_configurations = {
-    for i, v in local.additionalNetworks :
-    "ens${local.first_interface_index + 32 * (i + 1)}" =>
-    { dhcp4 = true }
-  }
-
-  cloud_init_network = {
-    version = 2
-    ethernets = merge({
-      "ens${local.first_interface_index}" = jsondecode(local.main_interface_configuration)
-    }, local.additional_interface_configurations)
-  }
 
   cloud_init_metadata = {
     "local-hostname"   = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
     "public-keys-data" = var.providerClusterConfiguration.sshPublicKey
-    "network"          = local.cloud_init_network
   }
 
   timesync_extra_conf = lookup(var.providerClusterConfiguration, "disableTimesync", true) ? {
