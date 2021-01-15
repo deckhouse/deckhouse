@@ -26,8 +26,8 @@ EOF
 
 function __main__() {
   reserved="$(values::get global.enabledModules | jq -r '. + ["monitoring", "system", "frontend"] | join("|")')"
-  group="/modules/$(module::name::kebab_case)/reserved_domain_alert#reserved_domain_nodes"
-
+  group="/modules/$(module::name::kebab_case)/reserved_domain_nodes"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
   context::jq -c --arg reserved "$reserved" --arg group "$group" '
     .. | .filterResult? | select(.) |
     if ([.usedLabelsAndTaints[] | select(.| test("^(\($reserved))$") | not)] | length > 0) then
@@ -42,9 +42,6 @@ function __main__() {
       }
     else empty end
     ' >> $METRICS_PATH
-
-  # Used to hack metrics deletion
-  jq -c --arg group "$group" '.group = $group' <<< '{"name": "reserved_domain_nodes", "set": 0, "labels": {"name": "none"}}' >> $METRICS_PATH
 }
 
 hook::run $@

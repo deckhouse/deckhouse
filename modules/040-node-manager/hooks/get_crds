@@ -169,10 +169,7 @@ function __main__() {
 
   metrics_group="/modules/$(module::name::kebab_case)/internal_network_cidrs"
 
-  # Hack to allow metrics deletion
-  jq -c --arg group "$metrics_group" '.group = $group' \
-    <<< '{"name": "d8_node_group_internal_network_cidrs", "set": 0, "labels": {"name": "__fake_ng__"}}' \
-    >> $METRICS_PATH
+  jq -c --arg group "$metrics_group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
     ng_name="$(context::get snapshots.ngs.$i.filterResult.name)"
