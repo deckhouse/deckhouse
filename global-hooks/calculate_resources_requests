@@ -44,6 +44,11 @@ function min() {
 }
 
 function __main__() {
+  # TODO: remove ASAP as problem with script work will be fixed.
+  if [ ! -f /tmp/calculate_resources_requests.snapshots ]; then
+    context::jq -r '.snapshots' > /tmp/calculate_resources_requests.snapshots
+  fi
+
   # values for managed cluster
   discovery_millicpu_master=$managed_hard_limit_millicpu
   discovery_memory_master=$managed_hard_limit_memory
