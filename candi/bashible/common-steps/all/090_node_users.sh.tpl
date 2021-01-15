@@ -15,7 +15,7 @@ function get_node_users_secret() {
     exit 1
   fi
 
-  until kubectl --kubeconfig $kubeconfig get secrets -n d8-cloud-instance-manager $secret -o json; do
+  until bb-kubectl --kubeconfig $kubeconfig get secrets -n d8-cloud-instance-manager $secret -o json; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$max_attempts" ]; then
       bb-log-error "failed to get secret $secret after $max_attempts attempts"

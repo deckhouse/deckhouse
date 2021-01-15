@@ -2,9 +2,13 @@
 
 set -Eeo pipefail
 
+function kubectl_exec() {
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+}
+
 function annotate_node() {
   attempt=0
-  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
+  until kubectl_exec annotate node $(hostname -s) --overwrite ${@} 1> /dev/null; do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Failed to annotate node $(hostname -s) with annotation ${@} after ${MAX_RETRIES} retries."
@@ -21,7 +25,7 @@ function get_secret() {
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
-    until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n d8-cloud-instance-manager get secret $secret -o json; do
+    until kubectl_exec -n d8-cloud-instance-manager get secret $secret -o json; do
       attempt=$(( attempt + 1 ))
       if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -60,7 +64,7 @@ function main() {
   export NODE_GROUP="{{ .nodeGroup.name }}"
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+    if tmp="$(kubectl_exec get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
@@ -116,7 +120,7 @@ function main() {
     attempt=0
     until
       node_data="$(
-        kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+        kubectl_exec get node "$(hostname -s)" -o json | jq '
         {
           "resourceVersion": .metadata.resourceVersion,
           "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
@@ -130,16 +134,16 @@ function main() {
         >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
         exit 1
       fi
-      kubectl \
-        --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
+      kubectl_exec annotate node "$(hostname -s)" \
         --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-        update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
+        update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
+        || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
     done
 
     >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
     attempt=0
     until
-      kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+      kubectl_exec get node "$(hostname -s)" -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
     do
       attempt=$(( attempt + 1 ))

@@ -12,7 +12,7 @@ fi
 max_attempts=5
 node=$(hostname -s)
 
-until kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$node" node.deckhouse.io/virtualization="$virtualization"; do
+until bb-kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$node" node.deckhouse.io/virtualization="$virtualization"; do
   attempt=$(( attempt + 1 ))
   if [ "$attempt" -gt "$max_attempts" ]; then
     bb-log-error "failed to annotate node $node after $max_attempts attempts"
