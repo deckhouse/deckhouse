@@ -1,8 +1,5 @@
+{{- if eq .nodeGroup.name "master" }}
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  exit 0
-fi
-
-if [ ! -f /var/lib/bashible/kubernetes_data_device_path ]; then
   exit 0
 fi
 
@@ -18,3 +15,4 @@ do
   ln -s "${volume}" "${symlink}"
  fi
 done
+{{- end }}
