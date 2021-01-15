@@ -1,3 +1,7 @@
+bb-kubectl() {
+  kubectl --request-timeout 60s ${@}
+}
+
 bb-deckhouse-get-disruptive-update-approval() {
     if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
         return 0
@@ -9,7 +13,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     attempt=0
     until
         node_data="$(
-          kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+          bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
           {
             "resourceVersion": .metadata.resourceVersion,
             "isDisruptionApproved": (.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")),
@@ -23,7 +27,7 @@ bb-deckhouse-get-disruptive-update-approval() {
             bb-log-error "ERROR: Failed to annotate Node with annotation 'update.node.deckhouse.io/disruption-required='."
             exit 1
         fi
-        kubectl \
+        bb-kubectl \
           --kubeconfig=/etc/kubernetes/kubelet.conf \
           --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
           annotate node "$(hostname -s)" update.node.deckhouse.io/disruption-required= || { bb-log-info "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
@@ -33,7 +37,7 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     attempt=0
     until
-      kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+      bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
     do
         attempt=$(( attempt + 1 ))

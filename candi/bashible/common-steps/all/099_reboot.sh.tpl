@@ -27,7 +27,7 @@ if bb-flag? reboot; then
   # The solution — to delete Lease object for our node and handle this event with Deckhouse hook modules/040-node-manager/hooks/node_lease_handler.
   bb-log-info "Deleting node Lease resource..."
   attempt=0
-  until kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-node-lease delete lease "${HOSTNAME}"; do
+  until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-node-lease delete lease "${HOSTNAME}"; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "2" ]; then
       bb-log-warning "Can't delete node Lease resource. Node status won't be set to NotReady."

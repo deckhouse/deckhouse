@@ -13,13 +13,13 @@ else
 fi
 
 if [ -f /etc/kubernetes/admin.conf ]; then
-  if ! kubectl --kubeconfig /etc/kubernetes/admin.conf version > /dev/null; then
+  if ! bb-kubectl --kubeconfig /etc/kubernetes/admin.conf version > /dev/null; then
     for i in $(seq 60 -1 1); do
       echo  "WARNING: Cluster will be re-bootstrapped, all data will be lost, in $i sec"
       sleep 1
     done
 
-  elif kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/$(hostname -s)$"; then
+  elif bb-kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o name | grep -q -v "^node/$(hostname -s)$"; then
     >&2 echo "ERROR: Trying to re-bootstrap cluster which has more than one node."
     exit 1
   fi
