@@ -1,9 +1,10 @@
 package hooks
 
 import (
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: cert-manager :: hooks :: orphan_secrets_metrics ::", func() {

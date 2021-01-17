@@ -1,9 +1,10 @@
 package template_tests
 
 import (
-	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
 var _ = Describe("Module :: userAuthn :: helm template :: custom-certificate", func() {

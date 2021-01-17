@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/candictl/pkg/config"
-
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/values_store"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
 )
 
 var _ = sdk.Register(&ClusterDiscoveryHook{})

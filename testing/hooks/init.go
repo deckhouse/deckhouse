@@ -13,24 +13,20 @@ import (
 	"runtime"
 	"strings"
 
-	"golang.org/x/sys/unix"
-
+	// Define Register func and Registry object to import go-hooks.
+	"github.com/flant/addon-operator/pkg/module_manager"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/addon-operator/sdk/registry"
+	utils "github.com/flant/shell-operator/pkg/utils/file"
+	"github.com/flant/shell-operator/test/hook/context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-
+	"golang.org/x/sys/unix"
 	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	addonutils "github.com/flant/addon-operator/pkg/utils"
-	utils "github.com/flant/shell-operator/pkg/utils/file"
-	"github.com/flant/shell-operator/test/hook/context"
-
-	// Define Register func and Registry object to import go-hooks.
-	"github.com/flant/addon-operator/pkg/module_manager"
-	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/addon-operator/sdk/registry"
 
 	"github.com/deckhouse/deckhouse/testing/common"
 	"github.com/deckhouse/deckhouse/testing/library"
