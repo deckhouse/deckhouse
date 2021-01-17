@@ -85,7 +85,7 @@ docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
 ```yaml
   controlPlaneManager: |
     apiserver:
-      auditPolicyEnabled: "true"
+      auditPolicyEnabled: true
 ```
 Конфигурация параметров осуществляется через `Secret` `kube-system/audit-policy`, внутрь которого потребуется положить `yaml` файл, закодированный `base64`:
 ```yaml
