@@ -10,10 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/util/input"
-	"flant/candictl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
@@ -298,7 +298,6 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 	err := retry.StartLoop("Get Kubernetes cluster resources for group/version", 5, 5, func() error {
 		return checkMachinesAPI(kubeCl)
 	})
-
 	if err != nil {
 		log.WarnF("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v\n", err)
 		if input.AskForConfirmation("Machines weren't deleted from the cluster. Do you want to continue", true) {

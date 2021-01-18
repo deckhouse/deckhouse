@@ -8,12 +8,12 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/kubernetes/actions/deckhouse"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/operations"
-	"flant/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
 )
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -130,7 +130,6 @@ func TestCommandDelay() {
 	}
 
 	delay, err := time.ParseDuration(delayStr)
-
 	if err != nil {
 		delay = time.Minute
 	}

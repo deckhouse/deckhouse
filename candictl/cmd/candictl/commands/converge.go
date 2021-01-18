@@ -5,13 +5,13 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions/converge"
-	"flant/candictl/pkg/kubernetes/actions/deckhouse"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/operations"
-	"flant/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
 )
 
 func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {

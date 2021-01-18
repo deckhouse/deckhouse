@@ -3,8 +3,8 @@ package ssh
 import (
 	"fmt"
 
-	"flant/candictl/pkg/system/ssh/frontend"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 type Client struct {

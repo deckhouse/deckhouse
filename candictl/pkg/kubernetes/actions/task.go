@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 type ManifestTask struct {

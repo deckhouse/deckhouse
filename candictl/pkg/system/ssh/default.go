@@ -1,8 +1,8 @@
 package ssh
 
 import (
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 func NewClientFromFlags() *Client {

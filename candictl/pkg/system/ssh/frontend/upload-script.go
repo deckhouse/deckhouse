@@ -11,10 +11,10 @@ import (
 
 	"github.com/flant/logboek"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh/session"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 type UploadScript struct {

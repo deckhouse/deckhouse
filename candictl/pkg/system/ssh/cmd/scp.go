@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 type SCP struct {
@@ -33,16 +33,19 @@ func (s *SCP) WithRemoteDst(path string) *SCP {
 	s.Dst = path
 	return s
 }
+
 func (s *SCP) WithDst(path string) *SCP {
 	s.RemoteDst = false
 	s.Dst = path
 	return s
 }
+
 func (s *SCP) WithRemoteSrc(path string) *SCP {
 	s.RemoteSrc = true
 	s.Src = path
 	return s
 }
+
 func (s *SCP) WithSrc(path string) *SCP {
 	s.RemoteSrc = false
 	s.Src = path

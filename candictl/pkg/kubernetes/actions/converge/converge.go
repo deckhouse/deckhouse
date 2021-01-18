@@ -9,12 +9,12 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/terraform"
-	"flant/candictl/pkg/util/input"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 const masterNodeGroupName = "master"

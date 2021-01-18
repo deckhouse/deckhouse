@@ -8,9 +8,9 @@ import (
 
 	uuid "gopkg.in/satori/go.uuid.v1"
 
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh/cmd"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/cmd"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 type File struct {

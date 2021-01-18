@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
 )
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {

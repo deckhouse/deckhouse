@@ -14,12 +14,12 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions"
-	"flant/candictl/pkg/kubernetes/actions/manifests"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
 type Config struct {

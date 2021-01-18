@@ -8,13 +8,13 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"flant/candictl/cmd/candictl/commands"
-	"flant/candictl/cmd/candictl/commands/bootstrap"
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/util/cache"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/cmd/candictl/commands"
+	"github.com/deckhouse/deckhouse/candictl/cmd/candictl/commands/bootstrap"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 func main() {

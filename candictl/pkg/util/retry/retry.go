@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 const attemptMessage = `Attempt #%d of %d |

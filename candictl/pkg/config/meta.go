@@ -10,7 +10,7 @@ import (
 	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 type MetaConfig struct {

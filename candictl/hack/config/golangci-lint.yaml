@@ -8,7 +8,7 @@ issues:
 
 linters-settings:
   goimports:
-    local-prefixes: flant/candictl
+    local-prefixes: github.com/deckhouse/deckhouse
   golint:
     min-confidence: 0
   errcheck:
@@ -26,6 +26,7 @@ linters:
     - exhaustive
     - exportloopref
     - gocritic
+    - gocyclo
     - gofmt
     - goimports
     - golint

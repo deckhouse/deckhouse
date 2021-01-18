@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 var once sync.Once

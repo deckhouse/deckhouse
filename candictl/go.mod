@@ -1,4 +1,4 @@
-module flant/candictl
+module github.com/deckhouse/deckhouse/candictl
 
 go 1.15
 

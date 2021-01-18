@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"time"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 // exec.Cmd executor
@@ -271,61 +271,7 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 	// - Copy to buffer if capture is enabled
 	// - Copy to pipe if StdoutHandler is set
 	go func() {
-		if stdoutReadPipe == nil {
-			return
-		}
-		buf := make([]byte, 16)
-		matchersDone := false
-		if len(e.Matchers) == 0 {
-			matchersDone = true
-		}
-		for {
-			n, err := stdoutReadPipe.Read(buf)
-
-			m := 0
-			if !matchersDone {
-				for _, matcher := range e.Matchers {
-					m = matcher.Analyze(buf[:n])
-					if matcher.IsMatched() {
-						log.DebugF("Trigger matcher '%s'\n", matcher.Pattern)
-						// matcher is triggered
-						if e.MatchHandler != nil {
-							res := e.MatchHandler(matcher.Pattern)
-							if res == "done" {
-								matchersDone = true
-								break
-							}
-							if res == "reset" {
-								matcher.Reset()
-							}
-						}
-					}
-				}
-
-				// stdout for internal use, no copying to pipes until all Matchers are matched
-				if !matchersDone {
-					m = n
-				}
-			}
-
-			// TODO logboek
-			if app.IsDebug {
-				os.Stdout.Write(buf[:n])
-			}
-			if e.Live {
-				os.Stdout.Write(buf[m:n])
-			}
-			if e.StdoutBuffer != nil {
-				e.StdoutBuffer.Write(buf[m:n])
-			}
-			if e.StdoutHandler != nil {
-				_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
-			}
-
-			if err == io.EOF {
-				break
-			}
-		}
+		e.readFromStreams(stdoutReadPipe, stdoutHandlerWritePipe)
 	}()
 
 	go func() {
@@ -375,6 +321,64 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 	}()
 
 	return nil
+}
+
+func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer) {
+	if stdoutReadPipe == nil {
+		return
+	}
+	buf := make([]byte, 16)
+	matchersDone := false
+	if len(e.Matchers) == 0 {
+		matchersDone = true
+	}
+	for {
+		n, err := stdoutReadPipe.Read(buf)
+
+		m := 0
+		if !matchersDone {
+			for _, matcher := range e.Matchers {
+				m = matcher.Analyze(buf[:n])
+				if matcher.IsMatched() {
+					log.DebugF("Trigger matcher '%s'\n", matcher.Pattern)
+					// matcher is triggered
+					if e.MatchHandler != nil {
+						res := e.MatchHandler(matcher.Pattern)
+						if res == "done" {
+							matchersDone = true
+							break
+						}
+						if res == "reset" {
+							matcher.Reset()
+						}
+					}
+				}
+			}
+
+			// stdout for internal use, no copying to pipes until all Matchers are matched
+			if !matchersDone {
+				m = n
+			}
+		}
+
+		// TODO logboek
+		if app.IsDebug {
+			os.Stdout.Write(buf[:n])
+		}
+		if e.Live {
+			os.Stdout.Write(buf[m:n])
+		}
+		if e.StdoutBuffer != nil {
+			e.StdoutBuffer.Write(buf[m:n])
+		}
+		if e.StdoutHandler != nil {
+			_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
+		}
+
+		if err == io.EOF {
+			break
+		}
+	}
 }
 
 func (e *Executor) ConsumeLines(r io.Reader, fn func(l string)) {

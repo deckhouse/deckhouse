@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/exec"
 
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh/cmd"
-	"flant/candictl/pkg/system/ssh/session"
-	"flant/candictl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/cmd"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
 type Tunnel struct {

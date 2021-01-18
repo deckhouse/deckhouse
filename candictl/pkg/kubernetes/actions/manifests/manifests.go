@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 
 //nolint:funlen
 func DeckhouseDeployment(registry, logLevel, bundle string, isSecureRegistry bool) *appsv1.Deployment {
-	var deckhouseDeployment = `
+	deckhouseDeployment := `
 kind: Deployment
 apiVersion: apps/v1
 metadata:

@@ -3,7 +3,7 @@ package helpers
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	candiapp "flant/candictl/cmd/candictl/commands"
+	candiapp "github.com/deckhouse/deckhouse/candictl/cmd/candictl/commands"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
 
