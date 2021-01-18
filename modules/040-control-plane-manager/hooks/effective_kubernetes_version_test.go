@@ -11,9 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 type input struct {

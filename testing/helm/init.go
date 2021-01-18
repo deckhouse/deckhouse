@@ -7,12 +7,11 @@ import (
 	"path/filepath"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/shell-operator/pkg/utils/manifest/releaseutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/flant/shell-operator/pkg/utils/manifest/releaseutil"
 
 	"github.com/deckhouse/deckhouse/testing/common"
 	"github.com/deckhouse/deckhouse/testing/library"

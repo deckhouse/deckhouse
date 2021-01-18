@@ -8,11 +8,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	jsonpatch "gopkg.in/evanphx/json-patch.v4"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 type KubernetesPatch struct {

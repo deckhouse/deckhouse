@@ -1,9 +1,10 @@
 package hooks
 
 import (
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: discover_apiserver_endpoints ::", func() {

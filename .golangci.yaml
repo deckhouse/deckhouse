@@ -8,8 +8,10 @@ issues:
   - "don't use an underscore in package name"
 
 linters-settings:
+  gci:
+    local-prefixes: fox.flant.com/
   goimports:
-    local-prefixes: flant/
+    local-prefixes: fox.flant.com/
   golint:
     min-confidence: 0
   errcheck:
@@ -19,6 +21,7 @@ linters:
   disable-all: true
   enable:
   - errcheck
+  - gci
   - gocritic
   - gofmt
   - goimports
