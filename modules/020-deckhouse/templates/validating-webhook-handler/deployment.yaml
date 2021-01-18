@@ -63,7 +63,15 @@ spec:
         - name: validating-certs
           mountPath: /validating-certs/
           readOnly: true
+        - mountPath: /var/run
+          name: run
+        - mountPath: /tmp
+          name: tmp
       volumes:
       - name: validating-certs
         secret:
           secretName: validating-webhook-handler-certs
+      - emptyDir: {}
+        name: run
+      - emptyDir: {}
+        name: tmp
