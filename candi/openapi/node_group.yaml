@@ -61,7 +61,10 @@ spec:
   - name: Error
     type: string
     description: "Error message about possible problems with the group handling."
-    JSONPath: .status.error
+    JSONPath: .status.conditionSummary.errorMessage
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp
   validation:
     openAPIV3Schema:
       type: object

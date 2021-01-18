@@ -16,16 +16,14 @@ function __config__() {
       apiVersion: deckhouse.io/v1alpha1
       kind: NodeGroup
       jqFilter: |
-        .name = .metadata.name |
-        if (.spec.cloudInstances|has("maxPerZone")) then
-          .maxPerZone = .spec.cloudInstances.maxPerZone
-        else . end |
-        if (.spec.cloudInstances|has("minPerZone")) then
-          .minPerZone = .spec.cloudInstances.minPerZone
-        else . end |
-        if (.spec.cloudInstances|has("zones")) then
-          .zonesNum = (.spec.cloudInstances.zones | length)
-        else . end
+        {
+          "name": .metadata.name,
+          "nodeType": .spec.nodeType,
+          "minPerZone": (.spec.cloudInstances.minPerZone // null),
+          "maxPerZone": (.spec.cloudInstances.maxPerZone // null),
+          "zonesNum": (if (.spec.cloudInstances|has("zones")) then .spec.cloudInstances.zones | length else null end),
+          "error": .status.error
+        }
     - name: cloud_provider_secrets
       group: main
       keepFullObjectsInMemory: false
@@ -98,6 +96,25 @@ function __config__() {
 EOF
 }
 
+# $1 — ng name
+# $2 — ng error message or empty string
+# $3 — latest machine failure or empty string
+function _set_ng_condition_summary() {
+  error_message=$(echo "$2" "$3" | xargs)
+  ready="True"
+  if [ ! -z "$error_message" ]; then
+      ready="False"
+  fi
+  patch="$(jq -ns --arg ready "$ready" --arg error_message "$error_message" '
+{
+  "conditionSummary": {
+    "ready": $ready,
+    "errorMessage": $error_message
+  }
+}')"
+    kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${patch}"
+}
+
 function __main__() {
   default_zones_num="0"
   if context::has snapshots.cloud_provider_secrets.0; then
@@ -106,9 +123,10 @@ function __main__() {
 
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
     ng_name="$(context::get snapshots.ngs."$i".filterResult.name)"
+    ng_error=$(context::jq -r --argjson i "$i" '.snapshots.ngs[$i].filterResult |.error // ""')
 
     last_machine_failures="$(context::jq -r --arg ng_name "${ng_name}" '([.snapshots.mds[] | select(.filterResult.nodeGroup == $ng_name)] | reduce .[] as $md ([]; . += $md.object.status.failedMachines)) // []')"
-    latest_machine_failure="$(jq -n --argjson last_machine_failures "${last_machine_failures}" '($last_machine_failures | sort_by(.lastOperation.lastUpdateTime | fromdate) | .[-1].lastOperation.description) // ""')"
+    latest_machine_failure="$(jq -nr --argjson last_machine_failures "${last_machine_failures}" '($last_machine_failures | sort_by(.lastOperation.lastUpdateTime | fromdate) | .[-1].lastOperation.description) // ""')"
     all_md_replicas="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.mds[] | select(.filterResult.nodeGroup == $ng_name) | .filterResult.replicas] | add // 0')"
     instances_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.instances[] | select(.filterResult.nodeGroup == $ng_name)] | length')"
     nodes_num="$(context::jq -r --arg ng_name "${ng_name}" '[.snapshots.nodes[] | select(.filterResult.cloudInstanceGroup == $ng_name)] | length')"
@@ -127,16 +145,14 @@ function __main__() {
       --argjson ready_nodes_num "$ready_nodes_num" \
       --argjson uptodate_nodes_count "$uptodate_nodes_count" \
       --argjson last_machine_failures "$last_machine_failures" \
-      --argjson latest_machine_failure "$latest_machine_failure" \
       '.snapshots.ngs[$i].filterResult |
-        if .spec.nodeType == "Cloud" then
+        if .nodeType == "Cloud" then
         {
           "min": (.minPerZone * (.zonesNum // $default_zones_num)),
           "max": (.maxPerZone * (.zonesNum // $default_zones_num)),
           "desired": ([$all_md_replicas, (.minPerZone * (.zonesNum // $default_zones_num))] | max),
           "instances": $instances_num,
-          "lastMachineFailures": $last_machine_failures,
-          "error": $latest_machine_failure
+          "lastMachineFailures": $last_machine_failures
         }
         else {} end |
         .nodes = $nodes_num |
@@ -145,6 +161,8 @@ function __main__() {
     ')"
 
     kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${ng_name}" "${status_patch}"
+
+    _set_ng_condition_summary "${ng_name}" "${ng_error}" "${latest_machine_failure}"
   done
 }
 
