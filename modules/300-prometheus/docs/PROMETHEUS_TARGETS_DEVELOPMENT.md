@@ -23,7 +23,7 @@ search: Разработка target'ов Prometheus, prometheus target
     * метрики поддерживаемых application'ов (redis, rabbitmq и др.)
     * custom-метрики
 
-У всех pod-ориентированных метрик обязательно есть лейбл с именем pod'а (обычно он называется `instance`, но у метрик получаемых из kubelet'а — `pod_name, а у kube-state-metrics — `pod`), но работать с именами pod'ов не удобно, а удобно нам работать с `service` и `namespace`, поэтому:
+У всех pod-ориентированных метрик обязательно есть лейбл с именем pod'а (обычно он называется `instance`, но у метрик получаемых из kubelet'а — `pod_name`, а у kube-state-metrics — `pod`), но работать с именами pod'ов не удобно, а удобно нам работать с `service` и `namespace`, поэтому:
 * у всех без исключения pod-ориентированных метрик есть лейбл `namespace`,
 * у прикладных (applications и custom) pod-ориентированных метрик есть лейбл `service`, определяющий группу pod'ов под одним понятным названием.
 
@@ -88,7 +88,7 @@ spec:
 
 Чтобы аутентифицировать и авторизовывать пользователей при помощи kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/tree/master/modules/020-deckhouse/templates/kube-rbac-proxy.yaml) - **d8-rbac-proxy**.
+В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/tree/master/modules/020-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) - **d8-rbac-proxy**.
 Создавать её самостоятельно не нужно! Нужно только прикрепить её к serviceaccount'у вашего Deployment'а.
 ```yaml
 ---

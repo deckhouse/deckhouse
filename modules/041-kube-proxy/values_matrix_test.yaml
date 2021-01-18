@@ -2,7 +2,10 @@ kubeProxy:
   internal:
     clusterMasterAddresses: ["10.2.3.4", "10.5.6.7"]
 global:
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules:
+    __ConstantChoices__:
+      - [ "vertical-pod-autoscaler-crd", "operator-prometheus-crd" ]
+      - [ "vertical-pod-autoscaler-crd" ]
   discovery:
     kubernetesVersion: 1.15.6
   modules:
@@ -10,6 +13,8 @@ global:
   modulesImages:
     registry: registry.flant.com
     tags:
+      common:
+        kubeRbacProxy: tagstring
       kubeProxy:
         apiProxyCheck: sadfwffeqwfeqw3fwqefewfreg53gregfreqfq3t43ferwfdsaf43f3s
         kubeProxy114: safdfsadfsadfdsafdeqwfr3wqefr42tf2fdsacfsdf43frwfssadf34
