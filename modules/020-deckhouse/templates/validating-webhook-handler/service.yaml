@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: validating-webhook-handler
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler")) | indent 2 }}
+spec:
+  ports:
+    - name: validating-webhook
+      port: 443
+      targetPort: 9680
+      protocol: TCP
+  selector:
+    app: validating-webhook-handler

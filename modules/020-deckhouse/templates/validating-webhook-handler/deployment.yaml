@@ -1,0 +1,69 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: validating-webhook-handler
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: validating-webhook-handler
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: validating-webhook-handler
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
+  selector:
+    matchLabels:
+      app: validating-webhook-handler
+  template:
+    metadata:
+      labels:
+        app: validating-webhook-handler
+    spec:
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-high") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "validating-webhook-handler")) | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      serviceAccountName: validating-webhook-handler
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: handler
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        image: "{{ $.Values.global.modulesImages.registry }}/deckhouse/validating-webhook-handler:{{ $.Values.global.modulesImages.tags.deckhouse.validatingWebhookHandler }}"
+        env:
+        - name: SHELL_OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: VALIDATING_WEBHOOK_SERVICE_NAME
+          value: validating-webhook-handler
+        - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
+          value: d8-deckhouse-validating-webhook-handler
+        ports:
+          - containerPort: 9680
+            name: http
+            protocol: TCP
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+        volumeMounts:
+        - name: validating-certs
+          mountPath: /validating-certs/
+          readOnly: true
+      volumes:
+      - name: validating-certs
+        secret:
+          secretName: validating-webhook-handler-certs

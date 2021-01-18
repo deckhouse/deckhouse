@@ -197,7 +197,6 @@ func applyObjectRules(objectStore *storage.UnstructuredObjectStore, lintRuleErro
 	lintRuleErrorsList.Add(objectRecommendedLabels(object))
 	lintRuleErrorsList.Add(objectAPIVersion(object))
 	lintRuleErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(module, object))
-	lintRuleErrorsList.Add(roles.ObjectDeckhouseClusterRoles(module, object))
 	lintRuleErrorsList.Add(roles.ObjectRBACPlacement(module, object))
 	lintRuleErrorsList.Add(roles.ObjectBindingSubjectServiceAccountCheck(module, object, objectStore))
 

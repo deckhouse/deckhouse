@@ -1,0 +1,57 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  beforeHelm: 10
+  kubernetes:
+  - name: secret
+    group: main
+    queue: /modules/$(module::name::kebab_case)/discover_validating_certs
+    keepFullObjectsInMemory: false
+    apiVersion: v1
+    kind: Secret
+    executeHookOnEvent: ["Added", "Modified"]
+    nameSelector:
+      matchNames: ["validating-webhook-handler-certs"]
+    namespace:
+      nameSelector:
+        matchNames: ["d8-system"]
+    jqFilter: |
+      {
+        "crt": (.data."cert.crt" | @base64d),
+        "key": (.data."cert.key" | @base64d),
+        "ca":  (.data."ca.crt"   | @base64d)
+      }
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.secret.0; then
+    values::set deckhouse.internal.validatingWebhookHandlerCert.crt "$(context::get snapshots.secret.0.filterResult.crt)"
+    values::set deckhouse.internal.validatingWebhookHandlerCert.key "$(context::get snapshots.secret.0.filterResult.key)"
+    values::set deckhouse.internal.validatingWebhookHandlerCert.ca  "$(context::get snapshots.secret.0.filterResult.ca)"
+    return 0
+  fi
+  
+  svc_host="validating-webhook-handler.d8-system.svc"
+  svc_fqdn="${svc_host}.$(values::get global.discovery.clusterDomain)"
+
+  ca="$(jo CN="$svc_host" key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)"
+  ca_crt="$(jq .cert -r <<< "$ca")"
+
+  # config for cfssl gencert
+  config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
+
+  cert="$(jo CN=user-authz-webhook hosts="$(jo -a "$svc_host" "$svc_fqdn")" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(jq .cert -r <<< ${ca}) -ca-key=<(jq .key -r <<< "$ca") -config=<(echo "$config") -)"
+  webhook_server_crt="$(jq .cert -r <<< "$cert")"
+  webhook_server_key="$(jq .key  -r <<< "$cert")"
+
+  values::set deckhouse.internal.validatingWebhookHandlerCert.crt "$webhook_server_crt"
+  values::set deckhouse.internal.validatingWebhookHandlerCert.key "$webhook_server_key"
+  values::set deckhouse.internal.validatingWebhookHandlerCert.ca  "$ca_crt"
+}
+
+hook::run "$@"
