@@ -1,0 +1,34 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: d8-kube-proxy
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  jobLabel: k8s-app
+  selector:
+    matchLabels:
+      k8s-app: kube-proxy
+  namespaceSelector:
+    matchNames:
+    - kube-system
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+{{- end }}

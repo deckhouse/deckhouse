@@ -90,6 +90,39 @@ spec:
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+      - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9255"
+          - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:10249/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: kube-system
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: d8-kube-proxy
+        ports:
+          - containerPort: 9255
+            name: https-metrics
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       hostNetwork: true
       serviceAccountName: d8-kube-proxy
       volumes:
