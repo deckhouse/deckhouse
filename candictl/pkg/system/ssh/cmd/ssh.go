@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 type SSH struct {

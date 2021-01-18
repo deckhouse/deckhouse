@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"time"
 
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 var LocalAPIPort = 22322

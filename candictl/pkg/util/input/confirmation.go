@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 func AskForConfirmation(s string, defaultAnswer bool) bool {

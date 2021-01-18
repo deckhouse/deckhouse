@@ -8,7 +8,7 @@ import (
 	"sync"
 	"syscall"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 var callbacks teardownCallbacks

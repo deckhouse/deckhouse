@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 func AskBecomePassword() (err error) {

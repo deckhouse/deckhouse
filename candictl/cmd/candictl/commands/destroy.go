@@ -6,18 +6,30 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions/converge"
-	"flant/candictl/pkg/kubernetes/actions/deckhouse"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/operations"
-	"flant/candictl/pkg/system/ssh"
-	"flant/candictl/pkg/terraform"
-	"flant/candictl/pkg/util/cache"
-	"flant/candictl/pkg/util/input"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
+)
+
+const (
+	destroyCacheErrorMessage = `Create cache:
+	Error: %v
+
+	Probably that Kubernetes cluster was already deleted.
+	If you want to continue, please delete the cache folder manually.
+`
+	destroyApprovalsMessage = `You will be asked for approve multiple times.
+If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+`
 )
 
 func getClientOnce(sshClient *ssh.Client, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
@@ -35,17 +47,51 @@ func getClientOnce(sshClient *ssh.Client, kubeCl *client.KubernetesClient) (*cli
 	return kubeCl, err
 }
 
-const (
-	destroyCacheErrorMessage = `Create cache:
-	Error: %v
+func deleteResources(sshClient *ssh.Client, kubeCl *client.KubernetesClient) error {
+	if app.SkipResources {
+		return nil
+	}
 
-	Probably that Kubernetes cluster was already deleted.
-	If you want to continue, please delete the cache folder manually.
-`
-	destroyApprovalsMessage = `You will be asked for approve multiple times.
-If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
-`
-)
+	kubeCl, err := getClientOnce(sshClient, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	return log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
+		return deleteEntities(kubeCl)
+	})
+}
+
+func loadMetaConfig(sshClient *ssh.Client, kubeCl *client.KubernetesClient, stateCache *cache.StateCache) (*config.MetaConfig, error) {
+	var metaConfig *config.MetaConfig
+	var err error
+
+	if stateCache.InCache("cluster-config") && input.AskForConfirmation("Do you want to continue with Cluster configuration from local cache", true) {
+		if err := stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
+			return nil, err
+		}
+		return metaConfig, nil
+	}
+
+	if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
+		return nil, err
+	}
+
+	metaConfig, err = config.ParseConfigFromCluster(kubeCl)
+	if err != nil {
+		return nil, err
+	}
+
+	metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
+		return nil, err
+	}
+	return metaConfig, nil
+}
 
 func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
@@ -64,42 +110,13 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var kubeCl *client.KubernetesClient
-		if !app.SkipResources {
-			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
-				return err
-			}
-
-			err = log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
-				return deleteEntities(kubeCl)
-			})
-			if err != nil {
-				return err
-			}
+		if err := deleteResources(sshClient, kubeCl); err != nil {
+			return err
 		}
 
-		var metaConfig *config.MetaConfig
-		if stateCache.InCache("cluster-config") && input.AskForConfirmation("Do you want to continue with Cluster configuration from local cache", true) {
-			if err := stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
-				return err
-			}
-		} else {
-			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
-				return err
-			}
-			metaConfig, err = config.ParseConfigFromCluster(kubeCl)
-			if err != nil {
-				return err
-			}
-
-			metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
-			if err != nil {
-				return err
-			}
-
-			err := stateCache.SaveStruct("cluster-config", metaConfig)
-			if err != nil {
-				return err
-			}
+		metaConfig, err := loadMetaConfig(sshClient, kubeCl, stateCache)
+		if err != nil {
+			return err
 		}
 
 		var nodesState map[string]converge.NodeGroupTerraformState

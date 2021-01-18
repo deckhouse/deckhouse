@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/system/ssh/cmd"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/cmd"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 type Command struct {

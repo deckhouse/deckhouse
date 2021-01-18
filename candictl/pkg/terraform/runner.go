@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/util/cache"
-	"flant/candictl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/input"
 )
 
 const (
@@ -33,9 +33,7 @@ If you want to drop the cache and continue, please run candictl with "--yes-i-wa
 `
 )
 
-var (
-	ErrRunnerStopped = errors.New("Terraform runner was stopped.")
-)
+var ErrRunnerStopped = errors.New("Terraform runner was stopped.")
 
 type Runner struct {
 	name       string

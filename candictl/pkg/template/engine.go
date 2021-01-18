@@ -130,8 +130,10 @@ func cleanupExecError(filename string, err error) error {
 	return err
 }
 
-const warnStartDelim = "HELM_ERR_START"
-const warnEndDelim = "HELM_ERR_END"
+const (
+	warnStartDelim = "HELM_ERR_START"
+	warnEndDelim   = "HELM_ERR_END"
+)
 
 var warnRegex = regexp.MustCompile(warnStartDelim + `(.*)` + warnEndDelim)
 

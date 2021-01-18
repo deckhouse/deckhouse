@@ -7,8 +7,8 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 const (

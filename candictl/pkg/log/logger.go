@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/klog"
 
-	"flant/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
 )
 
 var defaultLogger Logger

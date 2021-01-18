@@ -7,10 +7,10 @@ import (
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh"
-	"flant/candictl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/frontend"
 )
 
 // KubernetesClient is a wrapper around KubernetesClient from shell-operator which is a wrapper around kubernetes.Interface

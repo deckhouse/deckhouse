@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 type PipelineOutputs struct {

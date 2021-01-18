@@ -3,14 +3,13 @@ package deckhouse
 import (
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
-
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 func TestDeleteMachinesIfResourcesExist(t *testing.T) {
@@ -148,7 +147,8 @@ func TestDeletePods(t *testing.T) {
 						VolumeSource: v1.VolumeSource{
 							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 								ClaimName: "test",
-							}},
+							},
+						},
 					},
 					{
 						Name: "test2",

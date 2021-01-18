@@ -6,13 +6,13 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"sigs.k8s.io/yaml"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions/deckhouse"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/operations"
-	"flant/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
 )
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {

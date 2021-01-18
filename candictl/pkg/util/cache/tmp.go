@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"flant/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
 )
 
 func ClearTerraformDir() {

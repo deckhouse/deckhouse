@@ -3,7 +3,7 @@ package process
 import (
 	"sync"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 var DefaultSession *Session

@@ -5,16 +5,16 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions/deckhouse"
-	"flant/candictl/pkg/kubernetes/actions/resources"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/operations"
-	"flant/candictl/pkg/system/ssh"
-	"flant/candictl/pkg/terraform"
-	"flant/candictl/pkg/util/cache"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/resources"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {

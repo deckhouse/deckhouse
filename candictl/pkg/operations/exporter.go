@@ -8,13 +8,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions/converge"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh"
-	"flant/candictl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
 )
 
 type ConvergeExporter struct {

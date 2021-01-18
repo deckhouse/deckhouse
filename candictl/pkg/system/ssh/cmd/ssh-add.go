@@ -5,9 +5,9 @@ import (
 	"os"
 	"os/exec"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 )
 
 const SSHAddPath = "ssh-add"

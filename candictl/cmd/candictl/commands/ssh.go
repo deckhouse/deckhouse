@@ -8,10 +8,10 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/operations"
-	"flant/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
 )
 
 func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -55,7 +55,6 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.DebugLn("scp: start ssh-agent")
 		sshCl, err := ssh.NewClientFromFlags().Start()
-
 		if err != nil {
 			return err
 		}

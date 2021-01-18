@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/system/process"
-	"flant/candictl/pkg/system/ssh/session"
-	"flant/candictl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 const SSHAgentPath = "ssh-agent"

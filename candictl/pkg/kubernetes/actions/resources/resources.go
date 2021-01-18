@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/kubernetes/actions"
-	"flant/candictl/pkg/kubernetes/client"
-	"flant/candictl/pkg/log"
-	"flant/candictl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
 func CreateResources(kubeCl *client.KubernetesClient, resources *config.Resources) error {

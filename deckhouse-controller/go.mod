@@ -3,7 +3,7 @@ module flant/deckhouse-controller
 go 1.12
 
 require (
-	flant/candictl v0.0.0 // use non-existent version for replace
+	github.com/deckhouse/deckhouse/candictl v0.0.0 // use non-existent version for replace
 	github.com/deckhouse/deckhouse v0.0.0
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/blang/semver v3.5.0+incompatible
@@ -32,7 +32,7 @@ require (
 
 //replace github.com/flant/addon-operator => ../../addon-operator
 
-replace flant/candictl => ../candictl
+replace github.com/deckhouse/deckhouse/candictl => ../candictl
 
 replace github.com/deckhouse/deckhouse => ../
 

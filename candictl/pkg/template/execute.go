@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 const (

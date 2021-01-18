@@ -7,9 +7,9 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"flant/candictl/pkg/app"
-	"flant/candictl/pkg/config"
-	"flant/candictl/pkg/log"
+	"github.com/deckhouse/deckhouse/candictl/pkg/app"
+	"github.com/deckhouse/deckhouse/candictl/pkg/config"
+	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
 func Edit(data []byte) ([]byte, error) {

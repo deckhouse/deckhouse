@@ -96,7 +96,7 @@ func (p *DeploymentInformer) HandleWatchEvent(object interface{}, eventType stri
 	if staleObj, stale := object.(cache.DeletedFinalStateUnknown); stale {
 		object = staleObj.Obj
 	}
-	var obj = object.(*appsv1.Deployment)
+	obj := object.(*appsv1.Deployment)
 
 	p.EventCb(obj, eventType)
 }
@@ -166,7 +166,7 @@ func (p *CRDInformer) HandleWatchEvent(object interface{}, eventType string) {
 	if staleObj, stale := object.(cache.DeletedFinalStateUnknown); stale {
 		object = staleObj.Obj
 	}
-	var obj = object.(*apiextensionsv1beta1.CustomResourceDefinition)
+	obj := object.(*apiextensionsv1beta1.CustomResourceDefinition)
 
 	p.EventCb(obj, eventType)
 }
