@@ -1,7 +1,27 @@
+{{- define "kubernetes_version_enabled" }}
+  {{- if semverCompare "<= 1.16 || >= 1.19" .Values.global.discovery.kubernetesVersion }}
+    not empty string
+  {{- end }}
+{{- end }}
+
 {{- define "machine_controller_manager_enabled" }}
-  {{- if not .Values.nodeManager.mcmEmergencyBrake }}
-    {{- if .Values.nodeManager.internal.machineControllerManagerEnabled }}
-      not empty string
+  {{- if include "kubernetes_version_enabled" . }}
+    {{- if not .Values.nodeManager.mcmEmergencyBrake }}
+      {{- if .Values.nodeManager.internal.machineControllerManagerEnabled }}
+        not empty string
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "cluster_autoscaler_enabled" }}
+  {{- if include "kubernetes_version_enabled" . }}
+    {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+      {{- if eq $ng.nodeType "Cloud" }}
+        {{- if lt (int $ng.cloudInstances.minPerZone) (int $ng.cloudInstances.maxPerZone) }}
+          not empty string
+        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

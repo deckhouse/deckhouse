@@ -1,13 +1,3 @@
-{{- define "cluster_autoscaler_enabled" }}
-  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-    {{- if eq $ng.nodeType "Cloud" }}
-      {{- if lt (int $ng.cloudInstances.minPerZone) (int $ng.cloudInstances.maxPerZone) }}
-        1
-      {{- end }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-
 {{- define "cluster_autoscaler_nodes" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if eq $ng.nodeType "Cloud" }}
