@@ -27,22 +27,35 @@ discovery:
 modulesImages:
   registry: registry.flant.com
   registryDockercfg: cfg
+  tags:
+    deckhouse:
+      validatingWebhookHandler: hash
 modules:
   placement: {}
 `
 
 	moduleValuesForMasterNode = `
-    bundle: Default
-    logLevel: Info
+bundle: Default
+logLevel: Info
+internal:
+  validatingWebhookHandlerCert:
+    crt: a
+    key: b
+    ca: c
 `
 
 	moduleValuesForDeckhouseNode = `
-    bundle: Default
-    logLevel: Info
-    nodeSelector: 'node-role.kubernetes.io/deckhouse: ""'
-    tolerations:
-    - key: testkey
-      operator: Exists
+bundle: Default
+logLevel: Info
+nodeSelector: 'node-role.kubernetes.io/deckhouse: ""'
+tolerations:
+- key: testkey
+  operator: Exists
+internal:
+  validatingWebhookHandlerCert:
+    crt: a
+    key: b
+    ca: c
 `
 )
 

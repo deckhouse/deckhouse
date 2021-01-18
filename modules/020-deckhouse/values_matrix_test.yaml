@@ -5,6 +5,9 @@ global:
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg
+    tags:
+      deckhouse:
+        validatingWebhookHandler: hash
   discovery:
     clusterControlPlaneIsHighlyAvailable: true
     d8SpecificNodeCountByRole:
@@ -14,9 +17,17 @@ deckhouse:
   __ConstantChoices__:
   -  internal:
        currentReleaseImageName: "registry:testtag"
+       validatingWebhookHandlerCert:
+         crt: a
+         key: b
+         ca: c
      logLevel: "Info"
   -  internal:
        currentReleaseImageName: "registry:testtag"
+       validatingWebhookHandlerCert:
+         crt: a
+         key: b
+         ca: c
      logLevel: "Info"
      nodeSelector:
        testnode: ""

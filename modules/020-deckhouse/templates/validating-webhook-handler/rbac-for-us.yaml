@@ -1,0 +1,34 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: validating-webhook-handler
+  namespace: d8-system
+{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:deckhouse:validating-webhook-handler
+{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler")) | indent 2 }}
+rules:
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations"]
+  verbs: ["create", "list", "update"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["*"]
+  verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:deckhouse:validating-webhook-handler
+{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:deckhouse:validating-webhook-handler
+subjects:
+  - kind: ServiceAccount
+    name: validating-webhook-handler
+    namespace: d8-system

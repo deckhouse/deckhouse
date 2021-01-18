@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: keepalivedinstances-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["keepalivedinstances"]
+    scope:       "Cluster"
+kubernetes:
+- name: keepalived_instances
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: deckhouse.io/v1alpha1
+  kind: KeepalivedInstance
+  jqFilter: |
+    {
+      "name": .metadata.name,
+      "ids": [.spec.vrrpInstances[].id]
+    }
+EOF
+}
+
+function __main__() {
+  allowed=true
+  message=""
+  for id in $(context::jq -r '.review.request.object.spec.vrrpInstances[].id'); do
+    if context::jq -e --argjson id "$id" '[.snapshots.keepalived_instances[].filterResult.ids] | add | index($id)' >/dev/null; then
+      allowed=false
+      message="${message}vrrpInstance.id '$id' is already in use; "
+    fi
+  done
+
+  if [[ "$allowed" == "true" ]]; then
+    cat <<EOF > $VALIDATING_RESPONSE_PATH
+{"allowed":true}
+EOF
+  else
+    cat <<EOF > $VALIDATING_RESPONSE_PATH
+{"allowed":false, "message":"${message}"}
+EOF
+  fi
+}
+
+hook::run $@
