@@ -53,7 +53,7 @@ EOF
 }
 
 function patch_max_used() {
-  kubernetes::patch_jq kube-system secret/d8-cluster-configuration '. | .data.maxUsedControlPlaneKubernetesVersion = ('"$1"' | @base64)'
+  kubernetes::patch_jq kube-system secret/d8-cluster-configuration '. | .data.maxUsedControlPlaneKubernetesVersion = ("'"$1"'" | @base64)'
 }
 
 function __main__() {
@@ -66,12 +66,14 @@ function __main__() {
 
   if ! context::jq -e '.snapshots.control_plane_versions[] | select(.object.metadata.name | contains("kube-apiserver")) | .filterResult' >/dev/null; then
     >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version"
-    control_plane_versions=("$(kubectl version -o json | jq -re '.serverVersion.gitVersion[1:] | split(".")[:-1] | join(".")').0")
+    server_version="$(kubectl version -o json | jq -re '.serverVersion.gitVersion[1:]')"
+    server_version_majmin="$(semver::majmin "${server_version}")"
+    control_plane_versions=("${server_version_majmin}.0")
   fi
 
   if ! context::jq -e '.snapshots.max_used_control_plane_version[0].filterResult' ; then
     >&2 echo "WARNING: deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version"
-    max_used_control_plane_version="${control_plane_versions[0]}"
+    max_used_control_plane_version="${config_version}"
   fi
 
   # validations
