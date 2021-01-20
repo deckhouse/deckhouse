@@ -102,6 +102,7 @@ const moduleValuesB = `
       datacenter: X1
       zones: ["aaa", "bbb"]
       masterInstanceClass: null
+      resourcePoolPath: kubernetes-dev
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
@@ -223,7 +224,10 @@ storageclass.kubernetes.io/is-default-class: "true"
           "password": "myPaSsWd",
           "region": "myreg",
           "regionTagCategory": "myregtagcat",
-          "instanceClassDefaults": {},
+          "instanceClassDefaults": {
+            "disableTimesync": true,
+            "resourcePoolPath": "kubernetes-dev"
+          },
           "sshKey": "mysshkey1",
           "username": "myuname",
           "vmFolderPath": "dev/test",

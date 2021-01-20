@@ -21,8 +21,8 @@ spec:
 {{- end }}
   datastore: {{ .nodeGroup.instanceClass.datastore | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.datastore | quote }}
 {{- /* TODO: remove once all clusters are migrated to the "resourcePool" field */ -}}
-{{- if or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePool }}
-  resourcePool: {{ or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePool | quote }}
+{{- if or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePoolPath }}
+  resourcePool: {{ or (or .nodeGroup.instanceClass.resourcePool .nodeGroup.instanceClass.resourcePoolForNewNodes) .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePoolPath | quote }}
 {{- end }}
 {{- if hasKey .nodeGroup.instanceClass "disableTimesync" }}
   disableTimesync: {{ .nodeGroup.instanceClass.disableTimesync }}
