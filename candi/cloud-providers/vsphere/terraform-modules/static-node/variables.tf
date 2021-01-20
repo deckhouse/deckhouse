@@ -42,7 +42,11 @@ locals {
   effective_zones = length(local.ng_zones) > 0 ? local.ng_zones : local.config_zones
   zone            = element(local.effective_zones, var.nodeIndex)
 
-  resourcePool       = lookup(local.instance_class, "resourcePool", "")
+  base_resource_pool = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
+  default_resource_pool = join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix])
+
+  resource_pool = lookup(local.master_instance_class, "resourcePool", local.default_resource_pool)
+
   additionalNetworks = lookup(local.instance_class, "additionalNetworks", [])
 
   runtime_options               = lookup(local.instance_class, "runtimeOptions", {})
