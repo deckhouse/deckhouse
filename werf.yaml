@@ -132,21 +132,16 @@ ansible:
     copy:
       content: |
 {{ .Files.Get "deckhouse-controller/files/bashrc" | indent 8 }}
-      dest: /root/.bashrc
+      dest: /.bashrc
 
   - name: "Shell comfort: vimrc"
     copy:
       content: |
 {{ .Files.Get "deckhouse-controller/files/vimrc" | indent 8 }}
-      dest: /root/.vimrc
+      dest: /.vimrc
 
   - name: "Shell comfort: kubectl completion"
-    shell: kubectl-1.19 completion bash > /root/.kubectl_completion.sh
-
-  - name: "Shell comfort: history search"
-    shell: |
-      sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
-      sed -i 's/^\# \"\\e\[6~\": history-search-forward/\"\\e\[6~\": history-search-forward/' /etc/inputrc
+    shell: kubectl-1.19 completion bash > /etc/profile.d/kubectl_completion.sh
 
   - raw: rm -rf /var/cache/apk/*
 
