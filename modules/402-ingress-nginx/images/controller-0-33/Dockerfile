@@ -2,10 +2,12 @@ ARG BASE_GOLANG_BUSTER
 FROM $BASE_GOLANG_BUSTER
 WORKDIR /src/
 COPY lua-info.patch /
+COPY omit-helm-secrets.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-0.33.0 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
+    patch -p1 < /omit-helm-secrets.patch && \
     # todo: Разобраться, почему игнорируется vendor
     make GO111MODULE=on USE_DOCKER=false build
 
