@@ -73,12 +73,12 @@ function __main__() {
     cpuAllocatable=$(context::jq -re '.snapshots.nodes_resources[] | .filterResult.allocatableCPU')
     discovery_millicpu_master=$(for allocatableCPU in $cpuAllocatable; do
       tools::dk_convert --milli "$allocatableCPU"
-    done | sort | head -1)
+    done | sort -n | head -1)
 
     memoryAllocatable=$(context::jq -re '.snapshots.nodes_resources[] | .filterResult.allocatableMemory')
     discovery_memory_master=$(for allocatableMemory in $memoryAllocatable; do
       tools::dk_convert "$allocatableMemory"
-    done | sort | head -1)
+    done | sort -n | head -1)
   fi
 
   # Get requests parameters from config for masterNode or calculate if absent
