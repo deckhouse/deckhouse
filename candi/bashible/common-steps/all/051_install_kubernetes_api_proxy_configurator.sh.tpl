@@ -8,17 +8,21 @@ _on_kubernetes_api_proxy_configurator_changed() {
 bb-sync-file /var/lib/bashible/kubernetes-api-proxy-configurator.sh - << "EOF"
 #!/bin/bash
 
+function kubectl_exec() {
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+}
+
 # Read from command args
 apiserver_endpoints=$@
 apiserver_backup_endpoints=""
 
 if [ -z "$apiserver_endpoints" ] ; then
   self_node_addresses=""
-  if self_node=$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json); then
+  if self_node=$(kubectl_exec get node $HOSTNAME -o json); then
     self_node_addresses="$(echo "$self_node" | jq '.status.addresses[] | .address' -r)"
   fi
 
-  if eps=$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n default get endpoints kubernetes -o json) ; then
+  if eps=$(kubectl_exec -n default get endpoints kubernetes -o json) ; then
     for ep in $(echo "$eps" | jq '.subsets[] | (.ports[0].port | tostring) as $port | .addresses[] | .ip + ":" +  $port' -r | sort) ; do
       ip_regex=$(echo $ep | cut -d: -f1 | sed 's/\./\\./g')
 
