@@ -94,6 +94,8 @@ spec:
           - mountPath: /db
             name: data
             readOnly: false
+          - mountPath: /tmp
+            name: tmp
         resources:
           limits:
             memory: "300Mi"
@@ -155,7 +157,13 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 5
-{{- if $storageClass }}
+      volumes:
+      - emptyDir: {}
+        name: tmp
+{{- if not $storageClass }}
+      - name: data
+        emptyDir: {}
+{{- else }}
   volumeClaimTemplates:
   - metadata:
       name: data
@@ -165,8 +173,4 @@ spec:
       resources:
         requests:
           storage: 1Gi
-{{- else }}
-      volumes:
-      - name: data
-        emptyDir: {}
 {{- end }}
