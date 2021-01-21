@@ -99,6 +99,8 @@ spec:
               name: cloud-credentials
               readOnly: true
               subPath: credentials.json
+            - mountPath: /tmp
+              name: tmp
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
@@ -113,4 +115,6 @@ spec:
       - name: cloud-credentials
         secret:
           secretName: cloud-credentials
+      - name: tmp
+        emptyDir: {}
 {{- end }}
