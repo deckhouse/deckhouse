@@ -11,7 +11,7 @@ function __config__() {
       kind: NodeGroup
       group: main
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)
+      queue: /modules/$(module::name::kebab_case)/discover_standby_ng
       jqFilter: |
         {
           "name": .metadata.name,
@@ -23,6 +23,7 @@ function __config__() {
     - name: nodes
       group: main
       keepFullObjectsInMemory: false
+      queue: /modules/$(module::name::kebab_case)/discover_standby_ng
       apiVersion: v1
       kind: Node
       jqFilter: |
@@ -39,7 +40,7 @@ function __config__() {
       kind: Pod
       group: main
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)
+      queue: /modules/$(module::name::kebab_case)/discover_standby_ng
       labelSelector:
         matchExpressions:
         - key: app
