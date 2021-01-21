@@ -102,7 +102,13 @@ spec:
               value: {{ join "," .Values.cloudProviderYandex.additionalExternalNetworkIDs | quote }}
             - name: YANDEX_CLOUD_ROUTE_TABLE_ID
               value: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID | required ".Values.cloudProviderYandex.internal.providerDiscoveryData.routeTableID is required" | quote }}
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
 {{- end }}
