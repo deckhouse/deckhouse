@@ -22,7 +22,8 @@ function __config__() {
             (.provisioner == "cinder.csi.openstack.org") or
             (.provisioner == "vsphere.csi.vmware.com") or
             (.provisioner == "yandex.csi.flant.com")
-          )
+          ),
+          "provisioner": .provisioner
         }
       labelSelector:
         matchExpressions:
@@ -35,9 +36,9 @@ EOF
 function __main__() {
   group="/modules/$(module::name::kebab_case)/storage_class_cloud_manual"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
-  if context::jq -er '([.snapshots.storageclasses[].filterResult | select(.isCloud == true)] | length) > 0'; then
-    context::jq -c --arg group "$group" '
-      .snapshots.storageclasses[].filterResult | select(.isCloud == true) |
+  if storageclasses="$(context::jq -rc '[.snapshots.storageclasses[].filterResult | select(.isCloud == true and ((.name == "vsphere-main" and .provisioner == "vsphere.csi.vmware.com") | not))]')" >/dev/null; then
+    context::jq -c --arg group "$group" --argjson storageclasses "$storageclasses" '
+      $storageclasses[] |
       {
         "name": "storage_class_cloud_manual",
         "group": "\($group)",

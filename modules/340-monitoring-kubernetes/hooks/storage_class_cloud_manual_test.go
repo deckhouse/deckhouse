@@ -14,6 +14,12 @@ var _ = Describe("Modules :: monitoring-kubernetes :: hooks :: storage_class_clo
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
+  name: vsphere-main
+provisioner: vsphere.csi.vmware.com
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
   labels:
     heritage: deckhouse
   name: aws-proper
@@ -85,7 +91,6 @@ metadata:
   name: azure-improper
 provisioner: disk.csi.azure.com
 ---
----
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -109,7 +114,6 @@ kind: StorageClass
 metadata:
   name: yandex-improper
 provisioner: yandex.csi.flant.com
-
 `
 	)
 	f := HookExecutionConfigInit(
@@ -136,6 +140,7 @@ provisioner: yandex.csi.flant.com
 
 		It("Hook must not fail, StorageClasses must be in cluster", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("StorageClass", "vsphere-main").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "aws-proper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "azure-proper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "openstack-proper").Exists()).To(BeTrue())
