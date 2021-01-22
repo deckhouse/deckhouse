@@ -38,8 +38,7 @@ metadata:
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | indent 2 }}
 spec:
-{{- /* TODO: change to "maxUnavailable: 10%" when PDB percentage will support daemonsets */}}
-  minAvailable: 0
+  maxUnavailable: 10%
   selector:
     matchLabels:
       app: csi-node
