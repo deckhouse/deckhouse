@@ -45,6 +45,13 @@ data:
   configure.sh: |-
     #!/bin/sh
     /etc/openvpn/setup/setup-certs.sh
+
+    md5_easyrsa_src="$(md5sum /usr/share/easy-rsa/easyrsa | awk '{print $1}')"
+    md5_easyrsa_dst="$(md5sum /etc/openvpn/certs/easyrsa | awk '{print $1}')"
+    if [ "$md5_easyrsa_src" != "$md5_easyrsa_dst" ]; then
+      cp /usr/share/easy-rsa/easyrsa /etc/openvpn/certs/easyrsa
+    fi
+
     iptables -t nat -A POSTROUTING -s {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} ! -d {{ $tunnelNetworkAddress }}/{{ $tunnelNetworkNetmask }} -j MASQUERADE
 
     mkdir -p /dev/net
