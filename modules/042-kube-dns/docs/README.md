@@ -27,6 +27,7 @@ title: "Модуль kube-dns"
 * `enableLogs` - позволяет включить логирование в CoreDNS:
   * Формат - true или false
   * По умолчанию, false
+* `clusterDomainAliases` — <a name="clusterDomainAliases"></a> список алиасов домена кластера, резолвятся наравне с `global.discovery.clusterDomain`
 
 ### Пример конфигурации
 
@@ -45,4 +46,7 @@ kubeDns: |
     upstreamNameservers:
     - 10.150.0.1
   enableLogs: true
+  clusterDomainAliases:
+  - foo.bar
+  - baz.qux
 ```
