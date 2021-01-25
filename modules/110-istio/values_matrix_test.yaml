@@ -1,0 +1,76 @@
+global:
+  highAvailability:
+    __ConstantChoices__: [true, false]
+  enabledModules: ["operator-prometheus-crd","cert-manager"]
+  modules:
+    publicDomainTemplate: "%s.example.com"
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
+    https:
+      __ConstantChoices__:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+  modulesImages:
+    registry: registry.flant.com
+    registryDockercfg: registry.example.com
+    tags:
+      common:
+        kubeRbacProxy: hashstring
+      istio:
+        kiali: hashstring
+        operatorV1x8x1: hashstring
+        operatorV1x8x2: hashstring
+        pilotV1x8x1: hashstring
+        pilotV1x8x2: hashstring
+        proxyv2V1x8x1: hashstring
+        proxyv2V1x8x2: hashstring
+  discovery:
+    clusterControlPlaneIsHighlyAvailable:
+      __ConstantChoices__: [true, false]
+    d8SpecificNodeCountByRole:
+      system:
+        __ConstantChoices__: [1, 2, 3]
+    kubernetesVersion: 1.19
+
+istio:
+    tlsMode:
+      __ConstantChoices__:
+      - Mutual
+      - MutualPermissive
+      - "Off"
+    clusterName: mycluster
+    internal:
+        applicationNamespaces:
+          __ConstantChoices__:
+          - []
+          - [default, foo, bar]
+        ca:
+            cert: mycert
+            key: mykey
+            root: myroot
+            chain: mychain
+        globalRevision: v1x8x1
+        operatorRevisionsToInstall:
+          __ConstantChoices__:
+          -  [v1x8x1, v1x8x2]
+          -  []
+        revisionsToInstall:
+          __ConstantChoices__:
+          -  [v1x8x1, v1x8x2]
+          -  []
+    network: mynetwork
+    sidecar:
+      includeOutboundIPRanges: ["*"]
+      excludeOutboundIPRanges: ["1.2.3.4"]
+      excludeInboundPorts: ["1", "2"]
+      excludeOutboundPorts: ["3", "4"]

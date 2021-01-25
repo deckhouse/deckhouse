@@ -25,29 +25,31 @@ search: grafana разработка графиков
 1. Найти все range'и и заменить на `$__interval_sx4`:
 
     ```bash
-    for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
-      sed 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
-    end
+    for dashboard in *.json; do
+      for range in $(grep '\[[0-9]\+[a-z]\]' $dashboard | sed 's/.*\(\[[0-9][a-z]\]\).*/\1/g' | sort | uniq); do
+        sed -e 's/\['$range'\]/[$__interval_sx4]/g' -i $dashboard
+      done
+    done
     ```
-2. Заменить `irate` на `rate`
+2. Заменить `irate` на `rate`:
 
     ```bash
-    sed 's/irate(/rate(/g' -i $dashboard
+    sed 's/irate(/rate(/g' -i *.json
     ```
-3. Заменить `Resolution` на `1/1`
+3. Заменить `Resolution` на `1/1`:
 
     ```bash
-    sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i $dashboard
+    sed 's/"intervalFactor":\s[0-9]/"intervalFactor": 1/' -i *.json
     ```
-4. Убрать `Min Step`
+4. Убрать `Min Step`:
 
     ```bash
-    sed 'd/"interval":/' -i $dashboard
+    sed '/"interval":/d' -i *.json
     ```
-5. Заменить все графики на `Staircase` (поломает графики `Stack` + `Percent`, которые придется поправить руками на `Bars`)
+5. Заменить все графики на `Staircase` (поломает графики `Stack` + `Percent`, которые придется поправить руками на `Bars`):
 
     ```bash
-    sed 's/"steppedLine": false/"steppedLine": true/' -i $dashboard
+    sed 's/"steppedLine": false/"steppedLine": true/' -i *.json
     ```
 
 ## Лучшие практики

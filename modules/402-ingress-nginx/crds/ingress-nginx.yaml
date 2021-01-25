@@ -48,6 +48,9 @@ spec:
               type: string
               description: 'One of the supported NGINX Ingress Controller versions.'
               enum: ['0.25', '0.26', '0.33']
+            enableIstioSidecar:
+              type: boolean
+              description: 'Whether to dedicate the controller for Istio environment.'
             nodeSelector:
               type: object
               description: 'Controller nodeSelector field.'

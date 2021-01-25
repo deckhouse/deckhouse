@@ -1,0 +1,96 @@
+{{- range $revision := .Values.istio.internal.operatorRevisionsToInstall }}
+  {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd" }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: operator-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: operator-{{ $revision }}
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    helm.sh/hook: post-upgrade, post-install
+    helm.sh/hook-delete-policy: before-hook-creation
+  name: operator-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | indent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  selector:
+    matchLabels:
+      app: "operator"
+      revision: {{ $revision }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: d8-{{ $.Chart.Name }}
+  name: operator-{{ $revision }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_strategy_and_replicas_for_ha" $ | indent 2 }}
+  selector:
+    matchLabels:
+      app: operator
+      revision: {{ $revision }}
+  template:
+    metadata:
+      labels:
+        app: operator
+        revision: {{ $revision }}
+    spec:
+{{- include "helm_lib_node_selector" (tuple $ "system") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "operator")) | indent 6 }}
+      serviceAccountName: operator
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: operator
+        image: {{ $.Values.global.modulesImages.registry }}/istio/operator-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "operator%s" ($revision | title)) }}
+        command:
+        - operator
+        - server
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1337
+          runAsUser: 1337
+          runAsNonRoot: true
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+        env:
+          - name: WATCH_NAMESPACE
+            value: d8-{{ $.Chart.Name }}
+          - name: LEADER_ELECTION_NAMESPACE
+            value: d8-{{ $.Chart.Name }}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: d8-{{ $.Chart.Name }}
+          - name: WAIT_FOR_RESOURCES_TIMEOUT
+            value: 300s
+          - name: REVISION
+            value: {{ $revision }}
+{{- end }}

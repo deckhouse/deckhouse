@@ -1,0 +1,99 @@
+{{- range $revision := .Values.istio.internal.revisionsToInstall }}
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: {{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | indent 2 }}
+spec:
+  revision: {{ $revision }}
+
+  components:
+    base:
+      enabled: true
+
+    pilot:
+      enabled: true
+
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: false
+
+    egressGateways:
+    - name: istio-egressgateway
+      enabled: false
+
+    cni:
+      enabled: false
+
+    istiodRemote:
+      enabled: false
+
+  addonComponents:
+    istiocoredns:
+      enabled: false
+
+  meshConfig:
+    rootNamespace: d8-{{ $.Chart.Name }}
+
+  values:
+    global:
+      istioNamespace: d8-{{ $.Chart.Name }}
+      meshID: d8-istio-mesh
+      network: network-{{ $.Values.global.clusterName }}
+      multiCluster:
+        clusterName: {{ $.Values.global.clusterName }}
+      externalIstiod: true
+
+      logging:
+        level: "default:info"
+      logAsJson: false
+      imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+      - deckhouse-registry
+      proxy:
+        image: {{ $.Values.global.modulesImages.registry }}/istio/proxyv2-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 2000m
+            memory: 1024Mi
+        logLevel: warning
+        componentLogLevel: "misc:error"
+  {{- $node_internal_cidrs := list }}
+  {{- range $ip := $.Values.global.discovery.nodeInternalIPs }}
+    {{- $node_internal_cidrs = append $node_internal_cidrs (printf "%s/32" $ip) }}
+  {{- end }}
+        includeIPRanges:      "{{ $.Values.istio.sidecar.includeOutboundIPRanges | default (list $.Values.global.discovery.podSubnet $.Values.global.discovery.serviceSubnet ($node_internal_cidrs | join ",")) | join "," }}"
+        excludeIPRanges:      "{{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," }}"
+        excludeOutboundPorts: "{{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," }}"
+        excludeInboundPorts:  "{{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," }}"
+
+      proxy_init:
+        image: {{ $.Values.global.modulesImages.registry }}/istio/proxyv2-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 1024Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+
+      priorityClassName: "cluster-high"
+      trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+    pilot:
+      autoscaleEnabled: false
+      replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+      image: {{ $.Values.global.modulesImages.registry }}/istio/pilot-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}
+      configNamespace: d8-{{ $.Chart.Name }}
+{{- include "helm_lib_node_selector" (tuple $ "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple $ "master") | indent 6 }}
+    telemetry:
+      enabled: true
+      v2:
+        enabled: true
+{{- end }}
