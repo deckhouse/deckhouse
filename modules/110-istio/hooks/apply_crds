@@ -1,0 +1,15 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  jo -p configVersion=v1 onStartup=10
+}
+
+function __on_startup() {
+  for i in $(module::path)/crds/*; do
+    kubectl apply -f ${i}
+  done
+}
+
+hook::run "$@"

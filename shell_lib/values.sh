@@ -64,8 +64,8 @@ function values::set() {
     shift
   fi
 
-  normalized_path_for_json_patch="$(values::_normalize_path_for_json_patch $1)"
-  normalized_path_for_jq="$(context::_convert_user_path_to_jq_path $1)"
+  normalized_path_for_json_patch="$(values::_normalize_path_for_json_patch "$1")"
+  normalized_path_for_jq="$(context::_convert_user_path_to_jq_path "$1")"
 
   values::_json_patch $config add "${normalized_path_for_json_patch}" "$2"
   patched_values="$(jq --arg value "${2}" "${normalized_path_for_jq}"' = (try ($value | fromjson) catch $value)' ${values_path})"

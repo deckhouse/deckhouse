@@ -1,0 +1,64 @@
+{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+  annotations:
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.istio.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.istio.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.istio.auth.externalAuthentication.authURL | quote }}
+  {{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: kiali-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+  {{- end }}
+  {{- if .Values.istio.auth.satisfyAny }}
+    nginx.ingress.kubernetes.io/satisfy: "any"
+  {{- end }}
+spec:
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "kiali") }}
+    http:
+      paths:
+      - backend:
+          serviceName: kiali
+          servicePort: http
+        path: /
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+    - hosts:
+        - {{ include "helm_lib_module_public_domain" (list . "kiali") }}
+      secretName: {{ include "helm_lib_module_https_secret_name" (list . "kiali-ingress-tls") }}
+  {{- end }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+spec:
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "kiali-ingress-tls") }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "kiali") }}
+  acme:
+    config:
+{{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | indent 4 }}
+      domains:
+      - {{ include "helm_lib_module_public_domain" (list . "kiali") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+{{- end }}
+---
+{{- end }}

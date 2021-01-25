@@ -1,0 +1,14 @@
+{{- $namespaces_to_install_registry_secret := .Values.istio.internal.applicationNamespaces }}
+{{- $namespaces_to_install_registry_secret = append $namespaces_to_install_registry_secret (printf "d8-%s" .Chart.Name) }}
+{{- range $namespace := $namespaces_to_install_registry_secret }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: {{ $namespace }}
+{{ include "helm_lib_module_labels" (list $) | indent 2 }}
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
+{{- end }}

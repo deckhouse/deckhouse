@@ -1,0 +1,120 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:istio:kiali
+{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - endpoints
+  - namespaces
+  - nodes
+  - pods
+  - pods/log
+  - pods/proxy
+  - replicationcontrollers
+  - services
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - networking.istio.io
+  - security.istio.io
+  resources: ["*"]
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups: ["apps.openshift.io"]
+  resources:
+  - deploymentconfigs
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups: ["project.openshift.io"]
+  resources:
+  - projects
+  verbs:
+  - get
+- apiGroups: ["route.openshift.io"]
+  resources:
+  - routes
+  verbs:
+  - get
+- apiGroups: ["monitoring.kiali.io"]
+  resources:
+  - monitoringdashboards
+  verbs:
+  - get
+  - list
+- apiGroups: ["iter8.tools"]
+  resources:
+  - experiments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups: ["apps"]
+  resources: ["deployments/http"]
+  resourceNames: ["trickster"]
+  verbs: ["get", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:istio:kiali
+{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:istio:kiali
+subjects:
+- kind: ServiceAccount
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+---

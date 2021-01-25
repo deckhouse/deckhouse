@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "kiali")) | indent 2 }}
+data:
+  config.yaml: |
+    auth:
+      strategy: anonymous
+    deployment:
+      accessible_namespaces:
+      - '**'
+      additional_service_yaml: {}
+      custom_dashboards:
+        excludes:
+        - ""
+        includes:
+        - '*'
+    external_services:
+      prometheus:
+        url: https://trickster.d8-monitoring/trickster/main
+        auth:
+          insecure_skip_verify: true
+          type: bearer
+          use_kiali_token: true
+      custom_dashboards:
+        enabled: true
+    identity: {}
+    istio_namespace: d8-{{ $.Chart.Name }}
+    server:
+      metrics_enabled: true
+      metrics_port: 9090
+      port: 20001
+      web_root: /kiali

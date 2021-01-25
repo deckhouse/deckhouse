@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+EOF
+}
+
+function __main__() {
+  if values::has istio.internal.deployDexAuthenticator ; then
+    cat <<EOF | kubectl apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+ name: kiali
+ namespace: d8-istio
+ labels:
+   heritage: deckhouse
+   module: istio
+   app: kiali
+ annotations:
+   dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applicationDomain: "$(module::public_domain kiali)"
+  sendAuthorizationHeader: true
+  applicationIngressCertificateSecretName: "$(module::https_secret_name "kiali-ingress-tls")"
+  applicationIngressClassName: "$(module::ingress_class)"
+EOF
+  else
+    if kubectl -n d8-istio get dexauthenticator kiali >/dev/null 2>/dev/null ; then
+      kubectl -n d8-istio delete dexauthenticator kiali >/dev/null 2>/dev/null
+    fi
+  fi
+}
+
+hook::run "$@"
