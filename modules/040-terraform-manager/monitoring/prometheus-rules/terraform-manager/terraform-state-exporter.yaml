@@ -129,7 +129,7 @@
 
   - alert: D8TerraformStateExporterClusterStateChanged
     expr: |
-      max by(job) (candi_converge_cluster_status{status="changed", job="terraform-state-exporter"} == 1)
+      max by(job, status) (candi_converge_cluster_status{status=~"changed|destructively_changed", job="terraform-state-exporter"} == 1)
     labels:
       severity_level: "8"
       tier: cluster
@@ -141,15 +141,15 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
-        Real Kubernetes cluster state and Terraform state differ.
+        Real Kubernetes cluster state is `{{ $labels.status }}` comparing to Terraform state.
 
         It's important to make them equal.
-        To converge state of Kubernetes cluster use `candictl converge` command.
+        To converge state of Kubernetes cluster, use `candictl converge` command.
       summary: Terraform-state-exporter cluster state changed
 
   - alert: D8TerraformStateExporterNodeStateChanged
     expr: |
-      max by(node_group, name) (candi_converge_node_status{status="changed", job="terraform-state-exporter"} == 1)
+      max by(node_group, name, status) (candi_converge_node_status{status=~"changed|destructively_changed", job="terraform-state-exporter"} == 1)
     labels:
       severity_level: "8"
       tier: cluster
@@ -161,10 +161,10 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
-        Real Node "{{ $labels.name }}" state and Terraform state differ.
+        Real Node "{{ $labels.node_group }}/{{ $labels.name }}" state is `{{ $labels.status }}` comparing to Terraform state.
 
         It's important to make them equal.
-        To converge state of Kubernetes cluster use `candictl converge` command.
+        To converge state of Kubernetes cluster, use `candictl converge` command.
       summary: Terraform-state-exporter node state changed
 
   - alert: D8TerraformStateExporterClusterStateError
@@ -184,7 +184,7 @@
         Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
 
         Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
-        To converge state of Kubernetes cluster use `candictl converge` command.
+        To converge state of Kubernetes cluster, use `candictl converge` command.
       summary: Terraform-state-exporter cluster state error
 
   - alert: D8TerraformStateExporterNodeStateError
@@ -201,10 +201,10 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
       description: |
-        Terraform-state-exporter can't check difference between Node "{{ $labels.name }}" state and Terraform state.
+        Terraform-state-exporter can't check difference between Node "{{ $labels.node_group }}/{{ $labels.name }}" state and Terraform state.
 
         Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
-        To converge state of Kubernetes cluster use `candictl converge` command.
+        To converge state of Kubernetes cluster, use `candictl converge` command.
       summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterNodeTemplateChanged
@@ -243,7 +243,7 @@
       description: |
         NodeGroup "{{ $labels.name }}" has {{ $labels.status }} amount of replicas.
 
-        To converge state of Kubernetes cluster use `candictl converge` command.
+        To converge state of Kubernetes cluster, use `candictl converge` command.
       summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterChecksFailed

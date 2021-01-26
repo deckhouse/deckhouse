@@ -46,8 +46,8 @@ func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineO
 	return extractedData, err
 }
 
-func CheckPipeline(r *Runner, name string) (bool, error) {
-	isChange := false
+func CheckPipeline(r *Runner, name string) (int, error) {
+	isChange := PlanHasNoChanges
 	pipelineFunc := func() error {
 		err := r.Init()
 		if err != nil {
