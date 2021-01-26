@@ -49,8 +49,28 @@ apiVersions:
                 type: string
               mainNetworkIPAddresses:
                 type: array
+                required: [address, gateway, nameservers]
                 items:
-                  type: string
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                    gateway:
+                      type: string
+                      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                    nameservers:
+                      type: object
+                      properties:
+                        addresses:
+                          type: array
+                          items:
+                            type: string
+                            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                        search:
+                          type: array
+                          items:
+                            type: string
               runtimeOptions:
                 type: object
                 properties:
@@ -135,7 +155,27 @@ apiVersions:
                 mainNetworkIPAddresses:
                   type: array
                   items:
-                    type: string
+                    type: object
+                    required: [address, gateway, nameservers]
+                    properties:
+                      address:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                      gateway:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                      nameservers:
+                        type: object
+                        properties:
+                          addresses:
+                            type: array
+                            items:
+                              type: string
+                              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                          search:
+                            type: array
+                            items:
+                              type: string
                 runtimeOptions:
                   type: object
                   properties:

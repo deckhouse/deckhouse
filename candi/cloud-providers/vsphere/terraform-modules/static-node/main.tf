@@ -56,13 +56,37 @@ data "vsphere_virtual_machine" "template" {
 }
 
 locals {
-  main_ip_addresses     = lookup(local.ng, "mainNetworkIPAddresses", [])
-  external_ip           = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : null
+  external_addresss      = length(local.main_ip_addresses) > 0 ? element(local.main_ip_addresses, var.nodeIndex) : tomap({})
+  external_ip            = lookup(local.external_addresss, "address", null)
+  external_gateway       = lookup(local.external_addresss, "gateway", null)
+  external_nameservers   = lookup(local.external_addresss, "nameservers", {})
+  external_dns_addresses = lookup(local.external_nameservers, "addresses", null)
+  external_dns_search    = lookup(local.external_nameservers, "search", null)
 
-  cloud_init_metadata = {
+  main_interface_configuration = jsonencode(merge(
+    local.external_ip != null ? { "addresses" = [local.external_ip] } : tomap({}),
+    local.external_gateway != null ? { "gateway4" = local.external_gateway } : tomap({}),
+    local.external_nameservers != {} ? {
+      "nameservers" = merge(
+        local.external_dns_addresses != null ? { "addresses" = local.external_dns_addresses } : tomap({}),
+        local.external_dns_search != null ? { "search" = local.external_dns_search } : tomap({})
+      )
+    } : tomap({})
+  ))
+
+  first_interface_index = 192
+
+  cloud_init_network = {
+    version = 2
+    ethernets = {
+      "ens${local.first_interface_index}" = jsondecode(local.main_interface_configuration)
+    }
+  }
+
+  cloud_init_metadata = merge({
     "local-hostname"   = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
     "public-keys-data" = var.providerClusterConfiguration.sshPublicKey
-  }
+  }, local.external_ip != null ? { "network" = local.cloud_init_network } : {})
 
   timesync_extra_conf = lookup(var.providerClusterConfiguration, "disableTimesync", true) ? {
     "time.synchronize.continue"      = "0"

@@ -78,6 +78,9 @@ function set_values_from_provider_cluster_configuration_yaml() {
   i=$(echo "$cloudProviderVsphere" | jq -r --argjson  provider "$provider_cluster_configuration" '.sshKeys[0] // $provider.sshPublicKey')
   values::set cloudProviderVsphere.internal.sshKey "$i"
 
+  i=$(echo "$cloudProviderVsphere" | jq -r --argjson data "$provider_discovery_data" '$data.resourcePoolPath')
+  values::set cloudProviderVsphere.internal.defaultResourcePoolPath "$i"
+
   i=$(jq -rn --argjson  provider "$provider_cluster_configuration" '$provider.masterNodeGroup.instanceClass')
   values::set cloudProviderVsphere.internal.masterInstanceClass "$i"
 }

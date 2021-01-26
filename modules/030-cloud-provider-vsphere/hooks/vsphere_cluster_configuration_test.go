@@ -44,7 +44,8 @@ cloudProviderVsphere:
 {
   "apiVersion":"deckhouse.io/v1alpha1",
   "kind":"VsphereCloudDiscoveryData",
-  "vmFolderPath":"test"
+  "vmFolderPath":"test",
+  "resourcePoolPath": "test"
 }
 `
 		stateAClusterConfiguration = `
@@ -132,6 +133,7 @@ vmFolderPath: test
 sshKey: test
 region: test
 zones: [test1, test2]
+defaultResourcePoolPath: test
 masterInstanceClass:
   datastore: dev/lun_1
   mainNetwork: k8s-msk/test_187
@@ -165,6 +167,7 @@ vmFolderPath: override
 sshKey: override1
 region: override
 zones: [override1, override2]
+defaultResourcePoolPath: null
 masterInstanceClass: null
 `))
 		})
@@ -191,6 +194,7 @@ vmFolderPath: override
 sshKey: override1
 region: override
 zones: [override1, override2]
+defaultResourcePoolPath: null
 masterInstanceClass: null
 `))
 		})
@@ -217,6 +221,7 @@ vmFolderPath: override
 sshKey: override1
 region: override
 zones: [override1, override2]
+defaultResourcePoolPath: test
 masterInstanceClass:
   datastore: dev/lun_1
   mainNetwork: k8s-msk/test_187

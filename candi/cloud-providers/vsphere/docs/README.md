@@ -36,8 +36,16 @@ title: Cloud provider - Vsphere
       * `memoryLimit`
       * `memoryReservation`
     * **`mainNetworkIPAddresses`** — список статических адресов (с CIDR префиксом), назначаемых (по-очереди) master нодам в основной сети (параметр `mainNetwork`).
-      * Формат — список строк.
       * Опциональный параметр. По-умолчанию, включается DHCP клиент.
+      * `address` — IP адрес с CIDR префиксом.
+        * Пример: `10.2.2.2/24`.
+      * `gateway` — IP адрес шлюза по умолчанию. Должен находится в подсети, указанной в `address`.
+        * Пример: `10.2.2.254`.
+      * `nameservers`
+        * `addresses` — список dns-серверов.
+          * Пример: `- 8.8.8.8`
+        * `search` — список DNS search domains.
+          * Пример: `- tech.lan`
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
@@ -60,8 +68,16 @@ title: Cloud provider - Vsphere
       * `memoryLimit`
       * `memoryReservation`
     * **`mainNetworkIPAddresses`** — список статических адресов (с CIDR префиксом), назначаемых (по-очереди) master нодам в основной сети (параметр `mainNetwork`).
-      * Формат — список строк.
       * Опциональный параметр. По-умолчанию, включается DHCP клиент.
+      * `address` — IP адрес с CIDR префиксом.
+        * Пример: `10.2.2.2/24`.
+      * `gateway` — IP адрес шлюза по умолчанию. Должен находится в подсети, указанной в `address`.
+        * Пример: `10.2.2.254`.
+      * `nameservers`
+        * `addresses` — массив dns-серверов.
+          * Пример: `- 8.8.8.8`
+        * `search` — массив DNS search domains.
+          * Пример: `- tech.lan`
   * `nodeTemplate` — настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
     * `labels` — аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`
       * Пример:
