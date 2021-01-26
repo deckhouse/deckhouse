@@ -1,5 +1,5 @@
 ---
-title: "Модуль istio: примеры использования"
+title: "Модуль istio: примеры конфигурации"
 ---
 
 ## Включить балансировку для сервиса `ratings.prod.svc.cluster.local`
@@ -21,7 +21,7 @@ spec:
 
 ## Добавить к сервису myservice.prod.svc дополнительные, вторичные subset-ы со своими правилами
 
-Эти subset-ы работают при использовании [VirtualService](CR.md#virtualservice):
+Эти subset-ы работают при использовании [VirtualService](cr.html#virtualservice):
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -46,7 +46,7 @@ spec:
 
 ## Circuit Breaker
 
-Для единственного сервиса потребуется единственный CR [DestinationRule](CR.md#destinationrule).
+Для единственного сервиса потребуется единственный CR [DestinationRule](cr.html#destinationrule).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -54,7 +54,7 @@ kind: DestinationRule
 metadata:
   name: myservice-circuit-breaker
 spec:
-  host: myservice.prod.svc.cluster.local # либо полный fqdn, либо локальный для namespace домен.
+  host: myservice.prod.svc.cluster.local # либо полный FQDN, либо локальный для namespace домен.
   trafficPolicy:
     outlierDetection:
       consecutiveErrors: 7 # можно допустить не более семи ошибок
@@ -64,7 +64,7 @@ spec:
 
 ## Retry
 
-Для единственного сервиса потребуется единственный CR [VirtualService](CR.md#virtualservice).
+Для единственного сервиса потребуется единственный CR [VirtualService](cr.html#virtualservice).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -73,7 +73,7 @@ metadata:
   name: productpage-retry
 spec:
   hosts:
-    - productpage # либо полный fqdn, либо локальный для namespace домен.
+    - productpage # либо полный FQDN, либо локальный для namespace домен.
   http:
   - route:
     - destination:
@@ -180,7 +180,7 @@ spec:
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](/modules/402-ingress-nginx). Данный контроллер сможет обслуживать толко Istio-окружение!
 * Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — таким образом ingress-контроллер будет отправлять запросы на единственный ClusterIP, работу по балансировке будет делать envoy.
-  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc.cluster.local` — Istio не парсит host из Ingress, с данной аннотацией envoy сможет идентифицировать прикладной сервис. Другой подход — создавать `VirtualService` с публичным fqdn.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc.cluster.local` — Istio не парсит host из Ingress, с данной аннотацией envoy сможет идентифицировать прикладной сервис. Другой подход — создавать `VirtualService` с публичным FQDN.
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -230,93 +230,99 @@ spec:
 
 Примеры:
 * Запретим POST-запросы для приложения myapp. Отныне, так как для приложения появилась политика, то согласно алгоритму выше будут запрещены только POST-запросы к приложению.
-```yaml
-apiVersion: security.istio.io/v1beta1
-kind: AuthorizationPolicy
-metadata:
-  name: deny-post-requests
-  namespace: foo
-spec:
-  selctor:
-    app: myapp
-  action: DENY
-  rules:
-  - to:
-    - operation:
-        methods: ["POST"]
-```
+
+  ```yaml
+  apiVersion: security.istio.io/v1beta1
+  kind: AuthorizationPolicy
+  metadata:
+	name: deny-post-requests
+	namespace: foo
+  spec:
+	selctor:
+	  app: myapp
+	action: DENY
+	rules:
+	- to:
+	  - operation:
+		  methods: ["POST"]
+  ```
 
 * Здесь для приложения создана полтитика ALLOW. При ней будут разрешены только запросы из NS `bar`. Остальные — запрещены.
-```yaml
-apiVersion: security.istio.io/v1beta1
-kind: AuthorizationPolicy
-metadata:
-  name: deny-all
-  namespace: foo
-spec:
-  selctor:
-    app: myapp
-  action: ALLOW # default, можно не указывать
-  rules:
-  - from:
-    - source:
-        namespaces: ["bar"]
-```
+
+  ```yaml
+  apiVersion: security.istio.io/v1beta1
+  kind: AuthorizationPolicy
+  metadata:
+	name: deny-all
+	namespace: foo
+  spec:
+	selctor:
+	  app: myapp
+	action: ALLOW # default, можно не указывать
+	rules:
+	- from:
+	  - source:
+		  namespaces: ["bar"]
+  ```
 
 * Здесь для приложения создана полтитика ALLOW. При этом она не имеет ни одного правила и поэтому ни один запрос под неё не попадёт, но она таки есть. Поэтому, согласно алгоритму, раз что-то разрешено, то всё остальное — запрещено. В данном случае всё остальное — это вообще все запросы.
-```yaml
-apiVersion: security.istio.io/v1beta1
-kind: AuthorizationPolicy
-metadata:
-  name: deny-all
-  namespace: foo
-spec:
-  selctor:
-    app: myapp
-  action: ALLOW # default, можно не указывать
-  rules: []
-```
+
+  ```yaml
+  apiVersion: security.istio.io/v1beta1
+  kind: AuthorizationPolicy
+  metadata:
+	name: deny-all
+	namespace: foo
+  spec:
+	selctor:
+	  app: myapp
+	action: ALLOW # default, можно не указывать
+	rules: []
+  ```
 
 * Здесь для приложения создана политика ALLOW (это default) и одно пустое правило. Под это правило попадает любой запрос и автоматически этот запрос получает добро.
-```yaml
-apiVersion: security.istio.io/v1beta1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-all
-  namespace: foo
-spec:
-  selctor:
-    app: myapp
-  rules:
-  - {}
-```
+
+  ```yaml
+  apiVersion: security.istio.io/v1beta1
+  kind: AuthorizationPolicy
+  metadata:
+	name: allow-all
+	namespace: foo
+  spec:
+	selctor:
+	  app: myapp
+	rules:
+	- {}
+  ```
 
 ### Запретить вообще всё в рамках NS foo
 
 Два способа:
 
 * Запретить явно. Здесь мы создаём политику DENY с единственным универсальным фильтром `{}`, под который попадают все запросы:
-```yaml
-apiVersion: security.istio.io/v1beta1
-kind: AuthorizationPolicy
-metadata:
-  name: deny-all
-  namespace: foo
-spec:
-  action: DENY
-  rules:
-  - {}
-```
+
+  ```yaml
+  apiVersion: security.istio.io/v1beta1
+  kind: AuthorizationPolicy
+  metadata:
+	name: deny-all
+	namespace: foo
+  spec:
+	action: DENY
+	rules:
+	- {}
+  ```
 
 * Неявно. Здесь мы создаём политику ALLOW (по умолчанию), но не создаём ни одного фильтра так, что ни один запрос под неё не попадёт и будет автоматически запрещён.
-```yaml
-apiVersion: security.istio.io/v1beta1
-kind: AuthorizationPolicy
-metadata:
-  name: deny-all
-  namespace: foo
-spec: {}
-```
+
+  ```yaml
+  apiVersion: security.istio.io/v1beta1
+  kind: AuthorizationPolicy
+  metadata:
+	name: deny-all
+	namespace: foo
+  spec: {}
+  ```
 
 ### Запретить доступ только из NS foo
 

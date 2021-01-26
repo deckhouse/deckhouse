@@ -340,6 +340,18 @@ entries:
           url: /modules/050-network-policy-engine/
         - title: Настройки модуля
           url: /modules/050-network-policy-engine/configuration.html
+      - title: istio
+        folders:
+        - title: Описание модуля
+          url: /modules/110-istio/
+        - title: Справка
+          folders:
+          - title: Настройки модуля
+            url: /modules/110-istio/configuration.html
+          - title: Custom Resources
+            url: /modules/110-istio/cr.html
+        - title: Примеры конфигурации
+          url: /modules/110-istio/usage.html
       - title: node-local-dns
         folders:
         - title: Описание модуля
