@@ -9,6 +9,11 @@ variable "providerClusterConfiguration" {
     condition     = cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR
     error_message = "Invalid internalNetworkCIDR in VsphereClusterConfiguration."
   }
+
+  validation {
+    condition     = length(flatten([for ng in var.providerClusterConfiguration.nodeGroups : ng.instanceClass.mainNetworkIPAddresses if contains(keys(ng.instanceClass), "mainNetworkIPAddresses")])) == length(flatten([for ng in var.providerClusterConfiguration.nodeGroups : [for a in ng.instanceClass.mainNetworkIPAddresses : a if a.address != cidrsubnet(a.address, 0, 0)] if contains(keys(ng.instanceClass), "mainNetworkIPAddresses")]))
+    error_message = "Invalid address in mainNetworkIPAddresses."
+  }
 }
 
 variable "nodeIndex" {
@@ -42,12 +47,14 @@ locals {
   effective_zones = length(local.ng_zones) > 0 ? local.ng_zones : local.config_zones
   zone            = element(local.effective_zones, var.nodeIndex)
 
-  base_resource_pool = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
+  base_resource_pool    = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
   default_resource_pool = join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix])
 
-  resource_pool = lookup(local.master_instance_class, "resourcePool", local.default_resource_pool)
+  resource_pool = lookup(local.instance_class, "resourcePool", local.default_resource_pool)
 
   additionalNetworks = lookup(local.instance_class, "additionalNetworks", [])
+  main_ip_addresses  = lookup(local.instance_class, "mainNetworkIPAddresses", [])
+
 
   runtime_options               = lookup(local.instance_class, "runtimeOptions", {})
   calculated_memory_reservation = lookup(local.runtime_options, "memoryReservation", 80)

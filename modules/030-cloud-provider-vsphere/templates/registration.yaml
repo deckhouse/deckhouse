@@ -26,8 +26,8 @@ data:
   {{- $_ := set $vsphereValues "vmFolderPath" (.Values.cloudProviderVsphere.internal.vmFolderPath | required ".Values.cloudProviderVsphere.internal.vmFolderPath is required") }}
 
   {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
-  {{- if .Values.cloudProviderVsphere.internal.resourcePoolPath }}
-    {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" .Values.cloudProviderVsphere.internal.resourcePoolPath }}
+  {{- if .Values.cloudProviderVsphere.internal.defaultResourcePoolPath }}
+    {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" .Values.cloudProviderVsphere.internal.defaultResourcePoolPath }}
   {{- end }}
   {{- if hasKey .Values.cloudProviderVsphere.internal "disableTimesync" }}
     {{- $_ := set $vsphereValues.instanceClassDefaults "disableTimesync" .Values.cloudProviderVsphere.internal.disableTimesync }}

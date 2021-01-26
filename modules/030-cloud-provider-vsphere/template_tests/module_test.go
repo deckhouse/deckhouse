@@ -102,7 +102,7 @@ const moduleValuesB = `
       datacenter: X1
       zones: ["aaa", "bbb"]
       masterInstanceClass: null
-      resourcePoolPath: kubernetes-dev
+      defaultResourcePoolPath: kubernetes-dev
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {

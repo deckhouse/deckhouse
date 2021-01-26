@@ -15,3 +15,6 @@ apiVersions:
       vmFolderPath:
         type: string
         minLength: 1
+      resourcePoolPath:
+        type: string
+        minLength: 1
