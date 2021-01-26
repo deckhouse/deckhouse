@@ -216,3 +216,45 @@ Status:
 ```yaml
 mcmEmergencyBrake: true
 ```
+## Как восстановить мастер-ноду, если kubelet не может загрузить компоненты control-plane?
+
+Подобная ситуация может возникнуть, если в кластере с одним мастером на мастер-ноде были удалены образы 
+компонентов `control-plane` (например, удалена директория `/var/lib/docker` при использовании docker или `/var/lib/containerd` при использовании containerd). В этом случае при рестарте `kubelet` он не сможет выкачать образы `control-plane`-компонентов, поскольку на мастер-ноде нет параметров авторизации в `registry.flant.com`.
+
+Как восстановить:
+### Docker
+Для восстановления работоспособности мастера нужно в любом рабочем кластере под управлением Deckhouse 
+выполнить команду:
+
+```
+kubectl -n d8-system get secrets deckhouse-registry -o json |
+jq -r '.data.".dockerconfigjson"' | base64 -d |
+jq -r 'del(.auths."registry.flant.com".username, .auths."registry.flant.com".password)'
+```
+Вывод команды нужно скопировать и добавить его в файл `/root/.docker/config.json` на поврежденном мастере.
+Далее, на поврежденном мастере нужно загрузить образы `control-plane` компонентов:
+```
+for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+  docker pull $image
+done
+```
+После загрузки образов необходимо перезапустить `kubelet`.
+После восстановления работоспособности мастера нужно убрать внесенные в файл `/root/.docker/config.json`  изменения !!!
+
+### Containerd
+Для восстановления работоспособности мастера нужно в любом рабочем кластере под управлением Deckhouse
+выполнить команду:
+
+```
+kubectl -n d8-system get secrets deckhouse-registry -o json |
+jq -r '.data.".dockerconfigjson"' | base64 -d |
+jq -r '.auths."registry.flant.com".auth'
+```
+Вывод команды нужно скопировать и присвоить переменной AUTH на поврежденном мастере.
+Далее, на поврежденном мастере нужно загрузить образы `control-plane` компонентов:
+```
+for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+  crictl pull --auth $AUTH $image
+done
+```
+После загрузки образов необходимо перезапустить `kubelet`.
