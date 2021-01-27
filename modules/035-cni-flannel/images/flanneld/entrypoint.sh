@@ -18,6 +18,8 @@ if ! iptables -w 600 -C INPUT -m conntrack --ctstate INVALID -j DROP 2> /dev/nul
   iptables -w 600 -I INPUT 1 -m conntrack --ctstate INVALID -j DROP
 fi
 
+# make sure that an old flannel configuration is not present
+rm -f /etc/cni/net.d/10-flannel.conf
 cp -f /etc/kube-flannel/cni-conf.json /etc/cni/net.d/10-flannel.conflist
 
 if [ "$POD_NETWORK_MODE" == "host-gw" ] && grep -q flannel <<< "$(ip link)"; then
