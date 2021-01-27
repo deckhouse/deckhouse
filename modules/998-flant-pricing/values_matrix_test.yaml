@@ -17,6 +17,10 @@ global:
     clusterMasterCount: 3
     d8SpecificNodeCountByRole:
       system: 1
+    kubernetesVersion:
+      __ConstantChoices__:
+      - 1.16.15
+      - 1.19.5
   modules:
     placement:
       __ConstantChoices__:

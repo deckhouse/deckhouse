@@ -35,6 +35,8 @@ global:
     d8SpecificNodeCountByRole:
       system:
         __ConstantChoices__: [1, 2, 3]
-    kubernetesVersion: 1.15.5
-
+    kubernetesVersion:
+      __ConstantChoices__:
+      - 1.16.15
+      - 1.19.5
 upmeter: {}

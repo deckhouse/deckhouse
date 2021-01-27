@@ -34,6 +34,7 @@ discovery:
   clusterMasterCount: 3
   d8SpecificNodeCountByRole:
     system: 1
+  kubernetesVersion: 1.16.15
 modules:
   placement: {}
 `
