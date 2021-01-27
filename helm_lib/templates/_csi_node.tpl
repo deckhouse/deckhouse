@@ -38,7 +38,7 @@ metadata:
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | indent 2 }}
 spec:
-  maxUnavailable: 10%
+{{ include "helm_lib_pdb_daemonset" $context | indent 2 }}
   selector:
     matchLabels:
       app: csi-node

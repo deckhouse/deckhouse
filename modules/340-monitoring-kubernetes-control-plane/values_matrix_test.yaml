@@ -11,7 +11,10 @@ global:
         proxy: tagstring
         kubeSchedulerFaceSlapper: tagstring
   discovery:
-    clusterVersion: 1.15.4
+    kubernetesVersion:
+      __ConstantChoices__:
+      - 1.16.15
+      - 1.19.5
     d8SpecificNodeCountByRole:
       master: 42
   modules:

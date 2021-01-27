@@ -26,7 +26,7 @@ const globalValues = `
         proxy: tagstring
         kubeSchedulerFaceSlapper: tagstring
   discovery:
-    clusterVersion: 1.15.4
+    kubernetesVersion: 1.16.15
     d8SpecificNodeCountByRole:
       master: 42
 `
