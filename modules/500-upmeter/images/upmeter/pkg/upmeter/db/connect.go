@@ -1,26 +1,16 @@
 package db
 
 import (
-	"database/sql"
-
+	// sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
-
-	"upmeter/pkg/upmeter/db/dao"
-	"upmeter/pkg/upmeter/db/migrations"
-	"upmeter/pkg/upmeter/db/util"
+	"upmeter/pkg/upmeter/db/context"
 )
 
-func Connect(path string, dbhInjector ...func(*sql.DB)) error {
-	if len(dbhInjector) == 0 {
-		dbhInjector = append(dbhInjector, DefaultDbhInjector)
+func Connect(path string) (*context.DbContext, error) {
+	dbCtx := context.NewDbContext()
+	err := dbCtx.ConnectWithPool(path)
+	if err != nil {
+		return nil, err
 	}
-
-	return util.Connect(path, dbhInjector...)
-}
-
-// InjectDbh injects dbh into all default Dao
-func DefaultDbhInjector(dbh *sql.DB) {
-	dao.Downtime30s.Dbh = dbh
-	dao.Downtime5m.Dbh = dbh
-	migrations.Migrator.Dbh = dbh
+	return dbCtx, nil
 }

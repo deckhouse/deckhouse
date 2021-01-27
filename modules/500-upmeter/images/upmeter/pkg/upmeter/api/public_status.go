@@ -3,9 +3,12 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
+
 	"upmeter/pkg/crd"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/entity"
 )
 
@@ -15,15 +18,8 @@ type PublicStatusResponse struct {
 }
 
 type PublicStatusHandler struct {
+	DbCtx      *dbcontext.DbContext
 	CrdMonitor *crd.Monitor
-}
-
-func NewPublicStatusHandler() *PublicStatusHandler {
-	return &PublicStatusHandler{}
-}
-
-func (h *PublicStatusHandler) WithCRDMonitor(crdMonitor *crd.Monitor) {
-	h.CrdMonitor = crdMonitor
 }
 
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +31,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, status, err := entity.CurrentStatusForGroups(h.CrdMonitor)
+	statuses, status, err := entity.CurrentStatusForGroups(h.DbCtx, h.CrdMonitor)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error getting current status\n", http.StatusInternalServerError)

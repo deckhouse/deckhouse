@@ -1,20 +1,15 @@
 package entity
 
-type StepRanges struct {
-	From   int64
-	To     int64
-	Step   int64
-	Ranges [][]int64 // array of 2 items arrays: 0 is a step range start, 1 is a step range end.
-}
+import "upmeter/pkg/upmeter/db/dao"
 
 // CalculateAdjustedStepRanges adjust from, to and step and calculates
 // intermediate step ranges.
-func CalculateAdjustedStepRanges(from, to, step int64) StepRanges {
+func CalculateAdjustedStepRanges(from, to, step int64) dao.StepRanges {
 	count := (to - from) / step
 	step = AdjustStep(step)
 	to = AdjustTo(to, step)
 	from = to - step*count
-	res := StepRanges{
+	res := dao.StepRanges{
 		From:   from,
 		To:     to,
 		Step:   step,

@@ -3,10 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
+
 	"upmeter/pkg/crd"
 	"upmeter/pkg/probe/types"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
 	"upmeter/pkg/upmeter/entity"
 )
@@ -21,15 +24,8 @@ type StatusResponse struct {
 }
 
 type StatusRangeHandler struct {
+	DbCtx      *dbcontext.DbContext
 	CrdMonitor *crd.Monitor
-}
-
-func NewStatusRangeHandler() *StatusRangeHandler {
-	return &StatusRangeHandler{}
-}
-
-func (h *StatusRangeHandler) WithCRDMonitor(crdMonitor *crd.Monitor) {
-	h.CrdMonitor = crdMonitor
 }
 
 func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +74,11 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	episodes, err := dao.Downtime5m.ListEpisodesByRange(stepRanges.From, stepRanges.To, groupName, probeName)
+	daoCtx := h.DbCtx.Start()
+	defer daoCtx.Stop()
+
+	dao5m := dao.NewDowntime5mDao(daoCtx)
+	episodes, err := dao5m.ListEpisodeSumsForRanges(stepRanges, groupName, probeName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)

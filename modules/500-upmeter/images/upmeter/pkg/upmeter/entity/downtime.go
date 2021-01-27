@@ -1,17 +1,22 @@
 package entity
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/probe/types"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
 )
 
 // SaveDowntimeEpisodes stores 30 sec downtime episodes into database.
 // It also clears old records and update 5 minute episodes in a database.
-func SaveDowntimeEpisodes(episodes []types.DowntimeEpisode) {
+func SaveDowntimeEpisodes(dbCtx *dbcontext.DbContext, episodes []types.DowntimeEpisode) {
+	saveCtx := dbCtx.Start()
+	defer saveCtx.Stop()
+
 	minTimeslot := time.Now().Unix() - 24*60*60
 	probesInFiveMinSlots := make(map[int64]map[string]types.ProbeRef)
 	for _, episode := range episodes {
@@ -22,35 +27,17 @@ func SaveDowntimeEpisodes(episodes []types.DowntimeEpisode) {
 		}
 
 		if !episode.IsCorrect(30) {
-			log.Infof("Possible bug!!! Ignore incorrect episode: %s", episode.DumpString())
+			log.Errorf("Possible bug!!! Ignore incorrect episode: %s", episode.DumpString())
 			continue
 		}
 
-		storedEpisode, err := dao.Downtime30s.GetSimilar(episode)
+		err := Save30sEpisode(saveCtx, episode)
 		if err != nil {
-			log.Errorf("Get stored episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
-			continue
-		}
-
-		if storedEpisode.Rowid == -1 {
-			err = dao.Downtime30s.Save(episode)
-			if err != nil {
-				log.Errorf("Save new episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
-				continue
-			}
-			log.Infof("Save episode: ts=%d probe='%s' s=%d f=%d", episode.TimeSlot, episode.ProbeRef.ProbeId(), episode.SuccessSeconds, episode.FailSeconds)
-		} else {
-			newEpisode := episode.CombineSeconds(storedEpisode.DowntimeEpisode, 30)
-			err = dao.Downtime30s.Update(storedEpisode.Rowid, newEpisode)
-			if err != nil {
-				log.Errorf("Update episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
-				continue
-			}
-			log.Infof("Update episode: ts=%d probe='%s' s=%d f=%d", episode.TimeSlot, episode.ProbeRef.ProbeId(), episode.SuccessSeconds, episode.FailSeconds)
+			log.Errorf("Save episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
 		}
 
 		// Save involved 5 min slot and ProbeRef to update 5m episodes later
-		slot5m := Get5MinSlot(episode.TimeSlot)
+		slot5m := Calculate5MinSlot(episode.TimeSlot)
 		if _, ok := probesInFiveMinSlots[slot5m]; !ok {
 			probesInFiveMinSlots[slot5m] = make(map[string]types.ProbeRef)
 		}
@@ -60,15 +47,64 @@ func SaveDowntimeEpisodes(episodes []types.DowntimeEpisode) {
 	// Update involved 5 min episodes
 	for slot5m, probeRefs := range probesInFiveMinSlots {
 		for _, probeRef := range probeRefs {
-			Update5MinStorage(slot5m, probeRef.Group, probeRef.Probe)
+			err := Update5MinStorage(saveCtx, slot5m, probeRef.Group, probeRef.Probe)
+			if err != nil {
+				log.Errorf("Save 5m episode for ts=%d, probe='%s': %v", slot5m, probeRef.ProbeId(), err)
+			}
 		}
 	}
-
 }
 
-func Update5MinStorage(slot5m int64, group string, probe string) {
-	// Get all records of 30s slots within 5 min slot
-	items, err := dao.Downtime30s.ListForRange(slot5m, slot5m+299, group, probe)
+// Insert or Update a DowntimeEpisode using a transaction.
+func Save30sEpisode(dbCtx *dbcontext.DbContext, episode types.DowntimeEpisode) error {
+	txCtx, err := dbCtx.BeginTransaction()
+	if err != nil {
+		return err
+	}
+	dao30s := dao.NewDowntime30sDao(txCtx)
+
+	storedEpisode, err := dao30s.GetSimilar(episode)
+	if err != nil {
+		log.Errorf("Get similar 30s episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
+		rollErr := txCtx.Rollback()
+		if rollErr != nil {
+			return fmt.Errorf("select 30s similar episode for ts=%d, probe='%s': %v, rollback: %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err, rollErr)
+		}
+		return err
+	}
+
+	if storedEpisode.Rowid == -1 {
+		err = dao30s.Insert(episode)
+		if err != nil {
+			log.Errorf("Insert 30s episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
+			rollErr := txCtx.Rollback()
+			if rollErr != nil {
+				return fmt.Errorf("insert 30s episode for ts=%d, probe='%s': %v, rollback: %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err, rollErr)
+			}
+			return fmt.Errorf("insert 30s episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
+		}
+		log.Infof("Insert 30s episode: ts=%d probe='%s' s=%d f=%d", episode.TimeSlot, episode.ProbeRef.ProbeId(), episode.SuccessSeconds, episode.FailSeconds)
+	} else {
+		newEpisode := episode.CombineSeconds(storedEpisode.DowntimeEpisode, 30)
+		err = dao30s.Update(storedEpisode.Rowid, newEpisode)
+		if err != nil {
+			log.Errorf("Update 30s episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
+			rollErr := txCtx.Rollback()
+			if rollErr != nil {
+				return fmt.Errorf("update 30s episode for ts=%d, probe='%s': %v, rollback: %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err, rollErr)
+			}
+			return fmt.Errorf("update 30s episode for ts=%d, probe='%s': %v", episode.TimeSlot, episode.ProbeRef.ProbeId(), err)
+		}
+		log.Infof("Update 30s episode: ts=%d probe='%s' s=%d f=%d", episode.TimeSlot, episode.ProbeRef.ProbeId(), episode.SuccessSeconds, episode.FailSeconds)
+	}
+
+	return txCtx.Commit()
+}
+
+func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, group string, probe string) error {
+	// Get all records of 30s slots within a 5 min slot.
+	dao30s := dao.NewDowntime30sDao(dbCtx)
+	items, err := dao30s.ListForRange(slot5m, slot5m+299, group, probe)
 	if err != nil {
 		log.Errorf("List episodes for 5 min slot %d for group='%s' and probe='%s': %v", slot5m, group, probe, err)
 	}
@@ -82,8 +118,14 @@ func Update5MinStorage(slot5m int64, group string, probe string) {
 		totalDowntime30s.NoData += item.DowntimeEpisode.NoData
 	}
 
+	txCtx, err := dbCtx.BeginTransaction()
+	if err != nil {
+		return err
+	}
+	dao5m := dao.NewDowntime5mDao(txCtx)
+
 	// Get stored 5 min episode.
-	entity5m, err := dao.Downtime5m.GetBySlotAndProbe(slot5m, group, probe)
+	entity5m, err := dao5m.GetBySlotAndProbe(slot5m, group, probe)
 	if err != nil {
 		log.Errorf("Get 5min episode: slot %d for group='%s' and probe='%s': %v", slot5m, group, probe, err)
 	}
@@ -93,7 +135,11 @@ func Update5MinStorage(slot5m int64, group string, probe string) {
 	// Do not update 5m episode if nothing has changed in 30s episodes.
 	if entity5m.Rowid != -1 && entity5m.DowntimeEpisode.IsEqualSeconds(combinedEpisode) {
 		log.Infof("5m episode is not changed: %s", entity5m.DowntimeEpisode.DumpString())
-		return
+		rollErr := txCtx.Rollback()
+		if rollErr != nil {
+			return fmt.Errorf("get 5m episode for ts=%d, probe='%s/%s': rollback: %v", slot5m, group, probe, rollErr)
+		}
+		return nil
 	}
 
 	// Assert that new success duration is not "worse"
@@ -110,19 +156,33 @@ func Update5MinStorage(slot5m int64, group string, probe string) {
 	entity5m.DowntimeEpisode.NoData = combinedEpisode.NoData
 
 	if entity5m.Rowid == -1 {
-		// create
+		// Insert
 		entity5m.DowntimeEpisode.ProbeRef.Group = group
 		entity5m.DowntimeEpisode.ProbeRef.Probe = probe
 		entity5m.DowntimeEpisode.TimeSlot = slot5m
-		err = dao.Downtime5m.Save(entity5m.DowntimeEpisode)
+		err = dao5m.Insert(entity5m.DowntimeEpisode)
+		if err != nil {
+			log.Errorf("Insert 5m episode for ts=%d, probe='%s': %v", entity5m.DowntimeEpisode.TimeSlot, entity5m.DowntimeEpisode.ProbeRef.ProbeId(), err)
+			rollErr := txCtx.Rollback()
+			if rollErr != nil {
+				return fmt.Errorf("insert 5m episode for ts=%d, probe='%s': %v, rollback: %v", entity5m.DowntimeEpisode.TimeSlot, entity5m.DowntimeEpisode.ProbeRef.ProbeId(), err, rollErr)
+			}
+			return fmt.Errorf("insert 5m episode for ts=%d, probe='%s': %v", entity5m.DowntimeEpisode.TimeSlot, entity5m.DowntimeEpisode.ProbeRef.ProbeId(), err)
+		}
 		log.Infof("Save 5m episode: %s", entity5m.DowntimeEpisode.DumpString())
 	} else {
-		// update
-		err = dao.Downtime5m.Update(entity5m.Rowid, entity5m.DowntimeEpisode)
+		// Update
+		err = dao5m.Update(entity5m.Rowid, entity5m.DowntimeEpisode)
 		if err != nil {
 			log.Errorf("Update 5m episode for ts=%d, probe='%s': %v", entity5m.DowntimeEpisode.TimeSlot, entity5m.DowntimeEpisode.ProbeRef.ProbeId(), err)
-		} else {
-			log.Infof("Update 5m episode: %s", entity5m.DowntimeEpisode.DumpString())
+			rollErr := txCtx.Rollback()
+			if rollErr != nil {
+				return fmt.Errorf("update 5m episode for ts=%d, probe='%s': %v, rollback: %v", entity5m.DowntimeEpisode.TimeSlot, entity5m.DowntimeEpisode.ProbeRef.ProbeId(), err, rollErr)
+			}
+			return fmt.Errorf("update 5m episode for ts=%d, probe='%s': %v", entity5m.DowntimeEpisode.TimeSlot, entity5m.DowntimeEpisode.ProbeRef.ProbeId(), err)
 		}
+		log.Infof("Update 5m episode: %s", entity5m.DowntimeEpisode.DumpString())
 	}
+
+	return txCtx.Commit()
 }

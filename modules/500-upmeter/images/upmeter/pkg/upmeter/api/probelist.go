@@ -7,11 +7,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
 	"upmeter/pkg/upmeter/entity"
 )
 
-func ProbeListHandler(w http.ResponseWriter, r *http.Request) {
+type ProbeListHandler struct {
+	DbCtx *dbcontext.DbContext
+}
+
+func (h *ProbeListHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("ProbeList", r.RemoteAddr, r.RequestURI)
 
 	if r.Method != "GET" {
@@ -23,7 +28,11 @@ func ProbeListHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 		select group, probe from downtime
 	*/
-	probeRefs, err := dao.Downtime5m.ListGroupProbe()
+	daoCtx := h.DbCtx.Start()
+	defer daoCtx.Stop()
+
+	dao5m := dao.NewDowntime5mDao(daoCtx)
+	probeRefs, err := dao5m.ListGroupProbe()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
@@ -43,5 +52,4 @@ func ProbeListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	w.Write(out)
-	//fmt.Fprintf(w, "{}")
 }

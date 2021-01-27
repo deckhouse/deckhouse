@@ -1,12 +1,12 @@
 package dao
 
 import (
-	"database/sql"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/probe/types"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 )
 
 const CreateTableDowntime30s_latest = `
@@ -79,15 +79,17 @@ DELETE FROM downtime30s
 WHERE timeslot < ?
 `
 
-var Downtime30s = NewDowntime30sDao()
-
 type Downtime30sDao struct {
-	Dbh   *sql.DB
-	Table string
+	DbCtx    *dbcontext.DbContext
+	ConnPool *dbcontext.ConnPool
+	Table    string
 }
 
-func NewDowntime30sDao() *Downtime30sDao {
-	return &Downtime30sDao{Table: "downtime30s"}
+func NewDowntime30sDao(dbCtx *dbcontext.DbContext) *Downtime30sDao {
+	return &Downtime30sDao{
+		DbCtx: dbCtx,
+		Table: "downtime30s",
+	}
 }
 
 type Downtime30sEntity struct {
@@ -96,10 +98,11 @@ type Downtime30sEntity struct {
 }
 
 func (d *Downtime30sDao) ListByTimestamp(tm int64) ([]Downtime30sEntity, error) {
-	rows, err := d.Dbh.Query(SelectDowntime30SecByTimeslot, tm)
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslot, tm)
 	if err != nil {
 		return nil, fmt.Errorf("select for timestamp: %v", err)
 	}
+	defer rows.Close()
 
 	var res = make([]Downtime30sEntity, 0)
 	for rows.Next() {
@@ -122,10 +125,11 @@ func (d *Downtime30sDao) ListByTimestamp(tm int64) ([]Downtime30sEntity, error) 
 }
 
 func (d *Downtime30sDao) GetSimilar(downtime types.DowntimeEpisode) (Downtime30sEntity, error) {
-	rows, err := d.Dbh.Query(SelectDowntime30SecByTimeslotGroupProbe, downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotGroupProbe, downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
 	if err != nil {
 		return Downtime30sEntity{}, fmt.Errorf("select for timestamp: %v", err)
 	}
+	defer rows.Close()
 
 	if !rows.Next() {
 		// No entities found, return impossible rowid
@@ -147,17 +151,18 @@ func (d *Downtime30sDao) GetSimilar(downtime types.DowntimeEpisode) (Downtime30s
 
 	// Assertion
 	if rows.Next() {
-		log.Errorf("Consistency problem: more than one record selected for ts=%d, group='%s', probe='%s'", downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
+		log.Errorf("Not consistent 30s data: more than one record selected for ts=%d, group='%s', probe='%s'", downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
 	}
 
 	return entity, nil
 }
 
 func (d *Downtime30sDao) ListForRange(start int64, end int64, group string, probe string) ([]Downtime30sEntity, error) {
-	rows, err := d.Dbh.Query(SelectDowntime30SecByTimeslotRange, start, end, group, probe)
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotRange, start, end, group, probe)
 	if err != nil {
 		return nil, fmt.Errorf("select for range: %v", err)
 	}
+	defer rows.Close()
 
 	var res = make([]Downtime30sEntity, 0)
 	for rows.Next() {
@@ -180,10 +185,11 @@ func (d *Downtime30sDao) ListForRange(start int64, end int64, group string, prob
 }
 
 func (d *Downtime30sDao) ListGroupProbe() ([]types.ProbeRef, error) {
-	rows, err := d.Dbh.Query(SelectDowntime30SecGroupProbe)
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecGroupProbe)
 	if err != nil {
 		return nil, fmt.Errorf("select group and probe: %v", err)
 	}
+	defer rows.Close()
 
 	var res = make([]types.ProbeRef, 0)
 	for rows.Next() {
@@ -199,10 +205,11 @@ func (d *Downtime30sDao) ListGroupProbe() ([]types.ProbeRef, error) {
 }
 
 func (d *Downtime30sDao) Stats() ([]string, error) {
-	rows, err := d.Dbh.Query(SelectDowntime30SecStats)
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecStats)
 	if err != nil {
 		return nil, fmt.Errorf("select stats: %v", err)
 	}
+	defer rows.Close()
 
 	var stats = []string{}
 	for rows.Next() {
@@ -217,7 +224,7 @@ func (d *Downtime30sDao) Stats() ([]string, error) {
 
 func (d *Downtime30sDao) SaveBatch(downtimes []types.DowntimeEpisode) error {
 	for _, downtime := range downtimes {
-		_, err := d.Dbh.Exec(InsertDowntime30Sec,
+		_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime30Sec,
 			downtime.TimeSlot,
 			downtime.SuccessSeconds,
 			downtime.FailSeconds,
@@ -232,8 +239,8 @@ func (d *Downtime30sDao) SaveBatch(downtimes []types.DowntimeEpisode) error {
 	return nil
 }
 
-func (d *Downtime30sDao) Save(downtime types.DowntimeEpisode) error {
-	_, err := d.Dbh.Exec(InsertDowntime30Sec,
+func (d *Downtime30sDao) Insert(downtime types.DowntimeEpisode) error {
+	_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime30Sec,
 		downtime.TimeSlot,
 		downtime.SuccessSeconds,
 		downtime.FailSeconds,
@@ -245,7 +252,7 @@ func (d *Downtime30sDao) Save(downtime types.DowntimeEpisode) error {
 }
 
 func (d *Downtime30sDao) Update(rowid int64, downtime types.DowntimeEpisode) error {
-	_, err := d.Dbh.Exec(UpdateDowntime30SecById,
+	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime30SecById,
 		downtime.SuccessSeconds,
 		downtime.FailSeconds,
 		downtime.Unknown,
@@ -258,7 +265,7 @@ func (d *Downtime30sDao) Update(rowid int64, downtime types.DowntimeEpisode) err
 }
 
 func (d *Downtime30sDao) DeleteEarlierThen(tm int64) error {
-	_, err := d.Dbh.Exec(DeleteDowntime30SecByEarlierTimestamp, tm)
+	_, err := d.DbCtx.StmtRunner().Exec(DeleteDowntime30SecByEarlierTimestamp, tm)
 	if err != nil {
 		return err
 	}

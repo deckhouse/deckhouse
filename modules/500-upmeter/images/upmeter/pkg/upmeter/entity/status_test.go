@@ -22,48 +22,55 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	// simple case with minimal step
 	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "testProbe")
 
-	ExpectStatuses(g, s, "testGroup", "testProbe", 3)
+	// Len should be 4: 3 episodes + one total episode for a period.
+	ExpectStatuses(g, s, "testGroup", "testProbe", 3+1, "simple case with minimal step")
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][0], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][1], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][2], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][3], 300*3, 0, 0, 0, 0)
 
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 300).Ranges, "testGroup", "testProbe")
 
-	ExpectStatuses(g, s, "testGroup", "testProbe", 4)
+	ExpectStatuses(g, s, "testGroup", "testProbe", 4+1, "testGroup/testProbe len 4")
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][0], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][1], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][2], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][3], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][4], 300*4, 0, 0, 0, 0)
 
 	// simple case, total seconds for group
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 300).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 3)
+	ExpectStatuses(g, s, "testGroup", "__total__", 3+1, "testGroup/__total__ len 4")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][3], 3*300, 0, 0, 0, 0)
 
 	// simple case, total seconds for group
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 300).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 4)
+	ExpectStatuses(g, s, "testGroup", "__total__", 4+1, "testGroup/__total__ len 4 2")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 300, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][3], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][4], 4*300, 0, 0, 0, 0)
 
 	// 2x step
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "testProbe")
 
-	ExpectStatuses(g, s, "testGroup", "testProbe", 2)
+	ExpectStatuses(g, s, "testGroup", "testProbe", 2+1, "testGroup/testProbe len 2")
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][0], 600, 0, 0, 0, 0)
 	ExpectStatusInfo(g, s["testGroup"]["testProbe"][1], 600, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["testProbe"][2], 2*600, 0, 0, 0, 0)
 
 	// 3x step with grouping
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 900).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatuses(g, s, "testGroup", "__total__", 1+1, "testGroup/__total__ len 1")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 900, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 900, 0, 0, 0, 0)
 }
 
 func Test_CalculateStatuses_with_incidents(t *testing.T) {
@@ -84,11 +91,13 @@ func Test_CalculateStatuses_with_incidents(t *testing.T) {
 	// 2x step with muting
 	s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	ExpectStatuses(g, s, "testGroup", "__total__", 2+1, "testGroup/__total__ len 2")
 	// All Up is not muted
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 600, 0, 0, 0, 0)
 	// unknown and down should be muted
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 100, 0, 200, 0)
+	// Last item is a Total for the period.
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 600+300, 100, 0, 200, 0)
 
 }
 
@@ -104,9 +113,11 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	// 2x step with nodata
 	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	ExpectStatuses(g, s, "testGroup", "__total__", 2+1, "testGroup/__total__ len 2")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 200, 0, 300)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 100, 100, 0, 300)
+	// Total for the period
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 200, 100, 200+100, 0, 300+300)
 
 	incidents := []types.DowntimeIncident{
 		NewDowntimeIncident(250, 400, "testGroup"),
@@ -116,11 +127,12 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	// 2x step with muting
 	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	ExpectStatuses(g, s, "testGroup", "__total__", 2+1, "testGroup/__total__ len 2 2")
 
 	// incidents should not  decrease Up seconds
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 50, 150, 300)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 50, 0, 150, 300)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 100+100, 50, 50, 150+150, 300+300)
 
 	// Increase incidents to test NoData decreasing
 	incidents = []types.DowntimeIncident{
@@ -131,10 +143,11 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	// 2x step with muting
 	s = CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 2)
+	ExpectStatuses(g, s, "testGroup", "__total__", 2+1, "testGroup/__total__ len 2 3")
 	// incidents should decrease NoData if mute is more than KnownSeconds and should not decrease Up seconds
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 0, 400, 100)
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 0, 0, 400, 100)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 100+100, 0, 0, 400+400, 100+100)
 }
 
 // Test CalculateTotalForStepRange
@@ -154,8 +167,9 @@ func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 600, 600).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatuses(g, s, "testGroup", "__total__", 1+1, "testGroup/__total__ len 1")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 500, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 0, 500, 0, 0)
 
 	// Only success and nodata should not emit down seconds
 	episodes = []types.DowntimeEpisode{
@@ -167,8 +181,9 @@ func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 
 	s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 600, 600).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatuses(g, s, "testGroup", "__total__", 1+1, "testGroup/__total__ len 1 2")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 100, 0, 100, 0, 400)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 0, 100, 0, 400)
 
 }
 
@@ -355,8 +370,8 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 	totalInfo = statuses["testGroup"]["__total__"][0]
 
 	g.Expect(totalInfo.Up).Should(BeEquivalentTo(10))
-	g.Expect(totalInfo.Down).Should(BeEquivalentTo(220))
-	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(0))
+	g.Expect(totalInfo.Down).Should(BeEquivalentTo(200))
+	g.Expect(totalInfo.Unknown).Should(BeEquivalentTo(20))
 	g.Expect(totalInfo.NoData).Should(BeEquivalentTo(70))
 }
 
@@ -372,8 +387,9 @@ func Test_CalculateStatuses_multi_episodes(t *testing.T) {
 
 	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 300, 300).Ranges, "testGroup", "__total__")
 
-	ExpectStatuses(g, s, "testGroup", "__total__", 1)
+	ExpectStatuses(g, s, "testGroup", "__total__", 1+1, "testGroup/__total__ len 1")
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][0], 300, 0, 0, 0, 0)
+	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 300, 0, 0, 0, 0)
 }
 
 // Helpers
@@ -423,9 +439,9 @@ func ExpectStatusInfo(g *WithT, status StatusInfo, up, down, unknown, muted, nod
 
 }
 
-func ExpectStatuses(g *WithT, s map[string]map[string][]StatusInfo, group, probe string, len int) {
-	g.Expect(s).ShouldNot(BeNil())
-	g.Expect(s).Should(HaveKey(group))
-	g.Expect(s[group]).Should(HaveKey(probe))
-	g.Expect(s[group][probe]).Should(HaveLen(len))
+func ExpectStatuses(g *WithT, s map[string]map[string][]StatusInfo, group, probe string, len int, msg string) {
+	g.Expect(s).ShouldNot(BeNil(), msg)
+	g.Expect(s).Should(HaveKey(group), msg)
+	g.Expect(s[group]).Should(HaveKey(probe), msg)
+	g.Expect(s[group][probe]).Should(HaveLen(len), msg)
 }

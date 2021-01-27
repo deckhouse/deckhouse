@@ -4,18 +4,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	// Install default pprof endpoint.
 	_ "net/http/pprof"
 
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // Import sqlite3 driver.
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/app"
 	"upmeter/pkg/crd"
 	"upmeter/pkg/upmeter/api"
 	"upmeter/pkg/upmeter/db"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/migrations"
 )
 
@@ -31,6 +33,7 @@ type Informer struct {
 	cancel context.CancelFunc
 
 	DbPath string
+	DbCtx  *dbcontext.DbContext
 
 	KubernetesClient kube.KubernetesClient
 	MetricStorage    *metric_storage.MetricStorage
@@ -81,32 +84,40 @@ func (inf *Informer) Start() error {
 		return fmt.Errorf("start CRD monitor: %v", err)
 	}
 
-	// Setup DB connect
-	err = db.Connect(inf.DbPath)
+	// Setup db context with connection pool.
+	inf.DbCtx, err = db.Connect(inf.DbPath)
 	if err != nil {
-		return fmt.Errorf("db connect: %v", err)
+		return fmt.Errorf("db connect with pool: %v", err)
 	}
 
 	// Apply migrations
-	err = migrations.Migrator.Apply()
+	err = migrations.Migrator.Apply(inf.DbCtx)
 	if err != nil {
 		return fmt.Errorf("db migrate: %v", err)
 	}
 
 	// Setup API handlers
-	http.HandleFunc("/api/probe", api.ProbeListHandler)
+	probeListHandler := new(api.ProbeListHandler)
+	probeListHandler.DbCtx = inf.DbCtx
+	http.Handle("/api/probe", probeListHandler)
 
-	statusHandler := api.NewStatusRangeHandler()
-	statusHandler.WithCRDMonitor(inf.CrdMonitor)
+	statusHandler := new(api.StatusRangeHandler)
+	statusHandler.CrdMonitor = inf.CrdMonitor
+	statusHandler.DbCtx = inf.DbCtx
 	http.Handle("/api/status/range", statusHandler)
 
-	publicStatusHandler := api.NewPublicStatusHandler()
-	publicStatusHandler.WithCRDMonitor(inf.CrdMonitor)
+	publicStatusHandler := new(api.PublicStatusHandler)
+	publicStatusHandler.CrdMonitor = inf.CrdMonitor
+	publicStatusHandler.DbCtx = inf.DbCtx
 	http.Handle("/public/api/status", publicStatusHandler)
 
-	http.HandleFunc("/downtime", api.DowntimeHandler)
+	downtimeHandler := new(api.DowntimeHandler)
+	downtimeHandler.DbCtx = inf.DbCtx
+	http.Handle("/downtime", downtimeHandler)
 
-	http.HandleFunc("/stats", api.Stats)
+	statsHandler := new(api.StatsHandler)
+	statsHandler.DbCtx = inf.DbCtx
+	http.Handle("/stats", statsHandler)
 
 	// Kubernetes probes
 	http.HandleFunc("/healthz", inf.Healthz)
