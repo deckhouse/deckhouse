@@ -74,7 +74,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
-{{ include "helm_lib_priority_class" (tuple $context "cluster-critical") | indent 6 }}
+{{ include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
 {{ include "helm_lib_node_selector" (tuple $context "master") | indent 6 }}
 {{ include "helm_lib_tolerations" (tuple $context "master") | indent 6 }}
 {{ include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}

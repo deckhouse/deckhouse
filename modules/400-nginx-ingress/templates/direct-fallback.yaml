@@ -64,7 +64,7 @@ spec:
     spec:
 {{- include "helm_lib_node_selector" (tuple $context "frontend" .) | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $context "frontend" . true) | indent 6 }}
-{{- include "helm_lib_priority_class" (tuple $context "cluster-high") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
       serviceAccountName: kube-nginx-ingress
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
