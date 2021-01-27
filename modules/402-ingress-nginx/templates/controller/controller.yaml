@@ -87,7 +87,7 @@ spec:
   {{- else }}
 {{- include "helm_lib_tolerations" (tuple $context "frontend") | indent 6 }}
   {{- end }}
-{{- include "helm_lib_priority_class" (tuple $context "cluster-high") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       imagePullSecrets:
