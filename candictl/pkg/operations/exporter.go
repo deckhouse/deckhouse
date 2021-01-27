@@ -29,10 +29,10 @@ type ConvergeExporter struct {
 }
 
 var (
-	clusterStatuses      = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus}
+	clusterStatuses      = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus, converge.DestructiveStatus}
+	nodeStatuses         = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus, converge.DestructiveStatus}
 	nodeGroupStatuses    = []string{converge.OKStatus, converge.InsufficientStatus, converge.ExcessiveStatus}
 	nodeTemplateStatuses = []string{converge.OKStatus, converge.AbsentStatus, converge.ChangedStatus}
-	nodeStatuses         = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus}
 )
 
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {

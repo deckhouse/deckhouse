@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -33,6 +32,12 @@ If you want to drop the cache and continue, please run candictl with "--yes-i-wa
 `
 )
 
+const (
+	PlanHasNoChanges = iota
+	PlanHasChanges
+	PlanHasDestructiveChanges
+)
+
 var ErrRunnerStopped = errors.New("Terraform runner was stopped.")
 
 type Runner struct {
@@ -47,7 +52,7 @@ type Runner struct {
 
 	autoApprove        bool
 	allowedCachedState bool
-	changesInPlan      bool
+	changesInPlan      int
 
 	stateCache cache.Cache
 
@@ -172,7 +177,7 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		if !r.autoApprove && r.changesInPlan {
+		if !r.autoApprove && r.changesInPlan != PlanHasNoChanges {
 			if !input.AskForConfirmation("Do you want to CHANGE objects state in the cloud", false) {
 				return fmt.Errorf("terraform apply aborted")
 			}
@@ -230,7 +235,14 @@ func (r *Runner) Plan() error {
 
 		exitCode, err := r.execTerraform(args...)
 		if exitCode == terraformHasChangesExitCode {
-			r.changesInPlan = true
+			r.changesInPlan = PlanHasChanges
+			hasDestructiveChanges, err := checkPlanDestructiveChanges(tmpFile.Name())
+			if err != nil {
+				return err
+			}
+			if hasDestructiveChanges {
+				r.changesInPlan = PlanHasDestructiveChanges
+			}
 		} else if err != nil {
 			return err
 		}
@@ -255,7 +267,8 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 		fmt.Sprintf("-state=%s", r.statePath),
 	}
 	args = append(args, output)
-	result, err := exec.Command("terraform", args...).Output()
+
+	result, err := terraformCmd(args...).Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
@@ -331,7 +344,7 @@ func (r *Runner) Stop() {
 }
 
 func (r *Runner) execTerraform(args ...string) (int, error) {
-	r.cmd = exec.Command("terraform", args...)
+	r.cmd = terraformCmd(args...)
 
 	stdout, err := r.cmd.StdoutPipe()
 	if err != nil {
@@ -341,16 +354,6 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	stderr, err := r.cmd.StderrPipe()
 	if err != nil {
 		return 1, fmt.Errorf("stderr pipe: %v", err)
-	}
-
-	r.cmd.Stdin = os.Stdin
-	r.cmd.Env = append(
-		r.cmd.Env,
-		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_candictl"),
-	)
-	if app.IsDebug {
-		// Debug mode is deprecated, however trace produces more useless information
-		r.cmd.Env = append(r.cmd.Env, "TF_LOG=DEBUG")
 	}
 
 	log.DebugLn(r.cmd.String())
@@ -401,4 +404,60 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 
 func buildTerraformPath(provider, layout, step string) string {
 	return filepath.Join(cloudProvidersDir, provider, "layouts", layout, step)
+}
+
+func terraformCmd(args ...string) *exec.Cmd {
+	cmd := exec.Command("terraform", args...)
+	cmd.Env = append(
+		cmd.Env,
+		"TF_IN_AUTOMATION=yes", "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_candictl"),
+	)
+	if app.IsDebug {
+		// Debug mode is deprecated, however trace produces more useless information
+		cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
+	}
+	return cmd
+}
+
+func checkPlanDestructiveChanges(planFile string) (bool, error) {
+	args := []string{
+		"show",
+		"-json",
+		planFile,
+	}
+
+	result, err := terraformCmd(args...).Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+		}
+		return false, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)
+	}
+
+	var changes struct {
+		ResourcesChanges []struct {
+			Change struct {
+				Actions []string `json:"actions"`
+			} `json:"change"`
+		} `json:"resource_changes"`
+	}
+
+	err = json.Unmarshal(result, &changes)
+	if err != nil {
+		return false, err
+	}
+	fmt.Println(string(result))
+
+	hasDestructiveChanges := func() bool {
+		for _, resource := range changes.ResourcesChanges {
+			for _, action := range resource.Change.Actions {
+				if action == "destroy" {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	return hasDestructiveChanges(), nil
 }
