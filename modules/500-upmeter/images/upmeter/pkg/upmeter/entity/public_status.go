@@ -2,10 +2,13 @@ package entity
 
 import (
 	"errors"
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+
 	"upmeter/pkg/crd"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
 )
 
@@ -20,11 +23,15 @@ const failStatus = "Outage"
 
 // CurrentStatusForGroups returns total statuses for each group
 // for the current partial 5m timeslot plus previous full 5m timeslot.
-func CurrentStatusForGroups(monitor *crd.Monitor) ([]GroupStatusInfo, string, error) {
+func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.Monitor) ([]GroupStatusInfo, string, error) {
 	/*
 		select group, probe from downtime
 	*/
-	probeRefs, err := dao.Downtime5m.ListGroupProbe()
+	daoCtx := dbCtx.Start()
+	defer daoCtx.Stop()
+
+	dao5m := dao.NewDowntime5mDao(daoCtx)
+	probeRefs, err := dao5m.ListGroupProbe()
 	if err != nil {
 		log.Errorf("List groups: %v", err)
 		return nil, "", errors.New("")
@@ -63,7 +70,7 @@ func CurrentStatusForGroups(monitor *crd.Monitor) ([]GroupStatusInfo, string, er
 	var currentStatuses = make([]GroupStatusInfo, 0)
 
 	for _, groupName := range groups {
-		episodes, err := dao.Downtime5m.ListEpisodesByRange(from, to, groupName, totalProbeName)
+		episodes, err := dao5m.ListEpisodesByRange(from, to, groupName, totalProbeName)
 		if err != nil {
 			log.Errorf("List episodes: %+v", err)
 			return nil, "", errors.New("")

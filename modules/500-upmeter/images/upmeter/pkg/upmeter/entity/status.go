@@ -43,6 +43,7 @@ func (s *StatusInfo) Add(info *StatusInfo) {
 	s.Down += info.Down
 	s.Unknown += info.Unknown
 	s.NoData += info.NoData
+	s.Muted += info.Muted
 }
 
 func (s *StatusInfo) SetSeconds(up int64, down int64, unknown int64, nodata int64) {

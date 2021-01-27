@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os"
-	"upmeter/pkg/probers/util"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -13,6 +12,7 @@ import (
 
 	"upmeter/pkg/agent"
 	"upmeter/pkg/app"
+	"upmeter/pkg/probers/util"
 	"upmeter/pkg/upmeter"
 )
 

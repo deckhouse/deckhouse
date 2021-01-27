@@ -7,10 +7,17 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"upmeter/pkg/upmeter/db"
 )
 
 func Test_DowntimeHandler(t *testing.T) {
-	//g := NewWithT(t)
+	g := NewWithT(t)
+
+	// setup database
+	dbCtx, connErr := db.Connect("test-downtime-handler.db.sqlite")
+	g.Expect(connErr).ShouldNot(HaveOccurred())
+	g.Expect(dbCtx).ShouldNot(BeNil())
 
 	var err error
 	var rr *httptest.ResponseRecorder
@@ -46,7 +53,8 @@ func Test_DowntimeHandler(t *testing.T) {
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			rr = httptest.NewRecorder()
 
-			handler := http.HandlerFunc(DowntimeHandler)
+			handler := new(DowntimeHandler)
+			handler.DbCtx = dbCtx
 
 			// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 			// directly and pass in our Request and ResponseRecorder.

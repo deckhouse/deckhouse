@@ -1,11 +1,12 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"sync"
 	"testing"
+
+	dbcontext "upmeter/pkg/upmeter/db/context"
 )
 
 // Reproduce messages "insert error: database is locked" without MaxOpenConns and busy_timeout in Connect.
@@ -19,29 +20,24 @@ import (
 // 9999
 func Test_reproduce_database_is_locked(t *testing.T) {
 	t.SkipNow()
-	workers := []Worker{
-		&WriteWorker{Num: 12},
-		&WriteWorker{Num: 431},
-		&WriteWorker{Num: 5123},
-		//&ReadWorker{Num: 5123},
-		//&ReadWorker{Num: 12},
-	}
 
-	var dbh *sql.DB
-
-	err := Connect("test.sqlite", func(db *sql.DB) {
-		dbh = db
-		for _, wrk := range workers {
-			wrk.WithDbh(db)
-		}
-	})
-
+	mainDbCtx, err := Connect("test.sqlite")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connect error: %+v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "connect error: %+v\n", err)
 		t.Fail()
 	}
+	dbCtx := mainDbCtx.Start()
+	defer mainDbCtx.Stop()
 
-	dbh.Exec(CreateTableTest)
+	_, _ = dbCtx.StmtRunner().Exec(CreateTableTest)
+
+	workers := []Worker{
+		&WriteWorker{Num: 12, DbCtx: dbCtx},
+		&WriteWorker{Num: 431, DbCtx: dbCtx},
+		&WriteWorker{Num: 5123, DbCtx: dbCtx},
+		//&ReadWorker{Num: 5123, DbCtx: dbCtx},
+		//&ReadWorker{Num: 12, DbCtx: dbCtx},
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(len(workers))
@@ -59,25 +55,20 @@ CREATE TABLE IF NOT EXISTS test (
 `
 
 type Worker interface {
-	WithDbh(dh *sql.DB)
 	Start(wg *sync.WaitGroup)
 }
 
 type WriteWorker struct {
-	Dbh *sql.DB
-	Num int64
-}
-
-func (w *WriteWorker) WithDbh(db *sql.DB) {
-	w.Dbh = db
+	DbCtx *dbcontext.DbContext
+	Num   int64
 }
 
 func (w *WriteWorker) Start(wg *sync.WaitGroup) {
 	go func() {
 		for i := 0; i < 10000; i++ {
-			_, err := w.Dbh.Exec(`insert into test (num) values (?)`, w.Num)
+			_, err := w.DbCtx.StmtRunner().Exec(`insert into test (num) values (?)`, w.Num)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "insert error: %+v\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "insert error: %+v\n", err)
 			}
 		}
 		wg.Done()
@@ -85,20 +76,16 @@ func (w *WriteWorker) Start(wg *sync.WaitGroup) {
 }
 
 type ReadWorker struct {
-	Dbh *sql.DB
-	Num int64
-}
-
-func (w *ReadWorker) WithDbh(db *sql.DB) {
-	w.Dbh = db
+	DbCtx *dbcontext.DbContext
+	Num   int64
 }
 
 func (w *ReadWorker) Start(wg *sync.WaitGroup) {
 	go func() {
 		for i := 0; i < 100; i++ {
-			rows, err := w.Dbh.Query(`select * from test where num = ?`, w.Num)
+			rows, err := w.DbCtx.StmtRunner().Query(`select * from test where num = ?`, w.Num)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "select %d error: %+v\n", w.Num, err)
+				_, _ = fmt.Fprintf(os.Stderr, "select %d error: %+v\n", w.Num, err)
 				continue
 			}
 
@@ -107,7 +94,7 @@ func (w *ReadWorker) Start(wg *sync.WaitGroup) {
 				var ref int64 = 0
 				err := rows.Scan(&ref)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "select %d rows error: %+v\n", w.Num, err)
+					_, _ = fmt.Fprintf(os.Stderr, "select %d rows error: %+v\n", w.Num, err)
 					continue
 				}
 				res = append(res, ref)

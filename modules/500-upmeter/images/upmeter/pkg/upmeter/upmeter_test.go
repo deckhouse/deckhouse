@@ -1,10 +1,11 @@
 package upmeter
 
 import (
+	"testing"
+
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func Test_kube_connection(t *testing.T) {
@@ -17,9 +18,9 @@ func Test_kube_connection(t *testing.T) {
 
 	// Kubernetes client
 	KubernetesClient = kube.NewKubernetesClient()
-	//KubernetesClient.WithContextName(shapp.KubeContext)
-	//KubernetesClient.WithConfigPath(shapp.KubeConfig)
-	//KubernetesClient.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	// KubernetesClient.WithContextName(shapp.KubeContext)
+	// KubernetesClient.WithConfigPath(shapp.KubeConfig)
+	// KubernetesClient.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
 	KubernetesClient.WithMetricStorage(MetricStorage)
 
 	err = KubernetesClient.Init()

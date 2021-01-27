@@ -1,7 +1,6 @@
 package dao
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -10,23 +9,25 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/probe/types"
-	"upmeter/pkg/upmeter/db/util"
+	"upmeter/pkg/upmeter/db/context"
+	"upmeter/pkg/upmeter/db/migrations"
 )
 
 func Test_Fill_RandomDB_For_Today(t *testing.T) {
+	// Uncomment to generate test data for webui.
 	t.SkipNow()
 	g := NewWithT(t)
 	var err error
 
-	dao30s := NewDowntime30sDao()
-	dao5m := NewDowntime5mDao()
-	err = util.Connect("random.db.sqlite", func(dbh *sql.DB) {
-		dao30s.Dbh = dbh
-		dao5m.Dbh = dbh
-	})
+	dbCtx := context.NewDbContext()
+	err = dbCtx.Connect("random.db.sqlite")
 	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(dao30s.Dbh).ShouldNot(BeNil())
-	g.Expect(dao5m.Dbh).ShouldNot(BeNil())
+
+	daoCtx := dbCtx.Start()
+	defer daoCtx.Stop()
+
+	dao30s := NewDowntime30sDao(daoCtx)
+	dao5m := NewDowntime5mDao(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -47,7 +48,7 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 	firstTs := ((time.Now().Unix() - (24 * 60 * 60)) / 300) * 300
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
-			log.Infof("gen episodes for %/%s", groupName, probeName)
+			log.Infof("gen episodes for %s/%s", groupName, probeName)
 
 			// 30 sec
 			tsCount := 24 * 60 * 2
@@ -58,10 +59,12 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 						Probe: probeName,
 					},
 					TimeSlot:       firstTs + int64(30*i),
-					FailSeconds:    int64(i % 30),
-					SuccessSeconds: int64(30 - i%30),
+					FailSeconds:    int64(i%30 - i%7 - i%3),
+					SuccessSeconds: int64(30 - i%30 - i%7 - i%3),
+					Unknown:        int64(i % 7),
+					NoData:         int64(i % 3),
 				}
-				dao30s.Save(downtime)
+				dao30s.Insert(downtime)
 			}
 
 			// 5min
@@ -77,7 +80,7 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 					FailSeconds:    int64(i % step5m),
 					SuccessSeconds: int64(step5m - i%step5m),
 				}
-				dao5m.Save(downtime)
+				dao5m.Insert(downtime)
 			}
 
 		}
@@ -85,17 +88,23 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 
 }
 
+// Test_Fill_30s_OneDay fills a database with random data to measure a size for 1 day.
 func Test_Fill_30s_OneDay(t *testing.T) {
 	t.SkipNow()
 	g := NewWithT(t)
 	var err error
 
-	dao := NewDowntime30sDao()
-	err = util.Connect("oneday30s.db.sqlite", func(dbh *sql.DB) {
-		dao.Dbh = dbh
-	})
+	dbCtx := context.NewDbContext()
+	err = dbCtx.Connect("oneday30s.db.sqlite")
 	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(dao.Dbh).ShouldNot(BeNil())
+
+	daoCtx := dbCtx.Start()
+	defer daoCtx.Stop()
+
+	migrator := migrations.NewMigratorService()
+	migrator.Apply(dbCtx)
+
+	dao30s := NewDowntime30sDao(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -124,14 +133,16 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 						Probe: probeName,
 					},
 					TimeSlot:       firstTs + int64(30*i),
-					FailSeconds:    int64(i % 30),
-					SuccessSeconds: int64(30 - i%30),
+					FailSeconds:    int64(i%30 - i%4 - i%5),
+					SuccessSeconds: int64(30 - i%30 - i%4 - i%5),
+					Unknown:        int64(i % 4),
+					NoData:         int64(i % 5),
 				}
-				dao.Save(downtime)
+				err = dao30s.Insert(downtime)
+				g.Expect(err).ShouldNot(HaveOccurred())
 			}
 		}
 	}
-
 }
 
 func Test_FillOneDay(t *testing.T) {
@@ -139,12 +150,17 @@ func Test_FillOneDay(t *testing.T) {
 	g := NewWithT(t)
 	var err error
 
-	dao := NewDowntime5mDao()
-	err = util.Connect("oneday.db.sqlite", func(dbh *sql.DB) {
-		dao.Dbh = dbh
-	})
+	dbCtx := context.NewDbContext()
+	err = dbCtx.Connect("oneday5m.db.sqlite")
 	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(dao.Dbh).ShouldNot(BeNil())
+
+	daoCtx := dbCtx.Start()
+	defer daoCtx.Stop()
+
+	migrator := migrations.NewMigratorService()
+	migrator.Apply(dbCtx)
+
+	dao5m := NewDowntime5mDao(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -173,10 +189,12 @@ func Test_FillOneDay(t *testing.T) {
 						Probe: probeName,
 					},
 					TimeSlot:       firstTs + int64(300*i),
-					FailSeconds:    int64(i % 300),
-					SuccessSeconds: int64(300 - i%300),
+					FailSeconds:    int64(i%300 - i%37 - i%13),
+					SuccessSeconds: int64(300 - i%300 - i%37 - i%13),
+					Unknown:        int64(i % 37),
+					NoData:         int64(i % 13),
 				}
-				dao.Save(downtime)
+				dao5m.Insert(downtime)
 			}
 		}
 	}
@@ -188,12 +206,17 @@ func Test_Fill_Year(t *testing.T) {
 	g := NewWithT(t)
 	var err error
 
-	dao := NewDowntime5mDao()
-	err = util.Connect("year.db.sqlite", func(dbh *sql.DB) {
-		dao.Dbh = dbh
-	})
+	dbCtx := context.NewDbContext()
+	err = dbCtx.Connect("year.db.sqlite")
 	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(dao.Dbh).ShouldNot(BeNil())
+
+	daoCtx := dbCtx.Start()
+	defer daoCtx.Stop()
+
+	migrator := migrations.NewMigratorService()
+	migrator.Apply(dbCtx)
+
+	dao5m := NewDowntime5mDao(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -222,10 +245,12 @@ func Test_Fill_Year(t *testing.T) {
 						Probe: probeName,
 					},
 					TimeSlot:       firstTs + int64(300*i),
-					FailSeconds:    int64(i % 300),
-					SuccessSeconds: int64(300 - i%300),
+					FailSeconds:    int64(i%300 - i%31 - i%17),
+					SuccessSeconds: int64(300 - i%300 - i%31 - i%17),
+					Unknown:        int64(i % 17),
+					NoData:         int64(i % 31),
 				}
-				dao.Save(downtime)
+				dao5m.Insert(downtime)
 			}
 		}
 	}

@@ -8,10 +8,15 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/probe/types"
+	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/entity"
 )
 
-func DowntimeHandler(w http.ResponseWriter, r *http.Request) {
+type DowntimeHandler struct {
+	DbCtx *dbcontext.DbContext
+}
+
+func (h *DowntimeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("Downtime", r.RemoteAddr, r.RequestURI)
 
 	if r.Method != "POST" {
@@ -38,7 +43,7 @@ func DowntimeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Put downtime episodes to storage.
-	entity.SaveDowntimeEpisodes(episodes)
+	entity.SaveDowntimeEpisodes(h.DbCtx, episodes)
 
 	// Response with empty object if everything is ok.
 	w.Header().Set("Content-Type", "application/json")
