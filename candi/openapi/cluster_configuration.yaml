@@ -21,6 +21,13 @@ apiVersions:
         properties:
           provider:
             type: string
+            enum:
+            - "OpenStack"
+            - "AWS"
+            - "GCP"
+            - "Yandex"
+            - "vSphere"
+            - "Azure"
           prefix:
             type: string
             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
@@ -37,11 +44,8 @@ apiVersions:
       kubernetesVersion:
         type: string
         enum:
-        - "1.14"
         - "1.15"
         - "1.16"
-        - "1.17"
-        - "1.18"
         - "1.19"
     oneOf:
     - properties:
