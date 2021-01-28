@@ -83,7 +83,7 @@ spec:
             cpu: 10m
             memory: 10Mi
 
-      priorityClassName: "cluster-high"
+      priorityClassName: "system-cluster-critical"
       trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
     pilot:
       autoscaleEnabled: false
