@@ -10,13 +10,13 @@ entries:
         url: /features/auth.html
       - title: user-authz
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/140-user-authz/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/140-user-authz/usage.html
         - title: Справка
           folders:
-          - title: Настройки модуля
+          - title: Настройки
             url: /modules/140-user-authz/configuration.html
           - title: Custom Resources
             url: /modules/140-user-authz/cr.html
@@ -24,13 +24,13 @@ entries:
           url: /modules/140-user-authz/faq.html
       - title: user-authn
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/150-user-authn/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/150-user-authn/usage.html
         - title: Справка
           folders:
-          - title: Настройки модуля
+          - title: Настройки
             url: /modules/150-user-authn/configuration.html
           - title: Custom Resources
             url: /modules/150-user-authn/cr.html
@@ -48,7 +48,7 @@ entries:
           folders:
           - title: Описание
             url: /modules/030-cloud-provider-aws/
-          - title: Примеры конфигурации
+          - title: Примеры
             url: /modules/030-cloud-provider-aws/usage.html
           - title: Справка
             folders:
@@ -62,7 +62,7 @@ entries:
           folders:
           - title: Описание
             url: /modules/030-cloud-provider-gcp/
-          - title: Примеры конфигурации
+          - title: Примеры
             url: /modules/030-cloud-provider-gcp/usage.html
           - title: Справка
             folders:
@@ -86,7 +86,7 @@ entries:
           folders:
           - title: Описание
             url: /modules/030-cloud-provider-openstack/
-          - title: Примеры конфигурации
+          - title: Примеры
             url: /modules/030-cloud-provider-openstack/usage.html
           - title: Справка
             folders:
@@ -100,7 +100,7 @@ entries:
           folders:
           - title: Описание
             url: /modules/030-cloud-provider-vsphere/
-          - title: Примеры конфигурации
+          - title: Примеры
             url: /modules/030-cloud-provider-vsphere/usage.html
           - title: Справка
             folders:
@@ -114,7 +114,7 @@ entries:
           folders:
           - title: Описание
             url: /modules/030-cloud-provider-yandex/
-          - title: Примеры конфигурации
+          - title: Примеры
             url: /modules/030-cloud-provider-yandex/usage.html
           - title: Справка
             folders:
@@ -126,7 +126,7 @@ entries:
         folders:
         - title: Описание
           url: /modules/040-control-plane-manager/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/040-control-plane-manager/usage.html
         - title: Настройки
           url: /modules/040-control-plane-manager/configuration.html
@@ -136,7 +136,7 @@ entries:
         folders:
         - title: Описание
           url: /modules/040-node-manager/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/040-node-manager/usage.html
         - title: Справка
           folders:
@@ -146,6 +146,24 @@ entries:
             url: /modules/040-node-manager/cr.html
         - title: FAQ
           url: /modules/040-node-manager/faq.html
+      - title: Другие модули
+        folders:
+        - title: cni-flannel
+          folders:
+          - title: Описание
+            url: /modules/035-cni-flannel/
+          - title: Настройки
+            url: /modules/035-cni-flannel/configuration.html
+        - title: kube-proxy
+          folders:
+          - title: Описание
+            url: /modules/041-kube-proxy/
+        - title: kube-dns
+          folders:
+          - title: Описание
+            url: /modules/042-kube-dns/
+          - title: Настройки
+            url: /modules/042-kube-dns/configuration.html
     - title: Подсистема core
       folders:
       - title: Описание
@@ -154,25 +172,25 @@ entries:
         folders:
           - title: priority-class
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/010-priority-class/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/010-priority-class/configuration.html
           - title: deckhouse
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/020-deckhouse/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/020-deckhouse/usage.html
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/020-deckhouse/configuration.html
           - title: deckhouse-web
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/810-deckhouse-web/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/810-deckhouse-web/usage.html
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/810-deckhouse-web/configuration.html
       - title: FAQ
         url: /features/core-faq.html
@@ -184,7 +202,7 @@ entries:
         folders:
         - title: Описание
           url: /modules/300-prometheus/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/300-prometheus/usage.html
         - title: Справка
           folders:
@@ -210,77 +228,77 @@ entries:
         folders:
           - title: descheduler
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/400-descheduler/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/400-descheduler/usage.html
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/400-descheduler/configuration.html
           - title: extended-monitoring
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/340-extended-monitoring/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/340-extended-monitoring/configuration.html
           - title: monitoring-applications
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/340-monitoring-applications/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/340-monitoring-applications/configuration.html
           - title: monitoring-ping
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/340-monitoring-ping/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/340-monitoring-ping/usage.html
           - title: monitoring-custom
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/340-monitoring-custom/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/340-monitoring-custom/configuration.html
           - title: monitoring-kubernetes
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/340-monitoring-kubernetes/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/340-monitoring-kubernetes/configuration.html
           - title: operator-prometheus
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/200-operator-prometheus/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/200-operator-prometheus/configuration.html
           - title: prometheus-metrics-adapter
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/301-prometheus-metrics-adapter/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/301-prometheus-metrics-adapter/usage.html
             - title: Справка
               folders:
-              - title: Настройки модуля
+              - title: Настройки
                 url: /modules/301-prometheus-metrics-adapter/configuration.html
               - title: Custom resources
                 url: /modules/301-prometheus-metrics-adapter/cr.html
           - title: prometheus-pushgateway
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/303-prometheus-pushgateway/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/303-prometheus-pushgateway/usage.html
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/303-prometheus-pushgateway/configuration.html
           - title: vertical-pod-autoscaler
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/302-vertical-pod-autoscaler/
-            - title: Примеры конфигурации
+            - title: Примеры
               url: /modules/302-vertical-pod-autoscaler/usage.html
             - title: Справка
               folders:
-              - title: Настройки модуля
+              - title: Настройки
                 url: /modules/302-vertical-pod-autoscaler/configuration.html
               - title: Custom resources
                 url: /modules/302-vertical-pod-autoscaler/cr.html
@@ -288,9 +306,9 @@ entries:
               url: /modules/302-vertical-pod-autoscaler/faq.html
           - title: upmeter
             folders:
-            - title: Описание модуля
+            - title: Описание
               url: /modules/500-upmeter/
-            - title: Настройки модуля
+            - title: Настройки
               url: /modules/500-upmeter/configuration.html
 #      - title: FAQ
 #        url: /features/marm-faq.html
@@ -298,13 +316,13 @@ entries:
       folders:
       - title: cert-manager
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/101-cert-manager/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/101-cert-manager/usage.html
         - title: Справка
           folders:
-          - title: Настройки модуля
+          - title: Настройки
             url: /modules/101-cert-manager/configuration.html
           - title: Custom Resources
             url: /modules/101-cert-manager/cr.html
@@ -312,13 +330,13 @@ entries:
           url: /modules/101-cert-manager/faq.html
       - title: ingress-nginx
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/402-ingress-nginx/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/402-ingress-nginx/usage.html
         - title: Справка
           folders:
-          - title: Настройки модуля
+          - title: Настройки
             url: /modules/402-ingress-nginx/configuration.html
           - title: Custom Resources
             url: /modules/402-ingress-nginx/cr.html
@@ -326,19 +344,21 @@ entries:
           url: /modules/402-ingress-nginx/faq.html
       - title: dashboard
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/500-dashboard/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/500-dashboard/usage.html
-        - title: Настройки модуля
+        - title: Настройки
           url: /modules/500-dashboard/configuration.html
     - title: Extended Networking Collection
       folders:
       - title: network-policy-engine
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/050-network-policy-engine/
-        - title: Настройки модуля
+        - title: Примеры
+          url: /modules/050-network-policy-engine/usage.html
+        - title: Настройки
           url: /modules/050-network-policy-engine/configuration.html
       - title: istio
         folders:
@@ -354,43 +374,43 @@ entries:
           url: /modules/110-istio/usage.html
       - title: node-local-dns
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/350-node-local-dns/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/350-node-local-dns/usage.html
-        - title: Настройки модуля
+        - title: Настройки
           url: /modules/350-node-local-dns/configuration.html
       - title: openvpn
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/500-openvpn/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/500-openvpn/usage.html
-        - title: Настройки модуля
+        - title: Настройки
           url: /modules/500-openvpn/configuration.html
     - title: Bare Metal Compatibility Collection
       folders:
       - title: metallb
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/380-metallb/
-        - title: Настройки модуля
+        - title: Настройки
           url: /modules/380-metallb/configuration.html
       - title: keepalived
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/450-keepalived/
-        - title: Примеры конфигурации
+        - title: Примеры
           url: /modules/450-keepalived/usage.html
         - title: Справка
           folders:
-          - title: Настройки модуля
+          - title: Настройки
             url: /modules/450-keepalived/configuration.html
           - title: Custom Resources
             url: /modules/450-keepalived/cr.html
       - title: network-gateway
         folders:
-        - title: Описание модуля
+        - title: Описание
           url: /modules/450-network-gateway/
-        - title: Настройки модуля
+        - title: Настройки
           url: /modules/450-network-gateway/configuration.html

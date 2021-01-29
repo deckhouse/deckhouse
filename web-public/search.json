@@ -7,7 +7,7 @@ searchable: false
 [
 {% assign searchedpages = site.pages | where: "searchable", true %}
 {%- for page in searchedpages %}
-{%- unless page.search == false %}
+{%- unless page.searchable == "false" %}
 {
 "title": "{{ page.title | escape }}",
 "tags": "{{ page.tags }}",

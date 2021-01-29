@@ -25,6 +25,8 @@ ansible:
     - name: "Add permalinks"
       shell: |
         for i in $(find . -regex '.*.md' -print); do
+          grep -q "^---" $i
+          if [ $? -gt 0 ]; then continue; fi
           cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
           if [ $? -eq 0 ]; then
             # permalink is absent, add permalink
@@ -35,9 +37,28 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
+    - name: "Copy and apply schemas"
+      shell: |
+        for schema_path in $(find modules -regex '^.*/openapi/config-values.yaml$' -print); do
+          module_path=$(echo $schema_path | cut -d\/ -f-2 )
+          module_name=$(echo $schema_path | cut -d\/ -f2 | cut -d- -f2-)
+          mkdir -p _data/schemas/${module_name}
+          cp -f $schema_path _data/schemas/${module_name}/
+          grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md
+          if [ $? -eq 0 ]; then
+            # Apply schema
+            echo -e "Applying schema ${schema_path} in ${module_path}/docs/CONFIGURATION.md"
+            sed -i "s#<!-- SCHEMA -->#\{\% include jsonschema_object.md object=site.data.schemas.${module_name}.config-values \%\}#" ${module_path}/docs/CONFIGURATION.md
+          else
+            echo -e "\nWARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md\n"
+          fi
+        done
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
     - name: "Generate sidebars"
       shell: |
-        /bin/bash /srv/jekyll-data/modules_make_data > /srv/jekyll-data/_data/sidebars/modules.yml2 &&  sed '1,+6d' _data/sidebars/modules.yml >> /srv/jekyll-data/_data/sidebars/modules.yml2  && mv -f /srv/jekyll-data/_data/sidebars/modules.yml2 /srv/jekyll-data/_data/sidebars/modules.yml
+        /bin/bash /srv/jekyll-data/modules_make_data > /srv/jekyll-data/_data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> /srv/jekyll-data/_data/sidebars/modules.yml2  && mv -f /srv/jekyll-data/_data/sidebars/modules.yml2 /srv/jekyll-data/_data/sidebars/modules.yml
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
@@ -69,18 +90,12 @@ git:
   excludePaths:
     - .helm
     - .werffiles
-    - "_data/releases.yml"
-    - "_data/sidebars/main.yml"
-    - "docs"
 - add: /web
-  to: /srv/jekyll-data
+  to: /srv/web
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths:
-    - "_data/releases.yml"
-    - "_data/sidebars/main.yml"
 - add: /docs
   to: /srv/jekyll-data/docs
   owner: jekyll
@@ -101,7 +116,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['**/docs/']
+  includePaths: ['**/docs/', '**/openapi/']
 ---
 image: dev/web-public
 from: nginx:1.17.2

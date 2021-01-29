@@ -272,6 +272,7 @@ git:
     install:
       - go.mod
       - go.sum
+  excludePaths: ['web', 'web-public','docs','docs-public']
 import:
 - artifact: deckhouse-controller
   add: /deckhouse-controller/deckhouse-controller

@@ -13,10 +13,9 @@ global:
         coredns: tag
 kubeDns:
   clusterDomainAliases:
-    - __EmptyItem__
-    -
-      - foo.bar
-      - baz.qux
+    __ConstantChoices__:
+      - __EmptyItem__
+      -  ["foo.bar", "baz.qux"]
   stubZones:
     __ConstantChoices__:
     - []
