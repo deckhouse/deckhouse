@@ -10,7 +10,8 @@ properties:
         default: false
         description: |
           Cлушать ли на `0.0.0.0`.
-            * По умолчанию apiserver слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
+
+          По умолчанию apiserver слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
       certSANs:
         type: array
         description: |
@@ -31,45 +32,46 @@ properties:
         type: object
         default: {}
         description: |
-          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](/modules/150-user-authn)
+          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](/modules/150-user-authn/)
         properties:
           oidcIssuerURL:
             type: string
             description: |
-              Cтрока, адрес OIDC провайдера.
+              URL OIDC-провайдера.
           oidcCA:
             type: string
             description: |
-              Строка, CA OIDC провайдера.
+              CA OIDC-провайдера.
       authz:
         type: object
         default: {}
         description: |
-          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](/modules/140-user-authz)
+          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](/modules/140-user-authz/)
         properties:
           webhookURL:
             type: string
             description: |
-              Строка, authorization webhook'а.
+              URL authorization webhook'а.
           webhookCA:
             type: string
             description: |
-              Строка, CA authorization webhook'a.
+              CA authorization webhook'a.
       loadBalancer:
         type: object
         description: |
-          Если указано, будет создан сервис с типом `LoadBalancer` (d8-control-plane-apiserver в ns kube-system).
+          Если указано, будет создан сервис с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).
         properties:
           annotations:
             type: object
             description: |
               Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-                * **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              > **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
           sourceRanges:
             type: array
             description: |
               Список CIDR, которым разрешен доступ к API.
-                * Облачный провайдер может не поддерживать данную опцию и игнорировать её.
+
+              Облачный провайдер может не поддерживать данную опцию и игнорировать её.
             items:
               type: string
               pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\/[0-9]+$'
@@ -77,7 +79,7 @@ properties:
         type: boolean
         default: false
         description: |
-          Включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (audit-policy в ns kube-system).
+          Включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (`audit-policy` в ns `kube-system`).
   etcd:
     type: object
     description: |
@@ -94,10 +96,10 @@ properties:
     type: integer
     default: 40
     description: |
-      Число секунд, через которое `Node` перейдёт в состояние `Unreachable` при потере с ней связи.
+      Число секунд, через которое узел перейдёт в состояние `Unreachable` при потере с ним связи.
   failedNodePodEvictionTimeoutSeconds:
     type: integer
     default: 300
     description: |
-      Количество секунд, по прошествии которых, поды с `Unreachable` `Node` будут удалены.
-        * **Важно!** При изменении этого параметра потребуется перезапуск подов.
+      Количество секунд, по прошествии которых, с узла в статусе `Unreachable` будут удалены поды.
+      > **Важно!** При изменении этого параметра потребуется перезапуск подов.

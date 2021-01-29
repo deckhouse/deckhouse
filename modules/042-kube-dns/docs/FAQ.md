@@ -13,7 +13,7 @@ type:
 1. В `controlPlaneManager.apiserver.certSANs` прописать
     - `kubernetes.default.svc.<старый clusterDomain>`
     - `kubernetes.default.svc.<новый clusterDomain>`
-1. В [kubeDns.clusterDomainAliases](./index.html#clusterDomainAliases) указать
+1. В [kubeDns.clusterDomainAliases](configuration.html#параметры) указать
     - старый clusterDomain.
     - новый clusterDomain.
 1. Дождаться переката kube-apiserver.
