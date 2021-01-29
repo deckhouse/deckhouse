@@ -83,7 +83,15 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 		return err
 	}
 
-	if len(nodesState) == 0 {
+	terraNodeGroups := metaConfig.GetTerraNodeGroups()
+
+	desiredQuantity := metaConfig.MasterNodeGroupSpec.Replicas
+	for _, group := range terraNodeGroups {
+		desiredQuantity += group.Replicas
+	}
+
+	// Candictl has nodes to create, and there are no nodes in the cluster.
+	if len(nodesState) == 0 && desiredQuantity > 0 {
 		if !input.AskForConfirmation("Cluster has no nodes created by Terraform. Do you want to continue and create nodes", false) {
 			log.InfoLn("Aborted")
 			return nil
@@ -91,7 +99,7 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 	}
 
 	var nodeGroupsWithStateInCluster []string
-	for _, group := range metaConfig.GetTerraNodeGroups() {
+	for _, group := range terraNodeGroups {
 		// Skip if node group terraform state exists, we will update node group state below
 		if _, ok := nodesState[group.Name]; ok {
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
