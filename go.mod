@@ -6,8 +6,8 @@ require (
 	github.com/deckhouse/deckhouse/candictl v0.0.0 // use non-existent version for replace
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-beta.6.0.20201215101807-c124484f9956 // master
-	github.com/flant/shell-operator v1.0.0-beta.13.0.20201214204115-463c4ecd8214 // master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210129092101-87b695f741d6 // branch: master
+	github.com/flant/shell-operator v1.0.0-rc.1.0.20210120105923-fe826ae429b4 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3

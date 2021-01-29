@@ -8,7 +8,7 @@ import (
 )
 
 var _ = Describe("Modules :: cniFlannel :: hooks :: set_pod_network_mode ::", func() {
-	f := HookExecutionConfigInit(`{"cniFlannel":{"internal":{}}}`, ``)
+	f := HookExecutionConfigInit(`{"cniFlannel":{"podNetworkMode":"host-gw", "internal":{}}}`, ``)
 
 	state := `
 ---

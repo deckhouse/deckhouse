@@ -56,10 +56,10 @@ controlPlaneManager:
             __ConstantChoices__:
             - service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
             - __EmptyItem__
-          sourceRanges:
-            __ConstantChoices__:
-            - [192.168.0.0/24]
-            - __EmptyItem__
+          __ConstantChoices__:
+          - sourceRanges:
+            - 192.168.0.0/24
+          - __EmptyItem__
         - __EmptyItem__
     - auditPolicyEnabled:
         __ConstantChoices__: [true, false, __EmptyItem__]

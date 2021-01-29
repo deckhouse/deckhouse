@@ -1,6 +1,0 @@
-deckhouse:
-  logLevel: Info
-  bundle: Default
-  internal:
-    currentVersion: unknown
-    validatingWebhookHandlerCert: {}

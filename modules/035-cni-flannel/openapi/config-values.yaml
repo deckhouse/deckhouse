@@ -1,0 +1,10 @@
+type: object
+properties:
+  podNetworkMode:
+    type: string
+    enum: ["host-gw", "vxlan"]
+    default: "host-gw"
+    description: |
+      Режим работы `host-gw` или `vxlan`.
+        * **ВНИМАНИЕ!!!** При переключении между `host-gw` и `vxlan` требуется перезагрузка всех нод кластера!!!
+        * **Внимание!** Изменять параметр можно только при использовании модуля в bare-metal-кластерах.

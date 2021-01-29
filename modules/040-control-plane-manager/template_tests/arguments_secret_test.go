@@ -48,7 +48,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     rolloutEpoch: 1857
 `
 
-	f := SetupHelmConfig(``)
+	f := SetupHelmConfig(`controlPlaneManager: {}`)
 
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", globalValues)

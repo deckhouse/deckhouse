@@ -338,3 +338,29 @@
   needs:
     - "Build"
     - "Build Modules Images"
+
+.OpenAPI Test Cases template:
+  stage: testing
+  before_script:
+    - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+    - rm -rf shell-operator || true
+    - git submodule update --init --recursive
+  script:
+    - pwd
+    - eval "${STAGES_STORAGE_LOGIN_CMD}"
+    - type multiwerf && source <(multiwerf use 1.1 early-access)
+    - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+    - werf run tests
+      --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+      -- ginkgo -vet=off ./testing/openapi_cases/
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true

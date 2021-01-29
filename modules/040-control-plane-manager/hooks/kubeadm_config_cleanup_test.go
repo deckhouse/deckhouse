@@ -17,10 +17,10 @@ import (
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: kubeadm_config_cleanup ::", func() {
 	const (
 		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
-		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": "false"}}}`
+		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": false}}}`
 		stateA                 = `
-apiVersion: v1 
-kind: ConfigMap 
+apiVersion: v1
+kind: ConfigMap
 metadata:
   name: kubeadm-config
   namespace: kube-system

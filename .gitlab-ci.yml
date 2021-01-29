@@ -61,6 +61,11 @@ GolangCI Lint:
   tags:
     - werf-distributed
 
+OpenAPI Test Cases:
+  extends: .OpenAPI Test Cases template
+  tags:
+    - werf-distributed
+
 Cloud layouts Tests (manual):
   extends: .Cloud layouts Tests template
   tags:

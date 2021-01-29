@@ -26,8 +26,9 @@ global:
       system:
         __ConstantChoices__: [1, 2, 3]
     kubernetesVersion: 1.15.5
-
 cniFlannel:
+  podNetworkMode:
+    __ConstantChoices__: [host-gw, vxlan]
   internal:
     podNetworkMode:
       __ConstantChoices__: [host-gw, vxlan]

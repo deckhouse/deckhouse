@@ -7,24 +7,27 @@ import (
 	"path/filepath"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/shell-operator/pkg/utils/manifest/releaseutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/testing/common"
 	"github.com/deckhouse/deckhouse/testing/library"
+	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
-	"github.com/deckhouse/deckhouse/testing/util/helm"
+	"github.com/deckhouse/deckhouse/testing/library/values_validation"
 )
 
 type Config struct {
-	modulePath  string
-	objectStore object_store.ObjectStore
-	values      *values_store.ValuesStore
-	RenderError error
+	moduleName      string
+	modulePath      string
+	objectStore     object_store.ObjectStore
+	values          *values_store.ValuesStore
+	RenderError     error
+	ValuesValidator *validation.ValuesValidator
 }
 
 func (hec Config) ValuesGet(path string) library.KubeResult {
@@ -56,7 +59,7 @@ func SetupHelmConfig(values string) *Config {
 
 	modulePath := filepath.Dir(wd)
 
-	moduleName, err := common.GetModuleNameByPath(modulePath)
+	moduleName, err := library.GetModuleNameByPath(modulePath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -75,6 +78,7 @@ func SetupHelmConfig(values string) *Config {
 
 	config := new(Config)
 	config.modulePath = modulePath
+	config.moduleName = moduleName
 
 	initialValuesJSON, err := json.Marshal(mergedConfigValues)
 	if err != nil {
@@ -82,13 +86,9 @@ func SetupHelmConfig(values string) *Config {
 		os.Exit(1)
 	}
 
-	if err := common.LoadOpenAPISchemas(moduleName, modulePath); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	config.ValuesValidator = validation.NewValuesValidator()
 
-	err = common.ValidateValues(moduleName, string(initialValuesJSON))
-	if err != nil {
+	if err := values_validation.LoadOpenAPISchemas(config.ValuesValidator, moduleName, modulePath); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -105,6 +105,10 @@ func SetupHelmConfig(values string) *Config {
 }
 
 func (hec *Config) HelmRender() {
+	// Validate Helm values
+	err := values_validation.ValidateHelmValues(hec.ValuesValidator, hec.moduleName, string(hec.values.JSONRepr))
+	Expect(err).To(Not(HaveOccurred()), "Helm values should conform to the contract in openapi/values.yaml")
+
 	hec.objectStore = make(object_store.ObjectStore)
 
 	yamlValuesBytes := hec.values.GetAsYaml()

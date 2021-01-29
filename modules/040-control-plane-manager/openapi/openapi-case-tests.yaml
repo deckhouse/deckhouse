@@ -1,0 +1,14 @@
+positive:
+  configValues:
+    - apiserver:
+        loadBalancer:
+          sourceRanges:
+          - 192.168.0.0/24
+  values:
+    - internal:
+        effectiveKubernetesVersion: "1.15"
+        etcdServers:
+        - 1.2.3.4
+        - 4.3.2.1
+        pkiChecksum: test
+        rolloutEpoch: 100500

@@ -42,12 +42,15 @@ internal:
     crt: a
     key: b
     ca: c
+  currentReleaseImageName: test
+  currentVersion: test
 `
 
 	moduleValuesForDeckhouseNode = `
 bundle: Default
 logLevel: Info
-nodeSelector: 'node-role.kubernetes.io/deckhouse: ""'
+nodeSelector:
+  node-role.kubernetes.io/deckhouse: ""
 tolerations:
 - key: testkey
   operator: Exists
@@ -56,11 +59,13 @@ internal:
     crt: a
     key: b
     ca: c
+  currentReleaseImageName: test
+  currentVersion: test
 `
 )
 
 var _ = Describe("Module :: deckhouse :: helm template ::", func() {
-	f := SetupHelmConfig(``)
+	f := SetupHelmConfig(`{deckhouse: {internal: {currentReleaseImageName: test }}}`)
 
 	Context("Cluster with deckhouse on master node", func() {
 		BeforeEach(func() {
