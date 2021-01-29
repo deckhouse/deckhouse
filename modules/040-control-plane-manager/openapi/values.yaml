@@ -1,0 +1,43 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-requred-for-helm:
+    - effectiveKubernetesVersion
+    - pkiChecksum
+    - rolloutEpoch
+    properties:
+      effectiveKubernetesVersion:
+        type: string
+        enum: ["1.14", "1.15", "1.16", "1.17", "1.18", "1.19"]
+      etcdServers:
+        type: array
+        items:
+          type: string
+          pattern:  '^[0-9a-zA-Z\.-:\/]+$'
+      pkiChecksum:
+        type: string
+        pattern: '^[0-9a-zA-Z]+$'
+      rolloutEpoch:
+        type: integer
+      auditPolicy:
+        type: string
+      testEtcdMemberUpdated:
+        type: boolean
+      arguments:
+        type: object
+        properties:
+          nodeMonitorGracePeriod:
+            type: [integer, string]
+          nodeMonitorPeriod:
+            type: [integer, string]
+          podEvictionTimeout:
+            type: [integer, string]
+          defaultUnreachableTolerationSeconds:
+            type: [integer, string]
+          nodeStatusUpdateFrequency:
+            type: [integer, string]
+

@@ -17,7 +17,7 @@ import (
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: audit_policy ::", func() {
 	const (
 		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
-		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": "false"}}}`
+		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": false}}}`
 		stateA                 = `
 apiVersion: v1
 kind: Secret
@@ -84,7 +84,7 @@ data:
 	Context("Cluster started with stateA Secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateA))
-			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", "true")
+			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
 			f.RunHook()
 		})
 
@@ -96,7 +96,7 @@ data:
 		Context("Cluster changed to stateB", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateB))
-				f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", "true")
+				f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
 				f.RunHook()
 			})
 

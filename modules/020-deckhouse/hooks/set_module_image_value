@@ -8,6 +8,7 @@ function __config__() {
     kubernetes:
     - name: deckhouse_deployment
       group: main
+      queue: /modules/$(module::name::kebab_case)
       keepFullObjectsInMemory: false
       waitForSynchronization: false
       apiVersion: apps/v1

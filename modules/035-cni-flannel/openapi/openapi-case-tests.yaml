@@ -1,0 +1,15 @@
+positive:
+  configValues:
+    - podNetworkMode: host-gw
+    - podNetworkMode: vxlan
+  values:
+    - internal:
+        podNetworkMode: host-gw
+    - internal:
+        podNetworkMode: vxlan
+negative:
+  configValues:
+  - podNetworkMode: foobar
+  values:
+  - internal:
+      podNetworkMode: foobar

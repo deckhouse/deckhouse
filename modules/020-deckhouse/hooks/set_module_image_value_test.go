@@ -13,7 +13,9 @@ global:
   modulesImages:
     registry: registry.flant.com/sys/antiopa
 deckhouse:
-  internal: {}
+  internal:
+    currentReleaseImageName: "test"
+    currentVersion: "12345"
 `, `{}`)
 
 	Context("With Deckhouse pod", func() {

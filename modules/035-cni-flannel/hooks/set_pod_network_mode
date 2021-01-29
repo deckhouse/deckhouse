@@ -28,11 +28,7 @@ EOF
 }
 
 function __main__() {
-  pod_network_mode="host-gw"
-
-  if values::has --config cniFlannel.podNetworkMode; then
-    pod_network_mode="$(values::get --config cniFlannel.podNetworkMode)"
-  fi
+  pod_network_mode="$(values::get cniFlannel.podNetworkMode)"
 
   if context::has snapshots.cni_configuration_secret.0; then
     pod_network_mode="$(context::jq -r '.snapshots.cni_configuration_secret[0].filterResult.podNetworkMode')"

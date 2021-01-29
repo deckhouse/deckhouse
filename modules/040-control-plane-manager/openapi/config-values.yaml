@@ -1,0 +1,103 @@
+type: object
+properties:
+  apiserver:
+    type: object
+    description: |
+      Параметры `kube-apiserver`.
+    properties:
+      bindToWildcard:
+        type: boolean
+        default: false
+        description: |
+          Cлушать ли на `0.0.0.0`.
+            * По умолчанию apiserver слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
+      certSANs:
+        type: array
+        description: |
+          Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат apiserver'а.
+            * Кроме переданного списка, всегда используется и следующий список:
+              * kubernetes
+              * kubernetes.default
+              * kubernetes.default.svc
+              * kubernetes.default.svc.cluster.local
+              * 192.168.0.1
+              * 127.0.0.1
+              * **current_hostname**
+              * **hostIP**
+        items:
+          type: string
+          pattern: '^[0-9a-zA-Z\.-]+$'
+      authn:
+        type: object
+        default: {}
+        description: |
+          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](/modules/150-user-authn)
+        properties:
+          oidcIssuerURL:
+            type: string
+            description: |
+              Cтрока, адрес OIDC провайдера.
+          oidcCA:
+            type: string
+            description: |
+              Строка, CA OIDC провайдера.
+      authz:
+        type: object
+        default: {}
+        description: |
+          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](/modules/140-user-authz)
+        properties:
+          webhookURL:
+            type: string
+            description: |
+              Строка, authorization webhook'а.
+          webhookCA:
+            type: string
+            description: |
+              Строка, CA authorization webhook'a.
+      loadBalancer:
+        type: object
+        description: |
+          Если указано, будет создан сервис с типом `LoadBalancer` (d8-control-plane-apiserver в ns kube-system).
+        properties:
+          annotations:
+            type: object
+            description: |
+              Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+                * **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+          sourceRanges:
+            type: array
+            description: |
+              Список CIDR, которым разрешен доступ к API.
+                * Облачный провайдер может не поддерживать данную опцию и игнорировать её.
+            items:
+              type: string
+              pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\/[0-9]+$'
+      auditPolicyEnabled:
+        type: boolean
+        default: false
+        description: |
+          Включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (audit-policy в ns kube-system).
+  etcd:
+    type: object
+    description: |
+      Параметры `etcd`.
+    properties:
+      externalMembersNames:
+        type: array
+        description: |
+          Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).
+        items:
+          type: string
+          pattern: '^[0-9a-zA-Z\.-:\/]+$'
+  nodeMonitorGracePeriodSeconds:
+    type: integer
+    default: 40
+    description: |
+      Число секунд, через которое `Node` перейдёт в состояние `Unreachable` при потере с ней связи.
+  failedNodePodEvictionTimeoutSeconds:
+    type: integer
+    default: 300
+    description: |
+      Количество секунд, по прошествии которых, поды с `Unreachable` `Node` будут удалены.
+        * **Важно!** При изменении этого параметра потребуется перезапуск подов.

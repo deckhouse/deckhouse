@@ -10,8 +10,9 @@ EOF
 }
 
 function __on_startup() {
-  if [[ -f /deckhouse/version ]] ; then currentVersion=$(cat /deckhouse/version) ; else currentVersion="unknown"; fi
-  values::set deckhouse.internal.currentVersion "$currentVersion"
+  if [[ -f /deckhouse/version ]] ; then
+    values::set deckhouse.internal.currentVersion "$(cat /deckhouse/version)"
+  fi
 }
 
-hook::run $@
+hook::run "$@"

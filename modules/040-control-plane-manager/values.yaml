@@ -1,6 +1,0 @@
-controlPlaneManager:
-  internal: {}
-  apiserver:
-    authn: {}
-    authz: {}
-    auditPolicyEnabled: false

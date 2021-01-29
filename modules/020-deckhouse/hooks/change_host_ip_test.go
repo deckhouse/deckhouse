@@ -8,7 +8,7 @@ import (
 )
 
 var _ = Describe("Modules :: deckhouse :: hooks :: change host ip ::", func() {
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	f := HookExecutionConfigInit(`{deckhouse: {internal: {currentReleaseImageName: "test", currentVersion: "12345"}}}`, `{}`)
 
 	Context("With Deckhouse pod", func() {
 		BeforeEach(func() {

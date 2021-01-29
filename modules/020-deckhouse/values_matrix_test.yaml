@@ -21,17 +21,24 @@ deckhouse:
          crt: a
          key: b
          ca: c
-     logLevel: "Info"
+     logLevel:
+       __ConstantChoices__: [Info, Debug, Error]
+     bundle:
+       __ConstantChoices__: [Minimal, Managed, Default]  
   -  internal:
        currentReleaseImageName: "registry:testtag"
        validatingWebhookHandlerCert:
          crt: a
          key: b
          ca: c
-     logLevel: "Info"
+     logLevel:
+       __ConstantChoices__: [Info, Debug, Error]
+     bundle:
+       __ConstantChoices__: [Minimal, Managed, Default]
      nodeSelector:
        testnode: ""
      tolerations:
        - key: foo
          operator: Equal
          value: bar
+

@@ -16,6 +16,7 @@ import (
 	// Define Register func and Registry object to import go-hooks.
 	"github.com/flant/addon-operator/pkg/module_manager"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/addon-operator/sdk/registry"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
@@ -28,11 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/testing/common"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
 	"github.com/deckhouse/deckhouse/testing/library/values_store"
+	"github.com/deckhouse/deckhouse/testing/library/values_validation"
 )
 
 var (
@@ -80,6 +81,7 @@ type HookExecutionConfig struct {
 	BindingContexts          BindingContextsSlice
 	BindingContextController *context.BindingContextController
 	extraHookEnvs            []string
+	ValuesValidator          *validation.ValuesValidator
 
 	Session   *gexec.Session
 	GoHookOut *sdk.HookOutput
@@ -136,6 +138,29 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 		panic("can't execute runtime.Caller")
 	}
 	hec.HookPath = strings.TrimSuffix(f, "_test.go")
+
+	// Use a working directory to retrieve moduleName and modulePath to load OpenAPI schemas.
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Errorf("get working directory: %v", err))
+	}
+
+	var modulePath string
+	if !strings.Contains(wd, "global-hooks") {
+		modulePath = filepath.Dir(wd)
+
+		var err error
+		moduleName, err = library.GetModuleNameByPath(modulePath)
+		if err != nil {
+			panic(fmt.Errorf("get module name from working directory: %v", err))
+		}
+	}
+	// TODO Is there a solution for ginkgo to have a shared validator for all tests in module?
+	hec.ValuesValidator = validation.NewValuesValidator()
+	err = values_validation.LoadOpenAPISchemas(hec.ValuesValidator, moduleName, modulePath)
+	if err != nil {
+		panic(fmt.Errorf("load module OpenAPI schemas for hook: %v", err))
+	}
 
 	// Search golang hook by name.
 	goHookPath := hec.HookPath + ".go"
@@ -386,9 +411,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
 
 	By("Validating initial values")
-	Expect(common.ValidateValues(moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
 	By("Validating initial config values")
-	Expect(common.ValidateValues(moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 
 	tmpDir, err = TempDirWithPerms(globalTmpDir, "", 0o777)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -467,9 +492,9 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	By("Validating resulting values")
-	Expect(common.ValidateValues(moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
 	By("Validating resulting config values")
-	Expect(common.ValidateValues(moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
+	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
 		kubePatch, err := NewKubernetesPatch(kubernetesPatchBytes)
@@ -539,19 +564,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 }
 
 var _ = BeforeSuite(func() {
-	wd, err := os.Getwd()
-	Expect(err).To(BeNil())
-
-	var modulePath string
-	if !strings.Contains(wd, "global-hooks") {
-		modulePath = filepath.Dir(wd)
-
-		var err error
-		moduleName, err = common.GetModuleNameByPath(modulePath)
-		Expect(err).To(BeNil())
-	}
-
-	Expect(common.LoadOpenAPISchemas(moduleName, modulePath)).To(Succeed())
+	var err error
 
 	if os.Getenv("KCOV_DISABLED") == "yes" {
 		return

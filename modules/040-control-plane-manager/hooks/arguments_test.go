@@ -11,7 +11,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: arguments ::", 
 
 	const (
 		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
-		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": "false"}}}}`
+		initConfigValuesString = `{"controlPlaneManager":{"apiserver": {"auditPolicyEnabled": false}}}}`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -33,7 +33,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: arguments ::", 
 
 		Context("nodeMonitorGracePeriodSeconds is set to 15 seconds", func() {
 			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.nodeMonitorGracePeriodSeconds", "15")
+				f.ValuesSet("controlPlaneManager.nodeMonitorGracePeriodSeconds", 15)
 				f.RunHook()
 			})
 
@@ -45,7 +45,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: arguments ::", 
 
 		Context("failedNodePodEvictionTimeoutSeconds is set to 15 seconds", func() {
 			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.failedNodePodEvictionTimeoutSeconds", "15")
+				f.ValuesSet("controlPlaneManager.failedNodePodEvictionTimeoutSeconds", 15)
 				f.RunHook()
 			})
 
@@ -57,8 +57,8 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: arguments ::", 
 
 		Context("nodeMonitorGracePeriodSeconds and failedNodePodEvictionTimeoutSeconds both are set to 15 seconds", func() {
 			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.nodeMonitorGracePeriodSeconds", "15")
-				f.ValuesSet("controlPlaneManager.failedNodePodEvictionTimeoutSeconds", "15")
+				f.ValuesSet("controlPlaneManager.nodeMonitorGracePeriodSeconds", 15)
+				f.ValuesSet("controlPlaneManager.failedNodePodEvictionTimeoutSeconds", 15)
 				f.RunHook()
 			})
 

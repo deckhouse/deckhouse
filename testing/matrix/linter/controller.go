@@ -11,17 +11,18 @@ import (
 	"syscall"
 
 	"github.com/fatih/color"
+	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/kyokomi/emoji"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 
-	"github.com/deckhouse/deckhouse/testing/common"
+	"github.com/deckhouse/deckhouse/testing/library/helm"
+	"github.com/deckhouse/deckhouse/testing/library/values_validation"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
-	"github.com/deckhouse/deckhouse/testing/util/helm"
 )
 
 func init() {
@@ -36,9 +37,10 @@ var (
 )
 
 type ModuleController struct {
-	Module types.Module
-	Values []string
-	Chart  *chart.Chart
+	Module          types.Module
+	Values          []string
+	Chart           *chart.Chart
+	ValuesValidator *validation.ValuesValidator
 }
 
 func NewModuleController(m types.Module, values []string) *ModuleController {
@@ -48,11 +50,17 @@ func NewModuleController(m types.Module, values []string) *ModuleController {
 		panic(fmt.Errorf("chart load: %v", err))
 	}
 
-	if err := common.LoadOpenAPISchemas(m.Name, m.Path); err != nil {
+	validator := validation.NewValuesValidator()
+	if err := values_validation.LoadOpenAPISchemas(validator, m.Name, m.Path); err != nil {
 		panic(fmt.Errorf("schemas load: %v", err))
 	}
 
-	return &ModuleController{Module: m, Values: values, Chart: hc}
+	return &ModuleController{
+		Module:          m,
+		Values:          values,
+		Chart:           hc,
+		ValuesValidator: validator,
+	}
 }
 
 type Task struct {
@@ -169,7 +177,7 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 }
 
 func lint(c *ModuleController, task *Task) error {
-	err := common.ValidateValues(c.Module.Name, task.values)
+	err := values_validation.ValidateValues(c.ValuesValidator, c.Module.Name, task.values)
 	if err != nil {
 		return testsError(task.index, err, task.values)
 	}
