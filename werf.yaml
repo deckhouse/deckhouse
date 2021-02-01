@@ -132,19 +132,21 @@ ansible:
     copy:
       content: |
 {{ .Files.Get "deckhouse-controller/files/bashrc" | indent 8 }}
-      dest: /.bashrc
+      dest: /etc/bashrc
 
-  - name: "Shell comfort: vimrc"
+  - name: "Shell comfort: add bashrc for root"
+    shell: ln -s /etc/bashrc /root/.bashrc
+
+  - name: "Shell comfort: add bashrc for nobody"
+    shell: ln -s /etc/bashrc /.bashrc
+
+  - name: "Shell comfort: vimrc.local"
     copy:
       content: |
-{{ .Files.Get "deckhouse-controller/files/vimrc" | indent 8 }}
-      dest: /.vimrc
-
-  - name: "Shell comfort: kubectl completion"
-    shell: kubectl-1.19 completion bash > /etc/profile.d/kubectl_completion.sh
+{{ .Files.Get "deckhouse-controller/files/vimrc.local" | indent 8 }}
+      dest: /etc/vim/vimrc.local
 
   - raw: rm -rf /var/cache/apk/*
-
 
 ---
 image: base-for-go
@@ -632,12 +634,13 @@ import:
 docker:
   ENV:
     EDITOR: vim
+    TF_CLI_CONFIG_FILE: /etc/terraformrc
 ansible:
   beforeInstall:
 
   - name: "Add candictl completion"
     shell: |
-      echo 'eval "$(candictl --completion-script-bash)"' >> /root/.bashrc
+        echo 'eval "$(candictl --completion-script-bash)"' >> /etc/bashrc
 
   - name: "Install dependencies"
     apk:
@@ -652,7 +655,7 @@ ansible:
 
   - name: "Configure terraform cli"
     copy:
-      dest: "/root/.terraformrc"
+      dest: "/etc/terraformrc"
       content: |
         provider_installation {
           filesystem_mirror {
