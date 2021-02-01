@@ -308,7 +308,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient) error {
 			case <-ctx.Done():
 				return ErrTimedOut
 			default:
-				ready, err := PrintDeckhouseLogs(ctx, kubeCl)
+				ok, err := NewLogPrinter(kubeCl).WaitPodBecomeReady().Print(ctx)
 				if err != nil {
 					if errors.Is(err, ErrTimedOut) {
 						return err
@@ -316,7 +316,7 @@ func WaitForReadiness(kubeCl *client.KubernetesClient) error {
 					log.InfoLn(err.Error())
 				}
 
-				if ready {
+				if ok {
 					log.InfoLn("Deckhouse pod is Ready!")
 					return nil
 				}
