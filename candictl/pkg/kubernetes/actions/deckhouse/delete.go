@@ -300,7 +300,10 @@ func DeleteMachinesIfResourcesExist(kubeCl *client.KubernetesClient) error {
 	})
 	if err != nil {
 		log.WarnF("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v\n", err)
-		if input.AskForConfirmation("Machines weren't deleted from the cluster. Do you want to continue", true) {
+		if input.NewConfirmation().
+			WithMessage("Machines weren't deleted from the cluster. Do you want to continue?").
+			WithYesByDefault().
+			Ask() {
 			return nil
 		}
 		return fmt.Errorf("Machines deletion aborted.\n")

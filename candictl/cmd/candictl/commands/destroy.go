@@ -66,7 +66,10 @@ func loadMetaConfig(sshClient *ssh.Client, kubeCl *client.KubernetesClient, stat
 	var metaConfig *config.MetaConfig
 	var err error
 
-	if stateCache.InCache("cluster-config") && input.AskForConfirmation("Do you want to continue with Cluster configuration from local cache", true) {
+	confirmation := input.NewConfirmation().
+		WithMessage("Do you want to continue with Cluster configuration from local cache?").
+		WithYesByDefault()
+	if stateCache.InCache("cluster-config") && confirmation.Ask() {
 		if err := stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
 			return nil, err
 		}
@@ -120,7 +123,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var nodesState map[string]converge.NodeGroupTerraformState
-		if stateCache.InCache("nodes-state") && input.AskForConfirmation("Do you want to continue with Nodes state from local cache", true) {
+		confirmation := input.NewConfirmation().
+			WithMessage("Do you want to continue with Nodes state from local cache?").
+			WithYesByDefault()
+
+		if stateCache.InCache("nodes-state") && !confirmation.Ask() {
 			if err := stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 				return err
 			}
@@ -139,7 +146,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var clusterState []byte
-		if stateCache.InCache("cluster-state") && input.AskForConfirmation("Do you want to continue with Cluster state from local cache", true) {
+		confirmation = input.NewConfirmation().
+			WithMessage("Do you want to continue with Cluster state from local cache?").
+			WithYesByDefault()
+
+		if stateCache.InCache("cluster-state") && confirmation.Ask() {
 			clusterState = stateCache.Load("cluster-state")
 			if len(clusterState) == 0 {
 				return fmt.Errorf("can't load cluster state from cache")

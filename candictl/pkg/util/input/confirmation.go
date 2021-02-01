@@ -11,14 +11,33 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 )
 
-func AskForConfirmation(s string, defaultAnswer bool) bool {
+type Confirmation struct {
+	message       string
+	defaultAnswer bool
+}
+
+func NewConfirmation() *Confirmation {
+	return &Confirmation{message: "Should we proceed?"}
+}
+
+func (c *Confirmation) WithYesByDefault() *Confirmation {
+	c.defaultAnswer = true
+	return c
+}
+
+func (c *Confirmation) WithMessage(m string) *Confirmation {
+	c.message = m
+	return c
+}
+
+func (c *Confirmation) Ask() bool {
 	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
-		return defaultAnswer
+		return c.defaultAnswer
 	}
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		log.WarnF(fmt.Sprintf("%s? [y/n]: ", s))
+		log.WarnF(fmt.Sprintf("%s [y/n]: ", c.message))
 		line, _, err := reader.ReadLine()
 		if err != nil {
 			log.ErrorF("can't read from stdin: %v\n", err)
