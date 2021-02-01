@@ -21,7 +21,7 @@ kubeDns: |
   - domain: two.another.example.com
     ip: 10.10.0.128
   stubZones:
-  - zone: consul.local:53
+  - zone: consul.local
     upstreamNameservers:
     - 10.150.0.1
   enableLogs: true

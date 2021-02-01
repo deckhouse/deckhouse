@@ -2,6 +2,7 @@ type: object
 properties:
   apiserver:
     type: object
+    default: {}
     description: |
       Параметры `kube-apiserver`.
     properties:
