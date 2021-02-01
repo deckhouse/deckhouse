@@ -65,7 +65,7 @@ masterNodeGroup:
     additionalNetworks:
     - DEVOPS_36
     datastore: 3par_4_Lun103
-    resourcePool: kubernetes-dev/cloud-layout-tests
+    resourcePool: kubernetes-stage/cloud-layout-tests
     rootDiskSize: 20
     runtimeOptions:
       nestedHardwareVirtualization: false
