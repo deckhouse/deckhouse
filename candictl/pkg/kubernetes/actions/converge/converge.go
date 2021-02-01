@@ -17,7 +17,11 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
-const masterNodeGroupName = "master"
+const (
+	masterNodeGroupName = "master"
+
+	noNodesConfirmationMessage = `Cluster has no nodes created by Terraform. Do you want to continue and create nodes?`
+)
 
 func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string) error {
 	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
@@ -92,7 +96,7 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 
 	// Candictl has nodes to create, and there are no nodes in the cluster.
 	if len(nodesState) == 0 && desiredQuantity > 0 {
-		if !input.AskForConfirmation("Cluster has no nodes created by Terraform. Do you want to continue and create nodes", false) {
+		if !input.NewConfirmation().WithMessage(noNodesConfirmationMessage).Ask() {
 			log.InfoLn("Aborted")
 			return nil
 		}
@@ -281,6 +285,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 
 	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
+		WithSkipChangesOnDeny(true).
 		WithState(state).
 		WithName(nodeName)
 	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
@@ -363,7 +368,9 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 			WithState(state).
 			WithName(name).
-			WithAllowedCachedState(true)
+			WithAllowedCachedState(true).
+			WithSkipChangesOnDeny(true)
+
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
 		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {

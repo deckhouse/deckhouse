@@ -52,6 +52,7 @@ type Runner struct {
 
 	autoApprove        bool
 	allowedCachedState bool
+	skipChangesOnDeny  bool
 	changesInPlan      int
 
 	stateCache cache.Cache
@@ -133,6 +134,11 @@ func (r *Runner) WithAllowedCachedState(flag bool) *Runner {
 	return r
 }
 
+func (r *Runner) WithSkipChangesOnDeny(flag bool) *Runner {
+	r.skipChangesOnDeny = flag
+	return r
+}
+
 func (r *Runner) Init() error {
 	if r.stopped {
 		return ErrRunnerStopped
@@ -145,7 +151,10 @@ func (r *Runner) Init() error {
 
 		if r.stateCache.InCache(stateName) && !r.allowedCachedState {
 			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
-			if !input.AskForConfirmation("Do you want to continue with Terraform state from local cache", true) {
+			if !input.NewConfirmation().
+				WithMessage("Do you want to continue with Terraform state from local cache?").
+				WithYesByDefault().
+				Ask() {
 				return fmt.Errorf(terraformPipelineAbortedMessage)
 			}
 		}
@@ -171,16 +180,33 @@ func (r *Runner) Init() error {
 	})
 }
 
+func (r *Runner) handleChanges() (bool, error) {
+	if r.autoApprove || r.changesInPlan == PlanHasNoChanges {
+		return false, nil
+	}
+
+	if !input.NewConfirmation().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
+		if !r.skipChangesOnDeny {
+			return false, fmt.Errorf("terraform apply aborted")
+		}
+	}
+
+	return true, nil
+}
+
 func (r *Runner) Apply() error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		if !r.autoApprove && r.changesInPlan != PlanHasNoChanges {
-			if !input.AskForConfirmation("Do you want to CHANGE objects state in the cloud", false) {
-				return fmt.Errorf("terraform apply aborted")
-			}
+		skip, err := r.handleChanges()
+		if err != nil {
+			return err
+		}
+		if skip {
+			log.InfoLn("Skip terraform apply.")
+			return nil
 		}
 
 		args := []string{
@@ -201,7 +227,7 @@ func (r *Runner) Apply() error {
 			)
 		}
 
-		_, err := r.execTerraform(args...)
+		_, err = r.execTerraform(args...)
 		if err != nil {
 			return err
 		}
@@ -285,7 +311,7 @@ func (r *Runner) Destroy() error {
 	}
 
 	if !r.autoApprove {
-		if !input.AskForConfirmation("Do you want to DELETE objects from the cloud", false) {
+		if !input.NewConfirmation().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}
@@ -446,7 +472,6 @@ func checkPlanDestructiveChanges(planFile string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	fmt.Println(string(result))
 
 	hasDestructiveChanges := func() bool {
 		for _, resource := range changes.ResourcesChanges {
