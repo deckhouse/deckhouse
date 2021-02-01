@@ -20,9 +20,9 @@ kubeDns:
     __ConstantChoices__:
     - []
     -
-      - zone: domain:53
+      - zone: domain
         upstreamNameservers: [8.8.8.8]
-      - zone: domain.next:53
+      - zone: domain.next
         upstreamNameservers: [8.8.8.8, 8.8.4.4]
   enableLogs:
     __ConstantChoices__: [false, true]
