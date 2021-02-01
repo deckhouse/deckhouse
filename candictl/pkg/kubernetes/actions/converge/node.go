@@ -1,6 +1,7 @@
 package converge
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
@@ -19,12 +21,38 @@ import (
 
 func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
-	err := retry.StartLoop(fmt.Sprintf("Get %s cloud config️", nodeGroupName), 45, 5, func() error {
-		secret, err := kubeCl.CoreV1().Secrets("d8-cloud-instance-manager").Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
+
+	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
+	err := log.Process("default", name, func() error {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					_, _ = deckhouse.NewLogPrinter(kubeCl).Print(ctx)
+				}
+			}
+		}()
+
+		err := retry.StartSilentLoop(name, 45, 5, func() error {
+			secret, err := kubeCl.CoreV1().
+				Secrets("d8-cloud-instance-manager").
+				Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
+
+		log.InfoLn("Cloud configuration found!")
 		return nil
 	})
 	return cloudData, err
@@ -37,7 +65,9 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 	resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
 
 	return retry.StartLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15, func() error {
-		res, err := kubeCl.Dynamic().Resource(resourceSchema).Create(&doc, metav1.CreateOptions{})
+		res, err := kubeCl.Dynamic().
+			Resource(resourceSchema).
+			Create(&doc, metav1.CreateOptions{})
 		if err == nil {
 			log.InfoF("NodeGroup %q created\n", res.GetName())
 			return nil
@@ -49,7 +79,9 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 			if err != nil {
 				return err
 			}
-			_, err = kubeCl.Dynamic().Resource(resourceSchema).Patch(doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+			_, err = kubeCl.Dynamic().
+				Resource(resourceSchema).
+				Patch(doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 			if err != nil {
 				return err
 			}
