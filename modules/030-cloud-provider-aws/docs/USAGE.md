@@ -33,8 +33,10 @@ spec:
    * **Внимание!** При изменении поля cloud-controller-manager попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group он не сможет и будет пытаться вечно. Необходимо вручную отсоединить от Target Group NLB или ALB.
 
 ## Настройка политик безопасности на узлах
+
 Вариантов, зачем может понадобиться ограничить или наоборот расширить входящий или исходящий трафик на виртуальных
 машинах кластера  в AWS, может быть множество, например:
+
 * Разрешить подключение к нодам кластера с виртуальных машин из другой подсети
 * Разрешить подключение к портам статической ноды для работы приложения
 * Ограничить доступ к внешним ресурсам или другим вм в облаке по требованию службы безопасности
@@ -42,6 +44,7 @@ spec:
 Для всего этого следует применять дополнительные security groups. Можно использовать только security groups, предварительно созданные в облаке.
 
 ## Установка дополнительных security groups на статических и мастер-узлах
+
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные security groups указываются в `AWSClusterConfiguration`:
 - для мастер-узлов, в секции `masterNodeGroup` в поле `additionalSecurityGroups`
 - для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalSecurityGroups`.
@@ -49,4 +52,11 @@ spec:
 Поле `additionalSecurityGroups` — содержит массив строк с именами security groups.
 
 ## Установка дополнительных security groups на эфемерных нодах
+
 Необходимо указать параметр `additionalSecurityGroups` для всех [`AWSInstanceClass`](cr.html#awsinstanceclass) в кластере, которым нужны дополнительные security groups.
+
+## Настройка балансировщика в случае наличия ingress нод не во всех зонах
+
+Необходимо указать аннотацию на Service объекте: `service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-foo, subnet-bar`.
+
+Список текущих подсетей, что используются для конкретной инсталляции можно так: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.

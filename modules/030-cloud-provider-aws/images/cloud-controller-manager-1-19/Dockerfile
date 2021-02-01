@@ -8,9 +8,11 @@ WORKDIR /src/
 RUN apk add --no-cache git mercurial patch
 RUN wget https://github.com/kubernetes/legacy-cloud-providers/archive/v0.19.3.tar.gz -O - | tar -xz --strip-components=1 -C /src
 COPY legacy-cloud-providers-patches/001-identify-instances-by-name.patch \
-    legacy-cloud-providers-patches/002-non-type-lb.patch /src/
+    legacy-cloud-providers-patches/002-non-type-lb.patch \
+    legacy-cloud-providers-patches/003-additional-subnet-configuration-for-elb.patch /src/
 RUN patch -p1 < 001-identify-instances-by-name.patch && \
-    patch -p1 < 002-non-type-lb.patch
+    patch -p1 < 002-non-type-lb.patch && \
+    patch -p5 < 003-additional-subnet-configuration-for-elb.patch
 
 FROM $BASE_GOLANG_ALPINE as ccm
 COPY --from=legacy-cloud-providers /src /legacy-cloud-providers
