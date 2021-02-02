@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: nodes
-      queue: /modules/$(module::name::kebab_case)/unmanagemed-nodes
+      queue: /modules/$(module::name::kebab_case)/unmanaged-nodes
       group: main
       keepFullObjectsInMemory: false
       waitForSynchronization: false
@@ -16,24 +16,16 @@ function __config__() {
       jqFilter: |
         {
           "name":                   .metadata.name,
-          "nodeGroup":              (.metadata.labels | has("node.deckhouse.io/group")),
-          "configurationChecksum":  (.metadata.annotations | has("node.deckhouse.io/configuration-checksum")),
-          "isWaitingForApproval":   (.metadata.annotations | has("update.node.deckhouse.io/waiting-for-approval")),
-          "isApproved":             (.metadata.annotations | has("update.node.deckhouse.io/approved"))
+          "hasNodeGroup":           (.metadata.labels | has("node.deckhouse.io/group")),
         }
 EOF
 }
 
 function __main__() {
-  if context::jq -e '.snapshots.nodes[0].filterResult' ; then
-    for node in $(context::jq -rc '.snapshots.nodes[] | .filterResult | .name as $name | all(to_entries[] | select(.key != "name"); .value == false) | if . then $name else empty end'); do
-      if [ ! -z "$node" ] ; then
-        echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": "'"$node"'"}, "set": 1}' >> $METRICS_PATH
-      else
-        echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": ""}, "set": 0}' >> $METRICS_PATH
-      fi
-    done
-  fi
+  echo '{"group":"node_manager_unmanaged_nodes", "action":"expire"}' >> "$METRICS_PATH"
+  for node in $(context::jq -r '.snapshots.nodes[].filterResult | select(.hasNodeGroup == false) | .name'); do
+    echo '{"name":"d8_unmanaged_nodes_on_cluster", "group":"node_manager_unmanaged_nodes", "labels": {"node": "'"$node"'"}, "set": 1}' >> "$METRICS_PATH"
+  done
 }
 
 hook::run "$@"
