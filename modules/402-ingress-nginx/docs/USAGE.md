@@ -37,6 +37,27 @@ spec:
   loadBalancer:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+
+```
+## Пример для AWS (Network Load Balancer), Ingress ноды находятся не во всех зонах
+
+В таком случае нужно указать аннотацию, в которой перечислены все идентификаторы подсетей, где необходимо создать Listener'ы. Подсети должны соответствовать зонам, где находятся Ingress ноды.
+Список текущих подсетей, которые используются для конкретной инсталляции можно получить так: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
+
+**Внимание!** Добавление аннотации на существующий Service не сработает, необходимо будет его пересоздать.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+ name: main
+spec:
+  ingressClass: "nginx"
+  inlet: "LoadBalancer"
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo, subnet-bar"
 ```
 
 ## Пример для GCP
