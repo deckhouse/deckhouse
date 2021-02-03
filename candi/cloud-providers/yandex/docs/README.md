@@ -8,7 +8,7 @@ title: "Cloud provider — Yandex: Развертывание"
   * Варианты — `Standard`, `WithoutNAT` или `WithNATInstance` (описание ниже).
 * `withNATInstance` — настройки для layout'а `WithNATInstance`.
   * `natInstanceExternalAddress` — внешний [зарезервированный белый IP адрес](#резервирование-белого-ip-адреса) или адрес из `externalSubnetID` при указании опции.
-  * `internalSubnetID` — ID подсети для внутреннего интерфейса
+  * `internalSubnetID` — ID подсети для внутреннего интерфейса.
   * `externalSubnetID` — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
 * `provider` — параметры подключения к API Yandex.Cloud.
   * `cloudID` — идентификатор облака.
@@ -196,7 +196,9 @@ dhcpOptions:
 
 В данной схеме размещения создаётся NAT instance, а в таблицу маршрутизации добавляется правило на 0.0.0.0/0 с NAT instance nexthop'ом.
 
-По-умолчанию, NAT instance создастся в зоне `ru-central1-c`. Если необходима другая зона, то стоит вручную создать subnet в нужной зоне и указать его в параметре `withNATInstance.internalSubnetID`.
+Если задан `withNATInstance.externalSubnetID` — NAT instance создастся в зоне этого subnet.
+Если `withNATInstance.externalSubnetID` не задан, а `withNATInstance.internalSubnetID` задан — NAT instance создастся в зоне этого subnet.
+Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT instance создастся в зоне `ru-central1-c`.
 
 **Внимание!** Сразу же (в течение 3х минут) после создания базовых сетевых ресурсов, нужно вручную прописать маршрут к созданному NAT instance. Если этого не сделать, то bootstrap процесс не сможет завершиться.
 
