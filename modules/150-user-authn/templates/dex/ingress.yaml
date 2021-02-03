@@ -22,3 +22,34 @@ spec:
         backend:
           serviceName: dex
           servicePort: 5556
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: dex-auth
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    nginx.ingress.kubernetes.io/limit-rpm: "10"
+    # Works only for ingress-controllers >=0.40. It is here to not forget to add the annotation after upgrading ingress controller.
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+{{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
+spec:
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    http:
+      paths:
+      - path: /auth
+        backend:
+          serviceName: dex
+          servicePort: 5556
+      - path: /healthz
+        backend:
+          serviceName: dex
+          servicePort: 5556
