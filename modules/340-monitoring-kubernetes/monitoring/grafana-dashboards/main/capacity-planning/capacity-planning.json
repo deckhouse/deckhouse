@@ -443,7 +443,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (\n  max by (node, pod) (kube_pod_info{node=~\"$node\"} > 0) \n  and on(pod) \n  max by (pod) (kube_pod_status_phase{phase=~\"Running|Pending\"} > 0)\n)",
+          "expr": "count(\n  (kube_pod_info{node=\"$node\"}==1) * on (pod, namespace)\n  (max by (pod, namespace)(kube_pod_container_status_running))==1\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Current number of Pods",
@@ -663,7 +663,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Capacity Planing",
+  "title": "Capacity Planning",
   "uid": "Tf3tuvziz1",
   "version": 2
 }
