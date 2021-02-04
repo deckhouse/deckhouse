@@ -8,7 +8,7 @@ properties:
       По умолчанию - список из `/etc/resolv.conf`.
     items:
       type: string
-      pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$'
+      pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
   hosts:
     description: |
       Cтатический список хостов в стиле /etc/hosts.
@@ -45,7 +45,7 @@ properties:
           type: array
           items:
             type: string
-            pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$'
+            pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
   enableLogs:
     description: |
       Позволяет включить логирование в CoreDNS.
