@@ -11,7 +11,7 @@ EOF
 
 function __on_startup() {
   if [[ -f /deckhouse/version ]] ; then
-    values::set deckhouse.internal.currentVersion "$(cat /deckhouse/version)"
+    values::set deckhouse.internal.currentVersion "\"$(cat /deckhouse/version)\""
   fi
 }
 
