@@ -38,7 +38,10 @@ const (
 	PlanHasDestructiveChanges
 )
 
-var ErrRunnerStopped = errors.New("Terraform runner was stopped.")
+var (
+	ErrRunnerStopped         = errors.New("Terraform runner was stopped.")
+	ErrTerraformApplyAborted = errors.New("terraform apply aborted")
+)
 
 type Runner struct {
 	name       string
@@ -58,6 +61,7 @@ type Runner struct {
 	stateCache cache.Cache
 
 	cmd     *exec.Cmd
+	confirm func() *input.Confirmation
 	stopped bool
 }
 
@@ -67,6 +71,7 @@ func NewRunner(provider, prefix, layout, step string) *Runner {
 		step:       step,
 		name:       step,
 		workingDir: buildTerraformPath(provider, layout, step),
+		confirm:    input.NewConfirmation,
 		stateCache: cache.Global(),
 	}
 }
@@ -82,6 +87,11 @@ func (r *Runner) WithCache(cache cache.Cache) *Runner {
 
 func (r *Runner) WithName(name string) *Runner {
 	r.name = name
+	return r
+}
+
+func (r *Runner) WithConfirm(confirm func() *input.Confirmation) *Runner {
+	r.confirm = confirm
 	return r
 }
 
@@ -151,7 +161,7 @@ func (r *Runner) Init() error {
 
 		if r.stateCache.InCache(stateName) && !r.allowedCachedState {
 			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
-			if !input.NewConfirmation().
+			if !r.confirm().
 				WithMessage("Do you want to continue with Terraform state from local cache?").
 				WithYesByDefault().
 				Ask() {
@@ -185,13 +195,14 @@ func (r *Runner) handleChanges() (bool, error) {
 		return false, nil
 	}
 
-	if !input.NewConfirmation().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
-		if !r.skipChangesOnDeny {
-			return false, fmt.Errorf("terraform apply aborted")
+	if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
+		if r.skipChangesOnDeny {
+			return true, nil
 		}
+		return false, ErrTerraformApplyAborted
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func (r *Runner) Apply() error {
@@ -311,7 +322,7 @@ func (r *Runner) Destroy() error {
 	}
 
 	if !r.autoApprove {
-		if !input.NewConfirmation().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
+		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}
