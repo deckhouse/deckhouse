@@ -93,6 +93,7 @@ spec:
     annotations:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
       threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
+      checksum/client: {{ include (print $.Template.BasePath "/prometheus-api-client-tls.yaml") . | sha256sum }}
   secrets:
   - prometheus-api-client-tls
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
