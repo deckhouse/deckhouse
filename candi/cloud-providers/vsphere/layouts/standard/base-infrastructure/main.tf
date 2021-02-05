@@ -49,4 +49,20 @@ resource "vsphere_resource_pool" "resource_pool" {
   for_each = toset([for s in data.vsphere_resource_pool.parent_resource_pool: s.id])
   name          = local.prefix
   parent_resource_pool_id = each.key
+
+  # for now we assume that these options would be tuned manually by vSphere cluster admin
+  lifecycle {
+    ignore_changes = [
+      cpu_share_level,
+      cpu_shares,
+      cpu_reservation,
+      cpu_expandable,
+      cpu_limit,
+      memory_share_level,
+      memory_shares,
+      memory_reservation,
+      memory_expandable,
+      memory_limit
+    ]
+  }
 }
