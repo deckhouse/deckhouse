@@ -7,7 +7,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 const (
@@ -25,7 +25,7 @@ func isDeckhouseSystemNamespace(actual string) bool {
 	return actual == "d8-monitoring" || actual == "d8-system"
 }
 
-func ObjectRBACPlacement(m types.Module, object storage.StoreObject) errors.LintRuleError {
+func ObjectRBACPlacement(m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	if m.Name == "user-authz" || m.Name == "deckhouse" {
 		return errors.EmptyRuleError
 	}
@@ -56,7 +56,7 @@ func ObjectRBACPlacement(m types.Module, object storage.StoreObject) errors.Lint
 	}
 }
 
-func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObject) errors.LintRuleError {
+func objectRBACPlacementServiceAccount(m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	objectName := object.Unstructured.GetName()
 	shortPath := object.ShortPath()
 	namespace := object.Unstructured.GetNamespace()
@@ -150,7 +150,7 @@ func objectRBACPlacementServiceAccount(m types.Module, object storage.StoreObjec
 	)
 }
 
-func objectRBACPlacementClusterRole(kind string, m types.Module, object storage.StoreObject) errors.LintRuleError {
+func objectRBACPlacementClusterRole(kind string, m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	objectName := object.Unstructured.GetName()
 	shortPath := object.ShortPath()
 
@@ -194,7 +194,7 @@ func objectRBACPlacementClusterRole(kind string, m types.Module, object storage.
 	return errors.EmptyRuleError
 }
 
-func objectRBACPlacementRole(kind string, m types.Module, object storage.StoreObject) errors.LintRuleError {
+func objectRBACPlacementRole(kind string, m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	objectName := object.Unstructured.GetName()
 	shortPath := object.ShortPath()
 	namespace := object.Unstructured.GetNamespace()
@@ -221,7 +221,7 @@ func objectRBACPlacementRole(kind string, m types.Module, object storage.StoreOb
 }
 
 // handleRootRBACForUs applies to templates/rbac-for-us.yaml file's objects
-func handleRootRBACForUs(m types.Module, object storage.StoreObject, objectName, kind string) errors.LintRuleError {
+func handleRootRBACForUs(m utils.Module, object storage.StoreObject, objectName, kind string) errors.LintRuleError {
 	prefix := "d8:" + m.Name
 	namespace := object.Unstructured.GetNamespace()
 
@@ -259,7 +259,7 @@ func handleRootRBACForUs(m types.Module, object storage.StoreObject, objectName,
 }
 
 // handleRootRBACToUs applies to templates/rbac-to-us.yaml file's objects
-func handleRootRBACToUs(m types.Module, object storage.StoreObject, objectName, kind string) errors.LintRuleError {
+func handleRootRBACToUs(m utils.Module, object storage.StoreObject, objectName, kind string) errors.LintRuleError {
 	prefix := "access-to-" + m.Name
 	if !strings.HasPrefix(objectName, prefix) {
 		return errors.NewLintRuleError(
@@ -286,7 +286,7 @@ func handleRootRBACToUs(m types.Module, object storage.StoreObject, objectName, 
 }
 
 // handleNestedRBACForUs applies to templates/**/rbac-for-us.yaml file's objects
-func handleNestedRBACForUs(m types.Module, object storage.StoreObject, shortPath, objectName, namespace, kind string) errors.LintRuleError {
+func handleNestedRBACForUs(m utils.Module, object storage.StoreObject, shortPath, objectName, namespace, kind string) errors.LintRuleError {
 	parts := strings.Split(
 		strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-for-us.yaml"), "templates/"),
 		string(os.PathSeparator),
@@ -340,7 +340,7 @@ func handleNestedRBACForUs(m types.Module, object storage.StoreObject, shortPath
 }
 
 // handleNestedRBACToUs applies to templates/**/rbac-to-us.yaml file's objects
-func handleNestedRBACToUs(m types.Module, object storage.StoreObject, shortPath, objectName, kind string) errors.LintRuleError {
+func handleNestedRBACToUs(m utils.Module, object storage.StoreObject, shortPath, objectName, kind string) errors.LintRuleError {
 	parts := strings.Split(
 		strings.TrimPrefix(strings.TrimSuffix(shortPath, "/rbac-to-us.yaml"), "templates/"),
 		string(os.PathSeparator),

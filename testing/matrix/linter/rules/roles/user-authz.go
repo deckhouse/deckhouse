@@ -7,14 +7,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 /*
 ObjectUserAuthzClusterRolePath validates that files for user-authz contains only cluster roles.
 Also, it validates that role names equals to d8:user-authz:<ChartName>:<AccessLevel>
 */
-func ObjectUserAuthzClusterRolePath(m types.Module, object storage.StoreObject) errors.LintRuleError {
+func ObjectUserAuthzClusterRolePath(m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	objectKind := object.Unstructured.GetKind()
 
 	shortPath := object.ShortPath()

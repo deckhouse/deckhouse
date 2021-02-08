@@ -26,9 +26,9 @@ myTemplates:
 global:
   enabledModules:
     __ConstantChoices__:
-      - ["vertical-pod-autoscaler-crd", "prometheus"]
-      - ["vertical-pod-autoscaler-crd"]
-      - []
+      - ["vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
+      - ["vertical-pod-autoscaler-crd", "priority-class"]
+      - ["priority-class"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

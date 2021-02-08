@@ -5,7 +5,11 @@ global:
         __ConstantChoices__: ["1", "3"]
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false, __EmptyItem__]
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+    kubernetesVersion:
+      __ConstantChoices__:
+      - "1.16"
+      - "1.19"
+  enabledModules: ["vertical-pod-autoscaler-crd", "priority-class"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg
@@ -21,7 +25,7 @@ global:
       provider:
         __ConstantChoices__: ["OpenStack"]
     clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-    kubernetesVersion: 1.15.4
+    kubernetesVersion: "1.19"
   modules:
     placement:
       __ConstantChoices__:

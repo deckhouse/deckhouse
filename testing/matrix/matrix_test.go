@@ -8,7 +8,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 func TestMatrix(t *testing.T) {
@@ -19,7 +19,7 @@ func TestMatrix(t *testing.T) {
 var _ = Describe("Matrix tests", func() {
 	modules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
 
-	modulesCH := make(chan types.Module, len(modules))
+	modulesCH := make(chan utils.Module, len(modules))
 	Context("module discovery", func() {
 		It("", func() {
 			Expect(err).ShouldNot(HaveOccurred())

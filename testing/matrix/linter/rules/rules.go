@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 func skipObjectIfNeeded(o *storage.StoreObject) bool {
@@ -53,7 +55,14 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 	return false
 }
 
-func applyContainerRules(lintRuleErrorsList *errors.LintRuleErrorsList, object storage.StoreObject) {
+type ObjectLinter struct {
+	ObjectStore *storage.UnstructuredObjectStore
+	ErrorsList  *errors.LintRuleErrorsList
+	Module      utils.Module
+	Values      string
+}
+
+func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
 	containers, err := object.GetContainers()
 	if err != nil {
 		panic(err)
@@ -62,15 +71,15 @@ func applyContainerRules(lintRuleErrorsList *errors.LintRuleErrorsList, object s
 		return
 	}
 
-	lintRuleErrorsList.Add(containerNameDuplicates(object, containers))
-	lintRuleErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
-	lintRuleErrorsList.Add(containerImageTagLatest(object, containers))
-	lintRuleErrorsList.Add(containerImagePullPolicyIfNotPresent(object, containers))
+	l.ErrorsList.Add(containerNameDuplicates(object, containers))
+	l.ErrorsList.Add(containerEnvVariablesDuplicates(object, containers))
+	l.ErrorsList.Add(containerImageTagLatest(object, containers))
+	l.ErrorsList.Add(containerImagePullPolicyIfNotPresent(object, containers))
 
 	if !skipObjectIfNeeded(&object) {
-		lintRuleErrorsList.Add(containerStorageEphemeral(object, containers))
-		lintRuleErrorsList.Add(containerSecurityContext(object, containers))
-		lintRuleErrorsList.Add(containerPorts(object, containers))
+		l.ErrorsList.Add(containerStorageEphemeral(object, containers))
+		l.ErrorsList.Add(containerSecurityContext(object, containers))
+		l.ErrorsList.Add(containerPorts(object, containers))
 	}
 }
 
@@ -193,15 +202,17 @@ func containerPorts(object storage.StoreObject, containers []v1.Container) error
 	return errors.EmptyRuleError
 }
 
-func applyObjectRules(objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList, module types.Module, object storage.StoreObject) {
-	lintRuleErrorsList.Add(objectRecommendedLabels(object))
-	lintRuleErrorsList.Add(objectAPIVersion(object))
-	lintRuleErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(module, object))
-	lintRuleErrorsList.Add(roles.ObjectRBACPlacement(module, object))
-	lintRuleErrorsList.Add(roles.ObjectBindingSubjectServiceAccountCheck(module, object, objectStore))
+func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
+	l.ErrorsList.Add(objectRecommendedLabels(object))
+	l.ErrorsList.Add(objectAPIVersion(object))
+	l.ErrorsList.Add(objectPriorityClass(l.Values, object))
+
+	l.ErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(l.Module, object))
+	l.ErrorsList.Add(roles.ObjectRBACPlacement(l.Module, object))
+	l.ErrorsList.Add(roles.ObjectBindingSubjectServiceAccountCheck(l.Module, object, l.ObjectStore))
 
 	if !skipObjectIfNeeded(&object) {
-		lintRuleErrorsList.Add(objectSecurityContext(object))
+		l.ErrorsList.Add(objectSecurityContext(object))
 	}
 }
 
@@ -258,6 +269,78 @@ func objectAPIVersion(object storage.StoreObject) errors.LintRuleError {
 	default:
 		return errors.EmptyRuleError
 	}
+}
+
+func newConvertError(object storage.StoreObject, err error) errors.LintRuleError {
+	return errors.NewLintRuleError(
+		"MANIFEST007",
+		object.Identity(),
+		nil,
+		"Cannot convert object to %s: %v", object.Unstructured.GetKind(), err,
+	)
+}
+
+func objectPriorityClass(values string, object storage.StoreObject) errors.LintRuleError {
+	if !utils.ModuleEnabled(values, "priority-class") {
+		return errors.EmptyRuleError
+	}
+
+	kind := object.Unstructured.GetKind()
+	converter := runtime.DefaultUnstructuredConverter
+
+	var priorityClass string
+
+	switch kind {
+	case "Deployment":
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		priorityClass = deployment.Spec.Template.Spec.PriorityClassName
+	case "DaemonSet":
+		daemonset := new(appsv1.DaemonSet)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), daemonset)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		priorityClass = daemonset.Spec.Template.Spec.PriorityClassName
+	case "StatefulSet":
+		statefulset := new(appsv1.StatefulSet)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), statefulset)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		priorityClass = statefulset.Spec.Template.Spec.PriorityClassName
+	default:
+		return errors.EmptyRuleError
+	}
+
+	switch priorityClass {
+	case "":
+		return errors.NewLintRuleError(
+			"MANIFEST007",
+			object.Identity(),
+			priorityClass,
+			"Priority class must not be empty",
+		)
+	case "system-node-critical", "system-cluster-critical", "cluster-medium", "cluster-low" /* TODO: delete after migrating to 1.19 -> */, "cluster-critical":
+	default:
+		return errors.NewLintRuleError(
+			"MANIFEST007",
+			object.Identity(),
+			priorityClass,
+			"Priority class is not allowed",
+		)
+	}
+
+	return errors.EmptyRuleError
 }
 
 func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
@@ -334,15 +417,21 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
-func ApplyLintRules(module types.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
-	var lintRuleErrorsList errors.LintRuleErrorsList
-	for _, object := range objectStore.Storage {
-		applyObjectRules(objectStore, &lintRuleErrorsList, module, object)
-		applyContainerRules(&lintRuleErrorsList, object)
+func ApplyLintRules(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
+	linter := ObjectLinter{
+		ObjectStore: objectStore,
+		Values:      values,
+		Module:      module,
+		ErrorsList:  &errors.LintRuleErrorsList{},
 	}
 
-	resources.ControllerMustHaveVPA(module, values, objectStore, &lintRuleErrorsList)
-	resources.ControllerMustHavePDB(objectStore, &lintRuleErrorsList)
+	for _, object := range objectStore.Storage {
+		linter.ApplyObjectRules(object)
+		linter.ApplyContainerRules(object)
+	}
 
-	return lintRuleErrorsList.ConvertToError()
+	resources.ControllerMustHaveVPA(module, values, objectStore, linter.ErrorsList)
+	resources.ControllerMustHavePDB(objectStore, linter.ErrorsList)
+
+	return linter.ErrorsList.ConvertToError()
 }

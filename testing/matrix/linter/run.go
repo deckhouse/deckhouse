@@ -6,11 +6,11 @@ import (
 	"log"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 //
-func Run(tmpDir string, m types.Module) error {
+func Run(tmpDir string, m utils.Module) error {
 	// Silence default logger (helm)
 	log.SetOutput(ioutil.Discard)
 

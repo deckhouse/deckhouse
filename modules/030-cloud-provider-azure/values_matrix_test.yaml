@@ -6,6 +6,7 @@ global:
   enabledModules:
     __ConstantChoices__:
       - ["vertical-pod-autoscaler-crd"]
+      - ["priority-class"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

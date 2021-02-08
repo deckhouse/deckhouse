@@ -1,7 +1,7 @@
 global:
   project: my_project
   clusterName: my_cluster
-  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-pricing"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-pricing", "priority-class"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

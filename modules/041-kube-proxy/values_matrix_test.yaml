@@ -4,7 +4,7 @@ kubeProxy:
 global:
   enabledModules:
     __ConstantChoices__:
-      - [ "vertical-pod-autoscaler-crd", "operator-prometheus-crd" ]
+      - [ "vertical-pod-autoscaler-crd", "operator-prometheus-crd", "priority-class"]
       - [ "vertical-pod-autoscaler-crd" ]
   discovery:
     kubernetesVersion: 1.15.6

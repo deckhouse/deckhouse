@@ -1,6 +1,6 @@
 global:
   highAvailability: [true, false]
-  enabledModules: ["vertical-pod-autoscaler-crd", "cert-manager", "prometheus"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "cert-manager", "prometheus", "priority-class"]
   modules:
     publicDomainTemplate: "%s.example.com"
     placement:
