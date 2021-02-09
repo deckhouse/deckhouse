@@ -22,7 +22,7 @@ title: "Модуль extended-monitoring: настройки"
 
 Сразу же после этого, для всех поддерживаемых Kubernetes объектов в данном Namespace в Prometheus появятся default метрики + любые кастомные с префиксом `threshold.extended-monitoring.flant.com/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes объектов, описанных ниже, мониторинг и стандартные аннотации включаются автоматически.
 
-К Kubernetes объектам `threshold.extended-monitoring.flant.com/что-то своё` можно добавить любые другие аннотации с указанным значением. Пример: `kubectl annotate pod test monitoring.flant.com/disk-inodes-warning-threshold=30`.
+К Kubernetes объектам `threshold.extended-monitoring.flant.com/что-то своё` можно добавить любые другие аннотации с указанным значением. Пример: `kubectl annotate pod test threshold.extended-monitoring.flant.com/disk-inodes-warning-threshold=30`.
 В таком случае, значение из аннотации заменит значение по умолчанию.
 
 Слежение за объектом можно отключить индивидуально, поставив на него аннотацию `extended-monitoring.flant.com/enabled=false`. Соответственно, отключатся и аннотации по умолчанию, а также все алерты, привязанные к аннотациям.
