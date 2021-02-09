@@ -108,6 +108,7 @@ spec:
     annotations:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
       threshold.extended-monitoring.flant.com/disk-bytes-critical: "99"
+      checksum/scraper: {{ include (print $.Template.BasePath "/prometheus-scraper-tls.yaml") . | sha256sum }}
   serviceMonitorSelector:
     matchLabels:
       prometheus: main
