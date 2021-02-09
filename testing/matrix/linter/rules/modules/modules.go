@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 const (
@@ -287,8 +287,8 @@ func checkImageNamesInDockerAndWerfFiles(name, path string, lintRuleErrorsList *
 	}
 }
 
-func GetDeckhouseModulesWithValuesMatrixTests() ([]types.Module, error) {
-	var modules []types.Module
+func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
+	var modules []utils.Module
 
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
@@ -357,7 +357,7 @@ func getModulePaths(modulesDir string) ([]string, error) {
 
 // lintModuleStructure collects linting errors
 // for helmignore, hooks, docker and werf files, namespace, and CRDs
-func lintModuleStructure(lintRuleErrorsList errors.LintRuleErrorsList, modulePath string) (types.Module, bool) {
+func lintModuleStructure(lintRuleErrorsList errors.LintRuleErrorsList, modulePath string) (utils.Module, bool) {
 	moduleName := filepath.Base(modulePath)
 
 	lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
@@ -367,19 +367,19 @@ func lintModuleStructure(lintRuleErrorsList errors.LintRuleErrorsList, modulePat
 	name, lintError := chartModuleRule(moduleName, modulePath)
 	lintRuleErrorsList.Add(lintError)
 	if name == "" {
-		return types.Module{}, false
+		return utils.Module{}, false
 	}
 
 	namespace, lintError := namespaceModuleRule(moduleName, modulePath)
 	lintRuleErrorsList.Add(lintError)
 	if namespace == "" {
-		return types.Module{}, false
+		return utils.Module{}, false
 	}
 
 	if isExistsOnFilesystem(modulePath, "crds") {
 		lintRuleErrorsList.Merge(crdsModuleRule(moduleName, modulePath+"/crds"))
 	}
 
-	module := types.Module{Name: name, Path: modulePath, Namespace: namespace}
+	module := utils.Module{Name: name, Path: modulePath, Namespace: namespace}
 	return module, true
 }

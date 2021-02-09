@@ -1,5 +1,5 @@
 global:
-  enabledModules: ["cert-manager","vertical-pod-autoscaler-crd"]
+  enabledModules: ["cert-manager","vertical-pod-autoscaler-crd", "priority-class"]
   modules:
     publicDomainTemplate: "%s.example.com"
     placement:

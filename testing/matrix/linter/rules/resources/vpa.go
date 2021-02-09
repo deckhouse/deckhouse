@@ -4,19 +4,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 // ControllerMustHaveVPA fills linting error regarding VPA
-func ControllerMustHaveVPA(module types.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
-	if !isVPAEnabled(values) {
+func ControllerMustHaveVPA(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
+	if !utils.ModuleEnabled(values, "vertical-pod-autoscaler-crd") {
 		return
 	}
 
@@ -40,23 +39,6 @@ func ControllerMustHaveVPA(module types.Module, values string, objectStore *stor
 
 		ensureTolerations(scope, vpaTolerationGroups, index, object)
 	}
-}
-
-func isVPAEnabled(values string) bool {
-	var v struct {
-		Global struct{ EnabledModules []string }
-	}
-	err := yaml.Unmarshal([]byte(values), &v)
-	if err != nil {
-		panic("unable to parse global.enabledModules values section")
-	}
-
-	for _, module := range v.Global.EnabledModules {
-		if module == "vertical-pod-autoscaler-crd" {
-			return true
-		}
-	}
-	return false
 }
 
 func isPodController(kind string) bool {

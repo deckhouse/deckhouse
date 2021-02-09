@@ -6,10 +6,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
-func ObjectBindingSubjectServiceAccountCheck(m types.Module, object storage.StoreObject, objectStore *storage.UnstructuredObjectStore) errors.LintRuleError {
+func ObjectBindingSubjectServiceAccountCheck(m utils.Module, object storage.StoreObject, objectStore *storage.UnstructuredObjectStore) errors.LintRuleError {
 	if m.Name == "user-authz" {
 		return errors.EmptyRuleError
 	}

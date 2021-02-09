@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/types"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 func init() {
@@ -37,13 +37,13 @@ var (
 )
 
 type ModuleController struct {
-	Module          types.Module
+	Module          utils.Module
 	Values          []string
 	Chart           *chart.Chart
 	ValuesValidator *validation.ValuesValidator
 }
 
-func NewModuleController(m types.Module, values []string) *ModuleController {
+func NewModuleController(m utils.Module, values []string) *ModuleController {
 	// Check chart requirements to make sure all dependencies are present in /charts
 	hc, err := loader.Load(m.Path)
 	if err != nil {
@@ -68,16 +68,20 @@ type Task struct {
 	values string
 }
 
+func NewTask(index int, values string) *Task {
+	return &Task{index: index, values: values}
+}
+
 type Worker struct {
 	id       int
-	tasksCh  chan Task
+	tasksCh  <-chan *Task
 	errorsCh chan error
 	doneCh   chan struct{}
 
 	ctx context.Context
 }
 
-func NewWorker(ctx context.Context, id int, tasksCh chan Task, errorsCh chan error, doneCh chan struct{}) *Worker {
+func NewWorker(ctx context.Context, id int, tasksCh <-chan *Task, errorsCh chan error, doneCh chan struct{}) *Worker {
 	return &Worker{id: id, tasksCh: tasksCh, errorsCh: errorsCh, doneCh: doneCh, ctx: ctx}
 }
 
@@ -85,7 +89,7 @@ func (w *Worker) Start(c *ModuleController) {
 	for {
 		select {
 		case task := <-w.tasksCh:
-			if err := lint(c, &task); err != nil {
+			if err := lint(c, task); err != nil {
 				w.errorsCh <- err
 				return
 			}
@@ -104,7 +108,7 @@ func (c *ModuleController) Run() error {
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	errorsCh := make(chan error, testCasesQuantity)
-	tasksCh := make(chan Task)
+	tasksCh := make(chan *Task)
 	doneCh := make(chan struct{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -116,7 +120,7 @@ func (c *ModuleController) Run() error {
 
 	go func() {
 		for index, valuesData := range c.Values {
-			tasksCh <- Task{index: index, values: valuesData}
+			tasksCh <- NewTask(index, valuesData)
 		}
 	}()
 

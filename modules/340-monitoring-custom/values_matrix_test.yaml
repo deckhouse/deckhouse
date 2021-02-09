@@ -1,5 +1,5 @@
 global:
-  enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus"]
+  enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
   modulesImages:
     registry: registry.flant.com
     registryDockercfg: cfg

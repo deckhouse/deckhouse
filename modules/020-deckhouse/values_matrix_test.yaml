@@ -1,5 +1,5 @@
 global:
-  enabledModules: ["vertical-pod-autoscaler-crd", "flant-pricing"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "flant-pricing", "priority-class"]
   modules:
     placement: {}
   modulesImages:
@@ -24,7 +24,7 @@ deckhouse:
      logLevel:
        __ConstantChoices__: [Info, Debug, Error]
      bundle:
-       __ConstantChoices__: [Minimal, Managed, Default]  
+       __ConstantChoices__: [Minimal, Managed, Default]
   -  internal:
        currentReleaseImageName: "registry:testtag"
        validatingWebhookHandlerCert:
