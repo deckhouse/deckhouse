@@ -36,5 +36,5 @@ locals {
   external_ip_addresses = lookup(local.instance_class, "externalIPAddresses", [])
   external_subnet_id = lookup(local.instance_class, "externalSubnetID", null)
 
-  additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.master_instance_class, "additionalLabels", {}))
+  additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.instance_class, "additionalLabels", {}))
 }
