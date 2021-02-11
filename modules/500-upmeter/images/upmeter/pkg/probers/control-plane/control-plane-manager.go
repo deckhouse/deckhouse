@@ -32,7 +32,7 @@ func NewControlPlaneManagerProber() types.Prober {
 		Group: groupName,
 		Probe: "control-plane-manager",
 	}
-	const mgrProbePeriod = 60 // period: 1 min
+	const mgrProbePeriod = time.Minute
 	const mgrCreateDeploymentTimeout = time.Second * 5
 	const mgrPodPendingTimeout = time.Second * 10
 	const mgrDeleteDeploymentTimeout = time.Second * 5
@@ -44,7 +44,7 @@ func NewControlPlaneManagerProber() types.Prober {
 		Period:   mgrProbePeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
 		// Set Unknown result if API server is unavailable

@@ -51,7 +51,7 @@ func NewDefaultAgent(ctx context.Context) *Agent {
 	a.Manager = manager.NewProbeManager()
 	a.Manager.Init() // Create instances for each prober.
 
-	for _, prober := range a.Manager.ProberList {
+	for _, prober := range a.Manager.Probers() {
 		log.Infof("Register probe %s", prober.ProbeId())
 	}
 

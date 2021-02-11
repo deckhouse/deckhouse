@@ -27,7 +27,7 @@ func NewAccessProber() types.Prober {
 		Group: groupName,
 		Probe: "access",
 	}
-	const accessPeriod = 5
+	const accessPeriod = 5 * time.Second
 	const accessDnsTimeout = 2 * time.Second
 	const accessTimeout = 2 * time.Second
 
@@ -36,11 +36,11 @@ func NewAccessProber() types.Prober {
 		Period:   accessPeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
-		smokeIPs, failed := ResolveSmokeMiniIps(SmokeMiniAddr, accessDnsTimeout)
-		if failed {
+		smokeIPs, found := LookupAndShuffleIPs(SmokeMiniAddr, accessDnsTimeout)
+		if !found {
 			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 			return
 		}

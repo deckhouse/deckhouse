@@ -28,7 +28,7 @@ func NewNeighborViaServiceProber() types.Prober {
 		Group: groupName,
 		Probe: "neighbor-via-service",
 	}
-	const nghsrvPeriod = 5
+	const nghsrvPeriod = 5 * time.Second
 	const nghsrvDnsTimeout = 2 * time.Second
 	const nghsrvTimeout = 4 * time.Second
 
@@ -37,11 +37,11 @@ func NewNeighborViaServiceProber() types.Prober {
 		Period:   nghsrvPeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
-		smokeIPs, failed := ResolveSmokeMiniIps(SmokeMiniAddr, nghsrvDnsTimeout)
-		if failed {
+		smokeIPs, found := LookupAndShuffleIPs(SmokeMiniAddr, nghsrvDnsTimeout)
+		if !found {
 			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 			return
 		}

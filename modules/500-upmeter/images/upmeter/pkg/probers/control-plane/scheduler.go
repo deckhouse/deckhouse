@@ -28,7 +28,7 @@ func NewSchedulerProber() types.Prober {
 		Group: groupName,
 		Probe: "scheduler",
 	}
-	const schProbePeriod = 60 // period: 1 min
+	const schProbePeriod = time.Minute
 	const schCreatePodTimeout = time.Second * 5
 	const schSchedulerReactionTimeout = time.Second * 20
 	const schDeletePodTimeout = time.Second * 5
@@ -40,7 +40,7 @@ func NewSchedulerProber() types.Prober {
 
 	nodeAffinity := GetControlPlaneSchedulerNodeAffinity()
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
 		// Set Unknown result if API server is unavailable

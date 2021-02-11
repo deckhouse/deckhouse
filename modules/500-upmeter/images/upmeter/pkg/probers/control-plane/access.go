@@ -23,7 +23,7 @@ func NewAccessProber() types.Prober {
 		Group: groupName,
 		Probe: "access",
 	}
-	const accessPeriod = 5
+	const accessPeriod = 5 * time.Second
 	const accessTimeout = 5 * time.Second
 
 	pr := &types.CommonProbe{
@@ -31,7 +31,7 @@ func NewAccessProber() types.Prober {
 		Period:   accessPeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 		util.DoWithTimer(accessTimeout, func() {
 			_, err := pr.KubernetesClient.Discovery().ServerVersion()

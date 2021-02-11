@@ -27,7 +27,7 @@ func NewNeighborProber() types.Prober {
 		Group: groupName,
 		Probe: "neighbor",
 	}
-	const nghPeriod = 5
+	const nghPeriod = 5 * time.Second
 	const nghDnsTimeout = 2 * time.Second
 	const nghTimeout = 4 * time.Second
 
@@ -36,11 +36,11 @@ func NewNeighborProber() types.Prober {
 		Period:   nghPeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
-		smokeIPs, failed := ResolveSmokeMiniIps(SmokeMiniAddr, nghDnsTimeout)
-		if failed {
+		smokeIPs, found := LookupAndShuffleIPs(SmokeMiniAddr, nghDnsTimeout)
+		if !found {
 			pr.ResultCh <- pr.Result(types.ProbeUnknown)
 			return
 		}
