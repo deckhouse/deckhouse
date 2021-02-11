@@ -237,9 +237,22 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 		return err
 	}
 
+	terraNodesExistInConfig := make(map[string]struct{}, len(c.config.GetTerraNodeGroups()))
+	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
+		terraNodesExistInConfig[terranodeGroup.Name] = struct{}{}
+	}
+
 	if replicas < len(nodeGroupState.State) {
 		err := log.Process("converge", fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
-			return c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings)
+			if err := c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings); err != nil {
+				return err
+			}
+			if _, ok := terraNodesExistInConfig[nodeGroup.Name]; !ok && nodeGroup.Name != "master" {
+				if err := DeleteNodeGroup(c.client, nodeGroup.Name); err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		if err != nil {
 			return err
@@ -378,8 +391,12 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 			continue
 		}
 
-		err := DeleteTerraformState(c.client, fmt.Sprintf("d8-node-terraform-state-%s", name))
-		if err != nil {
+		if err := DeleteNode(c.client, name); err != nil {
+			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
+			continue
+		}
+
+		if err := DeleteTerraformState(c.client, fmt.Sprintf("d8-node-terraform-state-%s", name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
 			continue
 		}

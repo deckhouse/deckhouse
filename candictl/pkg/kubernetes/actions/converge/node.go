@@ -19,6 +19,8 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
+var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
+
 func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
 
@@ -192,10 +194,9 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 
 func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
 	nodeTemplates := make(map[string]map[string]interface{})
-	resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
 
 	err := retry.StartLoop("Get NodeGroups node template settings", 10, 5, func() error {
-		nodeGroups, err := kubeCl.Dynamic().Resource(resourceSchema).List(metav1.ListOptions{})
+		nodeGroups, err := kubeCl.Dynamic().Resource(nodeGroupResource).List(metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -212,4 +213,26 @@ func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[stri
 	})
 
 	return nodeTemplates, err
+}
+
+func DeleteNode(kubeCl *client.KubernetesClient, nodeName string) error {
+	return retry.StartLoop(fmt.Sprintf("Delete Node %s", nodeName), 45, 10, func() error {
+		err := kubeCl.CoreV1().Nodes().Delete(nodeName, &metav1.DeleteOptions{})
+		if errors.IsNotFound(err) {
+			// Node has already been deleted
+			return nil
+		}
+		return err
+	})
+}
+
+func DeleteNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) error {
+	return retry.StartLoop(fmt.Sprintf("Delete NodeGroup %s", nodeGroupName), 45, 10, func() error {
+		err := kubeCl.Dynamic().Resource(nodeGroupResource).Delete(nodeGroupName, &metav1.DeleteOptions{})
+		if errors.IsNotFound(err) {
+			// NodeGroup has already been deleted
+			return nil
+		}
+		return err
+	})
 }
