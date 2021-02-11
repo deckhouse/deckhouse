@@ -10,9 +10,9 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "10m"
-      summary: Deckhouse module {{`{{ $labels.module_name }}`}} use emptydir as storage.
+      summary: Deckhouse module {{ $labels.module_name }} use emptydir as storage.
       description: |
-        Deckhouse module {{`{{ $labels.module_name }}`}} use emptydir as storage.
+        Deckhouse module {{ $labels.module_name }} use emptydir as storage.
 
   - alert: ClusterHasProblemsWithDeckhouseModuleUseEmptyDir
     expr: |
