@@ -2,12 +2,17 @@ package manager
 
 import (
 	"github.com/flant/shell-operator/pkg/kube"
+
 	"upmeter/pkg/probe/types"
 	"upmeter/pkg/probers"
 )
 
 type ProbeManager struct {
-	ProberList []types.Prober
+	probers []types.Prober
+}
+
+func (m *ProbeManager) Probers() []types.Prober {
+	return m.probers
 }
 
 func NewProbeManager() *ProbeManager {
@@ -15,19 +20,15 @@ func NewProbeManager() *ProbeManager {
 }
 
 func (m *ProbeManager) Init() {
-	m.ProberList = FilterDisabledProbesFromProbers(probers.Load())
+	m.probers = FilterDisabledProbesFromProbers(probers.Load())
 }
 
 func (m *ProbeManager) InitProbes(ch chan types.ProbeResult, client kube.KubernetesClient) {
-	for _, p := range m.ProberList {
+	for _, p := range m.probers {
 		_ = p.Init()
 		p.WithResultChan(ch)
 		p.WithKubernetesClient(client)
 	}
-}
-
-func (m *ProbeManager) Probers() []types.Prober {
-	return m.ProberList
 }
 
 func FilterDisabledProbesFromProbers(probers []types.Prober) []types.Prober {

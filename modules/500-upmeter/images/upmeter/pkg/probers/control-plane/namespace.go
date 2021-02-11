@@ -32,7 +32,7 @@ func NewNamespaceProber() types.Prober {
 		Group: groupName,
 		Probe: "namespace",
 	}
-	const nsProbePeriod = 60 // period: 1 min
+	const nsProbePeriod = time.Minute
 	const nsCreateTimeout = time.Second * 5
 	const nsDeleteTimeout = time.Second * 60
 
@@ -41,7 +41,7 @@ func NewNamespaceProber() types.Prober {
 		Period:   nsProbePeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
 		// Set Unknown result if API server is unavailable

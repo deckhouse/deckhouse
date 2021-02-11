@@ -1,13 +1,15 @@
 package types
 
 import (
+	"time"
+
 	"github.com/flant/shell-operator/pkg/kube"
 	log "github.com/sirupsen/logrus"
 )
 
 type Prober interface {
 	Init() error
-	Run(start int64) error
+	Run(start time.Time) error
 	ProbeId() string
 	State() *ProbeState
 	WithResultChan(ch chan ProbeResult)
@@ -16,22 +18,24 @@ type Prober interface {
 
 type ProbeState struct {
 	Running   bool
-	StartedAt int64
-	Period    int64 // Period between runs
+	StartedAt time.Time
+	Period    time.Duration // Period between runs
 	FirstRun  bool
 }
 
-// probe should run if it is not running and period is reached
-func (ps *ProbeState) ShouldRun(now int64) bool {
-	if !ps.Running && now-ps.StartedAt >= ps.Period {
+// ShouldRun checks that the probe can be run. Returns true if the probe is not
+// running and its period passed
+func (ps *ProbeState) ShouldRun(now time.Time) bool {
+	periodPassed := now.After(ps.StartedAt.Add(ps.Period))
+	if !ps.Running && periodPassed {
 		return true
 	}
 	return false
 }
 
-func (ps *ProbeState) Start(tm int64) {
+func (ps *ProbeState) Start(t time.Time) {
 	ps.Running = true
-	ps.StartedAt = tm
+	ps.StartedAt = t
 }
 
 func (ps *ProbeState) Stop() {
@@ -49,11 +53,11 @@ type CommonProbe struct {
 	ResultCh         chan ProbeResult
 	KubernetesClient kube.KubernetesClient
 
-	Period int64
+	Period time.Duration
 
 	ProbeRef *ProbeRef
 	InitFn   func()
-	RunFn    func(start int64)
+	RunFn    func()
 }
 
 func (c *CommonProbe) State() *ProbeState {
@@ -88,13 +92,13 @@ func (c *CommonProbe) ProbeId() string {
 	return ""
 }
 
-func (c *CommonProbe) Run(start int64) error {
+func (c *CommonProbe) Run(start time.Time) error {
 	//log.Infof("Run probe ")
 	c.State().Start(start)
 
 	go func() {
 		if c.RunFn != nil {
-			c.RunFn(start)
+			c.RunFn()
 		}
 		c.State().Stop()
 	}()

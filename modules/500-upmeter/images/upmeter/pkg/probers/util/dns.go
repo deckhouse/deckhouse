@@ -19,15 +19,17 @@ func LookupIPsWithTimeout(domain string, timeout time.Duration) (ips []string, e
 	resolver := net.Resolver{}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
 	addrs, err := resolver.LookupIPAddr(ctx, domain)
 	if err != nil {
 		return
 	}
+
 	ips = make([]string, 0)
 	for _, addr := range addrs {
 		ips = append(ips, addr.IP.String())
 	}
-	log.Infof("domain '%s' resolved to %+v", domain, ips)
+	log.Debugf("domain '%s' resolved to %+v", domain, ips)
 	return ips, nil
 }
 

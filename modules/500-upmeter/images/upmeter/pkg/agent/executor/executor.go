@@ -65,7 +65,8 @@ func (e *ProbeExecutor) Start() {
 
 	// Probe restarter
 	go func() {
-		restartTick := time.NewTicker(time.Second)
+		// The minimal period to spawn probes
+		restartTick := time.NewTicker(100 * time.Millisecond)
 
 		for {
 			select {
@@ -115,15 +116,15 @@ func (e *ProbeExecutor) Stop() {
 // RestartProbes checks if probe is running and restart them.
 func (e *ProbeExecutor) RestartProbes() {
 	//log.Infof("RestartProbes")
-	currentSecond := time.Now().Unix()
+	now := time.Now()
 	for _, prob := range e.ProbeManager.Probers() {
-		if !prob.State().ShouldRun(currentSecond) {
+		if !prob.State().ShouldRun(now) {
 			continue
 		}
 
 		// Run probe again
-		//log.Infof("executor Start probe '%s' at %d", prob.Metadata().String(), currentSecond)
-		_ = prob.Run(currentSecond)
+		//log.Infof("executor Start probe '%s' at %d", prob.Metadata().String(), now)
+		_ = prob.Run(now)
 
 		// Increase probe running counter
 		e.MetricStorage.CounterAdd("upmeter_agent_probe_run_total",

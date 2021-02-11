@@ -24,15 +24,15 @@ func NewBasicProber() types.Prober {
 		Group: groupName,
 		Probe: "basic-functionality",
 	}
-	const basicProbePeriod = 5
-	const basicProbeTimeout = time.Second * 5
+	const basicProbePeriod = 5 * time.Second
+	const basicProbeTimeout = 5 * time.Second
 
 	pr := &types.CommonProbe{
 		ProbeRef: &basicProbeRef,
 		Period:   basicProbePeriod,
 	}
 
-	pr.RunFn = func(start int64) {
+	pr.RunFn = func() {
 		log := pr.LogEntry()
 
 		// Set Unknown result if API server is unavailable
