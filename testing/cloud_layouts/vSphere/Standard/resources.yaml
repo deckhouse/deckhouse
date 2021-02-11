@@ -28,7 +28,7 @@ spec:
   memory: 8192
   rootDiskSize: 20
   mainNetwork: DEVOPS_36
-  datastore: 3par_4_Lun103
+  datastore: 3par_4_Lun105
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroup
