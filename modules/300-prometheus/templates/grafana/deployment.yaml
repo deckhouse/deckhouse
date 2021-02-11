@@ -94,6 +94,8 @@ spec:
           mountPath: /etc/grafana-dashboard-definitions
         - name: tmp
           mountPath: /tmp
+        - name: plugins
+          mountPath: /var/lib/grafana/plugins
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
@@ -180,4 +182,6 @@ spec:
       - name: grafana-storage
         emptyDir: {}
       - name: tmp
+        emptyDir: {}
+      - name: plugins
         emptyDir: {}
