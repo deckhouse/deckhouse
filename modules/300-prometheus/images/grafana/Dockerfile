@@ -37,7 +37,7 @@ RUN apt-get update && \
     done && \
     mkdir -p /var/lib/grafana/plugins/flant-statusmap-panel && \
     mv /plugin-dist /var/lib/grafana/plugins/flant-statusmap-panel/ && \
-    chmod +r /etc/grafana/grafana.ini
+    chmod +r -R /etc/grafana
 EXPOSE 3000
 COPY ./run.sh /run.sh
 WORKDIR /
