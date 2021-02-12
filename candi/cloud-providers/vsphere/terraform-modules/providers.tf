@@ -3,4 +3,5 @@ provider "vsphere" {
   user = var.providerClusterConfiguration.provider.username
   password = var.providerClusterConfiguration.provider.password
   allow_unverified_ssl = lookup(var.providerClusterConfiguration.provider, "insecure", false)
+  persist_session = true
 }
