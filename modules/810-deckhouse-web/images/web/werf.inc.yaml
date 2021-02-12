@@ -41,7 +41,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data
-    - name: "Copy and apply schemas"
+    - name: "Generate module configuration schemas"
       shell: |
         for schema_path in $(find modules -regex '^.*/openapi/config-values.yaml$' -print); do
           module_path=$(echo $schema_path | cut -d\/ -f-2 )
@@ -51,10 +51,30 @@ ansible:
           grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md
           if [ $? -eq 0 ]; then
             # Apply schema
-            echo -e "Applying schema ${schema_path} in ${module_path}/docs/CONFIGURATION.md"
+            echo "Generating schema ${schema_path} for ${module_path}/docs/CONFIGURATION.md"
             sed -i "s#<!-- SCHEMA -->#\{\% include jsonschema_object.md object=site.data.schemas.${module_name}.config-values \%\}#" ${module_path}/docs/CONFIGURATION.md
           else
-            echo -e "\nWARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md\n"
+            echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
+          fi
+        done
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data
+    - name: "Generate CR schemas"
+      shell: |
+        for schema_path in $(find modules -regex '^.*/crds/.*.yaml$' -print); do
+          module_path=$(echo $schema_path | cut -d\/ -f-2 )
+          module_name=$(echo $schema_path | cut -d\/ -f2 | cut -d- -f2-)
+          schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\/#\.#")
+          mkdir -p _data/schemas/${module_name}/crds
+          cp -f $schema_path _data/schemas/${module_name}/crds/
+          grep -q '<!-- SCHEMA -->' ${module_path}/docs/CR.md &> /dev/null
+          if [ $? -eq 0 ]; then
+            # Apply schema
+            echo "Generating schema ${schema_path} for ${module_path}/docs/CR.md"
+            sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd \}\}" ${module_path}/docs/CR.md
+          else
+            echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CR.md"
           fi
         done
       args:
@@ -105,4 +125,4 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['**/docs/', '**/openapi/']
+  includePaths: ['**/docs/','**/openapi/','**/crds/']

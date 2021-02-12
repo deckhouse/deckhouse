@@ -39,6 +39,9 @@
 	{%- endif %}
   {%- endif %}
   {{- propertyData.description | markdownify }}
+  {%- if propertyData.example %}
+	<p>Пример: <code class="highlighter-rouge">{{ propertyData.example }}</code></p>
+  {%- endif %}
   {%- if propertyData.properties %}
 	{% include jsonschema_object.md properties=propertyData.properties %}
   {%- endif %}
