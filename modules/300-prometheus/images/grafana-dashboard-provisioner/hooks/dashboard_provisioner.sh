@@ -18,11 +18,11 @@ EOF
 }
 
 function __main__() {
-  mkdir -p /tmp/dashboards-prepare/
-  rm -rf /tmp/dashboards-prepare/*
+  mkdir -p /tmp/dashboards/
+  rm -rf /tmp/dashboards/*
 
   if ! context::has snapshots.dashboard_resources.0 ; then
-    rm -rf /tmp/dashboards/*
+    rm -rf /etc/grafana/dashboards/*
     return 0
   fi
 
@@ -39,12 +39,12 @@ function __main__() {
       folder="General Folder"
     fi
 
-    mkdir -p "/tmp/dashboards-prepare/${folder}"
-    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards-prepare/${folder}/${title}.json"
+    mkdir -p "/tmp/dashboards/${folder}"
+    jq -rc '.definition' <<< ${dashboard} > "/tmp/dashboards/${folder}/${title}.json"
   done
 
-  rm -rf /tmp/dashboards/*
-  cp -TR /tmp/dashboards-prepare/ /tmp/dashboards/
+  rm -rf /etc/grafana/dashboards/*
+  cp -TR /tmp/dashboards/ /etc/grafana/dashboards/
 }
 
 hook::run "$@"

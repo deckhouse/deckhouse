@@ -69,9 +69,9 @@ spec:
           value: "light"
         {{- end }}
         - name: GF_PATHS_PROVISIONING
-          value: /grafana/conf/provisioning
+          value: /etc/grafana/provisioning
         - name: GF_PATHS_DATA
-          value: /var/lib/grafana-storage
+          value: /var/lib/grafana/data
         - name: GF_SERVER_HTTP_ADDR
           value: "127.0.0.1"
         - name: GF_METRICS_ENABLED
@@ -83,19 +83,19 @@ spec:
           {{- end }}
         {{- end }}
         volumeMounts:
-        - name: grafana-storage
-          mountPath: /var/lib/grafana-storage
+        - name: grafana-data
+          mountPath: /var/lib/grafana/data
         - name: grafana-datasources
-          mountPath: /grafana/conf/provisioning/datasources
+          mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-dashboard-definitions
-          mountPath: /grafana/conf/provisioning/dashboards/d8-custom.yaml
+          mountPath: /etc/grafana/provisioning/dashboards/d8-custom.yaml
           subPath: grafana-dashboard-definitions.yaml
         - name: shared-dashboards-folder
-          mountPath: /etc/grafana-dashboard-definitions
+          mountPath: /etc/grafana/dashboards
+        - name: plugins
+          mountPath: /etc/grafana/plugins
         - name: tmp
           mountPath: /tmp
-        - name: plugins
-          mountPath: /var/lib/grafana/plugins
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
@@ -115,10 +115,8 @@ spec:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
         volumeMounts:
-        - name: grafana-storage
-          mountPath: /var/lib/grafana-storage
         - name: shared-dashboards-folder
-          mountPath: /tmp/dashboards/
+          mountPath: /etc/grafana/dashboards
         - name: tmp
           mountPath: /tmp
       - name: kube-rbac-proxy
@@ -164,9 +162,6 @@ spec:
         livenessProbe:
           tcpSocket:
             port: 8443
-        readinessProbe:
-          tcpSocket:
-            port: 8443
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
@@ -179,7 +174,7 @@ spec:
       - name: grafana-dashboard-definitions
         configMap:
           name: grafana-dashboard-definitions
-      - name: grafana-storage
+      - name: grafana-data
         emptyDir: {}
       - name: tmp
         emptyDir: {}
