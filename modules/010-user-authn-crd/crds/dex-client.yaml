@@ -16,6 +16,8 @@ spec:
   validation:
     openAPIV3Schema:
       type: object
+      description: |
+        Позволяет приложениям, поддерживающим DC-аутентификацию взаимодействовать с dex.
       required:
       - spec
       properties:
@@ -24,16 +26,23 @@ spec:
           properties:
             allowedGroups:
               type: array
-              description: 'Groups of users having access.'
+              x-description: 'Groups of users having access.'
+              description: |
+                Список групп, участникам которых разрешено подключаться к этому клиенту;
+                **По умолчанию:** разрешено всем группам.
               items:
                 type: string
             redirectURIs:
               type: array
-              description: 'Array or urls that dex can redirect to after successful authentication.'
+              x-description: 'Array or urls that dex can redirect to after successful authentication.'
+              description: |
+                Список адресов, на которые допустимо редиректить dex'у после успешного прохождения аутентификации.
               items:
                 type: string
             trustedPeers:
               type: array
-              description: 'OAuth2 client IDs that allowed cross authentication with the current client.'
+              x-description: 'OAuth2 client IDs that allowed cross authentication with the current client.'
+              description: |
+                ID клиентов, которым позволена cross аутентификация. [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth).
               items:
                 type: string

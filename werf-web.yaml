@@ -58,7 +58,7 @@ ansible:
         chdir: /srv/jekyll-data
     - name: "Generate CR schemas"
       shell: |
-        for schema_path in $(find modules -regex '^.*/crds/.*.yaml$' -print); do
+        for schema_path in $(find modules -regex '^.*/crds/.*.yaml$' -print | sort); do
           module_path=$(echo $schema_path | cut -d\/ -f-2 )
           module_name=$(echo $schema_path | cut -d\/ -f2 | cut -d- -f2-)
           schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\/#\.#")
@@ -67,7 +67,7 @@ ansible:
           grep -q '<!-- SCHEMA -->' ${module_path}/docs/CR.md &> /dev/null
           if [ $? -eq 0 ]; then
             # Apply schema
-            echo "Generating schema ${schema_path} for ${module_path}/docs/CR.md"
+            echo "OK: Generating schema ${schema_path} for ${module_path}/docs/CR.md"
             sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd \}\}" ${module_path}/docs/CR.md
           else
             echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CR.md"
@@ -137,6 +137,12 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths: ['**/docs/','**/openapi/','**/crds/']
+- add: /modules/010-user-authn-crd/crds
+  to: /srv/jekyll-data/modules/150-user-authn/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 ---
 image: dev/web-public
 from: nginx:1.17.2

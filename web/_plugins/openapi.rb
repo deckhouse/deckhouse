@@ -32,7 +32,7 @@ module Jekyll
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
         result.push(converter.convert(attributes['description'])) if attributes['description']
 
-        result.push("<br/> **default:** `#{value['default'].to_json}`") if attributes['default']
+        result.push(converter.convert("**По умолчанию:** `#{attributes['default'].to_json}`")) if attributes.has_key?('default')
 
         if attributes['minimum'] || attributes['maximum']
             range = '**Допустимые значения:** `'
@@ -138,25 +138,30 @@ module Jekyll
 
     def format_crd(input)
         result = []
-        converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
+        if input.has_key?("spec") and input["spec"].has_key?("validation") and
+           input["spec"]["validation"].has_key?("openAPIV3Schema") then
 
-        result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
+            converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
-        result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
-        if input["spec"].has_key?("version") then
-           result.push('<br/>Version: ' + input["spec"]["version"] + '')
-        end
-        result.push('</font></p>')
-        if input["spec"]["validation"]["openAPIV3Schema"]["description"] then
-           result.push(input["spec"]["validation"]["openAPIV3Schema"]["description"])
-        end
+            result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
+            result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
 
-        if input["spec"]["validation"]["openAPIV3Schema"]['properties']
-            result.push('<ul>')
-            input["spec"]["validation"]["openAPIV3Schema"]['properties'].each do |key, value|
-            result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"] ))
+            if input["spec"].has_key?("version") then
+               result.push('<br/>Version: ' + input["spec"]["version"] + '')
             end
-            result.push('</ul>')
+            result.push('</font></p>')
+
+            if input["spec"]["validation"]["openAPIV3Schema"].has_key?("description") then
+               result.push(input["spec"]["validation"]["openAPIV3Schema"]["description"])
+            end
+
+            if input["spec"]["validation"]["openAPIV3Schema"].has_key?('properties')
+                result.push('<ul>')
+                input["spec"]["validation"]["openAPIV3Schema"]['properties'].each do |key, value|
+                result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"] ))
+                end
+                result.push('</ul>')
+            end
         end
         result.join
     end
