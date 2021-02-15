@@ -229,7 +229,10 @@ func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, er
 		}
 
 		err := retry.StartLoop("Get Kubernetes API client", 45, 5, func() error {
-			kubeCl = client.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl = client.NewKubernetesClient()
+			if sshClient != nil {
+				kubeCl = kubeCl.WithSSHClient(sshClient)
+			}
 			if err := kubeCl.Init(); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
