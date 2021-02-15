@@ -8,8 +8,6 @@ import (
 )
 
 func RenderBashBooster(templatesDir string) (string, error) {
-	templatesDir = formatDir(templatesDir)
-
 	files, err := ioutil.ReadDir(templatesDir)
 	if err != nil {
 		return "", fmt.Errorf("bashbooster read dir: %v", err)

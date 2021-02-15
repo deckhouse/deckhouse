@@ -1,0 +1,105 @@
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: bashible-apiserver
+  updatePolicy:
+    updateMode: "Auto"
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: "bashible-apiserver"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "bashible-apiserver"
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+  selector:
+    matchLabels:
+      app: "bashible-apiserver"
+  template:
+    metadata:
+      labels:
+        app: "bashible-apiserver"
+    spec:
+{{- include "helm_lib_node_selector"  (tuple . "master")  | indent 6 }}
+{{- include "helm_lib_tolerations"    (tuple . "master")  | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" .   | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "bashible-apiserver"))  | indent 6 }}
+      serviceAccountName: bashible-apiserver
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+      - name: bashible-apiserver
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        image: "{{ .Values.global.modulesImages.registry }}/node-manager/bashible-apiserver:{{ .Values.global.modulesImages.tags.nodeManager.bashibleApiserver }}"
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--cert-dir=/var/certs"
+          - "--secure-port=11223"
+          - "--v=2"
+        volumeMounts:
+          - name: certs
+            mountPath: /var/certs
+            readOnly: false
+        ports:
+          - name: https
+            containerPort: 11223
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: https
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: https
+            scheme: HTTPS
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
+      volumes:
+        - name: certs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bashible-apiserver-context
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+data:
+  context.yaml: |-
+{{- range $bundle := $.Values.nodeManager.allowedBundles }}
+  {{- range $ng := $.Values.nodeManager.internal.nodeGroups }}
+    bashible-{{ $bundle }}-{{ $ng.name }}:
+{{ include "bashible_context"  (list $ $bundle $ng) | indent 6 }}
+    bundle-{{ $bundle }}-{{ $ng.name }}:
+{{ include "bundle_ng_context" (list $ $bundle $ng) | indent 6 }}
+  {{- end }}
+  {{- range $kubernetes_version := $.Values.nodeManager.allowedKubernetesVersions }}
+    bundle-{{ $bundle }}-{{ $kubernetes_version }}:
+{{ include "bundle_k8s_version_context" (list $ $bundle $kubernetes_version) | indent 6 }}
+  {{- end }}
+
+{{- end }}

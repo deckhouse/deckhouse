@@ -1,0 +1,66 @@
+---
+artifact: apiserver
+from: {{ env "BASE_GOLANG_ALPINE" }}
+git:
+- add: /modules/040-node-manager/images/bashible-apiserver
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  - hack
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+ansible:
+  beforeInstall:
+  - apk:
+      name: git
+      update_cache: yes
+  - command: rm -rf /var/cache/apk/*
+  install:
+  - shell: go mod download
+    args:
+      chdir: /src
+  setup:
+  - shell: go build -ldflags="-s -w" -o bashible-apiserver .
+    args:
+      chdir: /src
+    environment:
+      GOOS: "linux"
+      GOARCH: "amd64"
+      CGO_ENABLED: "0"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ env "BASE_ALPINE" }}
+docker:
+  ENTRYPOINT: ["/bashible-apiserver"]
+import:
+- artifact: apiserver
+  add: /src/bashible-apiserver
+  to: /bashible-apiserver
+  before: setup
+git:
+- add: /candi/bashible
+  to: /bashible/templates/bashible
+  stageDependencies:
+    beforeSetup:
+    - "*"
+  includePaths:
+  - bundles
+  - common-steps
+  - bashible.sh.tpl
+  excludePaths:
+  - "**/bootstrap.sh.tpl"
+  - "**/cluster-bootstrap"
+- add: /candi/cloud-providers
+  to: /bashible/templates/cloud-providers
+  stageDependencies:
+    beforeSetup:
+    - "*"
+  includePaths:
+  - "*/bashible"
