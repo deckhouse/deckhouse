@@ -45,12 +45,10 @@ func DecodeFromToStep(fromArg, toArg, stepArg []string) (from int64, to int64, s
 	// TODO do not adjust at this time, it should be done by CalculateStepRagnge
 	if hasFrom && !hasTo {
 		return now - from, now, step, nil
-		//return entity.AdjustFrom(now - from), entity.AdjustTo(now), entity.AdjustStep(step), nil
 	}
 	// "from-to" variant
 	if hasFrom && hasTo {
 		return from, to, step, nil
-		//return entity.AdjustFrom(from), entity.AdjustTo(to), entity.AdjustStep(step), nil
 	}
 	// something wrong
 	return 0, 0, 0, fmt.Errorf("bad arguments")
@@ -60,7 +58,7 @@ var digitsRe = regexp.MustCompile(`^\d+$`)
 
 func ParseSecondsOrDuration(in string) (int64, error) {
 	if digitsRe.MatchString(in) {
-		in = in + "s"
+		in += "s"
 	}
 	dur, err := time.ParseDuration(in)
 	if err != nil {

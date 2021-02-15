@@ -117,7 +117,6 @@ func NewSchedulerProber() types.Prober {
 				podObj, err := pr.KubernetesClient.CoreV1().Pods(app.Namespace).Get(pod.Name, metav1.GetOptions{})
 				if err != nil {
 					getErr = err
-					//log.Warnf("Check Pod/%s status: %v", podName, err)
 					continue
 				}
 				lastPhase = podObj.Status.Phase

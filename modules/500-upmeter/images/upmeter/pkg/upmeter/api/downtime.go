@@ -35,7 +35,7 @@ func (h *DowntimeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var episodes []types.DowntimeEpisode
 	err := decoder.Decode(&episodes)
-	//log.Infof("episodes: %+v", episodes)
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusBadRequest, err)

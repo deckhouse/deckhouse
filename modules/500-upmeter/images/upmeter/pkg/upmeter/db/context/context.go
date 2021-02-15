@@ -74,7 +74,6 @@ func (c *DbContext) Start() *DbContext {
 	}
 
 	panic("Call Start from uninitialized DbContext")
-	return nil
 }
 
 func (c *DbContext) Stop() {

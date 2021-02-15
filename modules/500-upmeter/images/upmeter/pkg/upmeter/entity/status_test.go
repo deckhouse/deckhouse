@@ -310,7 +310,7 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 	stepRange := []int64{0, 300}
 
 	infos := []*StatusInfo{
-		&StatusInfo{
+		{
 			TimeSlot: 0,
 			Up:       300,
 			Down:     0,
@@ -318,7 +318,7 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 			Muted:    0,
 			NoData:   0,
 		},
-		&StatusInfo{
+		{
 			TimeSlot: 0,
 			Up:       0,
 			Down:     300,
@@ -326,7 +326,7 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 			Muted:    0,
 			NoData:   0,
 		},
-		&StatusInfo{
+		{
 			TimeSlot: 0,
 			Up:       0,
 			Down:     0,

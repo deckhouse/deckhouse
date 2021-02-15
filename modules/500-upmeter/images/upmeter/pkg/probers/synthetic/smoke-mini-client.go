@@ -19,7 +19,6 @@ func LookupAndShuffleIPs(addr string, resolveTimeout time.Duration) (ips []strin
 	ips, err := util.LookupIPsWithTimeout(addr, resolveTimeout)
 	if err != nil {
 		log.Errorf("resolve '%s': %v", addr, err)
-		//pr.ResultCh <- pr.ResultFail(accessProbeRef)
 		return nil, false
 	}
 

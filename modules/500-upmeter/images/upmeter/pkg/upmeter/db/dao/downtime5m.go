@@ -229,6 +229,8 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 		if err != nil {
 			return nil, fmt.Errorf("select for TimeslotRange: %v", err)
 		}
+
+		defer rows.Close()
 		for rows.Next() {
 			var entity = Downtime5mEntity{}
 			var err error
@@ -257,13 +259,11 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 					&entity.DowntimeEpisode.ProbeRef.Probe)
 			}
 			if err != nil {
-				rows.Close()
 				return nil, fmt.Errorf("row to Downtime5mEntity: %v", err)
 			}
 			entity.DowntimeEpisode.TimeSlot = stepRange[0]
 			res = append(res, entity.DowntimeEpisode)
 		}
-		rows.Close()
 	}
 
 	return res, nil
