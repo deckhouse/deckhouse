@@ -15,7 +15,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: AWSInstanceClass defines AWS-specific properties for to-be-provisioned Instances.
+          description: |
+            Параметры instance в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
             - spec
           properties:
@@ -25,32 +28,63 @@ spec:
                 - instanceType
               properties:
                 instanceType:
-                  description: Instance type of AWS instance.
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
+                  x-description: Instance type of AWS instance.
                   example: t3.large
                   type: string
                 ami:
-                  description: AMI ID to use whilst provisioning AWS instances.
+                  description: |
+                    Образ (AMI ID), который будет использоваться в заказанных инстансах.
+
+                    Как найти нужный AMI (в каждом регионе AMI разные):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                  x-description: AMI ID to use whilst provisioning AWS instances.
                   example: ami-040a1551f9c9d11ad
                   type: string
                 spot:
-                  description: Whether to create Spot Instances with minimum hourly price with which Instances will run.
+                  description: |
+                    Создавать ли spot-инстансы (spot instance). Spot-инстансы будут запускаться с минимально возможной для успешного запуска ценой за час.
+                  x-description: Whether to create Spot Instances with minimum hourly price with which Instances will run.
                   type: boolean
                 diskType:
-                  description: Instance EBS disk type.
+                  description: |
+                    Тип созданного диска.
+                  x-description: Instance EBS disk type.
                   example: "gp2"
                   type: string
+                  default: "gp2"
                 iops:
-                  description: iops rate for io1 diskType
+                  description: |
+                    Количество `IOPS`. Применяется только для `diskType` **io1**.
+                  x-description: iops rate for io1 diskType
                   example: "500"
                   type: string
                 diskSizeGb:
-                  description: Instance disk size in gigabytes.
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+                  x-description: Instance disk size in gigabytes.
                   example: 20
                   type: integer
+                  default: 20
                 additionalTags:
-                  description: extra AWS tags for instances in addition to AWSClusterConfiguration.tags.
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам.
+                  x-description: extra AWS tags for instances in addition to AWSClusterConfiguration.tags.
                   type: object
                   additionalProperties:
+                    type: string
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего InstanceClass.
+                  items:
                     type: string
   scope: Cluster
   names:

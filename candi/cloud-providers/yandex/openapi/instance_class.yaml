@@ -15,7 +15,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: YandexInstanceClass defines Yandex-specific properties for to-be-provisioned Instances.
+          description: |
+            Параметры группы Yandex Instance'ов, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
             - spec
           properties:
@@ -26,45 +29,86 @@ spec:
                 - memory
               properties:
                 cores:
-                  description: Amount of CPU cores to provision on a Yandex Compute Instance.
+                  description: |
+                    Количество ядер у создаваемых инстансов.
+                  x-description: Amount of CPU cores to provision on a Yandex Compute Instance.
                   example: 4
                   type: integer
                 coreFraction:
-                  description: Percent of reserved CPU capacity on a Yandex Compute Instance.
-                  example: 100
+                  description: |
+                    Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
+                  x-description: Percent of reserved CPU capacity on a Yandex Compute Instance.
+                  example: 20
+                  default: 100
+                  enum: [ 0,5,20,50,100 ]
+                  type: integer
+                gpus:
+                  description: |
+                    Количество графических адаптеров у создаваемых инстансов.
+                  example: 4
+                  default: 0
                   type: integer
                 memory:
-                  description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  description: |
+                    Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
+                  x-description: Amount of primary memory in MB provision on a Yandex Compute Instance.
                   example: 8192
                   type: integer
                 imageID:
-                  description: Image ID to use while provisioning Yandex Compute Instances.
+                  description: |
+                    Идентификатор образа, который будет установлен в заказанные instance'ы.
+
+                    По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
+                  x-description: Image ID to use while provisioning Yandex Compute Instances.
                   example: fd8nb7ecsbvj76dfaa8b
                   type: string
+                platformID:
+                  description: |
+                    ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
+                  default: standard-v2
+                  type: string
                 preemptible:
-                  description: Should a provisioned Yandex Compute Instance be preemtible.
+                  description: |
+                    Заказывать ли preemptible instance.
+                  x-description: Should a provisioned Yandex Compute Instance be preemtible.
                   type: boolean
+                  default: false
                 diskType:
-                  description: Instance disk type.
-                  example: "network-ssd"
+                  description: |
+                    Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
+                  x-description: Instance disk type.
+                  example: "network-hdd"
+                  default: "network-ssd"
                   type: string
                   enum:
-                    - "network-ssd"
-                    - "network-hdd"
+                  - "network-ssd"
+                  - "network-hdd"
                 diskSizeGB:
-                  description: Yandex Compute Instance disk size in gigabytes.
+                  description: |
+                    Размер диска (в гигабайтах) у инстансов.
+                  x-description: Yandex Compute Instance disk size in gigabytes.
                   example: 20
+                  default: 50
                   type: integer
                 assignPublicIPAddress:
-                  description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  description: |
+                    Присваивать ли публичные IP-адреса инстансам.
+                  x-description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
                   example: false
+                  default: false
                   type: boolean
                 mainSubnet:
-                  description: Subnet ID that VirtualMachines' primary NIC will connect to.
+                  description: |
+                    Позволяет переопределить имя основного subnet, к которому будет подключен инстанс.
+
+                    По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
+                  x-description: Subnet ID that VirtualMachines' primary NIC will connect to.
                   example: e9bnc7g9mu9mper9clk4
                   type: string
                 additionalSubnets:
-                  description: Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  description: |
+                    Список subnet, которые будут подключены к инстансу.
+                  x-description: Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
                   example:
                     - b0csh41c1or82vuch89v
                     - e2lgddi5svochh5fbq96
@@ -73,6 +117,14 @@ spec:
                     type: string
                 additionalLabels:
                   type: object
+                  description: |
+                    Дополнительные label'ы, которые будут присвоены созданным инстансам.
+
+                    Пример:
+                    ```yaml
+                    project: cms-production
+                    severity: critical
+                    ```
                   additionalProperties:
                     type: string
   scope: Cluster

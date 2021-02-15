@@ -149,6 +149,42 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /candi/cloud-providers/aws/openapi/
+  to: /srv/jekyll-data/modules/030-cloud-provider-aws/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/azure/openapi/
+  to: /srv/jekyll-data/modules/030-cloud-provider-azure/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/gcp/openapi/
+  to: /srv/jekyll-data/modules/030-cloud-provider-gcp/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/openstack/openapi/
+  to: /srv/jekyll-data/modules/030-cloud-provider-openstack/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/vsphere/openapi/
+  to: /srv/jekyll-data/modules/030-cloud-provider-vsphere/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/yandex/openapi/
+  to: /srv/jekyll-data/modules/030-cloud-provider-yandex/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 ---
 image: dev/web-public
 from: nginx:1.17.2
