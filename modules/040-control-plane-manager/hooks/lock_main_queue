@@ -1,0 +1,41 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: cpm_pods
+      group: main
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Pod
+      namespace:
+        nameSelector:
+          matchNames: [kube-system]
+      labelSelector:
+        matchLabels:
+          app: d8-control-plane-manager
+      jqFilter: |
+        {
+          "isReady": (if .status.conditions then .status.conditions[] | select(.type == "Ready") | .status == "True" else false end),
+          "nodeName": (.spec.nodeName // null)
+        }
+EOF
+}
+
+function __main__() {
+  delay=30
+  # Lock deckhouse main queue while the control-plane is updating.
+  if context::jq -e '[.snapshots.cpm_pods[].filterResult | select(.nodeName and (.isReady | not))] | any' >/dev/null; then
+    if [ -z "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+      >&2 echo "Locking the main queue for $delay seconds. Waiting for all control-plane-manager Pods to become Ready."
+      # Delay for some time not letting exponential backoff delay rise fast.
+      sleep "$delay"
+    fi
+    return 1
+  fi
+}
+
+hook::run "$@"
