@@ -12,3 +12,4 @@ RUN npm run build
 FROM $BASE_NGINX_ALPINE
 COPY --from=builder /app/dist /usr/share/nginx/html
 RUN chown nginx.nginx /usr/share/nginx/html/ -R
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

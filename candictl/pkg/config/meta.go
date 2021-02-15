@@ -301,6 +301,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) map[
 	return map[string]interface{}{
 		"runType":           "ClusterBootstrap",
 		"bundle":            bundle,
+		"cri":               data["defaultCRI"],
 		"kubernetesVersion": data["kubernetesVersion"],
 		"nodeGroup":         nodeGroup,
 		"clusterBootstrap":  clusterBootstrap,

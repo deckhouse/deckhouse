@@ -275,7 +275,39 @@ function __main__() {
       # Nodes should not be above control plane
       effective_kubernetes_version="$control_plane_min_kubernetes_version"
     fi
+
     ng="$(jq --arg effective_kubernetes_version "$effective_kubernetes_version" '.kubernetesVersion = $effective_kubernetes_version' <<< "$ng")"
+
+    # detect cri
+    default_cri="Docker"
+    if values::has global.clusterConfiguration.defaultCRI ; then
+      default_cri="$(values::get global.clusterConfiguration.defaultCRI)"
+    fi
+
+    cri="$(jq -r '.cri.type' <<< "$ng")"
+
+    # Check if cri is set, or set to global cri
+    if [ "$cri" == "null" ]; then
+      cri="$default_cri"
+    fi
+
+    case $cri in
+    "Docker")
+    # Check if cri set to Docker and docker.manage set to false
+    if ! jq -e 'if .docker.manage == null then true else .docker.manage end' <<< "$ng" >/dev/null; then
+      cri="NotManaged"
+    fi
+    ;;
+    "Containerd")
+      # Check if cri is set to Containerd kubernetes version must be 1.19+
+    if semver::lt "$effective_kubernetes_version" "1.19" ; then
+      >&2 echo "ERROR: Containerd cri allowed only for kubernetes 1.19+."
+      return 1
+    fi
+    ;;
+    esac
+
+    ng="$(jq --arg cri "$cri" '.cri.type = $cri' <<< "$ng")"
 
     # Calculate update epoch
     seedMD5="$(md5sum <<< "$(values::get global.discovery.clusterUUID)${ng_name}" | cut -f1 -d" ")"

@@ -1,4 +1,5 @@
-{{- if include "node_group_manage_docker" .nodeGroup }}
+{{- if eq .cri "Docker" }}
+
 bb-event-on 'bb-sync-file-changed' '_on_docker_config_changed'
 _on_docker_config_changed() {
 {{ if ne .runType "ImageBuilding" -}}
@@ -7,6 +8,7 @@ _on_docker_config_changed() {
 {{- end }}
 }
 
+mkdir -p /etc/docker
 bb-sync-file /etc/docker/daemon.json - << "EOF"
 {
 {{- $max_concurrent_downloads := 3 }}

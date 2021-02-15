@@ -5,3 +5,4 @@ ADD src /app
 RUN apk add --no-cache --virtual .build-deps build-base libffi-dev openssl-dev && \
     pip3 install -r /app/requirements.txt && \
     apk del .build-deps
+ENTRYPOINT ["python3"]

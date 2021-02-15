@@ -94,6 +94,10 @@ spec:
           mountPath: /var/run/node-exporter-textfile
         - name: dockersock
           mountPath: /var/run/docker.sock
+        - name: containerdsock
+          mountPath: /var/run/containerd/containerd.sock
+        - name: crictl
+          mountPath: /usr/local/bin/crictl
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | indent 12 }}
@@ -141,5 +145,11 @@ spec:
       - name: dockersock
         hostPath:
           path: /var/run/docker.sock
+      - name: containerdsock
+        hostPath:
+          path: /var/run/containerd/containerd.sock
+      - name: crictl
+        hostPath:
+          path: /usr/local/bin/crictl
       imagePullSecrets:
       - name: deckhouse-registry

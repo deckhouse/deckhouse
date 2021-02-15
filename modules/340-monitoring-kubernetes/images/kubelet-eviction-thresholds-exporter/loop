@@ -2,6 +2,14 @@
 
 set -euf -o pipefail
 
+runtime () {
+ kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME" | jq -r '.status.nodeInfo.containerRuntimeVersion | split(":")[0]'
+}
+
+evictions () {
+  kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME/proxy/configz" | jq -r '.kubeletconfig | {"evictionHard": .evictionHard, "evictionSoft": .evictionSoft}'
+}
+
 mountpoint () {
   stat -c "%m" "/host$1" | sed 's#/host#/#g' | sed 's#//#/#g'
 }
@@ -14,8 +22,19 @@ total_inodes () {
   df "/host$1" --output=itotal | tail -n 1
 }
 
-docker_root_dir () {
-  curl -sS --unix-sock /var/run/docker.sock http://system/info | jq -re '.DockerRootDir'
+runtime_root_dir () {
+  case $(runtime) in
+  docker)
+    curl -sS --unix-sock /var/run/docker.sock http://system/info | jq -re '.DockerRootDir'
+    ;;
+  containerd)
+    crictl --runtime-endpoint unix:/var/run/containerd/containerd.sock info | jq -r '.config.containerdRootDir'
+    ;;
+  *)
+    echo "Unknown container runtime detected: $(runtime). Only \"docker\" and \"containerd\" are supported"
+    exit 1
+    ;;
+  esac
 }
 
 kubelet_root_dir () {
@@ -42,11 +61,9 @@ normalize_to_pcnt () {
 }
 
 while true; do
-  evictions=$(kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME/proxy/configz" |
-    jq -r '.kubeletconfig | {"evictionHard": .evictionHard, "evictionSoft": .evictionSoft}')
-
+  evictions=$(evictions)
   nodefs=$(kubelet_root_dir)
-  imagefs=$(docker_root_dir)
+  imagefs=$(runtime_root_dir)
   nodefs_mountpoint=$(mountpoint "$nodefs")
   imagefs_mountpoint=$(mountpoint "$imagefs")
   nodefs_bytes=$(total_bytes "$nodefs_mountpoint")

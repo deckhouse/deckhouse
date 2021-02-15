@@ -41,6 +41,13 @@ apiVersions:
       clusterDomain:
         type: string
         default: "cluster.local"
+      defaultCRI:
+        type: string
+        enum:
+        - "Docker"
+        - "Containerd"
+        - "NotManaged"
+        default: "Docker"
       kubernetesVersion:
         type: string
         enum:

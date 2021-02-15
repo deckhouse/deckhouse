@@ -1,4 +1,4 @@
-{{- if include "node_group_manage_docker" .nodeGroup }}
+{{- if or (eq .cri "Docker") (eq .cri "Containerd") }}
 if bb-yum-repo? d8-docker-ce-stable/x86_64; then
   exit 0
 fi

@@ -143,6 +143,40 @@ spec:
     - xxx
 `
 
+		stateNGSimple = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: proper1
+spec:
+  nodeType: Cloud
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+  kubernetesVersion: "1.19"
+`
+
+		stateNGDockerUnmanaged = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: proper1
+spec:
+  cri:
+    type: Docker
+  docker:
+    manage: false
+  nodeType: Cloud
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+  kubernetesVersion: "1.19"
+`
+
 		stateICProper = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -248,6 +282,9 @@ metadata:
                     "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper1",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -266,6 +303,9 @@ metadata:
                     "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper2",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -296,6 +336,9 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper1",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -314,6 +357,9 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper2",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -349,7 +395,10 @@ metadata:
 				[
                   {
                     "kubernetesVersion": "1.15",
-                    "manualRolloutID": "",
+					"cri": {
+                      "type": "Docker"
+                    },
+					"manualRolloutID": "",
                     "name": "hybrid1",
                     "nodeType": "Hybrid",
                     "updateEpoch": "` + calculateEpoch("hybrid1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
@@ -370,6 +419,9 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper1",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -388,11 +440,17 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper2",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
                     "manualRolloutID": "",
                     "name": "static1",
                     "nodeType": "Static",
@@ -421,6 +479,9 @@ metadata:
 				[
                   {
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
                     "manualRolloutID": "",
                     "name": "hybrid1",
                     "nodeType": "Hybrid",
@@ -442,6 +503,9 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper1",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -460,11 +524,17 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper2",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
                   {
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
                     "manualRolloutID": "",
                     "name": "static1",
                     "nodeType": "Static",
@@ -506,6 +576,9 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper1",
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -524,6 +597,9 @@ metadata:
 				    "instanceClass": null,
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "name": "proper2",
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -564,6 +640,9 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -582,6 +661,9 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -639,6 +721,9 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -657,6 +742,9 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -699,6 +787,9 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -717,6 +808,9 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -759,6 +853,9 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -777,6 +874,9 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -834,6 +934,9 @@ metadata:
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
@@ -852,6 +955,9 @@ metadata:
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
+					"cri": {
+                      "type": "Docker"
+                    },
 				    "instanceClass": null,
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
@@ -1067,4 +1173,76 @@ spec:
 		})
 	})
 
+	Context("Cluster with proper NG, global cri is set to docker", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Docker")
+			f.RunHook()
+		})
+
+		It("Hook must not fail; cri must be correct", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("Docker"))
+		})
+	})
+
+	Context("Cluster with proper NG, global cri is set to containerd", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.19")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.19.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.19.5")
+			f.RunHook()
+		})
+
+		It("Hook must not fail; cri must be correct", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("Containerd"))
+		})
+	})
+
+	Context("Cluster with proper NG, global cri is set to containerd, kubernetesVersion set to 1.16", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Containerd")
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.16")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.15")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.15")
+			f.RunHook()
+		})
+
+		It("Hook must fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Containerd cri allowed only for kubernetes 1.19+.`))
+		})
+	})
+
+	Context("Cluster with proper NG, docker is not managed", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGDockerUnmanaged + stateICProper))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; zones must be correct", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
+		})
+	})
+
+	Context("Cluster with proper NG, global cri is set to not managed", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
+			f.ValuesSet("global.clusterConfiguration.defaultCRI", "NotManaged")
+			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.19")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.19.5")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.19.5")
+			f.RunHook()
+		})
+
+		It("Hook must not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
+		})
+	})
 })

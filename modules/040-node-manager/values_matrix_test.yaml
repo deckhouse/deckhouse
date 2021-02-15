@@ -87,6 +87,8 @@ nodeManager:
                 bbb: bbb
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: AWSInstanceClass
@@ -102,6 +104,8 @@ nodeManager:
               instanceType: t2.medium
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: AWSInstanceClass
@@ -150,6 +154,8 @@ nodeManager:
               mainNetwork: kube
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: OpenStackInstanceClass
@@ -206,6 +212,8 @@ nodeManager:
               diskSizeGb: 42 #optional
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: GCPInstanceClass
@@ -222,6 +230,8 @@ nodeManager:
               machineType: mymachinetype
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: GCPInstanceClass
@@ -270,6 +280,8 @@ nodeManager:
                 memoryReservation: 42
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: VsphereInstanceClass
@@ -319,6 +331,8 @@ nodeManager:
                 my: label
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: YandexInstanceClass
@@ -343,6 +357,8 @@ nodeManager:
                 my: label
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: YandexInstanceClass
@@ -361,6 +377,8 @@ nodeManager:
         - - name: worker
             nodeType: Static
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
     - <<: *internalDefaults
       bootstrapTokens:
         worker: mytoken
@@ -370,12 +388,25 @@ nodeManager:
         - - name: worker
             nodeType: Static
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
+        - - name: worker
+            nodeType: Static
+            kubernetesVersion: "1.19"
+            cri:
+              type:
+                __ConstantChoices__:
+                - Docker
+                - Containerd
+                - NotManaged
         - - name: worker
             instanceClass: # maximum
               flavorName: m1.large
               imageName: ubuntu-18-04-cloud-amd64
             nodeType: Cloud
             kubernetesVersion: "1.16"
+            cri:
+              type: "Docker"
             cloudInstances:
               classReference:
                 kind: OpenStackInstanceClass

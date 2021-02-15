@@ -1,4 +1,4 @@
-{{- if include "node_group_manage_docker" .nodeGroup }}
+{{- if or (eq .cri "Docker") (eq .cri "Containerd") }}
 if bb-apt-repo? https://download.docker.com/linux/ubuntu; then
   exit 0
 fi

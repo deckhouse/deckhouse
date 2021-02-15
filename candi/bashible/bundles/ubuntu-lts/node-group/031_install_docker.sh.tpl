@@ -1,4 +1,4 @@
-{{- if include "node_group_manage_docker" .nodeGroup }}
+{{- if eq .cri "Docker" }}
 
 bb-event-on 'bb-package-installed' 'post-install'
 post-install() {
@@ -21,6 +21,22 @@ post-install() {
 if bb-apt-package? docker.io ; then
   bb-log-warning 'Skipping "docker-ce" installation, since "docker.io" is already installed'
   exit 0
+fi
+
+if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
+  bb-deckhouse-get-disruptive-update-approval
+  systemctl stop kubelet.service
+  systemctl stop containerd.service
+  # Kill running containerd-shim processes
+  kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
+  # Remove mounts
+  umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
+  bb-apt-remove containerd.io
+  rm -rf /var/lib/containerd/ /var/run/containerd /usr/local/bin/crictl
+  # Pod kubelet-eviction-thresholds-exporter in cri=Containerd mode mounts /var/run/docker.sock, /var/run/docker.sock will be a directory and newly installed docker won't run.
+  rm -rf /var/run/docker.sock
+  bb-log-info "Setting reboot flag due to cri being updated"
+  bb-flag-set reboot
 fi
 
 if bb-is-ubuntu-version? 20.04 ; then
