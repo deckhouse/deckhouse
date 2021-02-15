@@ -1,0 +1,29 @@
+#!/bin/bash
+# current revision of vsphere CSI driver isn't supported, so this hook hack around a bug in it
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: finalizers
+      group: main
+      queue: /modules/$(module::name::kebab_case)
+      keepFullObjectsInMemory: false
+      apiVersion: storage.k8s.io/v1
+      kind: VolumeAttachment
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "message": (.status.detachError.message // null)
+        }
+EOF
+}
+
+function __main__() {
+  for volumeattachment in $(context::jq -r '.snapshots.finalizers[].filterResult | select(.message=="rpc error: code = Unknown desc = No VM found").name'); do
+    kubernetes::patch_jq "" "volumeattachments/$volumeattachment" "del(.metadata.finalizers)"
+  done
+}
+
+hook::run "$@"
