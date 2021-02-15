@@ -35,8 +35,8 @@ func Test_reproduce_database_is_locked(t *testing.T) {
 		&WriteWorker{Num: 12, DbCtx: dbCtx},
 		&WriteWorker{Num: 431, DbCtx: dbCtx},
 		&WriteWorker{Num: 5123, DbCtx: dbCtx},
-		//&ReadWorker{Num: 5123, DbCtx: dbCtx},
-		//&ReadWorker{Num: 12, DbCtx: dbCtx},
+		&ReadWorker{Num: 5123, DbCtx: dbCtx},
+		&ReadWorker{Num: 12, DbCtx: dbCtx},
 	}
 
 	var wg sync.WaitGroup
@@ -83,22 +83,7 @@ type ReadWorker struct {
 func (w *ReadWorker) Start(wg *sync.WaitGroup) {
 	go func() {
 		for i := 0; i < 100; i++ {
-			rows, err := w.DbCtx.StmtRunner().Query(`select * from test where num = ?`, w.Num)
-			if err != nil {
-				_, _ = fmt.Fprintf(os.Stderr, "select %d error: %+v\n", w.Num, err)
-				continue
-			}
 
-			var res = make([]int64, 0)
-			for rows.Next() {
-				var ref int64 = 0
-				err := rows.Scan(&ref)
-				if err != nil {
-					_, _ = fmt.Fprintf(os.Stderr, "select %d rows error: %+v\n", w.Num, err)
-					continue
-				}
-				res = append(res, ref)
-			}
 		}
 		wg.Done()
 	}()

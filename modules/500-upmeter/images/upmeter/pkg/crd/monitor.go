@@ -44,9 +44,6 @@ func (m *Monitor) Start() error {
 		LogEntry:                log.WithField("component", "crd-monitor"),
 		KeepFullObjectsInMemory: true,
 	})
-	//m.Monitor.WithKubeEventCb(func(event types.KubeEvent) {
-	//	// No handler is needed.
-	//})
 	// Load initial CRD list
 	err := m.Monitor.CreateInformers()
 	if err != nil {

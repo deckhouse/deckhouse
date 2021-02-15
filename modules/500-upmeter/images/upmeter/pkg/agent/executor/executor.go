@@ -115,7 +115,6 @@ func (e *ProbeExecutor) Stop() {
 
 // RestartProbes checks if probe is running and restart them.
 func (e *ProbeExecutor) RestartProbes() {
-	//log.Infof("RestartProbes")
 	now := time.Now()
 	for _, prob := range e.ProbeManager.Probers() {
 		if !prob.State().ShouldRun(now) {
@@ -123,7 +122,6 @@ func (e *ProbeExecutor) RestartProbes() {
 		}
 
 		// Run probe again
-		//log.Infof("executor Start probe '%s' at %d", prob.Metadata().String(), now)
 		_ = prob.Run(now)
 
 		// Increase probe running counter
@@ -153,7 +151,6 @@ func (e *ProbeExecutor) Scrape() {
 	}
 
 	for probeRefId, result := range e.Results {
-		//log.Infof("Scrape check result: %+v", result)
 		downtime, ok := e.ScrapeResults[probeRefId]
 		if !ok {
 			downtime = &types.DowntimeEpisode{
@@ -216,7 +213,7 @@ func (e *ProbeExecutor) CheckAndUpdateLastExportTime(nowTime int64) bool {
 	} else {
 		prevMark := (e.LastExportTimestamp / ExportGranularity) * ExportGranularity
 
-		//Export if now is a 30 second mark or past it
+		// Export if now is a 30 second mark or past it
 		if nowTime >= prevMark+ExportGranularity {
 			shouldExport = true
 		}

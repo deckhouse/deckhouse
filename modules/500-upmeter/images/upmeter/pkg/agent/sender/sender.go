@@ -45,9 +45,7 @@ func (s *Sender) Start() {
 		for {
 			select {
 			case episodes := <-s.DowntimeEpisodesCh:
-				//log.Infof("sender got episodes via chan: %+v", episodes)
 				s.BufferLock.Lock()
-				//log.Infof("SENDER append %d downtime episodes from scraper", len(episodes))
 				// TODO buffer should be persistent — sqlite or something
 				s.Buffer = append(s.Buffer, episodes...)
 				s.BufferLock.Unlock()
@@ -67,7 +65,6 @@ func (s *Sender) Start() {
 			select {
 			case <-sendTimer.C:
 				now := time.Now().Unix()
-				//log.Infof("SENDER Send downtime episodes at %d", now)
 				// TODO return len and catch error. Stop if error, send next batch if len > 0.
 				s.SendEpisodes(now)
 			case <-s.ctx.Done():

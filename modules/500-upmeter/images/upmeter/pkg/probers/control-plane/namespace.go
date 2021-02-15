@@ -68,7 +68,7 @@ func NewNamespaceProber() types.Prober {
 		}
 		// This finalizer can help during testing on local cluster.
 		// https://github.com/kubernetes/kubernetes/issues/60807
-		//ns.Spec = v1.NamespaceSpec{Finalizers: []v1.FinalizerName{"foregroundDeletion"}}
+		// ns.Spec = v1.NamespaceSpec{Finalizers: []v1.FinalizerName{"foregroundDeletion"}}
 
 		if !GarbageCollect(pr, ns.Kind, ns.Labels) {
 			return

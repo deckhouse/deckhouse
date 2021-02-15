@@ -93,7 +93,6 @@ func (c *CommonProbe) ProbeId() string {
 }
 
 func (c *CommonProbe) Run(start time.Time) error {
-	//log.Infof("Run probe ")
 	c.State().Start(start)
 
 	go func() {

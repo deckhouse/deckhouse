@@ -70,6 +70,10 @@ func (m *MigratorService) getVersions() map[string]int64 {
 	versions := map[string]int64{}
 
 	rows, err := m.DbCtx.StmtRunner().Query(SelectVersions)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var version string

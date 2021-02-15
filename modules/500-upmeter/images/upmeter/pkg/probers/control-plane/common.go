@@ -98,12 +98,10 @@ func GarbageCollect(pr *types.CommonProbe, kind string, labels map[string]string
 			list, err = ListObjects(pr, kind, listOpts)
 			if err != nil {
 				listErrors++
-			} else {
-				if len(list) == 0 {
-					// Success!!!
-					collected = true
-					return
-				}
+			} else if len(list) == 0 {
+				// Success!!!
+				collected = true
+				return
 			}
 		}
 		if listErrors > 0 {
@@ -213,7 +211,7 @@ func ListDeployNames(client kube.KubernetesClient, listOpts metav1.ListOptions) 
 }
 
 func DumpNames(list []string) string {
-	if list == nil || len(list) == 0 {
+	if len(list) == 0 {
 		return ""
 	}
 	return strings.Join(list, ", ")
@@ -251,11 +249,10 @@ func WaitForObjectDeletion(pr *types.CommonProbe, timeout time.Duration, kind, n
 		list, listErr = ListObjects(pr, kind, listOpts)
 		if listErr != nil {
 			listErrors++
-		} else {
-			if len(list) == 0 {
-				return true
-			}
+		} else if len(list) == 0 {
+			return true
 		}
+
 	}
 	if listErrors > 0 {
 		pr.LogEntry().Errorf("Error waiting for deletion %s/%s: %v", kind, name, listErr)

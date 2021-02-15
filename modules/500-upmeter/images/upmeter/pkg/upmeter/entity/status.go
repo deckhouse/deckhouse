@@ -240,7 +240,7 @@ func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents 
 
 				// Mute Down
 				if muteDuration <= status.Unknown+status.Down {
-					status.Down = status.Down - (muteDuration - status.Unknown)
+					status.Down -= muteDuration - status.Unknown
 					status.Unknown = 0
 					status.Muted = muteDuration
 					continue

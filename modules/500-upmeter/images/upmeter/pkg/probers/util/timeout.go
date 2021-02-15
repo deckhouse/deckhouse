@@ -50,6 +50,7 @@ func SequentialDoWithTimer(
 	wg.Add(len(items))
 
 	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
 
 	for index, item := range items {
 		go doOne(ctx, cancel, &wg, period, handleItem, handleTimeout, index, item)
@@ -60,7 +61,7 @@ func SequentialDoWithTimer(
 
 func doOne(
 	// runtime
-	parentCtx context.Context,
+	ctx context.Context,
 	cancel context.CancelFunc,
 	wg *sync.WaitGroup,
 	// configuration
@@ -71,8 +72,6 @@ func doOne(
 	index int,
 	item string,
 ) {
-	ctx, _ := context.WithCancel(parentCtx)
-
 	delayTimer := time.NewTimer(time.Duration(index) * period)
 	defer func() {
 		wg.Done()

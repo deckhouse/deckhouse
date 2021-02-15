@@ -54,9 +54,7 @@ func Test_SequentialDoWithTimer(t *testing.T) {
 
 			t := time.NewTicker(500 * time.Millisecond)
 			defer func() {
-				//fmt.Printf(prefix+"%s job stop timer\n", item)
 				t.Stop()
-				//fmt.Printf(prefix+"%s job stop\n", item)
 			}()
 			for {
 				select {
@@ -91,9 +89,7 @@ func Test_SequentialDoWithTimer(t *testing.T) {
 
 			t := time.NewTimer(500 * time.Millisecond)
 			defer func() {
-				//fmt.Printf(prefix+"%s job stop timer\n", item)
 				t.Stop()
-				//fmt.Printf(prefix+"%s job stop\n", item)
 			}()
 			for {
 				select {
@@ -123,9 +119,7 @@ func Test_SequentialDoWithTimer(t *testing.T) {
 
 			t := time.NewTimer(500 * time.Millisecond)
 			defer func() {
-				//fmt.Printf(prefix+"%s job stop timer\n", item)
 				t.Stop()
-				//fmt.Printf(prefix+"%s job stop\n", item)
 			}()
 			for {
 				select {
