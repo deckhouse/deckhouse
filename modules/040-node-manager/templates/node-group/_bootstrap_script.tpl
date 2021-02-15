@@ -90,16 +90,19 @@ systemctl enable bashible.timer
   {{- $context := . -}}
 #!/bin/bash
 
-function get_secret() {
-  secret="$1"
+function get_bundle() {
+  resource="$1"
+  name="$2"
+  token="$(</var/lib/bashible/bootstrap-token)"
 
   while true; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
-      if curl -s -f -X GET "https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
+      if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then
-        return 0
+       return 0
       else
-        >&2 echo "failed to get secret $secret with curl https://$server..."
+        >&2 echo "failed to get $resource $name with curl https://$server..."
       fi
     done
     sleep 10
@@ -148,6 +151,6 @@ fi
 {{- define "node_group_bashible_bootstrap_script_download_bashible" -}}
   {{- $context := . }}
 # Get bashible script from secret
-get_secret bashible-{{ .nodeGroup.name }}-${BUNDLE} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible.sh
+get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
 {{- end }}

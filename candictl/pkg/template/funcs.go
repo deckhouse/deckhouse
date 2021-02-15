@@ -43,6 +43,12 @@ import (
 // These are late-bound in Engine.Render().  The
 // version included in the FuncMap is a placeholder.
 //
+//
+// NOTE: Sync the content of this function among these files!
+//  (you are here) candictl/pkg/template/funcs.go
+//                 helm-mod/pkg/engine/funcs.go
+//                 modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
+
 func FuncMap() template.FuncMap {
 	f := sprig.TxtFuncMap()
 	delete(f, "env")

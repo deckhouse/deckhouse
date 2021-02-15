@@ -25,7 +25,7 @@ function get_secret() {
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
-    until kubectl_exec -n d8-cloud-instance-manager get secret $secret -o json; do
+    until kubectl_exec -n d8-cloud-instance-manager get secret "$secret" -o json; do
       attempt=$(( attempt + 1 ))
       if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -36,9 +36,11 @@ function get_secret() {
     done
 {{ if eq .runType "Normal" }}
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
+    token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if curl -s -f -X GET "https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
+        if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -49,7 +51,46 @@ function get_secret() {
     done
 {{ end }}
   else
-    >&2 echo "failead to get secret $secret: can't find kubelet.conf or bootstrap-token"
+    >&2 echo "failed to get secret $secret: can't find kubelet.conf or bootstrap-token"
+    exit 1
+  fi
+}
+
+
+function get_bundle() {
+  resource="$1"
+  name="$2"
+  max_retries="$3"
+
+  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+    attempt=0
+    until kubectl_exec get "$resource" "$name" -o json; do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${max_retries-}" ] && [ "$attempt" -gt "${max_retries}" ]; then
+        >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+        exit 1
+      fi
+      >&2 echo "failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+      sleep 10
+    done
+{{ if eq .runType "Normal" }}
+  elif [ -f /var/lib/bashible/bootstrap-token ]; then
+    token="$(</var/lib/bashible/bootstrap-token)"
+    while true; do
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
+        if curl -s -f -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        then
+         return 0
+        else
+          >&2 echo "failed to get $resource $name with curl https://$server..."
+        fi
+      done
+      sleep 10
+    done
+{{ end }}
+  else
+    >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
     exit 1
   fi
 }
@@ -80,7 +121,7 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_secret bashible-${NODE_GROUP}-${BUNDLE} ${MAX_RETRIES} | jq -r '.data."bashible.sh"' | base64 -d > $BOOTSTRAP_DIR/bashible-new.sh
+    get_bundle bashible "${BUNDLE}.${NODE_GROUP}" "${MAX_RETRIES}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
     $BOOTSTRAP_DIR/bashible-new.sh --no-lock
@@ -96,22 +137,33 @@ function main() {
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     exit 0
   fi
-  rm -f $CONFIGURATION_CHECKSUM_FILE
+  rm -f "$CONFIGURATION_CHECKSUM_FILE"
 {{ end }}
 
   if [ -z "${is_local-}" ]; then
     # update bashbooster library for idempotent scripting
     get_secret bashible-bashbooster -o json | jq -r '.data."bashbooster.sh"' | base64 -d > $BOOTSTRAP_DIR/bashbooster.sh
 
-    # get steps from bundle secrets
-    rm -rf $BUNDLE_STEPS_DIR/*
-    bundle_collections="bashible-bundle-${BUNDLE}-{{ .kubernetesVersion }} bashible-bundle-${BUNDLE}-${NODE_GROUP}"
-    for bundle_collection in $bundle_collections; do
-      collection_data="$(get_secret $bundle_collection | jq -r '.data')"
-      for step in $(jq -r 'to_entries[] | .key' <<< "$collection_data"); do
-        jq -r --arg step "$step" '.[$step] // ""' <<< "$collection_data" | base64 -d > "$BUNDLE_STEPS_DIR/$step"
-      done
+    # Get steps from bashible apiserver
+
+    rm -rf "$BUNDLE_STEPS_DIR/*"
+
+    # Convert, say, `1.19` to `1-19`. Dot is the delimiter of context parts, but
+    # parts themselves contain only hyphens. That is the convention of bashible
+    # apiserver meant to make name parsing easier.
+    KUBE_VERSION="$(echo {{ .kubernetesVersion }} | sed 's/\./-/g')"
+
+    k8s_steps_collection="$( get_bundle kubernetesbundle "${BUNDLE}.${KUBE_VERSION}" | jq -rc '.data')"
+    ng_steps_collection="$(  get_bundle nodegroupbundle  "${BUNDLE}.${NODE_GROUP}"   | jq -rc '.data')"
+
+    for step in $(jq -r 'to_entries[] | .key' <<< "$k8s_steps_collection"); do
+      jq -r --arg step "$step" '.[$step] // ""' <<< "$k8s_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
     done
+
+    for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
+      jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
+    done
+
   fi
 
 {{ if eq .runType "Normal" }}

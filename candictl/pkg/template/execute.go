@@ -22,16 +22,10 @@ type RenderedTemplate struct {
 	FileName string
 }
 
-func formatDir(dir string) string {
-	return strings.TrimSuffix(dir, "/") + "/"
-}
-
-// RenderTemplate renders each file in templatesDir.
+// RenderTemplatesDir renders each file in templatesDir.
 // Files are rendered separately, so no support for
 // libraries, like in Helm.
-func RenderTemplate(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
-	templatesDir = formatDir(templatesDir)
-
+func RenderTemplatesDir(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
 	files, err := ioutil.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
 		log.InfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
@@ -42,41 +36,52 @@ func RenderTemplate(templatesDir string, data map[string]interface{}) ([]Rendere
 		return nil, fmt.Errorf("read templates dir: %v", err)
 	}
 
-	renderedTemplates := make([]RenderedTemplate, 0, len(files))
+	renders := make([]RenderedTemplate, 0, len(files))
+
 	for _, file := range files {
-		if file.IsDir() {
+		tplName := file.Name()
+
+		isTemplate := !file.IsDir() && strings.HasSuffix(tplName, ".tpl")
+		if !isTemplate {
 			continue
 		}
 
-		fileName := file.Name()
-		if !strings.HasSuffix(fileName, ".tpl") {
-			continue
-		}
-
-		templatePath := templatesDir + file.Name()
+		tplPath := filepath.Join(templatesDir, tplName)
 
 		// Render template as a chart with one template to use helm functions.
-		tmplData, err := ioutil.ReadFile(templatePath)
+		tplContent, err := ioutil.ReadFile(tplPath)
 		if err != nil {
-			return nil, fmt.Errorf("read template file '%s': %v", templatePath, err)
+			return nil, fmt.Errorf("read template file '%s': %v", tplPath, err)
 		}
 
-		// render chart with prepared values
-		var e Engine
-		e.Name = file.Name()
-		e.Data = data
-		out, err := e.Render(tmplData)
+		rendered, err := RenderTemplate(tplName, tplContent, data)
 		if err != nil {
-			return nil, fmt.Errorf("render template file '%s': %v", templatePath, err)
+			return nil, fmt.Errorf("render template file '%s': %v", tplPath, err)
 		}
-
-		renderedTemplates = append(renderedTemplates, RenderedTemplate{
-			Content:  out,
-			FileName: strings.TrimSuffix(filepath.Base(templatePath), ".tpl"),
-		})
+		renders = append(renders, *rendered)
 	}
 
-	return renderedTemplates, nil
+	return renders, nil
+}
+
+func RenderTemplate(name string, content []byte, data map[string]interface{}) (*RenderedTemplate, error) {
+	// render chart with prepared values
+	e := Engine{
+		Name: name,
+		Data: data,
+	}
+
+	out, err := e.Render(content)
+	if err != nil {
+		return nil, err
+	}
+
+	rendered := &RenderedTemplate{
+		Content:  out,
+		FileName: strings.TrimSuffix(name, ".tpl"),
+	}
+
+	return rendered, nil
 }
 
 type Controller struct {
@@ -93,7 +98,6 @@ func NewTemplateController(tmpDir string) *Controller {
 			panic(err)
 		}
 	}
-	tmpDir = strings.TrimSuffix(tmpDir, "/")
 	_ = os.Mkdir(tmpDir, bundlePermissions)
 
 	tmpDir, err = ioutil.TempDir(tmpDir, tmpDirPrefix)
@@ -104,14 +108,14 @@ func NewTemplateController(tmpDir string) *Controller {
 }
 
 func (t *Controller) RenderAndSaveTemplates(fromDir, toDir string, data map[string]interface{}) error {
-	templates, err := RenderTemplate(fromDir, data)
+	renderedTemplates, err := RenderTemplatesDir(fromDir, data)
 	if err != nil {
 		return fmt.Errorf("render templates: %v", err)
 	}
 
-	err = SaveTemplatesToDir(templates, t.TmpDir+toDir)
+	err = SaveRenderedToDir(renderedTemplates, filepath.Join(t.TmpDir, toDir))
 	if err != nil {
-		return fmt.Errorf("save templates: %v", err)
+		return fmt.Errorf("save rendered templates: %v", err)
 	}
 
 	return nil
@@ -123,7 +127,8 @@ func (t *Controller) RenderBashBooster(fromDir, toDir string) error {
 		return fmt.Errorf("render bashboster: %v", err)
 	}
 
-	err = ioutil.WriteFile(t.TmpDir+toDir+"/bashbooster.sh", []byte(bashBooster), bundlePermissions)
+	filename := filepath.Join(t.TmpDir, toDir, "bashbooster.sh")
+	err = ioutil.WriteFile(filename, []byte(bashBooster), bundlePermissions)
 	if err != nil {
 		return fmt.Errorf("save bashboster: %v", err)
 	}

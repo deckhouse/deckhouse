@@ -1,20 +1,79 @@
-{{- /* deepCopy imitation */ -}}
+{{- /* deepCopy YAML imitation */ -}}
 {{- define "bundles_tpl_context_common_yaml" -}}
   {{- $context := . }}
 
   {{- $normal := dict }}
   {{- $_ := set $normal "bootstrapTokenPath" "/var/lib/bashible/bootstrap-token" }}
+  {{- $_ := set $normal "clusterDomain"      $context.Values.global.discovery.clusterDomain }}
+  {{- $_ := set $normal "clusterDNSAddress"  $context.Values.global.discovery.clusterDNSAddress }}
   {{- $_ := set $normal "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses }}
-  {{- $_ := set $normal "clusterDomain" $context.Values.global.discovery.clusterDomain }}
-  {{- $_ := set $normal "clusterDNSAddress" $context.Values.global.discovery.clusterDNSAddress }}
-  {{- $_ := set $normal "kubernetesCA" $context.Values.nodeManager.internal.kubernetesCA }}
+  {{- $_ := set $normal "kubernetesCA"       $context.Values.nodeManager.internal.kubernetesCA }}
 
   {{- $tpl_context_common := dict }}
   {{- $_ := set $tpl_context_common "runType" "Normal" }}
   {{- $_ := set $tpl_context_common "Template" $context.Template }}
-  {{- $_ := set $tpl_context_common "normal" $normal }}
+  {{- $_ := set $tpl_context_common "normal"   $normal }}
 
   {{- $tpl_context_common | toYaml }}
+{{- end -}}
+
+{{/* Kubernetes version comes from the allowed list */}}
+{{- define "bundle_k8s_version_context" -}}
+  {{- $context := index . 0 -}}
+  {{- $bundle  := index . 1 -}}
+  {{- $kubernetes_version := index . 2 -}}
+
+  {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
+  {{- $_ := set $tpl_context "bundle" $bundle }}
+  {{- $_ := set $tpl_context "kubernetesVersion" $kubernetes_version }}
+
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+    {{- $cloud_provider := $context.Values.nodeManager.internal.cloudProvider }}
+    {{- $_ := set $tpl_context "cloudProvider" $cloud_provider }}
+  {{- end }}
+
+  {{- $tpl_context | toYaml }}
+{{- end -}}
+
+{{/* Kubernetes version comes from the node group context */}}
+{{- define "bundle_ng_context" -}}
+  {{- $context := index . 0 -}}
+  {{- $bundle  := index . 1 -}}
+  {{- $ng      := index . 2 -}}
+
+  {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
+  {{- $_ := set $tpl_context "bundle" $bundle }}
+  {{- $_ := set $tpl_context "kubernetesVersion" $ng.kubernetesVersion }}
+  {{- $_ := set $tpl_context "nodeGroup" $ng }}
+
+  {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
+    {{- $cloud_provider := $context.Values.nodeManager.internal.cloudProvider }}
+    {{- $_ := set $tpl_context "cloudProvider" $cloud_provider }}
+  {{- end }}
+
+  {{- if hasKey $context.Values.nodeManager.internal "nodeStatusUpdateFrequency" }}
+    {{- $update_freq := $context.Values.nodeManager.internal.nodeStatusUpdateFrequency }}
+    {{- $_ := set $tpl_context "nodeStatusUpdateFrequency" $update_freq }}
+  {{- end }}
+
+  {{- $tpl_context | toYaml }}
+{{- end -}}
+
+{{- define "bashible_context" -}}
+  {{- $context := index . 0 -}}
+  {{- $bundle  := index . 1 -}}
+  {{- $ng      := index . 2 -}}
+
+  {{- $bashible_context := dict }}
+  {{- $_ := set $bashible_context "configurationChecksum" (include "bashible_configuration_united" (list $context $ng) | sha256sum) }}
+  {{- $_ := set $bashible_context "kubernetesVersion" $ng.kubernetesVersion }}
+  {{- $_ := set $bashible_context "bundle" $bundle }}
+  {{- $_ := set $bashible_context "normal" (dict "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses) }}
+  {{- $_ := set $bashible_context "nodeGroup" $ng }}
+  {{- $_ := set $bashible_context "Template" $context.Template }}
+  {{- $_ := set $bashible_context "runType" "Normal" }}
+
+  {{- $bashible_context | toYaml }}
 {{- end -}}
 
 {{- define "bundles_common_steps_pattern" -}}

@@ -42,7 +42,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-        - image: {{ .Values.global.modulesImages.registry }}/node-manager/machine-controller-manager:{{ .Values.global.modulesImages.tags.nodeManager.machineControllerManager }}
+        - image: "{{ .Values.global.modulesImages.registry }}/node-manager/machine-controller-manager:{{ .Values.global.modulesImages.tags.nodeManager.machineControllerManager }}"
           name: controller
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
           command:
