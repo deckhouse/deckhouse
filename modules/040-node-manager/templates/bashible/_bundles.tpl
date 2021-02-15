@@ -50,6 +50,7 @@
   {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $ng.kubernetesVersion }}
+  {{- $_ := set $tpl_context "cri" $ng.cri.type }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
 
   {{- if hasKey $context.Values.nodeManager.internal "nodeStatusUpdateFrequency" }}
@@ -91,7 +92,6 @@
   {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $kubernetes_version }}
-
 
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_common_steps_pattern" (list "all")) }}
     {{- include "bundles_validate_step_file" $step_file }}

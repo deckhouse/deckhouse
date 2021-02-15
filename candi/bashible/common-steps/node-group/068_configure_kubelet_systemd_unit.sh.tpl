@@ -48,5 +48,9 @@ $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip}
 {{- if hasKey .nodeGroup "kubelet" }}
     --root-dir={{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }} \\
 {{- end }}
+{{- if eq .cri "Containerd" }}
+    --container-runtime=remote \\
+    --container-runtime-endpoint=unix:/var/run/containerd/containerd.sock \\
+{{- end }}
     --v=2
 EOF

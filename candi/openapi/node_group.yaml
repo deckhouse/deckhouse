@@ -149,6 +149,26 @@ spec:
               - "1.17"
               - "1.18"
               - "1.19"
+            cri:
+              type: object
+              description: |
+                Container runtime parameters.
+              properties:
+                type:
+                  type: string
+                  description: |
+                    Container runtime type
+                  enum:
+                  - "Docker"
+                  - "Containerd"
+                  - "NotManaged"
+                containerd:
+                  type: object
+                  description: Containerd runtime parameters.
+                  properties:
+                    maxConcurrentDownloads:
+                      type: integer
+                      description: Set the max concurrent downloads for each pull (default 3).
             cloudInstances:
               type: object
               required:

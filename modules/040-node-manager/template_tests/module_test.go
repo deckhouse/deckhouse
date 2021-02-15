@@ -72,6 +72,8 @@ internal:
       instanceType: t2.medium
     nodeType: Cloud
     kubernetesVersion: "1.16"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: AWSInstanceClass
@@ -127,6 +129,8 @@ internal:
       diskSizeGb: 42 #optional
     nodeType: Cloud
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -181,6 +185,8 @@ internal:
       flavorName: m1.large
     nodeType: Cloud
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -235,6 +241,8 @@ internal:
       - mynetwork2
     nodeType: Cloud
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -255,6 +263,8 @@ internal:
         ccc: ddd
     nodeType: Cloud
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -312,6 +322,8 @@ internal:
         memoryReservation: 42
     nodeType: Cloud
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -377,6 +389,8 @@ internal:
         my: label
     nodeType: Cloud
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -411,6 +425,8 @@ internal:
   - name: worker
     nodeType: Static
     kubernetesVersion: "1.15"
+    cri:
+      type: "Docker"
   nodeUsers:
   - name: test
     spec:

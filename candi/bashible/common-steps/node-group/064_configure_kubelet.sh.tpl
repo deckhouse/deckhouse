@@ -29,15 +29,6 @@ evictionSoftThresholdImagefsInodesFree="10%"
 
 rootDir="{{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }}"
 
-dockerDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
-if [ -d "${dockerDir}/overlay2" ]; then
-  dockerDir="${dockerDir}/overlay2"
-else
-  if [ -d "${dockerDir}/aufs" ]; then
-    dockerDir="${dockerDir}/aufs"
-  fi
-fi
-
 nodefsSize=$(df --output=size $rootDir | tail -n1)
 nodefsSizeGFivePercent=$((nodefsSize/(1000*1000)*5/100))
 if [ "$nodefsSizeGFivePercent" -gt "$maxAvailableReservedSpace" ]; then
@@ -56,7 +47,21 @@ if [ "$(($nodefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdNodefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-imagefsSize=$(df --output=size $dockerDir | tail -n1)
+{{- if or (eq .cri "Docker") (eq .cri "Containerd")}}
+{{- if eq .cri "Docker" }}
+criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
+if [ -d "${criDir}/overlay2" ]; then
+  criDir="${criDir}/overlay2"
+else
+  if [ -d "${criDir}/aufs" ]; then
+    criDir="${criDir}/aufs"
+  fi
+fi
+{{- else }}
+criDir=$(/usr/local/bin/crictl info -o json | jq -r '.config.containerdRootDir')
+{{- end }}
+
+imagefsSize=$(df --output=size $criDir | tail -n1)
 imagefsSizeGFivePercent=$((imagefsSize/(1000*1000)*5/100))
 if [ "$imagefsSizeGFivePercent" -gt "$maxAvailableReservedSpace" ]; then
   evictionHardThresholdImagefsAvailable="${maxAvailableReservedSpace}G"
@@ -64,8 +69,9 @@ fi
 if [ "$(($imagefsSizeGFivePercent*2))" -gt "$(($maxAvailableReservedSpace*2))" ]; then
   evictionSoftThresholdImagefsAvailable="$(($maxAvailableReservedSpace*2))G"
 fi
+{{- end }}
 
-imagefsInodes=$(df --output=itotal $dockerDir | tail -n1)
+imagefsInodes=$(df --output=itotal $criDir | tail -n1)
 imagefsInodesKFivePercent=$((imagefsInodes/1000*5/100))
 if [ "$imagefsInodesKFivePercent" -gt "$needInodesFree" ]; then
   evictionHardThresholdImagefsInodesFree="${needInodesFree}k"
@@ -73,6 +79,7 @@ fi
 if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
+
 
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
@@ -164,4 +171,8 @@ syncFrequency: 1m0s
 volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
+{{- if eq .cri "Containerd" }}
+containerLogMaxSize: 10Mi
+containerLogMaxFiles: 5
+{{- end }}
 EOF
