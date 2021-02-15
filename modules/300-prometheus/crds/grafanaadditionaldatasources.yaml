@@ -21,46 +21,48 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: Additional Grafana Datasource
+          description: |
+            Ресурс для подключения дополнительных datasource к Grafana.
+
+            Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
           required:
             - spec
           properties:
             spec:
               type: object
-              description: Spec of additional grafana datasource
               required:
                 - type
                 - access
               properties:
                 type:
                   type: string
-                  description: Datasource type
+                  description: Тип datasource.
                 access:
                   type: string
-                  description: Access mode
+                  description: Режим доступа.
                   enum: ["proxy", "direct"]
                 url:
                   type: string
-                  description: Datasource URL
+                  description: Datasource URL.
                   example: http://localhost:8080
                 user:
                   type: string
-                  description: Database username
+                  description: Database username.
                 database:
                   type: string
-                  description: Database name, if used
+                  description: Database name, если ипользуется.
                 withCredentials:
                   type: boolean
                   description: Enable/disable with credentials headers
                 basicAuth:
                   type: boolean
-                  description: Enable/disable basic auth
+                  description: Включить/выключить basic auth.
                 basicAuthUser:
                   type: string
                   description: Basic auth username
                 jsonData:
                   type: object
-                  description: Fields that will be converted to json and stored in jsonData
+                  description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
                   type: object
-                  description: Json object of data that will be encrypted
+                  description: JSON-объект данных, который будет сохранен зашифрованным

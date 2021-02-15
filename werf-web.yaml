@@ -185,6 +185,12 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /modules/010-prometheus-crd/crds/grafanadashboarddefinition.yaml
+  to: /srv/jekyll-data/modules/300-prometheus/crds/grafanadashboarddefinition.yaml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 ---
 image: dev/web-public
 from: nginx:1.17.2
