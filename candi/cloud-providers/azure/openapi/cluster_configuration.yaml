@@ -131,6 +131,10 @@ apiVersions:
                   type: object
                   additionalProperties:
                     type: string
+      tags:
+        type: object
+        additionalProperties:
+          type: string
       provider:
         type: object
         additionalProperties: false
