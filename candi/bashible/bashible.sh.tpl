@@ -146,7 +146,7 @@ function main() {
 
     # Get steps from bashible apiserver
 
-    rm -rf "$BUNDLE_STEPS_DIR/*"
+    rm -rf "$BUNDLE_STEPS_DIR"/*
 
     # Convert, say, `1.19` to `1-19`. Dot is the delimiter of context parts, but
     # parts themselves contain only hyphens. That is the convention of bashible
