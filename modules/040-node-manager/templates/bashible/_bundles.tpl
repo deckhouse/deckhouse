@@ -44,6 +44,7 @@
   {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $ng.kubernetesVersion }}
+  {{- $_ := set $tpl_context "cri" $ng.cri.type }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
 
   {{- if hasKey $context.Values.nodeManager.internal "cloudProvider" }}
