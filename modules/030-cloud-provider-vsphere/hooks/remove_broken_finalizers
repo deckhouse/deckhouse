@@ -3,12 +3,20 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
+  execute_hook_on_synchronization="false"
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    # The current test suite does not support snapshots while running
+    # `beforeHelm` with `executeHookOnSynchronization: false`.
+    execute_hook_on_synchronization="true"
+  fi
   cat << EOF
     configVersion: v1
+    beforeHelm: 10
     kubernetes:
     - name: finalizers
       group: main
       queue: /modules/$(module::name::kebab_case)
+      executeHookOnSynchronization: ${execute_hook_on_synchronization}
       keepFullObjectsInMemory: false
       apiVersion: storage.k8s.io/v1
       kind: VolumeAttachment
