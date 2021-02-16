@@ -166,10 +166,8 @@ spec:
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
-  securityContext:
-    runAsNonRoot: true
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 2 }}
     fsGroup: 2000
-    runAsUser: 1000
 {{- include "helm_lib_node_selector" (tuple . "monitoring") | indent 2 }}
 {{- include "helm_lib_tolerations" (tuple . "monitoring") | indent 2 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 2 }}

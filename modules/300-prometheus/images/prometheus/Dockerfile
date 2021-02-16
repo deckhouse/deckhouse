@@ -21,7 +21,7 @@ RUN patch -p1 < sample_limit_annotation.patch && \
   patch -p1 < successfully_sent_metric.patch && \
   make build
 
-FROM quay.io/prometheus/busybox-linux-amd64:latest
+FROM quay.io/prometheus/busybox-linux-amd64@sha256:14d68ca3d69fceaa6224250c83d81d935c053fb13594c811038c461194599973
 COPY --from=0 /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=0 /prometheus/prometheus/promtool                               /bin/promtool
 COPY --from=0 /prometheus/prometheus/documentation/examples/prometheus.yml  /etc/prometheus/prometheus.yml
@@ -30,9 +30,9 @@ COPY --from=0 /prometheus/prometheus/consoles/                              /usr
 
 RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
 RUN mkdir -p /prometheus && \
-    chown -R nobody:nogroup etc/prometheus /prometheus
+    chown -R 1000:2000 etc/prometheus /prometheus
 
-USER       nobody
+USER       1000
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
 WORKDIR    /prometheus
