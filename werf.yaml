@@ -1,3 +1,5 @@
+{{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
+
 project: deckhouse
 configVersion: 1
 cleanup:
@@ -63,18 +65,18 @@ ansible:
       dest: /usr/local/bin/yq
       mode: +x
 
-  - name: "Install kubectl 1.16.15"
+  - name: "Install kubectl 1.16"
     get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.16.15/bin/linux/amd64/kubectl
-      checksum: "sha256:e8913069293156ddf55f243814a22d2384fc18b165efb6200606fdeaad146605"
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.16.{{ index $CandiVersionMap "k8s" "1.16" "patch" }}/bin/linux/amd64/kubectl
       dest: /usr/local/bin/kubectl-1.16
+      checksum: sha256:{{ index $CandiVersionMap "k8s" "1.16" "kubectl" "checksum" }}
       mode: +x
 
-  - name: "Install kubectl 1.19.5"
+  - name: "Install kubectl 1.19"
     get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.19.5/bin/linux/amd64/kubectl
-      checksum: "sha256:5f5a0bebde8a8782b2d9de9bd314dce722f9f960bee090b121ea5ac38cf4377d"
+      url: https://storage.googleapis.com/kubernetes-release/release/v1.19.{{ index $CandiVersionMap "k8s" "1.19" "patch" }}/bin/linux/amd64/kubectl
       dest: /usr/local/bin/kubectl-1.19
+      checksum: sha256:{{ index $CandiVersionMap "k8s" "1.19" "kubectl" "checksum" }}
       mode: +x
 
   - name: "Install kubectl wrapper"
@@ -473,7 +475,6 @@ ansible:
       - autoconf
       - libtool
       - build-base
-      repository: http://nl.alpinelinux.org/alpine/edge/main/
       update_cache: yes
   - raw: rm -rf /var/cache/apk/*
   - shell: |

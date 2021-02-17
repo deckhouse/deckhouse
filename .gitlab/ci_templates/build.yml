@@ -33,8 +33,8 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - type multiwerf && source <(multiwerf use 1.1 early-access)
-  - source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
+  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
   - werf build-and-publish
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
       echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;

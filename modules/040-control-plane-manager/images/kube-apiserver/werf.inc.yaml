@@ -1,0 +1,49 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+    add: /src/_output/bin/kube-apiserver
+    to: /usr/bin/kube-apiserver
+    before: setup
+
+docker:
+  ENTRYPOINT: ["/usr/bin/kube-apiserver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  {{- if semverCompare "=1.15" $version }}
+from: golang:1.12-alpine3.11
+  {{- else }}
+from: {{ env "BASE_GOLANG_ALPINE" }}
+  {{- end }}
+git:
+  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+shell:
+  beforeInstall:
+  - apk add --no-cache make bash git mercurial patch rsync
+  install:
+  - mkdir /src
+  - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+  - cd /src
+  {{- if semverCompare ">=1.19" $version }}
+  - |
+    cat <<EOF > .kube-version
+    KUBE_GIT_VERSION='v{{ printf "%s.%s" $version $patch }}+flant.$(ls /patches/{{ $version }}/* 2>/dev/null | wc -l)'
+    KUBE_GIT_MAJOR='{{ $version }}'
+    KUBE_GIT_MINOR='{{ $patch }}'
+    KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
+    KUBE_GIT_TREE_STATE='archive'
+    EOF
+  - export KUBE_GIT_VERSION_FILE=.kube-version
+  {{- end }}
+  - test -d /patches/{{ $version }} && patch -p0 -i /patches/{{ $version }}/*.patch || true
+  - make all WHAT=cmd/kube-apiserver
+{{- end }}

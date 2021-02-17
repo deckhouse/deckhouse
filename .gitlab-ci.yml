@@ -1,6 +1,7 @@
 include:
   - '.gitlab/ci_includes/web.yml'
   - '.gitlab/ci_includes/terraform_versions.yml'
+  - '.gitlab/ci_includes/image_versions.yml'
   - '.gitlab/ci_templates/build.yml'
   - '.gitlab/ci_templates/cleanup.yml'
   - '.gitlab/ci_templates/tests.yml'
@@ -12,14 +13,6 @@ variables:
   WERF_STAGES_REPO_BASE: ${REGISTRY_STAGES_HOST}
   WERF_STAGES_STORAGE_REPO_IMPLEMENTATION: default
   STAGES_STORAGE_LOGIN_CMD: "docker login -u ${REGISTRY_STAGES_USER} -p ${REGISTRY_STAGES_PASSWORD} ${WERF_STAGES_REPO_BASE}"
-  BASE_ALPINE: "alpine:3.12.1"
-  BASE_DEBIAN: "debian:buster"
-  BASE_GOLANG_ALPINE: "golang:1.15.3-alpine3.12"
-  BASE_GOLANG_BUSTER: "golang:1.15.3-buster"
-  BASE_NGINX_ALPINE: "nginx:1.15-alpine"
-  BASE_PYTHON_ALPINE: "python:3.7.9-alpine3.12"
-  BASE_SHELL_OPERATOR: "flant/shell-operator:v1.0.0-rc.1"
-  BASE_UBUNTU: "ubuntu:18.04"
   TEST_TIMEOUT: "15m"
 
 stages:
