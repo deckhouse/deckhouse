@@ -128,9 +128,7 @@ spec:
     spec:
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
-      tolerations:
-      - effect: NoSchedule
-        key: node-role.kubernetes.io/master
+{{- include "helm_lib_tolerations" (tuple . "any-uninitialized-node") | indent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: d8-control-plane-manager

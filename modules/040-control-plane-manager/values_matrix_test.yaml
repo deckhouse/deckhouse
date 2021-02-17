@@ -5,6 +5,12 @@ global:
       internal:
         milliCpuControlPlane: 1024
         memoryControlPlane: 536870912
+    placement:
+      __ConstantChoices__:
+      - {}
+      - customTolerationKeys:
+          - "test-1"
+          - "test-2/master"
   discovery:
     d8SpecificNodeCountByRole:
       master:
