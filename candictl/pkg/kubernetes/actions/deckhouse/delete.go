@@ -16,9 +16,15 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
+const (
+	deckhouseDeploymentNamespace = "d8-system"
+	deckhouseDeploymentName      = "deckhouse"
+)
+
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Delete Deckhouse", 45, 5, func() error {
-		err := kubeCl.AppsV1().Deployments("d8-system").Delete("deckhouse", &metav1.DeleteOptions{})
+		foregroundPolicy := metav1.DeletePropagationForeground
+		err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Delete(deckhouseDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
@@ -150,6 +156,19 @@ func DeleteMachineDeployments(kubeCl *client.KubernetesClient) error {
 			log.InfoF("%s/%s\n", namespace, name)
 		}
 		return nil
+	})
+}
+
+func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
+	return retry.StartLoop("Wait for Deckhouse Deployment deletion", 30, 5, func() error {
+		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(deckhouseDeploymentName, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			log.InfoLn("Deckhouse Deployment and its dependents are removed")
+			return nil
+		}
+
+		//goland:noinspection GoErrorStringFormat
+		return fmt.Errorf("Deckhouse Deployment and its dependents are not removed from the cluster yet, err: %v", err)
 	})
 }
 
