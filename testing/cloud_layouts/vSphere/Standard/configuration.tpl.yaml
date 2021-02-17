@@ -55,6 +55,7 @@ externalNetworkNames:
 internalNetworkNames:
 - DEVOPS_36
 internalNetworkCIDR: 172.16.25.0/24
+baseResourcePool: kubernetes-stage/cloud-layout-tests
 masterNodeGroup:
   replicas: 1
   instanceClass:
@@ -65,7 +66,6 @@ masterNodeGroup:
     additionalNetworks:
     - DEVOPS_36
     datastore: 3par_4_Lun105
-    resourcePool: kubernetes-stage/cloud-layout-tests
     rootDiskSize: 20
     runtimeOptions:
       nestedHardwareVirtualization: false
