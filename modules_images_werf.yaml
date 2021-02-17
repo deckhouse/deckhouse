@@ -14,6 +14,7 @@ cleanup:
       last: 10
 
 {{- $Root := . }}
+{{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
 {{- range $path, $content := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}"  }}
   {{- $ctx := dict }}
   {{- if regexMatch "/werf.inc.yaml$" $path }}
@@ -23,6 +24,7 @@ cleanup:
   {{- end }}
   {{- $ImageData := regexReplaceAll "^modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}" | split "#" }}
   {{- $ci_job_token := env "CI_JOB_TOKEN" }}
+  {{- $_ := set $ctx "CandiVersionMap" $CandiVersionMap }}
   {{- $_ := set $ctx "ModulePriority" $ImageData._0 }}
   {{- $_ := set $ctx "ModuleName" $ImageData._1 }}
   {{- $_ := set $ctx "ImageName" $ImageData._2 }}

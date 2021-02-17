@@ -107,8 +107,8 @@ fi
 
 if [[ -z "$(docker ps --filter "name=$CONTAINER_NAME" -q)" ]]; then
   PATH="$HOME/bin/:$PATH"
-  # shellcheck disable=SC1090
-  . "$(multiwerf use 1.1 stable --as-file)"
+  # shellcheck disable=SC2046
+  type multiwerf && source $(multiwerf use 1.1 ea --as-file)
 
   werf build tests --stages-storage=registry-stages.flant.com:5000/stages-deckhouse
   # shellcheck disable=SC2016

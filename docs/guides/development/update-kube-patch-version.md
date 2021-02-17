@@ -2,16 +2,18 @@
 
 > По мере выхода новых патч-версий требуется их обновление в коде, пока что это выполняется вручную в нескольких файлах и не вынесено в глобальные переменные.
 
+Текущие патч-версии прописаны в [глобальном VersionMap Candi](../../../candi/version_map.yml).
+
 На момент последней правки версии были следующие:
 
 | major.minor | current | latest |
 | --- | --- | --- |
 | 1.14 | 1.14.10 | `final` |
 | 1.15 | 1.15.12 | `final` |
-| 1.16 | 1.16.15 |         |
-| 1.17 | 1.17.14 |         |
-| 1.18 | 1.18.12 |         |
-| 1.19 | 1.19.5  |         |
+| 1.16 | 1.16.15 | `final` |
+| 1.17 | 1.17.17 |         |
+| 1.18 | 1.18.15 |         |
+| 1.19 | 1.19.7  |         |
 
 Патч версии компонентов захардкожены в следующих `.tpl` и `Dockerfile`:
 
@@ -52,36 +54,3 @@ kubernetesVersion: 1.15.patch
 kubernetesVersion: 1.16.patch
 {{- end }}
 ```
-## Образ kubeadm_builder
-[modules/040-control-plane-manager/images/control-plane-manager/Dockerfile](../../../modules/040-control-plane-manager/images/control-plane-manager/Dockerfile)
-
-## Компоненты control-plane
-
-### apiserver
-- [modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-apiserver-1-16/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-16/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-apiserver-1-17/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-17/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-apiserver-1-18/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-18/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-apiserver-1-19/Dockerfile](../../../modules/040-control-plane-manager/images/kube-apiserver-1-19/Dockerfile)
-
-### controller-manager
-- [modules/040-control-plane-manager/images/kube-controller-manager-1-15/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-15/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-controller-manager-1-16/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-16/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-controller-manager-1-17/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-17/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-controller-manager-1-18/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-18/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-controller-manager-1-19/Dockerfile](../../../modules/040-control-plane-manager/images/kube-controller-manager-1-19/Dockerfile)
-
-### scheduler
-- [modules/040-control-plane-manager/images/kube-scheduler-1-15/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-15/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-scheduler-1-16/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-16/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-scheduler-1-17/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-17/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-scheduler-1-18/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-18/Dockerfile)
-- [modules/040-control-plane-manager/images/kube-scheduler-1-19/Dockerfile](../../../modules/040-control-plane-manager/images/kube-scheduler-1-19/Dockerfile)
-
-### proxy
-- [modules/041-kube-proxy/images/kube-proxy-1-14/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-14/Dockerfile)
-- [modules/041-kube-proxy/images/kube-proxy-1-15/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-15/Dockerfile)
-- [modules/041-kube-proxy/images/kube-proxy-1-16/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-16/Dockerfile)
-- [modules/041-kube-proxy/images/kube-proxy-1-17/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-17/Dockerfile)
-- [modules/041-kube-proxy/images/kube-proxy-1-18/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-18/Dockerfile)
-- [modules/041-kube-proxy/images/kube-proxy-1-19/Dockerfile](../../../modules/041-kube-proxy/images/kube-proxy-1-19/Dockerfile)

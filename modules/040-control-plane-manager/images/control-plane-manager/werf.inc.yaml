@@ -1,0 +1,50 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+    add: /usr/local/bin
+    to: /usr/local/bin
+    includePaths:
+    - kubeadm-*
+    before: setup
+git:
+  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/control-plane-manager
+    to: /control-plane-manager
+shell:
+  beforeInstall:
+  - apk add --no-cache jq curl bash gettext grep
+  install:
+  - curl -L https://storage.googleapis.com/kubernetes-release/release/v1.19.{{ index $.CandiVersionMap "k8s" "1.19" "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
+  - echo "{{ index $.CandiVersionMap "k8s" "1.19" "kubectl" "checksum" }}  /usr/local/bin/kubectl" | sha256sum -c
+  - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl-certinfo_1.4.1_linux_amd64 -o /usr/local/bin/cfssl-certinfo
+  - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl
+  - chmod +x /usr/local/bin/kubectl /usr/local/bin/cfssl-certinfo /usr/local/bin/cfssl
+docker:
+  ENTRYPOINT: ["/control-plane-manager"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+from: {{ env "BASE_GOLANG_BUSTER" }}
+git:
+  - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+shell:
+  beforeInstall:
+  - apt update
+  - apt install rsync patch -y
+  install:
+ {{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
+  {{- if semverCompare ">=1.16" $version }}
+  - wget https://github.com/kubernetes/kubernetes/archive/v{{ printf "%s.%s" $version $patch }}.tar.gz -O - | tar -xz -C /
+  - cd /kubernetes-{{ printf "%s.%s" $version $patch }}
+  - test -d /patches/{{ $version }} && patch -p0 -i /patches/{{ $version }}/*.patch || true
+  - make all WHAT=cmd/kubeadm
+  - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
+  {{- end }}
+{{- end }}
