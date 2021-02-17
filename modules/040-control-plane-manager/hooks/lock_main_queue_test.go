@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: lock_main_queue ::", func() {
 	const (
-		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
+		initValuesString       = `{"global": {"clusterIsBootstrapped": true}, "controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 		initConfigValuesString = ``
 		runningReadyPods       = `
 apiVersion: v1

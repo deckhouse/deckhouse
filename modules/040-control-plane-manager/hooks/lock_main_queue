@@ -58,6 +58,11 @@ function lock_with_error() {
 }
 
 function __main__() {
+  if ! values::is_true global.clusterIsBootstrapped ; then
+    >&2 echo "Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update"
+    return 0
+  fi
+
   # Lock deckhouse main queue while the control-plane is updating.
 
   if ! ds_generation="$(context::jq -er '.snapshots.cpm_ds[0].filterResult.generation')"; then
