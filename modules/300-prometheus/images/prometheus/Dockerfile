@@ -30,9 +30,9 @@ COPY --from=0 /prometheus/prometheus/consoles/                              /usr
 
 RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
 RUN mkdir -p /prometheus && \
-    chown -R 1000:2000 etc/prometheus /prometheus
+    chown -R 65534:2000 etc/prometheus /prometheus
 
-USER       1000
+USER       65534
 EXPOSE     9090
 VOLUME     [ "/prometheus" ]
 WORKDIR    /prometheus
