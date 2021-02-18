@@ -159,15 +159,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: dedicated.flant.com
-  operator: Equal
-  value: "cert-manager"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "cert-manager"
-- key: dedicated.flant.com
-  operator: Equal
-  value: "system"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
@@ -227,15 +221,9 @@ podAntiAffinity:
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: dedicated.flant.com
-  operator: Equal
-  value: "cert-manager"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "cert-manager"
-- key: dedicated.flant.com
-  operator: Equal
-  value: "system"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
@@ -296,15 +284,9 @@ podAntiAffinity:
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: dedicated.flant.com
-  operator: Equal
-  value: "cert-manager"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "cert-manager"
-- key: dedicated.flant.com
-  operator: Equal
-  value: "system"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
@@ -364,15 +346,9 @@ podAntiAffinity:
 			Expect(certManager.Exists()).To(BeTrue())
 			Expect(certManager.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON("{\"node-role.deckhouse.io/system\":\"\"}"))
 			Expect(certManager.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
-- key: dedicated.flant.com
-  operator: Equal
-  value: "cert-manager"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "cert-manager"
-- key: dedicated.flant.com
-  operator: Equal
-  value: "system"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"

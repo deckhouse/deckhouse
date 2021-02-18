@@ -1,0 +1,43 @@
+#!/bin/bash
+
+### Migration 02.02.2021: Remove after final `domain migration` release reaches RockSolid
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  modules=$({ deckhouse-controller module list 2>/dev/null || echo ""; } | jq -Rr '. | [inputs | .[:-1]][:-1] + ["monitoring", "system", "frontend"] | join("|")')
+
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: nodes
+      group: main
+      keepFullObjectsInMemory: false
+      executeHookOnEvent: [Added, Modified]
+      apiVersion: v1
+      kind: Node
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "deprecatedTaints": ([.spec.taints // [] | .[] | select(.key=="dedicated.flant.com" and (.value // empty | test("^(${modules})$")))] | any),
+          "deprecatedLabels": ([.metadata.labels // {} | with_entries(select(.value == "")) | keys[] | select(. | test("^node-role\\\.flant\\\.com/(${modules})$"))] | any)
+        }
+EOF
+}
+
+function __main__() {
+  error=0
+  nodes_deprecated_taints=$(context::jq -r '[.snapshots.nodes[].filterResult | select(.deprecatedTaints == true) | .name] | join(", ")')
+  if [[ ! -z "$nodes_deprecated_taints" ]]; then
+    >&2 echo "ERROR: Cluster has Nodes: $nodes_deprecated_taints with deprecated dedicated.flant.com taints."
+    error=1
+  fi
+  nodes_deprecated_labels=$(context::jq -r '[.snapshots.nodes[].filterResult | select(.deprecatedLabels == true) | .name] | join(", ")')
+  if [[ ! -z "$nodes_deprecated_labels" ]]; then
+    >&2 echo "ERROR: Cluster has Nodes: $nodes_deprecated_labels with deprecated node-role.flant.com labels."
+    error=1
+  fi
+  return $error
+}
+
+hook::run $@

@@ -67,21 +67,12 @@ spec:
         operator: Exists
       - key: node-role.kubernetes.io/master
       - key: node-role/system
-      - key: dedicated.flant.com
+      - key: dedicated.deckhouse.io
         operator: Equal
         value: kube-dns
       - key: dedicated.deckhouse.io
         operator: Equal
-        value: kube-dns
-      - key: dedicated.flant.com
-        operator: Equal
         value: system
-      - key: dedicated.deckhouse.io
-        operator: Equal
-        value: system
-      - key: dedicated.flant.com
-        operator: Equal
-        value: master
       - key: dedicated.deckhouse.io
         operator: Equal
         value: master
@@ -167,9 +158,6 @@ spec:
                 operator: "Exists"
             - matchExpressions:
               - key: "node-role.deckhouse.io/{{ .Values.kubeDns.internal.specificNodeType }}"
-                operator: "Exists"
-            - matchExpressions:
-              - key: "node-role.flant.com/{{ .Values.kubeDns.internal.specificNodeType }}"
                 operator: "Exists"
             - matchExpressions:
               - key: "node-role.kubernetes.io/{{ .Values.kubeDns.internal.specificNodeType }}"

@@ -163,21 +163,12 @@ tolerations:
 {{- /* Monitoring: Nodes for monitoring components: prometheus, grafana, kube-state-metrics, etc. */ -}}
   {{- else if eq $strategy "monitoring" }}
 tolerations:
-- key: dedicated.flant.com
+- key: dedicated.deckhouse.io
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
 - key: dedicated.deckhouse.io
   operator: Equal
-  value: {{ $context.Chart.Name | quote }}
-- key: dedicated.flant.com
-  operator: Equal
   value: "monitoring"
-- key: dedicated.deckhouse.io
-  operator: Equal
-  value: "monitoring"
-- key: dedicated.flant.com
-  operator: Equal
-  value: "system"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
@@ -188,15 +179,9 @@ tolerations:
 {{- /* Frontend: Nodes for ingress-controllers */ -}}
   {{- else if eq $strategy "frontend" }}
 tolerations:
-- key: dedicated.flant.com
-  operator: Equal
-  value: {{ $context.Chart.Name | quote }}
 - key: dedicated.deckhouse.io
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
-- key: dedicated.flant.com
-  operator: Equal
-  value: "frontend"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "frontend"
@@ -207,15 +192,9 @@ tolerations:
 {{- /* System: Nodes for system components: prometheus, dns, cert-manager */ -}}
   {{- else if eq $strategy "system" }}
 tolerations:
-- key: dedicated.flant.com
-  operator: Equal
-  value: {{ $context.Chart.Name | quote }}
 - key: dedicated.deckhouse.io
   operator: Equal
   value: {{ $context.Chart.Name | quote }}
-- key: dedicated.flant.com
-  operator: Equal
-  value: "system"
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
