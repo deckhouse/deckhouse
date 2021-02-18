@@ -1,8 +1,8 @@
 diff --git a/public/app/core/time_series2.ts b/public/app/core/time_series2.ts
-index 0c4b241558..a5cc5bf1aa 100644
+index 5606ced6e6..9bc3b20e1c 100644
 --- a/public/app/core/time_series2.ts
 +++ b/public/app/core/time_series2.ts
-@@ -245,6 +245,7 @@ export default class TimeSeries {
+@@ -222,6 +222,7 @@ export default class TimeSeries {
      let previousTime;
      let previousValue = 0;
      let previousDeltaUp = true;
@@ -10,7 +10,7 @@ index 0c4b241558..a5cc5bf1aa 100644
 
      for (let i = 0; i < this.datapoints.length; i++) {
        currentValue = this.datapoints[i][0];
-@@ -254,8 +255,15 @@ export default class TimeSeries {
+@@ -231,8 +232,15 @@ export default class TimeSeries {
        // so we have to find the minimum one (could occur with aggregators such as ZimSum)
        if (previousTime !== undefined) {
          const timeStep = currentTime - previousTime;
@@ -28,10 +28,10 @@ index 0c4b241558..a5cc5bf1aa 100644
        }
        previousTime = currentTime;
 diff --git a/public/app/plugins/panel/heatmap/heatmap_data_converter.ts b/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
-index c4d4c60fa0..18d0893ff9 100644
+index 36267a8329..65e6b3219b 100644
 --- a/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
 +++ b/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
-@@ -399,10 +399,28 @@ function calculateBucketSize(bounds: number[], logBase = 1): number {
+@@ -399,10 +399,29 @@ function calculateBucketSize(bounds: number[], logBase = 1): number {
      return bounds[0];
    } else {
      bounds = _.sortBy(bounds);
@@ -39,6 +39,7 @@ index c4d4c60fa0..18d0893ff9 100644
 +
      for (let i = 1; i < bounds.length; i++) {
        const distance = getDistance(bounds[i], bounds[i - 1], logBase);
++      // Store distances count.
 +      if (bucketDistances[distance]) {
 +        bucketDistances[distance]++;
 +      } else {
@@ -46,9 +47,9 @@ index c4d4c60fa0..18d0893ff9 100644
 +      }
        bucketSize = distance < bucketSize ? distance : bucketSize;
      }
-+    // Filter out distances that occur only once.
++    // Ignore distances that occur only once.
 +    let newBucketSize = Infinity;
-+    _.forEach(bucketDistances, function(v, k) {
++    _.forEach(bucketDistances, function (v, k) {
 +      if (v > 1) {
 +        let size = _.toNumber(k);
 +        newBucketSize = size < newBucketSize ? size : newBucketSize;

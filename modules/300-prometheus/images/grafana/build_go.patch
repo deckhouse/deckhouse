@@ -1,0 +1,13 @@
+diff --git a/build.go b/build.go
+index 4fcb08e6d8..bafea6a143 100644
+--- a/build.go
++++ b/build.go
+@@ -300,7 +300,7 @@ func ldflags() string {
+        var b bytes.Buffer
+        b.WriteString("-w")
+        b.WriteString(fmt.Sprintf(" -X main.version=%s", version))
+-       b.WriteString(fmt.Sprintf(" -X main.commit=%s", getGitSha()))
++       b.WriteString(fmt.Sprintf(" -X main.commit=%s", "fix_heatmap,feat_extra_vars"))
+        b.WriteString(fmt.Sprintf(" -X main.buildstamp=%d", buildStamp()))
+        b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", getGitBranch()))
+        if v := os.Getenv("LDFLAGS"); v != "" {

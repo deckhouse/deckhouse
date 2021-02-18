@@ -1,10 +1,10 @@
 # Grafana
 
-Image with patched Grafana 7. Use v7.0.6
+Image with patched Grafana v7.4.2.
 
 ## Patches
 
-### extra variables
+### Extra variables for Prometheus datasource
 
 Add variables for queries:
 
@@ -14,12 +14,14 @@ ${__interval_sx4}
 ${__interval_rv}
 ```
 
-### folders
-
-A patch to define folder structure using configuration. See https://github.com/grafana/grafana/pull/23117
-
-This patch can be removed in future updates.
-
-### thin bars
+### Thin bars on heatmap panels
 
 Fast forward feature in Trickster make thin bars in graphs and thin cards in heatmap. It is fixed with filtering single small distance between timestamps for timeStep and card width calculation.
+
+### Useful version
+
+Patch build.go to display useful information in Help popup menu.
+
+### Copy bundled plugins
+
+Copy bundled plugins from $BUNDLED_PLUGINS_PATH if $GF_INSTALL_PLUGINS is set or BUNDLED_PLUGINS_PATH is not equal to GF_PATHS_PLUGINS.
