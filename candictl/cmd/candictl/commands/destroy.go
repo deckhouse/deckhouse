@@ -255,6 +255,11 @@ func deleteEntities(kubeCl *client.KubernetesClient) error {
 		return err
 	}
 
+	err = deckhouse.WaitForDeckhouseDeploymentDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
 	err = deckhouse.DeleteServices(kubeCl)
 	if err != nil {
 		return err
