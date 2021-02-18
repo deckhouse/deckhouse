@@ -34,24 +34,6 @@ function __main__() {
     fi
   fi
   values::set flantPricing.internal.deprecatedResourcesInHelmReleases "$(get_value_from_metrics "$prom_result")"
-
-  if [[ $(values::jq -er '.global.enabledModules[] | select(. == "terraform-manager")') ]]; then
-    if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-      prom_result='{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1,"1"]}]}}'
-    else
-      if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode 'query=count(ALERTS{alertname="D8TerraformStateExporterChecksFailed", alertstate="firing"})')"; then
-        prom_result=""
-      fi
-    fi
-    converge_is_completed=true
-
-    if [[ "x$(get_value_from_metrics $prom_result)" != "x0" ]]; then
-      converge_is_completed=false
-    fi
-    values::set flantPricing.internal.convergeIsCompleted $converge_is_completed
-  else
-    values::set flantPricing.internal.convergeIsCompleted true
-  fi
 }
 
 hook::run "$@"

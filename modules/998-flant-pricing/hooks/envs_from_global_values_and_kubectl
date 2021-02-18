@@ -18,10 +18,11 @@ function __main__() {
   values::set flantPricing.internal.cloudProvider "$cloud_provider"
 
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-    control_plane_version="1.16"
+    server_version="1.16.5-rc.0"
   else
-    control_plane_version=$(kubectl version -o json | jq '.serverVersion.major + "." + .serverVersion.minor')
+    server_version="$(kubectl version -o json | jq -re '.serverVersion.gitVersion[1:]')"
   fi
+  control_plane_version="$(semver::majmin "${server_version}")"
   values::set flantPricing.internal.controlPlaneVersion "$control_plane_version"
 
   cluster_type="Cloud"
@@ -42,6 +43,12 @@ function __main__() {
   fi
   values::set flantPricing.internal.clusterType "$cluster_type"
   values::set flantPricing.internal.kops $kops
+
+  terraform_manager_enabled=false
+  if [[ $(values::jq -er '.global.enabledModules[] | select(. == "terraform-manager")') ]]; then
+    terraform_manager_enabled=true
+  fi
+  values::set flantPricing.internal.terraformManagerEnabled $terraform_manager_enabled
 }
 
 hook::run "$@"

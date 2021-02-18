@@ -11,7 +11,7 @@ var _ = Describe("Modules :: flant-pricing :: hooks :: envs_from_global_values_a
 	const (
 		initValuesHybridWithCloudProvider = `
 global:
-  enabledModules: ["deckhouse", "cloud-provider-openstack"]
+  enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
   clusterConfiguration:
     clusterType: Static
 flantPricing:
@@ -27,7 +27,7 @@ flantPricing:
 `
 		initValuesCloudClusterWithStaticNodes = `
 global:
-  enabledModules: ["deckhouse", "cloud-provider-openstack"]
+  enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
   clusterConfiguration:
     clusterType: Static
   discovery:
@@ -60,6 +60,7 @@ flantPricing:
 			Expect(a.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(a.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Hybrid`))
 			Expect(a.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
+			Expect(a.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`true`))
 		})
 	})
 
@@ -77,6 +78,7 @@ flantPricing:
 			Expect(b.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(b.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Static`))
 			Expect(b.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
+			Expect(b.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`false`))
 		})
 	})
 
@@ -94,6 +96,7 @@ flantPricing:
 			Expect(c.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(c.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Hybrid`))
 			Expect(c.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
+			Expect(c.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`true`))
 		})
 	})
 
@@ -111,6 +114,7 @@ flantPricing:
 			Expect(d.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(d.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Cloud`))
 			Expect(d.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`true`))
+			Expect(d.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`false`))
 		})
 	})
 })

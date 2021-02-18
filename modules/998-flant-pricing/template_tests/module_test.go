@@ -18,6 +18,7 @@ func Test(t *testing.T) {
 const globalValues = `
 project: my_project
 clusterName: my_cluster
+deckhouseVersion: dev
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-pricing", "operator-prometheus-crd"]
 modulesImages:
   registry: registry.flant.com
@@ -28,6 +29,7 @@ modulesImages:
       grafanaAgent: tagstring
     common:
       alpine: tagstring
+      kubeRbacProxy: imagehash
 discovery:
   prometheusScrapeInterval: 30s
   clusterControlPlaneIsHighlyAvailable: true
@@ -53,11 +55,14 @@ internal:
   clusterType: Cloud
   mastersCount: 3
   kops: true
-  convergeIsCompleted: true
   deprecatedResourcesInHelmReleases: 100
   masterIsDedicated: true
   masterMinCPU: 4
   masterMinMemory: 800000
+  prometheusAPIClientTLS:
+    certificate: string
+    key: string
+  terraformManagerEnabled: true
 `
 
 var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
@@ -119,8 +124,6 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
   value: "1"
 - name: FP_ALL_MANAGED_NODES_UP_TO_DATE
   value: "0"
-- name: FP_CONVERGE_IS_COMPLETED
-  value: "1"
 - name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
   value: "100"
 - name: FP_MASTER_IS_DEDICATED
@@ -135,6 +138,10 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
   value: "0"
 - name: FP_CONTACTS
   value: "10"
+- name: FP_DECKHOUSE_VERSION
+  value: dev
+- name: FP_TERRAFORM_MANAGER_EBABLED
+  value: "true"
 - name: DEBUG_UNIX_SOCKET
   value: /tmp/shell-operator-debug.socket`
 

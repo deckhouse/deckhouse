@@ -122,4 +122,49 @@ status:
 			Expect(f.ValuesGet("flantPricing.internal.masterMinMemory").String()).To(Equal(`8280038894`))
 		})
 	})
+
+	Context("Cluster with one master defined allocatable in units ", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+ name: master-0
+ labels:
+   node.deckhouse.io/group: master
+   node-role.kubernetes.io/master: ""
+status:
+ allocatable:
+   cpu: 1900m
+   memory: 7763032Ki
+ nodeInfo:
+   kubeletVersion: v1.19.5
+---
+apiVersion: v1
+kind: Node
+metadata:
+ name: master-1
+ labels:
+   node.deckhouse.io/group: master
+   node-role.kubernetes.io/master: ""
+status:
+ allocatable:
+   cpu: 4
+   memory: 17763032Ki
+ nodeInfo:
+   kubeletVersion: v1.19.5
+`))
+			f.RunHook()
+		})
+
+		It("Should run correctly on single master", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("flantPricing.internal.minimalKubeletVersion").String()).To(Equal(`1.19`))
+			Expect(f.ValuesGet("flantPricing.internal.mastersCount").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.masterIsDedicated").String()).To(Equal(`false`))
+			Expect(f.ValuesGet("flantPricing.internal.masterMinCPU").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.masterMinMemory").String()).To(Equal(`7949344768`))
+		})
+	})
 })

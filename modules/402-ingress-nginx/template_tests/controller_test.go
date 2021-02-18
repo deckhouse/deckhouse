@@ -154,6 +154,9 @@ key: teststring
 			testNextDaemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next")
 			Expect(testNextDaemonSet.Exists()).To(BeTrue())
 
+			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`0.33`))
+			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/inlet`).String()).To(Equal(`HostPortWithProxyProtocol`))
+
 			var testNextArgs []string
 			for _, result := range testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array() {
 				testNextArgs = append(testNextArgs, result.String())

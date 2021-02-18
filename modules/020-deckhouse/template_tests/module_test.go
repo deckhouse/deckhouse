@@ -18,6 +18,7 @@ const (
 	globalValues = `
 project: my_project
 clusterName: my_cluster
+deckhouseVersion: test
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd"]
 discovery:
   clusterMasterCount: 3
@@ -43,7 +44,6 @@ internal:
     key: b
     ca: c
   currentReleaseImageName: test
-  currentVersion: test
 `
 
 	moduleValuesForDeckhouseNode = `
@@ -60,7 +60,6 @@ internal:
     key: b
     ca: c
   currentReleaseImageName: test
-  currentVersion: test
 `
 )
 

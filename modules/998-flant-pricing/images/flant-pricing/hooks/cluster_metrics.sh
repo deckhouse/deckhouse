@@ -15,7 +15,7 @@ function __main__() {
   echo '
   {
     "name": "flant_pricing_cluster_info",
-    "set": 1,
+    "set": '$(date +%s)',
     "labels": {
       "project": "'$FP_PROJECT'",
       "cluster": "'$FP_CLUSTER'",
@@ -24,6 +24,7 @@ function __main__() {
       "cloud_provider": "'$FP_CLOUD_PROVIDER'",
       "control_plane_version": "'$FP_CONTROL_PLANE_VERSION'",
       "minimal_kubelet_version": "'$FP_MINIMAL_KUBELET_VERSION'",
+      "deckhouse_version": "'$FP_DECKHOUSE_VERSION'",
       "pricing_plan": "'$FP_PLAN'",
       "pricing_cluster_type": "'$FP_CLUSTER_TYPE'"
     }
@@ -31,7 +32,6 @@ function __main__() {
   echo '{"name":"flant_pricing_masters_count","set":'"$FP_MASTERS_COUNT"'}' >> $METRICS_PATH
   echo '{"name":"flant_pricing_kops","set":'"$FP_KOPS"'}' >> $METRICS_PATH
   echo '{"name":"flant_pricing_all_managed_nodes_up_to_date","set":'"$FP_ALL_MANAGED_NODES_UP_TO_DATE"'}' >> $METRICS_PATH
-  echo '{"name":"flant_pricing_converge_is_completed","set":'"$FP_CONVERGE_IS_COMPLETED"'}' >> $METRICS_PATH
   echo '{"name":"flant_pricing_deprecated_resources_in_helm_releases","set":'"$FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES"'}' >> $METRICS_PATH
   echo '{"name":"flant_pricing_master_is_dedicated","set":'"$FP_MASTER_IS_DEDICATED"'}' >> $METRICS_PATH
   echo '{"name":"flant_pricing_master_min_cpu","set":'"$FP_MASTER_MIN_CPU"'}' >> $METRICS_PATH

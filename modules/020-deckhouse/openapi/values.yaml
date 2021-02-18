@@ -7,15 +7,10 @@ properties:
     default: {}
     x-required-for-helm:
     - currentReleaseImageName
-    - currentVersion
     properties:
       currentReleaseImageName:
         type: string
         pattern: '^[a-zA-Z0-9\.\/@:\-_]+$'
-      currentVersion:
-        type: string
-        pattern: '^[a-zA-Z0-9\.\/@:\-_]+$'
-        default: "unknown"
       validatingWebhookHandlerCert:
         type: object
         default: {}
