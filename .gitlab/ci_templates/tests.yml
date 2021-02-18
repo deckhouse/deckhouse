@@ -207,7 +207,7 @@
   - chmod -R 777 .
   - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - |
-    werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+    werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} \
       -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
       -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
@@ -244,32 +244,42 @@
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.16"
       - "1.19"
+      CRI:
+      - "Docker"
+      - "Containerd"
     - PROVIDER: Azure
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.16"
       - "1.19"
+      CRI:
+      - "Docker"
+      - "Containerd"
     - PROVIDER: GCP
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.16"
       - "1.19"
+      CRI:
+      - "Docker"
+      - "Containerd"
     - PROVIDER: Yandex.Cloud
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.16"
       - "1.19"
+      CRI:
+      - "Docker"
+      - "Containerd"
     - PROVIDER: OpenStack
       LAYOUT:
         - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.16"
       - "1.19"
+      CRI:
+      - "Docker"
+      - "Containerd"
   artifacts:
     when: always
     paths:
@@ -294,7 +304,7 @@
     - chmod -R 777 .
     - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
     - |
-      werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+      werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
         -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} \
         -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
         -v $(pwd):/deckhouse -v "/mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp" --user 997:997 --volume="/etc/group:/etc/group:ro" --volume="/etc/passwd:/etc/passwd:ro" \
@@ -327,8 +337,10 @@
         LAYOUT:
           - Standard
         KUBERNETES_VERSION:
-          - "1.16"
           - "1.19"
+        CRI:
+        - "Docker"
+        - "Containerd"
   artifacts:
     when: always
     paths:

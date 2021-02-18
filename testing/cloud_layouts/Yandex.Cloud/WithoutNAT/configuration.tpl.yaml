@@ -8,6 +8,7 @@ cloud:
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: '${KUBERNETES_VERSION}'
+defaultCRI: '${CRI}'
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1alpha1
