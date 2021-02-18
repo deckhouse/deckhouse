@@ -72,13 +72,15 @@ spec:
           value: /etc/grafana/provisioning
         - name: GF_PATHS_DATA
           value: /var/lib/grafana/data
+        - name: GF_PATHS_PLUGINS
+          value: /etc/grafana/plugins
         - name: GF_SERVER_HTTP_ADDR
           value: "127.0.0.1"
         - name: GF_METRICS_ENABLED
           value: "true"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
-        - name: GF_CUSTOM_PLUGINS
+        - name: GF_INSTALL_PLUGINS
           value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
           {{- end }}
         {{- end }}
