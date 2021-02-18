@@ -45,9 +45,6 @@ dynatrace:
         nodeSelector:
           node-role.deckhouse.io/system: ""
         tolerations:
-        - key: dedicated.flant.com
-          operator: Equal
-          value: system
         - key: dedicated.deckhouse.io
           operator: Equal
           value: system

@@ -417,7 +417,7 @@ spec:
 		})
 	})
 
-	Context("NG with label node-role.flant.com/system and minimal Static Node", func() {
+	Context("NG with label node-role.deckhouse.io/system and minimal Static Node", func() {
 		BeforeEach(func() {
 
 			state := `
@@ -431,8 +431,8 @@ spec:
   nodeTemplate:
     labels:
       node.deckhouse.io/group: wor-ker
-      node-role.flant.com/system: ""
-      node-role.flant.com/stateful: ""
+      node-role.deckhouse.io/system: ""
+      node-role.deckhouse.io/stateful: ""
 ---
 apiVersion: v1
 kind: Node
@@ -450,8 +450,7 @@ metadata:
 				{
 					"labels": {
 						"node-role.deckhouse.io/system": "",
-						"node-role.flant.com/system": "",
-						"node-role.flant.com/stateful": "",
+						"node-role.deckhouse.io/stateful": "",
 						"node.deckhouse.io/group": "wor-ker"
 					},
 					"annotations": {},

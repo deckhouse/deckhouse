@@ -16,8 +16,6 @@ function __config__() {
         .metadata.labels // {} |
         if ([keys[] | select(startswith("node-role.kubernetes.io/master"))] | length > 0) then
           [keys[] | select(startswith("node-role.kubernetes.io/"))][0]
-        elif ([keys[] | select(startswith("node-role.flant.com/"))] | length > 0) then
-          [keys[] | select(startswith("node-role.flant.com/"))][0]
         elif ([keys[] | select(startswith("node-role.deckhouse.io/"))] | length > 0) then
           [keys[] | select(startswith("node-role.deckhouse.io/"))][0]
         elif ([keys[] | select(startswith("node-role.kubernetes.io/"))] | length > 0) then

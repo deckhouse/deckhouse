@@ -1127,7 +1127,7 @@ spec:
 		})
 	})
 
-	Context("Cluster with NG node-role.flant.com/system", func() {
+	Context("Cluster with NG node-role.deckhouse.io/system", func() {
 		BeforeEach(func() {
 			ng := `
 ---
@@ -1138,7 +1138,7 @@ metadata:
 spec:
   nodeTemplate:
     labels:
-      node-role.flant.com/system: ""
+      node-role.deckhouse.io/system: ""
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng))
 			f.RunHook()
@@ -1146,11 +1146,11 @@ spec:
 
 		It("Hook must not fail; label must be added", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeTemplate.labels").String()).To(MatchJSON(`{"node-role.flant.com/system": "","node-role.deckhouse.io/system": ""}`))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeTemplate.labels").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
 		})
 	})
 
-	Context("Cluster with NG node-role.flant.com/stateful", func() {
+	Context("Cluster with NG node-role.deckhouse.io/stateful", func() {
 		BeforeEach(func() {
 			ng := `
 ---
@@ -1161,7 +1161,7 @@ metadata:
 spec:
   nodeTemplate:
     labels:
-      node-role.flant.com/stateful: ""
+      node-role.deckhouse.io/stateful: ""
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng))
 			f.RunHook()
@@ -1169,7 +1169,7 @@ spec:
 
 		It("Hook must not fail; label must not be added", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeTemplate.labels").String()).To(MatchJSON(`{"node-role.flant.com/stateful": ""}`))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeTemplate.labels").String()).To(MatchJSON(`{"node-role.deckhouse.io/stateful": ""}`))
 		})
 	})
 
