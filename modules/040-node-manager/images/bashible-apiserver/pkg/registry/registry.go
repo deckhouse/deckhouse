@@ -23,9 +23,6 @@ import (
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 type TemplateStorage interface {
@@ -97,37 +94,4 @@ func (r *REST) forbidden() (runtime.Object, error) {
 
 func (r *REST) forbiddenBool() (runtime.Object, bool, error) {
 	return nil, false, fmt.Errorf("forbidden")
-}
-
-// --------------------------------------------------------------------------------
-// Nonsense methods
-//
-
-func (r *REST) ConvertToTable(ctx context.Context, obj runtime.Object, tableOptions runtime.Object) (*metav1.Table, error) {
-	return rest.NewDefaultTableConvertor(schema.GroupResource{Resource: "simple"}).ConvertToTable(ctx, obj, tableOptions)
-}
-
-func (r *REST) Delete(ctx context.Context, id string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
-	return nil, false, fmt.Errorf("forbidden")
-}
-
-func (r *REST) NewList() runtime.Object {
-	return r.storage.NewList()
-}
-
-func (r *REST) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (runtime.Object, error) {
-	return obj, fmt.Errorf("forbidden")
-
-}
-
-func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
-	return r.forbiddenBool()
-}
-
-func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (r *REST) Watcher() *watch.FakeWatcher {
-	return nil
 }
