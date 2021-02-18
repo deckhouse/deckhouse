@@ -7,7 +7,6 @@ positive:
   values:
   - internal:
       currentReleaseImageName: registry.flant.com/sys/antiopa/dev@sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
-      currentVersion: 20.20-hotfix-2020-12-30.2
 negative:
   configValues:
   - logLevel: FooBar
@@ -15,4 +14,3 @@ negative:
   values:
   - internal:
       currentReleaseImageName: registry.flant.com/sys/antiopa/dev??sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
-      currentVersion: 20.20-hotfix?2020-12-30.2

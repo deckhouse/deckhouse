@@ -43,6 +43,7 @@ spec:
         app: {{ .Chart.Name }}
       annotations:
         checksum/config: {{ include "grafana_agent_config" . | sha256sum }}
+        checksum/cert: {{ include (print $.Template.BasePath "/prometheus-api-client-tls.yaml") . | sha256sum}}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -82,8 +83,6 @@ spec:
           value: {{ .Values.flantPricing.internal.kops | int | quote }}
         - name: FP_ALL_MANAGED_NODES_UP_TO_DATE
           value: {{ .Values.flantPricing.internal.allManagedNodesUpToDate | default 0 | int | quote }}
-        - name: FP_CONVERGE_IS_COMPLETED
-          value: {{ .Values.flantPricing.internal.convergeIsCompleted | int | quote }}
         - name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
           value: {{ .Values.flantPricing.internal.deprecatedResourcesInHelmReleases | quote }}
         - name: FP_MASTER_IS_DEDICATED
@@ -98,17 +97,21 @@ spec:
           value: {{ .Values.flantPricing.doNotChargeForRockSolid | quote | int | quote }}
         - name: FP_CONTACTS
           value: {{ .Values.flantPricing.contacts | quote }}
+        - name: FP_DECKHOUSE_VERSION
+          value: {{ .Values.global.deckhouseVersion | quote }}
+        - name: FP_TERRAFORM_MANAGER_EBABLED
+          value: {{ .Values.flantPricing.internal.terraformManagerEnabled | quote }}
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
-        ports:
-        - containerPort: 9115
-          name: http-metrics
         livenessProbe:
           httpGet:
             path: /metrics
-            port: http-metrics
+            port: 9115
           periodSeconds: 60
         volumeMounts:
+        - mountPath: /etc/ssl/prometheus-api-client-tls/
+          name: flant-pricing-prometheus-api-client-tls
+          readOnly: true
         - mountPath: /tmp
           name: tmp
         resources:
@@ -128,8 +131,42 @@ spec:
         livenessProbe:
           httpGet:
             path: /-/healthy
-            port: 8080
+            scheme: HTTPS
+            port: 9100
           periodSeconds: 30
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+      - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9100"
+        - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        ports:
+        - containerPort: 9100
+          name: https-metrics
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /-/healthy
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: {{ .Chart.Name }}
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
@@ -140,5 +177,8 @@ spec:
       - name: agent-config
         secret:
           secretName: grafana-agent-config
+      - name: flant-pricing-prometheus-api-client-tls
+        secret:
+          secretName: flant-pricing-prometheus-api-client-tls
       - name: tmp
         emptyDir: {}

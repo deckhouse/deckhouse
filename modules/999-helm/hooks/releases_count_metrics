@@ -1,0 +1,50 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 5
+    schedule:
+    - group: main
+      queue: /modules/$(module::name::kebab_case)/releases_count_metrics
+      crontab: "*/20 * * * *"
+EOF
+}
+
+function __main__() {
+  metrics=""
+
+  # helm 2
+  if helm_releases_count="$(kubectl get configmaps -l OWNER=TILLER,STATUS=DEPLOYED --no-headers --all-namespaces 2>/dev/null | wc -l)"; then
+    metrics="$metrics\n$(jq -nc --argjson count "$helm_releases_count" '
+      {
+        "name": "helm_releases_count",
+        "set": $count,
+        "group": "/modules/'$(module::name::kebab_case)'/releases_count_metrics",
+        "labels": {
+          "helm_version": "2"
+        }
+      }
+    ')"
+  fi
+
+  # helm 3
+  if helm_releases_count="$(kubectl get secret -l owner=helm,status=deployed --no-headers --all-namespaces 2>/dev/null | wc -l)"; then
+    metrics="$metrics\n$(jq -nc --argjson count "$helm_releases_count" '
+      {
+        "name": "helm_releases_count",
+        "set": $count,
+        "group": "/modules/'$(module::name::kebab_case)'/releases_count_metrics",
+        "labels": {
+          "helm_version": "3"
+        }
+      }
+    ')"
+  fi
+
+  echo -e "$metrics" >> $METRICS_PATH
+}
+
+hook::run "$@"

@@ -53,6 +53,9 @@ metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+  annotations:
+    ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
+    ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
 spec:
   updateStrategy:
     type: RollingUpdate

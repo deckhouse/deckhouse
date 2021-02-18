@@ -38,7 +38,6 @@ flantPricing:
 		It("flantPricing.internal values should be correct", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("flantPricing.internal.deprecatedResourcesInHelmReleases").String()).To(Equal(`100`))
-			Expect(f.ValuesGet("flantPricing.internal.convergeIsCompleted").String()).To(Equal(`false`))
 		})
 	})
 
@@ -53,7 +52,6 @@ flantPricing:
 		It("flantPricing.internal values should be correct", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("flantPricing.internal.deprecatedResourcesInHelmReleases").String()).To(Equal(`100`))
-			Expect(b.ValuesGet("flantPricing.internal.convergeIsCompleted").String()).To(Equal(`true`))
 		})
 	})
 })

@@ -11,6 +11,7 @@ global:
         grafanaAgent: tagstring
       common:
         alpine: tagstring
+        kubeRbacProxy: imagehash
   discovery:
     prometheusScrapeInterval: 30s
     clusterControlPlaneIsHighlyAvailable: true
@@ -31,7 +32,9 @@ global:
 flantPricing:
   internal:
     __ConstantChoices__:
-    - {}
+    - prometheusAPIClientTLS:
+        certificate: string
+        key: string
     - releaseChannel: Alpha
       bundle: Default
       cloudProvider: AWS
@@ -50,3 +53,6 @@ flantPricing:
       planIsBoughtAsBundle: false
       doNotChargeForRockSolid: false
       contacts: 10
+      prometheusAPIClientTLS:
+        certificate: string
+        key: string
