@@ -3,11 +3,11 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  jo -p configVersion=v1 onStartup=10
+  common_hooks::https::apply_crds::config
 }
 
 function __on_startup() {
-  kubectl apply -f $(module::path)/crds/
+  common_hooks::https::apply_crds::main $(module::path)/crds/*
 }
 
 hook::run "$@"
