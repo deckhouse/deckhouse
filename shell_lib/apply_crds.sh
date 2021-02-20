@@ -4,10 +4,10 @@ function common_hooks::https::apply_crds::config() {
 }
 
 function common_hooks::https::apply_crds::main() {
-  path="$1"
-  custom_fields_regexp="x-description"
+  # TODO: switch back to "x-description" once we've converted all CRDs to apiVersion "v1"
+  custom_fields_regexp="(x-description|default)"
 
-  crds=$(for file in $(find "$path"); do
+  crds=$(for file in "$@"; do
     echo "---";
     # Prune custom fields
     cat "$file"
