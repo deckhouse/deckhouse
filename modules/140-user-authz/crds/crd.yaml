@@ -135,17 +135,19 @@ spec:
                 properties:
                   apiGroup:
                     type: string
-                    description: 'apiGroup for users.'
+                    x-description: 'apiGroup for users.'
+                    description: "apiGroup`а для пользователей"
                     example: 'rbac.authorization.k8s.io'
                     minLength: 1
                   kind:
                     type: string
-                    description: 'kind: ClusterRole or Role'
+                    x-description: 'kind: ClusterRole or Role'
+                    description: 'kind роли'
                     enum: [ClusterRole, Role]
                     example: 'ClusterRole'
-                    minLength: 1
                   name:
                     type: string
-                    description: 'name of ClusterRole or Role'
+                    x-description: 'name of ClusterRole or Role'
+                    description: 'Название `ClusterRole` или `Role`'
                     minLength: 1
                     example: 'cluster-admin'
