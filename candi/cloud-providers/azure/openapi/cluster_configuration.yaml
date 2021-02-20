@@ -45,6 +45,7 @@ apiVersions:
         properties:
           replicas:
             type: integer
+            minimum: 1
           zones:
             type: array
             items:
