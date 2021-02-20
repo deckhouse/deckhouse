@@ -41,7 +41,6 @@ func LoadOpenAPISchemas(validator *validation.ValuesValidator, moduleName, modul
 }
 
 // ValidateValues is an adapter between JSONRepr and Values
-// TODO There was validating with config-values.yaml schema and ignoring of "internal" key. It seems not needed after x-extend implementation.
 func ValidateValues(validator *validation.ValuesValidator, moduleName, values string) error {
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(values), &obj)

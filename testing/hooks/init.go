@@ -190,15 +190,23 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 		if err != nil {
 			panic(err)
 		}
-		mergedConfigValuesYaml, err := (addonutils.MergeValues(defaultConfigValues, configValues)).YamlBytes()
+		mergedConfigValuesYaml, err := addonutils.MergeValues(defaultConfigValues, configValues).YamlBytes()
 		if err != nil {
 			panic(err)
 		}
-		hec.values, err = values_store.NewStoreFromRawYaml([]byte(initValues))
+		values, err := addonutils.NewValuesFromBytes([]byte(initValues))
+		if err != nil {
+			panic(err)
+		}
+		mergedValuesYaml, err := addonutils.MergeValues(defaultConfigValues, values).YamlBytes()
 		if err != nil {
 			panic(err)
 		}
 		hec.configValues, err = values_store.NewStoreFromRawYaml(mergedConfigValuesYaml)
+		if err != nil {
+			panic(err)
+		}
+		hec.values, err = values_store.NewStoreFromRawYaml(mergedValuesYaml)
 		if err != nil {
 			panic(err)
 		}

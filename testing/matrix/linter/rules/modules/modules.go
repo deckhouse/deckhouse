@@ -1,12 +1,10 @@
 package modules
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -16,48 +14,39 @@ import (
 )
 
 const (
-	ValuesConfigFilename       = "values_matrix_test.yaml"
+	ChartConfigFilename  = "Chart.yaml"
+	ValuesConfigFilename = "values_matrix_test.yaml"
+
 	defaultDeckhouseModulesDir = "/deckhouse/modules"
+
+	crdsDir    = "crds"
+	openapiDir = "openapi"
+	hooksDir   = "hooks"
+	imagesDir  = "images"
 )
 
-var (
-	toHelmignore  = []string{"hooks", "crds", "enabled"}
-	regexPatterns = map[string]string{
-		`$BASE_ALPINE`:         imageRegexp(`alpine:[\d.]+`),
-		`$BASE_DEBIAN`:         imageRegexp(`debian:[\d.]+`),
-		`$BASE_GOLANG_ALPINE`:  imageRegexp(`golang:[\d.]+-alpine`),
-		`$BASE_GOLANG_BUSTER`:  imageRegexp(`golang:[\d.]+-buster`),
-		`$BASE_NGINX_ALPINE`:   imageRegexp(`nginx:[\d.]+-alpine`),
-		`$BASE_PYTHON_ALPINE`:  imageRegexp(`python:[\d.]+-alpine`),
-		`$BASE_SHELL_OPERATOR`: imageRegexp(`shell-operator:v[\d.]+`),
-		`$BASE_UBUNTU`:         imageRegexp(`ubuntu:[\d.]+`),
-	}
-)
+var toHelmignore = []string{hooksDir, openapiDir, crdsDir, imagesDir, "enabled"}
 
-func skipModuleImageNameIfNeeded(filePath string) bool {
-	// Kube-apiserver 1.15 needs golang 1.12 to build, so we don't use $BASE_GOLANG_ALPINE image for building
-	return filePath == "/deckhouse/modules/040-control-plane-manager/images/kube-apiserver-1-15/Dockerfile"
+func moduleLabel(n string) string {
+	return fmt.Sprintf("module = %s", n)
 }
 
 func shouldSkipModule(name string) bool {
 	switch name {
-	case "helm_lib",
-		"360-istio",
-		"400-nginx-ingress",
-		"500-dashboard":
+	case "helm_lib", "400-nginx-ingress", "500-dashboard":
 		return true
 	}
 	return false
 }
 
 func namespaceModuleRule(name, path string) (string, errors.LintRuleError) {
-	content, err := ioutil.ReadFile(path + "/.namespace")
+	content, err := ioutil.ReadFile(filepath.Join(path, ".namespace"))
 	if err != nil {
 		return "", errors.NewLintRuleError(
 			"MODULE002",
-			"module = "+name,
+			moduleLabel(name),
 			nil,
-			"Module does not contain \".namespace\" file, module will be ignored",
+			`Module does not contain ".namespace" file, module will be ignored`,
 		)
 	}
 	return strings.TrimRight(string(content), " \t\n"), errors.EmptyRuleError
@@ -66,12 +55,12 @@ func namespaceModuleRule(name, path string) (string, errors.LintRuleError) {
 func chartModuleRule(name, path string) (string, errors.LintRuleError) {
 	lintError := errors.NewLintRuleError(
 		"MODULE002",
-		"module = "+name,
+		moduleLabel(name),
 		nil,
-		"Module does not contain valid \"Chart.yaml\" file, module will be ignored",
+		"Module does not contain valid %q file, module will be ignored", ChartConfigFilename,
 	)
 
-	yamlFile, err := ioutil.ReadFile(path + "/Chart.yaml")
+	yamlFile, err := ioutil.ReadFile(filepath.Join(path, ChartConfigFilename))
 	if err != nil {
 		return "", lintError
 	}
@@ -84,12 +73,13 @@ func chartModuleRule(name, path string) (string, errors.LintRuleError) {
 		return "", lintError
 	}
 
-	if !isExistsOnFilesystem(path, ValuesConfigFilename) {
+	if !isExistsOnFilesystem(path, ValuesConfigFilename) && !isExistsOnFilesystem(path, openapiDir) {
 		return "", errors.NewLintRuleError(
 			"MODULE002",
-			"module = "+name,
+			moduleLabel(name),
 			nil,
-			"Module does not contain %q file, module will be ignored", ValuesConfigFilename,
+			"Module does not contain %q file or %s folder, module will be ignored",
+			ValuesConfigFilename, openapiDir,
 		)
 	}
 
@@ -107,13 +97,13 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 		return errors.EmptyRuleError
 	}
 
-	contentBytes, err := ioutil.ReadFile(path + "/.helmignore")
+	contentBytes, err := ioutil.ReadFile(filepath.Join(path, ".helmignore"))
 	if err != nil {
 		return errors.NewLintRuleError(
 			"MODULE001",
-			"module = "+name,
+			moduleLabel(name),
 			nil,
-			"Module does not contain \".helmignore\" file",
+			`Module does not contain ".helmignore" file`,
 		)
 	}
 
@@ -129,162 +119,12 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 	if len(moduleErrors) > 0 {
 		return errors.NewLintRuleError(
 			"MODULE001",
-			"module = "+name,
+			moduleLabel(name),
 			strings.Join(moduleErrors, ", "),
-			"module does not have desired entries in \".helmignore\" file",
+			`Module does not have desired entries in ".helmignore" file`,
 		)
 	}
 	return errors.EmptyRuleError
-}
-
-const commonTestGoContent = `package hooks
-
-import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
-`
-
-func commonTestGoForHooks(name, path string) errors.LintRuleError {
-	if !isExistsOnFilesystem(path + "/hooks") {
-		return errors.EmptyRuleError
-	}
-
-	if matches, _ := filepath.Glob(path + "/hooks/*.go"); len(matches) == 0 {
-		return errors.EmptyRuleError
-	}
-
-	commonTestPath := filepath.Join(path, "hooks", "common_test.go")
-
-	if !isExistsOnFilesystem(commonTestPath) {
-		return errors.NewLintRuleError(
-			"MODULE001",
-			"module = "+name,
-			nil,
-			"Module does not contain %q file", commonTestPath,
-		)
-	}
-
-	contentBytes, err := ioutil.ReadFile(commonTestPath)
-	if err != nil {
-		return errors.NewLintRuleError(
-			"MODULE001",
-			"module = "+name,
-			nil,
-			"Module does not contain %q file", commonTestPath,
-		)
-	}
-
-	if string(contentBytes) != commonTestGoContent {
-		return errors.NewLintRuleError(
-			"MODULE001",
-			"module = "+name,
-			nil,
-			"Module content of %q file is different from default\nContent should be equal to:\n%s",
-			commonTestPath, commonTestGoContent,
-		)
-	}
-
-	return errors.EmptyRuleError
-}
-
-func imageRegexp(s string) string {
-	return fmt.Sprintf("^(from:|FROM)(\\s+)(%s)", s)
-}
-
-func isImageNameUnacceptable(imageName string) (bool, string) {
-	for ciVariable, pattern := range regexPatterns {
-		matched, _ := regexp.MatchString(pattern, imageName)
-		if matched {
-			return true, ciVariable
-		}
-	}
-	return false, ""
-}
-
-func checkImageNamesInDockerAndWerfFiles(name, path string, lintRuleErrorsList *errors.LintRuleErrorsList) {
-	var filePaths []string
-	imagesPath := filepath.Join(path, "images")
-
-	if !isExistsOnFilesystem(imagesPath) {
-		return
-	}
-
-	err := filepath.Walk(imagesPath, func(fullPath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		switch filepath.Base(fullPath) {
-		case "werf.inc.yaml",
-			"Dockerfile":
-			filePaths = append(filePaths, fullPath)
-		}
-		return nil
-	})
-
-	if err != nil {
-		lintRuleErrorsList.Add(errors.NewLintRuleError(
-			"MODULE001",
-			"module = "+name,
-			imagesPath,
-			"Cannot read directory structure:%s",
-			err,
-		))
-		return
-	}
-	for _, filePath := range filePaths {
-		if skipModuleImageNameIfNeeded(filePath) {
-			continue
-		}
-		file, err := os.Open(filePath)
-		if err != nil {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"MODULE001",
-				"module = "+name,
-				filePath,
-				"Error opening file:%s",
-				err,
-			))
-			continue
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		linePos := 0
-		relativeFilePath, err := filepath.Rel(imagesPath, filePath)
-		if err != nil {
-			lintRuleErrorsList.Add(errors.NewLintRuleError(
-				"MODULE001",
-				"module = "+name,
-				filePath,
-				"Error calculating relative file path:%s",
-				err,
-			))
-			continue
-		}
-
-		for scanner.Scan() {
-			line := scanner.Text()
-			linePos++
-			result, ciVariable := isImageNameUnacceptable(line)
-			if result {
-				lintRuleErrorsList.Add(errors.NewLintRuleError(
-					"MODULE001",
-					fmt.Sprintf("module = %s, image = %s, line = %d", name, relativeFilePath, linePos),
-					line,
-					"Please use %s as an image name", ciVariable,
-				))
-			}
-		}
-	}
 }
 
 func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
@@ -297,12 +137,12 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
 
 	modulePaths, err := getModulePaths(modulesDir)
 	if err != nil {
-		return modules, fmt.Errorf("search modules with Chart.yaml: %v", err)
+		return modules, fmt.Errorf("search modules with %q: %v", ChartConfigFilename, err)
 	}
 
 	var lintRuleErrorsList errors.LintRuleErrorsList
 	for _, modulePath := range modulePaths {
-		module, ok := lintModuleStructure(lintRuleErrorsList, modulePath)
+		module, ok := lintModuleStructure(&lintRuleErrorsList, modulePath)
 		if !ok {
 			continue
 		}
@@ -322,7 +162,7 @@ func isExistsOnFilesystem(parts ...string) bool {
 func getModulePaths(modulesDir string) ([]string, error) {
 	var chartDirs = make([]string, 0)
 
-	if isExistsOnFilesystem(modulesDir, "Chart.yaml") {
+	if isExistsOnFilesystem(modulesDir, ChartConfigFilename) {
 		chartDirs = append(chartDirs, modulesDir)
 		return chartDirs, nil
 	}
@@ -330,7 +170,7 @@ func getModulePaths(modulesDir string) ([]string, error) {
 	// Here we find all dirs and check for Chart.yaml in them.
 	err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("error access '%s': %v", path, err)
+			return fmt.Errorf("file access '%s': %v", path, err)
 		}
 
 		// Ignore root path and non-dirs
@@ -342,8 +182,8 @@ func getModulePaths(modulesDir string) ([]string, error) {
 			return filepath.SkipDir
 		}
 
-		// Check if first level subdirectory has a Chart.yaml
-		if isExistsOnFilesystem(path, "Chart.yaml") {
+		// Check if first level subdirectory has a helm chart configuration file
+		if isExistsOnFilesystem(path, ChartConfigFilename) {
 			chartDirs = append(chartDirs, path)
 		}
 		return filepath.SkipDir
@@ -357,12 +197,12 @@ func getModulePaths(modulesDir string) ([]string, error) {
 
 // lintModuleStructure collects linting errors
 // for helmignore, hooks, docker and werf files, namespace, and CRDs
-func lintModuleStructure(lintRuleErrorsList errors.LintRuleErrorsList, modulePath string) (utils.Module, bool) {
+func lintModuleStructure(lintRuleErrorsList *errors.LintRuleErrorsList, modulePath string) (utils.Module, bool) {
 	moduleName := filepath.Base(modulePath)
 
 	lintRuleErrorsList.Add(helmignoreModuleRule(moduleName, modulePath))
 	lintRuleErrorsList.Add(commonTestGoForHooks(moduleName, modulePath))
-	checkImageNamesInDockerAndWerfFiles(moduleName, modulePath, &lintRuleErrorsList)
+	checkImageNamesInDockerAndWerfFiles(lintRuleErrorsList, moduleName, modulePath)
 
 	name, lintError := chartModuleRule(moduleName, modulePath)
 	lintRuleErrorsList.Add(lintError)
@@ -376,8 +216,8 @@ func lintModuleStructure(lintRuleErrorsList errors.LintRuleErrorsList, modulePat
 		return utils.Module{}, false
 	}
 
-	if isExistsOnFilesystem(modulePath, "crds") {
-		lintRuleErrorsList.Merge(crdsModuleRule(moduleName, modulePath+"/crds"))
+	if isExistsOnFilesystem(modulePath, crdsDir) {
+		lintRuleErrorsList.Merge(crdsModuleRule(moduleName, filepath.Join(modulePath, crdsDir)))
 	}
 
 	module := utils.Module{Name: name, Path: modulePath, Namespace: namespace}

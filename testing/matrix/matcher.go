@@ -7,6 +7,16 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
+const (
+	failureErrMessage = `Expected an error to occur. Got:
+%s
+`
+	negatedLinterErrMessage = `Linter error:
+
+%s
+`
+)
+
 type LintErrorOccurredMatcher struct {
 }
 
@@ -20,11 +30,11 @@ func (matcher *LintErrorOccurredMatcher) Match(actual interface{}) (success bool
 }
 
 func (matcher *LintErrorOccurredMatcher) FailureMessage(actual interface{}) (message string) {
-	return fmt.Sprintf("Expected an error to have occurred.  Got:\n%s", format.Object(actual, 1))
+	return fmt.Sprintf(failureErrMessage, format.Object(actual, 1))
 }
 
 func (matcher *LintErrorOccurredMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-	return fmt.Sprintf("Linter error:\n\n%s\n", format.IndentString(actual.(error).Error(), 1))
+	return fmt.Sprintf(negatedLinterErrMessage, format.IndentString(actual.(error).Error(), 1))
 }
 
 func ErrorOccurred() types.GomegaMatcher {
