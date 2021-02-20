@@ -1,5 +1,6 @@
 global:
-  highAvailability: [true, false]
+  highAvailability:
+    __ConstantChoices__: [true, false]
   enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
   modulesImages:
     registry: registry.flant.com
@@ -44,8 +45,7 @@ userAuthn:
       - mode: SelfSigned
       - mode: Global
         kubeconfigGeneratorMasterCA: plainstring
-  idTokenTTL:
-    __ConstantChoices__: [10000m, __EmptyItem__]
+  idTokenTTL: 10000m
   internal:
     customCertificateData:
       tls.crt: plainstring
@@ -98,7 +98,7 @@ userAuthn:
               groups:
                 - only
                 - team
-        - - id: oidc
+          - id: oidc
             displayName: google
             type: OIDC
             oidc:

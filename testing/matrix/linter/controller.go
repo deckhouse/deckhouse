@@ -13,7 +13,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/kyokomi/emoji"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -24,11 +23,6 @@ import (
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
-
-func init() {
-	// Mute Shell-Operator logs
-	logrus.SetLevel(logrus.PanicLevel)
-}
 
 var (
 	workersQuantity = runtime.NumCPU()

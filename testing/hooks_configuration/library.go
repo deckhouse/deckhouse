@@ -53,22 +53,16 @@ func GetAllHooks() ([]Hook, error) {
 
 	for _, dir := range hookDirs {
 		_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
+			switch {
+			case err != nil:
 				return err
-			}
-
-			// Ignore tests.
-			if strings.HasSuffix(path, "test.go") {
+			case strings.HasSuffix(path, "test.go"): // ignore tests
 				return nil
-			}
-
-			// Ignore golang hooks.
-			if strings.HasSuffix(path, ".go") {
+			case strings.HasSuffix(path, ".go"): // ignore go-hooks
 				return nil
-			}
-
-			// Ignore subdirectories.
-			if info.IsDir() {
+			case strings.HasSuffix(path, ".yaml"): // ignore openapi schemas
+				return nil
+			case info.IsDir():
 				return nil
 			}
 

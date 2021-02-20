@@ -141,7 +141,7 @@ func formatFile(file interface{}, keys []interface{}, resultItem interface{}, co
 				f[key] = resultItem
 			}
 		} else {
-			// Recursion call, need to be fixed
+			// Recursive call, need to be fixed
 			counter++
 			f[key] = formatFile(f[key], keys, resultItem, counter)
 		}
@@ -161,7 +161,7 @@ func formatFile(file interface{}, keys []interface{}, resultItem interface{}, co
 				f[intKey] = resultItem
 			}
 		} else {
-			// Recursion call, need to be fixed
+			// Recursive call, need to be fixed
 			counter++
 			f[intKey] = formatFile(f[intKey], keys, resultItem, counter)
 		}
@@ -175,7 +175,7 @@ func formatFile(file interface{}, keys []interface{}, resultItem interface{}, co
 func (f *FileController) SaveValues() error {
 	counter := 1
 	for f.Queue.Len() > 0 {
-		filename := fmt.Sprintf("%s/%s%v.yaml", f.TmpDir, f.Prefix, counter)
+		filename := fmt.Sprintf("%s%s%s%v.yaml", f.TmpDir, string(os.PathSeparator), f.Prefix, counter)
 		out, err := yaml.Marshal(f.Queue.PopFront())
 
 		if err != nil {

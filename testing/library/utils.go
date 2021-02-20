@@ -17,6 +17,29 @@ import (
 	"github.com/deckhouse/deckhouse/testing/library/git"
 )
 
+func GetModulesImagesTags(modulePath string) (map[string]map[string]string, error) {
+	tags := make(map[string]map[string]string)
+
+	for _, path := range []string{modulePath, filepath.Join(filepath.Dir(modulePath), "000-common")} {
+		imageTags, err := git.ListTreeObjects(filepath.Join(path, "images"))
+		if err != nil {
+			return nil, err
+		}
+
+		_, moduleDir := filepath.Split(path)
+		moduleDirClean := string([]byte(moduleDir)[4:])
+		moduleName := strcase.ToLowerCamel(moduleDirClean)
+		tags[moduleName] = make(map[string]string)
+
+		for _, tag := range imageTags {
+			fileName := strcase.ToLowerCamel(tag.File)
+			tags[moduleName][fileName] = tag.Object
+		}
+	}
+
+	return tags, nil
+}
+
 func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]interface{}, error) {
 	var (
 		err error
@@ -73,22 +96,12 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 			},
 		}
 
-		for _, path := range []string{modulePath, filepath.Join(filepath.Dir(modulePath), "000-common")} {
-			imageTags, err := git.ListTreeObjects(filepath.Join(path, "images"))
-			if err != nil {
-				return nil, err
-			}
-
-			_, moduleDir := filepath.Split(path)
-			moduleDirClean := string([]byte(moduleDir)[4:])
-			moduleName := strcase.ToLowerCamel(moduleDirClean)
-			moduleImagesValues["global"]["modulesImages"]["tags"][moduleName] = map[string]string{}
-
-			for _, tag := range imageTags {
-				fileName := strcase.ToLowerCamel(tag.File)
-				moduleImagesValues["global"]["modulesImages"]["tags"][moduleName][fileName] = tag.Object
-			}
+		tags, err := GetModulesImagesTags(modulePath)
+		if err != nil {
+			return nil, err
 		}
+
+		moduleImagesValues["global"]["modulesImages"]["tags"] = tags
 	} else {
 		var imageTags map[string]map[string]string
 		err = json.Unmarshal(imageTagsRaw, &imageTags)

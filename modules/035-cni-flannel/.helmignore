@@ -1,5 +1,6 @@
 images
 hooks
+openapi
 crds
 template_tests
 enabled

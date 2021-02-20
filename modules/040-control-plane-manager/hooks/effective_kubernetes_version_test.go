@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -27,12 +28,6 @@ type input struct {
 type output struct {
 	maxUsedControlPlaneVersion string
 	effectiveVersion           string
-}
-
-type testCase struct {
-	description string
-	input       input
-	output      output
 }
 
 func setStateFromTestCase(hec *HookExecutionConfig, caseInput input) {
@@ -130,114 +125,6 @@ data:
 }
 
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: get_pki_checksum ::", func() {
-
-	var testingTable = []testCase{
-		{
-			description: "upgrade: Node version lower than control plane, do not allow to bump effective version and max used version",
-			input: input{
-				nodeVersions:               []string{"v1.14.3", "v1.14.1", "v1.14.5", "v1.15.2"},
-				maxUsedControlPlaneVersion: "1.15",
-				configVersion:              "1.16",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.15",
-				effectiveVersion:           "1.15",
-			},
-		},
-		{
-			description: "upgrade: control plane and nodes are on the same version, allow bumping effective version and max used version",
-			input: input{
-				nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
-				maxUsedControlPlaneVersion: "1.15",
-				configVersion:              "1.16",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.16",
-				effectiveVersion:           "1.16",
-			},
-		},
-		{
-			description: "upgrade: control plane and nodes are on the same version (but kube-scheduler is on a lower version), do not bump effective version and max used version",
-			input: input{
-				nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
-				maxUsedControlPlaneVersion: "1.15",
-				configVersion:              "1.16",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.14"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.15",
-				effectiveVersion:           "1.15",
-			},
-		},
-		{
-			description: "downgrade: control plane and nodes are on the same version, do not lower effective version",
-			input: input{
-				nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
-				maxUsedControlPlaneVersion: "1.15",
-				configVersion:              "1.14",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.15",
-				effectiveVersion:           "1.15",
-			},
-		},
-		{
-			description: "downgrade: nodes are downgraded already, lower effective version",
-			input: input{
-				nodeVersions:               []string{"v1.14.18", "v1.14.3", "v1.14.5", "v1.14.2"},
-				maxUsedControlPlaneVersion: "1.15",
-				configVersion:              "1.14",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.15",
-				effectiveVersion:           "1.14",
-			},
-		},
-		{
-			description: "downgrade: nodes are downgraded already, but configVersion is 2 minor versions lower, lower effective version by one",
-			input: input{
-				nodeVersions:               []string{"v1.14.18", "v1.14.3", "v1.14.5", "v1.14.2"},
-				maxUsedControlPlaneVersion: "1.15",
-				configVersion:              "1.13",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.15",
-				effectiveVersion:           "1.14",
-			},
-		},
-		{
-			description: "downgrade: nodes are downgraded already, but maxUsedControlPlaneVersion does not allow us to downgrade by more than 1",
-			input: input{
-				nodeVersions:               []string{"v1.14.18", "v1.14.3", "v1.14.5", "v1.14.2"},
-				maxUsedControlPlaneVersion: "1.16",
-				configVersion:              "1.13",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.16",
-				effectiveVersion:           "1.15",
-			},
-		},
-		{
-			description: "downgrade: nodes are downgraded already, maxUsedControlPlaneVersion does not allow us to downgrade by more than 1, but we already violating maxUsedControlPlaneVersion",
-			input: input{
-				nodeVersions:               []string{"v1.14.18", "v1.14.3", "v1.14.5", "v1.14.2"},
-				maxUsedControlPlaneVersion: "1.17",
-				configVersion:              "1.13",
-				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
-			},
-			output: output{
-				maxUsedControlPlaneVersion: "1.17",
-				effectiveVersion:           "1.15",
-			},
-		},
-	}
-
 	Context("Empty cluster", func() {
 		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
 
@@ -251,26 +138,118 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: get_pki_checksu
 		})
 	})
 
-	for _, tCase := range testingTable {
-		Context(tCase.description, func() {
-			testCase := tCase
-			f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
+	Context("Empty cluster", func() {
+		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}}}`, `{}`)
 
-			BeforeEach(func() {
-				setStateFromTestCase(f, testCase.input)
+		DescribeTable("version change",
+			func(in input, out output) {
+				setStateFromTestCase(f, in)
 				f.RunHook()
-			})
 
-			It("", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				d8ClusterConfigSecret := f.KubernetesResource("Secret", "kube-system", "d8-cluster-configuration")
 				decodedMaxUsedKubernetesVersion, err := base64.StdEncoding.DecodeString(d8ClusterConfigSecret.Field("data.maxUsedControlPlaneKubernetesVersion").String())
 				Expect(err).To(BeNil())
-				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(testCase.output.maxUsedControlPlaneVersion))
+				Expect(string(decodedMaxUsedKubernetesVersion)).To(Equal(out.maxUsedControlPlaneVersion))
 
-				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(testCase.output.effectiveVersion))
-			})
-		})
-	}
+				Expect(f.ValuesGet("controlPlaneManager.internal.effectiveKubernetesVersion").String()).To(Equal(out.effectiveVersion))
+			},
+			Entry("upgrade: Node version lower than control plane, do not allow to bump effective version and max used version",
+				input{
+					nodeVersions:               []string{"v1.14.3", "v1.14.1", "v1.14.5", "v1.15.2"},
+					maxUsedControlPlaneVersion: "1.15",
+					configVersion:              "1.16",
+					controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.15",
+					effectiveVersion:           "1.15",
+				},
+			),
+			Entry("upgrade: control plane and nodes are on the same version, allow bumping effective version and max used version", input{
+				nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
+				maxUsedControlPlaneVersion: "1.15",
+				configVersion:              "1.16",
+				controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
+			},
+				output{
+					maxUsedControlPlaneVersion: "1.16",
+					effectiveVersion:           "1.16",
+				},
+			),
+			Entry("upgrade: control plane and nodes are on the same version (but kube-scheduler is on a lower version), do not bump effective version and max used version",
+				input{
+					nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
+					maxUsedControlPlaneVersion: "1.15",
+					configVersion:              "1.16",
+					controlPlaneVersions:       []string{"1.15", "1.15", "1.14"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.15",
+					effectiveVersion:           "1.15",
+				},
+			),
+			Entry("downgrade: control plane and nodes are on the same version, do not lower effective version",
+				input{
+					nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
+					maxUsedControlPlaneVersion: "1.15",
+					configVersion:              "1.14",
+					controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.15",
+					effectiveVersion:           "1.15",
+				},
+			),
+			Entry("downgrade: nodes are downgraded already, lower effective version",
+				input{
+					nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
+					maxUsedControlPlaneVersion: "1.16",
+					configVersion:              "1.14",
+					controlPlaneVersions:       []string{"1.16", "1.16", "1.16"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.16",
+					effectiveVersion:           "1.15",
+				},
+			),
+			Entry("downgrade: nodes are downgraded already, but configVersion is 2 minor versions lower, lower effective version by one",
+				input{
+					nodeVersions:               []string{"v1.15.18", "v1.15.3", "v1.15.5", "v1.15.2"},
+					maxUsedControlPlaneVersion: "1.16",
+					configVersion:              "1.13",
+					controlPlaneVersions:       []string{"1.16", "1.16", "1.16"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.16",
+					effectiveVersion:           "1.15",
+				},
+			),
+			Entry("downgrade: nodes are downgraded already, but maxUsedControlPlaneVersion does not allow us to downgrade by more than 1",
+				input{
+					nodeVersions:               []string{"v1.14.18", "v1.14.3", "v1.14.5", "v1.14.2"},
+					maxUsedControlPlaneVersion: "1.16",
+					configVersion:              "1.13",
+					controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.16",
+					effectiveVersion:           "1.15",
+				},
+			),
+			Entry("downgrade: nodes are downgraded already, maxUsedControlPlaneVersion does not allow us to downgrade by more than 1, but we already violating maxUsedControlPlaneVersion",
+				input{
+					nodeVersions:               []string{"v1.14.18", "v1.14.3", "v1.14.5", "v1.14.2"},
+					maxUsedControlPlaneVersion: "1.17",
+					configVersion:              "1.13",
+					controlPlaneVersions:       []string{"1.15", "1.15", "1.15"},
+				},
+				output{
+					maxUsedControlPlaneVersion: "1.17",
+					effectiveVersion:           "1.15",
+				},
+			),
+		)
+	})
 })

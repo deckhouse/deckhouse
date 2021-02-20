@@ -1,0 +1,80 @@
+############
+# Attention!!! This schema exists only for matrix testing purposes.
+# Please, consider it completely rewritable.
+############
+
+type: object
+default: {}
+additionalProperties: true
+properties:
+  deckhouseVersion:
+    type: string
+    x-examples: ["dev"]
+  clusterConfiguration:
+    default: {}
+    additionalProperties: true
+    x-examples:
+    - podSubnetNodeCIDRPrefix: "24"
+      podSubnetCIDR: 10.244.0.0/16
+      serviceSubnetCIDR: 192.168.0.0/16
+      kubernetesVersion: "1.19"
+      clusterDomain: test
+      clusterType: "Cloud"
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+  enabledModules:
+    type: array
+    x-examples:
+    - ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
+    - []
+  discovery:
+    additionalProperties: true
+    type: object
+    default: {}
+    properties:
+      clusterControlPlaneIsHighlyAvailable:
+        type: boolean
+        x-examples: [true, false]
+      d8SpecificNodeCountByRole:
+        type: object
+        x-examples:
+        - system: 2
+      kubernetesVersion:
+        type: string
+        x-examples: [1.16.5, 1.19.5]
+  modulesImages:
+    additionalProperties: true
+    type: object
+    x-examples:
+    - registry: registry.flant.com
+      registryDockercfg: registry.example.com
+      tags: {}
+  modules:
+    default: {}
+    additionalProperties: true
+    type: object
+    properties:
+      publicDomainTemplate:
+        type: string
+        x-examples: ["%s.example.com"]
+      https:
+        type: object
+        x-examples:
+          - certManager:
+              clusterIssuerName: letsencrypt
+            mode: CertManager
+          - mode: Disabled
+          - mode: OnlyInURI
+          - mode: CustomCertificate
+            customCertificate:
+              secretName: plainstring
+      placement:
+        additionalProperties: true
+        type: object
+        default: {}
+      resourcesRequests:
+        x-examples:
+        - internal:
+            milliCpuControlPlane: 1024
+            memoryControlPlane: 536870912

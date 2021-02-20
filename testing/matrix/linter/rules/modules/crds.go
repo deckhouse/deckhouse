@@ -46,7 +46,7 @@ func crdsModuleRule(name, path string) errors.LintRuleErrorsList {
 					"MODULE004",
 					"module = "+name,
 					err.Error(),
-					"Can't parse manifests in crds folder",
+					"Can't parse manifests in %s folder", crdsDir,
 				))
 			}
 
