@@ -24,6 +24,7 @@ apiVersions:
         properties:
           replicas:
             type: integer
+            minimum: 1
           instanceClass:
             type: object
             required: [flavorName, imageName]

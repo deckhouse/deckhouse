@@ -30,6 +30,7 @@ apiVersions:
         properties:
           replicas:
             type: integer
+            minimum: 1
           additionalNetworkTags:
             type: array
             items:
