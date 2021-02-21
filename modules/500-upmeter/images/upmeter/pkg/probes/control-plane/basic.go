@@ -7,8 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"upmeter/pkg/app"
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
@@ -19,17 +19,17 @@ Period: 1 minute
 Create Namespace timeout: 5 seconds.
 Delete Namespace timeout: 60 seconds.
 */
-func NewBasicProber() types.Prober {
-	var basicProbeRef = types.ProbeRef{
+func NewBasicProbe() *checks.Probe {
+	var basicProbeRef = checks.ProbeRef{
 		Group: groupName,
 		Probe: "basic-functionality",
 	}
 	const basicProbePeriod = 5 * time.Second
 	const basicProbeTimeout = 5 * time.Second
 
-	pr := &types.CommonProbe{
-		ProbeRef: &basicProbeRef,
-		Period:   basicProbePeriod,
+	pr := &checks.Probe{
+		Ref:    &basicProbeRef,
+		Period: basicProbePeriod,
 	}
 
 	pr.RunFn = func() {
@@ -68,25 +68,25 @@ func NewBasicProber() types.Prober {
 			_, err := pr.KubernetesClient.CoreV1().ConfigMaps(app.Namespace).Create(cm)
 			if err != nil {
 				log.Errorf("Create cm/%s: %v", cmName, err)
-				pr.ResultCh <- pr.Result(types.ProbeUnknown)
+				pr.ResultCh <- pr.Result(checks.StatusUnknown)
 				return
 			}
 			err = pr.KubernetesClient.CoreV1().ConfigMaps(app.Namespace).Delete(cm.Name, &metav1.DeleteOptions{})
 			if err != nil {
 				log.Errorf("Delete cm/%s: %v", cmName, err)
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 				return
 			}
 
 			if !WaitForObjectDeletion(pr, basicProbeTimeout, cm.Kind, cm.Name) {
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 				return
 			}
 
-			pr.ResultCh <- pr.Result(types.ProbeSuccess)
+			pr.ResultCh <- pr.Result(checks.StatusSuccess)
 		}, func() {
 			log.Infof("Exceeds timeout when create/delete cm/%s", cmName)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 	}

@@ -6,8 +6,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
@@ -27,8 +27,8 @@ Probe do nothing if namespace is stuck in Terminating
 phase to prevent API server overload.
 */
 
-func NewNamespaceProber() types.Prober {
-	var nsProbeRef = types.ProbeRef{
+func NewNamespaceProbe() *checks.Probe {
+	var nsProbeRef = checks.ProbeRef{
 		Group: groupName,
 		Probe: "namespace",
 	}
@@ -36,9 +36,9 @@ func NewNamespaceProber() types.Prober {
 	const nsCreateTimeout = time.Second * 5
 	const nsDeleteTimeout = time.Second * 60
 
-	pr := &types.CommonProbe{
-		ProbeRef: &nsProbeRef,
-		Period:   nsProbePeriod,
+	pr := &checks.Probe{
+		Ref:    &nsProbeRef,
+		Period: nsProbePeriod,
 	}
 
 	pr.RunFn = func() {
@@ -81,13 +81,13 @@ func NewNamespaceProber() types.Prober {
 		util.DoWithTimer(nsCreateTimeout, func() {
 			_, err := pr.KubernetesClient.CoreV1().Namespaces().Create(ns)
 			if err != nil {
-				pr.ResultCh <- pr.Result(types.ProbeUnknown)
+				pr.ResultCh <- pr.Result(checks.StatusUnknown)
 				log.Errorf("Create ns/%s: %v", nsName, err)
 				stop = true
 			}
 		}, func() {
 			log.Infof("Exceed timeout when create ns/%s", nsName)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 		if stop {
@@ -98,20 +98,20 @@ func NewNamespaceProber() types.Prober {
 			err := pr.KubernetesClient.CoreV1().Namespaces().Delete(ns.Name, &metav1.DeleteOptions{})
 			if err != nil {
 				log.Errorf("Delete ns/%s: %v", nsName, err)
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 				return
 			}
 
 			if !WaitForObjectDeletion(pr, nsDeleteTimeout, ns.Kind, ns.Name) {
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 				return
 			}
 
-			pr.ResultCh <- pr.Result(types.ProbeSuccess)
+			pr.ResultCh <- pr.Result(checks.StatusSuccess)
 
 		}, func() {
 			log.Infof("Exceed timeout when delete ns/%s", nsName)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 	}

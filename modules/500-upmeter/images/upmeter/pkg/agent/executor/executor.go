@@ -9,26 +9,27 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/agent/manager"
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 )
 
 const ExportGranularity = 30
 
 type ProbeExecutor struct {
-	ProbeManager     *manager.ProbeManager
-	MetricStorage    *metric_storage.MetricStorage
-	KubernetesClient kube.KubernetesClient
+	ProbeManager        *manager.ProbeManager
+	MetricStorage       *metric_storage.MetricStorage
+	KubernetesClient    kube.KubernetesClient
+	serviceAccountToken string
 
 	LastExportTimestamp int64
 	LastScrapeTimestamp int64
 
-	ResultCh chan types.ProbeResult
+	ResultCh chan checks.Result
 
-	Results map[string]*types.ProbeResult
+	Results map[string]*checks.Result
 
-	ScrapeResults map[string]*types.DowntimeEpisode
+	ScrapeResults map[string]*checks.DowntimeEpisode
 
-	DowntimeEpisodesCh chan []types.DowntimeEpisode
+	DowntimeEpisodesCh chan []checks.DowntimeEpisode
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -36,8 +37,8 @@ type ProbeExecutor struct {
 
 func NewProbeExecutor(ctx context.Context) *ProbeExecutor {
 	p := &ProbeExecutor{
-		ResultCh: make(chan types.ProbeResult),
-		Results:  make(map[string]*types.ProbeResult),
+		ResultCh: make(chan checks.Result),
+		Results:  make(map[string]*checks.Result),
 	}
 	p.ctx, p.cancel = context.WithCancel(ctx)
 	return p
@@ -47,11 +48,11 @@ func (p *ProbeExecutor) WithProbeManager(mgr *manager.ProbeManager) {
 	p.ProbeManager = mgr
 }
 
-func (p *ProbeExecutor) WithResultCh(ch chan types.ProbeResult) {
+func (p *ProbeExecutor) WithResultCh(ch chan checks.Result) {
 	p.ResultCh = ch
 }
 
-func (p *ProbeExecutor) WithDowntimeEpisodesCh(ch chan []types.DowntimeEpisode) {
+func (p *ProbeExecutor) WithDowntimeEpisodesCh(ch chan []checks.DowntimeEpisode) {
 	p.DowntimeEpisodesCh = ch
 }
 
@@ -59,9 +60,13 @@ func (p *ProbeExecutor) WithKubernetesClient(client kube.KubernetesClient) {
 	p.KubernetesClient = client
 }
 
-func (e *ProbeExecutor) Start() {
+func (p *ProbeExecutor) WithServiceAccountToken(token string) {
+	p.serviceAccountToken = token
+}
+
+func (p *ProbeExecutor) Start() {
 	// Set result chan for each probe.
-	e.ProbeManager.InitProbes(e.ResultCh, e.KubernetesClient)
+	p.ProbeManager.InitProbes(p.ResultCh, p.KubernetesClient, p.serviceAccountToken)
 
 	// Probe restarter
 	go func() {
@@ -70,36 +75,36 @@ func (e *ProbeExecutor) Start() {
 
 		for {
 			select {
-			case <-e.ctx.Done():
+			case <-p.ctx.Done():
 				restartTick.Stop()
 				// TODO stop probes
 				// TODO signal to main
 				return
 			case <-restartTick.C:
-				e.RestartProbes()
+				p.RestartProbes()
 			}
 		}
 	}()
 
 	// Scraper
-	// Synced read/write of e.Results and e.ScrapeResults
+	// Synced read/write of p.Results and p.ScrapeResults
 	go func() {
 		scrapeTick := time.NewTicker(time.Second)
 		for {
 			select {
-			case <-e.ctx.Done():
+			case <-p.ctx.Done():
 				scrapeTick.Stop()
 				return
 			case <-scrapeTick.C:
-				e.Scrape()
-			case probeResult := <-e.ResultCh:
-				log.Debugf("probe '%s' result %+v", probeResult.ProbeRef.ProbeId(), probeResult.CheckResults)
-				storedResult, ok := e.Results[probeResult.ProbeRef.ProbeId()]
+				p.Scrape()
+			case probeResult := <-p.ResultCh:
+				log.Debugf("probe '%s' result %+v", probeResult.ProbeRef.Id(), probeResult.CheckResults)
+				storedResult, ok := p.Results[probeResult.ProbeRef.Id()]
 				if !ok {
-					storedResult = &types.ProbeResult{
+					storedResult = &checks.Result{
 						ProbeRef: probeResult.ProbeRef,
 					}
-					e.Results[probeResult.ProbeRef.ProbeId()] = storedResult
+					p.Results[probeResult.ProbeRef.Id()] = storedResult
 				}
 				storedResult.MergeChecks(probeResult)
 			}
@@ -107,16 +112,16 @@ func (e *ProbeExecutor) Start() {
 	}()
 }
 
-func (e *ProbeExecutor) Stop() {
-	if e.cancel != nil {
-		e.cancel()
+func (p *ProbeExecutor) Stop() {
+	if p.cancel != nil {
+		p.cancel()
 	}
 }
 
 // RestartProbes checks if probe is running and restart them.
-func (e *ProbeExecutor) RestartProbes() {
+func (p *ProbeExecutor) RestartProbes() {
 	now := time.Now()
-	for _, prob := range e.ProbeManager.Probers() {
+	for _, prob := range p.ProbeManager.Probes() {
 		if !prob.State().ShouldRun(now) {
 			continue
 		}
@@ -125,40 +130,40 @@ func (e *ProbeExecutor) RestartProbes() {
 		_ = prob.Run(now)
 
 		// Increase probe running counter
-		e.MetricStorage.CounterAdd("upmeter_agent_probe_run_total",
-			1.0, map[string]string{"probe": prob.ProbeId()})
+		p.MetricStorage.CounterAdd("upmeter_agent_probe_run_total",
+			1.0, map[string]string{"probe": prob.Id()})
 	}
 }
 
 // Scrape checks probe results
-func (e *ProbeExecutor) Scrape() {
+func (p *ProbeExecutor) Scrape() {
 	now := time.Now().Unix()
 	timeslot := (now / 30) * 30
 	// Scrape is started every second, but we may lose seconds
 	// if timer is not precise.
 	var delta int64 = 1
 	var noDataDelta int64 = 0
-	if e.LastScrapeTimestamp > 0 {
-		delta = now - e.LastScrapeTimestamp
-		e.LastScrapeTimestamp = now
+	if p.LastScrapeTimestamp > 0 {
+		delta = now - p.LastScrapeTimestamp
+		p.LastScrapeTimestamp = now
 	} else {
 		// proper NoData for first 30 sec episode at start.
 		noDataDelta = now - timeslot
 	}
 
-	if e.ScrapeResults == nil {
-		e.ScrapeResults = make(map[string]*types.DowntimeEpisode)
+	if p.ScrapeResults == nil {
+		p.ScrapeResults = make(map[string]*checks.DowntimeEpisode)
 	}
 
-	for probeRefId, result := range e.Results {
-		downtime, ok := e.ScrapeResults[probeRefId]
+	for probeRefId, result := range p.Results {
+		downtime, ok := p.ScrapeResults[probeRefId]
 		if !ok {
-			downtime = &types.DowntimeEpisode{
+			downtime = &checks.DowntimeEpisode{
 				ProbeRef: result.ProbeRef,
 				TimeSlot: timeslot,
 				NoData:   30,
 			}
-			e.ScrapeResults[probeRefId] = downtime
+			p.ScrapeResults[probeRefId] = downtime
 		}
 
 		switch result.Value() {
@@ -186,32 +191,32 @@ func (e *ProbeExecutor) Scrape() {
 	}
 
 	// Send to sender every 30 seconds.
-	shouldExport := e.CheckAndUpdateLastExportTime(now)
+	shouldExport := p.CheckAndUpdateLastExportTime(now)
 	if !shouldExport {
 		return
 	}
 
 	// Copy scraped results and send to sender.
-	exportResults := make([]types.DowntimeEpisode, 0)
-	for _, downtime := range e.ScrapeResults {
+	exportResults := make([]checks.DowntimeEpisode, 0)
+	for _, downtime := range p.ScrapeResults {
 		exportResults = append(exportResults, *downtime)
 	}
-	e.DowntimeEpisodesCh <- exportResults
-	e.ScrapeResults = nil
+	p.DowntimeEpisodesCh <- exportResults
+	p.ScrapeResults = nil
 }
 
-func (e *ProbeExecutor) CheckAndUpdateLastExportTime(nowTime int64) bool {
+func (p *ProbeExecutor) CheckAndUpdateLastExportTime(nowTime int64) bool {
 	var shouldExport = false
-	if e.LastExportTimestamp == 0 {
+	if p.LastExportTimestamp == 0 {
 		// Export at start only if now is a 30 second mark
 		if nowTime%ExportGranularity == 0 {
 			shouldExport = true
 		} else {
 			// Set LastExportTimestamp to a prevMark for future calls
-			e.LastExportTimestamp = (nowTime / ExportGranularity) * ExportGranularity
+			p.LastExportTimestamp = (nowTime / ExportGranularity) * ExportGranularity
 		}
 	} else {
-		prevMark := (e.LastExportTimestamp / ExportGranularity) * ExportGranularity
+		prevMark := (p.LastExportTimestamp / ExportGranularity) * ExportGranularity
 
 		// Export if now is a 30 second mark or past it
 		if nowTime >= prevMark+ExportGranularity {
@@ -219,7 +224,7 @@ func (e *ProbeExecutor) CheckAndUpdateLastExportTime(nowTime int64) bool {
 		}
 	}
 	if shouldExport {
-		e.LastExportTimestamp = nowTime
+		p.LastExportTimestamp = nowTime
 	}
 
 	return shouldExport

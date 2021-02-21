@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 )
 
 type DowntimeSpec struct {
@@ -35,8 +35,8 @@ type DowntimeList struct {
 }
 
 // TODO use FilterFunc and store an array of DowntimeIncidents in a filterResult object.
-func (d Downtime) GetDowntimeIncidents() []types.DowntimeIncident {
-	res := make([]types.DowntimeIncident, 0)
+func (d Downtime) GetDowntimeIncidents() []checks.DowntimeIncident {
+	res := make([]checks.DowntimeIncident, 0)
 	for _, obj := range d.Spec {
 		start, err := DateToSeconds(obj.StartDate)
 		if err != nil {
@@ -48,7 +48,7 @@ func (d Downtime) GetDowntimeIncidents() []types.DowntimeIncident {
 			log.Errorf("convert endDate '%s' in %s: %v", obj.EndDate, d.Name, err)
 			continue
 		}
-		inc := types.DowntimeIncident{
+		inc := checks.DowntimeIncident{
 			Start:        start,
 			End:          end,
 			Duration:     0,

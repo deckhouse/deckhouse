@@ -11,6 +11,7 @@ require (
 	github.com/onsi/gomega v1.9.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spaolacci/murmur3 v1.1.0
+	github.com/tidwall/gjson v1.6.8
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0

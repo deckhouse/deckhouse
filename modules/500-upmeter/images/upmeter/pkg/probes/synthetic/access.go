@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
@@ -22,8 +22,8 @@ Dns resolve timeout: 2 seconds.
 Http response timeout: 2 seconds.
 */
 
-func NewAccessProber() types.Prober {
-	var accessProbeRef = types.ProbeRef{
+func NewAccessProbe() *checks.Probe {
+	var accessProbeRef = checks.ProbeRef{
 		Group: groupName,
 		Probe: "access",
 	}
@@ -31,9 +31,9 @@ func NewAccessProber() types.Prober {
 	const accessDnsTimeout = 2 * time.Second
 	const accessTimeout = 2 * time.Second
 
-	pr := &types.CommonProbe{
-		ProbeRef: &accessProbeRef,
-		Period:   accessPeriod,
+	pr := &checks.Probe{
+		Ref:    &accessProbeRef,
+		Period: accessPeriod,
 	}
 
 	pr.RunFn = func() {
@@ -41,7 +41,7 @@ func NewAccessProber() types.Prober {
 
 		smokeIPs, found := LookupAndShuffleIPs(SmokeMiniAddr, accessDnsTimeout)
 		if !found {
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 			return
 		}
 
@@ -67,7 +67,7 @@ func NewAccessProber() types.Prober {
 			}, func(idx int, item string) {
 				// The last smokeIp is timed out, send fail result.
 				if idx == len(smokeIPs)-1 {
-					pr.ResultCh <- pr.Result(types.ProbeFailed)
+					pr.ResultCh <- pr.Result(checks.StatusFail)
 				}
 			})
 

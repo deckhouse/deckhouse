@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
@@ -22,8 +22,8 @@ Dns resolve timeout: 2 seconds.
 Http response timeout: 4 seconds.
 */
 
-func NewNeighborProber() types.Prober {
-	var nghProbeRef = types.ProbeRef{
+func NewNeighborProbe() *checks.Probe {
+	var nghProbeRef = checks.ProbeRef{
 		Group: groupName,
 		Probe: "neighbor",
 	}
@@ -31,9 +31,9 @@ func NewNeighborProber() types.Prober {
 	const nghDnsTimeout = 2 * time.Second
 	const nghTimeout = 4 * time.Second
 
-	pr := &types.CommonProbe{
-		ProbeRef: &nghProbeRef,
-		Period:   nghPeriod,
+	pr := &checks.Probe{
+		Ref:    &nghProbeRef,
+		Period: nghPeriod,
 	}
 
 	pr.RunFn = func() {
@@ -41,7 +41,7 @@ func NewNeighborProber() types.Prober {
 
 		smokeIPs, found := LookupAndShuffleIPs(SmokeMiniAddr, nghDnsTimeout)
 		if !found {
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 			return
 		}
 
@@ -67,7 +67,7 @@ func NewNeighborProber() types.Prober {
 			}, func(idx int, item string) {
 				// The last smokeIp is timed out, send fail result.
 				if idx == len(smokeIPs)-1 {
-					pr.ResultCh <- pr.Result(types.ProbeFailed)
+					pr.ResultCh <- pr.Result(checks.StatusFail)
 				}
 			})
 

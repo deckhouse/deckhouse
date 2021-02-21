@@ -7,15 +7,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 )
 
 const MaxBatchSize = 64
 
 type Sender struct {
-	DowntimeEpisodesCh chan []types.DowntimeEpisode
+	DowntimeEpisodesCh chan []checks.DowntimeEpisode
 	BufferLock         sync.RWMutex
-	Buffer             []types.DowntimeEpisode
+	Buffer             []checks.DowntimeEpisode
 	Client             *UpmeterClient
 
 	ctx    context.Context
@@ -24,9 +24,9 @@ type Sender struct {
 
 func NewSender(ctx context.Context) *Sender {
 	s := &Sender{
-		DowntimeEpisodesCh: make(chan []types.DowntimeEpisode),
+		DowntimeEpisodesCh: make(chan []checks.DowntimeEpisode),
 		BufferLock:         sync.RWMutex{},
-		Buffer:             make([]types.DowntimeEpisode, 0),
+		Buffer:             make([]checks.DowntimeEpisode, 0),
 	}
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	return s
@@ -97,7 +97,7 @@ func (s *Sender) SendEpisodes(now int64) {
 		batchSize = bufferLen
 	}
 
-	var batchBuf = make([]types.DowntimeEpisode, batchSize)
+	var batchBuf = make([]checks.DowntimeEpisode, batchSize)
 	for i := 0; i < batchSize; i++ {
 		batchBuf[i] = s.Buffer[i]
 	}
@@ -118,7 +118,7 @@ func (s *Sender) SendEpisodes(now int64) {
 	s.BufferLock.Lock()
 	if len(s.Buffer) == batchSize {
 		// Recreate a Buffer as a "fresh" array if all items were sent
-		s.Buffer = make([]types.DowntimeEpisode, 0)
+		s.Buffer = make([]checks.DowntimeEpisode, 0)
 	} else {
 		s.Buffer = s.Buffer[batchSize:len(s.Buffer)]
 	}

@@ -3,16 +3,16 @@ package manager
 import (
 	"github.com/flant/shell-operator/pkg/kube"
 
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes"
 )
 
 type ProbeManager struct {
-	probers []types.Prober
+	probes []*checks.Probe
 }
 
-func (m *ProbeManager) Probers() []types.Prober {
-	return m.probers
+func (m *ProbeManager) Probes() []*checks.Probe {
+	return m.probes
 }
 
 func NewProbeManager() *ProbeManager {
@@ -20,23 +20,24 @@ func NewProbeManager() *ProbeManager {
 }
 
 func (m *ProbeManager) Init() {
-	m.probers = FilterDisabledProbesFromProbers(probers.Load())
+	m.probes = FilterDisabled(probes.Load())
 }
 
-func (m *ProbeManager) InitProbes(ch chan types.ProbeResult, client kube.KubernetesClient) {
-	for _, p := range m.probers {
+func (m *ProbeManager) InitProbes(ch chan checks.Result, client kube.KubernetesClient, token string) {
+	for _, p := range m.probes {
 		_ = p.Init()
 		p.WithResultChan(ch)
 		p.WithKubernetesClient(client)
+		p.WithServiceAccountToken(token)
 	}
 }
 
-func FilterDisabledProbesFromProbers(probers []types.Prober) []types.Prober {
-	var newList = make([]types.Prober, 0)
+func FilterDisabled(ps []*checks.Probe) []*checks.Probe {
+	var newList = make([]*checks.Probe, 0)
 
-	for _, prober := range probers {
-		if types.IsProbeEnabled(prober.ProbeId()) {
-			newList = append(newList, prober)
+	for _, p := range ps {
+		if checks.IsProbeEnabled(p.Id()) {
+			newList = append(newList, p)
 		}
 	}
 

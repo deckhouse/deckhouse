@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 )
 
@@ -62,7 +62,7 @@ WHERE rowid=?
 
 type Downtime5mEntity struct {
 	Rowid           int64
-	DowntimeEpisode types.DowntimeEpisode
+	DowntimeEpisode checks.DowntimeEpisode
 }
 
 type Downtime5mDao struct {
@@ -77,8 +77,8 @@ func NewDowntime5mDao(dbCtx *dbcontext.DbContext) *Downtime5mDao {
 	}
 }
 
-func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, group string, probe string) (Downtime5mEntity, error) {
-	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mByTimeslotGroupProbe, slot5m, group, probe)
+func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, ref checks.ProbeRef) (Downtime5mEntity, error) {
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mByTimeslotGroupProbe, slot5m, ref.Group, ref.Probe)
 	if err != nil {
 		return Downtime5mEntity{}, fmt.Errorf("select for TimeslotGroupProbe: %v", err)
 	}
@@ -104,7 +104,7 @@ func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, group string, probe stri
 
 	// Assertion
 	if rows.Next() {
-		log.Errorf("Not consistent 5m data: more than one record for slot=%d, group='%s', probe='%s'", slot5m, group, probe)
+		log.Errorf("Not consistent 5m data: more than one record for slot=%d, group='%s', probe='%s'", slot5m, ref.Group, ref.Probe)
 	}
 
 	return entity, nil
@@ -138,7 +138,7 @@ func (d *Downtime5mDao) ListByRange(from, to, step int64) ([]Downtime5mEntity, e
 	return res, nil
 }
 
-func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName string) ([]types.DowntimeEpisode, error) {
+func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName string) ([]checks.DowntimeEpisode, error) {
 	query := SelectDowntime5mByTimeslotRange
 	queryArgs := []interface{}{
 		from,
@@ -161,7 +161,7 @@ func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName
 	}
 	defer rows.Close()
 
-	var res = make([]types.DowntimeEpisode, 0)
+	var res = make([]checks.DowntimeEpisode, 0)
 	for rows.Next() {
 		var entity = Downtime5mEntity{}
 		err := rows.Scan(&entity.Rowid,
@@ -185,8 +185,8 @@ func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName
 // ListEpisodeSumsForRanges returns sums of seconds for each group_name+probe_name to reduce
 // calculations over full table.
 // FIXME rewrite this quick hack code.
-func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupName, probeName string) ([]types.DowntimeEpisode, error) {
-	var res = make([]types.DowntimeEpisode, 0)
+func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupName, probeName string) ([]checks.DowntimeEpisode, error) {
+	var res = make([]checks.DowntimeEpisode, 0)
 
 	var queryParts = map[string]string{
 		"select": `SELECT
@@ -269,28 +269,28 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 	return res, nil
 }
 
-func (d *Downtime5mDao) ListGroupProbe() ([]types.ProbeRef, error) {
+func (d *Downtime5mDao) ListGroupProbe() ([]checks.ProbeRef, error) {
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mGroupProbe)
 	if err != nil {
 		return nil, fmt.Errorf("select group and probe: %v", err)
 	}
 	defer rows.Close()
 
-	var res = make([]types.ProbeRef, 0)
+	var res = make([]checks.ProbeRef, 0)
 	for rows.Next() {
-		var ref = types.ProbeRef{}
+		var ref = checks.ProbeRef{}
 		err := rows.Scan(&ref.Group, &ref.Probe)
 		if err != nil {
 			return nil, fmt.Errorf("row to ProbeRef: %v", err)
 		}
 		res = append(res, ref)
-		log.Infof("got probeRef=%s", ref.ProbeId())
+		log.Infof("got probeRef=%s", ref.Id())
 	}
 
 	return res, nil
 }
 
-func (d *Downtime5mDao) Insert(downtime types.DowntimeEpisode) error {
+func (d *Downtime5mDao) Insert(downtime checks.DowntimeEpisode) error {
 	_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime5m,
 		downtime.TimeSlot,
 		downtime.SuccessSeconds, downtime.FailSeconds,
@@ -299,7 +299,7 @@ func (d *Downtime5mDao) Insert(downtime types.DowntimeEpisode) error {
 	return err
 }
 
-func (d *Downtime5mDao) Update(rowid int64, downtime types.DowntimeEpisode) error {
+func (d *Downtime5mDao) Update(rowid int64, downtime checks.DowntimeEpisode) error {
 	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime5m,
 		downtime.SuccessSeconds, downtime.FailSeconds,
 		downtime.Unknown, downtime.NoData,

@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/probes/util"
 )
 
 // LookupAndShuffleIPs resolves IPs with timeout. The resulting `ips` slice has at least on e IP or equal nil if none found.
