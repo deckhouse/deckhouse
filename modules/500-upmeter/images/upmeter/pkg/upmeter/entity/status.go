@@ -6,20 +6,20 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 	"upmeter/pkg/util"
 )
 
 type StatusInfo struct {
-	TimeSlot  int64                    `json:"ts"`
-	StartDate string                   `json:"start"`
-	EndDate   string                   `json:"end"`
-	Up        int64                    `json:"up"`
-	Down      int64                    `json:"down"`
-	Unknown   int64                    `json:"unknown"`
-	Muted     int64                    `json:"muted"`
-	NoData    int64                    `json:"nodata"`
-	Downtimes []types.DowntimeIncident `json:"downtimes"`
+	TimeSlot  int64                     `json:"ts"`
+	StartDate string                    `json:"start"`
+	EndDate   string                    `json:"end"`
+	Up        int64                     `json:"up"`
+	Down      int64                     `json:"down"`
+	Unknown   int64                     `json:"unknown"`
+	Muted     int64                     `json:"muted"`
+	NoData    int64                     `json:"nodata"`
+	Downtimes []checks.DowntimeIncident `json:"downtimes"`
 }
 
 func NewEmptyStatusInfo(stepRange []int64) *StatusInfo {
@@ -31,7 +31,7 @@ func NewEmptyStatusInfo(stepRange []int64) *StatusInfo {
 	}
 }
 
-func (s *StatusInfo) AddEpisode(episode types.DowntimeEpisode) {
+func (s *StatusInfo) AddEpisode(episode checks.DowntimeEpisode) {
 	s.Up += episode.SuccessSeconds
 	s.Down += episode.FailSeconds
 	s.Unknown += episode.Unknown
@@ -101,8 +101,8 @@ testGroup:
     down: 0
 */
 func CalculateStatuses(
-	episodes []types.DowntimeEpisode,
-	incidents []types.DowntimeIncident,
+	episodes []checks.DowntimeEpisode,
+	incidents []checks.DowntimeIncident,
 	stepRanges [][]int64,
 	groupName string,
 	probeName string,
@@ -137,10 +137,10 @@ func CalculateStatuses(
 }
 
 // Each group/probe should have only 1 DowntimeEpisode per Timeslot.
-func CombineEpisodesByTimeslot(episodes []types.DowntimeEpisode) []types.DowntimeEpisode {
+func CombineEpisodesByTimeslot(episodes []checks.DowntimeEpisode) []checks.DowntimeEpisode {
 	var idx = make(map[string]map[int64][]int)
 	for i, episode := range episodes {
-		probeId := episode.ProbeRef.ProbeId()
+		probeId := episode.ProbeRef.Id()
 		if _, ok := idx[probeId]; !ok {
 			idx[probeId] = make(map[int64][]int)
 		}
@@ -150,7 +150,7 @@ func CombineEpisodesByTimeslot(episodes []types.DowntimeEpisode) []types.Downtim
 		idx[probeId][episode.TimeSlot] = append(idx[probeId][episode.TimeSlot], i)
 	}
 
-	var newEpisodes = make([]types.DowntimeEpisode, 0)
+	var newEpisodes = make([]checks.DowntimeEpisode, 0)
 	for _, timeslots := range idx {
 		for _, indicies := range timeslots {
 			ep := episodes[indicies[0]]
@@ -208,12 +208,12 @@ func CalculateTotalForStepRange(statuses map[string]map[string]map[int64]*Status
 }
 
 // UpdateMute applies muting to a StatusInfo based on intervals described by incidents.
-func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents []types.DowntimeIncident, stepRanges [][]int64) {
+func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents []checks.DowntimeIncident, stepRanges [][]int64) {
 	for groupName := range statuses {
 		for _, stepRange := range stepRanges {
 			var stepDuration int64 = stepRange[1] - stepRange[0]
 			var muteDuration int64 = 0
-			var relatedDowntimes = make([]types.DowntimeIncident, 0)
+			var relatedDowntimes = make([]checks.DowntimeIncident, 0)
 
 			// calculate maximum known mute duration
 			for _, incident := range incidents {
@@ -299,7 +299,7 @@ func CalculateTotalForPeriod(statuses map[string]map[string]map[int64]*StatusInf
 	}
 }
 
-func CreateEmptyStatusesTable(episodes []types.DowntimeEpisode, stepRanges [][]int64, groupName string, probeName string) map[string]map[string]map[int64]*StatusInfo {
+func CreateEmptyStatusesTable(episodes []checks.DowntimeEpisode, stepRanges [][]int64, groupName string, probeName string) map[string]map[string]map[int64]*StatusInfo {
 	// Create empty statuses for each probe.
 	statuses := map[string]map[string]map[int64]*StatusInfo{}
 	for _, episode := range episodes {
@@ -370,11 +370,11 @@ func TransformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 	return res
 }
 
-func FilterDisabledProbesFromEpisodes(episodes []types.DowntimeEpisode) []types.DowntimeEpisode {
-	res := make([]types.DowntimeEpisode, 0)
+func FilterDisabledProbesFromEpisodes(episodes []checks.DowntimeEpisode) []checks.DowntimeEpisode {
+	res := make([]checks.DowntimeEpisode, 0)
 
 	for _, episode := range episodes {
-		if types.IsProbeEnabled(episode.ProbeRef.ProbeId()) {
+		if checks.IsProbeEnabled(episode.ProbeRef.Id()) {
 			res = append(res, episode)
 		}
 	}

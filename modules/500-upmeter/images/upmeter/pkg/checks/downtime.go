@@ -1,8 +1,10 @@
-package types
+package checks
 
 import (
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
+
 	"upmeter/pkg/util"
 )
 
@@ -38,7 +40,7 @@ func (e *DowntimeEpisode) Correct(step int64) {
 	}
 
 	log.Errorf("Episode for '%s' requires correction: %d!=%d. Success=%d, fail=%d, unknown=%d, nodata=%d",
-		e.ProbeRef.ProbeId(), e.Total(), step, e.SuccessSeconds, e.FailSeconds, e.Unknown, e.NoData)
+		e.ProbeRef.Id(), e.Total(), step, e.SuccessSeconds, e.FailSeconds, e.Unknown, e.NoData)
 
 	delta := step - e.Total()
 
@@ -152,7 +154,7 @@ func (e DowntimeEpisode) IsEqualSeconds(a DowntimeEpisode) bool {
 func (e DowntimeEpisode) DumpString() string {
 	return fmt.Sprintf("ts=%d probe='%s' s=%d f=%d u=%d n=%d",
 		e.TimeSlot,
-		e.ProbeRef.ProbeId(),
+		e.ProbeRef.Id(),
 		e.SuccessSeconds,
 		e.FailSeconds,
 		e.Unknown,

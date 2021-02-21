@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"upmeter/pkg/app"
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
@@ -27,8 +27,8 @@ Pending Pod timeout: 10 seconds
 Delete Deployment timeout: 5 seconds
 Pod Disappear timeout: 10 seconds
 */
-func NewControlPlaneManagerProber() types.Prober {
-	var mgrProbeRef = types.ProbeRef{
+func NewControlPlaneManagerProbe() *checks.Probe {
+	var mgrProbeRef = checks.ProbeRef{
 		Group: groupName,
 		Probe: "control-plane-manager",
 	}
@@ -39,9 +39,9 @@ func NewControlPlaneManagerProber() types.Prober {
 	const mgrPodDisappearTimeout = time.Second * 10
 	const deleteGarbageTimeout = 10 * time.Second
 
-	pr := &types.CommonProbe{
-		ProbeRef: &mgrProbeRef,
-		Period:   mgrProbePeriod,
+	pr := &checks.Probe{
+		Ref:    &mgrProbeRef,
+		Period: mgrProbePeriod,
 	}
 
 	pr.RunFn = func() {
@@ -118,13 +118,13 @@ func NewControlPlaneManagerProber() types.Prober {
 		util.DoWithTimer(mgrCreateDeploymentTimeout, func() {
 			_, err := pr.KubernetesClient.AppsV1().Deployments(app.Namespace).Create(deployment)
 			if err != nil {
-				pr.ResultCh <- pr.Result(types.ProbeUnknown)
+				pr.ResultCh <- pr.Result(checks.StatusUnknown)
 				log.Errorf("Create Deployment/%s: %v", deployName, err)
 				stop = true
 			}
 		}, func() {
 			log.Infof("Exceed timeout when create Deployment/%s", deployName)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 		var pendingPodName = ""
@@ -159,22 +159,22 @@ func NewControlPlaneManagerProber() types.Prober {
 			}
 			// No Pod in Pending or Running state, probe is failed.
 			log.Errorf("Deployment/%s has no Pending or Running pod, phase: '%s'", deployName, lastPhase)
-			pr.ResultCh <- pr.Result(types.ProbeFailed)
+			pr.ResultCh <- pr.Result(checks.StatusFail)
 		}, func() {
 			log.Infof("Exceed timeout while waiting pending Pod")
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 		util.DoWithTimer(mgrDeleteDeploymentTimeout, func() {
 			err := pr.KubernetesClient.AppsV1().Deployments(app.Namespace).Delete(deployment.Name, &metav1.DeleteOptions{})
 			if err != nil {
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 				log.Errorf("Delete Deployment/%s: %v", deployName, err)
 				stop = true
 			}
 		}, func() {
 			log.Infof("Exceed timeout when delete Deployment/%s", deployName)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 		if stop {
@@ -183,14 +183,14 @@ func NewControlPlaneManagerProber() types.Prober {
 
 		util.DoWithTimer(mgrPodDisappearTimeout, func() {
 			if WaitForObjectDeletion(pr, mgrPodDisappearTimeout, "Pod", pendingPodName) {
-				pr.ResultCh <- pr.Result(types.ProbeSuccess)
+				pr.ResultCh <- pr.Result(checks.StatusSuccess)
 			} else {
 				log.Errorf("Deleted Deployment/%s still has Pod/%s", deployName, pendingPodName)
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 			}
 		}, func() {
 			log.Infof("Exceed timeout while wait for Pod deletion")
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 
 	}

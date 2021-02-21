@@ -3,12 +3,12 @@ package control_plane
 import (
 	"time"
 
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
-NewAccessProber
+NewAccessProbe
 
 CHECK:
 API server should be accessible.
@@ -18,17 +18,17 @@ Fetch /version endpoint from API server.
 Period: 5 seconds.
 HTTP request timeout: 5 seconds.
 */
-func NewAccessProber() types.Prober {
-	var accessProbeRef = types.ProbeRef{
+func NewAccessProbe() *checks.Probe {
+	var accessProbeRef = checks.ProbeRef{
 		Group: groupName,
 		Probe: "access",
 	}
 	const accessPeriod = 5 * time.Second
 	const accessTimeout = 5 * time.Second
 
-	pr := &types.CommonProbe{
-		ProbeRef: &accessProbeRef,
-		Period:   accessPeriod,
+	pr := &checks.Probe{
+		Ref:    &accessProbeRef,
+		Period: accessPeriod,
 	}
 
 	pr.RunFn = func() {
@@ -37,13 +37,13 @@ func NewAccessProber() types.Prober {
 			_, err := pr.KubernetesClient.Discovery().ServerVersion()
 			if err != nil {
 				log.Errorf("Get cluster version: %v type=%T", err, err)
-				pr.ResultCh <- pr.Result(types.ProbeFailed)
+				pr.ResultCh <- pr.Result(checks.StatusFail)
 			} else {
-				pr.ResultCh <- pr.Result(types.ProbeSuccess)
+				pr.ResultCh <- pr.Result(checks.StatusSuccess)
 			}
 		}, func() {
 			log.Infof("Exceeds timeout '%s' when fetch /version", accessTimeout.String())
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		})
 	}
 

@@ -2,6 +2,8 @@ package agent
 
 import (
 	"context"
+	"io/ioutil"
+
 	shapp "github.com/flant/shell-operator/pkg/app"
 
 	"github.com/flant/shell-operator/pkg/kube"
@@ -47,12 +49,18 @@ func NewDefaultAgent(ctx context.Context) *Agent {
 	a.KubernetesClient.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
 	a.KubernetesClient.WithMetricStorage(a.MetricStorage)
 
+	// Service account token
+	serviceAccountToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		log.Fatalf("pod expected, cannot read service account token: %v", err)
+	}
+
 	// Probe manager
 	a.Manager = manager.NewProbeManager()
-	a.Manager.Init() // Create instances for each prober.
+	a.Manager.Init() // Create instances for each probe.
 
-	for _, prober := range a.Manager.Probers() {
-		log.Infof("Register probe %s", prober.ProbeId())
+	for _, probe := range a.Manager.Probes() {
+		log.Infof("Register probe %s", probe.Id())
 	}
 
 	a.UpmeterClient = sender.CreateUpmeterClient(app.UpmeterHost, app.UpmeterPort)
@@ -64,6 +72,7 @@ func NewDefaultAgent(ctx context.Context) *Agent {
 	a.Executor.WithProbeManager(a.Manager)
 	a.Executor.WithDowntimeEpisodesCh(a.Sender.DowntimeEpisodesCh)
 	a.Executor.WithKubernetesClient(a.KubernetesClient)
+	a.Executor.WithServiceAccountToken(string(serviceAccountToken))
 
 	return a
 }

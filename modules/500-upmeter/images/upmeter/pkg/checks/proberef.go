@@ -1,4 +1,4 @@
-package types
+package checks
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ type ProbeRef struct {
 	Probe string `json:"probe"`
 }
 
-func (p ProbeRef) ProbeId() string {
+func (p ProbeRef) Id() string {
 	return fmt.Sprintf("%s/%s", p.Group, p.Probe)
 }
 

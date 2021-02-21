@@ -9,13 +9,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"upmeter/pkg/app"
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 const checkApiTimeout = 5 * time.Second
 
-func CheckApiAvailable(pr *types.CommonProbe) bool {
+func CheckApiAvailable(pr *checks.Probe) bool {
 	avail := true
 	log := pr.LogEntry()
 	// Check API server is available
@@ -25,12 +25,12 @@ func CheckApiAvailable(pr *types.CommonProbe) bool {
 		_, err := pr.KubernetesClient.Discovery().ServerVersion()
 		if err != nil {
 			log.Errorf("Check API availability: %v", err)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 			avail = false
 		}
 	}, func() {
 		log.Infof("Exceeds timeout '%s' when fetch /version", checkApiTimeout.String())
-		pr.ResultCh <- pr.Result(types.ProbeUnknown)
+		pr.ResultCh <- pr.Result(checks.StatusUnknown)
 	})
 	return avail
 }
@@ -40,7 +40,7 @@ const deleteGarbageTimeout = 10 * time.Second
 // GarbageCollect list objects by labels, delete them and wait until deletion is complete.
 // return 1 if deletion was successful or no objects found
 // return 0 if list of delete operations give error or there are objects after deletion.
-func GarbageCollect(pr *types.CommonProbe, kind string, labels map[string]string) bool {
+func GarbageCollect(pr *checks.Probe, kind string, labels map[string]string) bool {
 	log := pr.LogEntry()
 
 	var collected bool
@@ -67,7 +67,7 @@ func GarbageCollect(pr *types.CommonProbe, kind string, labels map[string]string
 		list, err = ListObjects(pr, kind, listOpts)
 		if err != nil {
 			log.Errorf("List %s: %v", kind, err)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 			return
 		}
 		if len(list) == 0 {
@@ -79,13 +79,13 @@ func GarbageCollect(pr *types.CommonProbe, kind string, labels map[string]string
 
 		// Immediate Unknown result if garbage is found on first run.
 		if pr.State().FirstRun {
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		}
 
 		err = DeleteObjects(pr, kind, list)
 		if err != nil {
 			log.Errorf("Delete garbage %s: %v", kind, err)
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 			return
 		}
 
@@ -109,19 +109,19 @@ func GarbageCollect(pr *types.CommonProbe, kind string, labels map[string]string
 				log.Errorf("List garbage %s: %s", kind, err)
 			}
 			log.Errorf("Stop probe. Garbage %s list is not empty: %s", kind, DumpNames(list))
-			pr.ResultCh <- pr.Result(types.ProbeUnknown)
+			pr.ResultCh <- pr.Result(checks.StatusUnknown)
 		}
 
 		// Garbage is not collected.
 	}, func() {
 		log.Infof("Exceed timeout when listing garbage %s", kind)
-		pr.ResultCh <- pr.Result(types.ProbeUnknown)
+		pr.ResultCh <- pr.Result(checks.StatusUnknown)
 	})
 
 	return collected
 }
 
-func ListObjects(pr *types.CommonProbe, kind string, listOpts metav1.ListOptions) ([]string, error) {
+func ListObjects(pr *checks.Probe, kind string, listOpts metav1.ListOptions) ([]string, error) {
 	fn, ok := listFns[strings.ToLower(kind)]
 	if !ok {
 		return nil, fmt.Errorf("Possible bug!!! No list function for kind='%s'", kind)
@@ -129,7 +129,7 @@ func ListObjects(pr *types.CommonProbe, kind string, listOpts metav1.ListOptions
 	return fn(pr.KubernetesClient, listOpts)
 }
 
-func DeleteObjects(pr *types.CommonProbe, kind string, names []string) error {
+func DeleteObjects(pr *checks.Probe, kind string, names []string) error {
 	fn, ok := delFns[strings.ToLower(kind)]
 	if !ok {
 		return fmt.Errorf("Possible bug!!! No delete function for kind='%s'", kind)
@@ -232,7 +232,7 @@ var delFns = map[string]func(client kube.KubernetesClient, name string) error{
 	},
 }
 
-func WaitForObjectDeletion(pr *types.CommonProbe, timeout time.Duration, kind, name string) bool {
+func WaitForObjectDeletion(pr *checks.Probe, timeout time.Duration, kind, name string) bool {
 	listOpts := metav1.ListOptions{
 		FieldSelector: "metadata.name=" + name,
 	}

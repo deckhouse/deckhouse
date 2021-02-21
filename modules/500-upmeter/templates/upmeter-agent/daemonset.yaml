@@ -55,7 +55,7 @@ spec:
       containers:
         - name: agent
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}/upmeter/upmeter:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}
+          image: "{{ $.Values.global.modulesImages.registry }}/upmeter/upmeter:{{ $.Values.global.modulesImages.tags.upmeter.upmeter }}"
           command:
             - /upmeter
             - agent
@@ -70,11 +70,18 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+          - name: UPMETER_DISABLED_PROBES
             {{- $disabledProbes := .Values.upmeter.disabledProbes }}
             {{- if eq .Values.upmeter.smokeMiniDisabled true }}
-            {{- $disabledProbes = append $disabledProbes "synthetic/" }}
+              {{- $disabledProbes = append $disabledProbes "synthetic/" }}
             {{- end }}
-          - name: UPMETER_DISABLED_PROBES
+            {{- if (not (.Values.global.enabledModules | has "prometheus")) }}
+              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/prometheus" }}
+              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/trickster" }}
+            {{ end }}
+            {{- if (not (.Values.global.enabledModules | has "prometheus-metrics-adapter")) }}
+              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/prometheus-metrics-adapter" }}
+            {{ end }}
             value: {{ $disabledProbes | join "," | quote }}
           resources:
             requests:

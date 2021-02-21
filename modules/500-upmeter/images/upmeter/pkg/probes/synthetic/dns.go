@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/probe/types"
-	"upmeter/pkg/probers/util"
+	"upmeter/pkg/checks"
+	"upmeter/pkg/probes/util"
 )
 
 /*
@@ -32,7 +32,7 @@ Period:              0.2 seconds
 Dns resolve timeout: 0.1 seconds
 */
 
-var dnsProbeRef = types.ProbeRef{
+var dnsProbeRef = checks.ProbeRef{
 	Group: groupName,
 	Probe: "dns",
 }
@@ -53,17 +53,17 @@ const (
 	dnsProbeHTTPTimeout = 100 * time.Millisecond
 )
 
-func NewDnsProberSmokeCheck() types.Prober {
-	pr := &types.CommonProbe{
-		ProbeRef: &dnsProbeRef,
-		Period:   dnsPeriod,
+func NewDnsProbeSmokeCheck() *checks.Probe {
+	pr := &checks.Probe{
+		Ref:    &dnsProbeRef,
+		Period: dnsPeriod,
 	}
 
 	pr.RunFn = func() {
 		// Resolve
 		smokeIPs, found := LookupAndShuffleIPs(SmokeMiniAddr, dnsProbeDNSTimeout)
 		if !found {
-			pr.ResultCh <- pr.CheckResult("smoke", types.ProbeFailed)
+			pr.ResultCh <- pr.CheckResult("smoke", checks.StatusFail)
 			return
 		}
 
@@ -76,10 +76,10 @@ func NewDnsProberSmokeCheck() types.Prober {
 	return pr
 }
 
-func NewDnsProberInternalDomainCheck() types.Prober {
-	pr := &types.CommonProbe{
-		ProbeRef: &dnsProbeRef,
-		Period:   dnsPeriod,
+func NewDnsProbeInternalDomainCheck() *checks.Probe {
+	pr := &checks.Probe{
+		Ref:    &dnsProbeRef,
+		Period: dnsPeriod,
 	}
 
 	pr.RunFn = func() {

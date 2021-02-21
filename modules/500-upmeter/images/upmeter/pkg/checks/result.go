@@ -1,4 +1,4 @@
-package types
+package checks
 
 import (
 	"math"
@@ -6,14 +6,14 @@ import (
 )
 
 // Probe result. Contains results for each probe's checks.
-type ProbeResult struct {
+type Result struct {
 	ProbeRef        ProbeRef
 	CheckResults    map[string]int64
 	FailDescription string
 }
 
 // MergeChecks updates CheckResults
-func (r *ProbeResult) MergeChecks(next ProbeResult) {
+func (r *Result) MergeChecks(next Result) {
 	if next.CheckResults == nil {
 		return
 	}
@@ -28,7 +28,7 @@ func (r *ProbeResult) MergeChecks(next ProbeResult) {
 // CalcResult returns min value in CheckResult.
 //
 // Probe result is 1 if all check results are 1.
-func (r *ProbeResult) Value() int64 {
+func (r *Result) Value() int64 {
 	var res int64 = math.MaxInt64
 	for _, v := range r.CheckResults {
 		if v < res {
@@ -38,7 +38,7 @@ func (r *ProbeResult) Value() int64 {
 	return res
 }
 
-func NewProbeResult(ref ProbeRef, checkName string, value interface{}) ProbeResult {
+func NewResult(ref ProbeRef, checkName string, value interface{}) Result {
 	var res int64 = 0
 
 	switch v := value.(type) {
@@ -46,7 +46,7 @@ func NewProbeResult(ref ProbeRef, checkName string, value interface{}) ProbeResu
 		res = int64(v)
 	case int64:
 		res = v
-	case ProbeResultValue:
+	case Status:
 		res = int64(v)
 	case bool:
 		if v {
@@ -59,14 +59,17 @@ func NewProbeResult(ref ProbeRef, checkName string, value interface{}) ProbeResu
 		}
 	}
 
-	return ProbeResult{
+	return Result{
 		ProbeRef:     ref,
 		CheckResults: map[string]int64{checkName: res},
 	}
 }
 
-type ProbeResultValue int64
+type Status int64
 
-const ProbeFailed ProbeResultValue = 0
-const ProbeSuccess ProbeResultValue = 1
-const ProbeUnknown ProbeResultValue = 2
+const (
+	StatusFail Status = iota
+	StatusSuccess
+	StatusUnknown
+	StatusNoData
+)

@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/app"
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 )
 
 type UpmeterClient struct {
@@ -29,7 +29,7 @@ func CreateUpmeterClient(ip string, port string) *UpmeterClient {
 	}
 }
 
-func (c *UpmeterClient) Send(results []types.DowntimeEpisode) error {
+func (c *UpmeterClient) Send(results []checks.DowntimeEpisode) error {
 	// encode to JSON
 	jsonBytes, err := json.Marshal(results)
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	. "github.com/onsi/gomega"
 
-	"upmeter/pkg/probe/types"
+	"upmeter/pkg/checks"
 	"upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/migrations"
 )
@@ -29,9 +29,9 @@ func Test_Downtime30s_CRUD(t *testing.T) {
 
 	dao30s := NewDowntime30sDao(daoCtx)
 
-	episodes := []types.DowntimeEpisode{
+	episodes := []checks.DowntimeEpisode{
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "nginx",
 				Probe: "main",
 			},
@@ -39,7 +39,7 @@ func Test_Downtime30s_CRUD(t *testing.T) {
 			SuccessSeconds: 0,
 		},
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "nginx",
 				Probe: "redirect",
 			},
@@ -47,7 +47,7 @@ func Test_Downtime30s_CRUD(t *testing.T) {
 			SuccessSeconds: 22,
 		},
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "api",
 				Probe: "configmap",
 			},
@@ -124,9 +124,9 @@ func Test_Downtime30s_FileWrite(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	dao30s := NewDowntime30sDao(daoCtx)
 
-	episodes := []types.DowntimeEpisode{
+	episodes := []checks.DowntimeEpisode{
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "nginx",
 				Probe: "main",
 			},
@@ -134,7 +134,7 @@ func Test_Downtime30s_FileWrite(t *testing.T) {
 			SuccessSeconds: 0,
 		},
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "nginx",
 				Probe: "redirect",
 			},
@@ -142,7 +142,7 @@ func Test_Downtime30s_FileWrite(t *testing.T) {
 			SuccessSeconds: 22,
 		},
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "api",
 				Probe: "configmap",
 			},
@@ -191,9 +191,9 @@ func Test_Downtime30s_Transaction_FileWrite(t *testing.T) {
 
 	dao30s := NewDowntime30sDao(txCtx)
 
-	episodes := []types.DowntimeEpisode{
+	episodes := []checks.DowntimeEpisode{
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "nginx",
 				Probe: "main",
 			},
@@ -201,7 +201,7 @@ func Test_Downtime30s_Transaction_FileWrite(t *testing.T) {
 			SuccessSeconds: 0,
 		},
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "nginx",
 				Probe: "redirect",
 			},
@@ -209,7 +209,7 @@ func Test_Downtime30s_Transaction_FileWrite(t *testing.T) {
 			SuccessSeconds: 22,
 		},
 		{
-			ProbeRef: types.ProbeRef{
+			ProbeRef: checks.ProbeRef{
 				Group: "api",
 				Probe: "configmap",
 			},
