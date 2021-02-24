@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,6 +17,10 @@ import (
 var (
 	sep = regexp.MustCompile("(?:^|\\s*\n)---\\s*")
 )
+
+func shouldSkipCrd(name string) bool {
+	return !strings.Contains(name, "deckhouse.io")
+}
 
 func crdsModuleRule(name, path string) errors.LintRuleErrorsList {
 	var lintRuleErrorsList errors.LintRuleErrorsList
@@ -50,17 +55,18 @@ func crdsModuleRule(name, path string) errors.LintRuleErrorsList {
 				))
 			}
 
-			// Enable this after all clusters will be upgraded to 1.16+
-			/*
-				if crd.APIVersion != "apiextensions.k8s.io/v1" {
-					lintRuleErrorsList.Add(errors.NewLintRuleError(
-						"MODULE004",
-						fmt.Sprintf("kind = %s ; name = %s ; module = %s", crd.Kind, crd.Name, name),
-						crd.APIVersion,
-						"CRD specified using deprecated api version, wanted \"apiextensions.k8s.io/v1\"",
-					))
-				}
-			*/
+			if shouldSkipCrd(crd.Name) {
+				continue
+			}
+
+			if crd.APIVersion != "apiextensions.k8s.io/v1" {
+				lintRuleErrorsList.Add(errors.NewLintRuleError(
+					"MODULE004",
+					fmt.Sprintf("kind = %s ; name = %s ; module = %s ; file = %s", crd.Kind, crd.Name, name, path),
+					crd.APIVersion,
+					"CRD specified using deprecated api version, wanted \"apiextensions.k8s.io/v1\"",
+				))
+			}
 		}
 		return nil
 	})

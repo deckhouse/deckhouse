@@ -1,5 +1,4 @@
----
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: ingressnginxcontrollers.deckhouse.io
@@ -13,270 +12,273 @@ spec:
     plural: ingressnginxcontrollers
     singular: ingressnginxcontroller
     kind: IngressNginxController
-  version: v1alpha1
-  additionalPrinterColumns:
-  - JSONPath: .spec.ingressClass
-    name: Ingress Class
-    description: 'Name of served ingress class.'
-    type: string
-  - JSONPath: .spec.inlet
-    name: Inlet
-    description: 'The way traffic goes to current Ingress Controller from the outer network.'
-    type: string
-  - JSONPath: .spec.controllerVersion
-    name: Controller Version
-    description: 'Current NGINX Ingress Controller version.'
-    type: string
-  validation:
-    openAPIV3Schema:
-      type: object
-      required: ['spec']
-      properties:
-        spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
           type: object
-          required: ['ingressClass', 'inlet']
+          required: ['spec']
           properties:
-            ingressClass:
-              type: string
-              description: 'Name of served ingress class.'
-              example: 'nginx'
-              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
-            inlet:
-              type: string
-              description: 'The way traffic goes to cluster from the outer network.'
-            controllerVersion:
-              type: string
-              description: 'One of the supported NGINX Ingress Controller versions.'
-              enum: ['0.25', '0.26', '0.33']
-            enableIstioSidecar:
-              type: boolean
-              description: 'Whether to dedicate the controller for Istio environment.'
-            nodeSelector:
+            spec:
               type: object
-              description: 'Controller nodeSelector field.'
-            tolerations:
-              type: array
-              description: 'Controller tolerations field.'
-              items:
-                type: object
-                properties:
-                  key:
-                    type: string
-                  operator:
-                    type: string
-                    enum:
-                  value:
-                    type: string
-                  effect:
-                    type: string
-            loadBalancer:
-              type: object
+              required: ['ingressClass', 'inlet']
               properties:
-                sourceRanges:
+                ingressClass:
+                  type: string
+                  description: 'Name of served ingress class.'
+                  example: 'nginx'
+                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                inlet:
+                  type: string
+                  description: 'The way traffic goes to cluster from the outer network.'
+                controllerVersion:
+                  type: string
+                  description: 'One of the supported NGINX Ingress Controller versions.'
+                  enum: ['0.25', '0.26', '0.33']
+                enableIstioSidecar:
+                  type: boolean
+                  description: 'Whether to dedicate the controller for Istio environment.'
+                nodeSelector:
+                  type: object
+                  description: 'Controller nodeSelector field.'
+                tolerations:
                   type: array
-                  description: 'IP ranges (CIDR) that are allowed to access the load balancer.'
+                  description: 'Controller tolerations field.'
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                        enum:
+                      value:
+                        type: string
+                      effect:
+                        type: string
+                loadBalancer:
+                  type: object
+                  properties:
+                    sourceRanges:
+                      type: array
+                      description: 'IP ranges (CIDR) that are allowed to access the load balancer.'
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                    annotations:
+                      type: object
+                      description: 'Annotations that will be passed to service with type load balancer to configure it.'
+                      additionalProperties:
+                        type: string
+                    behindL7Proxy:
+                      type: boolean
+                      description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
+                    realIPHeader:
+                      type: string
+                      description: 'Sets the header field for identifying the originating IP address of a client.'
+                      example: 'CF-Connecting-IP'
+                loadBalancerWithProxyProtocol:
+                  type: object
+                  properties:
+                    sourceRanges:
+                      type: array
+                      description: 'IP ranges (CIDR) that are allowed to access the load balancer.'
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                    annotations:
+                      type: object
+                      description: 'Annotations that will be passed to service with type load balancer to configure it.'
+                      additionalProperties:
+                        type: string
+                hostPort:
+                  type: object
+                  anyOf:
+                    - {required: ["httpPort"]}
+                    - {required: ["httpsPort"]}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: 'Port for HTTP connections.'
+                      example: '80'
+                    httpsPort:
+                      type: integer
+                      description: 'Port for HTTPS connections.'
+                      example: '443'
+                    behindL7Proxy:
+                      type: boolean
+                      description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
+                    realIPHeader:
+                      type: string
+                      description: 'Sets the header field for identifying the originating IP address of a client.'
+                      example: 'CF-Connecting-IP'
+                hostPortWithProxyProtocol:
+                  type: object
+                  anyOf:
+                    - {required: ['httpPort']}
+                    - {required: ['httpsPort']}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: 'Port for HTTP connections.'
+                      example: '80'
+                    httpsPort:
+                      type: integer
+                      description: 'Port for HTTPS connections.'
+                      example: '443'
+                acceptRequestsFrom:
+                  type: array
+                  description: 'IP or CIDR that is allowed to access the ingress controller.'
                   items:
                     type: string
                     pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-                annotations:
+                hsts:
+                  type: boolean
+                  description: 'Enable hsts.'
+                hstsOptions:
                   type: object
-                  description: 'Annotations that will be passed to service with type load balancer to configure it.'
+                  description: 'Options for HTTP Strict Transport Security.'
+                  properties:
+                    maxAge:
+                      type: string
+                      description: 'The time, in seconds, that the browser should remember that a site is only to be accessed using HTTPS.'
+                      pattern: '^([0-9])*([1-9])$'
+                    preload:
+                      type: boolean
+                      description: 'Add your site to preload list to enforce to use SSL/TLS connections on your site.'
+                    includeSubDomains:
+                      type: boolean
+                      description: 'If this optional parameter is specified, this rule applies to all of subdomains as well.'
+                geoIP2:
+                  type: object
+                  description: 'Options for GeoIP2.'
+                  properties:
+                    maxmindLicenseKey:
+                      type: string
+                      description: 'License key for MaxMind services.'
+                    maxmindEditionIDs:
+                      type: array
+                      description: 'MaxMind GeoIP2 database editions IDs.'
+                      items:
+                        type: string
+                        enum:
+                          - GeoIP2-Anonymous-IP
+                          - GeoIP2-Country
+                          - GeoIP2-City
+                          - GeoIP2-Connection-Type
+                          - GeoIP2-Domain
+                          - GeoIP2-ISP
+                          - GeoIP2-ASN
+                          - GeoLite2-ASN
+                          - GeoLite2-Country
+                          - GeoLite2-City
+                legacySSL:
+                  type: boolean
+                  description: 'Enable old TLS protocol versions and legacy cipher suites.'
+                disableHTTP2:
+                  type: boolean
+                  description: 'Switch off HTTP2 support.'
+                config:
+                  type: object
+                  description: 'Another ingress nginx configuration parameters to add to ingress controller configmap.'
+                additionalHeaders:
+                  type: object
+                  description: 'Headers to add to all request.'
                   additionalProperties:
                     type: string
-                behindL7Proxy:
-                  type: boolean
-                  description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
-                realIPHeader:
-                  type: string
-                  description: 'Sets the header field for identifying the originating IP address of a client.'
-                  example: 'CF-Connecting-IP'
-            loadBalancerWithProxyProtocol:
-              type: object
-              properties:
-                sourceRanges:
-                  type: array
-                  description: 'IP ranges (CIDR) that are allowed to access the load balancer.'
-                  items:
-                    type: string
-                    pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-                annotations:
+                resourcesRequests:
+                  required: ['mode']
                   type: object
-                  description: 'Annotations that will be passed to service with type load balancer to configure it.'
-                  additionalProperties:
-                    type: string
-            hostPort:
-              type: object
-              anyOf:
-              - {required: ["httpPort"]}
-              - {required: ["httpsPort"]}
-              properties:
-                httpPort:
-                  type: integer
-                  description: 'Port for HTTP connections.'
-                  example: '80'
-                httpsPort:
-                  type: integer
-                  description: 'Port for HTTPS connections.'
-                  example: '443'
-                behindL7Proxy:
-                  type: boolean
-                  description: 'Accepts all the incoming X-Forwarded-* headers and passes them to upstreams'
-                realIPHeader:
-                  type: string
-                  description: 'Sets the header field for identifying the originating IP address of a client.'
-                  example: 'CF-Connecting-IP'
-            hostPortWithProxyProtocol:
-              type: object
-              anyOf:
-              - {required: ['httpPort']}
-              - {required: ['httpsPort']}
-              properties:
-                httpPort:
-                  type: integer
-                  description: 'Port for HTTP connections.'
-                  example: '80'
-                httpsPort:
-                  type: integer
-                  description: 'Port for HTTPS connections.'
-                  example: '443'
-            acceptRequestsFrom:
-              type: array
-              description: 'IP or CIDR that is allowed to access the ingress controller.'
-              items:
-                type: string
-                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-            hsts:
-              type: boolean
-              description: 'Enable hsts.'
-            hstsOptions:
-              type: object
-              description: 'Options for HTTP Strict Transport Security.'
-              properties:
-                maxAge:
-                  type: string
-                  description: 'The time, in seconds, that the browser should remember that a site is only to be accessed using HTTPS.'
-                  pattern: '^([0-9])*([1-9])$'
-                preload:
-                  type: boolean
-                  description: 'Add your site to preload list to enforce to use SSL/TLS connections on your site.'
-                includeSubDomains:
-                  type: boolean
-                  description: 'If this optional parameter is specified, this rule applies to all of subdomains as well.'
-            geoIP2:
-              type: object
-              description: 'Options for GeoIP2.'
-              properties:
-                maxmindLicenseKey:
-                  type: string
-                  description: 'License key for MaxMind services.'
-                maxmindEditionIDs:
-                  type: array
-                  description: 'MaxMind GeoIP2 database editions IDs.'
-                  items:
-                    type: string
-                    enum:
-                    - GeoIP2-Anonymous-IP
-                    - GeoIP2-Country
-                    - GeoIP2-City
-                    - GeoIP2-Connection-Type
-                    - GeoIP2-Domain
-                    - GeoIP2-ISP
-                    - GeoIP2-ASN
-                    - GeoLite2-ASN
-                    - GeoLite2-Country
-                    - GeoLite2-City
-            legacySSL:
-              type: boolean
-              description: 'Enable old TLS protocol versions and legacy cipher suites.'
-            disableHTTP2:
-              type: boolean
-              description: 'Switch off HTTP2 support.'
-            config:
-              type: object
-              description: 'Another ingress nginx configuration parameters to add to ingress controller configmap.'
-            additionalHeaders:
-              type: object
-              description: 'Headers to add to all request.'
-              additionalProperties:
-                type: string
-            resourcesRequests:
-              required: ['mode']
-              type: object
-              description: 'Resources requests settings.'
-              properties:
-                mode:
-                  type: string
-                  enum: ['VPA', 'Static']
-                vpa:
-                  type: object
-                  description: 'VPA mode settings.'
+                  description: 'Resources requests settings.'
                   properties:
                     mode:
                       type: string
-                      enum: ['Initial', 'Auto']
-                    cpu:
+                      enum: ['VPA', 'Static']
+                    vpa:
                       type: object
+                      description: 'VPA mode settings.'
                       properties:
-                        max:
-                          description: 'Maximum allowed CPU requests.'
+                        mode:
                           type: string
-                        min:
-                          description: 'Minimum allowed CPU requests.'
-                          type: string
-                    memory:
+                          enum: ['Initial', 'Auto']
+                        cpu:
+                          type: object
+                          properties:
+                            max:
+                              description: 'Maximum allowed CPU requests.'
+                              type: string
+                            min:
+                              description: 'Minimum allowed CPU requests.'
+                              type: string
+                        memory:
+                          type: object
+                          properties:
+                            max:
+                              description: 'Maximum allowed memory requests.'
+                              type: string
+                            min:
+                              description: 'Minimum allowed memory requests.'
+                              type: string
+                    static:
                       type: object
+                      description: 'Static mode settings.'
                       properties:
-                        max:
-                          description: 'Maximum allowed memory requests.'
+                        cpu:
                           type: string
-                        min:
-                          description: 'Minimum allowed memory requests.'
+                          description: 'CPU requests.'
+                        memory:
                           type: string
-                static:
+                          description: 'Memory requests.'
+                customErrors:
                   type: object
-                  description: 'Static mode settings.'
+                  required: ['namespace', 'serviceName', 'codes']
                   properties:
-                    cpu:
+                    serviceName:
                       type: string
-                      description: 'CPU requests.'
-                    memory:
+                      description: 'Name of kubernetes service that leads to custom errors backend.'
+                      example: 'custom-errors-backend-service'
+                    namespace:
                       type: string
-                      description: 'Memory requests.'
-            customErrors:
-              type: object
-              required: ['namespace', 'serviceName', 'codes']
-              properties:
-                serviceName:
-                  type: string
-                  description: 'Name of kubernetes service that leads to custom errors backend.'
-                  example: 'custom-errors-backend-service'
-                namespace:
-                  type: string
-                  description: 'Namespace of custom errors backend.'
-                  example: 'default'
-                codes:
-                  type: array
-                  description: 'Error codes which should be redirected to custom errors backend.'
-                  items:
-                    type: string
-                    name: 'Error code.'
-                    pattern: '^[1-5][0-9][0-9]$'
-          oneOf:
-          - properties:
-              inlet:
-                enum: ['LoadBalancer']
-              loadBalancer: {}
-          - properties:
-              inlet:
-                enum: ['LoadBalancerWithProxyProtocol']
-              loadBalancerWithProxyProtocol: {}
-          - properties:
-              inlet:
-                enum: ['HostPort']
-              hostPort: {}
-            required: ['hostPort']
-          - properties:
-              hostPortWithProxyProtocol: {}
-              inlet:
-                enum: ['HostPortWithProxyProtocol']
-            required: ['hostPortWithProxyProtocol']
+                      description: 'Namespace of custom errors backend.'
+                      example: 'default'
+                    codes:
+                      type: array
+                      description: 'Error codes which should be redirected to custom errors backend.'
+                      items:
+                        type: string
+                        name: 'Error code.'
+                        pattern: '^[1-5][0-9][0-9]$'
+              oneOf:
+                - properties:
+                    inlet:
+                      enum: ['LoadBalancer']
+                    loadBalancer: {}
+                - properties:
+                    inlet:
+                      enum: ['LoadBalancerWithProxyProtocol']
+                    loadBalancerWithProxyProtocol: {}
+                - properties:
+                    inlet:
+                      enum: ['HostPort']
+                    hostPort: {}
+                  required: ['hostPort']
+                - properties:
+                    hostPortWithProxyProtocol: {}
+                    inlet:
+                      enum: ['HostPortWithProxyProtocol']
+                  required: ['hostPortWithProxyProtocol']
+      additionalPrinterColumns:
+        - jsonPath: .spec.ingressClass
+          name: Ingress Class
+          description: 'Name of served ingress class.'
+          type: string
+        - jsonPath: .spec.inlet
+          name: Inlet
+          description: 'The way traffic goes to current Ingress Controller from the outer network.'
+          type: string
+        - jsonPath: .spec.controllerVersion
+          name: Controller Version
+          description: 'Current NGINX Ingress Controller version.'
+          type: string
