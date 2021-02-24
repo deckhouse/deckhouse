@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: dexclients.deckhouse.io
@@ -12,37 +12,40 @@ spec:
     plural: dexclients
     singular: dexclient
     kind: DexClient
-  version: v1alpha1
-  validation:
-    openAPIV3Schema:
-      type: object
-      description: |
-        Позволяет приложениям, поддерживающим DC-аутентификацию взаимодействовать с dex.
-      required:
-      - spec
-      properties:
-        spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
           type: object
+          description: |
+            Позволяет приложениям, поддерживающим DC-аутентификацию взаимодействовать с dex.
+          required:
+            - spec
           properties:
-            allowedGroups:
-              type: array
-              x-description: 'Groups of users having access.'
-              description: |
-                Список групп, участникам которых разрешено подключаться к этому клиенту;
-                **По умолчанию:** разрешено всем группам.
-              items:
-                type: string
-            redirectURIs:
-              type: array
-              x-description: 'Array or urls that dex can redirect to after successful authentication.'
-              description: |
-                Список адресов, на которые допустимо редиректить dex'у после успешного прохождения аутентификации.
-              items:
-                type: string
-            trustedPeers:
-              type: array
-              x-description: 'OAuth2 client IDs that allowed cross authentication with the current client.'
-              description: |
-                ID клиентов, которым позволена cross аутентификация. [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth).
-              items:
-                type: string
+            spec:
+              type: object
+              properties:
+                allowedGroups:
+                  type: array
+                  x-description: 'Groups of users having access.'
+                  description: |
+                    Список групп, участникам которых разрешено подключаться к этому клиенту;
+                    **По умолчанию:** разрешено всем группам.
+                  items:
+                    type: string
+                redirectURIs:
+                  type: array
+                  x-description: 'Array or urls that dex can redirect to after successful authentication.'
+                  description: |
+                    Список адресов, на которые допустимо редиректить dex'у после успешного прохождения аутентификации.
+                  items:
+                    type: string
+                trustedPeers:
+                  type: array
+                  x-description: 'OAuth2 client IDs that allowed cross authentication with the current client.'
+                  description: |
+                    ID клиентов, которым позволена cross аутентификация. [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth).
+                  items:
+                    type: string

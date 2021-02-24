@@ -11,7 +11,6 @@ import (
 )
 
 func skipModuleImageNameIfNeeded(filePath string) bool {
-	// Kube-apiserver 1.15 needs golang 1.12 to build, so we don't use $BASE_GOLANG_ALPINE image for building
 	return filePath == "/deckhouse/modules/040-control-plane-manager/images/kube-apiserver/werf.inc.yaml"
 }
 

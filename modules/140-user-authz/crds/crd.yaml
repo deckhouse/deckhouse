@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: clusterauthorizationrules.deckhouse.io
@@ -12,142 +12,144 @@ spec:
     plural: clusterauthorizationrules
     singular: clusterauthorizationrule
     kind: ClusterAuthorizationRule
-  version: v1alpha1
-  validation:
-    openAPIV3Schema:
-      type: object
-      description: |
-        Управляет настройками RBAC и авторизацией по namespace.
-      required:
-      - spec
-      properties:
-        spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
           type: object
+          description: |
+            Управляет настройками RBAC и авторизацией по namespace.
           required:
-          - subjects
+          - spec
           properties:
-            accessLevel:
-              type: string
-              description: |
-                Уровень доступа:
-                * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-                * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять поды (что обеспечивает возможность перезагрузки);
-                * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять namespace и все объекты, которые обычно нужны для прикладных задач;
+            spec:
+              type: object
+              required:
+              - subjects
+              properties:
+                accessLevel:
+                  type: string
+                  description: |
+                    Уровень доступа:
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять поды (что обеспечивает возможность перезагрузки);
+                    * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять namespace и все объекты, которые обычно нужны для прикладных задач;
 
-                  **Важно!** т.к. Editor уполномочен редактировать RoleBindings, он может сам себе расширить полномочия в рамках namespace.
-                * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-                * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
+                      **Важно!** т.к. Editor уполномочен редактировать RoleBindings, он может сам себе расширить полномочия в рамках namespace.
+                    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
 
-                  **Важно!** т.к. `ClusterEditor` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
-                * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, MachineSets, Machines, OpenstackInstanceClasses..., а так же ClusterAuthorizationRule). Роль для работы администратора кластера.
+                      **Важно!** т.к. `ClusterEditor` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
+                    * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, MachineSets, Machines, OpenstackInstanceClasses..., а так же ClusterAuthorizationRule). Роль для работы администратора кластера.
 
-                  **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
-                * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
-              enum: [User,Master,PrivilegedUser,Deploy,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
-              example: 'PrivilegedUser'
-            portForwarding:
-              type: boolean
-              default: false
-              description: |
-                Разрешить/запретить выполнять `port-forward`.
-            allowScale:
-              type: boolean
-              default: false
-              x-description: 'Allow scaling. Default: false.'
-              description: |
-                Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
-            allowAccessToSystemNamespaces:
-              type: boolean
-              default: false
-              x-description: 'Allow access to System namespaces (kube-*, d8-*, loghouse, default). Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: false.'
-              description: |
-                Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+                      **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
+                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
+                  enum: [User,Master,PrivilegedUser,Deploy,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
+                  example: 'PrivilegedUser'
+                portForwarding:
+                  type: boolean
+                  default: false
+                  description: |
+                    Разрешить/запретить выполнять `port-forward`.
+                allowScale:
+                  type: boolean
+                  default: false
+                  x-description: 'Allow scaling. Default: false.'
+                  description: |
+                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                allowAccessToSystemNamespaces:
+                  type: boolean
+                  x-description: 'Allow access to System namespaces (kube-*, d8-*, loghouse, default). Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: false.'
+                  description: |
+                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
 
-                **Доступно только** с включённым параметром `enableMultiTenancy`.
-            limitNamespaces:
-              type: array
-              x-description: 'List of namespace regex-patterns to allow for user. Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: empty, no namespaces allowed.'
-              description: |
-                Белый список разрешённых namespace в формате регулярных выражений.
+                    **Доступно только** с включённым параметром `enableMultiTenancy`.
+                limitNamespaces:
+                  type: array
+                  x-description: 'List of namespace regex-patterns to allow for user. Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: empty, no namespaces allowed.'
+                  description: |
+                    Белый список разрешённых namespace в формате регулярных выражений.
 
-                Политика:
-                * Если список указан, то разрешаем доступ только по нему.
-                * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    Политика:
+                    * Если список указан, то разрешаем доступ только по нему.
+                    * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
-                **Доступно только** с включённым параметром `enableMultiTenancy`.
-              items:
-                type: string
-                minLength: 1
-                example: 'production-.*'
-            subjects:
-              type: array
-              description: |
-                Пользователи и/или группы, которым необходимо предоставить права.
-
-                [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
-
-                **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-              items:
-                type: object
-                required:
-                - kind
-                - name
-                properties:
-                  kind:
-                    type: string
-                    enum: [User,Group,ServiceAccount]
-                    x-description: 'Type of user identification resource. One of User, Group or ServiceAccount.'
-                    description: 'Тип ресурса.'
-                    example: 'Group'
-                  name:
+                    **Доступно только** с включённым параметром `enableMultiTenancy`.
+                  items:
                     type: string
                     minLength: 1
-                    description: 'Имя ресурса.'
-                    example: 'some-group-name'
-                  namespace:
-                    type: string
-                    minLength: 1
-                    description: 'Namespace для ServiceAccount.'
-            additionalRoles:
-              type: array
-              x-description: 'Additional roles to bind for subjects. Not recomended option.'
-              description: |
-                Дополнительные роли, которые необходимо выдать для заданных `subjects`.
+                    example: 'production-.*'
+                subjects:
+                  type: array
+                  description: |
+                    Пользователи и/или группы, которым необходимо предоставить права.
 
-                Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
 
-                Пример:
-                ```yaml
+                    **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                  items:
+                    type: object
+                    required:
+                    - kind
+                    - name
+                    properties:
+                      kind:
+                        type: string
+                        enum: [User,Group,ServiceAccount]
+                        x-description: 'Type of user identification resource. One of User, Group or ServiceAccount.'
+                        description: 'Тип ресурса.'
+                        example: 'Group'
+                      name:
+                        type: string
+                        minLength: 1
+                        description: 'Имя ресурса.'
+                        example: 'some-group-name'
+                      namespace:
+                        type: string
+                        minLength: 1
+                        description: 'Namespace для ServiceAccount.'
                 additionalRoles:
-                - apiGroup: rbac.authorization.k8s.io
-                  kind: ClusterRole
-                  name: cluster-write-all
-                - apiGroup: rbac.authorization.k8s.io
-                  kind: ClusterRole
-                  name: cluster-read-all
-                ```
-              items:
-                type: object
-                required:
-                - apiGroup
-                - kind
-                - name
-                properties:
-                  apiGroup:
-                    type: string
-                    x-description: 'apiGroup for users.'
-                    description: "apiGroup`а для пользователей"
-                    example: 'rbac.authorization.k8s.io'
-                    minLength: 1
-                  kind:
-                    type: string
-                    x-description: 'kind: ClusterRole or Role'
-                    description: 'kind роли'
-                    enum: [ClusterRole, Role]
-                    example: 'ClusterRole'
-                  name:
-                    type: string
-                    x-description: 'name of ClusterRole or Role'
-                    description: 'Название `ClusterRole` или `Role`'
-                    minLength: 1
-                    example: 'cluster-admin'
+                  type: array
+                  x-description: 'Additional roles to bind for subjects. Not recomended option.'
+                  description: |
+                    Дополнительные роли, которые необходимо выдать для заданных `subjects`.
+
+                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+
+                    Пример:
+                    ```yaml
+                    additionalRoles:
+                    - apiGroup: rbac.authorization.k8s.io
+                      kind: ClusterRole
+                      name: cluster-write-all
+                    - apiGroup: rbac.authorization.k8s.io
+                      kind: ClusterRole
+                      name: cluster-read-all
+                    ```
+                  items:
+                    type: object
+                    required:
+                    - apiGroup
+                    - kind
+                    - name
+                    properties:
+                      apiGroup:
+                        type: string
+                        x-description: 'apiGroup for users.'
+                        description: "apiGroup`а для пользователей"
+                        example: 'rbac.authorization.k8s.io'
+                        minLength: 1
+                      kind:
+                        type: string
+                        x-description: 'kind: ClusterRole or Role'
+                        description: 'kind роли'
+                        enum: [ClusterRole, Role]
+                        example: 'ClusterRole'
+                      name:
+                        type: string
+                        x-description: 'name of ClusterRole or Role'
+                        description: 'Название `ClusterRole` или `Role`'
+                        minLength: 1
+                        example: 'cluster-admin'

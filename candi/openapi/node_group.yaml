@@ -1,5 +1,5 @@
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: nodegroups.deckhouse.io
@@ -8,337 +8,402 @@ metadata:
     module: node-manager
 spec:
   group: deckhouse.io
-  versions:
-    - name: v1alpha1
-      served: true
-      storage: true
   scope: Cluster
+  preserveUnknownFields: false
   names:
     plural: nodegroups
     singular: nodegroup
     kind: NodeGroup
     shortNames:
-    - ng
-  subresources:
-    status: {}
-  additionalPrinterColumns:
-  - name: Type
-    type: string
-    description: "Type of nodes in group"
-    JSONPath: .spec.nodeType
-  - name: Ready
-    type: integer
-    description: "Number of ready Kubernetes nodes in the group."
-    JSONPath: .status.ready
-  - name: Nodes
-    type: integer
-    description: "Number of Kubernetes nodes (in any state) in the group."
-    JSONPath: .status.nodes
-  - name: UpToDate
-    type: integer
-    description: "Number of up-to-date nodes in the group."
-    JSONPath: .status.upToDate
-  - name: Instances
-    type: integer
-    description: "Number of instances (in any state) in the group."
-    JSONPath: .status.instances
-  - name: Desired
-    type: integer
-    description: "Number of desired instances in the group."
-    JSONPath: .status.desired
-  - name: Min
-    type: integer
-    description: "Minimal amount of instances in the group."
-    JSONPath: .status.min
-  - name: Max
-    type: integer
-    description: "Maximum amount of instances in the group."
-    JSONPath: .status.max
-  - name: Standby
-    type: integer
-    description: "Number of overprovisioned instances in the group."
-    JSONPath: .status.standby
-  - name: Error
-    type: string
-    description: "Error message about possible problems with the group handling."
-    JSONPath: .status.conditionSummary.errorMessage
-  - name: Age
-    type: date
-    JSONPath: .metadata.creationTimestamp
-  validation:
-    openAPIV3Schema:
-      type: object
-      description: 'NodeGroup defines parameters for a group of Nodes and, if nodeType is Cloud, also runtime parameters for instances to be created.'
-      required:
-      - spec
-      properties:
-        status:
+      - ng
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns: &additionalPrinterColumns
+        - name: Type
+          type: string
+          description: "Type of nodes in group"
+          jsonPath: .spec.nodeType
+        - name: Ready
+          type: integer
+          description: "Number of ready Kubernetes nodes in the group."
+          jsonPath: .status.ready
+        - name: Nodes
+          type: integer
+          description: "Number of Kubernetes nodes (in any state) in the group."
+          jsonPath: .status.nodes
+        - name: UpToDate
+          type: integer
+          description: "Number of up-to-date nodes in the group."
+          jsonPath: .status.upToDate
+        - name: Instances
+          type: integer
+          description: "Number of instances (in any state) in the group."
+          jsonPath: .status.instances
+        - name: Desired
+          type: integer
+          description: "Number of desired instances in the group."
+          jsonPath: .status.desired
+        - name: Min
+          type: integer
+          description: "Minimal amount of instances in the group."
+          jsonPath: .status.min
+        - name: Max
+          type: integer
+          description: "Maximum amount of instances in the group."
+          jsonPath: .status.max
+        - name: Standby
+          type: integer
+          description: "Number of overprovisioned instances in the group."
+          jsonPath: .status.standby
+        - name: Error
+          type: string
+          description: "Error message about possible problems with the group handling."
+          jsonPath: .status.conditionSummary.errorMessage
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
           type: object
-          required: []
+          description: 'NodeGroup defines parameters for a group of Nodes and, if nodeType is Cloud, also runtime parameters for instances to be created.'
+          required:
+            - spec
           properties:
-            ready:
-              type: integer
-              description: "Number of ready Kubernetes nodes in the group."
-            nodes:
-              type: integer
-              description: "Number of Kubernetes nodes (in any state) in the group."
-            instances:
-              type: integer
-              description: "Number of instances (in any state) in the group."
-            desired:
-              type: integer
-              description: "Number of desired machines in the group."
-            min:
-              type: integer
-              description: "Minimal amount of instances in the group."
-            max:
-              type: integer
-              description: "Maximum amount of instances in the group."
-            upToDate:
-              type: integer
-              description: "Number of up-to-date nodes in the group."
-            error:
-              type: string
-              description: "Error message about possible problems with the group handling."
-            lastMachineFailures:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                    description: "Machine's name."
-                  providerID:
-                    type: string
-                    description: "Machine's ProviderID."
-                  ownerRef:
-                    type: string
-                    description: "Machine owner's name."
-                  lastOperation:
+            status: &status
+              type: object
+              required: [ ]
+              properties:
+                ready:
+                  type: integer
+                  description: "Number of ready Kubernetes nodes in the group."
+                nodes:
+                  type: integer
+                  description: "Number of Kubernetes nodes (in any state) in the group."
+                instances:
+                  type: integer
+                  description: "Number of instances (in any state) in the group."
+                desired:
+                  type: integer
+                  description: "Number of desired machines in the group."
+                min:
+                  type: integer
+                  description: "Minimal amount of instances in the group."
+                max:
+                  type: integer
+                  description: "Maximum amount of instances in the group."
+                upToDate:
+                  type: integer
+                  description: "Number of up-to-date nodes in the group."
+                error:
+                  type: string
+                  description: "Error message about possible problems with the group handling."
+                lastMachineFailures:
+                  type: array
+                  items:
                     type: object
                     properties:
-                      description:
+                      name:
                         type: string
-                        description: "Last operation's description."
-                      lastUpdateTime:
+                        description: "Machine's name."
+                      providerID:
                         type: string
-                        description: "Timestamp of last status update for operation."
-                      state:
+                        description: "Machine's ProviderID."
+                      ownerRef:
                         type: string
-                        description: "Machine's operation state."
-                      type:
-                        type: string
-                        description: "Type of operation."
-        spec:
-          type: object
-          required:
-          - nodeType
-          properties:
-            nodeType:
-              type: string
-              enum:
-              - Cloud
-              - Static
-              - Hybrid
-            kubernetesVersion:
-              type: string
-              enum:
-              - "1.14"
-              - "1.15"
-              - "1.16"
-              - "1.17"
-              - "1.18"
-              - "1.19"
-            cri:
+                        description: "Machine owner's name."
+                      lastOperation:
+                        type: object
+                        properties:
+                          description:
+                            type: string
+                            description: "Last operation's description."
+                          lastUpdateTime:
+                            type: string
+                            description: "Timestamp of last status update for operation."
+                          state:
+                            type: string
+                            description: "Machine's operation state."
+                          type:
+                            type: string
+                            description: "Type of operation."
+            spec:
               type: object
-              description: |
-                Container runtime parameters.
+              required:
+                - nodeType
               properties:
-                type:
+                nodeType: &nodeType
                   type: string
-                  description: |
-                    Container runtime type
                   enum:
-                  - "Docker"
-                  - "Containerd"
-                  - "NotManaged"
-                containerd:
+                    - Cloud
+                    - Static
+                    - Hybrid
+                kubernetesVersion:
+                  type: string
+                  enum:
+                    - "1.14"
+                    - "1.15"
+                    - "1.16"
+                    - "1.17"
+                    - "1.18"
+                    - "1.19"
+                cri:
                   type: object
-                  description: Containerd runtime parameters.
+                  description: |
+                    Container runtime parameters.
+                  properties:
+                    type: &criType
+                      type: string
+                      description: |
+                        Container runtime type
+                      enum:
+                        - "Docker"
+                        - "Containerd"
+                        - "NotManaged"
+                    containerd: &criContainerd
+                      type: object
+                      description: Containerd runtime parameters.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: Set the max concurrent downloads for each pull (default 3).
+                cloudInstances: &cloudInstances
+                  type: object
+                  required:
+                    - classReference
+                    - minPerZone
+                    - maxPerZone
+                  properties:
+                    zones:
+                      description: List of availability zones to create instances in.
+                      example: |
+                        - Helsinki
+                        - Espoo
+                        - Tampere
+                      type: array
+                      items:
+                        type: string
+                    minPerZone:
+                      description: |
+                        Minimal amount of instances for the group in each zone.
+                        If equals-or-more than "maxPerZone", cluster-autoscaler is disabled for this NodeGroup.
+                      type: integer
+                      minimum: 0
+                    maxPerZone:
+                      description: |
+                        Maximum amount of instances for the group in each zone.
+                      type: integer
+                      minimum: 0
+                    maxUnavailablePerZone:
+                      description: |
+                        Maximum amount of unavailable instances (during rollout) in the group in each zone.
+                      type: integer
+                      minimum: 0
+                    maxSurgePerZone:
+                      description: |
+                        Maximum amount of instances to rollout simultaneously in the group in each zone.
+                      type: integer
+                      minimum: 0
+                    standby:
+                      description: |
+                        Amount of overprovisioned Nodes for this NodeGroup.
+                        The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
+                        The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
+                      pattern: '^[0-9]+%?$'
+                      x-kubernetes-int-or-string: true
+                    standbyHolder:
+                      type: object
+                      properties:
+                        notHeldResources:
+                          description: |
+                            Describes the amount of resources, that will not be held by standby holder.
+                          type: object
+                          properties:
+                            cpu:
+                              description: |
+                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
+                              pattern: '^[0-9]+m?$'
+                              x-kubernetes-int-or-string: true
+                            memory:
+                              description: |
+                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
+                              pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              x-kubernetes-int-or-string: true
+                    classReference:
+                      type: object
+                      properties:
+                        kind:
+                          type: string
+                          enum:
+                            - OpenStackInstanceClass
+                            - GCPInstanceClass
+                            - VsphereInstanceClass
+                            - AWSInstanceClass
+                            - YandexInstanceClass
+                            - AzureInstanceClass
+                        name:
+                          type: string
+                nodeTemplate: &nodeTemplate
+                  description: Specification of some of the fields that will be maintained in all nodes of the group.
+                  example: |
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                  type: object
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    taints:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum:
+                              - NoSchedule
+                              - PreferNoSchedule
+                              - NoExecute
+                          key:
+                            type: string
+                          value:
+                            type: string
+                static:
+                  description: Static node parameters
+                  type: object
+                  properties:
+                    internalNetworkCIDRs:
+                      description: Subnet CIDR
+                      type: array
+                      items:
+                        type: string
+                chaos: &chaos
+                  description: Chaos monkey settings.
+                  example: |
+                    mode: DrainAndReboot
+                    period: 24h
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - Disabled
+                        - DrainAndDelete
+                    period:
+                      type: string
+                      pattern: '^[0-9]+[mh]{1}$'
+                operatingSystem: &operatingSystem
+                  description: Operating System settings for nodes.
+                  type: object
+                  properties:
+                    manageKernel:
+                      type: boolean
+                      description: Enable kernel maintenance from bashible (default true).
+                disruptions: &disruptions
+                  description: Disruptions settings for nodes.
+                  type: object
+                  required:
+                    - approvalMode
+                  properties:
+                    approvalMode:
+                      type: string
+                      enum:
+                        - Manual
+                        - Automatic
+                    automatic:
+                      type: object
+                      properties:
+                        drainBeforeApproval:
+                          type: boolean
+                docker:
+                  description: Docker settings for nodes.
+                  type: object
                   properties:
                     maxConcurrentDownloads:
                       type: integer
                       description: Set the max concurrent downloads for each pull (default 3).
-            cloudInstances:
-              type: object
-              required:
-              - classReference
-              - minPerZone
-              - maxPerZone
-              properties:
-                zones:
-                  description: List of availability zones to create instances in.
-                  example: |
-                    - Helsinki
-                    - Espoo
-                    - Tampere
-                  type: array
-                  items:
-                    type: string
-                minPerZone:
-                  description: |
-                    Minimal amount of instances for the group in each zone.
-                    If equals-or-more than "maxPerZone", cluster-autoscaler is disabled for this NodeGroup.
-                  type: integer
-                  minimum: 0
-                maxPerZone:
-                  description: |
-                    Maximum amount of instances for the group in each zone.
-                  type: integer
-                  minimum: 0
-                maxUnavailablePerZone:
-                  description: |
-                    Maximum amount of unavailable instances (during rollout) in the group in each zone.
-                  type: integer
-                  minimum: 0
-                maxSurgePerZone:
-                  description: |
-                    Maximum amount of instances to rollout simultaneously in the group in each zone.
-                  type: integer
-                  minimum: 0
-                standby:
-                  description: |
-                    Amount of overprovisioned Nodes for this NodeGroup.
-                    The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
-                    The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
-                  pattern: '^[0-9]+%?$'
-                  x-kubernetes-int-or-string: true
-                standbyHolder:
-                  type: object
-                  properties:
-                    notHeldResources:
-                      description: |
-                        Describes the amount of resources, that will not be held by standby holder.
-                      type: object
-                      properties:
-                        cpu:
-                          description: |
-                            Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
-                            The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                          pattern: '^[0-9]+m?$'
-                          x-kubernetes-int-or-string: true
-                        memory:
-                          description: |
-                            Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
-                            The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                          pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                          x-kubernetes-int-or-string: true
-                classReference:
-                  type: object
-                  properties:
-                    kind:
-                      type: string
-                      enum:
-                      - OpenStackInstanceClass
-                      - GCPInstanceClass
-                      - VsphereInstanceClass
-                      - AWSInstanceClass
-                      - YandexInstanceClass
-                      - AzureInstanceClass
-                    name:
-                      type: string
-            nodeTemplate:
-              description: Specification of some of the fields that will be maintained in all nodes of the group.
-              example: |
-                labels:
-                  environment: production
-                  app: warp-drive-ai
-                annotations:
-                  ai.fleet.com/discombobulate: "true"
-                taints:
-                - effect: NoExecute
-                  key: ship-class
-                  value: frigate
-              type: object
-              properties:
-                labels:
-                  type: object
-                  additionalProperties:
-                    type: string
-                annotations:
-                  type: object
-                  additionalProperties:
-                    type: string
-                taints:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      effect:
-                        type: string
-                        enum:
-                        - NoSchedule
-                        - PreferNoSchedule
-                        - NoExecute
-                      key:
-                        type: string
-                      value:
-                        type: string
-            chaos:
-              description: Chaos monkey settings.
-              example: |
-                mode: DrainAndReboot
-                period: 24h
-              type: object
-              properties:
-                mode:
-                  type: string
-                  enum:
-                  - Disabled
-                  - DrainAndDelete
-                period:
-                  type: string
-                  pattern: '^[0-9]+[mh]{1}$'
-            operatingSystem:
-              description: Operating System settings for nodes.
-              type: object
-              properties:
-                manageKernel:
-                  type: boolean
-                  description: Enable kernel maintenance from bashible (default true).
-            disruptions:
-              description: Disruptions settings for nodes.
-              type: object
-              required:
-              - approvalMode
-              properties:
-                approvalMode:
-                  type: string
-                  enum:
-                    - Manual
-                    - Automatic
-                automatic:
-                  type: object
-                  properties:
-                    drainBeforeApproval:
+                    manage:
                       type: boolean
-            docker:
-              description: Docker settings for nodes.
+                      description: Enable docker maintenance from bashible  (default true).
+                kubelet: &kubelet
+                  description: Kubelet settings for nodes.
+                  type: object
+                  properties:
+                    maxPods:
+                      type: integer
+                      description: Set the max count of pods per node (default 110).
+                    rootDir:
+                      type: string
+                      description: Directory path for managing kubelet files (volume mounts,etc). (default "/var/lib/kubelet")
+    - name: v1alpha2
+      served: true
+      storage: false
+      additionalPrinterColumns: *additionalPrinterColumns
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: 'NodeGroup defines parameters for a group of Nodes and, if nodeType is Cloud, also runtime parameters for instances to be created.'
+          required:
+            - spec
+          properties:
+            status: *status
+            spec:
               type: object
+              required:
+                - nodeType
               properties:
-                maxConcurrentDownloads:
-                  type: integer
-                  description: Set the max concurrent downloads for each pull (default 3).
-                manage:
-                  type: boolean
-                  description: Enable docker maintenance from bashible  (default true).
-            kubelet:
-              description: Kubelet settings for nodes.
-              type: object
-              properties:
-                maxPods:
-                  type: integer
-                  description: Set the max count of pods per node (default 110).
-                rootDir:
-                  type: string
-                  description: Directory path for managing kubelet files (volume mounts,etc). (default "/var/lib/kubelet")
+                nodeType: *nodeType
+                cri:
+                  type: object
+                  description: |
+                    Container runtime parameters.
+                  properties:
+                    type: *criType
+                    containerd: *criContainerd
+                    docker:
+                      type: object
+                      description: Docker settings for nodes.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: Set the max concurrent downloads for each pull (default 3).
+                        manage:
+                          type: boolean
+                          description: Enable docker maintenance from bashible  (default true).
+                  oneOf:
+                    - properties:
+                        type:
+                          enum: ["Docker"]
+                        docker: {}
+                    - properties:
+                        type:
+                          enum: ["Containerd"]
+                        containerd: {}
+                    - properties:
+                        type:
+                          enum: ["NotManaged"]
+                cloudInstances: *cloudInstances
+                nodeTemplate: *nodeTemplate
+                chaos: *chaos
+                operatingSystem: *operatingSystem
+                disruptions: *disruptions
+                kubelet: *kubelet

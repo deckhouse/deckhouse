@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: nodeusers.deckhouse.io
@@ -12,60 +12,61 @@ spec:
     plural: nodeusers
     singular: nodeuser
     kind: NodeUser
-  version: v1alpha1
-  additionalPrinterColumns:
-  - name: Uid
-    JSONPath: .spec.uid
-    type: number
-    description: User ID
-  - name: IsSudoer
-    JSONPath: .spec.isSudoer
-    type: boolean
-    description: Can user run commands as root
-  - name: ExtraGroups
-    JSONPath: .spec.extraGroups
-    type: string
-    description: extra groups for user
-  - name: Age
-    JSONPath: .metadata.creationTimestamp
-    type: date
-    description: >
-        CreationTimestamp is a timestamp representing the server time when this object was created.
-        It is not guaranteed to be set in happens-before order across separate operations.
-        Clients may not set this value. It is represented in RFC3339 form and is in UTC.
-        Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-  validation:
-    openAPIV3Schema:
-      type: object
-      required:
-      - spec
-      properties:
-        spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
           type: object
           required:
-          - uid
-          - sshPublicKey
-          - passwordHash
+            - spec
           properties:
-            uid:
-              type: number
-              description: 'Node user ID.'
-              example: '1001'
-              minimum: 1001
-            sshPublicKey:
-              type: string
-              description: 'Node user ssh public key.'
-              example: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ'
-            passwordHash:
-              type: string
-              description: 'Hashed user password.'
-              example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
-            isSudoer:
-              type: boolean
-              description: 'Persistence of node user in sudo group.'
-              example: 'true'
-            extraGroups:
-              type: array
-              description: 'Node user additional system groups.'
-              items:
-                type: string
+            spec:
+              type: object
+              required:
+                - uid
+                - sshPublicKey
+                - passwordHash
+              properties:
+                uid:
+                  type: number
+                  description: 'Node user ID.'
+                  example: '1001'
+                  minimum: 1001
+                sshPublicKey:
+                  type: string
+                  description: 'Node user ssh public key.'
+                  example: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ'
+                passwordHash:
+                  type: string
+                  description: 'Hashed user password.'
+                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
+                isSudoer:
+                  type: boolean
+                  description: 'Persistence of node user in sudo group.'
+                  example: 'true'
+                extraGroups:
+                  type: array
+                  description: 'Node user additional system groups.'
+                  items:
+                    type: string
+      additionalPrinterColumns:
+        - name: Uid
+          jsonPath: .spec.uid
+          type: number
+          description: User ID
+        - name: IsSudoer
+          jsonPath: .spec.isSudoer
+          type: boolean
+          description: Can user run commands as root
+        - name: ExtraGroups
+          jsonPath: .spec.extraGroups
+          type: string
+          description: extra groups for user
+        - name: Age
+          jsonPath: .metadata.creationTimestamp
+          type: date
+          description: >
+            CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+

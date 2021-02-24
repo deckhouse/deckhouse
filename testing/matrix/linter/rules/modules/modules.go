@@ -93,6 +93,7 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 			existedFiles = append(existedFiles, file)
 		}
 	}
+
 	if len(existedFiles) == 0 {
 		return errors.EmptyRuleError
 	}
@@ -148,7 +149,6 @@ func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
 		}
 		modules = append(modules, module)
 	}
-
 	return modules, lintRuleErrorsList.ConvertToError()
 }
 
