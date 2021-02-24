@@ -7,7 +7,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Kube DNS :: migrate_service_ports ::", func() {
+var _ = Describe("Kube DNS :: migrate_service_ports_final ::", func() {
 	const (
 		initValues = `
 kubeDns:
@@ -18,7 +18,7 @@ kubeDns:
 `
 		initConfigValues = `{}`
 
-		notMigratedDNSService = `
+		originalState = `
 ---
 apiVersion: v1
 kind: Service
@@ -35,25 +35,6 @@ spec:
     port: 53
     protocol: TCP
     targetPort: 53
-`
-
-		migratedDNSService = `
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: d8-kube-dns
-  namespace: kube-system
-spec:
-  ports:
-  - name: dns
-    port: 53
-    protocol: UDP
-    targetPort: 5353
-  - name: dns-tcp
-    port: 53
-    protocol: TCP
-    targetPort: 5353
 `
 	)
 
@@ -70,13 +51,14 @@ spec:
 		})
 	})
 
-	Context("Cluster with a Service for migration", func() {
+	Context("Cluster with a Service for migration with migration flag set", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(notMigratedDNSService))
+			f.BindingContexts.Set(f.KubeStateSet(originalState))
+			f.ValuesSet("kubeDns.internal.migration", true)
 			f.RunHook()
 		})
 
-		It("Hook must not fail, storage class should be present as a default", func() {
+		It("Hook must not fail, ports should not be patched", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			service := f.KubernetesResource("Service", "kube-system", "d8-kube-dns")
 			Expect(service.Exists()).To(BeTrue())
@@ -84,22 +66,23 @@ spec:
   - name: dns
     port: 53
     protocol: UDP
-    targetPort: 5353
+    targetPort: 53
   - name: dns-tcp
     port: 53
     protocol: TCP
-    targetPort: 5353
+    targetPort: 53
 `))
 		})
 	})
 
-	Context("Cluster with a migrated Service", func() {
+	Context("Cluster with a Service for migration migration flag unset", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(migratedDNSService))
+			f.BindingContexts.Set(f.KubeStateSet(originalState))
+			f.ValuesSet("kubeDns.internal.migration", false)
 			f.RunHook()
 		})
 
-		It("Hook must not fail, storage class should be present as a default", func() {
+		It("Hook must not fail, ports should be patched", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			service := f.KubernetesResource("Service", "kube-system", "d8-kube-dns")
 			Expect(service.Exists()).To(BeTrue())
