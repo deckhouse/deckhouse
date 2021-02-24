@@ -71,5 +71,4 @@ const (
 	StatusFail Status = iota
 	StatusSuccess
 	StatusUnknown
-	StatusNoData
 )

@@ -18,16 +18,9 @@ func ErrUnknownResult(format string, a ...interface{}) Error {
 	}
 }
 
-func ErrNoData(format string, a ...interface{}) Error {
-	return probeError{
-		err:    fmt.Errorf(format, a...),
-		result: StatusNoData,
-	}
-}
-
 type Error interface {
 	Error() string
-	Result() Status
+	Status() Status
 }
 
 type probeError struct {
@@ -39,6 +32,6 @@ func (pe probeError) Error() string {
 	return pe.err.Error()
 }
 
-func (pe probeError) Result() Status {
+func (pe probeError) Status() Status {
 	return pe.result
 }

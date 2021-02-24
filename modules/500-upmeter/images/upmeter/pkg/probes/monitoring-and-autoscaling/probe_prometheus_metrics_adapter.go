@@ -1,12 +1,12 @@
 package monitoring_and_autoscaling
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/tidwall/gjson"
 
 	"upmeter/pkg/checks"
-	"upmeter/pkg/probes/control-plane"
 )
 
 /*
@@ -24,55 +24,61 @@ Period: 10s
 Timeout: 5s
 */
 
-func NewPromMetricsAdapterProbe() *checks.Probe {
+func NewPMAPodsProbe() *checks.Probe {
 	const (
-		probePeriod  = 5 * time.Second
-		probeTimeout = 5 * time.Second
+		period  = 5 * time.Second
+		timeout = 5 * time.Second
 
 		namespace     = "d8-monitoring"
 		labelSelector = "app=prometheus-metrics-adapter"
 	)
 
-	endpoint := "https://kubernetes.default/apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m"
-	checker := metricsAdapterChecker{
-		namespace:     namespace,
-		labelSelector: labelSelector,
-		endpoint:      endpoint,
-	}
+	pr := newProbe("prometheus-metrics-adapter", period)
+	kubeAccessor := newKubeAccessor(pr)
+	checker := newAnyPodReadyChecker(kubeAccessor, timeout, namespace, labelSelector)
 
-	nsProbeRef := checks.ProbeRef{
-		Group: groupName,
-		Probe: "prometheus-metrics-adapter",
-	}
-
-	pr := &checks.Probe{
-		Period: probePeriod,
-		Ref:    &nsProbeRef,
-	}
-
-	pipeline := NewPodCheckPipeline(pr, probeTimeout, checker)
-
-	pr.RunFn = func() {
-		// Set Unknown result if API server is unavailable
-		if !control_plane.CheckApiAvailable(pr) {
-			return
-		}
-		pipeline.Go()
-	}
+	pr.RunFn = RunFn(pr, checker, "pods")
 
 	return pr
 }
 
-type metricsAdapterChecker struct {
-	commonPodChecker
+func NewPrometheusMetricsAdapterAPIProbe() *checks.Probe {
+	const (
+		period   = 5 * time.Second
+		timeout  = 5 * time.Second
+		endpoint = "https://kubernetes.default/apis/custom.metrics.k8s.io/v1beta1/namespaces/d8-upmeter/metrics/memory_1m"
+	)
 
-	namespace     string
-	labelSelector string
-	endpoint      string
+	pr := newProbe("prometheus-metrics-adapter", period)
+	kubeAccessor := newKubeAccessor(pr)
+	checker := newPMAEndpointChecker(kubeAccessor, endpoint, timeout)
+
+	pr.RunFn = RunFn(pr, checker, "api")
+
+	return pr
 }
 
-func (c metricsAdapterChecker) Endpoint() string {
-	return c.endpoint
+type metricsAdapterAPIVerifier struct {
+	endpoint     string
+	kubeAccessor *KubeAccessor
+}
+
+func newPMAEndpointChecker(kubeAccessor *KubeAccessor, endpoint string, timeout time.Duration) Checker {
+	verifier := metricsAdapterAPIVerifier{
+		endpoint:     endpoint,
+		kubeAccessor: kubeAccessor,
+	}
+	checker := newHTTPChecker(insecureClient, verifier)
+	return withTimeout(checker, timeout)
+
+}
+
+func (v metricsAdapterAPIVerifier) Request() *http.Request {
+	req, err := newGetRequest(v.endpoint, v.kubeAccessor.ServiceAccountToken())
+	if err != nil {
+		panic(err)
+	}
+	return req
 }
 
 /*
@@ -98,11 +104,10 @@ Expecting this with non-zero value
   ]
 }
 */
-// Verify checks that value is non-zero
-func (c metricsAdapterChecker) Verify(body []byte) checks.Error {
+func (v metricsAdapterAPIVerifier) Verify(body []byte) checks.Error {
 	value := gjson.Get(string(body), "items.0.value")
-	if value.Float() == 0 {
-		return checks.ErrFail("metrics adapter responded with zero value, body = %s", body)
+	if value.String() == "" {
+		return checks.ErrFail("got zero value, body = %s", body)
 	}
 	return nil
 }
