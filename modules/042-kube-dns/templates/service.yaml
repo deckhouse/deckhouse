@@ -12,11 +12,21 @@ spec:
   ports:
   - name: dns
     port: 53
+{{/* ### Migration 19.02.2021: Remove following statement (left only 5353 port) after this commit reached RockSolid */}}
+{{- if .Values.kubeDns.internal.migration }}
+    targetPort: 53
+{{- else }}
     targetPort: 5353
+{{- end }}
     protocol: UDP
   - name: dns-tcp
     port: 53
+{{/* ### Migration 19.02.2021: Remove following statement (left only 5353 port) after this commit reached RockSolid */}}
+{{- if .Values.kubeDns.internal.migration }}
+    targetPort: 53
+{{- else }}
     targetPort: 5353
+{{- end }}
     protocol: TCP
 ---
 apiVersion: v1

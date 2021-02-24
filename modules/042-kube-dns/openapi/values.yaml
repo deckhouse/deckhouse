@@ -15,3 +15,7 @@ properties:
       specificNodeType:
         type: string
         enum: ["system", "kube-dns"]
+### Migration 19.02.2021: Remove after this commit reached RockSolid
+      migration:
+        type: boolean
+        default: false

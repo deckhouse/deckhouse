@@ -1,0 +1,54 @@
+#!/bin/bash
+
+### Migration 19.02.2021: Remove after this commit reached RockSolid
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  execute_hook_on_synchronization="false"
+  if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    # The current test suite does not support snapshots while running
+    # `afterHelm` with `executeHookOnSynchronization: false`.
+    execute_hook_on_synchronization="true"
+  fi
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 20
+    kubernetes:
+    - name: service
+      group: main
+      keepFullObjectsInMemory: false
+      executeHookOnEvent: []
+      executeHookOnSynchronization: ${execute_hook_on_synchronization}
+      apiVersion: v1
+      kind: Service
+      nameSelector:
+        matchNames:
+        - d8-kube-dns
+      jqFilter: |
+        {
+          "isMigrated": ([.spec.ports // [] | .[] | select(.targetPort == 5353)] | length == 2)
+        }
+EOF
+}
+
+function __main__() {
+  if ! context::has snapshots.service.0; then
+    return 0
+  fi
+
+  if context::jq -er '.snapshots.service[0] | select(.filterResult.isMigrated == true)' >/dev/null; then
+    return 0
+  fi
+
+  # Patch Service only in final state (after migration is completed).
+  if [[ "$(values::get kubeDns.internal.migration)" == "true" ]]; then
+    >&2 echo "Migrations final: waiting for migration process to finish."
+    return 0
+  fi
+
+  >&2 echo "Migrations final: patch kube-dns Service targetPorts to 5353."
+  kubernetes::patch_jq kube-system service/d8-kube-dns ".spec.ports[].targetPort = 5353"
+}
+
+hook::run "$@"
