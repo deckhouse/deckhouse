@@ -36,18 +36,6 @@ func (p *Probe) Init() error {
 	return nil
 }
 
-func (p *Probe) WithResultChan(ch chan Result) {
-	p.ResultCh = ch
-}
-
-func (p *Probe) WithKubernetesClient(client kube.KubernetesClient) {
-	p.KubernetesClient = client
-}
-
-func (p *Probe) WithServiceAccountToken(token string) {
-	p.ServiceAccountToken = token
-}
-
 func (p *Probe) Id() string {
 	if p.Ref != nil {
 		return p.Ref.Id()
@@ -83,6 +71,18 @@ func (p *Probe) CheckResult(checkName string, value interface{}) Result {
 	return NewResult(*p.Ref, checkName, value)
 }
 
+func (p *Probe) WithResultChan(ch chan Result) {
+	p.ResultCh = ch
+}
+
+func (p *Probe) WithKubernetesClient(client kube.KubernetesClient) {
+	p.KubernetesClient = client
+}
+
+func (p *Probe) WithServiceAccountToken(token string) {
+	p.ServiceAccountToken = token
+}
+
 type State struct {
 	Running   bool
 	StartedAt time.Time
@@ -92,25 +92,22 @@ type State struct {
 
 // ShouldRun checks that the probe can be run. Returns true if the probe is not
 // running and its period passed
-func (ps *State) ShouldRun(now time.Time) bool {
-	periodPassed := now.After(ps.StartedAt.Add(ps.Period))
-	if !ps.Running && periodPassed {
-		return true
-	}
-	return false
+func (s *State) ShouldRun(now time.Time) bool {
+	periodPassed := now.After(s.StartedAt.Add(s.Period))
+	return !s.Running && periodPassed
 }
 
-func (ps *State) Start(t time.Time) {
-	ps.Running = true
-	ps.StartedAt = t
+func (s *State) Start(t time.Time) {
+	s.Running = true
+	s.StartedAt = t
 }
 
-func (ps *State) Stop() {
-	ps.Running = false
+func (s *State) Stop() {
+	s.Running = false
 	// Do not reset StartedAt to calculate delay.
 	// Reset FirstRun
-	if ps.FirstRun {
-		ps.FirstRun = false
+	if s.FirstRun {
+		s.FirstRun = false
 	}
 
 }

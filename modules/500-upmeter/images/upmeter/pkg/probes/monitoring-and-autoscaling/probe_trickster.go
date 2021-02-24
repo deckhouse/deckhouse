@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"upmeter/pkg/checks"
-	control_plane "upmeter/pkg/probes/control-plane"
 )
 
 /*
@@ -23,45 +22,43 @@ Period: 10s
 Timeout: 5s
 */
 
-func NewTricksterProbe() *checks.Probe {
+func NewTricksterPodsProbe() *checks.Probe {
 	const (
-		probePeriod  = 10 * time.Second
-		probeTimeout = 5 * time.Second
+		period  = 10 * time.Second
+		timeout = 5 * time.Second
 
 		namespace     = "d8-monitoring"
 		labelSelector = "app=trickster"
-		service       = "trickster"
-		port          = 443
+	)
+
+	pr := newProbe("trickster", period)
+
+	kubeAccessor := newKubeAccessor(pr)
+	checker := newAnyPodReadyChecker(kubeAccessor, timeout, namespace, labelSelector)
+
+	pr.RunFn = RunFn(pr, checker, "pods")
+
+	return pr
+}
+
+func NewTricksterAPIProbe() *checks.Probe {
+	const (
+		period  = 10 * time.Second
+		timeout = 5 * time.Second
+
+		namespace = "d8-monitoring"
+		service   = "trickster"
+		port      = 443
 	)
 
 	// trickster.d8-monitoring:443
 	endpoint := fmt.Sprintf("https://%s.%s:%d/trickster/main/api/v1/query?query=vector(1)", service, namespace, port)
-	checker := promChecker{
-		namespace:     namespace,
-		labelSelector: labelSelector,
-		endpoint:      endpoint,
-		client:        insecureClient,
-	}
 
-	nsProbeRef := checks.ProbeRef{
-		Group: groupName,
-		Probe: "trickster",
-	}
+	pr := newProbe("trickster", period)
+	kubeAccessor := newKubeAccessor(pr)
+	checker := newPrometheusEndpointChecker(kubeAccessor, endpoint, timeout)
 
-	pr := &checks.Probe{
-		Period: probePeriod,
-		Ref:    &nsProbeRef,
-	}
-
-	pipeline := NewPodCheckPipeline(pr, probeTimeout, checker)
-
-	pr.RunFn = func() {
-		// Set Unknown result if API server is unavailable
-		if !control_plane.CheckApiAvailable(pr) {
-			return
-		}
-		pipeline.Go()
-	}
+	pr.RunFn = RunFn(pr, checker, "api")
 
 	return pr
 }
