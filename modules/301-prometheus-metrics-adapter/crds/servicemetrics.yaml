@@ -12,6 +12,7 @@ spec:
     plural: servicemetrics
     singular: servicemetric
     kind: ServiceMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

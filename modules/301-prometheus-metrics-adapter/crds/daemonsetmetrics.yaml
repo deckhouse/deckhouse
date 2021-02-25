@@ -12,6 +12,7 @@ spec:
     plural: daemonsetmetrics
     singular: daemonsetmetric
     kind: DaemonSetMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

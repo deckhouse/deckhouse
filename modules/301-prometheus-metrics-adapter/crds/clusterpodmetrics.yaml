@@ -12,6 +12,7 @@ spec:
     plural: clusterpodmetrics
     singular: clusterpodmetric
     kind: ClusterPodMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

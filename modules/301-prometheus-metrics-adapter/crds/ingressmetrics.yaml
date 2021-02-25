@@ -12,6 +12,7 @@ spec:
     plural: ingressmetrics
     singular: ingressmetric
     kind: IngressMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

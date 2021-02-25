@@ -12,6 +12,7 @@ spec:
     plural: clusterdaemonsetmetrics
     singular: clusterdaemonsetmetric
     kind: ClusterDaemonSetMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true
