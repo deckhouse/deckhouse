@@ -102,8 +102,7 @@ Web cleanup:
   only:
     refs:
     - schedules
-  except:
     variables:
-    - $CLOUD_LAYOUTS_SCHEDULE
+    - $CLEANUP_SCHEDULE
   tags:
   - werf-distributed

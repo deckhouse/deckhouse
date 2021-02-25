@@ -8,8 +8,11 @@
   script:
   - werf cleanup --without-kube --git-history-based-cleanup-v1.2=true
   only:
+    refs:
+    - schedules
     variables:
     - $CLEANUP_SCHEDULE
+  when: always
 
 .Cleanup modules registry template:
   stage: cleanup_registry
@@ -18,8 +21,11 @@
   script:
   - ./modules_images_werf cleanup --git-history-based-cleanup-v1.2=true
   only:
+    refs:
+    - schedules
     variables:
     - $CLEANUP_SCHEDULE
+  when: always
 
 .Cleanup modules images template:
   stage: cleanup_builder
@@ -27,5 +33,8 @@
   - docker ps --filter status=exited -q | xargs --no-run-if-empty docker rm -v
   - docker images -f dangling=true -q | xargs --no-run-if-empty docker image rm
   only:
+    refs:
+    - schedules
     variables:
     - $CLEANUP_SCHEDULE
+  when: always
