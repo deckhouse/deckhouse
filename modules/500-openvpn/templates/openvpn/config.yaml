@@ -41,6 +41,11 @@ data:
     {{- else }}
     {{- end }}
     push "dhcp-option DNS {{ .Values.openvpn.pushToClientDNS | default .Values.global.discovery.clusterDNSAddress }}"
+    {{- if hasKey .Values.openvpn "pushToClientSearchDomains" }}
+      {{- range $searchDomain := .Values.openvpn.pushToClientSearchDomains }}
+    push "dhcp-option DOMAIN {{ $searchDomain }}"
+      {{- end }}
+    {{- end }}
 
   configure.sh: |-
     #!/bin/sh

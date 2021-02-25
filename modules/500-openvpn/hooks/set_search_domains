@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  cluster_domain="$(values::get global.discovery.clusterDomain)"
+
+  if ! values::has 'openvpn.pushToClientSearchDomains' ; then
+    values::set --config openvpn.pushToClientSearchDomains "[\"$cluster_domain\"]"
+  fi
+}
+
+hook::run $@
