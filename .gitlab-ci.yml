@@ -64,9 +64,8 @@ Cloud layouts Tests (manual):
   tags:
     - cloud-layouts
   except:
-    variables:
-    - $CLOUD_LAYOUTS_SCHEDULE
     refs:
+    - schedules
     - alpha
     - beta
     - early-access
@@ -79,9 +78,8 @@ Cloud layouts Tests vSphere (manual):
   tags:
     - cloud-layouts-vsphere
   except:
-    variables:
-    - $CLOUD_LAYOUTS_SCHEDULE
     refs:
+    - schedules
     - alpha
     - beta
     - early-access
