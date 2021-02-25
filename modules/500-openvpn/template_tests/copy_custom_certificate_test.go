@@ -35,6 +35,7 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
+  clusterDomain: cluster.local
 `
 const customCertificatePresent = `
 https:

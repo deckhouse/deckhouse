@@ -36,6 +36,7 @@ global:
       system:
         __ConstantChoices__: [1, 2, 3]
     kubernetesVersion: 1.15.5
+    clusterDomain: cluster.local
 openvpn:
   https:
     __ConstantChoices__:
