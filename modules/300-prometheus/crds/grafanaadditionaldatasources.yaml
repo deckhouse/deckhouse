@@ -13,6 +13,7 @@ spec:
     plural: grafanaadditionaldatasources
     singular: grafanaadditionaldatasource
     kind: GrafanaAdditionalDatasource
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

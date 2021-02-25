@@ -12,6 +12,7 @@ spec:
     plural: namespacemetrics
     singular: namespacemetric
     kind: NamespaceMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

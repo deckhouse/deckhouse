@@ -13,6 +13,7 @@ spec:
     plural: grafanadashboarddefinitions
     singular: grafanadashboarddefinition
     kind: GrafanaDashboardDefinition
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

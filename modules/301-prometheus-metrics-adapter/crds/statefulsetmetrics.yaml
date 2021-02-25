@@ -12,6 +12,7 @@ spec:
     plural: statefulsetmetrics
     singular: statefulsetmetric
     kind: StatefulSetMetric
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true

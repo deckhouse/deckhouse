@@ -12,6 +12,7 @@ spec:
     plural: prometheusremotewrites
     singular: prometheusremotewrite
     kind: PrometheusRemoteWrite
+  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true
