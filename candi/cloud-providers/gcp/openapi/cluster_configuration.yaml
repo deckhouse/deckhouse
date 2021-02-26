@@ -36,6 +36,7 @@ apiVersions:
             items:
               type: string
           additionalLabels:
+            type: object
             additionalProperties:
               type: string
           instanceClass:
@@ -92,6 +93,7 @@ apiVersions:
               items:
                 type: string
             additionalLabels:
+              type: object
               additionalProperties:
                 type: string
             instanceClass:
