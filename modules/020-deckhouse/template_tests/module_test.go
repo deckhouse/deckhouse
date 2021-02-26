@@ -30,7 +30,7 @@ modulesImages:
   registryDockercfg: cfg
   tags:
     deckhouse:
-      validatingWebhookHandler: hash
+      webhookHandler: hash
 modules:
   placement: {}
 `
@@ -39,7 +39,7 @@ modules:
 bundle: Default
 logLevel: Info
 internal:
-  validatingWebhookHandlerCert:
+  webhookHandlerCert:
     crt: a
     key: b
     ca: c
@@ -55,7 +55,7 @@ tolerations:
 - key: testkey
   operator: Exists
 internal:
-  validatingWebhookHandlerCert:
+  webhookHandlerCert:
     crt: a
     key: b
     ca: c

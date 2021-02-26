@@ -12,7 +12,7 @@ properties:
         type: string
         pattern: '^[a-zA-Z0-9\.\/@:\-_]+$'
         x-examples: ["registry.example.com/image:tag"]
-      validatingWebhookHandlerCert:
+      webhookHandlerCert:
         type: object
         default: {}
         x-required-for-helm:

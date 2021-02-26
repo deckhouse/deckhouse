@@ -13,7 +13,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: chaos_monkey ::", func() {
 	const (
 		stateCloudNGSmall = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: too-small
@@ -25,7 +25,7 @@ status:
 `
 		stateCloudNGLarge = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: largeng
@@ -40,7 +40,7 @@ status:
 `
 		stateCloudNGLargeBroken = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: largeng
@@ -56,7 +56,7 @@ status:
 
 		stateHybridNGSmall = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: too-small
@@ -68,7 +68,7 @@ status:
 `
 		stateHybridNGLarge = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: largeng
@@ -83,7 +83,7 @@ status:
 `
 		stateHybridNGLargeBroken = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: largeng
@@ -176,7 +176,7 @@ metadata:
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("Empty cluster", func() {

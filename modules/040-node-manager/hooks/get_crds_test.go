@@ -31,7 +31,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
 	const (
 		stateNGProper = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: proper1
@@ -41,9 +41,8 @@ spec:
     classReference:
       kind: D8TestInstanceClass
       name: proper1
-  kubernetesVersion: "1.42"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: proper2
@@ -57,14 +56,14 @@ spec:
 `
 		stateNGStaticAndHybrid = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: static1
 spec:
   nodeType: Static
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: hybrid1
@@ -73,7 +72,7 @@ spec:
 `
 		stateNGProperManualRolloutID = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: proper1
@@ -86,7 +85,7 @@ spec:
       kind: D8TestInstanceClass
       name: proper1
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: proper2
@@ -103,7 +102,7 @@ spec:
 `
 		stateNGWrongKind = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: improper
@@ -116,7 +115,7 @@ spec:
 `
 		stateNGWrongRefName = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: improper
@@ -129,7 +128,7 @@ spec:
 `
 		stateNGWrongZones = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: improper
@@ -145,7 +144,7 @@ spec:
 
 		stateNGSimple = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: proper1
@@ -155,26 +154,24 @@ spec:
     classReference:
       kind: D8TestInstanceClass
       name: proper1
-  kubernetesVersion: "1.19"
 `
 
 		stateNGDockerUnmanaged = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: proper1
 spec:
   cri:
     type: Docker
-  docker:
-    manage: false
+    docker:
+      manage: false
   nodeType: Cloud
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
       name: proper1
-  kubernetesVersion: "1.19"
 `
 
 		stateICProper = `
@@ -232,7 +229,7 @@ metadata:
 	)
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.15.5", "kubernetesVersions":["1.15.5"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
@@ -973,19 +970,16 @@ metadata:
 		})
 	})
 
-	// nodegroup 1.16
 	// config    1.16
 	// apiserver 1.16.X  |  effective 1.16
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
-spec:
-  kubernetesVersion: "1.16"
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng))
 			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.16")
@@ -1000,66 +994,13 @@ spec:
 		})
 	})
 
-	// nodegroup 1.15
-	// config    null
-	// apiserver 1.16.X  |  effective 1.15
-	Context("Cluster with NG", func() {
-		BeforeEach(func() {
-			ng := `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
-  kubernetesVersion: "1.15"
-`
-			f.BindingContexts.Set(f.KubeStateSet(ng))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.0")
-			f.RunHook()
-		})
-
-		It("must be executed successfully; kubernetesVersion must be 1.15", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.15"))
-		})
-	})
-
-	// nodegroup 1.17
-	// config    null
-	// apiserver 1.16.X  |  effective 1.16
-	Context("Cluster with NG", func() {
-		BeforeEach(func() {
-			ng := `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
-  kubernetesVersion: "1.17"
-`
-			f.BindingContexts.Set(f.KubeStateSet(ng))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.0")
-			f.RunHook()
-		})
-
-		It("must be executed successfully; kubernetesVersion must be 1.16", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.16"))
-		})
-	})
-
-	// nodegroup null
 	// config    1.15
 	// apiserver 1.16.X  |  effective 1.15
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
@@ -1077,14 +1018,13 @@ metadata:
 		})
 	})
 
-	// nodegroup null
 	// config    null
 	// apiserver 1.16  |  target 1.16
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
@@ -1101,37 +1041,11 @@ metadata:
 		})
 	})
 
-	// nodegroup 1.13
-	// config    null
-	// apiserver 1.16  |  target 1.14
-	Context("Cluster with NG", func() {
-		BeforeEach(func() {
-			ng := `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
-  kubernetesVersion: "1.13"
-`
-			f.BindingContexts.Set(f.KubeStateSet(ng))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.0")
-			f.RunHook()
-		})
-
-		It("must be executed successfully; kubernetesVersion must be 1.14", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.14"))
-		})
-	})
-
 	Context("Cluster with NG node-role.deckhouse.io/system", func() {
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
@@ -1154,7 +1068,7 @@ spec:
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test

@@ -23,7 +23,7 @@ function __config__() {
       keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/set_replicas_on_machine_deployment
       waitForSynchronization: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1alpha2
       kind: NodeGroup
       executeHookOnEvent: ["Added", "Modified"]
       jqFilter: '{"name": .metadata.name, "min": .spec.cloudInstances.minPerZone, "max": .spec.cloudInstances.maxPerZone}'

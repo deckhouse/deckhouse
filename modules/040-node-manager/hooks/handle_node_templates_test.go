@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Modules :: nodeManager :: hooks :: handle_node_templates_test ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -26,7 +26,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: handle_node_templates_test 
 		BeforeEach(func() {
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker
@@ -73,7 +73,7 @@ spec:
 		BeforeEach(func() {
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker
@@ -120,7 +120,7 @@ metadata:
 
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker
@@ -180,7 +180,7 @@ spec:
 
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker
@@ -237,7 +237,7 @@ spec:
 
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker
@@ -321,7 +321,7 @@ spec:
 
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker
@@ -422,7 +422,7 @@ spec:
 
 			state := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: wor-ker

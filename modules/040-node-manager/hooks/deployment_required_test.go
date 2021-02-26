@@ -11,7 +11,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: deployment_required ::", f
 	const (
 		nodeGroupHybrid = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: master
@@ -21,7 +21,7 @@ status: {}
 `
 		nodeGroupCloud = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: worker
@@ -62,7 +62,7 @@ metadata:
 	)
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.16.15", "kubernetesVersions":["1.16.15"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineSet", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)

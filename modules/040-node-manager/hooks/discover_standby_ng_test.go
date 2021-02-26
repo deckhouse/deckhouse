@@ -13,7 +13,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: discover_standby_ng ::", f
 	const (
 		nodeGroupWithoutStandby = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: normal
@@ -23,7 +23,7 @@ status: {}
 `
 		nodeGroupStandbyAbsolute = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: standby-absolute
@@ -45,7 +45,7 @@ status: {}
 `
 		nodeGroupStandbyAbsoluteTooBigStandby = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: standby-absolute
@@ -67,7 +67,7 @@ status: {}
 `
 		nodeGroupStandbyPercent = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: standby-percent
@@ -158,7 +158,7 @@ status:
 `
 		nodeGroupStandbyAbsoluteNotHeldResources = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: standby-absolute
@@ -201,7 +201,7 @@ status: {}
 		"internal": {}
 	}
 }`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {

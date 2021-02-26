@@ -12,8 +12,8 @@ mkdir -p /etc/docker
 bb-sync-file /etc/docker/daemon.json - << "EOF"
 {
 {{- $max_concurrent_downloads := 3 }}
-{{- if hasKey .nodeGroup "docker" }}
-  {{- $max_concurrent_downloads = .nodeGroup.docker.maxConcurrentDownloads | default $max_concurrent_downloads }}
+{{- if hasKey .nodeGroup.cri "docker" }}
+  {{- $max_concurrent_downloads = .nodeGroup.cri.docker.maxConcurrentDownloads | default $max_concurrent_downloads }}
 {{- end }}
         "log-driver": "json-file",
         "log-opts": {

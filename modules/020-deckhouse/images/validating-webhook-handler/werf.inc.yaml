@@ -1,7 +1,0 @@
-image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_SHELL_OPERATOR" }}
-git:
-- add: /
-  to: /hooks/
-  includePaths:
-  - modules/*/validating_webhooks/

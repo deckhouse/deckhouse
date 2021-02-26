@@ -10,7 +10,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
       group: main
       keepFullObjectsInMemory: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1alpha2
       kind: NodeGroup
       jqFilter: |
         {

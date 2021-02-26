@@ -24,7 +24,7 @@ function __config__() {
       keepFullObjectsInMemory: false
       queue: /modules/$(module::name::kebab_case)/update_approval
       waitForSynchronization: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1alpha2
       kind: NodeGroup
       jqFilter: |
         .spec as \$original_spec |

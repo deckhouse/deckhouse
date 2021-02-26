@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: alpha1_to_alpha2
+    crdName: nodegroups.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha1
+      toVersion: deckhouse.io/v1alpha2
+  - name: alpha2_to_alpha1
+    crdName: nodegroups.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha1
+EOF
+}
+
+function __on_conversion::alpha1_to_alpha2() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1alpha1" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       if .spec.docker then .spec.cri.docker = .spec.docker end |
+       del(.kubernetesVersion) |
+       del(.static)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::alpha2_to_alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha1" |
+       if .spec.cri.docker then .spec.docker = .spec.cri.docker end
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"
