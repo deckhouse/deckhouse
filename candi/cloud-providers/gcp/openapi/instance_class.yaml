@@ -54,6 +54,7 @@ spec:
                   items:
                     type: string
                 additionalLabels:
+                  type: object
                   additionalProperties:
                     type: string
   scope: Cluster
