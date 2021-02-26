@@ -145,6 +145,11 @@ debug: false
 pull-image-on-create: false
 EOF
 {{- else if eq .cri "Docker" }}
+# TODO: remove ASAP, provide proper migration from "docker.io" to "docker-ce"
+if bb-apt-package? docker.io ; then
+  bb-log-warning 'Skipping "containerd" configuration, since "docker.io" with its own "containerd" is already installed'
+  exit 0
+fi
 bb-sync-file /etc/containerd/config.toml - << "EOF"
 disabled_plugins = ["cri"]
 EOF
