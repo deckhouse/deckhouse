@@ -1,0 +1,11 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ env "BASE_SHELL_OPERATOR" }}
+git:
+- add: /modules
+  to: /available_hooks/
+  includePaths:
+  - '*/webhooks/'
+- add: /modules/020-deckhouse/images/webhook-handler/entrypoint.sh
+  to: /entrypoint.sh
+docker:
+  ENTRYPOINT: ["/entrypoint.sh"]

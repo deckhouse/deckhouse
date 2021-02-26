@@ -7,7 +7,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: node_group
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1alpha2
       kind: NodeGroup
       group: main
       keepFullObjectsInMemory: false

@@ -13,7 +13,7 @@ import (
 
 var stateNGStatic = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: static-0
@@ -23,7 +23,7 @@ spec:
 
 var stateNGCloud = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: cloud0
@@ -113,7 +113,7 @@ data:
 
 var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {

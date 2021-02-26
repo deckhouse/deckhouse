@@ -3,14 +3,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: validating-webhook-handler
+  name: webhook-handler
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "webhook-handler" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: validating-webhook-handler
+    name: webhook-handler
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -18,31 +18,31 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: validating-webhook-handler
+  name: webhook-handler
   namespace: d8-system
-{{ include "helm_lib_module_labels" (list . (dict "app" "validating-webhook-handler")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | indent 2 }}
 spec:
 {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
   selector:
     matchLabels:
-      app: validating-webhook-handler
+      app: webhook-handler
   template:
     metadata:
       labels:
-        app: validating-webhook-handler
+        app: webhook-handler
     spec:
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "validating-webhook-handler")) | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook-handler")) | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
-      serviceAccountName: validating-webhook-handler
+      serviceAccountName: webhook-handler
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: handler
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry }}/deckhouse/validating-webhook-handler:{{ $.Values.global.modulesImages.tags.deckhouse.validatingWebhookHandler }}"
+        image: "{{ $.Values.global.modulesImages.registry }}/deckhouse/webhook-handler:{{ $.Values.global.modulesImages.tags.deckhouse.webhookHandler }}"
         env:
         - name: SHELL_OPERATOR_NAMESPACE
           valueFrom:
@@ -52,26 +52,51 @@ spec:
           value: validating-webhook-handler
         - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
           value: d8-deckhouse-validating-webhook-handler
+        - name: VALIDATING_WEBHOOK_SERVER_CERT
+          value: /certs/tls.crt
+        - name: VALIDATING_WEBHOOK_SERVER_KEY
+          value: /certs/tls.key
+        - name: VALIDATING_WEBHOOK_CA
+          value: /certs/ca.crt
+        - name: CONVERSION_WEBHOOK_SERVICE_NAME
+          value: conversion-webhook-handler
+        - name: CONVERSION_WEBHOOK_CONFIGURATION_NAME
+          value: d8-deckhouse-conversion-webhook-handler
+        - name: CONVERSION_WEBHOOK_SERVER_CERT
+          value: /certs/tls.crt
+        - name: CONVERSION_WEBHOOK_SERVER_KEY
+          value: /certs/tls.key
+        - name: CONVERSION_WEBHOOK_CA
+          value: /certs/ca.crt
+        - name: ENABLED_MODULES
+          value: "{{ $.Values.global.enabledModules | join " " }}"
         ports:
           - containerPort: 9680
-            name: http
+            name: validating-http
+            protocol: TCP
+          - containerPort: 9681
+            name: conversion-http
             protocol: TCP
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
         volumeMounts:
-        - name: validating-certs
-          mountPath: /validating-certs/
+        - name: certs
+          mountPath: /certs/
           readOnly: true
         - mountPath: /var/run
           name: run
         - mountPath: /tmp
           name: tmp
+        - mountPath: /hooks
+          name: hooks
       volumes:
-      - name: validating-certs
+      - name: certs
         secret:
-          secretName: validating-webhook-handler-certs
+          secretName: webhook-handler-certs
       - emptyDir: {}
         name: run
       - emptyDir: {}
         name: tmp
+      - emptyDir: {}
+        name: hooks

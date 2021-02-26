@@ -16,7 +16,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: update_approval ::", func()
 	const (
 		initialState = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: worker
@@ -26,7 +26,7 @@ status:
   desired: 1
   ready: 1
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: undisruptable-worker
@@ -51,7 +51,7 @@ data:
 	nodeNames := []string{"worker-1", "worker-2", "worker-3"}
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -357,7 +357,7 @@ metadata:
 data:
   test: dXBkYXRlZA== # updated
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
@@ -588,7 +588,7 @@ status:
 func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady bool, nodeType string) string {
 	const tpl = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: worker-2
@@ -653,7 +653,7 @@ status:
 
 const tpl = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: worker-2

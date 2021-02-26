@@ -25,7 +25,7 @@ function __config__() {
       group: main
       includeSnapshotsFrom: ["cloud_provider_secrets"]
       keepFullObjectsInMemory: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1alpha2
       kind: NodeGroup
       jqFilter: |
         {
@@ -237,21 +237,6 @@ function __main__() {
 
     # Calculate effective version
     effective_kubernetes_version="$global_target_kubernetes_version"
-    if jq -e '.kubernetesVersion != null' <<< "$ng" > /dev/null; then
-      effective_kubernetes_version="$(jq -r '.kubernetesVersion' <<< "$ng")"
-
-      # If kubernetesVersion IS specified in NodeGroup, we don't allow Nodes
-      # to be more than 2 version befind control plane
-      if semver::lt "$effective_kubernetes_version" "$(semver::unbump_minor "$(semver::unbump_minor "$control_plane_max_kubernetes_version")")" ; then
-        effective_kubernetes_version="$(semver::unbump_minor "$(semver::unbump_minor "$control_plane_max_kubernetes_version")")"
-      fi
-    else
-      # If kubernetesVersion is NOT specified in NodeGroup, we don't allow Nodes
-      # to be more than 1 version befind control plane
-      if semver::lt "$effective_kubernetes_version" "$(semver::unbump_minor "$control_plane_max_kubernetes_version")" ; then
-        effective_kubernetes_version="$(semver::unbump_minor "$control_plane_max_kubernetes_version")"
-      fi
-    fi
     if semver::gt "$effective_kubernetes_version" "$control_plane_min_kubernetes_version" ; then
       # Nodes should not be above control plane
       effective_kubernetes_version="$control_plane_min_kubernetes_version"
@@ -275,7 +260,7 @@ function __main__() {
     case $cri in
     "Docker")
     # Check if cri set to Docker and docker.manage set to false
-    if ! jq -e 'if .docker.manage == null then true else .docker.manage end' <<< "$ng" >/dev/null; then
+    if ! jq -e 'if .cri.docker.manage == null then true else .cri.docker.manage end' <<< "$ng" >/dev/null; then
       cri="NotManaged"
     fi
     ;;

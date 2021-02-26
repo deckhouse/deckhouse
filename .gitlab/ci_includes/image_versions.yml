@@ -5,5 +5,5 @@ variables:
   BASE_GOLANG_BUSTER: "golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
   BASE_NGINX_ALPINE: "nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
   BASE_PYTHON_ALPINE: "python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
-  BASE_SHELL_OPERATOR: "flant/shell-operator:v1.0.0-rc.1@sha256:ffe872e8b29490a29b4593f7078be15d3ca7953814abfaad2af4a2bdb22cb9fc"
+  BASE_SHELL_OPERATOR: "flant/shell-operator:v1.0.0-rc.2@sha256:a2ca525d426a906d4d8ac1a55d64377771091f3acead4a5f6a53b9b6f9d1d3f2"
   BASE_UBUNTU: "ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
