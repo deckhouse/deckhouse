@@ -221,6 +221,32 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 		}
 	}
 
+	deleteNodesNames := make(map[string][]byte)
+
+	if replicas < len(nodeGroupState.State) {
+		count := len(nodeGroup.State)
+
+		// Descending order to delete nodes with bigger numbers first
+		// Need to use index instead of a name to prevent string sorting and decimals problem
+		keys := make([]string, 0, len(nodeGroup.State))
+		for k := range nodeGroup.State {
+			keys = append(keys, k)
+		}
+		sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+
+		for _, name := range keys {
+			state := nodeGroup.State[name]
+
+			deleteNodesNames[name] = state
+			delete(nodeGroup.State, name)
+			count--
+
+			if count == nodeGroup.Replicas {
+				break
+			}
+		}
+	}
+
 	var allErrs *multierror.Error
 	if replicas != 0 {
 		for name := range nodeGroupState.State {
@@ -242,9 +268,9 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 		terraNodesExistInConfig[terranodeGroup.Name] = struct{}{}
 	}
 
-	if replicas < len(nodeGroupState.State) {
+	if len(deleteNodesNames) > 0 {
 		err := log.Process("converge", fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
-			if err := c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings); err != nil {
+			if err := c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings, deleteNodesNames); err != nil {
 				return err
 			}
 			if _, ok := terraNodesExistInConfig[nodeGroup.Name]; !ok && nodeGroup.Name != "master" {
@@ -331,30 +357,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 	return WaitForSingleNodeBecomeReady(c.client, nodeName)
 }
 
-func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, settings []byte) error {
-	deleteNodesNames := make(map[string][]byte)
-	count := len(nodeGroup.State)
-
-	// Descending order to delete nodes with bigger numbers first
-	// Need to use index instead of a name to prevent string sorting and decimals problem
-	keys := make([]string, 0, len(nodeGroup.State))
-	for k := range nodeGroup.State {
-		keys = append(keys, k)
-	}
-	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
-
-	for _, name := range keys {
-		state := nodeGroup.State[name]
-
-		deleteNodesNames[name] = state
-		delete(nodeGroup.State, name)
-		count--
-
-		if count == nodeGroup.Replicas {
-			break
-		}
-	}
-
+func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, settings []byte, deleteNodesNames map[string][]byte) error {
 	cfg := c.config
 	if settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
