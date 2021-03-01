@@ -138,29 +138,57 @@ module Jekyll
 
     def format_crd(input)
         result = []
-        if input.has_key?("spec") and input["spec"].has_key?("validation") and
-           input["spec"]["validation"].has_key?("openAPIV3Schema") then
-
+        if ( input.has_key?("spec") and input["spec"].has_key?("validation") and
+           input["spec"]["validation"].has_key?("openAPIV3Schema")  ) or (input.has_key?("spec") and input["spec"].has_key?("versions"))
+           then
             converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
-            result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
-            result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
+            if input["spec"].has_key?("validation") and input["spec"]["validation"].has_key?("openAPIV3Schema") then
+                # v1beta1 CRD
 
-            if input["spec"].has_key?("version") then
-               result.push('<br/>Version: ' + input["spec"]["version"] + '')
-            end
-            result.push('</font></p>')
-
-            if input["spec"]["validation"]["openAPIV3Schema"].has_key?("description") then
-               result.push(input["spec"]["validation"]["openAPIV3Schema"]["description"])
-            end
-
-            if input["spec"]["validation"]["openAPIV3Schema"].has_key?('properties')
-                result.push('<ul>')
-                input["spec"]["validation"]["openAPIV3Schema"]['properties'].each do |key, value|
-                result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"] ))
+                result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
+                result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
+                if input["spec"].has_key?("version") then
+                   result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
                 end
-                result.push('</ul>')
+
+                if input["spec"]["validation"]["openAPIV3Schema"].has_key?("description")
+                   result.push(converter.convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
+                end
+
+                if input["spec"]["validation"]["openAPIV3Schema"].has_key?('properties')
+                    result.push('<ul>')
+                    input["spec"]["validation"]["openAPIV3Schema"]['properties'].each do |key, value|
+                    result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"] ))
+                    end
+                    result.push('</ul>')
+                end
+            elsif input.has_key?("spec") and input["spec"].has_key?("versions") then
+                # v1+ CRD
+
+                 result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
+                 input["spec"]["versions"].each do |item|
+                    if input["spec"]["versions"].length == 1 then
+                        result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
+                        result.push('<br/>Version: ' + item['name'] + '</font></p>')
+                    else
+                        result.push(converter.convert("### " + item['name'] + ' {#' + input["spec"]["names"]["kind"].downcase + '-' + item['name'].downcase + '}'))
+                        result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
+                    end
+
+                    if item.has_key?('schema') and item['schema'].has_key?('openAPIV3Schema') and
+                       item['schema']['openAPIV3Schema'].has_key?("description")
+                       result.push(converter.convert(item['schema']['openAPIV3Schema']['description']))
+                    end
+
+                    if item['schema']['openAPIV3Schema'].has_key?('properties')
+                        result.push('<ul>')
+                        item['schema']['openAPIV3Schema']['properties'].each do |key, value|
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] ))
+                        end
+                        result.push('</ul>')
+                    end
+                 end
             end
         end
         result.join
