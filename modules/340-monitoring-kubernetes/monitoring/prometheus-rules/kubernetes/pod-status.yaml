@@ -21,7 +21,7 @@
           Что нужно сделать:
           1. Найти поды в таком состоянии: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'`
           2. Найти все проблемные ноды: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`
-          3. Перезапустить на данной доне `kubelet`: `systemctl restart kubelet`
+          3. Перезапустить на данной ноде `kubelet`: `systemctl restart kubelet`
         summary: Под {{ $labels.namespace }}/{{ $labels.pod }} на ноде {{ $labels.node }} находится в некорректном состоянии. Необходимо перезагрузить `kubelet`.
 
     - alert: NodeHavePodsWithIncorrectStatus
