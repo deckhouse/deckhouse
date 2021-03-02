@@ -1,9 +1,12 @@
 #!/bin/bash
-function common_hooks::https::apply_crds::config() {
-  jo -p configVersion=v1 onStartup=10
+function common_hooks::https::ensure_crds::config() {
+  cat << EOF
+    configVersion: v1
+    onStartup: 10
+EOF
 }
 
-function common_hooks::https::apply_crds::main() {
+function common_hooks::https::ensure_crds::main() {
   # TODO: switch back to "x-description" once we've converted all CRDs to apiVersion "v1"
   custom_fields_regexp="x-description"
 
@@ -23,5 +26,5 @@ function common_hooks::https::apply_crds::main() {
           select(.key | test($regex) | not)
         )
         else . end)' \
-    | kubectl apply -f -
+    | kubernetes::replace_or_create_json
 }

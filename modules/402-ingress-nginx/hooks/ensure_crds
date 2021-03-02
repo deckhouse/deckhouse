@@ -3,11 +3,11 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  common_hooks::https::apply_crds::config
+  common_hooks::https::ensure_crds::config
 }
 
 function __main__() {
-  common_hooks::https::apply_crds::main $(module::path)/crds/*
+  common_hooks::https::ensure_crds::main $(module::path)/crds/*
 }
 
 hook::run "$@"
