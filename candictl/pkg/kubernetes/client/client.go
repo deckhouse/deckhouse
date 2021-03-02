@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
+
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 

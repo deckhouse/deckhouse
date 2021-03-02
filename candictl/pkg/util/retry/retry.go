@@ -12,7 +12,17 @@ const attemptMessage = `Attempt #%d of %d |
 	%s failed, next attempt will be in %ds"
 `
 
+var InTestEnvironment = false
+
+func setupTests(attemptsQuantity, waitSeconds *int) {
+	if InTestEnvironment {
+		*attemptsQuantity = 1
+		*waitSeconds = 0
+	}
+}
+
 func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
+	setupTests(&attemptsQuantity, &waitSeconds)
 	return log.Process("default", name, func() error {
 		for i := 1; i <= attemptsQuantity; i++ {
 			select {
@@ -36,6 +46,7 @@ func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error
 }
 
 func StartSilentLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
+	setupTests(&attemptsQuantity, &waitSeconds)
 	var err error
 	for i := 1; i <= attemptsQuantity; i++ {
 		if err = task(); err != nil {

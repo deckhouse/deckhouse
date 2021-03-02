@@ -19,6 +19,7 @@ require (
 	github.com/peterbourgon/mergemap v0.0.0-20130613134717-e21c03b7a721
 	github.com/pkg/errors v0.9.0
 	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904
