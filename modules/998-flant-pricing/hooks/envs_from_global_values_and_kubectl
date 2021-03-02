@@ -12,7 +12,7 @@ EOF
 function __main__() {
   cloud_provider="none"
   fltr='[.global.enabledModules[] | select(startswith("cloud-provider-"))][0] // "" | split("cloud-provider-")[1]'
-  if provider_from_values=$(values::jq -er "$fltr"); then
+  if provider_from_values="$(values::jq -er "$fltr")"; then
     cloud_provider="$provider_from_values"
   fi
   values::set flantPricing.internal.cloudProvider "$cloud_provider"
@@ -27,9 +27,9 @@ function __main__() {
 
   cluster_type="Cloud"
   kops=false
-  static_nodes_count=$(values::jq -r '.global.discovery.nodeCountByType.static // 0')
+  static_nodes_count="$(values::jq -r '.global.discovery.nodeCountByType.static // 0')"
   if values::has global.clusterConfiguration ; then
-    cluster_type=$(values::get global.clusterConfiguration.clusterType)
+    cluster_type="$(values::get global.clusterConfiguration.clusterType)"
     if { [[ $cluster_type == "Static" ]] && [[ $cloud_provider != "none" ]]; } || { [[ $cluster_type == "Cloud" ]] && [[ $static_nodes_count -gt 0 ]]; } then
       cluster_type="Hybrid"
     fi

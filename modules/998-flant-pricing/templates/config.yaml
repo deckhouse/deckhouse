@@ -1,14 +1,15 @@
 {{- define "grafana_agent_config" }}
 server:
-  log_level: debug
+  log_level: info
   http_listen_port: 8080
 prometheus:
   wal_directory: /data/agent/wal
   global:
-    scrape_interval: 1m
+    scrape_interval: 5m
   configs:
   - name: agent
     host_filter: false
+    max_wal_time: 360h
     scrape_configs:
     - job_name: 'deckhouse'
       params:

@@ -1,1 +1,1 @@
-FROM grafana/agent:v0.7.1
+FROM grafana/agent:v0.13.0

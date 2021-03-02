@@ -59,7 +59,7 @@ function __main__() {
 
   default_controller_version=""
 
-  controllers=$(context::jq -c '
+  controllers="$(context::jq -c '
     .snapshots.controllers // [] |
     map({
       "name": .filterResult.name,
@@ -73,10 +73,10 @@ function __main__() {
       "version": .[0].version,
       "inlet": .[0].inlet,
       "count": length
-    }) | .[]')
+    }) | .[]')"
   for controller in $controllers; do
-    controller_name=$(jq -r '.name' <<< "$controller")
-    controller_version=$(jq -r '.version' <<< "$controller")
+    controller_name="$(jq -r '.name' <<< "$controller")"
+    controller_version="$(jq -r '.version' <<< "$controller")"
     ds_controller_version="$(context::jq -r --arg controller_name "$controller_name" '
       .snapshots.daemonsets // [] | .[] |
        select(.filterResult.controllerName == $controller_name) |
@@ -102,7 +102,7 @@ function __main__() {
 
   # Set versions from IngressNginxController to figure out
   # which DaemonSet uses the default version.
-  daemonsets_with_default_version=$(context::jq -c '
+  daemonsets_with_default_version="$(context::jq -c '
     .snapshots as $snapshots | $snapshots.daemonsets // [] |
     map({
         "controllerVersion": (
@@ -115,9 +115,9 @@ function __main__() {
         ),
         "controllerInlet": .filterResult.controllerInlet,
         "readyPodCount": .filterResult.readyPodCount
-    })')
+    })')"
 
-  daemonsets=$(jq -c '
+  daemonsets="$(jq -c '
     map({
         "controllerVersion": .controllerVersion,
         "controllerInlet": .controllerInlet,
@@ -129,7 +129,7 @@ function __main__() {
       "controllerVersion": .[0].controllerVersion,
       "controllerInlet": .[0].controllerInlet,
       "readyPodCount": [.[].readyPodCount] | add
-    }) | .[]' <<< "$daemonsets_with_default_version")
+    }) | .[]' <<< "$daemonsets_with_default_version")"
   for daemonset in $daemonsets; do
     jq -c --arg metric_name "$pod_count_metric_name" --arg group "$group" \
       --arg default_controller_version "$default_controller_version" '
