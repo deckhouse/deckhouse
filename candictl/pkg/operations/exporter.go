@@ -17,12 +17,31 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
 )
 
+type previouslyExistedEntities struct {
+	Nodes      map[string]string
+	NodeGroups map[string]struct{}
+}
+
+func newPreviouslyExistedEntities() *previouslyExistedEntities {
+	return &previouslyExistedEntities{Nodes: make(map[string]string), NodeGroups: make(map[string]struct{})}
+}
+
+func (p *previouslyExistedEntities) AddNode(name, nodeGroup string) {
+	p.Nodes[name] = nodeGroup
+}
+
+func (p *previouslyExistedEntities) AddNodeGroup(name string) {
+	p.NodeGroups[name] = struct{}{}
+}
+
 type ConvergeExporter struct {
 	kubeCl *client.KubernetesClient
 
 	MetricsPath   string
 	ListenAddress string
 	CheckInterval time.Duration
+
+	existedEntities *previouslyExistedEntities
 
 	GaugeMetrics   map[string]*prometheus.GaugeVec
 	CounterMetrics map[string]*prometheus.CounterVec
@@ -55,6 +74,8 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 		ListenAddress: address,
 		kubeCl:        kubeCl,
 		CheckInterval: interval,
+
+		existedEntities: newPreviouslyExistedEntities(),
 
 		GaugeMetrics:   make(map[string]*prometheus.GaugeVec),
 		CounterMetrics: make(map[string]*prometheus.CounterVec),
@@ -148,7 +169,7 @@ func (c *ConvergeExporter) Start() {
 }
 
 func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
-	c.getStatistic()
+	c.recordStatistic(c.getStatistic())
 
 	ticker := time.NewTicker(c.CheckInterval)
 	defer ticker.Stop()
@@ -157,7 +178,7 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 		select {
 		case <-ticker.C:
 			cache.ClearTemporaryDirs()
-			c.getStatistic()
+			c.recordStatistic(c.getStatistic())
 		case <-stopCh:
 			log.ErrorLn("Stop exporter...")
 			return
@@ -165,25 +186,34 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 	}
 }
 
-func (c *ConvergeExporter) getStatistic() {
+func (c *ConvergeExporter) getStatistic() *converge.Statistics {
 	metaConfig, err := config.ParseConfigInCluster(c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
-		return
+		return nil
 	}
 
 	metaConfig.UUID, err = converge.GetClusterUUID(c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
-		return
+		return nil
 	}
 
 	statistic, err := converge.CheckState(c.kubeCl, metaConfig)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
+		return nil
+	}
+
+	return statistic
+}
+
+func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
+	if statistic == nil {
+		return
 	}
 
 	for _, status := range clusterStatuses {
@@ -194,10 +224,13 @@ func (c *ConvergeExporter) getStatistic() {
 		c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(0)
 	}
 
+	newExistedEntities := newPreviouslyExistedEntities()
+
 	for _, ng := range statistic.NodeGroups {
 		for _, status := range nodeGroupStatuses {
 			if status == ng.Status {
 				c.GaugeMetrics["node_group_status"].WithLabelValues(status, ng.Name).Set(1)
+				newExistedEntities.AddNodeGroup(ng.Name)
 				continue
 			}
 			c.GaugeMetrics["node_group_status"].WithLabelValues(status, ng.Name).Set(0)
@@ -208,6 +241,7 @@ func (c *ConvergeExporter) getStatistic() {
 		for _, status := range nodeStatuses {
 			if status == node.Status {
 				c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(1)
+				newExistedEntities.AddNode(node.Name, node.Group)
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
@@ -223,4 +257,29 @@ func (c *ConvergeExporter) getStatistic() {
 			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
 		}
 	}
+
+	// mark missed nodes and node groups statuses as 0 to avoid incorrect statistic
+	for nodeName, nodeGroup := range c.existedEntities.Nodes {
+		if _, ok := newExistedEntities.Nodes[nodeName]; ok {
+			continue
+		}
+		for _, status := range nodeStatuses {
+			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
+		}
+	}
+
+	for nodeGroup := range c.existedEntities.NodeGroups {
+		if _, ok := newExistedEntities.NodeGroups[nodeGroup]; ok {
+			continue
+		}
+		for _, status := range nodeStatuses {
+			c.GaugeMetrics["node_group_status"].WithLabelValues(status, nodeGroup).Set(0)
+		}
+		for _, status := range nodeTemplateStatuses {
+			c.GaugeMetrics["node_template_status"].WithLabelValues(status, nodeGroup).Set(0)
+		}
+	}
+
+	// getStatistic is executed in a loop by timer, so no race condition here
+	c.existedEntities = newExistedEntities
 }
