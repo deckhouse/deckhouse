@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, clusterConfiguration, nodeIP]
+    required: [apiVersion, kind, clusterConfiguration, nodeIP, k8s]
     properties:
       apiVersion:
         type: string
@@ -39,4 +39,19 @@ apiVersions:
               prefix:
                 type: string
               provider:
+                type: string
+      k8s:
+        type: object
+        patternProperties:
+          '^1.[0-9]+$':
+            type: object
+            properties:
+              patch:
+                type: [string, number]
+              kubectl:
+                type: object
+                properties:
+                  checksum:
+                    type: string
+              cni_version:
                 type: string

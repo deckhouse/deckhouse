@@ -101,5 +101,6 @@ data:
     bundle-{{ $bundle }}-{{ $kubernetes_version }}:
 {{ include "bundle_k8s_version_context" (list $ $bundle $kubernetes_version) | indent 6 }}
   {{- end }}
-
 {{- end }}
+    versionMap:
+{{ .Files.Get "candi/version_map.yml" | indent 6 }}

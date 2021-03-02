@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+const versionMap = "versionMap"
+
 func NewStepsRenderer(bashibleContext Context, rootDir string, target string, nameMapper NameMapper) *StepsRenderer {
 	return &StepsRenderer{
 		bashibleContext: bashibleContext,
@@ -35,6 +37,7 @@ func (s StepsRenderer) Render(name string) (map[string]string, error) {
 }
 
 func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {
+	fullContext := make(map[string]interface{})
 	contextKey, err := s.contextName(name)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context configMapKey: %v", err)
@@ -43,7 +46,18 @@ func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context data: %v", err)
 	}
-	return context, nil
+	versionMapContext, err := s.bashibleContext.Get(versionMap)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get versionMap context data: %v", err)
+	}
+	for k, v := range versionMapContext {
+		fullContext[k] = v
+	}
+	for k, v := range context {
+		fullContext[k] = v
+	}
+
+	return fullContext, nil
 }
 
 // pick $.cloudProvider.type as a string

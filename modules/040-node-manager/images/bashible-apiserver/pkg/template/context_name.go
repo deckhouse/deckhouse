@@ -12,7 +12,7 @@ import (
 func parseName(name string) (string, string, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("name must comply with format {os}.{target} using hyphens as innner delimiters")
+		return "", "", fmt.Errorf("name: %q must comply with format {os}.{target} using hyphens as innner delimiters", name)
 	}
 
 	os, target := parts[0], parts[1]
