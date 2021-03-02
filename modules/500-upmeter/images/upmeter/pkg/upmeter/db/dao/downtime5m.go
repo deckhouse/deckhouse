@@ -35,7 +35,7 @@ SELECT
   rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
 FROM downtime5m
 WHERE
-  timeslot >= ? AND timeslot <= ?
+  timeslot >= ? AND timeslot < ?
 `
 
 const SelectDowntime5mGroupProbe = `
@@ -192,7 +192,7 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 		"select": `SELECT
 		sum(success_seconds), sum(fail_seconds), sum(unknown_seconds), sum(nodata_seconds)`,
 		"from":  "FROM downtime5m",
-		"where": "WHERE timeslot >= ? AND timeslot <= ?",
+		"where": "WHERE timeslot >= ? AND timeslot < ?",
 	}
 
 	for _, stepRange := range stepRanges.Ranges {

@@ -34,7 +34,7 @@ SELECT
   rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
 FROM downtime30s
 WHERE
-      timeslot >= ? AND timeslot <= ?
+      timeslot >= ? AND timeslot < ?
       AND group_name = ? AND probe_name = ?
 `
 

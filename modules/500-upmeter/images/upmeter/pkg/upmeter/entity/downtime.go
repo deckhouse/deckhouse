@@ -104,7 +104,7 @@ func Save30sEpisode(dbCtx *dbcontext.DbContext, episode checks.DowntimeEpisode) 
 func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, ref checks.ProbeRef) error {
 	// Get all records of 30s slots within a 5 min slot.
 	dao30s := dao.NewDowntime30sDao(dbCtx)
-	items, err := dao30s.ListForRange(slot5m, slot5m+299, ref.Group, ref.Probe)
+	items, err := dao30s.ListForRange(slot5m, slot5m+300, ref.Group, ref.Probe)
 	if err != nil {
 		log.Errorf("List episodes for 5 min slot %d for group='%s' and probe='%s': %v", slot5m, ref.Group, ref.Probe, err)
 	}
