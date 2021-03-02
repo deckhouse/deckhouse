@@ -14,8 +14,8 @@ type DowntimeEpisode struct {
 	TimeSlot       int64    `json:"ts"`      // timestamp: 30s or 5m time slot (timestamp that is a multiple of 30 seconds or 5 min)
 	FailSeconds    int64    `json:"fail"`    // seconds of fail state during the slot range [timeslot;timeslot+30)
 	SuccessSeconds int64    `json:"success"` // seconds of success state during the slot range [timeslot;timeslot+30)
-	Unknown        int64    `json:"unknown"` // seconds of "unknown" state
-	NoData         int64    `jonn:"nodata"`  // seconds without data
+	UnknownSeconds int64    `json:"unknown"` // seconds of "unknown" state
+	NoDataSeconds  int64    `json:"nodata"`  // seconds without data
 }
 
 func (e DowntimeEpisode) IsInRange(from int64, to int64) bool {
@@ -27,11 +27,11 @@ func (e DowntimeEpisode) Known() int64 {
 }
 
 func (e DowntimeEpisode) Avail() int64 {
-	return e.SuccessSeconds + e.FailSeconds + e.Unknown
+	return e.SuccessSeconds + e.FailSeconds + e.UnknownSeconds
 }
 
 func (e DowntimeEpisode) Total() int64 {
-	return e.SuccessSeconds + e.FailSeconds + e.Unknown + e.NoData
+	return e.SuccessSeconds + e.FailSeconds + e.UnknownSeconds + e.NoDataSeconds
 }
 
 func (e *DowntimeEpisode) Correct(step int64) {
@@ -40,30 +40,30 @@ func (e *DowntimeEpisode) Correct(step int64) {
 	}
 
 	log.Errorf("Episode for '%s' requires correction: %d!=%d. Success=%d, fail=%d, unknown=%d, nodata=%d",
-		e.ProbeRef.Id(), e.Total(), step, e.SuccessSeconds, e.FailSeconds, e.Unknown, e.NoData)
+		e.ProbeRef.Id(), e.Total(), step, e.SuccessSeconds, e.FailSeconds, e.UnknownSeconds, e.NoDataSeconds)
 
 	delta := step - e.Total()
 
-	if e.NoData > 0 {
-		if e.NoData >= delta {
-			e.NoData -= delta
+	if e.NoDataSeconds > 0 {
+		if e.NoDataSeconds >= delta {
+			e.NoDataSeconds -= delta
 			return
 		}
-		delta -= e.NoData
-		e.NoData = 0
+		delta -= e.NoDataSeconds
+		e.NoDataSeconds = 0
 	}
 
-	// NoData == 0
-	if e.Unknown > 0 {
-		if e.Unknown >= delta {
-			e.Unknown -= delta
+	// NoDataSeconds == 0
+	if e.UnknownSeconds > 0 {
+		if e.UnknownSeconds >= delta {
+			e.UnknownSeconds -= delta
 			return
 		}
-		delta -= e.Unknown
-		e.Unknown = 0
+		delta -= e.UnknownSeconds
+		e.UnknownSeconds = 0
 	}
 
-	// NoData == Unknown == 0
+	// NoDataSeconds == UnknownSeconds == 0
 	if e.FailSeconds > 0 {
 		if e.FailSeconds >= delta {
 			e.FailSeconds -= delta
@@ -96,10 +96,10 @@ func (e DowntimeEpisode) CombineSeconds(new DowntimeEpisode, step int64) Downtim
 		TimeSlot: e.TimeSlot,
 	}
 
-	// Combined NoData is a minimum of unavailable seconds.
+	// Combined NoDataSeconds is a minimum of unavailable seconds.
 	// Episodes can be incomplete, so use step for proper calculation.
 	targetAvail := util.Max(e.Avail(), new.Avail())
-	target.NoData = step - targetAvail
+	target.NoDataSeconds = step - targetAvail
 
 	target.SuccessSeconds = util.Max(e.SuccessSeconds, new.SuccessSeconds)
 
@@ -108,28 +108,28 @@ func (e DowntimeEpisode) CombineSeconds(new DowntimeEpisode, step int64) Downtim
 	// '==' is a "fail=0, unknown=0" case
 	// '<' case is impossible, but who knows.
 	if failUnknown <= 0 {
-		target.Unknown = 0
+		target.UnknownSeconds = 0
 		target.FailSeconds = 0
 		return target
 	}
 
-	// Success and Fail seconds are filling Unknown, but not more than
+	// Success and Fail seconds are filling UnknownSeconds, but not more than
 	// maximum sum of known seconds.
 	maxKnown := util.Max(e.Known(), new.Known())
 	allowedFail := maxKnown - target.SuccessSeconds
 
 	if allowedFail == failUnknown {
 		target.FailSeconds = allowedFail
-		target.Unknown = 0
+		target.UnknownSeconds = 0
 	}
 	if allowedFail < failUnknown {
 		target.FailSeconds = allowedFail
-		target.Unknown = failUnknown - allowedFail
+		target.UnknownSeconds = failUnknown - allowedFail
 	}
 	if allowedFail > failUnknown {
 		// Impossible. targetAvail is always greater than maxKnown.
 		target.FailSeconds = failUnknown
-		target.Unknown = 0
+		target.UnknownSeconds = 0
 	}
 
 	return target
@@ -142,10 +142,10 @@ func (e DowntimeEpisode) IsEqualSeconds(a DowntimeEpisode) bool {
 	if e.FailSeconds != a.FailSeconds {
 		return false
 	}
-	if e.Unknown != a.Unknown {
+	if e.UnknownSeconds != a.UnknownSeconds {
 		return false
 	}
-	if e.NoData != a.NoData {
+	if e.NoDataSeconds != a.NoDataSeconds {
 		return false
 	}
 	return true
@@ -157,8 +157,8 @@ func (e DowntimeEpisode) DumpString() string {
 		e.ProbeRef.Id(),
 		e.SuccessSeconds,
 		e.FailSeconds,
-		e.Unknown,
-		e.NoData,
+		e.UnknownSeconds,
+		e.NoDataSeconds,
 	)
 }
 

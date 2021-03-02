@@ -403,8 +403,8 @@ func NewDowntimeEpisode(group, probe string, ts, success, fail, unknown, nodata 
 		TimeSlot:       ts,
 		SuccessSeconds: success,
 		FailSeconds:    fail,
-		Unknown:        unknown,
-		NoData:         nodata,
+		UnknownSeconds: unknown,
+		NoDataSeconds:  nodata,
 	}
 }
 

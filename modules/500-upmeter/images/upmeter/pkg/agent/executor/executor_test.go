@@ -46,7 +46,7 @@ func Test_IsMark(t *testing.T) {
 			nowTime := tt.startTime
 
 			for i := range tt.results {
-				result := exp.CheckAndUpdateLastExportTime(nowTime)
+				result := exp.UpdateLastExportTime(nowTime)
 				expectedResult := tt.results[i]
 
 				if result != expectedResult {

@@ -75,8 +75,8 @@ func SimpleEpisode(success, fail, unknown, nodata int64) DowntimeEpisode {
 	return DowntimeEpisode{
 		SuccessSeconds: success,
 		FailSeconds:    fail,
-		Unknown:        unknown,
-		NoData:         nodata,
+		UnknownSeconds: unknown,
+		NoDataSeconds:  nodata,
 	}
 }
 
@@ -88,9 +88,9 @@ func ExpectEpisode(g *WithT, ep DowntimeEpisode, success, fail, unknown, nodata 
 		g.Expect(ep.FailSeconds).Should(BeEquivalentTo(fail), "Check Fail, ep: %+v", ep)
 	}
 	if unknown >= 0 {
-		g.Expect(ep.Unknown).Should(BeEquivalentTo(unknown), "Check Unknown, ep: %+v", ep)
+		g.Expect(ep.UnknownSeconds).Should(BeEquivalentTo(unknown), "Check Unknown, ep: %+v", ep)
 	}
 	if nodata >= 0 {
-		g.Expect(ep.NoData).Should(BeEquivalentTo(nodata), "Check NoData, ep: %+v", ep)
+		g.Expect(ep.NoDataSeconds).Should(BeEquivalentTo(nodata), "Check NoData, ep: %+v", ep)
 	}
 }

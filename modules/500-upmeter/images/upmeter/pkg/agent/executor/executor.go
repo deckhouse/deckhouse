@@ -12,7 +12,7 @@ import (
 	"upmeter/pkg/checks"
 )
 
-const ExportGranularity = 30
+const exportIntervalSeconds = 30
 
 type ProbeExecutor struct {
 	ProbeManager        *manager.ProbeManager
@@ -137,95 +137,145 @@ func (p *ProbeExecutor) RestartProbes() {
 
 // Scrape checks probe results
 func (p *ProbeExecutor) Scrape() {
-	now := time.Now().Unix()
-	timeslot := (now / 30) * 30
-	// Scrape is started every second, but we may lose seconds
-	// if timer is not precise.
-	var delta int64 = 1
-	var noDataDelta int64 = 0
-	if p.LastScrapeTimestamp > 0 {
-		delta = now - p.LastScrapeTimestamp
-		p.LastScrapeTimestamp = now
-	} else {
-		// proper NoData for first 30 sec episode at start.
-		noDataDelta = now - timeslot
-	}
-
 	if p.ScrapeResults == nil {
 		p.ScrapeResults = make(map[string]*checks.DowntimeEpisode)
 	}
 
-	for probeRefId, result := range p.Results {
-		downtime, ok := p.ScrapeResults[probeRefId]
-		if !ok {
-			downtime = &checks.DowntimeEpisode{
-				ProbeRef: result.ProbeRef,
-				TimeSlot: timeslot,
-				NoData:   30,
-			}
-			p.ScrapeResults[probeRefId] = downtime
-		}
-
-		switch result.Value() {
-		case 0:
-			downtime.FailSeconds += delta
-		case 1:
-			downtime.SuccessSeconds += delta
-		case 2:
-			downtime.Unknown += delta
-		}
-		if noDataDelta > 0 {
-			downtime.NoData -= noDataDelta
-		} else {
-			downtime.NoData -= delta
-		}
-		downtime.Correct(30)
-
-		// Log some asserts
-		if downtime.FailSeconds > ExportGranularity {
-			log.Warnf("Probe '%s' has fail seconds %d that is more than export granularity %d", probeRefId, downtime.FailSeconds, ExportGranularity)
-		}
-		if downtime.SuccessSeconds > ExportGranularity {
-			log.Warnf("Probe '%s' has success seconds %d that is more than export granularity %d", probeRefId, downtime.FailSeconds, ExportGranularity)
-		}
-	}
+	now := time.Now().Unix()
+	p.RecalcEpisodes(now)
+	p.LastScrapeTimestamp = now
 
 	// Send to sender every 30 seconds.
-	shouldExport := p.CheckAndUpdateLastExportTime(now)
+	shouldExport := p.UpdateLastExportTime(now)
 	if !shouldExport {
 		return
 	}
+	p.Export()
 
-	// Copy scraped results and send to sender.
-	exportResults := make([]checks.DowntimeEpisode, 0)
-	for _, downtime := range p.ScrapeResults {
-		exportResults = append(exportResults, *downtime)
-	}
-	p.DowntimeEpisodesCh <- exportResults
 	p.ScrapeResults = nil
 }
 
-func (p *ProbeExecutor) CheckAndUpdateLastExportTime(nowTime int64) bool {
-	var shouldExport = false
+// Export copies scraped results and sends them to sender along as evaluates computed probes.
+func (p *ProbeExecutor) Export() {
+	episodes := make([]checks.DowntimeEpisode, 0)
+
+	for _, ep := range p.ScrapeResults {
+		episodes = append(episodes, *ep)
+	}
+
+	// FIXME this is incorrect. The calculation of a correct downtime episode from two other downtime episodes is
+	//       impossible. Without original time points, we cannot know how these downtime episodes overlap.
+	//
+	//      For example, consider 2 similar downtime episodes that look like this {success: 15, fail: 15}.
+	//      How do they overlap?
+	//
+	//		1. Edge case: 100% overlap
+	//
+	//		 	|    15s    |    15s    |
+	//		1	|---fail----|--success--|	 50% downtime
+	//		2	|---fail----|--success--|	 50% downtime
+	//		result	|---fail----|--success--|	 50% downtime
+	//
+	//		2. Edge case: 0% overlap
+	//
+	//		 	|    15s    |    15s    |
+	//		1	|--success--|---fail----|	 50% downtime
+	//		2	|---fail----|--success--|	 50% downtime
+	//		result	|---fail----|---fail----|	100% downtime
+	//
+	//      For now, calc.Calc method picks biggest fail of two episodes like they fully overlap in fail,
+	//      in unknown, and in nodata intervals, and overlap in success by the remains.
+	for _, calc := range p.ProbeManager.Calculators() {
+		ep, err := calc.Calc(p.ScrapeResults, exportIntervalSeconds)
+		if err != nil {
+			log.Errorf("cannot calculate probe id=%s: %v", calc.Id(), err)
+			continue
+		}
+		episodes = append(episodes, *ep)
+	}
+
+	p.DowntimeEpisodesCh <- episodes
+}
+
+func (p *ProbeExecutor) RecalcEpisodes(now int64) {
+	/*
+		FIXME workaround timer/`now` inaccuracy
+
+		Scrape starts every second, but we may lose seconds because the timer is not precise and we just
+		throw away the precision of `now`. In exported results, we can observe something like this:
+
+			Success: 31m 27s     = 30m + 87s
+			Nodata:     -87s
+
+		 We seem to over-operate with delta, or correct incorrectly.
+	*/
+	timeslot := (now / 30) * 30
+	var delta, noDataDelta int64
+	if p.LastScrapeTimestamp == 0 {
+		// proper NoData for first 30 sec episode at start. We take delta into account.
+		delta = 1
+		noDataDelta = now - timeslot - delta
+	} else {
+		delta = now - p.LastScrapeTimestamp
+		noDataDelta = 0
+	}
+
+	for id, result := range p.Results {
+		episode, ok := p.ScrapeResults[id]
+		if !ok {
+			episode = &checks.DowntimeEpisode{
+				ProbeRef:      result.ProbeRef,
+				TimeSlot:      timeslot,
+				NoDataSeconds: 30,
+			}
+			p.ScrapeResults[id] = episode
+		}
+
+		// Move spent time to an acknowledged status
+		episode.NoDataSeconds -= delta
+		switch result.Value() {
+		case checks.StatusFail:
+			episode.FailSeconds += delta
+		case checks.StatusSuccess:
+			episode.SuccessSeconds += delta
+		case checks.StatusUnknown:
+			episode.UnknownSeconds += delta
+		}
+
+		// Correct possible inaccuracy
+		episode.NoDataSeconds -= noDataDelta
+		episode.Correct(30)
+
+		// Log some asserts
+		if episode.FailSeconds > exportIntervalSeconds {
+			log.Warnf("Probe '%s' fail time %ds exceeds export interval %ds\n", id, episode.FailSeconds, exportIntervalSeconds)
+		}
+		if episode.SuccessSeconds > exportIntervalSeconds {
+			log.Warnf("Probe '%s' success time %ds exceeds export interval %ds\n", id, episode.FailSeconds, exportIntervalSeconds)
+		}
+	}
+}
+
+func (p *ProbeExecutor) UpdateLastExportTime(now int64) bool {
 	if p.LastExportTimestamp == 0 {
 		// Export at start only if now is a 30 second mark
-		if nowTime%ExportGranularity == 0 {
-			shouldExport = true
-		} else {
-			// Set LastExportTimestamp to a prevMark for future calls
-			p.LastExportTimestamp = (nowTime / ExportGranularity) * ExportGranularity
+		if now%exportIntervalSeconds == 0 {
+			p.LastExportTimestamp = now
+			return true
 		}
-	} else {
-		prevMark := (p.LastExportTimestamp / ExportGranularity) * ExportGranularity
 
-		// Export if now is a 30 second mark or past it
-		if nowTime >= prevMark+ExportGranularity {
-			shouldExport = true
-		}
-	}
-	if shouldExport {
-		p.LastExportTimestamp = nowTime
+		// Set LastExportTimestamp to the interval start for future calls
+		p.LastExportTimestamp = (now / exportIntervalSeconds) * exportIntervalSeconds
+		return false
 	}
 
-	return shouldExport
+	// Export if now is a 30 second mark or past it
+	start := (p.LastExportTimestamp / exportIntervalSeconds) * exportIntervalSeconds
+	end := start + exportIntervalSeconds
+	if now >= end {
+		p.LastExportTimestamp = now
+		return true
+	}
+
+	return false
 }

@@ -34,8 +34,8 @@ func NewEmptyStatusInfo(stepRange []int64) *StatusInfo {
 func (s *StatusInfo) AddEpisode(episode checks.DowntimeEpisode) {
 	s.Up += episode.SuccessSeconds
 	s.Down += episode.FailSeconds
-	s.Unknown += episode.Unknown
-	s.NoData -= episode.SuccessSeconds + episode.FailSeconds + episode.Unknown
+	s.Unknown += episode.UnknownSeconds
+	s.NoData -= episode.SuccessSeconds + episode.FailSeconds + episode.UnknownSeconds
 }
 
 func (s *StatusInfo) Add(info *StatusInfo) {

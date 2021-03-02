@@ -84,6 +84,9 @@ var _ = Describe("Module :: upmeter :: helm template :: disabled probes", func()
 			Entry("Key metrics presence probe",
 				"monitoring-kubernetes",
 				"monitoring-and-autoscaling/key-metrics-present"),
+			Entry("Horizontal pod autoscaler probe",
+				"prometheus-metrics-adapter",
+				"monitoring-and-autoscaling/horizontal-pod-autoscaler"),
 		)
 	})
 })

@@ -63,6 +63,9 @@ func NewDefaultAgent(ctx context.Context) *Agent {
 	for _, probe := range a.Manager.Probes() {
 		log.Infof("Register probe %s", probe.Id())
 	}
+	for _, calc := range a.Manager.Calculators() {
+		log.Infof("Register calculated probe %s", calc.Id())
+	}
 
 	a.UpmeterClient = sender.CreateUpmeterClient(app.UpmeterHost, app.UpmeterPort)
 

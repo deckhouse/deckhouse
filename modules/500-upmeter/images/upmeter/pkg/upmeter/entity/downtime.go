@@ -114,8 +114,8 @@ func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, ref checks.Prob
 	for _, item := range items {
 		totalDowntime30s.SuccessSeconds += item.DowntimeEpisode.SuccessSeconds
 		totalDowntime30s.FailSeconds += item.DowntimeEpisode.FailSeconds
-		totalDowntime30s.Unknown += item.DowntimeEpisode.Unknown
-		totalDowntime30s.NoData += item.DowntimeEpisode.NoData
+		totalDowntime30s.UnknownSeconds += item.DowntimeEpisode.UnknownSeconds
+		totalDowntime30s.NoDataSeconds += item.DowntimeEpisode.NoDataSeconds
 	}
 
 	txCtx, err := dbCtx.BeginTransaction()
@@ -152,8 +152,8 @@ func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, ref checks.Prob
 	// Update entity with combined seconds
 	entity5m.DowntimeEpisode.SuccessSeconds = combinedEpisode.SuccessSeconds
 	entity5m.DowntimeEpisode.FailSeconds = combinedEpisode.FailSeconds
-	entity5m.DowntimeEpisode.Unknown = combinedEpisode.Unknown
-	entity5m.DowntimeEpisode.NoData = combinedEpisode.NoData
+	entity5m.DowntimeEpisode.UnknownSeconds = combinedEpisode.UnknownSeconds
+	entity5m.DowntimeEpisode.NoDataSeconds = combinedEpisode.NoDataSeconds
 
 	if entity5m.Rowid == -1 {
 		// Insert
