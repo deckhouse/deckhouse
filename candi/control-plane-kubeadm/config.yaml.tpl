@@ -1,18 +1,6 @@
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
-{{- if eq .clusterConfiguration.kubernetesVersion "1.15" }}
-kubernetesVersion: 1.15.12
-{{- else if eq .clusterConfiguration.kubernetesVersion "1.16" }}
-kubernetesVersion: 1.16.15
-{{- else if eq .clusterConfiguration.kubernetesVersion "1.17" }}
-kubernetesVersion: 1.17.14
-{{- else if eq .clusterConfiguration.kubernetesVersion "1.18" }}
-kubernetesVersion: 1.18.12
-{{- else if eq .clusterConfiguration.kubernetesVersion "1.19" }}
-kubernetesVersion: 1.19.5
-{{- else }}
-  {{- join (slice "Kubernetes version" .clusterConfiguration.kubernetesVersion "is not supported!") " "| fail }}
-{{- end }}
+kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 networking:
   serviceSubnet: {{ .clusterConfiguration.serviceSubnetCIDR | quote }}

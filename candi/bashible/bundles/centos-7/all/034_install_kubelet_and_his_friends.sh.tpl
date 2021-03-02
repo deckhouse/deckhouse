@@ -1,24 +1,5 @@
-{{ if eq .kubernetesVersion "1.14" }}
-kubernetes_version="1.14.10-0"
-kubernetes_cni_version="0.8.6-0"
-{{ else if eq .kubernetesVersion "1.15" }}
-kubernetes_version="1.15.12-0"
-kubernetes_cni_version="0.8.6-0"
-{{ else if eq .kubernetesVersion "1.16" }}
-kubernetes_version="1.16.15-0"
-kubernetes_cni_version="0.8.6-0"
-{{ else if eq .kubernetesVersion "1.17" }}
-kubernetes_version="1.17.14-0"
-kubernetes_cni_version="0.8.7-0"
-{{ else if eq .kubernetesVersion "1.18" }}
-kubernetes_version="1.18.12-0"
-kubernetes_cni_version="0.8.7-0"
-{{ else if eq .kubernetesVersion "1.19" }}
-kubernetes_version="1.19.5-0"
-kubernetes_cni_version="0.8.7-0"
-{{ else }}
-  {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
-{{ end }}
+kubernetes_version="{{ printf "%s.%s-0" (.kubernetesVersion | toString ) (index .k8s .kubernetesVersion "patch" | toString) }}"
+kubernetes_cni_version="{{ printf "%s-0" (index .k8s .kubernetesVersion "cni_version" | toString) }}"
 
 if rpm -q kubelet >/dev/null; then
   kubernetes_current_version="$(rpm -q kubelet | sed 's/-/ /' | sed 's/\.x86_64//' | awk '{print $2}')"

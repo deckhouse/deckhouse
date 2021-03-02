@@ -68,14 +68,15 @@ candictl render bashible-bundle --config=/config.yaml
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: BashibleTemplateData
-bundle: ubuntu-18.04
+bundle: ubuntu-lts
 provider: OpenStack
 runType: ClusterBootstrap
 clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
   nodeIP: 192.168.199.23
-kubernetesVersion: "1.16"
+kubernetesVersion: "1.19"
+cri: "Containerd"
 nodeGroup:
   cloudInstances:
     classReference:
@@ -92,4 +93,17 @@ nodeGroup:
   nodeType: Cloud
   zones:
   - nova
+k8s:
+  '1.15':
+    patch: 12
+  '1.16':
+    patch: 15
+    cni_version: 0.8.6
+  '1.17':
+    patch: 17
+    cni_version: 0.8.7
+  '1.18':
+    patch: 15
+  '1.19':
+    patch: 7  
 ```

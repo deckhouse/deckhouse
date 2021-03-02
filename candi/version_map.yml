@@ -3,19 +3,24 @@ k8s:
     patch: 12
     kubectl:
       checksum: a32b762279c33cb8d8f4198f3facdae402248c3164e9b9b664c3afbd5a27472e
+    cni_version: 0.8.6
   '1.16':
     patch: 15
     kubectl:
       checksum: e8913069293156ddf55f243814a22d2384fc18b165efb6200606fdeaad146605
+    cni_version: 0.8.6
   '1.17':
     patch: 17
     kubectl:
       checksum: 8329fac94c66bf7a475b630972a8c0b036bab1f28a5584115e8dd26483de8349
+    cni_version: 0.8.7
   '1.18':
     patch: 15
     kubectl:
       checksum: eb5a5dd0a72795942ab81d1e4331625e80a90002c8bb39b2cb15aa707a3812c6
+    cni_version: 0.8.7
   '1.19':
     patch: 7
     kubectl:
       checksum: d46eb3bbe2575e5b6bedbc6d3519424b4f2f57929d7da1ef7e11c09068f37297
+    cni_version: 0.8.7

@@ -10,8 +10,10 @@ import (
 const bootstrapDir = "/bootstrap"
 
 func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string, metaConfig *config.MetaConfig) error {
-	bashibleData := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
-
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	if err != nil {
+		return err
+	}
 	saveInfo := []saveFromTo{
 		{
 			from: filepath.Join(candiBashibleDir, "bundles", bundleName),

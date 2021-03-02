@@ -33,10 +33,16 @@ func logTemplatesData(name string, data map[string]interface{}) {
 }
 
 func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
-	kubeadmData := metaConfig.ConfigForKubeadmTemplates("")
+	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
+	if err != nil {
+		return err
+	}
 	logTemplatesData("kubeadm", kubeadmData)
 
-	bashibleData := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	if err != nil {
+		return err
+	}
 	logTemplatesData("bashible", bashibleData)
 
 	return log.Process("default", "Render bashible bundle templates", func() error {

@@ -13,11 +13,14 @@ func TestExecuteTemplate(t *testing.T) {
 	err := yaml.Unmarshal([]byte(`
 nodeIP: "127.0.0.1"
 clusterConfiguration:
-  kubernetesVersion: "1.15"
+  kubernetesVersion: "1.19"
   clusterType: "Cloud"
   serviceSubnetCIDR: "127.0.0.1/24"
   podSubnetCIDR: "127.0.0.1/24"
   clusterDomain: "%s.example.com"
+k8s:
+  '1.19':
+    patch: 7
 extraArgs: {}
 `), &data)
 	if err != nil {

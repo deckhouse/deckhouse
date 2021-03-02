@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, bundle, kubernetesVersion, runType]
+    required: [apiVersion, kind, bundle, kubernetesVersion, cri, runType, k8s]
     properties:
       apiVersion:
         type: string
@@ -16,8 +16,12 @@ apiVersions:
         type: string
       bundle:
         type: string
+        enum: [ubuntu-lts, centos-7]
       kubernetesVersion:
         type: string
+      cri:
+        type: string
+        enum: [Docker, Containerd, NotManaged]
       runType:
         type: string
         enum: [ClusterBootstrap, ImageBuilding, Normal]
@@ -40,6 +44,21 @@ apiVersions:
           type: object
         cloudInstances:
           type: object
+      k8s:
+        type: object
+        patternProperties:
+          '^1.[0-9]+$':
+            type: object
+            properties:
+              patch:
+                type: [string, number]
+              kubectl:
+                type: object
+                properties:
+                  checksum:
+                    type: string
+              cni_version:
+                type: string
     oneOf:
     - required: [clusterBootstrap]
       properties:

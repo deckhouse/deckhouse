@@ -37,6 +37,8 @@ const cacheMessage = `Create cache %s:
 	If you want to continue, please delete the cache folder manually.
 `
 
+const versionMap = "/deckhouse/candi/version_map.yml"
+
 func printBanner() {
 	_ = log.Process("bootstrap", "Banner", func() error {
 		log.InfoLn(banner)
@@ -65,6 +67,21 @@ func generateClusterUUID() (string, error) {
 	return clusterUUID, err
 }
 
+func loadConfigFromFile(path string) (*config.MetaConfig, error) {
+	metaConfig, err := config.ParseConfig(path)
+	if err != nil {
+		return nil, err
+	}
+	err = metaConfig.LoadVersionMap(versionMap)
+	if err != nil {
+		return nil, err
+	}
+	if len(metaConfig.ProviderClusterConfig) == 0 && len(metaConfig.StaticClusterConfig) == 0 {
+		return nil, fmt.Errorf("StaticClusterConfiguration must present for static-cluster bootstrap.")
+	}
+	return metaConfig, nil
+}
+
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
 	app.DefineSSHFlags(cmd)
@@ -77,13 +94,9 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
 
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		metaConfig, err := loadConfigFromFile(app.ConfigPath)
 		if err != nil {
 			return err
-		}
-
-		if len(metaConfig.ProviderClusterConfig) == 0 && len(metaConfig.StaticClusterConfig) == 0 {
-			return fmt.Errorf("StaticClusterConfiguration must present for static-cluster bootstrap.")
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()

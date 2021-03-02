@@ -1,24 +1,5 @@
-{{ if eq .kubernetesVersion "1.14" }}
-kubernetes_version="1.14.10-00"
-kubernetes_cni_version="0.8.6-00"
-{{ else if eq .kubernetesVersion "1.15" }}
-kubernetes_version="1.15.12-00"
-kubernetes_cni_version="0.8.6-00"
-{{ else if eq .kubernetesVersion "1.16" }}
-kubernetes_version="1.16.15-00"
-kubernetes_cni_version="0.8.6-00"
-{{ else if eq .kubernetesVersion "1.17" }}
-kubernetes_version="1.17.14-00"
-kubernetes_cni_version="0.8.7-00"
-{{ else if eq .kubernetesVersion "1.18" }}
-kubernetes_version="1.18.12-00"
-kubernetes_cni_version="0.8.7-00"
-{{ else if eq .kubernetesVersion "1.19" }}
-kubernetes_version="1.19.5-00"
-kubernetes_cni_version="0.8.7-00"
-{{ else }}
-  {{ fail (printf "Unsupported kubernetes version: %s" .kubernetesVersion) }}
-{{ end }}
+kubernetes_version="{{ printf "%s.%s-00" (.kubernetesVersion | toString ) (index .k8s .kubernetesVersion "patch" | toString) }}"
+kubernetes_cni_version="{{ printf "%s-00" (index .k8s .kubernetesVersion "cni_version" | toString) }}"
 
 if dpkg -S kubelet >/dev/null 2>&1; then
   kubernetes_current_version="$(dpkg -s kubelet | awk '/Version/{print $2}')"

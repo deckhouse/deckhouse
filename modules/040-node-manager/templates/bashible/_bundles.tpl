@@ -9,7 +9,7 @@
   {{- $_ := set $normal "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses }}
   {{- $_ := set $normal "kubernetesCA"       $context.Values.nodeManager.internal.kubernetesCA }}
 
-  {{- $tpl_context_common := dict }}
+  {{- $tpl_context_common := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
   {{- $_ := set $tpl_context_common "runType" "Normal" }}
   {{- $_ := set $tpl_context_common "Template" $context.Template }}
   {{- $_ := set $tpl_context_common "normal"   $normal }}

@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"strings"
 
@@ -14,16 +15,15 @@ import (
 )
 
 type MetaConfig struct {
-	ClusterType          string `json:"-"`
-	Layout               string `json:"-"`
-	ProviderName         string `json:"-"`
-	OriginalProviderName string `json:"-"`
-	ClusterPrefix        string `json:"-"`
-	ClusterDNSAddress    string `json:"-"`
-
-	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
-	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
-	TerraNodeGroupSpecs []TerraNodeGroupSpec   `json:"-"`
+	ClusterType          string                 `json:"-"`
+	Layout               string                 `json:"-"`
+	ProviderName         string                 `json:"-"`
+	OriginalProviderName string                 `json:"-"`
+	ClusterPrefix        string                 `json:"-"`
+	ClusterDNSAddress    string                 `json:"-"`
+	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
+	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
@@ -31,7 +31,8 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	UUID string `json:"clusterUUID,omitempty"`
+	VersionMap map[string]interface{} `json:"-"`
+	UUID       string                 `json:"clusterUUID,omitempty"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -242,35 +243,39 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
-func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) map[string]interface{} {
+func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
 		var t interface{}
-		_ = json.Unmarshal(value, &t)
+		err := json.Unmarshal(value, &t)
+		if err != nil {
+			return nil, fmt.Errorf("cluster config unmarshal: %v", err)
+		}
 		data[key] = t
 	}
-
-	result := map[string]interface{}{
-		"extraArgs":            make(map[string]interface{}),
-		"clusterConfiguration": data,
-		// bashible will use this as a placeholder on envsubst call, address will be discovered in one of bashible steps
-		"nodeIP": "$MY_IP",
-	}
+	result := m.VersionMap
+	result["extraArgs"] = make(map[string]interface{})
+	result["clusterConfiguration"] = data
+	// bashible will use this as a placeholder on envsubst call, address will be discovered in one of bashible steps
+	result["nodeIP"] = "$MY_IP"
 
 	if nodeIP != "" {
 		result["nodeIP"] = nodeIP
 	}
 
-	return result
+	return result, nil
 }
 
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) map[string]interface{} {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
 		var t interface{}
-		_ = json.Unmarshal(value, &t)
+		err := json.Unmarshal(value, &t)
+		if err != nil {
+			return nil, fmt.Errorf("cluster config unmarshal: %v", err)
+		}
 		data[key] = t
 	}
 
@@ -298,14 +303,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) map[
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	return map[string]interface{}{
-		"runType":           "ClusterBootstrap",
-		"bundle":            bundle,
-		"cri":               data["defaultCRI"],
-		"kubernetesVersion": data["kubernetesVersion"],
-		"nodeGroup":         nodeGroup,
-		"clusterBootstrap":  clusterBootstrap,
-	}
+	configForBashibleBundleTemplate := m.VersionMap
+	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
+	configForBashibleBundleTemplate["bundle"] = bundle
+	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
+	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
+	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
+	configForBashibleBundleTemplate["clusterBootstrap"] = clusterBootstrap
+
+	return configForBashibleBundleTemplate, nil
 }
 
 // NodeGroupConfig returns values for terraform to order master node or static node
@@ -393,6 +399,20 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	}
 
 	return m
+}
+
+func (m *MetaConfig) LoadVersionMap(filename string) error {
+	versionMapFile, err := ioutil.ReadFile(filename)
+	versionMap := make(map[string]interface{})
+	if err != nil {
+		return fmt.Errorf("version map file load: %v", err)
+	}
+	err = yaml.Unmarshal(versionMapFile, &versionMap)
+	if err != nil {
+		return fmt.Errorf("version map file unmarshal: %v", err)
+	}
+	m.VersionMap = versionMap
+	return nil
 }
 
 func getDNSAddress(serviceCIDR string) string {

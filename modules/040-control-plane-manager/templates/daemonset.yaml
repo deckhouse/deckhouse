@@ -7,7 +7,7 @@
 {{- end }}
 {{- $_ := set $images "etcd" (printf "%s/control-plane-manager/etcd:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
 
-{{- $tpl_context := dict }}
+{{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
 {{- $_ := set $tpl_context "etcd" (dict "existingCluster" true) }}
 {{- $_ := set $tpl_context "images" $images }}
