@@ -21,6 +21,17 @@ const (
 	providerSchemaFilenameSuffix = "_configuration.yaml"
 )
 
+func numerateManifestLines(manifest []byte) string {
+	manifestLines := strings.Split(string(manifest), "\n")
+	builder := strings.Builder{}
+
+	for index, line := range manifestLines {
+		builder.WriteString(fmt.Sprintf("%d\t%s\n", index+1, line))
+	}
+
+	return builder.String()
+}
+
 func ParseConfig(path string) (*MetaConfig, error) {
 	fileContent, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -126,12 +137,12 @@ func ParseConfigFromData(configData string) (*MetaConfig, error) {
 
 		index, err := schemaStore.Validate(&docData)
 		if err != nil {
-			return nil, fmt.Errorf("config validation: %v", err)
+			return nil, fmt.Errorf("config validation: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		var data map[string]json.RawMessage
 		if err = yaml.Unmarshal(docData, &data); err != nil {
-			return nil, fmt.Errorf("config unmarshal: %v", err)
+			return nil, fmt.Errorf("config unmarshal: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		switch {
