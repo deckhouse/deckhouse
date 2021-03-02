@@ -129,7 +129,7 @@ function kubernetes::_apply_patch_set() {
       if ! kubectl get -f - <<< "${resourceSpec}" >/dev/null 2>/dev/null; then
         kubectl create -f - <<< "${resourceSpec}" >/dev/null
       else
-        kubectl replace --force -f - <<< "${resourceSpec}" >/dev/null
+        kubectl replace -f - <<< "${resourceSpec}" >/dev/null
       fi
     ;;
     "JQPatch")

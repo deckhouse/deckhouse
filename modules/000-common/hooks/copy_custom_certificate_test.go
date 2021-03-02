@@ -1,19 +1,12 @@
 package hooks
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 var _ = Describe("Modules :: common :: hooks :: copy_custom_certificate ::", func() {
 	const (

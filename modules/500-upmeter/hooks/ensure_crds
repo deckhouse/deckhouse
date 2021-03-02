@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  common_hooks::https::ensure_crds::config
+}
+
+function __on_startup() {
+  common_hooks::https::ensure_crds::main $(module::path)/crds/*
+}
+
+hook::run "$@"
