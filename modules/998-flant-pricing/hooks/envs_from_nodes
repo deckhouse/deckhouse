@@ -36,18 +36,18 @@ function __on_group::master_nodes() {
     return 0
   fi
 
-  master_nodes=$(context::get snapshots.master_nodes)
+  master_nodes="$(context::get snapshots.master_nodes)"
   values::set flantPricing.internal.mastersCount "$(echo "$master_nodes" | jq -r '. | length')"
   values::set flantPricing.internal.masterIsDedicated "$(echo "$master_nodes" | jq -r '[.[].filterResult.isDedicated] | sort | .[0]')"
 
-  master_min_cpu=$(for cpu in $(jq -r '.[].filterResult.cpu' <<< "$master_nodes"); do
+  master_min_cpu="$(for cpu in $(jq -r '.[].filterResult.cpu' <<< "$master_nodes"); do
     tools::dk_convert "$cpu"
-  done | sort -n | head -1)
+  done | sort -n | head -1)"
   values::set flantPricing.internal.masterMinCPU "$master_min_cpu"
 
-  master_min_memory=$(for memory in $(jq -r '.[].filterResult.memory' <<< "$master_nodes"); do
+  master_min_memory="$(for memory in $(jq -r '.[].filterResult.memory' <<< "$master_nodes"); do
     tools::dk_convert "$memory"
-  done | sort -n | head -1)
+  done | sort -n | head -1)"
   values::set flantPricing.internal.masterMinMemory "$master_min_memory"
 }
 

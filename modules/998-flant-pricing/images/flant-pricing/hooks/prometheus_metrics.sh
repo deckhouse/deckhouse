@@ -17,60 +17,79 @@ function __config__() {
 EOF
 }
 
-# Makes query to prometheus and returns resulting json
+# Makes query to prometheus and returns resulting json.
 # $1 - promql
 function prometheus_query() {
   curl_args=(-s --connect-timeout 10 --max-time 10 -k -XGET -G -k --cert /etc/ssl/prometheus-api-client-tls/tls.crt --key /etc/ssl/prometheus-api-client-tls/tls.key)
   prom_url="https://prometheus.d8-monitoring:9090/api/v1/query"
-  if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode "${1}")"; then
+  if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode "query=${1}")"; then
     prom_result=""
   fi
   echo "$prom_result"
 }
 
-function get_cluster_status() {
-  if [[ $1 == "" ]]; then
-    echo "error"
-    return 0
-  fi
-  echo "$1" | jq -r '[.data.result // [] | .[] | .metric.status] | sort | first // "missing"'
+# Return appropriate status from statuses array.
+# $1 - statuses json array
+function get_status() {
+  statuses="$1"
+
+  # Following map represents "restatusing" rules and priority of each status.
+  status_map='{
+    "error": "error",
+    "absent": "missing",
+    "missing": "missing",
+    "destructively_changed": "destructively_changed",
+    "changed": "changed",
+    "excessive": "changed",
+    "insufficient": "changed",
+    "ok": "ok"
+  }'
+
+  # Get the first matching status.
+  jq -r --argjson statuses "$statuses" '
+    [. | to_entries[] | .key as $key | select($statuses[] | . == $key) | .value] | first // ""
+    ' <<< "$status_map"
 }
 
-function get_node_group_status() {
-  if [[ $2 == "" || $3 == ""  || $4 == "" ]]; then
-    echo "error"
-    return 0
-  fi
+# Return cluster state status.
+# $1 - prometheus json result
+function get_cluster_status() {
+  status="$(get_status "$(jq '[.data.result // [] | .[] | .metric.status]' <<< "$1")")"
 
-  node_group_name="$1"
-  node_group_statuses="$2"
-  node_statuses="$3"
-  node_template_statuses="$4"
-
-  node_group_status=$(jq -r --arg node_group_name "$node_group_name" '
-    [.data.result // [] | .[] | select(.metric.name == $node_group_name) | .metric.status] | sort | first // ""
-    ' <<< "$node_group_statuses")
-
-  node_status=$(jq -r --arg node_group_name "$node_group_name" '
-    [.data.result // [] | .[] | select(.metric.node_group == $node_group_name) | .metric.status] | sort | first // ""
-    ' <<< "$node_statuses")
-
-  node_template_status=$(jq -r --arg node_group_name "$node_group_name" '
-    [.data.result // [] | .[] | select(.metric.name == $node_group_name) | .metric.status] | sort | first // ""
-    ' <<< "$node_template_statuses")
-
-  status="changed"
-  if [[ "$node_group_status" == "ok" && "$node_status" == "ok"  && "$node_template_status" == "ok" ]]; then
-    status="ok"
-  else
-    if [[ -z "$node_template_status" ]]; then
+  if [[ -z "$status" ]]; then
       status="missing"
-    else
-      if jq -e --arg node_group_name "$node_group_name" '[.data.result // [] | .[] | select(.metric.node_group == $node_group_name and .metric.status == "destructively_changed")] | any' <<< "$node_statuses" > /dev/null; then
-        status="destructively_changed"
-      fi
-    fi
   fi
+
+  echo $status
+}
+
+# Return node group status.
+# $1 - node group name
+# $2, $3, $4 - prometheus json results
+function get_node_group_status() {
+  node_group_name="$1"
+  prom_node_group_statuses="$2"
+  prom_node_statuses="$3"
+  prom_node_template_statuses="$4"
+
+  node_group_status="$(get_status "$(jq --arg node_group_name "$node_group_name" '
+    [.data.result // [] | .[] | select(.metric.name == $node_group_name) | .metric.status]
+    ' <<< "$prom_node_group_statuses")")"
+
+  node_status="$(get_status "$(jq --arg node_group_name "$node_group_name" '
+    [.data.result // [] | .[] | select(.metric.node_group == $node_group_name) | .metric.status]
+    ' <<< "$prom_node_statuses")")"
+
+  node_template_status="$(get_status "$(jq --arg node_group_name "$node_group_name" '
+    [.data.result // [] | .[] | select(.metric.name == $node_group_name) | .metric.status]
+    ' <<< "$prom_node_template_statuses")")"
+
+  status="$(get_status '["'$node_group_status'","'$node_status'","'$node_template_status'"]')"
+
+  if [[ -z "$status" ]]; then
+      status="missing"
+  fi
+
   echo $status
 }
 
@@ -80,24 +99,32 @@ function terraform_state_metrics() {
   group="group_terraform_state_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
-  tf_state_cluster="none"
-  tf_state_master="none"
-  tf_state_terranode="none"
+  state_cluster_status="none"
+  state_master_status="none"
+  state_terranode_status="none"
 
   if [[ "${FP_TERRAFORM_MANAGER_EBABLED}" == "true" ]]; then
-    prom_result=$(prometheus_query 'query=max(candi_converge_cluster_status) by (status) == 1')
-    tf_state_cluster=$(get_cluster_status "$prom_result")
+    prom_cluster_status="$(prometheus_query 'max(candi_converge_cluster_status) by (status) == 1')"
+    prom_node_group_statuses="$(prometheus_query 'max(candi_converge_node_group_status) by (name,status) == 1')"
+    prom_node_statuses="$(prometheus_query 'max(candi_converge_node_status) by (name,node_group,status) == 1')"
+    prom_node_template_statuses="$(prometheus_query 'max(candi_converge_node_template_status) by (name,status) == 1')"
 
-    node_group_statuses=$(prometheus_query 'query=max(candi_converge_node_group_status) by (name,status) == 1')
-    node_statuses=$(prometheus_query 'query=max(candi_converge_node_status) by (name,node_group,status) == 1')
-    node_template_statuses=$(prometheus_query 'query=max(candi_converge_node_template_status) by (name,status) == 1')
+    if [[ -z "$prom_cluster_status" || -z "$prom_node_group_statuses" || -z "$prom_node_statuses" || -z "$prom_node_template_statuses" ]]; then
+      >&2 echo "ERROR: Crucial Prometheus queries failed. Skipping terraform_state metrics."
+      return 0
+    fi
 
-    tf_state_master="missing"
-    for node_group_name in $(jq -r '.data.result[] | .metric.name' <<< "$node_group_statuses"); do
-      status=$(get_node_group_status "$node_group_name" "$node_group_statuses" "$node_statuses" "$node_template_statuses")
+    state_cluster_status="$(get_cluster_status "$prom_cluster_status")"
+    state_master_status="missing"
+    state_terranode_statuses="[]"
+
+    for node_group_name in $(jq -r '.data.result[] | .metric.name' <<< "$prom_node_group_statuses"); do
+      status="$(get_node_group_status "$node_group_name" "$prom_node_group_statuses" "$prom_node_statuses" "$prom_node_template_statuses")"
       if [[ "$node_group_name" == "master" ]]; then
-        tf_state_master="$status"
+        state_master_status="$status"
       else
+        state_terranode_statuses="$(jq --arg status "$status" '. + [$status]' <<< "$state_terranode_statuses")"
+
         jq -nc --arg metric_name $node_group_metric_name --arg group "$group" \
           --arg node_group_name "$node_group_name" \
           --arg status "$status" '
@@ -111,28 +138,26 @@ function terraform_state_metrics() {
             }
           }
           ' >> $METRICS_PATH
-
-        if [[ "$tf_state_terranode" == "none" ]]; then
-          tf_state_terranode="$status"
-        elif [[ "$status" != "ok" && "$tf_state_terranode" != "destructively_changed" ]]; then
-          tf_state_terranode="$status"
-        fi
       fi
     done
+
+    if [[ "$state_terranode_statuses" != "[]" ]]; then
+      state_terranode_status="$(get_status "$state_terranode_statuses")"
+    fi
   fi
 
   jq -nc --arg metric_name $summarized_metric_name --arg group "$group" \
-    --arg tf_state_cluster "$tf_state_cluster" \
-    --arg tf_state_master "$tf_state_master" \
-    --arg tf_state_terranode "$tf_state_terranode" '
+    --arg state_cluster_status "$state_cluster_status" \
+    --arg state_master_status "$state_master_status" \
+    --arg state_terranode_status "$state_terranode_status" '
     {
       "name": $metric_name,
       "group": $group,
       "set": '$(date +%s)',
       "labels": {
-        "cluster": $tf_state_cluster,
-        "master": $tf_state_master,
-        "terranode": $tf_state_terranode
+        "cluster": $state_cluster_status,
+        "master": $state_master_status,
+        "terranode": $state_terranode_status
       }
     }
     ' >> $METRICS_PATH
@@ -143,7 +168,7 @@ function helm_releases_metrics() {
   group="group_helm_releases_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
-  prom_result=$(prometheus_query 'query=helm_releases_count')
+  prom_result="$(prometheus_query 'helm_releases_count')"
   if [[ ! -z "$prom_result" ]]; then
     jq --arg metric_name $helm_releases_metric_name --arg group "$group" '
       .data.result[] |
@@ -159,84 +184,48 @@ function helm_releases_metrics() {
   fi
 }
 
-function resources_metrics() {
-  resources_metric_name="flant_pricing_resources_count"
+function expire_resource_metrics() {
   group="group_resources_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+}
 
-  metrics=""
+# Output resource metric.
+# $1 - resource kind
+# $2 - prometheus json result
+function output_resource_metric() {
+  name="flant_pricing_resources_count"
+  group="group_resources_metrics"
 
-  prom_result=$(prometheus_query 'query=count(sum(kube_pod_container_status_ready) by (pod))')
-  if [[ ! -z "$prom_result" ]]; then
-    metrics="$metrics\n$(jq --arg metric_name $resources_metric_name --arg group "$group" '.data.result[] |
-    {
-      "name": $metric_name,
-      "group": $group,
-      "set": (.value[1] | tonumber),
-      "labels": {
-        "kind": "Pod"
-      }
-    }
-    ' <<< "$prom_result")"
+  value="$(jq -r '.data.result // [] | .[] | .value[1] // ""' <<< "$2")"
+
+  if [[ "$value" == "" ]]; then
+    >&2 echo "ERROR: Skipping empty value metric $name for resource Kind $1."
+    return 0
   fi
 
-  prom_result=$(prometheus_query 'query=count(kube_namespace_created)')
-  if [[ ! -z "$prom_result" ]]; then
-    metrics="$metrics\n$(jq --arg metric_name $resources_metric_name --arg group "$group" '.data.result[] |
+  jq -n --arg name "$name" --arg group "$group" --argjson value "$value" --arg kind "$1" '
     {
-      "name": $metric_name,
+      "name": $name,
       "group": $group,
-      "set": (.value[1] | tonumber),
+      "set": $value,
       "labels": {
-        "kind": "Namespace"
+        "kind": $kind
       }
     }
-    ' <<< "$prom_result")"
-  fi
+    ' >> $METRICS_PATH
+}
 
-  prom_result=$(prometheus_query 'query=count(kube_service_created)')
-  if [[ ! -z "$prom_result" ]]; then
-    metrics="$metrics\n$(jq --arg metric_name $resources_metric_name --arg group "$group" '.data.result[] |
-    {
-      "name": $metric_name,
-      "group": $group,
-      "set": (.value[1] | tonumber),
-      "labels": {
-        "kind": "Service"
-      }
-    }
-    ' <<< "$prom_result")"
-  fi
+function resources_metrics() {
+  expire_resource_metrics
 
-  prom_result=$(prometheus_query 'query=count(kube_ingress_created)')
-  if [[ ! -z "$prom_result" ]]; then
-    metrics="$metrics\n$(jq --arg metric_name $resources_metric_name --arg group "$group" '.data.result[] |
-    {
-      "name": $metric_name,
-      "group": $group,
-      "set": (.value[1] | tonumber),
-      "labels": {
-        "kind": "Ingress"
-      }
-    }
-    ' <<< "$prom_result")"
-  fi
+  output_resource_metric "DaemonSet" "$(prometheus_query 'count(kube_controller_replicas{controller_type="DaemonSet"})')"
+  output_resource_metric "Deployment" "$(prometheus_query 'count(kube_controller_replicas{controller_type="Deployment"})')"
+  output_resource_metric "StatefulSet" "$(prometheus_query 'count(kube_controller_replicas{controller_type="StatefulSet"})')"
 
-  prom_result=$(prometheus_query 'query=count(kube_controller_replicas{controller_type!="ReplicaSet"}) by (controller_type)')
-  if [[ ! -z "$prom_result" ]]; then
-    metrics="$metrics\n$(jq --arg metric_name $resources_metric_name --arg group "$group" '.data.result[] |
-    {
-      "name": $metric_name,
-      "group": $group,
-      "set": (.value[1] | tonumber),
-      "labels": {
-        "kind": .metric.controller_type
-      }
-    }
-    ' <<< "$prom_result")"
-  fi
-
-  echo -e "$metrics" >> $METRICS_PATH
+  output_resource_metric "Pod" "$(prometheus_query 'count(sum(kube_pod_container_status_ready) by (pod))')"
+  output_resource_metric "Namespace" "$(prometheus_query 'count(kube_namespace_created)')"
+  output_resource_metric "Service" "$(prometheus_query 'count(kube_service_created)')"
+  output_resource_metric "Ingress" "$(prometheus_query 'count(kube_ingress_created)')"
 }
 
 function rps_metrics() {
@@ -244,7 +233,7 @@ function rps_metrics() {
   group="group_helm_rps_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
-  prom_result=$(prometheus_query 'query=sum(rate(ingress_nginx_overall_requests_total[20m])) or vector(0)')
+  prom_result="$(prometheus_query 'sum(rate(ingress_nginx_overall_requests_total[20m])) or vector(0)')"
   if [[ ! -z "$prom_result" ]]; then
     jq --arg metric_name $rps_metric_name --arg group "$group" '.data.result[] |
       {
