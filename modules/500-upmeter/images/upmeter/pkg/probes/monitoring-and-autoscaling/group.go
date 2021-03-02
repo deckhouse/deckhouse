@@ -42,7 +42,7 @@ func LoadGroup() []*checks.Probe {
 		NewTricksterAPIProbe(),
 
 		// Prometheus Metrics Adapter
-		NewPMAPodsProbe(),
+		NewPrometheusMetricsAdapterPodsProbe(),
 		NewPrometheusMetricsAdapterAPIProbe(),
 
 		// Vertical Pod Autoscaler

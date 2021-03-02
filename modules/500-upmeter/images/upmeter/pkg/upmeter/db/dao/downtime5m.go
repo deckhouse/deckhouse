@@ -94,8 +94,8 @@ func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, ref checks.ProbeRef) (Do
 		&entity.DowntimeEpisode.TimeSlot,
 		&entity.DowntimeEpisode.SuccessSeconds,
 		&entity.DowntimeEpisode.FailSeconds,
-		&entity.DowntimeEpisode.Unknown,
-		&entity.DowntimeEpisode.NoData,
+		&entity.DowntimeEpisode.UnknownSeconds,
+		&entity.DowntimeEpisode.NoDataSeconds,
 		&entity.DowntimeEpisode.ProbeRef.Group,
 		&entity.DowntimeEpisode.ProbeRef.Probe)
 	if err != nil {
@@ -124,8 +124,8 @@ func (d *Downtime5mDao) ListByRange(from, to, step int64) ([]Downtime5mEntity, e
 			&entity.DowntimeEpisode.TimeSlot,
 			&entity.DowntimeEpisode.SuccessSeconds,
 			&entity.DowntimeEpisode.FailSeconds,
-			&entity.DowntimeEpisode.Unknown,
-			&entity.DowntimeEpisode.NoData,
+			&entity.DowntimeEpisode.UnknownSeconds,
+			&entity.DowntimeEpisode.NoDataSeconds,
 			&entity.DowntimeEpisode.ProbeRef.Group,
 			&entity.DowntimeEpisode.ProbeRef.Probe)
 		if err != nil {
@@ -168,8 +168,8 @@ func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName
 			&entity.DowntimeEpisode.TimeSlot,
 			&entity.DowntimeEpisode.SuccessSeconds,
 			&entity.DowntimeEpisode.FailSeconds,
-			&entity.DowntimeEpisode.Unknown,
-			&entity.DowntimeEpisode.NoData,
+			&entity.DowntimeEpisode.UnknownSeconds,
+			&entity.DowntimeEpisode.NoDataSeconds,
 			&entity.DowntimeEpisode.ProbeRef.Group,
 			&entity.DowntimeEpisode.ProbeRef.Probe)
 		if err != nil {
@@ -238,23 +238,23 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 				err = rows.Scan(
 					&entity.DowntimeEpisode.SuccessSeconds,
 					&entity.DowntimeEpisode.FailSeconds,
-					&entity.DowntimeEpisode.Unknown,
-					&entity.DowntimeEpisode.NoData)
+					&entity.DowntimeEpisode.UnknownSeconds,
+					&entity.DowntimeEpisode.NoDataSeconds)
 			}
 			if len(groupBy) == 1 {
 				err = rows.Scan(
 					&entity.DowntimeEpisode.SuccessSeconds,
 					&entity.DowntimeEpisode.FailSeconds,
-					&entity.DowntimeEpisode.Unknown,
-					&entity.DowntimeEpisode.NoData,
+					&entity.DowntimeEpisode.UnknownSeconds,
+					&entity.DowntimeEpisode.NoDataSeconds,
 					&entity.DowntimeEpisode.ProbeRef.Group)
 			}
 			if len(groupBy) == 2 {
 				err = rows.Scan(
 					&entity.DowntimeEpisode.SuccessSeconds,
 					&entity.DowntimeEpisode.FailSeconds,
-					&entity.DowntimeEpisode.Unknown,
-					&entity.DowntimeEpisode.NoData,
+					&entity.DowntimeEpisode.UnknownSeconds,
+					&entity.DowntimeEpisode.NoDataSeconds,
 					&entity.DowntimeEpisode.ProbeRef.Group,
 					&entity.DowntimeEpisode.ProbeRef.Probe)
 			}
@@ -294,7 +294,7 @@ func (d *Downtime5mDao) Insert(downtime checks.DowntimeEpisode) error {
 	_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime5m,
 		downtime.TimeSlot,
 		downtime.SuccessSeconds, downtime.FailSeconds,
-		downtime.Unknown, downtime.NoData,
+		downtime.UnknownSeconds, downtime.NoDataSeconds,
 		downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
 	return err
 }
@@ -302,7 +302,7 @@ func (d *Downtime5mDao) Insert(downtime checks.DowntimeEpisode) error {
 func (d *Downtime5mDao) Update(rowid int64, downtime checks.DowntimeEpisode) error {
 	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime5m,
 		downtime.SuccessSeconds, downtime.FailSeconds,
-		downtime.Unknown, downtime.NoData,
+		downtime.UnknownSeconds, downtime.NoDataSeconds,
 		rowid)
 	return err
 }

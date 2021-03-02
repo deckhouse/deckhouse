@@ -81,6 +81,7 @@ spec:
             {{ end }}
             {{- if (not (.Values.global.enabledModules | has "prometheus-metrics-adapter")) }}
               {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/prometheus-metrics-adapter" }}
+              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/horizontal-pod-autoscaler" }}
             {{ end }}
             {{- if (not (.Values.global.enabledModules | has "vertical-pod-autoscaler")) }}
               {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/vertical-pod-autoscaler" }}

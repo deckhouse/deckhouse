@@ -5,14 +5,12 @@ import (
 
 	"upmeter/pkg/checks"
 	"upmeter/pkg/probes"
+	"upmeter/pkg/probes/calculated"
 )
 
 type ProbeManager struct {
-	probes []*checks.Probe
-}
-
-func (m *ProbeManager) Probes() []*checks.Probe {
-	return m.probes
+	probes     []*checks.Probe
+	calcProbes []*calculated.Probe
 }
 
 func NewProbeManager() *ProbeManager {
@@ -20,7 +18,16 @@ func NewProbeManager() *ProbeManager {
 }
 
 func (m *ProbeManager) Init() {
-	m.probes = FilterDisabled(probes.Load())
+	m.probes = filterDisabledProbes(probes.Load())
+	m.calcProbes = filterDisabledCalcProbes(calculated.Load())
+}
+
+func (m *ProbeManager) Probes() []*checks.Probe {
+	return m.probes
+}
+
+func (m *ProbeManager) Calculators() []*calculated.Probe {
+	return m.calcProbes
 }
 
 func (m *ProbeManager) InitProbes(ch chan checks.Result, client kube.KubernetesClient, token string) {
@@ -32,8 +39,20 @@ func (m *ProbeManager) InitProbes(ch chan checks.Result, client kube.KubernetesC
 	}
 }
 
-func FilterDisabled(ps []*checks.Probe) []*checks.Probe {
+func filterDisabledProbes(ps []*checks.Probe) []*checks.Probe {
 	var newList = make([]*checks.Probe, 0)
+
+	for _, p := range ps {
+		if checks.IsProbeEnabled(p.Id()) {
+			newList = append(newList, p)
+		}
+	}
+
+	return newList
+}
+
+func filterDisabledCalcProbes(ps []*calculated.Probe) []*calculated.Probe {
+	var newList = make([]*calculated.Probe, 0)
 
 	for _, p := range ps {
 		if checks.IsProbeEnabled(p.Id()) {

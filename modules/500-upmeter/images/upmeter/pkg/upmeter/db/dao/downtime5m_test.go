@@ -61,8 +61,8 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 					TimeSlot:       firstTs + int64(30*i),
 					FailSeconds:    int64(i%30 - i%7 - i%3),
 					SuccessSeconds: int64(30 - i%30 - i%7 - i%3),
-					Unknown:        int64(i % 7),
-					NoData:         int64(i % 3),
+					UnknownSeconds: int64(i % 7),
+					NoDataSeconds:  int64(i % 3),
 				}
 				dao30s.Insert(downtime)
 			}
@@ -135,8 +135,8 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 					TimeSlot:       firstTs + int64(30*i),
 					FailSeconds:    int64(i%30 - i%4 - i%5),
 					SuccessSeconds: int64(30 - i%30 - i%4 - i%5),
-					Unknown:        int64(i % 4),
-					NoData:         int64(i % 5),
+					UnknownSeconds: int64(i % 4),
+					NoDataSeconds:  int64(i % 5),
 				}
 				err = dao30s.Insert(downtime)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -191,8 +191,8 @@ func Test_FillOneDay(t *testing.T) {
 					TimeSlot:       firstTs + int64(300*i),
 					FailSeconds:    int64(i%300 - i%37 - i%13),
 					SuccessSeconds: int64(300 - i%300 - i%37 - i%13),
-					Unknown:        int64(i % 37),
-					NoData:         int64(i % 13),
+					UnknownSeconds: int64(i % 37),
+					NoDataSeconds:  int64(i % 13),
 				}
 				dao5m.Insert(downtime)
 			}
@@ -247,8 +247,8 @@ func Test_Fill_Year(t *testing.T) {
 					TimeSlot:       firstTs + int64(300*i),
 					FailSeconds:    int64(i%300 - i%31 - i%17),
 					SuccessSeconds: int64(300 - i%300 - i%31 - i%17),
-					Unknown:        int64(i % 17),
-					NoData:         int64(i % 31),
+					UnknownSeconds: int64(i % 17),
+					NoDataSeconds:  int64(i % 31),
 				}
 				dao5m.Insert(downtime)
 			}

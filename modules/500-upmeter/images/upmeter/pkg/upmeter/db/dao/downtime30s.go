@@ -111,8 +111,8 @@ func (d *Downtime30sDao) ListByTimestamp(tm int64) ([]Downtime30sEntity, error) 
 			&entity.DowntimeEpisode.TimeSlot,
 			&entity.DowntimeEpisode.SuccessSeconds,
 			&entity.DowntimeEpisode.FailSeconds,
-			&entity.DowntimeEpisode.Unknown,
-			&entity.DowntimeEpisode.NoData,
+			&entity.DowntimeEpisode.UnknownSeconds,
+			&entity.DowntimeEpisode.NoDataSeconds,
 			&entity.DowntimeEpisode.ProbeRef.Group,
 			&entity.DowntimeEpisode.ProbeRef.Probe)
 		if err != nil {
@@ -141,8 +141,8 @@ func (d *Downtime30sDao) GetSimilar(downtime checks.DowntimeEpisode) (Downtime30
 		&entity.DowntimeEpisode.TimeSlot,
 		&entity.DowntimeEpisode.SuccessSeconds,
 		&entity.DowntimeEpisode.FailSeconds,
-		&entity.DowntimeEpisode.Unknown,
-		&entity.DowntimeEpisode.NoData,
+		&entity.DowntimeEpisode.UnknownSeconds,
+		&entity.DowntimeEpisode.NoDataSeconds,
 		&entity.DowntimeEpisode.ProbeRef.Group,
 		&entity.DowntimeEpisode.ProbeRef.Probe)
 	if err != nil {
@@ -171,8 +171,8 @@ func (d *Downtime30sDao) ListForRange(start int64, end int64, group string, prob
 			&entity.DowntimeEpisode.TimeSlot,
 			&entity.DowntimeEpisode.SuccessSeconds,
 			&entity.DowntimeEpisode.FailSeconds,
-			&entity.DowntimeEpisode.Unknown,
-			&entity.DowntimeEpisode.NoData,
+			&entity.DowntimeEpisode.UnknownSeconds,
+			&entity.DowntimeEpisode.NoDataSeconds,
 			&entity.DowntimeEpisode.ProbeRef.Group,
 			&entity.DowntimeEpisode.ProbeRef.Probe)
 		if err != nil {
@@ -228,8 +228,8 @@ func (d *Downtime30sDao) SaveBatch(downtimes []checks.DowntimeEpisode) error {
 			downtime.TimeSlot,
 			downtime.SuccessSeconds,
 			downtime.FailSeconds,
-			downtime.Unknown,
-			downtime.NoData,
+			downtime.UnknownSeconds,
+			downtime.NoDataSeconds,
 			downtime.ProbeRef.Group,
 			downtime.ProbeRef.Probe)
 		if err != nil {
@@ -244,8 +244,8 @@ func (d *Downtime30sDao) Insert(downtime checks.DowntimeEpisode) error {
 		downtime.TimeSlot,
 		downtime.SuccessSeconds,
 		downtime.FailSeconds,
-		downtime.Unknown,
-		downtime.NoData,
+		downtime.UnknownSeconds,
+		downtime.NoDataSeconds,
 		downtime.ProbeRef.Group,
 		downtime.ProbeRef.Probe)
 	return err
@@ -255,8 +255,8 @@ func (d *Downtime30sDao) Update(rowid int64, downtime checks.DowntimeEpisode) er
 	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime30SecById,
 		downtime.SuccessSeconds,
 		downtime.FailSeconds,
-		downtime.Unknown,
-		downtime.NoData,
+		downtime.UnknownSeconds,
+		downtime.NoDataSeconds,
 		rowid)
 	if err != nil {
 		return err

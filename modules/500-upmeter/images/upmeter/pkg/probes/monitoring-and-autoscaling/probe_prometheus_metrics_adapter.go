@@ -24,7 +24,7 @@ Period: 10s
 Timeout: 5s
 */
 
-func NewPMAPodsProbe() *checks.Probe {
+func NewPrometheusMetricsAdapterPodsProbe() *checks.Probe {
 	const (
 		period  = 5 * time.Second
 		timeout = 5 * time.Second
@@ -51,7 +51,7 @@ func NewPrometheusMetricsAdapterAPIProbe() *checks.Probe {
 
 	pr := newProbe("prometheus-metrics-adapter", period)
 	kubeAccessor := newKubeAccessor(pr)
-	checker := newPMAEndpointChecker(kubeAccessor, endpoint, timeout)
+	checker := newPrometheusMetricsAdapterEndpointChecker(kubeAccessor, endpoint, timeout)
 
 	pr.RunFn = RunFn(pr, checker, "api")
 
@@ -63,7 +63,7 @@ type metricsAdapterAPIVerifier struct {
 	kubeAccessor *KubeAccessor
 }
 
-func newPMAEndpointChecker(kubeAccessor *KubeAccessor, endpoint string, timeout time.Duration) Checker {
+func newPrometheusMetricsAdapterEndpointChecker(kubeAccessor *KubeAccessor, endpoint string, timeout time.Duration) Checker {
 	verifier := metricsAdapterAPIVerifier{
 		endpoint:     endpoint,
 		kubeAccessor: kubeAccessor,
