@@ -16,7 +16,7 @@ search: prometheus
     * `storageClass: false` — принудительное использование `emptyDir`. Удалить старый pvc и рестартануть pod придется руками.
     * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
 * `longtermStorageClass` — имя storageClass'а, который использовать для Longterm Prometheus.
-    * Если не указано — используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет — используется или `prometheus.storageClass` от основного Prometheus, или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+    * Если не указано — используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
     * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
 * `longtermRetentionDays` — сколько дней хранить данные в longterm Prometheus.
     * По умолчанию `1095`.
