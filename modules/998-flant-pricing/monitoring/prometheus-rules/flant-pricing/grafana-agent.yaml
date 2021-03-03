@@ -3,7 +3,7 @@
 
   - alert: FlantPricingSucceededSamplesMetricIsAbsent
     expr: |
-      absent(prometheus_remote_storage_succeeded_samples_total{job="flant-pricing"}) == 1
+      absent(prometheus_remote_storage_samples_bytes_total{job="flant-pricing"}) == 1
     labels:
       severity_level: "6"
       tier: cluster
@@ -25,7 +25,7 @@
 
   - alert: FlantPricingNotSendingSamples
     expr: |
-      sum(increase(prometheus_remote_storage_succeeded_samples_total{job="flant-pricing"}[5m])) == 0
+      sum(increase(prometheus_remote_storage_samples_bytes_total{job="flant-pricing"}[10m])) == 0
     labels:
       severity_level: "6"
       tier: cluster
@@ -46,7 +46,7 @@
 
   - alert: FlantPricingSamplesRateIsLowerThanExpected
     expr: |
-      sum(increase(prometheus_remote_storage_succeeded_samples_total{job="flant-pricing"}[5m])) < 100
+      avg(increase(prometheus_remote_storage_samples_bytes_total{job="flant-pricing"}[10m])) < 1000
     labels:
       severity_level: "6"
       tier: cluster
