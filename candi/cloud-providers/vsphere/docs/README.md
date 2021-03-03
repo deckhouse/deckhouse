@@ -180,7 +180,9 @@ nodeGroups:
 sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
 ```
 
-## Ручные настройки
+## Конфигурация vSphere
+
+Для конфигурации vSphere необходимо использовать vSphere CLI [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
 
 ### Настройка govc
 
@@ -194,6 +196,7 @@ export GOVC_INSECURE=1
 ### Создание тэгов и категорий тэгов
 
 В vSphere нет понятия "регион" и "зона", поэтому для разграничения зон доступности используются тэги.
+Например, если необходимо сделать 2 региона, и в каждом регионе будет 2 зоны доступности:
 
 ```shell
 govc tags.category.create -d "Kubernetes region" k8s-region
@@ -203,6 +206,7 @@ govc tags.create -d "Kubernetes Region X2" -c k8s-region k8s-region-x2
 govc tags.create -d "Kubernetes Zone X1-A" -c k8s-zone k8s-zone-x1-a
 govc tags.create -d "Kubernetes Zone X1-B" -c k8s-zone k8s-zone-x1-b
 govc tags.create -d "Kubernetes Zone X2-A" -c k8s-zone k8s-zone-x2-a
+govc tags.create -d "Kubernetes Zone X2-B" -c k8s-zone k8s-zone-x2-b
 ```
 
 Созданные категории тэгов необходимо указать в `VsphereClusterConfiguration` в `.spec.provider`.
@@ -217,7 +221,7 @@ govc tags.attach -c k8s-region k8s-region-x1 /X1
 
 ```shell
 govc tags.attach -c k8s-zone k8s-zone-x1-a /X1/host/x1_cluster_prod
-govc tags.attach -c k8s-zone k8s-zone-x1-a /X1/host/x1_cluster_prod
+govc tags.attach -c k8s-zone k8s-zone-x1-a /X1/datastore/x1_lun_1
 ```
 
 ### Права
@@ -231,3 +235,24 @@ govc role.create kubernetes Datastore.AllocateSpace Datastore.Browse Datastore.F
 
 govc permissions.set  -principal имя_пользователя -role kubernetes /datacenter
 ```
+
+## Инфраструктура
+
+### Сети
+Для работы кластера необходим VLAN с DHCP и доступом в Интернет
+* Если VLAN публичный (белые адреса), то нужна вторая сеть, в которой мы будем разворачивать сеть нод кластера (в этой сети DHCP не нужен)
+* Если VLAN внутренний (серые адреса), то эта же сеть будет сетью нод кластера
+
+### Входящий трафик
+* Если у вас имеется внутренний балансировщик запросов, то можно обойтись им и направлять трафик напрямую на фронтовые ноды кластера.
+* Если балансировщика нет, то для организации отказоустойчивых Lоadbalancer'ов рекомендуется использовать MetalLB в режиме BGP. В кластере будут созданы фронтовые ноды с двумя интерфейсами. Для этого дополнительно потребуются:
+  * Отдельный VLAN для обмена трафиком между BGP-роутерами и MetalLB. В этом VLAN'e должен быть DHCP и доступ в Интернет
+  * IP адреса BGP-роутеров
+  * ASN (номер автономной системы) на BGP-роутере
+  * ASN (номер автономной системы) в кластере
+  * Диапазон, из которого анонсировать адреса
+
+### Использование хранилища данных
+В кластере может одновременно использоваться различное количество типов хранилищ, в минимальной конфигурации потребуются:
+* Datastore, в котором kubernetes кластер будет заказывать PersistentVolume
+* Datastore, в котором будут заказываться рутовые диски для VM (может быть тот же Datastore, что и для PersistentVolume)
