@@ -1,0 +1,22 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  common_hooks::storage_class_change::config "d8-monitoring" "prometheus=longterm"
+}
+
+
+function __on_group::pvc_modified() {
+  common_hooks::storage_class_change::pvc_modified "d8-monitoring"
+}
+
+function __on_group::pvc_deleted() {
+  common_hooks::storage_class_change::pvc_deleted "d8-monitoring"
+}
+
+function __main__() {
+  common_hooks::storage_class_change::main "d8-monitoring" "prometheus-longterm" "prometheusLongterm" "longtermStorageClass"
+}
+
+hook::run $@

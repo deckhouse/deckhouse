@@ -3,95 +3,20 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  cat << EOF
-    configVersion: v1
-    beforeHelm: 1
-    kubernetes:
-    - name: pvc
-      group: main
-      keepFullObjectsInMemory: false
-      apiVersion: v1
-      kind: PersistentVolumeClaim
-      namespace:
-        nameSelector:
-          matchNames: ["d8-network-gateway"]
-      labelSelector:
-        matchLabels:
-          app: dhcp
-      jqFilter: |
-        {
-          "storageClassName": .spec.storageClassName
-        }
-    - name: default_sc
-      group: main
-      keepFullObjectsInMemory: false
-      apiVersion: storage.k8s.io/v1
-      kind: Storageclass
-      jqFilter: |
-        {
-          "name": .metadata.name,
-          "isDefault": (
-             (.metadata.annotations."storageclass.beta.kubernetes.io/is-default-class" == "true") or
-             (.metadata.annotations."storageclass.kubernetes.io/is-default-class" == "true")
-          )
-        }
-EOF
+  common_hooks::storage_class_change::config "d8-network-gateway" "app=dhcp"
 }
 
-function __main__ {
-  storage_class=""
-  if values::has --config networkGateway.storageClass; then
-    storage_class="$(values::get --config networkGateway.storageClass)"
-  fi
 
-  current_storage_class=""
-  if context::has snapshots.pvc.0 ; then
-    current_storage_class="$(context::get snapshots.pvc.0.filterResult.storageClassName)"
-  fi
+function __on_group::pvc_modified() {
+  common_hooks::storage_class_change::pvc_modified "d8-network-gateway"
+}
 
-  global_storage_class=""
-  if values::has --config global.storageClass; then
-    global_storage_class="$(values::get --config global.storageClass)"
-  fi
+function __on_group::pvc_deleted() {
+  common_hooks::storage_class_change::pvc_deleted "d8-network-gateway"
+}
 
-  default_sc="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult.isDefault)] | first | .filterResult.name')"
-  global_discovery_default_storage_class=""
-  if [ "$default_sc" != "null" ]; then
-    global_discovery_default_storage_class="$default_sc"
-  fi
-
-  if [ -n "$storage_class" ]; then
-    effective_storage_class="$storage_class"
-  elif [ -n "$current_storage_class" ]; then
-    effective_storage_class="$current_storage_class"
-  elif [ -n "$global_storage_class" ]; then
-    effective_storage_class="$global_storage_class"
-  elif [ -n "$global_discovery_default_storage_class" ]; then
-    effective_storage_class="$global_discovery_default_storage_class"
-  else
-    effective_storage_class="false"
-  fi
-
-  values::set networkGateway.internal.effectiveStorageClass "$effective_storage_class"
-
-  if [ "$current_storage_class" != "$effective_storage_class" ] && [ "$effective_storage_class" != "false" ]; then
-    if context::has snapshots.pvc.0 ; then
-      kubernetes::delete_if_exists::non_blocking "d8-network-gateway" "persistentvolumeclaim/dhcp-data-dhcp-0"
-      echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/dhcp-data-dhcp-0 !!!"
-    fi
-    kubernetes::delete_if_exists::non_blocking "d8-network-gateway" "pod/dhcp-0"
-    echo "!!! NOTICE: storage class changed, deleting pod/dhcp-0 !!!"
-  fi
-
-  jq -nr --arg storage_class "$effective_storage_class" '
-    {
-      "name": "d8_emptydir_usage",
-      "set": (if $storage_class == "false" then 1 else 0 end),
-      "labels": {
-        "app": "dhcp"
-      }
-    }
-  ' >> $METRICS_PATH
+function __main__() {
+  common_hooks::storage_class_change::main "d8-network-gateway" "dhcp"
 }
 
 hook::run $@

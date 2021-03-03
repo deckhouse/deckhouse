@@ -14,6 +14,10 @@ title: "Модуль upmeter: настройки"
 		- control-plane   # или без /
 * `statusPageAuthDisabled` – выключение авторизации для status-домена.
   * Значение по умолчанию `false`
+* `storageClass` — имя storageClass'а, который использовать.
+    * Если не указано — используется StorageClass существующей PVC, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в emptyDir.
+    * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск будет перезаказан, а все данные удалены.
+    * Если указать `false` — будет форсироваться использование emptyDir'а.
 * `smokeMiniDisabled` – выключение smokeMini.
   * Значение по умолчанию `false`
 * `smokeMini`

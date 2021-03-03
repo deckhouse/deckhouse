@@ -26,12 +26,12 @@ metadata:
 spec:
   storageClassName: sc-from-pvc
 `
-		pod = `
+		statefulset = `
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Statefulset
 metadata:
-  name: dhcp-0
+  name: dhcp
   namespace: d8-network-gateway
   labels:
     app: dhcp
@@ -115,7 +115,7 @@ metadata:
 
 	Context("Cluster with PVC, Pod and setting up networkGateway.storageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvc + pod))
+			f.BindingContexts.Set(f.KubeStateSet(pvc + statefulset))
 			f.ConfigValuesSet("networkGateway.storageClass", "sc-from-config")
 			f.RunHook()
 		})
@@ -123,7 +123,7 @@ metadata:
 		It("Must be executed successfully; effectiveStorageClass must be sc-from-config", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("networkGateway.internal.effectiveStorageClass").String()).To(Equal("sc-from-config"))
-			Expect(f.KubernetesResource("Pod", "d8-network-gateway", "dhcp-0").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Statefulset", "d8-network-gateway", "dhcp").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PersistentVolumeClaim", "kube-networkGateway", "networkGateway").Exists()).To(BeFalse())
 		})
 	})
