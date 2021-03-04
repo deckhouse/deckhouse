@@ -55,7 +55,16 @@ spec:
       initContainers:
       - name: api-proxy-check
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}/kube-proxy/api-proxy-check:{{ index .Values.global.modulesImages.tags.kubeProxy.apiProxyCheck }}
+        image: {{ .Values.global.modulesImages.registry }}/kube-proxy/init-container:{{ index .Values.global.modulesImages.tags.kubeProxy.initContainer }}
+        command: ["/api-proxy-check.sh"]
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy
+          name: config
+        - mountPath: /var/lib/kube-proxy-cm
+          name: kube-proxy-cm
+      - name: nodeport-bind-address
+        image: {{ .Values.global.modulesImages.registry }}/kube-proxy/init-container:{{ index .Values.global.modulesImages.tags.kubeProxy.initContainer }}
+        command: ["/nodeport-bind-address.sh"]
         volumeMounts:
         - mountPath: /var/lib/kube-proxy
           name: config

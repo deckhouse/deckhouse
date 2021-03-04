@@ -4,6 +4,7 @@ config.conf: |
   kind: KubeProxyConfiguration
   clusterCIDR: {{ .Values.global.discovery.podSubnet | quote }}
   mode: "iptables"
+  nodePortAddresses: ["__node_address__"]
   clientConnection:
     acceptContentTypes: ""
     burst: 10
