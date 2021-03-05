@@ -94,7 +94,7 @@ spec:
             --kubeconfig=$file_name
           ```
 
-      *  Если прямого доступа до API-сервера нет, то включаем `publishAPI` с `whitelistSourceRanges`. Либо через отдельный
+      *  Если прямого доступа до API-сервера нет, то [включаем](/modules/150-user-authn/configuration.html#параметры) `publishAPI` с `whitelistSourceRanges`. Либо через отдельный
          Ingress-controller при помощи опции `ingressClass` с конечным списком `SourceRange` прописываем в настройках контроллера `acceptRequestsFrom` только адреса с которых будут идти запросы.
 
           Достаем CA из secret'а с сертификатом для домена `api.%s`:
