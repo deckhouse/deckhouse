@@ -127,14 +127,8 @@ spec:
           name: scgi-temp-path
         - mountPath: /var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/client.crt
-          name: secret-nginx-auth-tls-crt
-          subPath: client.crt
-          readOnly: true
-        - mountPath: /etc/nginx/ssl/client.key
-          name: secret-nginx-auth-tls-key
-          subPath: client.key
-          readOnly: true
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
       - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
       - name: kube-rbac-proxy
@@ -187,17 +181,8 @@ spec:
         emptyDir: {}
       - name: uwsgi-temp-path
         emptyDir: {}
-      - name: secret-nginx-auth-tls-crt
+      - name: secret-nginx-auth-tls
         secret:
           secretName: nginx-auth-tls
-          items:
-          - key: tls.crt
-            path: client.crt
-      - name: secret-nginx-auth-tls-key
-        secret:
-          secretName: nginx-auth-tls
-          items:
-          - key: tls.key
-            path: client.key
   {{- end }}
 {{- end }}

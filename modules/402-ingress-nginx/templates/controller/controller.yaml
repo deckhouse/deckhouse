@@ -195,14 +195,8 @@ spec:
           name: scgi-temp-path
         - mountPath: /var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/client.crt
-          name: secret-nginx-auth-tls-crt
-          subPath: client.crt
-          readOnly: true
-        - mountPath: /etc/nginx/ssl/client.key
-          name: secret-nginx-auth-tls-key
-          subPath: client.key
-          readOnly: true
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
       - image: {{ $context.Values.global.modulesImages.registry }}/ingress-nginx/protobuf-exporter:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}
         name: protobuf-exporter
         resources:
@@ -261,18 +255,9 @@ spec:
         emptyDir: {}
       - name: uwsgi-temp-path
         emptyDir: {}
-      - name: secret-nginx-auth-tls-crt
+      - name: secret-nginx-auth-tls
         secret:
           secretName: {{ $crd.name }}-ingress-nginx-auth-tls
-          items:
-          - key: tls.crt
-            path: client.crt
-      - name: secret-nginx-auth-tls-key
-        secret:
-          secretName: {{ $crd.name }}-ingress-nginx-auth-tls
-          items:
-          - key: tls.key
-            path: client.key
 {{- end }}
 
 

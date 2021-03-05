@@ -1,4 +1,8 @@
 {{- range (prepend .Values.nginxIngress.additionalControllers .Values.nginxIngress) }}
+  {{ $key := "nginxAuthTLS" }}
+  {{- if .name }}
+    {{ $key = (printf "nginxAuthTLS%s" .name) }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,11 +12,32 @@ metadata:
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
 type: kubernetes.io/tls
 data:
-  {{- if not .name }}
-  tls.crt: {{ $.Values.nginxIngress.internal.nginxAuthTLS.certificate | b64enc }}
-  tls.key: {{ $.Values.nginxIngress.internal.nginxAuthTLS.key | b64enc }}
-  {{- else }}
-  tls.crt: {{ index $.Values.nginxIngress.internal (printf "nginxAuthTLS%s" .name) | pluck "certificate" | first | b64enc }}
-  tls.key: {{ index $.Values.nginxIngress.internal (printf "nginxAuthTLS%s" .name) | pluck "key" | first | b64enc }}
-  {{- end }}
+  tls.crt: {{ index $.Values.nginxIngress.internal $key | pluck "certificate" | first | b64enc }}
+  tls.key: {{ index $.Values.nginxIngress.internal $key | pluck "key" | first | b64enc }}
+
+{{- /* By deploying and deleting this ingress we trigger "nginx reload". It is required to update client certififcates. */ -}}
+  {{ if (index $.Values.nginxIngress.internal $key | pluck "certificate_updated" | first ) }}
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: fakeingress-{{ .name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $ ) | indent 2 }}
+  annotations:
+    {{- if not .name }}
+    kubernetes.io/ingress.class: nginx{{ if $.Values.nginxIngress.rewriteTargetMigration }}-rwr{{ end }}
+    {{- else }}
+    kubernetes.io/ingress.class: nginx-{{ .name }}{{ if $.Values.nginxIngress.rewriteTargetMigration }}-rwr{{ end }}
+    {{- end }}
+spec:
+  rules:
+    - host: reload.deckhouse.io
+      http:
+        paths:
+          - path: /fake-path-to-trigger-ingress-controller-config-reload
+            backend:
+              serviceName: fakeservice
+              servicePort: https
+ {{- end }}
 {{- end }}

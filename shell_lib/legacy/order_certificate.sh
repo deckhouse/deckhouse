@@ -31,20 +31,12 @@ function legacy::common_hooks::certificates::order_certificate::main() {
     not_after=$(echo "$cert" | cfssl-certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
     valid_for=$(expr $(date --date="$not_after" +%s) - $(date +%s))
 
-    # За десять дней до окончания
-    if [[ "$valid_for" -lt 864000 ]] ; then
-      # Удаляем секрет, будет перезаказан ниже
-      kubectl -n ${namespace} delete secret/${secret_name}
-
-    # Миграция, если у сертификата нет нужных групп
-    elif [[ "$group" != "" && $(echo "$cert" | cfssl-certinfo -cert - | jq -rc '.subject.organization') != "$group" ]]; then
-      # Удаляем секрет, будет перезаказан ниже
-      kubectl -n ${namespace} delete secret/${secret_name}
-
-    else
+    # Если сертификат будет действителен еще 10 дней - пропускаем обновление
+    if [[ "$valid_for" -ge 864000 ]] ; then
       values::set ${module_name}.$value_name "{}"
       values::set ${module_name}.$value_name.certificate "$(echo "$cert")"
       values::set ${module_name}.$value_name.key "$(kubectl -n ${namespace} get secret/${secret_name} -o jsonpath='{.data.tls\.key}' | base64 -d)"
+      values::unset ${module_name}.$value_name.certificate_updated
       return 0
     fi
   fi
@@ -98,4 +90,5 @@ EOF
   values::set ${module_name}.$value_name "{}"
   values::set ${module_name}.$value_name.certificate "$(echo "$cert" | base64 -d)"
   values::set ${module_name}.$value_name.key "$(echo "$cfssl_result" | jq .key -r)"
+  values::set ${module_name}.$value_name.certificate_updated "true"
 }
