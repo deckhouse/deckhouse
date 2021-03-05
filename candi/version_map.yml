@@ -15,12 +15,12 @@ k8s:
       checksum: 8329fac94c66bf7a475b630972a8c0b036bab1f28a5584115e8dd26483de8349
     cni_version: 0.8.7
   '1.18':
-    patch: 15
+    patch: 16
     kubectl:
-      checksum: eb5a5dd0a72795942ab81d1e4331625e80a90002c8bb39b2cb15aa707a3812c6
+      checksum: 3e8cd55186ffe461f383af06cbbab2bfe5dd75def1d699523c53ee8b11b8c91a
     cni_version: 0.8.7
   '1.19':
-    patch: 7
+    patch: 8
     kubectl:
-      checksum: d46eb3bbe2575e5b6bedbc6d3519424b4f2f57929d7da1ef7e11c09068f37297
+      checksum: a0737d3a15ca177816b6fb1fd59bdd5a3751bfdc66de4e08dffddba84e38bf3f
     cni_version: 0.8.7
