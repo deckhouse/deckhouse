@@ -21,7 +21,8 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: 'GrafanaDashboardDefinition is an interface for describing grafana dashboards.'
+          description: |
+            Ресурс хранения и управления Dashboard в Grafana. [Подробнее](https://early.deckhouse.io/modules/300-prometheus/grafana_dashboard_development.html).
           required:
             - spec
           properties:
@@ -34,12 +35,14 @@ spec:
                 folder:
                   type: string
                   description: |
-                    Which folder will the dashboard end up in.
+                    В какую папку попадёт данный dashboard. Если такой папки нет, она будет создана.
                   example: 'My Folder'
                 definition:
                   type: string
                   description: |
-                    JSON-specs of the dashboard.
+                    JSON-манифест dashboard.
+
+                    **Важно!** Следите, чтобы помимо `uid` в манифесте не было "местного" `id` по адресу `.id`.
       additionalPrinterColumns:
         - jsonPath: .spec.folder
           name: Folder

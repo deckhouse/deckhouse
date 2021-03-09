@@ -12,6 +12,7 @@ module Jekyll
                       when "integer" then "целочисленный"
                       when "string" then "строка"
                       when "boolean" then "булевый"
+                      when "x-kubernetes-int-or-string" then "строка или число"
                       else first_type
                     end
         if second_type
@@ -21,6 +22,7 @@ module Jekyll
                               when "integer" then "целых чисел"
                               when "string" then "строк"
                               when "boolean" then "булевых значений"
+                              when "x-kubernetes-int-or-string" then "строк или чисел"
                               else "of #{second_type}"
                             end
         end
@@ -50,8 +52,11 @@ module Jekyll
         end
 
         if attributes['enum']
-            # result.push(converter.convert('Допустимые значения: ' + [*attributes['enum']].map { |e| "`#{e.to_json}`" }.join(', ')))
-            result.push(converter.convert('**Допустимые значения:** ' + [*attributes['enum']].map { |e| "`#{e}`" }.join(', ')))
+            enum_result = '**Допустимые значения'
+            if name == "" and parent['type'] == 'array'
+                enum_result += ' элемента массива'
+            end
+            result.push(converter.convert(enum_result + ':** ' + [*attributes['enum']].map { |e| "`#{e}`" }.join(', ')))
         end
 
         if attributes['pattern']
@@ -101,38 +106,50 @@ module Jekyll
     # 3 - parent item data (hash)
     def format_schema(name, attributes, parent)
         result = Array.new()
-        result.push('<li>')
-
-        if attributes.has_key?('type')
-            if attributes.has_key?("items")
-                result.push(format_key_name(name)+ '(<i>' +  format_type(attributes["type"], attributes["items"]["type"]) + '</i>)')
-            else
-                result.push(format_key_name(name)+ '(<i>' +  format_type(attributes["type"], nil) + '</i>)')
+        if name != ""
+            result.push('<li>')
+            attributes_type = ''
+            if attributes.has_key?('type')
+               attributes_type = attributes["type"]
+            elsif attributes.has_key?('x-kubernetes-int-or-string')
+               attributes_type = "x-kubernetes-int-or-string"
             end
-        else
-            result.push(format_key_name(name))
+            if attributes_type != ''
+                if attributes.has_key?("items")
+                    result.push(format_key_name(name)+ '(<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)')
+                else
+                    result.push(format_key_name(name)+ '(<i>' +  format_type(attributes_type, nil) + '</i>)')
+                end
+            else
+                result.push(format_key_name(name))
+            end
         end
 
         result.push(format_attribute(name, attributes, parent))
 
         if attributes.has_key?("properties")
             result.push('<ul>')
-            attributes["properties"].each do |key, value|
+            attributes["properties"].sort.to_h.each do |key, value|
                 result.push(format_schema(key, value, attributes ))
             end
             result.push('</ul>')
         elsif attributes.has_key?('items')
             if attributes['items'].has_key?("properties")
+                # object items
                 result.push('<ul>')
-                attributes['items']["properties"].each do |item_key, item_value|
+                attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
                     result.push(format_schema(item_key, item_value, attributes['items'] ))
                 end
                 result.push('</ul>')
+            else
+                result.push(format_schema("", attributes['items'], attributes ))
             end
         else
         #           result.push("no properties for #{name}")
         end
-        result.push('</li>')
+        if name != ""
+            result.push('</li>')
+        end
         result.join
     end
 
@@ -158,7 +175,7 @@ module Jekyll
 
                 if input["spec"]["validation"]["openAPIV3Schema"].has_key?('properties')
                     result.push('<ul>')
-                    input["spec"]["validation"]["openAPIV3Schema"]['properties'].each do |key, value|
+                    input["spec"]["validation"]["openAPIV3Schema"]['properties'].sort.to_h.each do |key, value|
                     result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"] ))
                     end
                     result.push('</ul>')

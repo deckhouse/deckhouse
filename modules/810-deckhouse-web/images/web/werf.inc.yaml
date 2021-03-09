@@ -132,6 +132,12 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /modules/010-prometheus-crd/crds/grafanadashboarddefinition.yaml
+  to: /srv/jekyll-data/modules/300-prometheus/crds/grafanadashboarddefinition.yaml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 - add: /candi/cloud-providers/aws/openapi/
   to: /srv/jekyll-data/modules/030-cloud-provider-aws/crds/
   owner: jekyll

@@ -21,7 +21,8 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: Additional Prometheus recording and alerting rules.
+          description: |
+            Ресурс хранения `PrometheusRule`.  [Подробнее](https://early.deckhouse.io/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
           required:
             - spec
           properties:
@@ -32,7 +33,9 @@ spec:
               properties:
                 groups:
                   type: array
-                  description: Groups of Prometheus rules.
+                  description:
+                    Описание группы алертов. Структура групп полностью совпадает с аналогичной в [prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+                  x-description: Groups of Prometheus rules.
                   items:
                     type: object
                     required:
