@@ -182,11 +182,19 @@ module Jekyll
                     end
 
                     if item['schema']['openAPIV3Schema'].has_key?('properties')
-                        result.push('<ul>')
+                        header = '<ul>'
                         item['schema']['openAPIV3Schema']['properties'].each do |key, value|
+                        # skip status object
+                        next if key == 'status'
+                        if header != '' then
+                            result.push(header)
+                            header = ''
+                        end
                         result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] ))
                         end
-                        result.push('</ul>')
+                        if header == '' then
+                            result.push('</ul>')
+                        end
                     end
                  end
             end

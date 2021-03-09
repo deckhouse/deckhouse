@@ -143,6 +143,12 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /candi/openapi/node_group.yaml
+  to: /srv/jekyll-data/modules/040-node-manager/crds/node_group.yaml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 ---
 image: dev/web-public
 from: nginx:1.17.2

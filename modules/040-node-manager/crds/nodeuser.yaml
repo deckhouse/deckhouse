@@ -20,6 +20,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          description: |
+            Описывает linux-пользователей, которые будут созданы на всех узлах.
+
+            Домашний каталог пользователя создается в директории `/home/deckhouse/`.
           required:
             - spec
           properties:
@@ -32,24 +36,39 @@ spec:
               properties:
                 uid:
                   type: number
-                  description: 'Node user ID.'
+                  description: |
+                    User ID пользователя на узлах.
+
+                    Неизменяемый в течение жизни ресурса параметр.
+                  x-description: 'Node user ID.'
                   example: '1001'
                   minimum: 1001
                 sshPublicKey:
                   type: string
-                  description: 'Node user ssh public key.'
+                  description: |
+                    Публичный ssh ключ пользователя.
+                  x-description: 'Node user ssh public key.'
                   example: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ'
                 passwordHash:
                   type: string
-                  description: 'Hashed user password.'
+                  description: |
+                    Хеш пароля пользователя.
+
+                    Формат соответствует хешам паролей, содержащихся в `/etc/shadow`. Его можно получить при помощи команды `openssl passwd -6`.
+                  x-description: 'Hashed user password.'
                   example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
                 isSudoer:
                   type: boolean
-                  description: 'Persistence of node user in sudo group.'
+                  description: |
+                    Определяет, будет ли пользователю разрешено sudo.
+                  x-description: 'Persistence of node user in sudo group.'
                   example: 'true'
+                  default: false
                 extraGroups:
                   type: array
-                  description: 'Node user additional system groups.'
+                  description: |
+                    Список дополнительных групп, в которые должен быть включен пользователь.
+                  x-description: 'Node user additional system groups.'
                   items:
                     type: string
       additionalPrinterColumns:
@@ -70,4 +89,3 @@ spec:
           type: date
           description: >
             CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-
