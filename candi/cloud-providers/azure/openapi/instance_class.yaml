@@ -15,7 +15,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: AzureInstanceClass defines Azure-specific properties for to-be-provisioned Instances.
+          description: |
+            Параметры группы Azure Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
             - spec
           properties:
@@ -25,17 +28,52 @@ spec:
               properties:
                 machineSize:
                   type: string
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    Список всех доступных типов в регионе, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    ```shell
+                    az vm list-sizes --location westeurope -o table
+                    ```
                   example: Standard_F4
                 urn:
                   type: string
+                  description: |
+                    Образ виртуальной машины, который будет использоваться для инстанса.
+
+                    Подробнее про образы виртуальных машин можно посмотреть в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                    Последнюю доступную версию образа можно получить c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
+                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+
+                    **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
+
+                    По умолчанию: образ из `AzureCloudDiscoveryData` (образ из которого был создан мастер при развертывании кластера).
+
+                    Опциональный параметр.
+                  example: 'Canonical:UbuntuServer:18.04-LTS:18.04.202010140'
                 diskSizeGb:
-                  description: Instance disk size in gigabytes.
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+                  x-description: Instance disk size in gigabytes.
+                  default: 50
                   example: 40
                   type: integer
                 diskType:
                   type: string
+                  description: |
+                    Тип созданного диска.
+
+                    Список доступных типов дисков, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    ```shell
+                    az vm list-skus -l westeurope --zone`
+                    ```
+                  default: "StandardSSD_LRS"
                 additionalTags:
                   type: object
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам.
                   additionalProperties:
                     type: string
   scope: Cluster

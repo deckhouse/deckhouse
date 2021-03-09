@@ -11,7 +11,7 @@ cloudProviderYandex: |
   - enp6t4snovl2ko4p15em
 ```
 
-## Примеры CR `YandexInstanceClass`
+## Пример CR `YandexInstanceClass`
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

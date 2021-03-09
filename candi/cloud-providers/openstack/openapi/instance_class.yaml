@@ -15,7 +15,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: OpenStackInstanceClass defines OpenStack-specific properties for to-be-provisioned Instances.
+          description: |
+            Параметры группы OpenStack servers, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
             - spec
           properties:
@@ -25,23 +28,62 @@ spec:
                 - flavorName
               properties:
                 flavorName:
-                  description: Flavor of OpenStack servers.
+                  description: |
+                    Тип заказываемых server'ов.
+
+                    Получить список всех доступных flavor: `openstack flavor list`.
+                  x-description: Flavor of OpenStack servers.
                   example: m1.medium
                   type: string
                 imageName:
-                  description: Image to use while provisioning OpenStack servers.
+                  description: |
+                    Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                    Получить список всех доступных образов: `openstack image list`.
+
+                    **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
+
+                    По умолчанию: значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
+
+                    Опциональный параметр.
+                  x-description: Image to use while provisioning OpenStack servers.
                   example: ubuntu-18-04-cloud-amd64
                   type: string
                 rootDiskSize:
-                  description: If present, OpenStack will order a Cinder volume and the server will use if for its root.
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+
+                    Если параметр не указан, то для инстанса используется локальный диск с размером указанным в flavor.
+                    Если параметр присутствует, то инстанс будет использовать заказанный OpenStack'ом Cinder volume (с указанным размером и стандартным для кластера типом) как root-диск.
+
+                    > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска.
+                    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://early.deckhouse.io/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack)
+                    >
+                    > ```shell
+                      openstack volume type list
+                      openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
+                      ```
+
+                    Опциональный параметр.
+                  x-description: If present, OpenStack will order a Cinder volume and the server will use if for its root.
                   example: 20
                   type: integer
                 mainNetwork:
-                  description: Path to the network that VirtualMachines' primary NICs will connect to.
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине, как основная (шлюз по умолчанию).
+
+                    По умолчанию: значение из `OpenStackCloudDiscoveryData`.
+
+                    Опциональный параметр.
+                  x-description: Path to the network that VirtualMachines' primary NICs will connect to.
                   example: k8s-msk-178
                   type: string
                 additionalNetworks:
-                  description: Paths to networks that VirtualMachines' secondary NICs will connect to.
+                  description: |
+                    Список сетей, которые будут подключены к инстансу.
+
+                    По умолчанию: значение из `OpenStackCloudDiscoveryData`.
+                  x-description: Paths to networks that VirtualMachines' secondary NICs will connect to.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
@@ -49,18 +91,32 @@ spec:
                   items:
                     type: string
                 additionalSecurityGroups:
-                  description: Security groups that will be applied to VM's network ports in addition to security groups set in provider configuration
+                  description: |
+                    Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud провайдера.
+                    Используется для задания правил firewall по отношению к заказываемым инстансам.
+
+                    `SecurityGroups` могут не поддерживаться облачным провайдером.
+                  x-description: Security groups that will be applied to VM's network ports in addition to security groups set in provider configuration
                   example:
-                    - "security-group-1"
-                    - "security-group-2"
+                  - "security-group-1"
+                  - "security-group-2"
                   type: array
                   items:
                     type: string
                 additionalTags:
-                  description: Tags that will be attached to VM's
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud провайдера.
+
+                    Пример:
+                    ```yaml
+                    project: cms-production
+                    severity: critical
+                    ```
+                  x-description: Tags that will be attached to VM's
                   type: object
                   additionalProperties:
                     type: string
+
   scope: Cluster
   names:
     plural: openstackinstanceclasses

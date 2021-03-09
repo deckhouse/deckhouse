@@ -76,6 +76,8 @@ entries:
           folders:
           - title: Описание
             url: /modules/030-cloud-provider-azure/
+          - title: Примеры
+            url: /modules/030-cloud-provider-azure/usage.html
           - title: Справка
             folders:
             - title: Настройки

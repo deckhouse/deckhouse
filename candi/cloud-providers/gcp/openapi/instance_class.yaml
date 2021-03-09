@@ -15,7 +15,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: GCPInstanceClass defines GCP-specific properties for to-be-provisioned Instances.
+          description: |
+            Описывает параметры группы GCP Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
             - spec
           properties:
@@ -25,36 +28,72 @@ spec:
                 - machineType
               properties:
                 machineType:
-                  description: Machine type of GCP instance.
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
+
+                    GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+                  x-description: Machine type of GCP instance.
                   example: n1-standard-4
                   type: string
                 image:
-                  description: Image to use whilst provisioning GCP servers.
-                  example: https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
+                  description: |
+                    Образ, который будет использоваться в заказанных инстансах. Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
+
+                    **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
+
+                    Опциональный параметр.
+                  x-description: Image to use whilst provisioning GCP servers.
+                  example: "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"
                   type: string
                 preemptible:
-                  description: Should instances be preemtible.
+                  description: |
+                    Заказывать ли preemptible-инстансы.
+                  x-description: Should instances be preemtible.
                   type: boolean
+                  default: false
                 diskType:
-                  description: Instance disk type.
+                  description: |
+                    Тип созданного диска.
+                  x-description: Instance disk type.
                   example: "pd-ssd"
+                  default: "pd-standard"
                   type: string
                   enum:
-                    - "pd-standard"
-                    - "pd-ssd"
+                  - "pd-standard"
+                  - "pd-ssd"
                 diskSizeGb:
-                  description: Instance disk size in gigabytes.
+                  description: |
+                    Размер root-диска. Значение указывается в `ГиБ`.
+                  x-description: Instance disk size in gigabytes.
                   example: 20
+                  default: 50
                   type: integer
                 disableExternalIP:
-                  description: Defines whether to disable external ip for instance or not. True means that istance is created without external ip
+                  x-description: Defines whether to disable external ip for instance or not. True means that istance is created without external ip
+                  description: Запретить ли назначение внешнего IP для инстанса. True — инстанс будет создан  без внешнего IP.
                   type: boolean
                 additionalNetworkTags:
+                  description: |
+                    Список дополнительных тегов.
+
+                    К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
                   type: array
                   items:
                     type: string
                 additionalLabels:
                   type: object
+                  description: |
+                    Список дополнительных label'ов.
+
+                    Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+
+                    Пример:
+                    ```yaml
+                    project: cms-production
+                    severity: critical
+                    ```
                   additionalProperties:
                     type: string
   scope: Cluster
