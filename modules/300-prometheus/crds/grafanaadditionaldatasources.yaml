@@ -62,7 +62,9 @@ spec:
                   description: Basic auth username
                 jsonData:
                   type: object
+                  x-kubernetes-preserve-unknown-fields: true
                   description: Поля, которые будут конвертированы в JSON и сохранены в jsonData.
                 secureJsonData:
                   type: object
+                  x-kubernetes-preserve-unknown-fields: true
                   description: JSON-объект данных, который будет сохранен зашифрованным

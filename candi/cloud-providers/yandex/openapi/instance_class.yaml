@@ -125,6 +125,7 @@ spec:
                     project: cms-production
                     severity: critical
                     ```
+                  x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string
   scope: Cluster

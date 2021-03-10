@@ -78,6 +78,7 @@ spec:
                     Дополнительные теги, которые будут присвоены созданным инстансам.
                   x-description: extra AWS tags for instances in addition to AWSClusterConfiguration.tags.
                   type: object
+                  x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string
                 additionalSecurityGroups:
