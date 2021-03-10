@@ -33,10 +33,10 @@ function hook::run() {
     esac
     HANDLERS="${HANDLERS} __main__"
 
-    if [[ -n "$D8_TEST_KUBERNETES_PATCH_SET_FILE" ]]; then
+    if [[ -n "${D8_TEST_KUBERNETES_PATCH_SET_FILE:-}" ]]; then
       export KUBERNETES_PATCH_PATH="$D8_TEST_KUBERNETES_PATCH_SET_FILE"
     fi
-    
+
     hook::_run_first_available_handler "${HANDLERS}"
   done
 }
