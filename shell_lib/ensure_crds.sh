@@ -16,8 +16,7 @@ function common_hooks::https::ensure_crds::main() {
     cat "$file"
   done)
 
-  echo -n "$crds" \
-    | yq r -d '*' - --tojson \
+  readarray -t -d $'\n' crds_json < <(yq r -d '*' - --tojson <<<"$crds" \
     | jq -rc --arg regex "$custom_fields_regexp" '
       .[] | select(.)
       | walk(
@@ -25,6 +24,9 @@ function common_hooks::https::ensure_crds::main() {
         then with_entries(
           select(.key | test($regex) | not)
         )
-        else . end)' \
-    | kubernetes::replace_or_create_json
+        else . end)')
+
+  for crd_json in "${crds_json[@]}"; do
+    kubernetes::replace_or_create_json <<< "$crd_json"
+  done
 }

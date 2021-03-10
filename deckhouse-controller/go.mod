@@ -10,7 +10,7 @@ require (
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210129092101-87b695f741d6 // branch: master
-	github.com/flant/shell-operator v1.0.0-rc.1.0.20210120105923-fe826ae429b4
+	github.com/flant/shell-operator v1.0.0-rc.2.0.20210309133328-81e5d893a769
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.12.0
 	github.com/sirupsen/logrus v1.4.2
@@ -28,9 +28,9 @@ require (
 
 //replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.4-0.20200313141509-0c0fba4d39e1 // branch: fix_in_body_0_19_7
 
-//replace github.com/flant/shell-operator => ../../shell-operator
+replace github.com/flant/shell-operator => github.com/flant/shell-operator v1.0.0-rc.2.0.20210309133328-81e5d893a769
 
-//replace github.com/flant/addon-operator => ../../addon-operator
+replace github.com/flant/addon-operator => github.com/flant/addon-operator v1.0.0-rc.1.0.20210309135336-e01d3f8c5ffb
 
 replace github.com/deckhouse/deckhouse/candictl => ../candictl
 

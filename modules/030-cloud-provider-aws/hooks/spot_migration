@@ -27,7 +27,7 @@ function __main__() {
   fi
 
   for ic_name in "${unpatched_ics[@]}" ; do
-    kubernetes::patch_jq "" "awsinstanceclasses.deckhouse.io/$ic_name" "del(.spec.spotPrice) | .spec.spot = true"
+    kubernetes::patch_jq "" "awsinstanceclasses/$ic_name" "del(.spec.spotPrice) | .spec.spot = true"
   done
 }
 

@@ -32,7 +32,7 @@ EOF
 }
 
 function _create_is_bootstraped_cm() {
-    kubernetes::create_if_not_exists_yaml << EOF
+    kubernetes::replace_or_create_yaml << EOF
       apiVersion: v1
       kind: ConfigMap
       metadata:

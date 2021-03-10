@@ -33,9 +33,10 @@ function hook::run() {
     esac
     HANDLERS="${HANDLERS} __main__"
 
-    export D8_KUBERNETES_PATCH_SET_FILE=$(kubernetes::_init_patch_set)
+    if [[ -n "$D8_TEST_KUBERNETES_PATCH_SET_FILE" ]]; then
+      export KUBERNETES_PATCH_PATH="$D8_TEST_KUBERNETES_PATCH_SET_FILE"
+    fi
+    
     hook::_run_first_available_handler "${HANDLERS}"
-    kubernetes::_apply_patch_set
-    kubernetes::_destroy_patch_set
   done
 }
