@@ -3,6 +3,7 @@ package converge
 import (
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/hashicorp/go-multierror"
 
@@ -16,12 +17,9 @@ const (
 	OKStatus          = "ok"
 	ChangedStatus     = "changed"
 	DestructiveStatus = "destructively_changed"
+	AbandonedStatus   = "abandoned"
+	AbsentStatus      = "absent"
 	ErrorStatus       = "error"
-
-	InsufficientStatus = "insufficient"
-	ExcessiveStatus    = "excessive"
-
-	AbsentStatus = "absent"
 )
 
 type ClusterCheckResult struct {
@@ -41,7 +39,6 @@ type NodeGroupCheckResult struct {
 
 type Statistics struct {
 	Node          []NodeCheckResult      `json:"nodes,omitempty"`
-	NodeGroups    []NodeGroupCheckResult `json:"node_groups,omitempty"`
 	NodeTemplates []NodeGroupCheckResult `json:"node_templates,omitempty"`
 	Cluster       ClusterCheckResult     `json:"cluster,omitempty"`
 }
@@ -83,7 +80,6 @@ func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOpti
 func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (*Statistics, error) {
 	statistics := Statistics{
 		Node:          make([]NodeCheckResult, 0),
-		NodeGroups:    make([]NodeGroupCheckResult, 0),
 		NodeTemplates: make([]NodeGroupCheckResult, 0),
 		Cluster:       ClusterCheckResult{Status: OKStatus},
 	}
@@ -138,7 +134,13 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 		}
 
 		// track missed
-		statistics.NodeGroups = append(statistics.NodeGroups, NodeGroupCheckResult{Name: group.Name, Status: InsufficientStatus})
+		for _, nodeName := range expectedNodeNames(metaConfig, group.Name, group.Replicas) {
+			statistics.Node = append(statistics.Node, NodeCheckResult{
+				Group:  group.Name,
+				Name:   nodeName,
+				Status: AbsentStatus,
+			})
+		}
 	}
 
 	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
@@ -146,14 +148,55 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 		replicas := getReplicasByNodeGroupName(metaConfig, nodeGroupName)
 		step := getStepByNodeGroupName(nodeGroupName)
 
-		nodeGroupCheckResult := NodeGroupCheckResult{Name: nodeGroupName, Status: OKStatus}
 		if replicas > len(nodeGroupState.State) {
-			nodeGroupCheckResult.Status = InsufficientStatus
+			insufficientQuantity := len(nodeGroupState.State)
+			var missedNodes []string
+
+			for _, nodeName := range expectedNodeNames(metaConfig, nodeGroupName, replicas) {
+				if _, ok := nodeGroupState.State[nodeName]; ok {
+					insufficientQuantity--
+				} else {
+					missedNodes = append(missedNodes, nodeName)
+				}
+			}
+
+			// this can happen because nodes in cluster are not normilized
+			// for example, there can be three nodes in a cluster: node-1, node-3 and node-9
+			if insufficientQuantity > 0 {
+				missedNodes = missedNodes[:insufficientQuantity]
+			}
+
+			for _, nodeName := range missedNodes {
+				statistics.Node = append(statistics.Node, NodeCheckResult{
+					Group:  nodeGroupName,
+					Name:   nodeName,
+					Status: AbsentStatus,
+				})
+			}
 		} else if replicas < len(nodeGroupState.State) {
-			nodeGroupCheckResult.Status = ExcessiveStatus
+			sortedNodeNames, err := sortNodesByIndex(nodeGroupState.State)
+			if err != nil {
+				allErrs = multierror.Append(allErrs, err)
+				continue
+			}
+
+			excessiveQuantity := len(nodeGroupState.State) - replicas
+			for excessiveQuantity > 0 {
+				lastIndex := len(sortedNodeNames) - 1
+				nodeName := sortedNodeNames[lastIndex]
+
+				statistics.Node = append(statistics.Node, NodeCheckResult{
+					Group:  nodeGroupName,
+					Name:   nodeName,
+					Status: AbandonedStatus,
+				})
+
+				sortedNodeNames = sortedNodeNames[:lastIndex]
+				delete(nodeGroupState.State, nodeName)
+				excessiveQuantity--
+			}
 		}
 
-		statistics.NodeGroups = append(statistics.NodeGroups, nodeGroupCheckResult)
 		nodeGroup := NodeGroupGroupOptions{
 			Name:     nodeGroupName,
 			Step:     step,
@@ -163,7 +206,11 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 
 		for name := range nodeGroupState.State {
 			// track changed and ok
-			checkResult := NodeCheckResult{Group: nodeGroupName, Name: name, Status: OKStatus}
+			checkResult := NodeCheckResult{
+				Group:  nodeGroupName,
+				Name:   name,
+				Status: OKStatus,
+			}
 			changed, err := checkNodeState(metaConfig, &nodeGroup, name)
 			switch {
 			case err != nil:
@@ -180,4 +227,36 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 	}
 
 	return &statistics, allErrs.ErrorOrNil()
+}
+
+func expectedNodeNames(cfg *config.MetaConfig, nodeGroupName string, replicas int) []string {
+	names := make([]string, 0, replicas)
+	for i := 0; i < replicas; i++ {
+		names = append(names, fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, i))
+	}
+
+	return names
+}
+
+func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
+	var nameByIndex map[int]string
+	order := make([]int, 0, len(nodesState))
+
+	for nodeName := range nodesState {
+		index, ok := getIndexFromNodeName(nodeName)
+		if !ok {
+			return nil, fmt.Errorf("cannot get index from node name %s", nodeName)
+		}
+		order = append(order, int(index))
+		nameByIndex[int(index)] = nodeName
+	}
+
+	sort.Ints(order)
+	names := make([]string, 0, len(nameByIndex))
+
+	for _, i := range order {
+		names = append(names, nameByIndex[i])
+	}
+
+	return names, nil
 }

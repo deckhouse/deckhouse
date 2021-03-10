@@ -48,10 +48,25 @@ type ConvergeExporter struct {
 }
 
 var (
-	clusterStatuses      = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus, converge.DestructiveStatus}
-	nodeStatuses         = []string{converge.OKStatus, converge.ErrorStatus, converge.ChangedStatus, converge.DestructiveStatus}
-	nodeGroupStatuses    = []string{converge.OKStatus, converge.InsufficientStatus, converge.ExcessiveStatus}
-	nodeTemplateStatuses = []string{converge.OKStatus, converge.AbsentStatus, converge.ChangedStatus}
+	clusterStatuses = []string{
+		converge.OKStatus,
+		converge.ErrorStatus,
+		converge.ChangedStatus,
+		converge.DestructiveStatus,
+	}
+	nodeStatuses = []string{
+		converge.OKStatus,
+		converge.ErrorStatus,
+		converge.ChangedStatus,
+		converge.DestructiveStatus,
+		converge.AbsentStatus,
+		converge.AbandonedStatus,
+	}
+	nodeTemplateStatuses = []string{
+		converge.OKStatus,
+		converge.ChangedStatus,
+		converge.AbsentStatus,
+	}
 )
 
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
@@ -226,17 +241,6 @@ func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
 
 	newExistedEntities := newPreviouslyExistedEntities()
 
-	for _, ng := range statistic.NodeGroups {
-		for _, status := range nodeGroupStatuses {
-			if status == ng.Status {
-				c.GaugeMetrics["node_group_status"].WithLabelValues(status, ng.Name).Set(1)
-				newExistedEntities.AddNodeGroup(ng.Name)
-				continue
-			}
-			c.GaugeMetrics["node_group_status"].WithLabelValues(status, ng.Name).Set(0)
-		}
-	}
-
 	for _, node := range statistic.Node {
 		for _, status := range nodeStatuses {
 			if status == node.Status {
@@ -265,18 +269,6 @@ func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
 		}
 		for _, status := range nodeStatuses {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
-		}
-	}
-
-	for nodeGroup := range c.existedEntities.NodeGroups {
-		if _, ok := newExistedEntities.NodeGroups[nodeGroup]; ok {
-			continue
-		}
-		for _, status := range nodeStatuses {
-			c.GaugeMetrics["node_group_status"].WithLabelValues(status, nodeGroup).Set(0)
-		}
-		for _, status := range nodeTemplateStatuses {
-			c.GaugeMetrics["node_template_status"].WithLabelValues(status, nodeGroup).Set(0)
 		}
 	}
 

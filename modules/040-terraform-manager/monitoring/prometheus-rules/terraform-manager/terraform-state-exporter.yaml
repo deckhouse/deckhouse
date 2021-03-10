@@ -149,7 +149,7 @@
 
   - alert: D8TerraformStateExporterNodeStateChanged
     expr: |
-      max by(node_group, name, status) (candi_converge_node_status{status=~"changed|destructively_changed", job="terraform-state-exporter"} == 1)
+      max by(node_group, name, status) (candi_converge_node_status{status=~"changed|destructively_changed|absent|abandoned", job="terraform-state-exporter"} == 1)
     labels:
       severity_level: "8"
       tier: cluster
@@ -226,25 +226,6 @@
 
         Use `candictl converge` command or manually adjust NodeGroup settings to fix the issue.
       summary: Terraform-state-exporter node template changed
-
-  - alert: D8TerraformStateExporterNodeGroupHasProblemWithReplicas
-    expr: |
-      max by(name, status) (candi_converge_node_group_status{status!="ok", job="terraform-state-exporter"} == 1)
-    labels:
-      severity_level: "8"
-      tier: cluster
-      d8_module: terraform-manager
-      d8_component: terraform-state-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_pending_until_firing_for: "10m"
-      plk_grouped_by__main: "D8TerraformStateExporterChecksFailed,tier=cluster,prometheus=deckhouse"
-      description: |
-        NodeGroup "{{ $labels.name }}" has {{ $labels.status }} amount of replicas.
-
-        To converge state of Kubernetes cluster, use `candictl converge` command.
-      summary: Terraform-state-exporter node state error
 
   - alert: D8TerraformStateExporterChecksFailed
     expr: count(ALERTS{alertname=~"D8TerraformStateExporterHasErrors|D8TerraformStateExporterClusterStateChanged|D8TerraformStateExporterNodeStateChanged||D8TerraformStateExporterClusterStateError|D8TerraformStateExporterNodeStateError|D8TerraformStateExporterNodeGroupHasProblemWithReplicas", alertstate="firing"})
