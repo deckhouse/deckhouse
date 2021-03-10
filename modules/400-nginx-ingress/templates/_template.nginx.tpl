@@ -183,6 +183,6 @@ spec:
         emptyDir: {}
       - name: secret-nginx-auth-tls
         secret:
-          secretName: nginx-auth-tls
+          secretName: nginx-internal-auth-tls
   {{- end }}
 {{- end }}

@@ -257,7 +257,7 @@ spec:
         emptyDir: {}
       - name: secret-nginx-auth-tls
         secret:
-          secretName: {{ $crd.name }}-ingress-nginx-auth-tls
+          secretName: ingress-nginx-{{ $crd.name }}-auth-tls
 {{- end }}
 
 

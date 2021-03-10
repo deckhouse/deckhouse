@@ -3,17 +3,17 @@
   {{- if .name }}
     {{ $key = (printf "nginxAuthTLS%s" .name) }}
   {{- end }}
+
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: nginx-auth-tls
+  name: nginx-internal-auth-tls
   namespace: {{ include "helper.namespace" . }}
 {{ include "helm_lib_module_labels" (list $) | indent 2 }}
-type: kubernetes.io/tls
 data:
-  tls.crt: {{ index $.Values.nginxIngress.internal $key | pluck "certificate" | first | b64enc }}
-  tls.key: {{ index $.Values.nginxIngress.internal $key | pluck "key" | first | b64enc }}
+  client.crt: {{ index $.Values.nginxIngress.internal $key | pluck "certificate" | first | b64enc }}
+  client.key: {{ index $.Values.nginxIngress.internal $key | pluck "key" | first | b64enc }}
 
 {{- /* By deploying and deleting this ingress we trigger "nginx reload". It is required to update client certififcates. */ -}}
   {{ if (index $.Values.nginxIngress.internal $key | pluck "certificate_updated" | first ) }}
