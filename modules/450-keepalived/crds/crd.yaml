@@ -37,6 +37,9 @@ spec:
               properties:
                 nodeSelector:
                   type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
                   description: |
                     Определяет `nodeSelector` для подов с keepalived.
 

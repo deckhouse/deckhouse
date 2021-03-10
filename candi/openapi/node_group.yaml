@@ -359,6 +359,7 @@ spec:
                       type: object
                       additionalProperties:
                         type: string
+                      x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
@@ -372,6 +373,7 @@ spec:
                       type: object
                       additionalProperties:
                         type: string
+                      x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
 

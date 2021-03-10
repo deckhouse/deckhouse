@@ -60,6 +60,7 @@ spec:
                             annotations:
                               additionalProperties:
                                 type: string
+                              x-kubernetes-preserve-unknown-fields: true
                               type: object
                             expr:
                               anyOf:
@@ -71,6 +72,7 @@ spec:
                             labels:
                               additionalProperties:
                                 type: string
+                              x-kubernetes-preserve-unknown-fields: true
                               type: object
                             record:
                               type: string

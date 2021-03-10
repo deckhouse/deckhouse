@@ -116,7 +116,7 @@ spec:
                   type: object
                   additionalProperties:
                     type: string
-
+                  x-kubernetes-preserve-unknown-fields: true
   scope: Cluster
   names:
     plural: openstackinstanceclasses

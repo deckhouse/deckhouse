@@ -76,6 +76,7 @@ spec:
                     Дополнительные теги, которые будут присвоены созданным инстансам.
                   additionalProperties:
                     type: string
+                  x-kubernetes-preserve-unknown-fields: true
   scope: Cluster
   names:
     plural: azureinstanceclasses
