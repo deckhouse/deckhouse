@@ -136,7 +136,7 @@ function __main__() {
 
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_create"); do
     manifest="$(jq --argjson i $i -cr '.[$i].manifest' <<< "$secrets_to_create")"
-    kubernetes::create_if_not_exists_json <<< "$manifest"
+    kubernetes::replace_or_create_json <<< "$manifest"
   done
 
   for i in $(jq -r '. | to_entries[] | .key' <<< "$secrets_to_replace"); do

@@ -39,7 +39,7 @@ function __main__ {
         ) |
         del(.spec.allowDisruptions)
       '
-      kubernetes::patch_jq "" "nodegroups.deckhouse.io/$ng_name" "$fltr"
+      kubernetes::patch_jq "" "nodegroups/$ng_name" "$fltr"
     fi
   done
 }

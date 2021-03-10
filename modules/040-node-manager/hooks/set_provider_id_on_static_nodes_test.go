@@ -80,7 +80,7 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 
 			// Two patches — for node-1 and node-3
-			Expect(len(f.KubernetesResourcePatch.Operations)).To(Equal(3))
+			Expect(len(f.KubernetesResourcePatch)).To(Equal(3))
 
 			Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.providerID").String()).To(Equal(`static://`))
 			Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.providerID").Exists()).To(BeFalse())

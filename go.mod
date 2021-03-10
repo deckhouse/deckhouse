@@ -7,7 +7,7 @@ require (
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210129092101-87b695f741d6 // branch: master
-	github.com/flant/shell-operator v1.0.0-rc.1.0.20210120105923-fe826ae429b4 // branch: master
+	github.com/flant/shell-operator v1.0.0-rc.2.0.20210309133328-81e5d893a769 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3
@@ -33,9 +33,9 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-//replace github.com/flant/shell-operator => ../shell-operator
+replace github.com/flant/shell-operator => github.com/flant/shell-operator v1.0.0-rc.2.0.20210309133328-81e5d893a769
 
-//replace github.com/flant/addon-operator => ../addon-operator
+replace github.com/flant/addon-operator => github.com/flant/addon-operator v1.0.0-rc.1.0.20210309135336-e01d3f8c5ffb
 
 replace github.com/deckhouse/deckhouse/candictl => ./candictl
 
