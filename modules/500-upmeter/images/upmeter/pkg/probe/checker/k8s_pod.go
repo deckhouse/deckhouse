@@ -1,0 +1,327 @@
+package checker
+
+import (
+	"fmt"
+	"time"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/probe/util"
+)
+
+// PodLifecycle is a checker constructor and configurator
+type PodLifecycle struct {
+	Access            *kubernetes.Access
+	Namespace         string
+	CreationTimeout   time.Duration
+	SchedulingTimeout time.Duration
+	DeletionTimeout   time.Duration
+	Node              string
+
+	GarbageCollectionTimeout time.Duration
+}
+
+func (c PodLifecycle) Checker() check.Checker {
+	return &podLifecycleChecker{
+		access:                   c.Access,
+		namespace:                c.Namespace,
+		creationTimeout:          c.CreationTimeout,
+		schedulingTimeout:        c.SchedulingTimeout,
+		deletionTimeout:          c.DeletionTimeout,
+		node:                     c.Node,
+		garbageCollectionTimeout: c.GarbageCollectionTimeout,
+	}
+}
+
+// podLifecycleChecker is stateful checker that wraps pod creation with the check of the pod lifecycle
+type podLifecycleChecker struct {
+	access            *kubernetes.Access
+	namespace         string
+	creationTimeout   time.Duration
+	schedulingTimeout time.Duration
+	deletionTimeout   time.Duration
+	node              string
+
+	garbageCollectionTimeout time.Duration
+
+	// inner state
+	checker check.Checker
+}
+
+func (c *podLifecycleChecker) BusyWith() string {
+	return c.checker.BusyWith()
+}
+
+func (c *podLifecycleChecker) Check() check.Error {
+	pod := createPodObject(c.node)
+	c.checker = c.new(pod)
+	return c.checker.Check()
+}
+
+/*
+1. check control-plane
+2. collect garbage
+2. crate pod                    (podCreationTimeout)
+3. see the pod is scheduled     (podScheduledTimeout)
+4. delete the pod               (podDeletionTimeout)
+	+ensure the pod is not listed
+*/
+func (c *podLifecycleChecker) new(pod *v1.Pod) check.Checker {
+	listOpts := listOptsByLabels(pod.GetLabels())
+
+	createPod := withTimeout(
+		&podCreationChecker{access: c.access, namespace: c.namespace, pod: pod},
+		c.creationTimeout)
+
+	waitForScheduling := withRetryEachSeconds(
+		&podScheduledChecker{access: c.access, namespace: c.namespace, listOpts: listOpts},
+		c.schedulingTimeout)
+
+	deletePod := &podDeletionChecker{access: c.access, namespace: c.namespace, listOpts: listOpts}
+	verifyNoPod := withRetryEachSeconds(
+		&objectIsNotListedChecker{access: c.access, namespace: c.namespace, kind: pod.Kind, listOpts: listOpts},
+		c.deletionTimeout)
+
+	deletePodAndVerify := withTimeout(
+		sequence(deletePod, verifyNoPod),
+		c.deletionTimeout)
+
+	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, pod.Kind, c.namespace, pod.Labels, c.garbageCollectionTimeout)
+
+	timeout := c.creationTimeout + c.schedulingTimeout + c.deletionTimeout
+	checker := sequence(
+		&controlPlaneChecker{c.access},
+		collectGarbage,
+		createPod,
+		waitForScheduling,
+		deletePodAndVerify,
+	)
+
+	return withTimeout(checker, timeout)
+}
+
+type podCreationChecker struct {
+	access    *kubernetes.Access
+	namespace string
+	pod       *v1.Pod
+}
+
+func (c *podCreationChecker) BusyWith() string {
+	return fmt.Sprintf("creating pod %s/%s", c.namespace, c.pod.Name)
+}
+
+func (c *podCreationChecker) Check() check.Error {
+	_, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).Create(c.pod)
+	if err != nil {
+		return check.ErrFail("cannot create pod %s/%s", c.namespace, c.pod.Name)
+	}
+	return nil
+}
+
+type podScheduledChecker struct {
+	access    *kubernetes.Access
+	namespace string
+	listOpts  *metav1.ListOptions
+}
+
+func (c *podScheduledChecker) BusyWith() string {
+	return fmt.Sprintf("looking for scheduled pod ns=%s listOpts=%s", c.namespace, c.listOpts)
+}
+
+func (c *podScheduledChecker) Check() check.Error {
+	client := c.access.Kubernetes()
+
+	podList, err := client.CoreV1().Pods(c.namespace).List(*c.listOpts)
+	if err != nil {
+		return check.ErrFail("cannot get pod list %s/%s: %v", c.namespace, c.listOpts, err)
+	}
+
+	if len(podList.Items) == 0 {
+		return check.ErrFail("pod not found %s/%s", c.namespace, c.listOpts)
+	}
+
+	for _, pod := range podList.Items {
+		phase := pod.Status.Phase
+		isScheduled := phase == v1.PodRunning || phase == v1.PodSucceeded || pod.Spec.Hostname != ""
+		if isScheduled {
+			return nil
+		}
+	}
+	return check.ErrFail("pod not scheduled %s/%s", c.namespace, c.listOpts)
+}
+
+// Checks that at least one Pod is in "Pending" state.
+// FIXME by the task, should check it is not PodUnknown ???
+type pendingPodChecker struct {
+	access    *kubernetes.Access
+	namespace string
+	listOpts  *metav1.ListOptions
+}
+
+func (c *pendingPodChecker) BusyWith() string {
+	return fmt.Sprintf("looking for pending pod ns=%s listOpts=%s", c.namespace, c.listOpts)
+}
+
+func (c *pendingPodChecker) Check() check.Error {
+	client := c.access.Kubernetes()
+
+	podList, err := client.CoreV1().Pods(c.namespace).List(*c.listOpts)
+	if err != nil {
+		return check.ErrFail("cannot get pod list %s/%s: %v", c.namespace, c.listOpts, err)
+	}
+
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == v1.PodPending {
+			return nil
+		}
+	}
+
+	return check.ErrFail("did not find pod %s/%s", c.namespace, c.listOpts)
+}
+
+type podDeletionChecker struct {
+	access    *kubernetes.Access
+	namespace string
+	listOpts  *metav1.ListOptions
+}
+
+func (c *podDeletionChecker) BusyWith() string {
+	return fmt.Sprintf("deleting pod ns=%s listOpts=%s", c.namespace, c.listOpts)
+}
+
+func (c *podDeletionChecker) Check() check.Error {
+	client := c.access.Kubernetes()
+	// We delete a collection, not only one pod, to
+	//  1. reuse generic listOptions
+	//  2. eventually collect garbage left by previous runs
+	err := client.CoreV1().Pods(c.namespace).DeleteCollection(&metav1.DeleteOptions{}, *c.listOpts)
+	if err != nil {
+		return check.ErrFail("cannot delete pod %s/%s: %v", c.namespace, c.listOpts, err)
+	}
+	return nil
+}
+
+func createPodObject(nodeName string) *v1.Pod {
+	nodeAffinity := createNodeAffinityObject(nodeName)
+
+	podName := util.RandomIdentifier("upmeter-control-plane-scheduler")
+
+	return &v1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: podName,
+			Labels: map[string]string{
+				"heritage":      "upmeter",
+				"upmeter-agent": util.AgentUniqueId(),
+				"upmeter-group": "control-plane",
+				"upmeter-probe": "scheduler",
+			},
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:            "pause",
+					Image:           "alpine:3.12",
+					ImagePullPolicy: v1.PullIfNotPresent,
+					Command: []string{
+						"true",
+					},
+				},
+			},
+			RestartPolicy: v1.RestartPolicyNever,
+			Tolerations: []v1.Toleration{
+				{Operator: v1.TolerationOpExists},
+			},
+			Affinity: &v1.Affinity{
+				NodeAffinity: nodeAffinity,
+			},
+		},
+	}
+}
+
+func createNodeAffinityObject(nodeName string) *v1.NodeAffinity {
+	return &v1.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{
+				{
+					MatchExpressions: []v1.NodeSelectorRequirement{
+						{
+							Key:      "kubernetes.io/hostname",
+							Operator: "In",
+							Values:   []string{nodeName},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// AtLeastOnePodReady is a checker constructor and configurator
+type AtLeastOnePodReady struct {
+	Access        *kubernetes.Access
+	Timeout       time.Duration
+	Namespace     string
+	LabelSelector string
+}
+
+func (c AtLeastOnePodReady) Checker() check.Checker {
+	podsChecker := &podReadinessChecker{
+		access:        c.Access,
+		namespace:     c.Namespace,
+		labelSelector: c.LabelSelector,
+	}
+
+	checker := sequence(
+		&controlPlaneChecker{c.Access},
+		podsChecker,
+	)
+
+	return withTimeout(checker, c.Timeout)
+}
+
+// podReadinessChecker defines the information that lets check at least one ready pod
+type podReadinessChecker struct {
+	access        *kubernetes.Access
+	namespace     string
+	labelSelector string
+}
+
+func (c *podReadinessChecker) Check() check.Error {
+	podList, err := c.access.Kubernetes().CoreV1().Pods(c.namespace).List(metav1.ListOptions{LabelSelector: c.labelSelector})
+	if err != nil {
+		return check.ErrUnknown("cannot get pods %s,%s: %v", c.namespace, c.labelSelector, err)
+	}
+
+	for _, pod := range podList.Items {
+		if isPodReady(&pod) {
+			return nil
+		}
+	}
+
+	return check.ErrFail("no ready pods found %s,%s", c.namespace, c.labelSelector)
+}
+
+func (c *podReadinessChecker) BusyWith() string {
+	return fmt.Sprintf("getting pods %s,%s", c.namespace, c.labelSelector)
+}
+
+func isPodReady(pod *v1.Pod) bool {
+	if pod.Status.Phase != v1.PodRunning {
+		return false
+	}
+
+	for _, cnd := range pod.Status.Conditions {
+		if cnd.Status != v1.ConditionTrue {
+			return false
+		}
+	}
+
+	return true
+}

@@ -2,31 +2,25 @@ package agent
 
 import (
 	"context"
-	"io/ioutil"
 
-	shapp "github.com/flant/shell-operator/pkg/app"
-
-	"github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/agent/executor"
 	"upmeter/pkg/agent/manager"
 	"upmeter/pkg/agent/sender"
 	"upmeter/pkg/app"
+	"upmeter/pkg/kubernetes"
 )
 
 type Agent struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	KubernetesClient kube.KubernetesClient
-	MetricStorage    *metric_storage.MetricStorage
+	executor      *executor.ProbeExecutor
+	sender        *sender.Sender
+	upmeterClient *sender.UpmeterClient
 
-	Executor      *executor.ProbeExecutor
-	Manager       *manager.ProbeManager
-	Sender        *sender.Sender
-	UpmeterClient *sender.UpmeterClient
+	access *kubernetes.Access
 }
 
 func NewAgent(ctx context.Context) *Agent {
@@ -39,58 +33,34 @@ func NewAgent(ctx context.Context) *Agent {
 func NewDefaultAgent(ctx context.Context) *Agent {
 	a := NewAgent(ctx)
 
-	// Metric storage
-	a.MetricStorage = metric_storage.NewMetricStorage()
-
-	// Kubernetes client
-	a.KubernetesClient = kube.NewKubernetesClient()
-	a.KubernetesClient.WithContextName(shapp.KubeContext)
-	a.KubernetesClient.WithConfigPath(shapp.KubeConfig)
-	a.KubernetesClient.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
-	a.KubernetesClient.WithMetricStorage(a.MetricStorage)
-
-	// Service account token
-	serviceAccountToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		log.Fatalf("pod expected, cannot read service account token: %v", err)
-	}
-
 	// Probe manager
-	a.Manager = manager.NewProbeManager()
-	// Create instances for each probe.
-	a.Manager.Init()
-
-	for _, probe := range a.Manager.Probes() {
+	a.access = &kubernetes.Access{}
+	probeManager := manager.New(a.access)
+	for _, probe := range probeManager.Runners() {
 		log.Infof("Register probe %s", probe.Id())
 	}
-	for _, calc := range a.Manager.Calculators() {
+	for _, calc := range probeManager.Calculators() {
 		log.Infof("Register calculated probe %s", calc.Id())
 	}
 
-	a.UpmeterClient = sender.CreateUpmeterClient(app.UpmeterHost, app.UpmeterPort)
-
-	a.Sender = sender.NewSender(context.Background())
-	a.Sender.WithUpmeterClient(a.UpmeterClient)
-
-	a.Executor = executor.NewProbeExecutor(context.Background())
-	a.Executor.WithProbeManager(a.Manager)
-	a.Executor.WithDowntimeEpisodesCh(a.Sender.DowntimeEpisodesCh)
-	a.Executor.WithKubernetesClient(a.KubernetesClient)
-	a.Executor.WithServiceAccountToken(string(serviceAccountToken))
+	a.upmeterClient = sender.CreateUpmeterClient(app.UpmeterHost, app.UpmeterPort)
+	// TODO move context to Start methods
+	a.sender = sender.NewSender(context.Background(), a.upmeterClient)
+	a.executor = executor.NewProbeExecutor(context.Background(), probeManager, a.sender.DowntimeEpisodesCh)
 
 	return a
 }
 
 func (a *Agent) Start() error {
-	// Initialize kube client from kubeconfig.
-	err := a.KubernetesClient.Init()
+	// Initialize kube client from kubeconfig and service account token from filesystem.
+	err := a.access.Init()
 	if err != nil {
-		log.Errorf("MAIN Fatal: initialize kube client: %s\n", err)
+		log.Errorf("MAIN Fatal: %s\n", err)
 		return err
 	}
 
-	a.Sender.Start()
-	a.Executor.Start()
+	a.sender.Start()
+	a.executor.Start()
 
 	// block
 	var ch = make(chan struct{})

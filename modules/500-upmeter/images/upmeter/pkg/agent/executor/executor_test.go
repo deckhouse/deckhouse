@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"context"
 	"testing"
 )
 
@@ -42,11 +41,12 @@ func Test_IsMark(t *testing.T) {
 				t.Fatalf("bad test definition: should have equal length of results and lastExportTime arrays")
 			}
 
-			exp := NewProbeExecutor(context.Background())
+			exp := &ProbeExecutor{}
+
 			nowTime := tt.startTime
 
 			for i := range tt.results {
-				result := exp.UpdateLastExportTime(nowTime)
+				result := exp.updateLastExportTime(nowTime)
 				expectedResult := tt.results[i]
 
 				if result != expectedResult {
@@ -54,8 +54,8 @@ func Test_IsMark(t *testing.T) {
 				}
 
 				expectedLastExportTime := tt.lastExportTime[i]
-				if exp.LastExportTimestamp != expectedLastExportTime {
-					t.Fatalf("lastExportTime[%d]: should %v instead of '%v'", i, expectedLastExportTime, exp.LastExportTimestamp)
+				if exp.lastExportTimestamp != expectedLastExportTime {
+					t.Fatalf("lastExportTime[%d]: should %v instead of '%v'", i, expectedLastExportTime, exp.lastExportTimestamp)
 				}
 
 				nowTime++

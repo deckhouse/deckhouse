@@ -12,7 +12,7 @@ import (
 
 	"upmeter/pkg/agent"
 	"upmeter/pkg/app"
-	"upmeter/pkg/probes/util"
+	"upmeter/pkg/probe/util"
 	"upmeter/pkg/upmeter"
 )
 

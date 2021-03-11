@@ -2,164 +2,151 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/agent/manager"
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 )
 
 const exportIntervalSeconds = 30
+const schedulePeriod = 100 * time.Millisecond
+const scrapePeriod = time.Second
 
 type ProbeExecutor struct {
-	ProbeManager        *manager.ProbeManager
-	MetricStorage       *metric_storage.MetricStorage
-	KubernetesClient    kube.KubernetesClient
-	serviceAccountToken string
+	probeManager *manager.Manager
+	metrics      *metric_storage.MetricStorage
 
-	LastExportTimestamp int64
-	LastScrapeTimestamp int64
+	// receiving results from checks
+	recv    chan check.Result
+	results map[string]*check.Result
 
-	ResultCh chan checks.Result
+	// sending episodes to upmeter server
+	send     chan []check.DowntimeEpisode
+	episodes map[string]*check.DowntimeEpisode
 
-	Results map[string]*checks.Result
-
-	ScrapeResults map[string]*checks.DowntimeEpisode
-
-	DowntimeEpisodesCh chan []checks.DowntimeEpisode
+	lastScrapeTimestamp int64
+	lastExportTimestamp int64
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewProbeExecutor(ctx context.Context) *ProbeExecutor {
+func NewProbeExecutor(ctx context.Context, mgr *manager.Manager, send chan []check.DowntimeEpisode) *ProbeExecutor {
 	p := &ProbeExecutor{
-		ResultCh: make(chan checks.Result),
-		Results:  make(map[string]*checks.Result),
+		recv:    make(chan check.Result),
+		results: make(map[string]*check.Result),
 	}
 	p.ctx, p.cancel = context.WithCancel(ctx)
+	p.probeManager = mgr
+	p.send = send
 	return p
 }
 
-func (p *ProbeExecutor) WithProbeManager(mgr *manager.ProbeManager) {
-	p.ProbeManager = mgr
-}
+func (e *ProbeExecutor) Start() {
+	// Set result chan
+	e.probeManager.SendTo(e.recv)
 
-func (p *ProbeExecutor) WithResultCh(ch chan checks.Result) {
-	p.ResultCh = ch
-}
-
-func (p *ProbeExecutor) WithDowntimeEpisodesCh(ch chan []checks.DowntimeEpisode) {
-	p.DowntimeEpisodesCh = ch
-}
-
-func (p *ProbeExecutor) WithKubernetesClient(client kube.KubernetesClient) {
-	p.KubernetesClient = client
-}
-
-func (p *ProbeExecutor) WithServiceAccountToken(token string) {
-	p.serviceAccountToken = token
-}
-
-func (p *ProbeExecutor) Start() {
-	// Set result chan for each probe.
-	p.ProbeManager.InitProbes(p.ResultCh, p.KubernetesClient, p.serviceAccountToken)
-
-	// Probe restarter
+	// Checks scheduler
 	go func() {
-		// The minimal period to spawn probes
-		restartTick := time.NewTicker(100 * time.Millisecond)
+		// The minimal period to spawn runners
+		restartTick := time.NewTicker(schedulePeriod)
 
 		for {
 			select {
-			case <-p.ctx.Done():
+			case <-e.ctx.Done():
 				restartTick.Stop()
 				// TODO stop probes
 				// TODO signal to main
 				return
 			case <-restartTick.C:
-				p.RestartProbes()
+				e.run()
 			}
 		}
 	}()
 
 	// Scraper
-	// Synced read/write of p.Results and p.ScrapeResults
+	// Synced read/write of e.results and e.episodes
 	go func() {
-		scrapeTick := time.NewTicker(time.Second)
+		scrapeTick := time.NewTicker(scrapePeriod)
 		for {
 			select {
-			case <-p.ctx.Done():
+			case <-e.ctx.Done():
 				scrapeTick.Stop()
 				return
 			case <-scrapeTick.C:
-				p.Scrape()
-			case probeResult := <-p.ResultCh:
-				log.Debugf("probe '%s' result %+v", probeResult.ProbeRef.Id(), probeResult.CheckResults)
-				storedResult, ok := p.Results[probeResult.ProbeRef.Id()]
+				e.scrape()
+			case result := <-e.recv:
+				id := result.ProbeRef.Id()
+
+				log.Debugf("probe '%s' result %+v", id, result.CheckResults)
+
+				storedResult, ok := e.results[id]
 				if !ok {
-					storedResult = &checks.Result{
-						ProbeRef: probeResult.ProbeRef,
+					storedResult = &check.Result{
+						ProbeRef: result.ProbeRef,
 					}
-					p.Results[probeResult.ProbeRef.Id()] = storedResult
+					e.results[id] = storedResult
 				}
-				storedResult.MergeChecks(probeResult)
+				storedResult.SetCheckStatus(result)
 			}
 		}
 	}()
 }
 
-func (p *ProbeExecutor) Stop() {
-	if p.cancel != nil {
-		p.cancel()
+func (e *ProbeExecutor) Stop() {
+	if e.cancel != nil {
+		e.cancel()
 	}
 }
 
-// RestartProbes checks if probe is running and restart them.
-func (p *ProbeExecutor) RestartProbes() {
-	now := time.Now()
-	for _, prob := range p.ProbeManager.Probes() {
-		if !prob.State().ShouldRun(now) {
+// run checks if probe is running and restart them.
+func (e *ProbeExecutor) run() {
+	// rounding lets us avoid inaccuracies in time comparison
+	now := time.Now().Round(schedulePeriod)
+	for _, runner := range e.probeManager.Runners() {
+		if !runner.ShouldRun(now) {
 			continue
 		}
 
-		// Run probe again
-		_ = prob.Run(now)
+		runner.Run(now)
 
 		// Increase probe running counter
-		p.MetricStorage.CounterAdd("upmeter_agent_probe_run_total",
-			1.0, map[string]string{"probe": prob.Id()})
+		e.metrics.CounterAdd("upmeter_agent_probe_run_total",
+			1.0, map[string]string{"probe": runner.Id()})
 	}
 }
 
-// Scrape checks probe results
-func (p *ProbeExecutor) Scrape() {
-	if p.ScrapeResults == nil {
-		p.ScrapeResults = make(map[string]*checks.DowntimeEpisode)
+// scrape checks probe results
+func (e *ProbeExecutor) scrape() {
+	if e.episodes == nil {
+		e.episodes = make(map[string]*check.DowntimeEpisode)
 	}
 
-	now := time.Now().Unix()
-	p.RecalcEpisodes(now)
-	p.LastScrapeTimestamp = now
+	// rounding fixes go ticker inaccuracy
+	now := time.Now().Round(scrapePeriod).Unix()
+	e.recalcEpisodes(now)
+	e.lastScrapeTimestamp = now
 
 	// Send to sender every 30 seconds.
-	shouldExport := p.UpdateLastExportTime(now)
+	shouldExport := e.updateLastExportTime(now)
 	if !shouldExport {
 		return
 	}
-	p.Export()
+	e.export()
 
-	p.ScrapeResults = nil
+	e.episodes = nil
 }
 
-// Export copies scraped results and sends them to sender along as evaluates computed probes.
-func (p *ProbeExecutor) Export() {
-	episodes := make([]checks.DowntimeEpisode, 0)
+// export copies scraped results and sends them to sender along as evaluates computed probes.
+func (e *ProbeExecutor) export() {
+	episodes := make([]check.DowntimeEpisode, 0)
 
-	for _, ep := range p.ScrapeResults {
+	for _, ep := range e.episodes {
+		fmt.Println("exporting", ep.DumpString())
 		episodes = append(episodes, *ep)
 	}
 
@@ -185,66 +172,58 @@ func (p *ProbeExecutor) Export() {
 	//
 	//      For now, calc.Calc method picks biggest fail of two episodes like they fully overlap in fail,
 	//      in unknown, and in nodata intervals, and overlap in success by the remains.
-	for _, calc := range p.ProbeManager.Calculators() {
-		ep, err := calc.Calc(p.ScrapeResults, exportIntervalSeconds)
+	for _, calc := range e.probeManager.Calculators() {
+		ep, err := calc.Calc(e.episodes, exportIntervalSeconds)
 		if err != nil {
 			log.Errorf("cannot calculate probe id=%s: %v", calc.Id(), err)
 			continue
 		}
+		fmt.Println("exporting", ep.DumpString())
 		episodes = append(episodes, *ep)
 	}
 
-	p.DowntimeEpisodesCh <- episodes
+	e.send <- episodes
 }
 
-func (p *ProbeExecutor) RecalcEpisodes(now int64) {
-	/*
-		FIXME workaround timer/`now` inaccuracy
-
-		Scrape starts every second, but we may lose seconds because the timer is not precise and we just
-		throw away the precision of `now`. In exported results, we can observe something like this:
-
-			Success: 31m 27s     = 30m + 87s
-			Nodata:     -87s
-
-		 We seem to over-operate with delta, or correct incorrectly.
-	*/
+func (e *ProbeExecutor) recalcEpisodes(now int64) {
 	timeslot := (now / 30) * 30
-	var delta, noDataDelta int64
-	if p.LastScrapeTimestamp == 0 {
-		// proper NoData for first 30 sec episode at start. We take delta into account.
-		delta = 1
+
+	// 1 second by contract, because scraping period is 1 second and downtime episode aggregates intervals
+	// with seconds precision
+	var delta int64 = 1
+
+	var noDataDelta int64
+	if e.lastScrapeTimestamp == 0 {
+		// proper NoData for first 30 sec episode at start. We take delta into account because we always
+		// spread data with it.
 		noDataDelta = now - timeslot - delta
-	} else {
-		delta = now - p.LastScrapeTimestamp
-		noDataDelta = 0
 	}
 
-	for id, result := range p.Results {
-		episode, ok := p.ScrapeResults[id]
+	for id, result := range e.results {
+		episode, ok := e.episodes[id]
 		if !ok {
-			episode = &checks.DowntimeEpisode{
+			episode = &check.DowntimeEpisode{
 				ProbeRef:      result.ProbeRef,
 				TimeSlot:      timeslot,
-				NoDataSeconds: 30,
+				NoDataSeconds: exportIntervalSeconds,
 			}
-			p.ScrapeResults[id] = episode
+			e.episodes[id] = episode
 		}
 
 		// Move spent time to an acknowledged status
 		episode.NoDataSeconds -= delta
 		switch result.Value() {
-		case checks.StatusFail:
+		case check.StatusFail:
 			episode.FailSeconds += delta
-		case checks.StatusSuccess:
+		case check.StatusSuccess:
 			episode.SuccessSeconds += delta
-		case checks.StatusUnknown:
+		case check.StatusUnknown:
 			episode.UnknownSeconds += delta
 		}
 
 		// Correct possible inaccuracy
 		episode.NoDataSeconds -= noDataDelta
-		episode.Correct(30)
+		episode.Correct(exportIntervalSeconds)
 
 		// Log some asserts
 		if episode.FailSeconds > exportIntervalSeconds {
@@ -256,24 +235,24 @@ func (p *ProbeExecutor) RecalcEpisodes(now int64) {
 	}
 }
 
-func (p *ProbeExecutor) UpdateLastExportTime(now int64) bool {
-	if p.LastExportTimestamp == 0 {
+func (e *ProbeExecutor) updateLastExportTime(now int64) bool {
+	if e.lastExportTimestamp == 0 {
 		// Export at start only if now is a 30 second mark
 		if now%exportIntervalSeconds == 0 {
-			p.LastExportTimestamp = now
+			e.lastExportTimestamp = now
 			return true
 		}
 
-		// Set LastExportTimestamp to the interval start for future calls
-		p.LastExportTimestamp = (now / exportIntervalSeconds) * exportIntervalSeconds
+		// Set lastExportTimestamp to the interval start for future calls
+		e.lastExportTimestamp = (now / exportIntervalSeconds) * exportIntervalSeconds
 		return false
 	}
 
 	// Export if now is a 30 second mark or past it
-	start := (p.LastExportTimestamp / exportIntervalSeconds) * exportIntervalSeconds
+	start := (e.lastExportTimestamp / exportIntervalSeconds) * exportIntervalSeconds
 	end := start + exportIntervalSeconds
 	if now >= end {
-		p.LastExportTimestamp = now
+		e.lastExportTimestamp = now
 		return true
 	}
 

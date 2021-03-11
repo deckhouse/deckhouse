@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 	"upmeter/pkg/crd"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
@@ -19,8 +19,8 @@ type StatusResponse struct {
 	From      int64                                     `json:"from"`
 	To        int64                                     `json:"to"`
 	Statuses  map[string]map[string][]entity.StatusInfo `json:"statuses"`
-	Episodes  []checks.DowntimeEpisode                  `json:"episodes"`
-	Incidents []checks.DowntimeIncident                 `json:"incidents"`
+	Episodes  []check.DowntimeEpisode                   `json:"episodes"`
+	Incidents []check.DowntimeIncident                  `json:"incidents"`
 }
 
 type StatusRangeHandler struct {

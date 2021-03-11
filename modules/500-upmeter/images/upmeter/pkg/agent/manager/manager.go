@@ -1,49 +1,43 @@
 package manager
 
 import (
-	"github.com/flant/shell-operator/pkg/kube"
-
-	"upmeter/pkg/checks"
-	"upmeter/pkg/probes"
-	"upmeter/pkg/probes/calculated"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/probe"
+	"upmeter/pkg/probe/calculated"
 )
 
-type ProbeManager struct {
-	probes     []*checks.Probe
-	calcProbes []*calculated.Probe
+type Manager struct {
+	runners     []*check.Runner
+	calculators []*calculated.Probe
 }
 
-func NewProbeManager() *ProbeManager {
-	return &ProbeManager{}
+func New(access *kubernetes.Access) *Manager {
+	m := &Manager{}
+	m.runners = filterRunners(probe.Load(access))
+	m.calculators = filterCalculators(calculated.Load())
+	return m
 }
 
-func (m *ProbeManager) Init() {
-	m.probes = filterDisabledProbes(probes.Load())
-	m.calcProbes = filterDisabledCalcProbes(calculated.Load())
-}
-
-func (m *ProbeManager) Probes() []*checks.Probe {
-	return m.probes
-}
-
-func (m *ProbeManager) Calculators() []*calculated.Probe {
-	return m.calcProbes
-}
-
-func (m *ProbeManager) InitProbes(ch chan checks.Result, client kube.KubernetesClient, token string) {
-	for _, p := range m.probes {
-		_ = p.Init()
-		p.WithResultChan(ch)
-		p.WithKubernetesClient(client)
-		p.WithServiceAccountToken(token)
+func (m *Manager) SendTo(send chan check.Result) {
+	for _, runner := range m.runners {
+		runner.SendTo(send)
 	}
 }
 
-func filterDisabledProbes(ps []*checks.Probe) []*checks.Probe {
-	var newList = make([]*checks.Probe, 0)
+func (m *Manager) Runners() []*check.Runner {
+	return m.runners
+}
+
+func (m *Manager) Calculators() []*calculated.Probe {
+	return m.calculators
+}
+
+func filterRunners(ps []*check.Runner) []*check.Runner {
+	var newList = make([]*check.Runner, 0)
 
 	for _, p := range ps {
-		if checks.IsProbeEnabled(p.Id()) {
+		if check.IsProbeEnabled(p.Id()) {
 			newList = append(newList, p)
 		}
 	}
@@ -51,11 +45,11 @@ func filterDisabledProbes(ps []*checks.Probe) []*checks.Probe {
 	return newList
 }
 
-func filterDisabledCalcProbes(ps []*calculated.Probe) []*calculated.Probe {
+func filterCalculators(ps []*calculated.Probe) []*calculated.Probe {
 	var newList = make([]*calculated.Probe, 0)
 
 	for _, p := range ps {
-		if checks.IsProbeEnabled(p.Id()) {
+		if check.IsProbeEnabled(p.Id()) {
 			newList = append(newList, p)
 		}
 	}
