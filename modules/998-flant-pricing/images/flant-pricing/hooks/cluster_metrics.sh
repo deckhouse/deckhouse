@@ -49,7 +49,6 @@ function __main__() {
 
   output_metric "flant_pricing_masters_count" "$FP_MASTERS_COUNT"
   output_metric "flant_pricing_kops" "$FP_KOPS"
-  output_metric "flant_pricing_all_managed_nodes_up_to_date" "$FP_ALL_MANAGED_NODES_UP_TO_DATE"
   output_metric "flant_pricing_deprecated_resources_in_helm_releases" "$FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES"
   output_metric "flant_pricing_master_is_dedicated" "$FP_MASTER_IS_DEDICATED"
   output_metric "flant_pricing_master_min_cpu" "$FP_MASTER_MIN_CPU"
@@ -57,6 +56,21 @@ function __main__() {
   output_metric "flant_pricing_plan_is_bought_as_bundle" "$FP_PLAN_IS_BOUGHT_AS_BUNDLE"
   output_metric "flant_pricing_do_not_charge_for_rock_solid" "$FP_DO_NOT_CHARGE_FOR_ROCK_SOLID"
   output_metric "flant_pricing_contacts" "$FP_CONTACTS"
+
+  if [[ "$FP_KUBEALL_TEAM" != "" && "$FP_KUBEALL_HOST" != "" ]]; then
+    echo '
+    {
+      "name": "flant_pricing_***REMOVED***",
+      "set": '$(date +%s)',
+      "labels": {
+        "team": "'$FP_KUBEALL_TEAM'",
+        "host": "'$FP_KUBEALL_HOST'",
+        "kubectl": "'$FP_KUBEALL_KUBECTL'",
+        "kubeconfig": "'$FP_KUBEALL_KUBECONFIG'",
+        "context": "'$FP_KUBEALL_CONTEXT'"
+      }
+    }' | jq -rc >> $METRICS_PATH
+  fi
 }
 
 hook::run "$@"

@@ -81,8 +81,6 @@ spec:
           value: {{ .Values.flantPricing.internal.mastersCount | quote }}
         - name: FP_KOPS
           value: {{ .Values.flantPricing.internal.kops | int | quote }}
-        - name: FP_ALL_MANAGED_NODES_UP_TO_DATE
-          value: {{ .Values.flantPricing.internal.allManagedNodesUpToDate | default 0 | int | quote }}
         - name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
           value: {{ .Values.flantPricing.internal.deprecatedResourcesInHelmReleases | quote }}
         - name: FP_MASTER_IS_DEDICATED
@@ -103,6 +101,16 @@ spec:
           value: {{ .Values.flantPricing.internal.terraformManagerEnabled | quote }}
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
+        - name: FP_KUBEALL_TEAM
+          value: {{ .Values.flantPricing.***REMOVED***.team | quote }}
+        - name: FP_KUBEALL_HOST
+          value: {{ .Values.flantPricing.***REMOVED***.host | quote }}
+        - name: FP_KUBEALL_KUBECTL
+          value: {{ .Values.flantPricing.***REMOVED***.kubectl | quote }}
+        - name: FP_KUBEALL_KUBECONFIG
+          value: {{ .Values.flantPricing.***REMOVED***.kubeconfig | quote }}
+        - name: FP_KUBEALL_CONTEXT
+          value: {{ .Values.flantPricing.***REMOVED***.context | quote }}
         livenessProbe:
           httpGet:
             path: /metrics

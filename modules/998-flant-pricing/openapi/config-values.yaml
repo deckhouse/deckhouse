@@ -1,0 +1,63 @@
+type: object
+properties:
+  contacts:
+    type: integer
+    default: 0
+    description: |
+      Количество контактных лиц, за которые необходимо чаржить.
+  doNotChargeForRockSolid:
+    type: boolean
+    default: false
+    description: |
+      Входит ли канал обновлений RockSolid в стоимость, или надо за него чаржить отдельно.
+  plan:
+    type: string
+    enum: ["Standard", "Silver", "Gold", "Platinum"]
+    default: Standard
+    description: |
+      Тарифный план.
+  planIsBoughtAsBundle:
+    type: boolean
+    default: false
+    description: |
+      Куплен ли "пакет".
+  promscale:
+    type: object
+    default: {}
+    properties:
+      url:
+        type: string
+        default: "https://kulkulator.flant.com/write"
+        description: |
+          URL для отправки метрик.
+  ***REMOVED***:
+    type: object
+    default: {}
+    description: |
+      Параметры для формирования ***REMOVED*** реестра.
+    properties:
+      team:
+        type: string
+        default: ""
+        description: |
+          Команда, обслуживающая этот кластер.
+      host:
+        type: string
+        default: ""
+        description: |
+          Имя хоста, на котором запускать `kubectl`.
+      kubectl:
+        type: string
+        default: "sudo kubectl"
+        description: |
+          Команда `kubectl` (с sudo, если необходимо).
+      kubeconfig:
+        type: string
+        default: "/root/.kube/config"
+        description: |
+          Путь до файла `kubeconfig`.
+      context:
+        type: string
+        default: ""
+        description: |
+          Какой `context` использовать из указанного `kubeconfig`.

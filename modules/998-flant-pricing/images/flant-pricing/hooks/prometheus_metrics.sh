@@ -33,22 +33,21 @@ function prometheus_query() {
 function get_status() {
   statuses="$1"
 
-  # Following map represents "restatusing" rules and priority of each status.
-  status_map='{
-    "error": "error",
-    "absent": "missing",
-    "missing": "missing",
-    "destructively_changed": "destructively_changed",
-    "changed": "changed",
-    "excessive": "changed",
-    "insufficient": "changed",
-    "ok": "ok"
-  }'
+  # Following array represents priority of each status.
+  priority='[
+    "missing",
+    "error",
+    "destructively_changed",
+    "abandoned",
+    "absent",
+    "changed",
+    "ok"
+  ]'
 
   # Get the first matching status.
   jq -r --argjson statuses "$statuses" '
-    [. | to_entries[] | .key as $key | select($statuses[] | . == $key) | .value] | first // ""
-    ' <<< "$status_map"
+    [.[] | . as $status | select($statuses[] | . == $status) | .] | first // ""
+    ' <<< "$priority"
 }
 
 # Return cluster state status.
@@ -65,16 +64,11 @@ function get_cluster_status() {
 
 # Return node group status.
 # $1 - node group name
-# $2, $3, $4 - prometheus json results
+# $2, $3 - prometheus json results
 function get_node_group_status() {
   node_group_name="$1"
-  prom_node_group_statuses="$2"
-  prom_node_statuses="$3"
-  prom_node_template_statuses="$4"
-
-  node_group_status="$(get_status "$(jq --arg node_group_name "$node_group_name" '
-    [.data.result // [] | .[] | select(.metric.name == $node_group_name) | .metric.status]
-    ' <<< "$prom_node_group_statuses")")"
+  prom_node_statuses="$2"
+  prom_node_template_statuses="$3"
 
   node_status="$(get_status "$(jq --arg node_group_name "$node_group_name" '
     [.data.result // [] | .[] | select(.metric.node_group == $node_group_name) | .metric.status]
@@ -84,7 +78,7 @@ function get_node_group_status() {
     [.data.result // [] | .[] | select(.metric.name == $node_group_name) | .metric.status]
     ' <<< "$prom_node_template_statuses")")"
 
-  status="$(get_status '["'$node_group_status'","'$node_status'","'$node_template_status'"]')"
+  status="$(get_status '["'$node_status'","'$node_template_status'"]')"
 
   if [[ -z "$status" ]]; then
       status="missing"
@@ -105,11 +99,10 @@ function terraform_state_metrics() {
 
   if [[ "${FP_TERRAFORM_MANAGER_EBABLED}" == "true" ]]; then
     prom_cluster_status="$(prometheus_query 'max(candi_converge_cluster_status) by (status) == 1')"
-    prom_node_group_statuses="$(prometheus_query 'max(candi_converge_node_group_status) by (name,status) == 1')"
     prom_node_statuses="$(prometheus_query 'max(candi_converge_node_status) by (name,node_group,status) == 1')"
     prom_node_template_statuses="$(prometheus_query 'max(candi_converge_node_template_status) by (name,status) == 1')"
 
-    if [[ -z "$prom_cluster_status" || -z "$prom_node_group_statuses" || -z "$prom_node_statuses" || -z "$prom_node_template_statuses" ]]; then
+    if [[ -z "$prom_cluster_status" || -z "$prom_node_statuses" || -z "$prom_node_template_statuses" ]]; then
       >&2 echo "ERROR: Crucial Prometheus queries failed. Skipping terraform_state metrics."
       return 0
     fi
@@ -118,8 +111,8 @@ function terraform_state_metrics() {
     state_master_status="missing"
     state_terranode_statuses="[]"
 
-    for node_group_name in $(jq -r '.data.result[] | .metric.name' <<< "$prom_node_group_statuses"); do
-      status="$(get_node_group_status "$node_group_name" "$prom_node_group_statuses" "$prom_node_statuses" "$prom_node_template_statuses")"
+    for node_group_name in $(jq -r '[.data.result[] | .metric.node_group] | unique | .[]' <<< "$prom_node_statuses"); do
+      status="$(get_node_group_status "$node_group_name" "$prom_node_statuses" "$prom_node_template_statuses")"
       if [[ "$node_group_name" == "master" ]]; then
         state_master_status="$status"
       else

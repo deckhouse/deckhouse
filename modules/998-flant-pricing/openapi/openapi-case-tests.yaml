@@ -1,0 +1,20 @@
+positive:
+  configValues:
+    - ***REMOVED***:
+        team: test
+        host: test.control-plane
+  values:
+    - internal:
+        releaseChannel: "test"
+        bundle: "Default"
+        cloudProvider: "TestCloud"
+        controlPlaneVersion: "1.19"
+        minimalKubeletVersion: "1.19"
+        clusterType: "Static"
+        mastersCount: 3
+        kops: False
+        deprecatedResourcesInHelmReleases: 0
+        masterIsDedicated: True
+        masterMinCPU: 4
+        masterMinMemory: 8265010916
+        terraformManagerEnabled: True
