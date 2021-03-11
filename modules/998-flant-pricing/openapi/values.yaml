@@ -1,0 +1,74 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-requred-for-helm:
+    - releaseChannel
+    - bundle
+    - cloudProvider
+    - controlPlaneVersion
+    - minimalKubeletVersion
+    - clusterType
+    - mastersCount
+    - kops
+    - deprecatedResourcesInHelmReleases
+    - masterIsDedicated
+    - masterMinCPU
+    - masterMinMemory
+    - terraformManagerEnabled
+    - prometheusAPIClientTLS
+    - promscale
+    properties:
+      promscale:
+        type: object
+        default: {}
+        properties:
+          basic_auth:
+            type: object
+            default: {}
+            properties:
+              username:
+                type: string
+                default: flant-pricing
+              password:
+                type: string
+                default: FHVOq2RjpTnC2mixCl3WbxmikdrIsz
+      releaseChannel:
+        type: string
+      bundle:
+        type: string
+      cloudProvider:
+        type: string
+      controlPlaneVersion:
+        type: [number, string]
+      minimalKubeletVersion:
+        type: [number, string]
+      clusterType:
+        type: string
+        enum: [ "Cloud", "Static", "Hybrid" ]
+      mastersCount:
+        type: integer
+      kops:
+        type: boolean
+      deprecatedResourcesInHelmReleases:
+        type: integer
+      masterIsDedicated:
+        type: boolean
+      masterMinCPU:
+        type: integer
+      masterMinMemory:
+        type: integer
+        format: int64
+      terraformManagerEnabled:
+        type: boolean
+      prometheusAPIClientTLS:
+        type: object
+        default: {}
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string

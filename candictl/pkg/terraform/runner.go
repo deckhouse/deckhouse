@@ -487,7 +487,7 @@ func checkPlanDestructiveChanges(planFile string) (bool, error) {
 	hasDestructiveChanges := func() bool {
 		for _, resource := range changes.ResourcesChanges {
 			for _, action := range resource.Change.Actions {
-				if action == "destroy" {
+				if action == "delete" {
 					return true
 				}
 			}

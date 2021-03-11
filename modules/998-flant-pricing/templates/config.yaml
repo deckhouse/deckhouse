@@ -23,12 +23,12 @@ prometheus:
         action: keep
       - source_labels: [job]
         target_label: cluster_uuid
-        replacement: {{ $.Values.global.discovery.clusterUUID }}
+        replacement: {{ .Values.global.discovery.clusterUUID }}
     remote_write:
     - url: {{ .Values.flantPricing.promscale.url }}
       basic_auth:
-        username: {{ .Values.flantPricing.promscale.basic_auth.username }}
-        password: {{ .Values.flantPricing.promscale.basic_auth.password }}
+        username: {{ .Values.flantPricing.internal.promscale.basic_auth.username }}
+        password: {{ .Values.flantPricing.internal.promscale.basic_auth.password }}
 {{- end }}
 ---
 apiVersion: v1

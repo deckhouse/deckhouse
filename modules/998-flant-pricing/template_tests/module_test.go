@@ -46,7 +46,16 @@ contacts: 10
 doNotChargeForRockSolid: false
 plan: "Standard"
 planIsBoughtAsBundle: false
+promscale: {}
+***REMOVED***:
+  team: ""
+  host: ""
+  kubectl: "sudo kubectl"
+  kubeconfig: "/root/.kube/config"
+  context: ""
 internal:
+  promscale:
+    basic_auth: {}
   releaseChannel: Alpha
   bundle: Default
   cloudProvider: AWS
@@ -122,8 +131,6 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
   value: "3"
 - name: FP_KOPS
   value: "1"
-- name: FP_ALL_MANAGED_NODES_UP_TO_DATE
-  value: "0"
 - name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
   value: "100"
 - name: FP_MASTER_IS_DEDICATED
@@ -143,7 +150,18 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 - name: FP_TERRAFORM_MANAGER_EBABLED
   value: "true"
 - name: DEBUG_UNIX_SOCKET
-  value: /tmp/shell-operator-debug.socket`
+  value: /tmp/shell-operator-debug.socket
+- name: FP_KUBEALL_TEAM
+  value: ""
+- name: FP_KUBEALL_HOST
+  value: ""
+- name: FP_KUBEALL_KUBECTL
+  value: sudo kubectl
+- name: FP_KUBEALL_KUBECONFIG
+  value: /root/.kube/config
+- name: FP_KUBEALL_CONTEXT
+  value: ""
+`
 
 			Expect(ds.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(expectedEnvsDS))
 
