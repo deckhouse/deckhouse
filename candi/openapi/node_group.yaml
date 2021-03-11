@@ -76,7 +76,7 @@ spec:
           properties:
             status: &status
               type: object
-              required: [ ]
+              required: []
               properties:
                 ready:
                   type: integer
@@ -99,6 +99,9 @@ spec:
                 upToDate:
                   type: integer
                   description: "Number of up-to-date nodes in the group."
+                standby:
+                  type: integer
+                  description: "Number of overprovisioned instances in the group."
                 error:
                   type: string
                   description: "Error message about possible problems with the group handling."
@@ -131,6 +134,18 @@ spec:
                           type:
                             type: string
                             description: "Type of operation."
+                conditionSummary:
+                  type: object
+                  properties:
+                    errorMessage:
+                      description: "Error message about possible problems with the group handling."
+                      type: string
+                    ready:
+                      description: "Status of the condition summary."
+                      enum:
+                        - "True"
+                        - "False"
+                      type: string
             spec:
               type: object
               required:
