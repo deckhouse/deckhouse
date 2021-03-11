@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 	"upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/migrations"
 )
@@ -53,8 +53,8 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 			// 30 sec
 			tsCount := 24 * 60 * 2
 			for i := 0; i < tsCount; i++ {
-				downtime := checks.DowntimeEpisode{
-					ProbeRef: checks.ProbeRef{
+				downtime := check.DowntimeEpisode{
+					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
@@ -71,8 +71,8 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 			step5m := 5 * 60
 			tsCount = 24 * 60 * 60 / step5m
 			for i := 0; i < tsCount; i++ {
-				downtime := checks.DowntimeEpisode{
-					ProbeRef: checks.ProbeRef{
+				downtime := check.DowntimeEpisode{
+					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
@@ -127,8 +127,8 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			for i := 0; i < tsCount; i++ {
-				downtime := checks.DowntimeEpisode{
-					ProbeRef: checks.ProbeRef{
+				downtime := check.DowntimeEpisode{
+					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
@@ -183,8 +183,8 @@ func Test_FillOneDay(t *testing.T) {
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			for i := 0; i < tsCount; i++ {
-				downtime := checks.DowntimeEpisode{
-					ProbeRef: checks.ProbeRef{
+				downtime := check.DowntimeEpisode{
+					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
@@ -239,8 +239,8 @@ func Test_Fill_Year(t *testing.T) {
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			for i := 0; i < tsCount; i++ {
-				downtime := checks.DowntimeEpisode{
-					ProbeRef: checks.ProbeRef{
+				downtime := check.DowntimeEpisode{
+					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},

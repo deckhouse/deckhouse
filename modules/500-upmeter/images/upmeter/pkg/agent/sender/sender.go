@@ -7,33 +7,30 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 )
 
 const MaxBatchSize = 64
 
 type Sender struct {
-	DowntimeEpisodesCh chan []checks.DowntimeEpisode
+	DowntimeEpisodesCh chan []check.DowntimeEpisode
 	BufferLock         sync.RWMutex
-	Buffer             []checks.DowntimeEpisode
+	Buffer             []check.DowntimeEpisode
 	Client             *UpmeterClient
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewSender(ctx context.Context) *Sender {
+func NewSender(ctx context.Context, client *UpmeterClient) *Sender {
 	s := &Sender{
-		DowntimeEpisodesCh: make(chan []checks.DowntimeEpisode),
+		DowntimeEpisodesCh: make(chan []check.DowntimeEpisode),
 		BufferLock:         sync.RWMutex{},
-		Buffer:             make([]checks.DowntimeEpisode, 0),
+		Buffer:             make([]check.DowntimeEpisode, 0),
 	}
 	s.ctx, s.cancel = context.WithCancel(ctx)
-	return s
-}
-
-func (s *Sender) WithUpmeterClient(client *UpmeterClient) {
 	s.Client = client
+	return s
 }
 
 // Start runs two go routines to behave as a naive WAL:
@@ -97,7 +94,7 @@ func (s *Sender) SendEpisodes(now int64) {
 		batchSize = bufferLen
 	}
 
-	var batchBuf = make([]checks.DowntimeEpisode, batchSize)
+	var batchBuf = make([]check.DowntimeEpisode, batchSize)
 	for i := 0; i < batchSize; i++ {
 		batchBuf[i] = s.Buffer[i]
 	}
@@ -118,7 +115,7 @@ func (s *Sender) SendEpisodes(now int64) {
 	s.BufferLock.Lock()
 	if len(s.Buffer) == batchSize {
 		// Recreate a Buffer as a "fresh" array if all items were sent
-		s.Buffer = make([]checks.DowntimeEpisode, 0)
+		s.Buffer = make([]check.DowntimeEpisode, 0)
 	} else {
 		s.Buffer = s.Buffer[batchSize:len(s.Buffer)]
 	}

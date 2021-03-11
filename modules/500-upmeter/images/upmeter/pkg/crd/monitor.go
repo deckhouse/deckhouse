@@ -7,7 +7,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 )
 
 type Monitor struct {
@@ -58,16 +58,16 @@ func (m *Monitor) Stop() {
 	m.Monitor.Stop()
 }
 
-func (m *Monitor) GetDowntimeIncidents() []checks.DowntimeIncident {
-	res := make([]checks.DowntimeIncident, 0)
+func (m *Monitor) GetDowntimeIncidents() []check.DowntimeIncident {
+	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
 		res = append(res, ConvertToDowntimeIncidents(obj.Object)...)
 	}
 	return res
 }
 
-func (m *Monitor) FilterDowntimeIncidents(from, to int64, group string, muteDowntimeTypes []string) []checks.DowntimeIncident {
-	res := make([]checks.DowntimeIncident, 0)
+func (m *Monitor) FilterDowntimeIncidents(from, to int64, group string, muteDowntimeTypes []string) []check.DowntimeIncident {
+	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
 		incidents := ConvertToDowntimeIncidents(obj.Object)
 		for _, incident := range incidents {

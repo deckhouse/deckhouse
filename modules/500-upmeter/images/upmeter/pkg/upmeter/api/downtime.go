@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/entity"
 )
@@ -33,7 +33,7 @@ func (h *DowntimeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Decode DowntimeEpisodes json from body
 	decoder := json.NewDecoder(r.Body)
-	var episodes []checks.DowntimeEpisode
+	var episodes []check.DowntimeEpisode
 	err := decoder.Decode(&episodes)
 
 	if err != nil {

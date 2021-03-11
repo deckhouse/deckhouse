@@ -6,19 +6,19 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
 )
 
 // SaveDowntimeEpisodes stores 30 sec downtime episodes into database.
 // It also clears old records and update 5 minute episodes in a database.
-func SaveDowntimeEpisodes(dbCtx *dbcontext.DbContext, episodes []checks.DowntimeEpisode) {
+func SaveDowntimeEpisodes(dbCtx *dbcontext.DbContext, episodes []check.DowntimeEpisode) {
 	saveCtx := dbCtx.Start()
 	defer saveCtx.Stop()
 
 	minTimeslot := time.Now().Unix() - 24*60*60
-	probesInFiveMinSlots := make(map[int64]map[string]checks.ProbeRef)
+	probesInFiveMinSlots := make(map[int64]map[string]check.ProbeRef)
 	for _, episode := range episodes {
 		// Ignore episodes older then 24h.
 		if episode.TimeSlot < minTimeslot {
@@ -39,7 +39,7 @@ func SaveDowntimeEpisodes(dbCtx *dbcontext.DbContext, episodes []checks.Downtime
 		// Save involved 5 min slot and ProbeRef to update 5m episodes later
 		slot5m := Calculate5MinSlot(episode.TimeSlot)
 		if _, ok := probesInFiveMinSlots[slot5m]; !ok {
-			probesInFiveMinSlots[slot5m] = make(map[string]checks.ProbeRef)
+			probesInFiveMinSlots[slot5m] = make(map[string]check.ProbeRef)
 		}
 		probesInFiveMinSlots[slot5m][episode.ProbeRef.Id()] = episode.ProbeRef
 	}
@@ -56,7 +56,7 @@ func SaveDowntimeEpisodes(dbCtx *dbcontext.DbContext, episodes []checks.Downtime
 }
 
 // Insert or Update a DowntimeEpisode using a transaction.
-func Save30sEpisode(dbCtx *dbcontext.DbContext, episode checks.DowntimeEpisode) error {
+func Save30sEpisode(dbCtx *dbcontext.DbContext, episode check.DowntimeEpisode) error {
 	txCtx, err := dbCtx.BeginTransaction()
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func Save30sEpisode(dbCtx *dbcontext.DbContext, episode checks.DowntimeEpisode) 
 	return txCtx.Commit()
 }
 
-func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, ref checks.ProbeRef) error {
+func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, ref check.ProbeRef) error {
 	// Get all records of 30s slots within a 5 min slot.
 	dao30s := dao.NewDowntime30sDao(dbCtx)
 	items, err := dao30s.ListForRange(slot5m, slot5m+300, ref.Group, ref.Probe)
@@ -110,7 +110,7 @@ func Update5MinStorage(dbCtx *dbcontext.DbContext, slot5m int64, ref checks.Prob
 	}
 
 	// Sum up 30 sec episodes.
-	totalDowntime30s := checks.DowntimeEpisode{}
+	totalDowntime30s := check.DowntimeEpisode{}
 	for _, item := range items {
 		totalDowntime30s.SuccessSeconds += item.DowntimeEpisode.SuccessSeconds
 		totalDowntime30s.FailSeconds += item.DowntimeEpisode.FailSeconds

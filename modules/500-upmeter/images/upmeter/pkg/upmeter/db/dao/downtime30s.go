@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 )
 
@@ -94,7 +94,7 @@ func NewDowntime30sDao(dbCtx *dbcontext.DbContext) *Downtime30sDao {
 
 type Downtime30sEntity struct {
 	Rowid           int64
-	DowntimeEpisode checks.DowntimeEpisode
+	DowntimeEpisode check.DowntimeEpisode
 }
 
 func (d *Downtime30sDao) ListByTimestamp(tm int64) ([]Downtime30sEntity, error) {
@@ -124,7 +124,7 @@ func (d *Downtime30sDao) ListByTimestamp(tm int64) ([]Downtime30sEntity, error) 
 	return res, nil
 }
 
-func (d *Downtime30sDao) GetSimilar(downtime checks.DowntimeEpisode) (Downtime30sEntity, error) {
+func (d *Downtime30sDao) GetSimilar(downtime check.DowntimeEpisode) (Downtime30sEntity, error) {
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotGroupProbe, downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
 	if err != nil {
 		return Downtime30sEntity{}, fmt.Errorf("select for timestamp: %v", err)
@@ -184,16 +184,16 @@ func (d *Downtime30sDao) ListForRange(start int64, end int64, group string, prob
 	return res, nil
 }
 
-func (d *Downtime30sDao) ListGroupProbe() ([]checks.ProbeRef, error) {
+func (d *Downtime30sDao) ListGroupProbe() ([]check.ProbeRef, error) {
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecGroupProbe)
 	if err != nil {
 		return nil, fmt.Errorf("select group and probe: %v", err)
 	}
 	defer rows.Close()
 
-	var res = make([]checks.ProbeRef, 0)
+	var res = make([]check.ProbeRef, 0)
 	for rows.Next() {
-		var ref = checks.ProbeRef{}
+		var ref = check.ProbeRef{}
 		err := rows.Scan(&ref.Group, &ref.Probe)
 		if err != nil {
 			return nil, fmt.Errorf("row to ProbeRef: %v", err)
@@ -222,7 +222,7 @@ func (d *Downtime30sDao) Stats() ([]string, error) {
 	return stats, nil
 }
 
-func (d *Downtime30sDao) SaveBatch(downtimes []checks.DowntimeEpisode) error {
+func (d *Downtime30sDao) SaveBatch(downtimes []check.DowntimeEpisode) error {
 	for _, downtime := range downtimes {
 		_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime30Sec,
 			downtime.TimeSlot,
@@ -239,7 +239,7 @@ func (d *Downtime30sDao) SaveBatch(downtimes []checks.DowntimeEpisode) error {
 	return nil
 }
 
-func (d *Downtime30sDao) Insert(downtime checks.DowntimeEpisode) error {
+func (d *Downtime30sDao) Insert(downtime check.DowntimeEpisode) error {
 	_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime30Sec,
 		downtime.TimeSlot,
 		downtime.SuccessSeconds,
@@ -251,7 +251,7 @@ func (d *Downtime30sDao) Insert(downtime checks.DowntimeEpisode) error {
 	return err
 }
 
-func (d *Downtime30sDao) Update(rowid int64, downtime checks.DowntimeEpisode) error {
+func (d *Downtime30sDao) Update(rowid int64, downtime check.DowntimeEpisode) error {
 	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime30SecById,
 		downtime.SuccessSeconds,
 		downtime.FailSeconds,

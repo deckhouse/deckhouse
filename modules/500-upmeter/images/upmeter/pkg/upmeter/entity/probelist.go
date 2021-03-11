@@ -1,14 +1,14 @@
 package entity
 
 import (
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 )
 
-func FilterDisabledProbesFromGroupProbeList(probeRefs []checks.ProbeRef) []checks.ProbeRef {
-	res := make([]checks.ProbeRef, 0)
+func FilterDisabledProbesFromGroupProbeList(probeRefs []check.ProbeRef) []check.ProbeRef {
+	res := make([]check.ProbeRef, 0)
 
 	for _, probeRef := range probeRefs {
-		if checks.IsProbeEnabled(probeRef.Id()) {
+		if check.IsProbeEnabled(probeRef.Id()) {
 			res = append(res, probeRef)
 		}
 	}

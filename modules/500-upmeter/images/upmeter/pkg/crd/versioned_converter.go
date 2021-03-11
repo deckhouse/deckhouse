@@ -5,11 +5,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 	v1 "upmeter/pkg/crd/v1"
 )
 
-func ConvertToDowntimeIncidents(obj *unstructured.Unstructured) []checks.DowntimeIncident {
+func ConvertToDowntimeIncidents(obj *unstructured.Unstructured) []check.DowntimeIncident {
 	var incidentObj v1.Downtime
 	err := runtime.DefaultUnstructuredConverter.
 		FromUnstructured(obj.UnstructuredContent(), &incidentObj)

@@ -6,13 +6,13 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"upmeter/pkg/checks"
+	"upmeter/pkg/check"
 )
 
 func Test_CalculateStatuses_success_only(t *testing.T) {
 	g := NewWithT(t)
 
-	episodes := []checks.DowntimeEpisode{
+	episodes := []check.DowntimeEpisode{
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 300, 0, 0, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 300, 300, 0, 0, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 600, 300, 0, 0, 0),
@@ -76,14 +76,14 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 func Test_CalculateStatuses_with_incidents(t *testing.T) {
 	g := NewWithT(t)
 
-	episodes := []checks.DowntimeEpisode{
+	episodes := []check.DowntimeEpisode{
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 300, 0, 0, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 300, 300, 0, 0, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 600, 0, 200, 100, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 900, 300, 0, 0, 0),
 	}
 
-	incidents := []checks.DowntimeIncident{
+	incidents := []check.DowntimeIncident{
 		NewDowntimeIncident(250, 400, "testGroup"),
 		NewDowntimeIncident(600, 800, "testGroup"), // mute duration is 200 to mute unknown and a half of down
 	}
@@ -105,7 +105,7 @@ func Test_CalculateStatuses_with_incidents(t *testing.T) {
 func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	g := NewWithT(t)
 
-	episodes := []checks.DowntimeEpisode{
+	episodes := []check.DowntimeEpisode{
 		NewDowntimeEpisode("testGroup", "testProbe", 300, 100, 0, 200, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 900, 100, 100, 100, 0),
 	}
@@ -119,7 +119,7 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	// Total for the period
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 200, 100, 200+100, 0, 300+300)
 
-	incidents := []checks.DowntimeIncident{
+	incidents := []check.DowntimeIncident{
 		NewDowntimeIncident(250, 400, "testGroup"),
 		NewDowntimeIncident(800, 950, "testGroup"),
 	}
@@ -135,7 +135,7 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][2], 100+100, 50, 50, 150+150, 300+300)
 
 	// Increase incidents to test NoData decreasing
-	incidents = []checks.DowntimeIncident{
+	incidents = []check.DowntimeIncident{
 		NewDowntimeIncident(100, 600, "testGroup"),
 		NewDowntimeIncident(700, 1400, "testGroup"),
 	}
@@ -154,11 +154,11 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 	g := NewWithT(t)
 
-	var episodes []checks.DowntimeEpisode
+	var episodes []check.DowntimeEpisode
 	var s map[string]map[string][]StatusInfo
 
 	// Only success and unknown should not emit down seconds
-	episodes = []checks.DowntimeEpisode{
+	episodes = []check.DowntimeEpisode{
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 50, 0, 250, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 300, 50, 0, 250, 0),
 		NewDowntimeEpisode("testGroup", "testProbe2", 0, 100, 0, 200, 0),
@@ -172,7 +172,7 @@ func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 	ExpectStatusInfo(g, s["testGroup"]["__total__"][1], 100, 0, 500, 0, 0)
 
 	// Only success and nodata should not emit down seconds
-	episodes = []checks.DowntimeEpisode{
+	episodes = []check.DowntimeEpisode{
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 50, 0, 0, 250),
 		NewDowntimeEpisode("testGroup", "testProbe", 300, 50, 0, 0, 250),
 		NewDowntimeEpisode("testGroup", "testProbe2", 0, 100, 0, 0, 200),
@@ -379,7 +379,7 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 func Test_CalculateStatuses_multi_episodes(t *testing.T) {
 	g := NewWithT(t)
 
-	episodes := []checks.DowntimeEpisode{
+	episodes := []check.DowntimeEpisode{
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 300, 0, 0, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 100, 200, 0, 0),
 		NewDowntimeEpisode("testGroup", "testProbe", 0, 50, 25, 300-50-25, 0),
@@ -394,9 +394,9 @@ func Test_CalculateStatuses_multi_episodes(t *testing.T) {
 
 // Helpers
 
-func NewDowntimeEpisode(group, probe string, ts, success, fail, unknown, nodata int64) checks.DowntimeEpisode {
-	return checks.DowntimeEpisode{
-		ProbeRef: checks.ProbeRef{
+func NewDowntimeEpisode(group, probe string, ts, success, fail, unknown, nodata int64) check.DowntimeEpisode {
+	return check.DowntimeEpisode{
+		ProbeRef: check.ProbeRef{
 			Group: group,
 			Probe: probe,
 		},
@@ -408,8 +408,8 @@ func NewDowntimeEpisode(group, probe string, ts, success, fail, unknown, nodata 
 	}
 }
 
-func NewDowntimeIncident(start, end int64, affected ...string) checks.DowntimeIncident {
-	return checks.DowntimeIncident{
+func NewDowntimeIncident(start, end int64, affected ...string) check.DowntimeIncident {
+	return check.DowntimeIncident{
 		Start:        start,
 		End:          end,
 		Duration:     0,
