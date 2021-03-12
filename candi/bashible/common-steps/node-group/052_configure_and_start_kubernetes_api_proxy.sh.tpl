@@ -53,7 +53,7 @@ _on_kubernetes_api_proxy_service_changed() {
 bb-sync-file /etc/systemd/system/kubernetes-api-proxy.service - << "EOF"
 [Unit]
 Description=nginx TCP stream proxy for kubernetes-api-servers
-After=network.target
+After=network.target mnt-kubernetes\x2ddata.mount
 
 [Service]
 Type=forking
@@ -64,6 +64,8 @@ ExecReload=/usr/sbin/nginx -c /etc/kubernetes/kubernetes-api-proxy/nginx.conf -s
 ExecStop=/bin/kill -s QUIT $MAINPID
 TimeoutStopSec=5
 KillMode=mixed
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
