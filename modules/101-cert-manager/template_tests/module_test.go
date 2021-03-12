@@ -35,6 +35,7 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
+  extensionAPIServerAuthenticationRequestheaderClientCA: string
 `
 
 const globalValuesHa = `
@@ -59,6 +60,7 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 3
     master: 1
+  extensionAPIServerAuthenticationRequestheaderClientCA: string
 `
 
 const globalValuesManaged = `
@@ -81,6 +83,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 1
     system: 3
+  extensionAPIServerAuthenticationRequestheaderClientCA: string
 `
 
 const globalValuesManagedHa = `
@@ -104,6 +107,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
     system: 3
+  extensionAPIServerAuthenticationRequestheaderClientCA: string
 `
 
 const certManager = `
@@ -111,6 +115,10 @@ internal:
   selfSignedCA:
     cert: string
     key: string
+  webhookCACrt: string
+  webhookCAKey: string
+  webhookCrt: string
+  webhookKey: string
 `
 
 const cloudDNS = `

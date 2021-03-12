@@ -1,0 +1,71 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  beforeHelm: 10
+  kubernetes:
+  - name: secret_ca
+    group: main
+    keepFullObjectsInMemory: false
+    apiVersion: v1
+    kind: Secret
+    executeHookOnEvent: ["Modified"]
+    nameSelector:
+      matchNames: ["cert-manager-webhook-ca"]
+    namespace:
+      nameSelector:
+        matchNames: ["d8-cert-manager"]
+    jqFilter: |
+      {
+        "cert": ( .data."ca.crt" | @base64d),
+        "key": ( .data."tls.key" | @base64d)
+      }
+  - name: secret_tls
+    group: main
+    keepFullObjectsInMemory: false
+    apiVersion: v1
+    kind: Secret
+    executeHookOnEvent: ["Modified"]
+    nameSelector:
+      matchNames: ["cert-manager-webhook-tls"]
+    namespace:
+      nameSelector:
+        matchNames: ["d8-cert-manager"]
+    jqFilter: |
+      {
+        "cert": ( .data."tls.crt" | @base64d),
+        "key": ( .data."tls.key" | @base64d)
+      }
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.secret_ca.0.filterResult && context::has snapshots.secret_tls.0.filterResult; then
+    ca_crt="$(context::get snapshots.secret_ca.0.filterResult.cert)"
+    ca_key="$(context::get snapshots.secret_ca.0.filterResult.key)"
+    cert_crt="$(context::get snapshots.secret_tls.0.filterResult.cert)"
+    cert_key="$(context::get snapshots.secret_tls.0.filterResult.key)"
+  else
+    ca_csr='{"CN":"cert-manager.webhook.ca","names":[{"O":"cert-manager.system"}],"key":{"algo":"rsa","size":2048},"ca":{"expiry":"87600h"},"hosts":["cert-manager.webhook.ca"]}'
+    ca="$(cfssl gencert -initca - <<< "$ca_csr")"
+    ca_crt="$(jq .cert -r <<< "$ca")"
+    ca_key="$(jq .key -r <<< "$ca")"
+
+    config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
+
+    cert_csr='{"CN":"cert-manager-webhook","names":[{"O":"cert-manager.system"}],"key":{"algo":"rsa","size":2048},"hosts":["cert-manager-webhook","cert-manager-webhook.d8-cert-manager","cert-manager-webhook.d8-cert-manager.svc"]}'
+    cert="$(cfssl gencert -ca=<(echo "$ca_crt") -ca-key=<(echo "$ca_key") -config=<(echo "$config") - <<< "$cert_csr")"
+    cert_crt="$(jq .cert -r <<< "$cert")"
+    cert_key="$(jq .key -r <<< "$cert")"
+  fi
+
+  values::set certManager.internal.webhookCACrt "$ca_crt"
+  values::set certManager.internal.webhookCAKey "$ca_key"
+  values::set certManager.internal.webhookCrt "$cert_crt"
+  values::set certManager.internal.webhookKey "$cert_key"
+}
+
+hook::run "$@"

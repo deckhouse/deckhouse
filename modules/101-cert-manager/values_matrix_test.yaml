@@ -15,6 +15,7 @@ global:
     d8SpecificNodeCountByRole:
       system: 1
     kubernetesVersion: 1.15.5
+    extensionAPIServerAuthenticationRequestheaderClientCA: string
   modules:
     placement:
       __ConstantChoices__:
@@ -27,3 +28,8 @@ certManager:
     selfSignedCA:
       cert: string
       key: string
+    webhookCACrt: string
+    webhookCAKey: string
+    webhookCrt: string
+    webhookKey: string
+    
