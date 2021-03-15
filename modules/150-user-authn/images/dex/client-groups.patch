@@ -1,19 +1,20 @@
 diff --git a/server/handlers.go b/server/handlers.go
-index 5a7244fa..ea8b502b 100644
+index eb65f490..a939b62e 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
-@@ -21,6 +21,7 @@ import (
- 	jose "gopkg.in/square/go-jose.v2"
-
- 	"github.com/dexidp/dex/connector"
+@@ -14,6 +14,8 @@ import (
+ 	"strings"
+ 	"time"
+ 
 +	"github.com/dexidp/dex/pkg/groups"
- 	"github.com/dexidp/dex/server/internal"
- 	"github.com/dexidp/dex/storage"
- )
-@@ -577,18 +578,29 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
- 		return
- 	}
-
++
+ 	"github.com/coreos/go-oidc/v3/oidc"
+ 	"github.com/gorilla/mux"
+ 	jose "gopkg.in/square/go-jose.v2"
+@@ -243,6 +245,22 @@ func (s *Server) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+ 	scopes := parseScopes(authReq.Scopes)
+ 	showBacklink := len(s.connectors) > 1
+ 
 +	client, err := s.storage.GetClient(authReq.ClientID)
 +	if err != nil {
 +		s.logger.Errorf("Failed to get client %q: %v", authReq.ClientID, err)
@@ -23,7 +24,6 @@ index 5a7244fa..ea8b502b 100644
 +
 +	if len(client.AllowedGroups) > 0 {
 +		authReq.Claims.Groups = groups.Filter(authReq.Claims.Groups, client.AllowedGroups)
-+
 +		if len(authReq.Claims.Groups) == 0 {
 +			s.logger.Errorf("user not in allowed groups: %v", client.AllowedGroups)
 +			s.renderError(r, w, http.StatusInternalServerError, "User not in allowed groups.")
@@ -33,31 +33,19 @@ index 5a7244fa..ea8b502b 100644
 +
  	switch r.Method {
  	case http.MethodGet:
- 		if s.skipApproval {
- 			s.sendCodeResponse(w, r, authReq)
- 			return
- 		}
--		client, err := s.storage.GetClient(authReq.ClientID)
--		if err != nil {
--			s.logger.Errorf("Failed to get client %q: %v", authReq.ClientID, err)
--			s.renderError(r, w, http.StatusInternalServerError, "Failed to retrieve client.")
--			return
--		}
- 		if err := s.templates.approval(r, w, authReq.ID, authReq.Claims.Username, client.Name, authReq.Scopes); err != nil {
- 			s.logger.Errorf("Server template error: %v", err)
- 		}
+ 		switch conn := conn.Connector.(type) {
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 41b14f37..4ed11c4d 100644
+index 07e25084..8aefe485 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -197,6 +197,8 @@ type Client struct {
-
+ 
  	Name    string `json:"name,omitempty"`
  	LogoURL string `json:"logoURL,omitempty"`
 +
 +	AllowedGroups []string `json:"allowedGroups,omitempty"`
  }
-
+ 
  // ClientList is a list of Clients.
 @@ -216,25 +218,27 @@ func (cli *client) fromStorageClient(c storage.Client) Client {
  			Name:      cli.idToName(c.ID),
@@ -80,7 +68,7 @@ index 41b14f37..4ed11c4d 100644
 +		AllowedGroups: c.AllowedGroups,
  	}
  }
-
+ 
  func toStorageClient(c Client) storage.Client {
  	return storage.Client{
 -		ID:           c.ID,
@@ -100,17 +88,17 @@ index 41b14f37..4ed11c4d 100644
 +		AllowedGroups: c.AllowedGroups,
  	}
  }
-
+ 
 diff --git a/storage/storage.go b/storage/storage.go
-index 06f718e1..552e4091 100644
+index c308ac46..76ff386f 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
-@@ -156,6 +156,8 @@ type Client struct {
+@@ -164,6 +164,8 @@ type Client struct {
  	// Name and LogoURL used when displaying this client to the end user.
  	Name    string `json:"name" yaml:"name"`
  	LogoURL string `json:"logoURL" yaml:"logoURL"`
 +
 +	AllowedGroups []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
  }
-
+ 
  // Claims represents the ID Token claims supported by the server.
