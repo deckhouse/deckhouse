@@ -5,6 +5,7 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    beforeHelm: 20
     kubernetes:
     - name: ngs
       queue: /modules/$(module::name::kebab_case)/order_bootstrap_token
@@ -12,6 +13,7 @@ function __config__() {
       keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1alpha2
       kind: NodeGroup
+      executeHookOnEvent: []
       jqFilter: |
         {
           "name": .metadata.name,
@@ -23,7 +25,7 @@ function __config__() {
       keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Secret
-      executeHookOnEvent: ["Modified","Deleted"]
+      executeHookOnEvent: []
       namespace:
         nameSelector:
           matchNames: [kube-system]
