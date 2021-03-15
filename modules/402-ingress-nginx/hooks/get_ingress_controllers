@@ -26,6 +26,7 @@ function __config__() {
         | if .spec.inlet == "LoadBalancerWithProxyProtocol" then .spec.loadBalancerWithProxyProtocol //= {} else .spec.loadBalancerWithProxyProtocol |= {} end
         | if .spec.inlet == "HostPort" then .spec.hostPort //= {} else .spec.hostPort |= {} end
         | if .spec.inlet == "HostPortWithProxyProtocol" then .spec.hostPortWithProxyProtocol //= {} else .spec.hostPortWithProxyProtocol |= {} end
+        | if .spec.inlet == "HostWithFailover" then .spec.hostWithFailover //= {} else .spec.hostWithFailover |= {} end
         | {"name": .metadata.name, "spec": .spec}
 EOF
 }

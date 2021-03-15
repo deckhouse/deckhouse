@@ -14,8 +14,10 @@ global:
       ingressNginx:
         controller025: tagstring
         controller026: tagstring
-        statsdExporter: tagstring
+        nginxExporter: tagstring
         protobufExporter: tagstring
+        proxyFailover: tagstring
+        proxyFailoverIptables: tagstring
   discovery:
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
@@ -69,3 +71,19 @@ ingressNginx:
               inlet: LoadBalancer
               loadBalancer: {}
               loadBalancerWithProxyProtocol: {}
+        -
+          - name: test
+            spec:
+              config: {}
+              resourcesRequests:
+                mode: VPA
+                static: {}
+                vpa:
+                  cpu:
+                    max: 200m
+                  memory:
+                    min: 100Mi
+              ingressClass: nginx
+              controllerVersion: "0.26"
+              inlet: HostWithFailover
+              hostWithFailover: {}

@@ -64,6 +64,7 @@ spec:
   },
   "hostPortWithProxyProtocol": {},
   "hostPort": {},
+  "hostWithFailover": {},
   "loadBalancerWithProxyProtocol": {},
   "acceptRequestsFrom": [
     "~127.0.0.1",
@@ -140,6 +141,7 @@ spec:
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {},
+"hostWithFailover": {},
 "hostPort": {}
 }`))
 
@@ -159,6 +161,7 @@ spec:
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {"httpPort": 80, "httpsPort": 443},
+"hostWithFailover": {},
 "hostPort": {}
 }`))
 
@@ -178,6 +181,7 @@ spec:
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
 "hostPortWithProxyProtocol": {},
+"hostWithFailover": {},
 "hostPort": {}
 }`))
 		})

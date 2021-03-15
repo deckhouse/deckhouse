@@ -1,10 +1,13 @@
-{{- $context := . }}
-{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+{{- define "configmap" }}
+{{- $context := index . 0 }}
+{{- $crd := index . 1 }}
+{{- $name := index . 2 }}
+{{- $failover := index . 3 }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $crd.name }}-config
+  name: {{ $name }}-config
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context) | indent 2 }}
 data:
@@ -104,7 +107,7 @@ data:
     {{- end }}
   {{- end }}
 
-  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
+  {{- if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") $failover }}
   use-proxy-protocol: "true"
   proxy-real-ip-cidr: "0.0.0.0/0"
   {{- end }}
@@ -186,6 +189,15 @@ data:
     {{- range $key, $additionalConfig := $crd.spec.config }}
   {{ $key }}: {{ $additionalConfig | quote }}
     {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{ include "configmap" (list $context $crd $crd.name false) }}
+
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{ include "configmap" (list $context $crd (printf "%s-failover" $crd.name) true) }}
   {{- end }}
 ---
 apiVersion: v1

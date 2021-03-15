@@ -127,6 +127,9 @@ func (hec *Config) HelmRender() {
 			var t interface{}
 			err = yaml.Unmarshal([]byte(doc), &t)
 
+			if err != nil {
+				By("Doc\n:" + doc)
+			}
 			Expect(err).To(Not(HaveOccurred()))
 			if t == nil {
 				continue

@@ -276,6 +276,10 @@ spec:
                     inlet:
                       enum: ['HostPortWithProxyProtocol']
                   required: ['hostPortWithProxyProtocol']
+                - properties:
+                    inlet:
+                      enum: ['HostWithFailover']
+                    hostWithFailover: {}
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

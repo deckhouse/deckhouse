@@ -31,8 +31,7 @@ func skipObjectIfNeeded(o *storage.StoreObject) bool {
 		return true
 	}
 	// Ingress Nginx has a lot of hardcoded configuration, which makes it hard to get secured
-	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-ingress-nginx" &&
-		strings.HasPrefix(o.Unstructured.GetName(), "controller") {
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-ingress-nginx" {
 		return true
 	}
 
