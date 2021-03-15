@@ -35,15 +35,14 @@ properties:
     default: {}
     description: |
       Параметры для формирования ***REMOVED*** реестра.
+    required: [team, host]
     properties:
       team:
         type: string
-        default: ""
         description: |
           Команда, обслуживающая этот кластер.
       host:
         type: string
-        default: ""
         description: |
           Имя хоста, на котором запускать `kubectl`.
       kubectl:
