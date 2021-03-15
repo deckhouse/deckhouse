@@ -51,27 +51,29 @@ func (d *DeckhouseController) Shutdown() {
 func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	// Initialize RegistryWatcher dependencies
 
-	// Metric storage.
+	// Create and start a metric storage for the RegistryWatcher and the AddonOperator.
 	metricStorage := metric_storage.NewMetricStorage()
 	metricStorage.WithContext(d.ctx)
 	metricStorage.WithPrefix(sh_app.PrometheusMetricsPrefix)
 	metricStorage.Start()
 	addon_operator.RegisterAddonOperatorMetrics(metricStorage)
 	RegisterDeckhouseMetrics(metricStorage)
+	// Set MetricStorage in addon-operator to use in a Kubernetes client initialization.
+	d.AddonOperator.WithMetricStorage(metricStorage)
 
-	// Initialize kube client.
-	kubeClient := kube.NewKubernetesClient()
-	kubeClient.WithContextName(sh_app.KubeContext)
-	kubeClient.WithConfigPath(sh_app.KubeConfig)
-	kubeClient.WithRateLimiterSettings(sh_app.KubeClientQps, sh_app.KubeClientBurst)
-	kubeClient.WithMetricStorage(metricStorage)
-	err := kubeClient.Init()
+	// Create and initialize a Kubernetes client for the RegistryWatcher and the AddonOperator
+	// Register metrics for client-go with custom labels.
+	kube.RegisterKubernetesClientMetrics(metricStorage, d.AddonOperator.GetMainKubeClientMetricLabels())
+	// Initialize a Kubernetes client with settings, metricStorage and custom metric labels.
+	kubeClient, err := d.AddonOperator.InitMainKubeClient()
 	if err != nil {
 		log.Errorf("MAIN Fatal: initialize kube client: %s\n", err)
 		return err
 	}
+	// Set KubeClient in AddonOperator.
+	d.AddonOperator.WithKubernetesClient(kubeClient)
 
-	// Initialize RegistryWatcher
+	// Initialize and start the RegistryWatcher.
 	LastSuccessTime := time.Now()
 	registryWatcher := docker_registry_watcher.NewDockerRegistryWatcher()
 	registryWatcher.WithContext(d.ctx)
@@ -118,10 +120,6 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	registryWatcher.Start()
 
 	d.RegistryWatcher = registryWatcher
-
-	// RegistryWatcher started, set initialized dependencies for AddonOperator.
-	d.AddonOperator.WithKubernetesClient(kubeClient)
-	d.AddonOperator.WithMetricStorage(metricStorage)
 
 	return nil
 }
