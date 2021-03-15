@@ -2,6 +2,7 @@
 {{- $context := index . 0 }}
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
+{{- $failover := index . 3 }}
 
   {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -53,12 +54,23 @@ metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{- if $failover }}
+    ingress-nginx-failover: ""
+    {{- else }}
+    ingress-nginx-safe-update: ""
+    {{- end }}
+  {{- end }}
   annotations:
     ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
 spec:
   updateStrategy:
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+    type: OnDelete
+  {{ else }}
     type: RollingUpdate
+  {{ end }}
   selector:
     matchLabels:
       app: controller
@@ -93,6 +105,13 @@ spec:
 {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+  {{- else }}
+      dnsPolicy: ClusterFirst
+      hostNetwork: false
+  {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -129,7 +148,7 @@ spec:
           timeoutSeconds: 5
         args:
         - /nginx-ingress-controller
-        - --configmap=$(POD_NAMESPACE)/{{ $crd.name }}-config
+        - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
         - --v=2
         - --ingress-class={{ $crd.spec.ingressClass }}
         - --healthz-port=10254
@@ -212,7 +231,9 @@ spec:
         - "--stale-cache-interval=1h30m"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-          value: "0.0.0.0"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
@@ -263,5 +284,9 @@ spec:
 
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-  {{ include "ingress-controller" (list $context $crd $crd.name ) }}
+  {{ include "ingress-controller" (list $context $crd $crd.name false) }}
+
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{ include "ingress-controller" (list $context $crd (printf "%s-failover" $crd.name) true) }}
+  {{- end }}
 {{- end }}

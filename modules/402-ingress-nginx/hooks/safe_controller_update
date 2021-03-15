@@ -1,0 +1,117 @@
+#!/bin/bash -e
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: controller
+      keepFullObjectsInMemory: false
+      group: main
+      queue: /modules/$(module::name::kebab_case)/safe_daemonset_update
+      apiVersion: apps/v1
+      kind: DaemonSet
+      labelSelector:
+        matchLabels:
+         ingress-nginx-safe-update: ""
+         app: controller
+      namespace:
+        nameSelector:
+          matchNames: [d8-ingress-nginx]
+      jqFilter: |
+        {
+          "name": .metadata.labels.name,
+          "generation": .metadata.generation,
+          "status": .status
+        }
+    - name: proxy
+      keepFullObjectsInMemory: false
+      group: main
+      queue: /modules/$(module::name::kebab_case)/safe_daemonset_update
+      apiVersion: apps/v1
+      kind: DaemonSet
+      labelSelector:
+        matchLabels:
+         ingress-nginx-safe-update: ""
+         app: proxy-failover
+      namespace:
+        nameSelector:
+          matchNames: [d8-ingress-nginx]
+      jqFilter: |
+        {
+          "name": .metadata.labels.name,
+          "generation": .metadata.generation,
+          "status": .status
+        }
+    - name: failover
+      keepFullObjectsInMemory: false
+      group: main
+      queue: /modules/$(module::name::kebab_case)/safe_daemonset_update
+      apiVersion: apps/v1
+      kind: DaemonSet
+      labelSelector:
+        matchLabels:
+         ingress-nginx-failover: ""
+         app: controller
+      namespace:
+        nameSelector:
+          matchNames: [d8-ingress-nginx]
+      jqFilter: |
+        {
+          "name": .metadata.labels.name,
+          "status": .status
+        }
+EOF
+}
+
+function __main__() {
+  controllers="$(context::jq -rc '[.snapshots.controller // [] | .[].filterResult]')"
+  proxy="$(context::jq -rc '[.snapshots.proxy // [] | .[].filterResult]')"
+  failovers="$(context::jq -rc '[.snapshots.failover // [] | .[].filterResult]')"
+
+
+  for i in $(jq -r 'keys[]' <<< "$controllers"); do
+    name=$(jq -er --argjson i "$i"  '.[$i].name' <<< "$controllers")
+
+    failover_ready=$(jq -r --arg name "${name}-failover" '
+      .[] | select(.name == $name ) | .status |
+      (.numberReady == .currentNumberScheduled) and ((.updatedNumberScheduled // 0) >= .desiredNumberScheduled)
+      ' <<< "$failovers"
+    )
+
+    if [[ "${failover_ready}" != "true" ]]; then
+      continue
+    fi
+
+    IFS=";" read -r -a controller_status <<< $(jq -er --argjson i "$i" '
+      .[$i].status |
+        {"need": ((.updatedNumberScheduled // 0) < .desiredNumberScheduled), "ready": (.numberReady == .currentNumberScheduled)} |
+        "\(.need);\(.ready)"
+      ' <<< "$controllers"
+    )
+
+    IFS=";" read -r -a proxy_status <<< $(jq -er --arg name "$name" '
+      .[] | select(.name == $name ) | .status |
+        {"need": ((.updatedNumberScheduled // 0) < .desiredNumberScheduled), "ready": (.numberReady == .currentNumberScheduled)} |
+        "\(.need);\(.ready)"
+      ' <<< "$proxy"
+    )
+
+    controller_need_update="${controller_status[0]}"
+    controller_ready="${controller_status[1]}"
+    proxy_need_update="${proxy_status[0]}"
+    proxy_ready="${proxy_status[1]}"
+
+    if [[ "${controller_need_update}" == "true" && "${controller_ready}" == "true" && "${proxy_ready}" == "true" ]]; then
+      legacy::common_hooks::daemonset_pair_safe_update::delete_pod_in_ds d8-ingress-nginx "controller-${name}"
+    elif [[ "${proxy_need_update}" == "true" && "${proxy_ready}" == "true" && "${controller_ready}" == "true" ]]; then
+      legacy::common_hooks::daemonset_pair_safe_update::delete_pod_in_ds d8-ingress-nginx "proxy-${name}-failover"
+    fi
+
+    legacy::common_hooks::daemonset_pair_safe_update::delete_all_not_updated_crashloopback_pods_in_ds d8-ingress-nginx "controller-${name}"
+    legacy::common_hooks::daemonset_pair_safe_update::delete_all_not_updated_crashloopback_pods_in_ds d8-ingress-nginx "proxy-${name}-failover"
+  done
+}
+
+hook::run "$@"
