@@ -155,6 +155,7 @@ module Jekyll
 
     def format_crd(input)
         result = []
+        result.push('<div markdown="0">')
         if ( input.has_key?("spec") and input["spec"].has_key?("validation") and
            input["spec"]["validation"].has_key?("openAPIV3Schema")  ) or (input.has_key?("spec") and input["spec"].has_key?("versions"))
            then
@@ -184,13 +185,39 @@ module Jekyll
                 # v1+ CRD
 
                  result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
+
+                 if input["spec"]["versions"].length > 1 then
+                     result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
+                     result.push('<div class="tabs">')
+                     activeStatus=" active"
+                     input["spec"]["versions"].each do |item|
+                         #result.push(" onclick=\"openTab(event, 'tabs__btn', 'tabs__content', " + input["spec"]["names"]["kind"].downcase + '_' + item['name'].downcase + ')">' + item['name'].downcase + '</a>')
+                         result.push("<a href='javascript:void(0)' class='tabs__btn tabs__btn__%s%s' onclick=\"openTab(event, 'tabs__btn__%s', 'tabs__content__%s', '%s_%s')\">%s</a>" %
+                           [ input["spec"]["names"]["kind"].downcase, activeStatus,
+                             input["spec"]["names"]["kind"].downcase,
+                             input["spec"]["names"]["kind"].downcase,
+                             input["spec"]["names"]["kind"].downcase, item['name'].downcase,
+                             item['name'].downcase ])
+                         activeStatus = ""
+                     end
+                     result.push('</div>')
+                 end
+
+                 activeStatus=" active"
                  input["spec"]["versions"].each do |item|
                     if input["spec"]["versions"].length == 1 then
                         result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                         result.push('<br/>Version: ' + item['name'] + '</font></p>')
                     else
-                        result.push(converter.convert("### " + item['name'] + ' {#' + input["spec"]["names"]["kind"].downcase + '-' + item['name'].downcase + '}'))
-                        result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
+                        #result.push(converter.convert("### " + item['name'] + ' {#' + input["spec"]["names"]["kind"].downcase + '-' + item['name'].downcase + '}'))
+                        #result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
+                    end
+
+                    if input["spec"]["versions"].length > 1 then
+                        result.push("<div id='%s_%s' class='tabs__content tabs__content__%s%s'>" %
+                            [ input["spec"]["names"]["kind"].downcase, item['name'].downcase,
+                            input["spec"]["names"]["kind"].downcase, activeStatus ])
+                        activeStatus = ""
                     end
 
                     if item.has_key?('schema') and item['schema'].has_key?('openAPIV3Schema') and
@@ -213,9 +240,15 @@ module Jekyll
                             result.push('</ul>')
                         end
                     end
+
+                    if input["spec"]["versions"].length > 1 then
+                        result.push("</div>")
+                    end
+
                  end
             end
         end
+        result.push('</div>')
         result.join
     end
   end
