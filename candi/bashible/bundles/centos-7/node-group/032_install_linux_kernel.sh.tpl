@@ -14,8 +14,13 @@ post-install() {
 }
   {{- end }}
 
-desired_version="3.10.0-1127.8.2.el7.x86_64"
-allowed_versions_pattern=""
+desired_version={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "desiredVersion" | quote }}
+allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "allowedPattern" | quote }}
+
+if [[ -z $desired_version ]]; then
+  bb-log-error "Desired version must be set"
+  exit 1
+fi
 
 should_install_kernel=true
 version_in_use="$(uname -r)"

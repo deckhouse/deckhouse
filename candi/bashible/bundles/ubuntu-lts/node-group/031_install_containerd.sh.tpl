@@ -33,8 +33,20 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   bb-flag-set reboot
 fi
 
-desired_version="containerd.io=1.4.3-1"
-allowed_versions_pattern=""
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
+  {{- $ubuntuVersion := toString $key }}
+  {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
+if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
+  desired_version={{ $value.containerd.desiredVersion | quote }}
+  allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
+fi
+  {{- end }}
+{{- end }}
+
+if [[ -z $desired_version ]]; then
+  bb-log-error "Desired version must be set"
+  exit 1
+fi
 
 should_install_containerd=true
 version_in_use="$(dpkg -l containerd.io 2>/dev/null | grep -E "(hi|ii)\s+(containerd.io)" | awk '{print $2"="$3}' || true)"

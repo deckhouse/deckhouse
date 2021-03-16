@@ -1,11 +1,11 @@
-if bb-is-ubuntu-version? 20.04 ; then
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
+  {{- $ubuntuVersion := toString $key }}
+  {{- if or $value.kernel.gcp.desiredVersion $value.kernel.gcp.allowedPattern }}
+if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
   cat <<EOF > /var/lib/bashible/kernel_version_config_by_cloud_provider
-desired_version="5.4.0-1029-gcp"
-allowed_versions_pattern=""
-EOF
-elif bb-is-ubuntu-version? 18.04 ; then
-  cat <<EOF > /var/lib/bashible/kernel_version_config_by_cloud_provider
-desired_version="5.3.0-1018-gcp"
-allowed_versions_pattern=""
+desired_version={{ $value.kernel.gcp.desiredVersion | quote }}
+allowed_versions_pattern={{ $value.kernel.gcp.allowedPattern | quote }}
 EOF
 fi
+  {{- end }}
+{{- end }}

@@ -21,22 +21,23 @@ if [ -n "$metapackages" ]; then
   bb-apt-remove $metapackages
 fi
 
-if bb-is-ubuntu-version? 20.04 ; then
-  desired_version="5.4.0-54-generic"
-  allowed_versions_pattern=""
-elif bb-is-ubuntu-version? 18.04 ; then
-  desired_version="5.3.0-51-generic"
-  allowed_versions_pattern=""
-elif bb-is-ubuntu-version? 16.04 ; then
-  desired_version="4.18.0-20-generic"
-  allowed_versions_pattern=""
-else
-  bb-log-error "Unsupported Ubuntu version"
-  exit 1
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
+  {{- $ubuntuVersion := toString $key }}
+  {{- if or $value.kernel.generic.desiredVersion $value.kernel.generic.allowedPattern }}
+if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
+  desired_version={{ $value.kernel.generic.desiredVersion | quote }}
+  allowed_versions_pattern={{ $value.kernel.generic.allowedPattern | quote }}
 fi
+  {{- end }}
+{{- end }}
 
 if [ -f /var/lib/bashible/kernel_version_config_by_cloud_provider ]; then
   source /var/lib/bashible/kernel_version_config_by_cloud_provider
+fi
+
+if [[ -z $desired_version ]]; then
+  bb-log-error "Desired version must be set"
+  exit 1
 fi
 
 should_install_kernel=true

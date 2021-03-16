@@ -45,28 +45,22 @@ if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   bb-flag-set reboot
 fi
 
-if bb-is-ubuntu-version? 20.04 ; then
-  desired_version_containerd="containerd.io=1.4.3-1"
-  allowed_versions_containerd_pattern="containerd.io=1.[23]"
-  desired_version_docker="docker-ce=5:19.03.13~3-0~ubuntu-focal"
-  allowed_versions_docker_pattern=""
-elif bb-is-ubuntu-version? 18.04 ; then
-  desired_version_containerd="containerd.io=1.4.3-1"
-  allowed_versions_containerd_pattern="containerd.io=1.[23]"
-{{- if eq .kubernetesVersion "1.19" }}
-  desired_version_docker="docker-ce=5:19.03.13~3-0~ubuntu-bionic"
-  allowed_versions_docker_pattern="docker-ce=5:18.09.7~3-0~ubuntu-bionic"
-{{- else }}
-  desired_version_docker="docker-ce=5:18.09.7~3-0~ubuntu-bionic"
-  allowed_versions_docker_pattern=""
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
+  {{- $ubuntuVersion := toString $key }}
+  {{- if or $value.docker.desiredVersion $value.docker.allowedPattern }}
+if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
+  desired_version_docker={{ $value.docker.desiredVersion | quote }}
+  allowed_versions_docker_pattern={{ $value.docker.allowedPattern | quote }}
+    {{- if or $value.docker.containerd.desiredVersion $value.docker.containerd.allowedPattern }}
+  desired_version_containerd={{ $value.docker.containerd.desiredVersion | quote }}
+  allowed_versions_containerd_pattern={{ $value.docker.containerd.allowedPattern | quote }}
+    {{- end }}
+fi
+  {{- end }}
 {{- end }}
-elif bb-is-ubuntu-version? 16.04 ; then
-  desired_version_containerd="containerd.io=1.4.3-1"
-  allowed_versions_containerd_pattern="containerd.io=1.[23]"
-  desired_version_docker="docker-ce=5:18.09.7~3-0~ubuntu-xenial"
-  allowed_versions_docker_pattern=""
-else
-  bb-log-error "Unsupported Ubuntu version"
+
+if [[ -z $desired_version_docker || -z $desired_version_containerd ]]; then
+  bb-log-error "Desired version must be set"
   exit 1
 fi
 
