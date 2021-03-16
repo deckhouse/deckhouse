@@ -4,7 +4,22 @@ title: "Модуль kube-proxy"
 
 Модуль удаляет весь комплект kube-proxy (`DaemonSet`, `ConfigMap`, `RBAC`) от `kubeadm` и устанавливает свой.
 
-В целях безопасности, при использовании сервисов с типом NodePort, по умолчанию подключения принимаются только на InternalIP нод. Если требуется принимать подключения на другие адреса ноды, то в nodeGroup необходимо добавить аннотацию `node.deckhouse.io/nodeport-bind-internal-ip: "false"`.
+В целях безопасности, при использовании сервисов с типом NodePort, по умолчанию подключения принимаются только на InternalIP нод. Для снятия данного ограничения предусмотрена аннотация на ноду — `node.deckhouse.io/nodeport-bind-internal-ip: "false"`.
+
+Пример аннотации для NodeGroup:
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: NodeGroup
+metadata:
+  name: myng
+spec:
+  nodeTemplate:
+    annotations:
+      node.deckhouse.io/nodeport-bind-internal-ip: "false"
+...
+```
+
+
 **Внимание** После добавления, удаления или изменения значения аннотации, необходимо самостоятельно выполнить рестарт подов kube-proxy.
 
 Конфигурация
