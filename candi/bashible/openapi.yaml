@@ -44,6 +44,46 @@ apiVersions:
           type: object
         cloudInstances:
           type: object
+      bashible: &bashible
+        type: object
+        patternProperties:
+          "ubuntu|centos":
+            type: object
+            patternProperties:
+              '^[0-9.]+$':
+                type: object
+                properties:
+                  docker:
+                    type: object
+                    properties:
+                      desiredVersion:
+                        type: string
+                      allowedPattern:
+                        type: string
+                      containerd:
+                        type: object
+                        properties:
+                          desiredVersion:
+                            type: string
+                          allowedPattern:
+                            type: string
+                  containerd:
+                    type: object
+                    properties:
+                      desiredVersion:
+                        type: string
+                      allowedPattern:
+                        type: string
+                  kernel:
+                    type: object
+                    patternProperties:
+                      "generic|aws|azure|gcp|openstack|vsphere|yandex":
+                        type: object
+                        properties:
+                          desiredVersion:
+                            type: string
+                          allowedPattern:
+                            type: string
       k8s:
         type: object
         patternProperties:
@@ -59,6 +99,7 @@ apiVersions:
                     type: string
               cni_version:
                 type: string
+              bashible: *bashible
     oneOf:
     - required: [clusterBootstrap]
       properties:

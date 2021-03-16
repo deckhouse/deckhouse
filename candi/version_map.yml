@@ -1,3 +1,77 @@
+bashible: &bashible
+  ubuntu: &ubuntu
+    '16.04':
+      docker:
+        desiredVersion: "docker-ce=5:18.09.7~3-0~ubuntu-xenial"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.4.3-1"
+          allowedPattern: "containerd.io=1.[23]"
+      containerd:
+        desiredVersion: "containerd.io=1.4.3-1"
+        allowedPattern: ""
+      kernel:
+        generic:
+          desiredVersion: "4.18.0-20-generic"
+          allowedPattern: ""
+    '18.04':
+      docker:
+        desiredVersion: "docker-ce=5:18.09.7~3-0~ubuntu-bionic"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.4.3-1"
+          allowedPattern: "containerd.io=1.[23]"
+      containerd:
+        desiredVersion: "containerd.io=1.4.3-1"
+        allowedPattern: ""
+      kernel:
+        generic:
+          desiredVersion: "5.3.0-51-generic"
+          allowedPattern: ""
+        aws:
+          desiredVersion: "5.3.0-1017-aws"
+          allowedPattern: ""
+        azure:
+          desiredVersion: "5.4.0-1034-azure"
+          allowedPattern: ""
+        gcp:
+          desiredVersion: "5.3.0-1018-gcp"
+          allowedPattern: ""
+    '20.04':
+      docker:
+        desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-focal"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.4.3-1"
+          allowedPattern: "containerd.io=1.[23]"
+      containerd:
+        desiredVersion: "containerd.io=1.4.3-1"
+        allowedPattern: ""
+      kernel:
+        generic:
+          desiredVersion: "5.4.0-54-generic"
+          allowedPattern: ""
+        aws:
+          desiredVersion: "5.4.0-1029-aws"
+          allowedPattern: ""
+        azure:
+          desiredVersion: "5.4.0-1034-azure"
+          allowedPattern: ""
+        gcp:
+          desiredVersion: "5.4.0-1029-gcp"
+          allowedPattern: ""
+  centos:
+    '7':
+      docker:
+        desiredVersion: "docker-ce-18.09.9-3.el7.x86_64"
+        allowedPattern: ""
+      containerd:
+        desiredVersion: "containerd.io-1.4.3-3.1.el7.x86_64"
+        allowedPattern: ""
+      kernel:
+        generic:
+          desiredVersion: "3.10.0-1127.8.2.el7.x86_64"
+          allowedPattern: ""
 k8s:
   '1.15':
     patch: 12
@@ -9,18 +83,48 @@ k8s:
     kubectl:
       checksum: e8913069293156ddf55f243814a22d2384fc18b165efb6200606fdeaad146605
     cni_version: 0.8.6
+    bashible: *bashible
   '1.17':
     patch: 17
     kubectl:
       checksum: 8329fac94c66bf7a475b630972a8c0b036bab1f28a5584115e8dd26483de8349
     cni_version: 0.8.7
+    bashible: *bashible
   '1.18':
     patch: 16
     kubectl:
       checksum: 3e8cd55186ffe461f383af06cbbab2bfe5dd75def1d699523c53ee8b11b8c91a
     cni_version: 0.8.7
+    bashible: *bashible
   '1.19':
     patch: 8
     kubectl:
       checksum: a0737d3a15ca177816b6fb1fd59bdd5a3751bfdc66de4e08dffddba84e38bf3f
     cni_version: 0.8.7
+    bashible:
+      <<: *bashible
+      ubuntu:
+        <<: *ubuntu
+        '18.04':
+          docker:
+            desiredVersion: "docker-ce=5:19.03.13~3-0~ubuntu-bionic"
+            allowedPattern: "docker-ce=5:18.09.7~3-0~ubuntu-bionic"
+            containerd:
+              desiredVersion: "containerd.io=1.4.3-1"
+              allowedPattern: "containerd.io=1.[23]"
+          containerd:
+            desiredVersion: "containerd.io=1.4.3-1"
+            allowedPattern: ""
+          kernel:
+            generic:
+              desiredVersion: "5.3.0-51-generic"
+              allowedPattern: ""
+            aws:
+              desiredVersion: "5.3.0-1017-aws"
+              allowedPattern: ""
+            azure:
+              desiredVersion: "5.4.0-1034-azure"
+              allowedPattern: ""
+            gcp:
+              desiredVersion: "5.3.0-1018-gcp"
+              allowedPattern: ""

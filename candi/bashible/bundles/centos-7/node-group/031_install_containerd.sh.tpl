@@ -33,8 +33,13 @@ if bb-yum-package? docker-ce; then
   bb-flag-set reboot
 fi
 
-desired_version="containerd.io-1.4.3-3.1.el7.x86_64"
-allowed_versions_pattern=""
+desired_version={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "desiredVersion" | quote }}
+allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "allowedPattern" | quote }}
+
+if [[ -z $desired_version ]]; then
+  bb-log-error "Desired version must be set"
+  exit 1
+fi
 
 should_install_containerd=true
 version_in_use="$(rpm -q containerd.io | head -1 || true)"

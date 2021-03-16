@@ -36,7 +36,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.15.4
+  kubernetesVersion: 1.19.8
 `
 
 const nodeManagerAWS = `
@@ -71,7 +71,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: Cloud
-    kubernetesVersion: "1.16"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -128,7 +128,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: Cloud
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -184,7 +184,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: Cloud
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -240,7 +240,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: Cloud
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -262,7 +262,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: Cloud
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -321,7 +321,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: Cloud
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -388,7 +388,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: Cloud
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
     cloudInstances:
@@ -424,7 +424,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.15"
+    kubernetesVersion: "1.19"
     cri:
       type: "Docker"
   nodeUsers:
