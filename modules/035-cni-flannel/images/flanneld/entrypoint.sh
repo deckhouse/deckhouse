@@ -1,6 +1,7 @@
 #!/bin/bash
+set -euo pipefail
 
-status=$(curl -s -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" -k https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/nodes/$(hostname)/status | jq -r '.status.addresses[]')
+status=$(curl --connect-timeout 5 --max-time 10 -s -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" -k https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}/api/v1/nodes/$(hostname)/status | jq -r '.status.addresses[]')
 internalips=$(jq -r 'select(.type == "InternalIP") | .address' <<< "$status")
 externalips=$(jq -r 'select(.type == "ExternalIP") | .address' <<< "$status")
 
