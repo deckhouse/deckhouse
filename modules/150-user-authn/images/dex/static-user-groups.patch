@@ -1,9 +1,9 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index eba919fa..1386806b 100644
+index 88dc98e7..3c274743 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -85,11 +85,12 @@ type password storage.Password
-
+@@ -86,11 +86,12 @@ type password storage.Password
+ 
  func (p *password) UnmarshalJSON(b []byte) error {
  	var data struct {
 -		Email       string `json:"email"`
@@ -20,7 +20,7 @@ index eba919fa..1386806b 100644
  	}
  	if err := json.Unmarshal(b, &data); err != nil {
  		return err
-@@ -98,6 +99,7 @@ func (p *password) UnmarshalJSON(b []byte) error {
+@@ -99,6 +100,7 @@ func (p *password) UnmarshalJSON(b []byte) error {
  		Email:    data.Email,
  		Username: data.Username,
  		UserID:   data.UserID,
@@ -29,18 +29,18 @@ index eba919fa..1386806b 100644
  	if len(data.Hash) == 0 && len(data.HashFromEnv) > 0 {
  		data.Hash = os.Getenv(data.HashFromEnv)
 diff --git a/server/server.go b/server/server.go
-index c37b4fdc..8812707d 100644
+index a79b7cfd..b21c7847 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -378,6 +378,7 @@ type passwordDB struct {
+@@ -382,6 +382,7 @@ type passwordDB struct {
  }
-
+ 
  func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, password string) (connector.Identity, bool, error) {
 +
  	p, err := db.s.GetPassword(email)
  	if err != nil {
  		if err != storage.ErrNotFound {
-@@ -393,11 +394,13 @@ func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, passw
+@@ -397,11 +398,13 @@ func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, passw
  	if err := bcrypt.CompareHashAndPassword(p.Hash, []byte(password)); err != nil {
  		return connector.Identity{}, false, nil
  	}
@@ -53,24 +53,15 @@ index c37b4fdc..8812707d 100644
 +		Groups:        p.Groups,
  	}, true, nil
  }
-
+ 
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 41b14f37..05608b6f 100644
+index 07e25084..05608b6f 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -362,7 +362,7 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
- 	return req
- }
-
--// Password is a mirrored struct from the stroage with JSON struct tags and
-+// Password is a mirrored struct from the storage with JSON struct tags and
- // Kubernetes type metadata.
- type Password struct {
- 	k8sapi.TypeMeta   `json:",inline"`
 @@ -373,9 +373,10 @@ type Password struct {
  	// This field is IMMUTABLE. Do not change.
  	Email string `json:"email,omitempty"`
-
+ 
 -	Hash     []byte `json:"hash,omitempty"`
 -	Username string `json:"username,omitempty"`
 -	UserID   string `json:"userID,omitempty"`
@@ -79,7 +70,7 @@ index 41b14f37..05608b6f 100644
 +	UserID   string   `json:"userID,omitempty"`
 +	Groups   []string `json:"groups,omitempty"`
  }
-
+ 
  // PasswordList is a list of Passwords.
 @@ -400,6 +401,7 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
  		Hash:     p.Hash,
@@ -88,7 +79,7 @@ index 41b14f37..05608b6f 100644
 +		Groups:   p.Groups,
  	}
  }
-
+ 
 @@ -409,6 +411,7 @@ func toStoragePassword(p Password) storage.Password {
  		Hash:     p.Hash,
  		Username: p.Username,
@@ -96,12 +87,12 @@ index 41b14f37..05608b6f 100644
 +		Groups:   p.Groups,
  	}
  }
-
+ 
 diff --git a/storage/sql/crud.go b/storage/sql/crud.go
-index c804fc43..0e19b51d 100644
+index 4451e5c5..e2ef588d 100644
 --- a/storage/sql/crud.go
 +++ b/storage/sql/crud.go
-@@ -588,13 +588,13 @@ func (c *conn) CreatePassword(p storage.Password) error {
+@@ -592,13 +592,13 @@ func (c *conn) CreatePassword(p storage.Password) error {
  	p.Email = strings.ToLower(p.Email)
  	_, err := c.Exec(`
  		insert into password (
@@ -118,7 +109,7 @@ index c804fc43..0e19b51d 100644
  	)
  	if err != nil {
  		if c.alreadyExistsCheck(err) {
-@@ -619,10 +619,10 @@ func (c *conn) UpdatePassword(email string, updater func(p storage.Password) (st
+@@ -623,10 +623,10 @@ func (c *conn) UpdatePassword(email string, updater func(p storage.Password) (st
  		_, err = tx.Exec(`
  			update password
  			set
@@ -132,7 +123,7 @@ index c804fc43..0e19b51d 100644
  		)
  		if err != nil {
  			return fmt.Errorf("update password: %v", err)
-@@ -638,7 +638,7 @@ func (c *conn) GetPassword(email string) (storage.Password, error) {
+@@ -642,7 +642,7 @@ func (c *conn) GetPassword(email string) (storage.Password, error) {
  func getPassword(q querier, email string) (p storage.Password, err error) {
  	return scanPassword(q.QueryRow(`
  		select
@@ -141,7 +132,7 @@ index c804fc43..0e19b51d 100644
  		from password where email = $1;
  	`, strings.ToLower(email)))
  }
-@@ -646,7 +646,7 @@ func getPassword(q querier, email string) (p storage.Password, err error) {
+@@ -650,7 +650,7 @@ func getPassword(q querier, email string) (p storage.Password, err error) {
  func (c *conn) ListPasswords() ([]storage.Password, error) {
  	rows, err := c.Query(`
  		select
@@ -150,8 +141,8 @@ index c804fc43..0e19b51d 100644
  		from password;
  	`)
  	if err != nil {
-@@ -669,7 +669,7 @@ func (c *conn) ListPasswords() ([]storage.Password, error) {
-
+@@ -674,7 +674,7 @@ func (c *conn) ListPasswords() ([]storage.Password, error) {
+ 
  func scanPassword(s scanner) (p storage.Password, err error) {
  	err = s.Scan(
 -		&p.Email, &p.Hash, &p.Username, &p.UserID,
@@ -160,16 +151,16 @@ index c804fc43..0e19b51d 100644
  	if err != nil {
  		if err == sql.ErrNoRows {
 diff --git a/storage/storage.go b/storage/storage.go
-index 06f718e1..ed604fa9 100644
+index c308ac46..424ef087 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
-@@ -335,6 +335,9 @@ type Password struct {
-
+@@ -343,6 +343,9 @@ type Password struct {
+ 
  	// Randomly generated user ID. This is NOT the primary ID of the Password object.
  	UserID string `json:"userID"`
 +
 +	// Groups assigned to the user
 +	Groups []string `json:"groups"`
  }
-
+ 
  // Connector is an object that contains the metadata about connectors used to login to Dex.

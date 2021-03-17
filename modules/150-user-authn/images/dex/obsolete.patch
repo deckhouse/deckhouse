@@ -1,33 +1,33 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index eba919fa9..4723d309e 100644
+index 88dc98e72..f218879db 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
-@@ -282,6 +282,9 @@ type Expiry struct {
+@@ -304,6 +304,9 @@ type Expiry struct {
  
  	// DeviceRequests defines the duration of time for which the DeviceRequests will be valid.
  	DeviceRequests string `json:"deviceRequests"`
 +
 +	// RefreshTokens defines refresh tokens expiry policy
-+	RefreshTokens RefreshTokenExpiry `json:"refreshTokens"`
++	RefreshTokens RefreshToken `json:"refreshTokens"`
  }
  
  // Logger holds configuration required to customize logging for dex.
-@@ -292,3 +295,10 @@ type Logger struct {
+@@ -314,3 +317,10 @@ type Logger struct {
  	// Format specifies the format to be used for logging.
  	Format string `json:"format"`
  }
 +
-+type RefreshTokenExpiry struct {
++type RefreshToken struct {
 +	DisableRotation   bool   `json:"disableRotation"`
 +	ReuseInterval     string `json:"reuseInterval"`
 +	AbsoluteLifetime  string `json:"absoluteLifetime"`
 +	ValidIfNotUsedFor string `json:"validIfNotUsedFor"`
 +}
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index ca7405936..2db0aa1c1 100644
+index 7afb88510..9e6f8b9ac 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -277,6 +277,18 @@ func serve(cmd *cobra.Command, args []string) error {
+@@ -317,6 +317,18 @@ func runServe(options serveOptions) error {
  		logger.Infof("config device requests valid for: %v", deviceRequests)
  		serverConfig.DeviceRequestsValidFor = deviceRequests
  	}
@@ -47,10 +47,10 @@ index ca7405936..2db0aa1c1 100644
  	if err != nil {
  		return fmt.Errorf("failed to initialize server: %v", err)
 diff --git a/examples/config-dev.yaml b/examples/config-dev.yaml
-index 75126692b..d4d238c03 100644
+index 1ca7aa66f..344d72dc7 100644
 --- a/examples/config-dev.yaml
 +++ b/examples/config-dev.yaml
-@@ -67,6 +67,10 @@ telemetry:
+@@ -77,6 +77,10 @@ telemetry:
  #   deviceRequests: "5m"
  #   signingKeys: "6h"
  #   idTokens: "24h"
@@ -62,7 +62,7 @@ index 75126692b..d4d238c03 100644
  # Options for controlling the logger.
  # logger:
 diff --git a/server/handlers.go b/server/handlers.go
-index 5a7244faa..ed3e7ea64 100644
+index 348700dfe..1db1f68f0 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -5,7 +5,6 @@ import (
@@ -73,7 +73,7 @@ index 5a7244faa..ed3e7ea64 100644
  	"fmt"
  	"net/http"
  	"net/url"
-@@ -1000,206 +999,6 @@ func (s *Server) exchangeAuthCode(w http.ResponseWriter, authCode storage.AuthCo
+@@ -1005,206 +1004,6 @@ func (s *Server) exchangeAuthCode(w http.ResponseWriter, authCode storage.AuthCo
  	return s.toAccessTokenResponse(idToken, accessToken, refreshToken, expiry), nil
  }
  
@@ -212,7 +212,7 @@ index 5a7244faa..ed3e7ea64 100644
 -		return
 -	}
 -
--	idToken, expiry, err := s.newIDToken(client.ID, claims, scopes, refresh.Nonce, accessToken, refresh.ConnectorID)
+-	idToken, expiry, err := s.newIDToken(client.ID, claims, scopes, refresh.Nonce, accessToken, "", refresh.ConnectorID)
 -	if err != nil {
 -		s.logger.Errorf("failed to create ID token: %v", err)
 -		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
@@ -282,7 +282,7 @@ index 5a7244faa..ed3e7ea64 100644
  
 diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
 new file mode 100644
-index 000000000..588b91f19
+index 000000000..8ea7ea9ef
 --- /dev/null
 +++ b/server/refreshhandlers.go
 @@ -0,0 +1,339 @@
@@ -316,7 +316,9 @@ index 000000000..588b91f19
 +	desc string
 +}
 +
-+var internalErr = &refreshError{msg: errInvalidRequest, desc: "", code: http.StatusInternalServerError}
++func newInternalServerError() *refreshError {
++	return &refreshError{msg: errInvalidRequest, desc: "", code: http.StatusInternalServerError}
++}
 +
 +func newBadRequestError(desc string) *refreshError {
 +	return &refreshError{msg: errInvalidRequest, desc: desc, code: http.StatusBadRequest}
@@ -354,7 +356,7 @@ index 000000000..588b91f19
 +	if err != nil {
 +		s.logger.Errorf("failed to get refresh token: %v", err)
 +		if err != storage.ErrNotFound {
-+			return nil, internalErr
++			return nil, newInternalServerError()
 +		}
 +
 +		return nil, invalidErr
@@ -384,7 +386,7 @@ index 000000000..588b91f19
 +	}
 +
 +	if s.refreshTokenPolicy.ExpiredBecauseUnused(refresh.LastUsed) {
-+		s.logger.Errorf("refresh token with id %s expired because being unused", refresh.ID)
++		s.logger.Errorf("refresh token with id %s expired due to inactivity", refresh.ID)
 +		return nil, expiredErr
 +	}
 +
@@ -431,9 +433,7 @@ index 000000000..588b91f19
 +	case err != nil:
 +		if err != storage.ErrNotFound {
 +			s.logger.Errorf("failed to get offline session: %v", err)
-+			// TODO: previously there was a naked return without writing anything in response
-+			//   Need to ensure that everything works as expected.
-+			return connector.Identity{}, internalErr
++			return connector.Identity{}, newInternalServerError()
 +		}
 +	case len(refresh.ConnectorData) > 0:
 +		// Use the old connector data if it exists, should be deleted once used
@@ -445,7 +445,7 @@ index 000000000..588b91f19
 +	conn, err := s.getConnector(refresh.ConnectorID)
 +	if err != nil {
 +		s.logger.Errorf("connector with ID %q not found: %v", refresh.ConnectorID, err)
-+		return connector.Identity{}, internalErr
++		return connector.Identity{}, newInternalServerError()
 +	}
 +
 +	ident := connector.Identity{
@@ -473,7 +473,7 @@ index 000000000..588b91f19
 +		newIdent, err := refreshConn.Refresh(ctx, parseScopes(scopes), ident)
 +		if err != nil {
 +			s.logger.Errorf("failed to refresh identity: %v", err)
-+			return connector.Identity{}, internalErr
++			return connector.Identity{}, newInternalServerError()
 +		}
 +		ident = newIdent
 +	}
@@ -497,7 +497,7 @@ index 000000000..588b91f19
 +	err := s.storage.UpdateOfflineSessions(refresh.Claims.UserID, refresh.ConnectorID, offlineSessionUpdater)
 +	if err != nil {
 +		s.logger.Errorf("failed to update offline session: %v", err)
-+		return internalErr
++		return newInternalServerError()
 +	}
 +
 +	return nil
@@ -553,7 +553,7 @@ index 000000000..588b91f19
 +	err := s.storage.UpdateRefreshToken(refresh.ID, refreshTokenUpdater)
 +	if err != nil {
 +		s.logger.Errorf("failed to update refresh token: %v", err)
-+		return nil, internalErr
++		return nil, newInternalServerError()
 +	}
 +
 +	return newToken, nil
@@ -598,14 +598,14 @@ index 000000000..588b91f19
 +	accessToken, err := s.newAccessToken(client.ID, claims, scopes, refresh.Nonce, refresh.ConnectorID)
 +	if err != nil {
 +		s.logger.Errorf("failed to create new access token: %v", err)
-+		s.refreshTokenErrHelper(w, internalErr)
++		s.refreshTokenErrHelper(w, newInternalServerError())
 +		return
 +	}
 +
-+	idToken, expiry, err := s.newIDToken(client.ID, claims, scopes, refresh.Nonce, accessToken, refresh.ConnectorID)
++	idToken, expiry, err := s.newIDToken(client.ID, claims, scopes, refresh.Nonce, accessToken, "", refresh.ConnectorID)
 +	if err != nil {
 +		s.logger.Errorf("failed to create ID token: %v", err)
-+		s.refreshTokenErrHelper(w, internalErr)
++		s.refreshTokenErrHelper(w, newInternalServerError())
 +		return
 +	}
 +
@@ -618,7 +618,7 @@ index 000000000..588b91f19
 +	rawNewToken, err := internal.Marshal(newToken)
 +	if err != nil {
 +		s.logger.Errorf("failed to marshal refresh token: %v", err)
-+		s.refreshTokenErrHelper(w, internalErr)
++		s.refreshTokenErrHelper(w, newInternalServerError())
 +		return
 +	}
 +
@@ -844,10 +844,10 @@ index 000000000..c64c50b33
 +	}
 +}
 diff --git a/server/rotation.go b/server/rotation.go
-index 464dccf09..5a444b3f0 100644
+index b7dd8116a..98489767e 100644
 --- a/server/rotation.go
 +++ b/server/rotation.go
-@@ -177,3 +177,73 @@ func (k keyRotater) rotate() error {
+@@ -177,3 +177,73 @@ func (k keyRotator) rotate() error {
  	k.logger.Infof("keys rotated, next rotation: %s", nextRotation)
  	return nil
  }
@@ -922,7 +922,7 @@ index 464dccf09..5a444b3f0 100644
 +	return !r.now().After(lastUsed.Add(r.reuseInterval))
 +}
 diff --git a/server/rotation_test.go b/server/rotation_test.go
-index 66c269cef..cffc9c656 100644
+index 6f9b2ecb3..e279bf543 100644
 --- a/server/rotation_test.go
 +++ b/server/rotation_test.go
 @@ -7,6 +7,7 @@ import (
@@ -933,7 +933,7 @@ index 66c269cef..cffc9c656 100644
  
  	"github.com/dexidp/dex/storage"
  	"github.com/dexidp/dex/storage/memory"
-@@ -100,3 +101,29 @@ func TestKeyRotater(t *testing.T) {
+@@ -100,3 +101,29 @@ func TestKeyRotator(t *testing.T) {
  		}
  	}
  }
@@ -964,7 +964,7 @@ index 66c269cef..cffc9c656 100644
 +	})
 +}
 diff --git a/server/server.go b/server/server.go
-index c37b4fdc5..077421920 100644
+index 6fd4d8b70..4d6c69b4c 100644
 --- a/server/server.go
 +++ b/server/server.go
 @@ -80,6 +80,10 @@ type Config struct {
@@ -978,7 +978,7 @@ index c37b4fdc5..077421920 100644
  	// If set, the server will use this connector to handle password grants
  	PasswordConnector string
  
-@@ -162,6 +166,8 @@ type Server struct {
+@@ -159,6 +163,8 @@ type Server struct {
  	authRequestsValidFor   time.Duration
  	deviceRequestsValidFor time.Duration
  
@@ -987,7 +987,7 @@ index c37b4fdc5..077421920 100644
  	logger log.Logger
  }
  
-@@ -230,6 +236,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+@@ -227,6 +233,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
  		idTokensValidFor:       value(c.IDTokensValidFor, 24*time.Hour),
  		authRequestsValidFor:   value(c.AuthRequestsValidFor, 24*time.Hour),
  		deviceRequestsValidFor: value(c.DeviceRequestsValidFor, 5*time.Minute),
@@ -996,10 +996,10 @@ index c37b4fdc5..077421920 100644
  		alwaysShowLogin:        c.AlwaysShowLoginScreen,
  		now:                    now,
 diff --git a/server/server_test.go b/server/server_test.go
-index a909d98b3..5d90f1291 100644
+index 3a918434d..62ba40c93 100644
 --- a/server/server_test.go
 +++ b/server/server_test.go
-@@ -116,6 +116,16 @@ func newTestServer(ctx context.Context, t *testing.T, updateConfig func(c *Confi
+@@ -117,6 +117,16 @@ func newTestServer(ctx context.Context, t *testing.T, updateConfig func(c *Confi
  		t.Fatal(err)
  	}
  	server.skipApproval = true // Don't prompt for approval, just immediately redirect with code.
@@ -1017,10 +1017,10 @@ index a909d98b3..5d90f1291 100644
  }
  
 diff --git a/storage/conformance/conformance.go b/storage/conformance/conformance.go
-index 92611cc1f..00c1c4735 100644
+index 3f5e2aa19..dde369c48 100644
 --- a/storage/conformance/conformance.go
 +++ b/storage/conformance/conformance.go
-@@ -320,14 +320,15 @@ func testClientCRUD(t *testing.T, s storage.Storage) {
+@@ -324,14 +324,15 @@ func testClientCRUD(t *testing.T, s storage.Storage) {
  func testRefreshTokenCRUD(t *testing.T, s storage.Storage) {
  	id := storage.NewID()
  	refresh := storage.RefreshToken{
@@ -1044,7 +1044,7 @@ index 92611cc1f..00c1c4735 100644
  		Claims: storage.Claims{
  			UserID:        "1",
  			Username:      "jane",
-@@ -374,14 +375,15 @@ func testRefreshTokenCRUD(t *testing.T, s storage.Storage) {
+@@ -378,14 +379,15 @@ func testRefreshTokenCRUD(t *testing.T, s storage.Storage) {
  
  	id2 := storage.NewID()
  	refresh2 := storage.RefreshToken{
@@ -1069,10 +1069,10 @@ index 92611cc1f..00c1c4735 100644
  			UserID:        "2",
  			Username:      "john",
 diff --git a/storage/etcd/types.go b/storage/etcd/types.go
-index 22e083afe..ffeed98d9 100644
+index f2ffd9f70..9390608af 100644
 --- a/storage/etcd/types.go
 +++ b/storage/etcd/types.go
-@@ -114,7 +114,8 @@ func toStorageAuthRequest(a AuthRequest) storage.AuthRequest {
+@@ -132,7 +132,8 @@ func toStorageAuthRequest(a AuthRequest) storage.AuthRequest {
  type RefreshToken struct {
  	ID string `json:"id"`
  
@@ -1082,7 +1082,7 @@ index 22e083afe..ffeed98d9 100644
  
  	CreatedAt time.Time `json:"created_at"`
  	LastUsed  time.Time `json:"last_used"`
-@@ -134,6 +135,7 @@ func toStorageRefreshToken(r RefreshToken) storage.RefreshToken {
+@@ -152,6 +153,7 @@ func toStorageRefreshToken(r RefreshToken) storage.RefreshToken {
  	return storage.RefreshToken{
  		ID:            r.ID,
  		Token:         r.Token,
@@ -1090,7 +1090,7 @@ index 22e083afe..ffeed98d9 100644
  		CreatedAt:     r.CreatedAt,
  		LastUsed:      r.LastUsed,
  		ClientID:      r.ClientID,
-@@ -149,6 +151,7 @@ func fromStorageRefreshToken(r storage.RefreshToken) RefreshToken {
+@@ -167,6 +169,7 @@ func fromStorageRefreshToken(r storage.RefreshToken) RefreshToken {
  	return RefreshToken{
  		ID:            r.ID,
  		Token:         r.Token,
@@ -1099,7 +1099,7 @@ index 22e083afe..ffeed98d9 100644
  		LastUsed:      r.LastUsed,
  		ClientID:      r.ClientID,
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 41b14f373..11d310f60 100644
+index 07e250840..bed52736a 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -496,7 +496,8 @@ type RefreshToken struct {
@@ -1129,7 +1129,7 @@ index 41b14f373..11d310f60 100644
  		LastUsed:      r.LastUsed,
  		ClientID:      r.ClientID,
 diff --git a/storage/sql/crud.go b/storage/sql/crud.go
-index c804fc430..119b22bfe 100644
+index 4451e5c56..5a234f9de 100644
 --- a/storage/sql/crud.go
 +++ b/storage/sql/crud.go
 @@ -285,16 +285,16 @@ func (c *conn) CreateRefresh(r storage.RefreshToken) error {
@@ -1193,7 +1193,7 @@ index c804fc430..119b22bfe 100644
  		from refresh_token;
  	`)
  	if err != nil {
-@@ -399,7 +400,7 @@ func scanRefresh(s scanner) (r storage.RefreshToken, err error) {
+@@ -401,7 +402,7 @@ func scanRefresh(s scanner) (r storage.RefreshToken, err error) {
  		&r.Claims.Email, &r.Claims.EmailVerified,
  		decoder(&r.Claims.Groups),
  		&r.ConnectorID, &r.ConnectorData,
@@ -1219,10 +1219,10 @@ index 460658c2a..498db2527 100644
 +	},
  }
 diff --git a/storage/storage.go b/storage/storage.go
-index 06f718e10..8fc5842cf 100644
+index c308ac46c..855eb09f3 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
-@@ -263,7 +263,8 @@ type RefreshToken struct {
+@@ -271,7 +271,8 @@ type RefreshToken struct {
  	// A single token that's rotated every time the refresh token is refreshed.
  	//
  	// May be empty.
