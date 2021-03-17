@@ -34,6 +34,11 @@ resource "openstack_blockstorage_volume_v2" "volume" {
   size = local.root_disk_size
   image_id = data.openstack_images_image_v2.image.id
   metadata = local.metadata_tags
+  lifecycle {
+    ignore_changes = [
+      metadata,
+    ]
+  }
 }
 
 resource "openstack_compute_instance_v2" "node" {

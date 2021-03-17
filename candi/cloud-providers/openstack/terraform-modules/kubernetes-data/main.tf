@@ -4,6 +4,11 @@ resource "openstack_blockstorage_volume_v2" "kubernetes_data" {
   size = 10
   volume_type = var.volume_type
   metadata = var.tags
+  lifecycle {
+    ignore_changes = [
+      metadata,
+    ]
+  }
 }
 
 resource "openstack_compute_volume_attach_v2" "kubernetes_data" {
