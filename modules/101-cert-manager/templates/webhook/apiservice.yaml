@@ -4,8 +4,6 @@ kind: APIService
 metadata:
   name: v1beta1.webhook.certmanager.k8s.io
 {{ include "helm_lib_module_labels" (list . (dict "app" "webhook")) | indent 2 }}
-  annotations:
-    certmanager.k8s.io/inject-ca-from-secret: "d8-cert-manager/cert-manager-webhook-tls"
 spec:
   caBundle: {{ .Values.certManager.internal.webhookCACrt | b64enc }}
   group: webhook.certmanager.k8s.io
