@@ -69,7 +69,6 @@ Cleanup registry:
   extends: .Cleanup registry template
   tags:
     - deckhouse
-  retry: 1
 
 Cleanup modules registry:
   extends: .Cleanup modules registry template
@@ -77,7 +76,6 @@ Cleanup modules registry:
     WERF_STAGES_STORAGE: ${WERF_STAGES_REPO_BASE}/stages-modules-images
   tags:
     - deckhouse
-  retry: 1
 
 Cleanup modules images:
   extends: .Cleanup modules images template
