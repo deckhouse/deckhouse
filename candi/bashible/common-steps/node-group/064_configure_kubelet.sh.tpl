@@ -99,7 +99,11 @@ authorization:
     cacheUnauthorizedTTL: 30s
 cgroupRoot: "/"
 cgroupsPerQOS: true
+{{- if eq .cri "Containerd" }}
+cgroupDriver: systemd
+{{- else }}
 cgroupDriver: cgroupfs
+{{- end }}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
 clusterDNS:
