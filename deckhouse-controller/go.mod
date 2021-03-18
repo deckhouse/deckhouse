@@ -10,7 +10,7 @@ require (
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210316192613-5cc07f762ec7 // branch: master
-	github.com/flant/shell-operator v1.0.0-rc.2.0.20210316171155-954e8339d8c3 // branch: master
+	github.com/flant/shell-operator v1.0.0-rc.2.0.20210318080013-cf46be76d52d // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.12.0
 	github.com/sirupsen/logrus v1.4.2
