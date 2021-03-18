@@ -136,7 +136,6 @@ spec:
                         Процент зарезервированной для виртуальной машины памяти в кластере. В процентах относительно `.spec.memory`.
                       x-description: VM memory reservation in percent.
                       type: integer
-                      default: 80
                       minimum: 0
                       maximum: 100
   scope: Cluster

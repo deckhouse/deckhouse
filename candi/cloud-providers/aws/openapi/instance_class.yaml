@@ -59,7 +59,6 @@ spec:
                   x-description: Instance EBS disk type.
                   example: "gp2"
                   type: string
-                  default: "gp2"
                 iops:
                   description: |
                     Количество `IOPS`. Применяется только для `diskType` **io1**.
@@ -72,7 +71,6 @@ spec:
                   x-description: Instance disk size in gigabytes.
                   example: 20
                   type: integer
-                  default: 20
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам.
