@@ -172,13 +172,11 @@ Cleanup registry:
   extends: .Cleanup registry template
   tags:
     - werf-distributed
-  retry: 1
 
 Cleanup modules registry:
   extends: .Cleanup modules registry template
   tags:
     - werf-distributed
-  retry: 1
 
 Cleanup modules images:
   extends: .Cleanup modules images template
