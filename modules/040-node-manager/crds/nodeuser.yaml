@@ -63,7 +63,6 @@ spec:
                     Определяет, будет ли пользователю разрешено sudo.
                   x-description: 'Persistence of node user in sudo group.'
                   example: 'true'
-                  default: false
                 extraGroups:
                   type: array
                   description: |

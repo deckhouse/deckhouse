@@ -52,13 +52,11 @@ spec:
                     Заказывать ли preemptible-инстансы.
                   x-description: Should instances be preemtible.
                   type: boolean
-                  default: false
                 diskType:
                   description: |
                     Тип созданного диска.
                   x-description: Instance disk type.
                   example: "pd-ssd"
-                  default: "pd-standard"
                   type: string
                   enum:
                   - "pd-standard"
@@ -68,7 +66,6 @@ spec:
                     Размер root-диска. Значение указывается в `ГиБ`.
                   x-description: Instance disk size in gigabytes.
                   example: 20
-                  default: 50
                   type: integer
                 disableExternalIP:
                   x-description: Defines whether to disable external ip for instance or not. True means that istance is created without external ip
