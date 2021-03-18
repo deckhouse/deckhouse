@@ -2,7 +2,10 @@ package terraform
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os/exec"
+	"sort"
 	"strconv"
 
 	"github.com/deckhouse/deckhouse/candictl/pkg/config"
@@ -16,6 +19,18 @@ type PipelineOutputs struct {
 	MasterIPForSSH     string
 	NodeInternalIP     string
 	KubeDataDevicePath string
+}
+
+func equalArray(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func ApplyPipeline(r *Runner, name string, extractFn func(r *Runner) (*PipelineOutputs, error)) (*PipelineOutputs, error) {
@@ -60,6 +75,74 @@ func CheckPipeline(r *Runner, name string) (int, error) {
 		}
 
 		isChange = r.changesInPlan
+		return nil
+	}
+	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.step, name), pipelineFunc)
+	return isChange, err
+}
+
+func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
+	isChange := PlanHasNoChanges
+	pipelineFunc := func() error {
+		err := r.Init()
+		if err != nil {
+			return err
+		}
+
+		err = r.Plan()
+		if err != nil {
+			return err
+		}
+
+		isChange = r.changesInPlan
+		if isChange > PlanHasChanges {
+			return nil
+		}
+
+		info, err := GetBaseInfraResult(r)
+		if err != nil {
+			isChange = PlanHasDestructiveChanges
+			return err
+		}
+
+		// Because terraform 0.14 is not able to track changes in outputs correctly, we have to do it in candictl code
+		// by manually comparing `zones` arrays from the plan and from the state
+		var data struct {
+			Zones []string `json:"zones"`
+		}
+		if err := json.Unmarshal(info.CloudDiscovery, &data); err != nil {
+			return err
+		}
+
+		var changes struct {
+			Output struct {
+				Data struct {
+					Zones []string `json:"zones"`
+				} `json:"cloud_discovery_data"`
+			} `json:"output_changes"`
+		}
+
+		result, err := terraformCmd("show", "-json", r.planPath).Output()
+		if err != nil {
+			var ee *exec.ExitError
+			if ok := errors.As(err, &ee); ok {
+				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+			}
+			return fmt.Errorf("can't get terraform plan for %q\n%v", r.planPath, err)
+		}
+
+		err = json.Unmarshal(result, &changes)
+		if err != nil {
+			return err
+		}
+
+		sort.Strings(changes.Output.Data.Zones)
+		sort.Strings(data.Zones)
+
+		if !equalArray(data.Zones, changes.Output.Data.Zones) {
+			isChange = PlanHasDestructiveChanges
+		}
+
 		return nil
 	}
 	err := log.Process("terraform", fmt.Sprintf("Check state %s for %s", r.step, name), pipelineFunc)

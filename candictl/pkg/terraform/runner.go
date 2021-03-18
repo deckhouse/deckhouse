@@ -465,7 +465,8 @@ func checkPlanDestructiveChanges(planFile string) (bool, error) {
 
 	result, err := terraformCmd(args...).Output()
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
+		var ee *exec.ExitError
+		if ok := errors.As(err, &ee); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return false, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)
@@ -484,16 +485,13 @@ func checkPlanDestructiveChanges(planFile string) (bool, error) {
 		return false, err
 	}
 
-	hasDestructiveChanges := func() bool {
-		for _, resource := range changes.ResourcesChanges {
-			for _, action := range resource.Change.Actions {
-				if action == "delete" {
-					return true
-				}
+	for _, resource := range changes.ResourcesChanges {
+		for _, action := range resource.Change.Actions {
+			if action == "delete" {
+				return true, nil
 			}
 		}
-		return false
 	}
 
-	return hasDestructiveChanges(), nil
+	return false, nil
 }
