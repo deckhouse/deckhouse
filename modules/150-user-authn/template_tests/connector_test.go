@@ -113,6 +113,7 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
     clientID: clientID
     clientSecret: secret
     useLoginAsID: true
+    teamNameField: both
     orgs:
     - name: TestOrg1
       teams:
@@ -154,6 +155,8 @@ var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 			Expect(githubConnector.Get("config.clientSecret").String()).To(Equal("secret"))
 			Expect(githubConnector.Get("config.useLoginAsID").Bool()).To(Equal(true))
 			Expect(githubConnector.Get("config.loadAllGroups").Bool()).To(Equal(false))
+			Expect(githubConnector.Get("config.teamNameField").String()).To(Equal("both"))
+
 			Expect(githubConnector.Get("config.orgs").String()).To(MatchJSON(
 				`[{"name":"TestOrg1","teams":["Admins","Everyone"]},{"name":"TestOrg2"}]`,
 			))
