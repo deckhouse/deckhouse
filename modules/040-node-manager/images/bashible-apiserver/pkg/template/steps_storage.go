@@ -78,9 +78,9 @@ func (s *StepsStorage) readBundleTemplates(bundle string) (map[string][]byte, er
 //      cloud-providers/{provider}/bashible/common-steps/{target}
 //
 // Where
-//      bundle   = centos-7 | ubuntu-lts
-//      target   = all | node-group
-//      provider = aws | gcp | openstack | ...
+//      bundle   = "centos-7" | "ubuntu-lts"
+//      target   = "all" | "node-group"
+//      provider = "" | "aws" | "gcp" | "openstack" | ...
 func (s *StepsStorage) lookupDirs(bundle string) []string {
 	root := s.config.rootDir
 	target := s.config.target
@@ -89,8 +89,14 @@ func (s *StepsStorage) lookupDirs(bundle string) []string {
 	dirs := []string{
 		filepath.Join(root, "bashible", "bundles", bundle, target),
 		filepath.Join(root, "bashible", "common-steps", target),
-		filepath.Join(root, "cloud-providers", provider, "bashible", "bundles", bundle, target),
-		filepath.Join(root, "cloud-providers", provider, "bashible", "common-steps", target),
+	}
+
+	// Are we in the cloud?
+	if provider != "" {
+		dirs = append(dirs,
+			filepath.Join(root, "cloud-providers", provider, "bashible", "bundles", bundle, target),
+			filepath.Join(root, "cloud-providers", provider, "bashible", "common-steps", target),
+		)
 	}
 
 	return dirs

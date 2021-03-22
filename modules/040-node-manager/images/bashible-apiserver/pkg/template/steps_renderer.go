@@ -60,12 +60,14 @@ func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {
 	return fullContext, nil
 }
 
-// pick $.cloudProvider.type as a string
+// getProviderType picks $.cloudProvider.type as a string. When we cannot parse this field, it can mean that the
+// node group is static, e.g. not in the cloud.
 // TODO better be known in advance from the config
 func (s StepsRenderer) getProviderType(templateContext map[string]interface{}) (string, error) {
 	cloudProvider, ok := templateContext["cloudProvider"].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("cloudProvider is not map[string]interface{}")
+		// absent cloud provider means static nodes
+		return "", nil
 	}
 	providerType, ok := cloudProvider["type"].(string)
 	if !ok {
