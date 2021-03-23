@@ -16,7 +16,7 @@ data:
 ## Параметры
 
 * `enableMultiTenancy` — включить авторизацию по namespace.
-  * Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](usage.html#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-configurator](/modules/160-control-plane-configurator).
+  * Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](usage.html#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-configurator](/modules/160-control-plane-configurator/).
   * Значение по умолчанию – `false` (то есть multi-tenancy отключен).
 * `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator](/modules/160-control-plane-configurator).
   * `enabled` — передавать ли в control-plane-configurator параметры для настройки authz-webhook (см. [параметры control-plane-configurator-а](/modules/160-control-plane-configurator#параметры)).

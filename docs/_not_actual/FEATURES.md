@@ -14,7 +14,7 @@ permalink: features.html
 - [Очистка](/candi/bashible/common-steps/node-group/042_configure_systemd_slices_cleaner.sh.tpl) systemd-слайсов в Ubuntu 16 на нодах;
 - Настраивается [cert-manager](/modules/101-cert-manager/) и создаются его CRD;
 - **[v1.11+]** Создаются [PriorityClass](/modules/010-priority-class/). **Но!** Чтобы заработал учет приоритетов при шедулинге, необходимо еще [расставить]({{ site.baseurl }}/modules/010-priority-class/) `priorityClassName` контроллерам подов;
-- [Prometheus и Grafana](/modules/300-prometheus) — ключевой компонент мониторинга кластера. Если он включен, то также сразу работают:
+- [Prometheus и Grafana](/modules/300-prometheus/) — ключевой компонент мониторинга кластера. Если он включен, то также сразу работают:
     - [Ping мониторинг](/modules/340-monitoring-ping/) сетевого взаимодействия между всеми узлами кластера;
     - [Расширенный мониторинг](/modules/340-extended-monitoring/) на ноде по месту и inode;
     - [HPA](/modules/301-prometheus-metrics-adapter/) — для работы горизонтального автомасштабирования (экземплярами подов);
