@@ -38,7 +38,12 @@ while [ "$patch_pending" = true ] ; do
 done
 
 # Start output bootstrap logs
-while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
+if type socat >/dev/null 2>&1; then
+  socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
+else
+  while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
+fi
+
   {{- end }}
 
   {{- include "node_group_bashible_bootstrap_script_download_bashible" $context }}
