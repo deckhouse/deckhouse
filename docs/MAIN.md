@@ -121,7 +121,7 @@ layout: default
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="/modules/101-cert-manager"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Must Have Collection</h3></a>
+            <a href="/modules/101-cert-manager/"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Must Have Collection</h3></a>
           <div class="text card-benefits__text">
             <p>Устанавливает Dashboard, Ingress на базе Nginx. Управляет SSL-сертификатами.</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
@@ -144,7 +144,7 @@ layout: default
             </svg>
           </div>
           <div class="card-benefits__header">
-              <a href="/modules/050-network-policy-engine"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Extended Networking Collection</h3></a>
+              <a href="/modules/050-network-policy-engine/"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Extended Networking Collection</h3></a>
           <div class="text card-benefits__text">
             <p>Доступ в кластер через VPN, сетевые политики доступа, ускорение работы с DNS (скоро еще и Istio).</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
@@ -167,7 +167,7 @@ layout: default
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="/modules/380-metallb"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Bare Metal Compatibility Collection</h3></a>
+            <a href="/modules/380-metallb/"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Bare Metal Compatibility Collection</h3></a>
           <div class="text card-benefits__text">
             <p>Балансировка в bare-metal кластерах на базе metallb и keepalived. Организация сетевого шлюза в кластере.</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
