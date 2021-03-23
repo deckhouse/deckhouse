@@ -46,7 +46,7 @@ kubectl label node <node_name> node.deckhouse.io/group-
     ```shell
     systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
     systemctl stop bashible.service bashible.timer
-    systemctl stop kubelet.service kubelet-face-slapper.service kubelet-face-slapper.timer
+    systemctl stop kubelet.service
     systemctl stop docker
     ```
 2. Удалим маунты.
@@ -83,7 +83,7 @@ kubectl label node <node_name> node.deckhouse.io/group-
 7. [Запустим](#как-автоматически-добавить-статичный-узел-в-кластер) `bootstrap.sh`.
 8. Включим все сервисы обратно.
    ```shell
-   systemctl start kubelet.service kubelet-face-slapper.service kubelet-face-slapper.timer
+   systemctl start kubelet.service
    systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
    systemctl start bashible.service bashible.timer
    ```
