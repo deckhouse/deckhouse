@@ -117,7 +117,9 @@ func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
 		var changes struct {
 			Output struct {
 				Data struct {
-					Zones []string `json:"zones"`
+					After struct {
+						Zones []string `json:"zones"`
+					} `json:"after"`
 				} `json:"cloud_discovery_data"`
 			} `json:"output_changes"`
 		}
@@ -136,10 +138,10 @@ func CheckBaseInfrastructurePipeline(r *Runner, name string) (int, error) {
 			return err
 		}
 
-		sort.Strings(changes.Output.Data.Zones)
+		sort.Strings(changes.Output.Data.After.Zones)
 		sort.Strings(data.Zones)
 
-		if !equalArray(data.Zones, changes.Output.Data.Zones) {
+		if !equalArray(data.Zones, changes.Output.Data.After.Zones) {
 			isChange = PlanHasDestructiveChanges
 		}
 
