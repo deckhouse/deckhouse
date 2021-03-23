@@ -13,6 +13,11 @@ resource "openstack_blockstorage_volume_v2" "master" {
   image_id = data.openstack_images_image_v2.master.id
   metadata = local.metadata_tags
   volume_type = var.volume_type
+  lifecycle {
+    ignore_changes = [
+      metadata,
+    ]
+  }
 }
 
 resource "openstack_compute_instance_v2" "master" {
