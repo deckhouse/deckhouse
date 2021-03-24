@@ -85,6 +85,10 @@ spec:
                   fieldPath: metadata.name
             - name: HELM_HOST
               value: "127.0.0.1:44434"
+            - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
+              value: "30"
+            - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
+              value: "60"
             - name: ADDON_OPERATOR_CONFIG_MAP
               value: deckhouse
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
