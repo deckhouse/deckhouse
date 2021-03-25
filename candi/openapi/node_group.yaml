@@ -207,6 +207,7 @@ spec:
                           type: integer
                           x-description: Set the max concurrent downloads for each pull (default 3).
                           description: Максимальное количество параллельных потоков загрузки для каждой операции pull.
+                          x-doc-default: 3
                 cloudInstances: &cloudInstances
                   description: |
                     Параметры заказа облачных виртуальных машин.
@@ -263,6 +264,7 @@ spec:
                       x-description: |
                         Maximum amount of unavailable instances (during rollout) in the group in each zone.
                       type: integer
+                      x-doc-default: 0
                       minimum: 0
                     maxSurgePerZone:
                       description: |
@@ -270,6 +272,7 @@ spec:
                       x-description: |
                         Maximum amount of instances to rollout simultaneously in the group in each zone.
                       type: integer
+                      x-doc-default: 1
                       minimum: 0
                     standby:
                       description: |
@@ -449,6 +452,7 @@ spec:
 
                         - `DrainAndDelete` — при срабатывании drain'ит и удаляет ноду
                         - `Disabled` — не трогает данную NodeGroup.
+                      x-doc-default: 'Disabled'
                       enum:
                         - Disabled
                         - DrainAndDelete
@@ -457,6 +461,7 @@ spec:
                       description: |
                         В какой интервал времени сработает chaos monkey (указывать можно в [golang формате](https://golang.org/pkg/time/#ParseDuration)).
                       pattern: '^[0-9]+[mh]{1}$'
+                      x-doc-default: '6h'
                 operatingSystem: &operatingSystem
                   type: object
                   description: |
@@ -468,6 +473,7 @@ spec:
                       description: |
                         Автоматическое управление ядром операционной системы.
                       x-description: Enable kernel maintenance from bashible (default true).
+                      x-doc-default: true
                 disruptions: &disruptions
                   type: object
                   description: |
@@ -492,6 +498,7 @@ spec:
                       properties:
                         drainBeforeApproval:
                           type: boolean
+                          x-doc-default: true
                           description: |
                             Выгон (draining) подов с ноды, перед выдачей разрешения на disruption.
                 docker:
@@ -505,10 +512,12 @@ spec:
                       description: |
                         Максимальное количество потоков одновременного скачивания docker образов.
                       x-description: Set the max concurrent downloads for each pull (default 3).
+                      x-doc-default: 3
                     manage:
                       type: boolean
                       description: |
                         Автоматическое управление версией и параметрами Docker.
+                      x-doc-default: true
                       x-description: Enable docker maintenance from bashible.
                 kubelet: &kubelet
                   type: object
@@ -521,10 +530,12 @@ spec:
                       description: |
                         Максимальное количество подов на нодах данной `NodeGroup`.
                       x-description: Set the max count of pods per node.
+                      x-doc-default: 110
                     rootDir:
                       type: string
                       description: |
                         Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
+                      x-doc-default: '/var/lib/kubelet'
                       x-description: Directory path for managing kubelet files (volume mounts,etc).
     - name: v1alpha2
       served: true
@@ -567,10 +578,12 @@ spec:
                           description: |
                             Максимальное количество потоков одновременного скачивания docker образов.
                           x-description: Set the max concurrent downloads for each pull (default 3).
+                          x-doc-default: 3
                         manage:
                           type: boolean
                           description: |
                             Автоматическое управление версией и параметрами Docker.
+                          x-doc-default: true
                           x-description: Enable docker maintenance from bashible.
                   oneOf:
                     - properties:

@@ -39,12 +39,14 @@ spec:
                     Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
                   x-description: Percent of reserved CPU capacity on a Yandex Compute Instance.
                   example: 20
+                  x-doc-default: 100
                   enum: [ 0,5,20,50,100 ]
                   type: integer
                 gpus:
                   description: |
                     Количество графических адаптеров у создаваемых инстансов.
                   example: 4
+                  x-doc-default: 0
                   type: integer
                 memory:
                   description: |
@@ -63,17 +65,20 @@ spec:
                 platformID:
                   description: |
                     ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
+                  x-doc-default: standard-v2
                   type: string
                 preemptible:
                   description: |
                     Заказывать ли preemptible instance.
                   x-description: Should a provisioned Yandex Compute Instance be preemtible.
                   type: boolean
+                  x-doc-default: false
                 diskType:
                   description: |
                     Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
                   x-description: Instance disk type.
                   example: "network-hdd"
+                  x-doc-default: "network-ssd"
                   type: string
                   enum:
                   - "network-ssd"
@@ -83,12 +88,14 @@ spec:
                     Размер диска (в гигабайтах) у инстансов.
                   x-description: Yandex Compute Instance disk size in gigabytes.
                   example: 20
+                  x-doc-default: 50
                   type: integer
                 assignPublicIPAddress:
                   description: |
                     Присваивать ли публичные IP-адреса инстансам.
                   x-description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
                   example: false
+                  x-doc-default: false
                   type: boolean
                 mainSubnet:
                   description: |
