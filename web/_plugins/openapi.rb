@@ -34,7 +34,11 @@ module Jekyll
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
         result.push(converter.convert(attributes['description'])) if attributes['description']
 
-        result.push(converter.convert("**По умолчанию:** `#{attributes['default'].to_json}`")) if attributes.has_key?('default')
+        if attributes.has_key?('x-doc-default')
+            result.push(converter.convert("**По умолчанию:** `#{attributes['x-doc-default'].to_json}`"))
+        elsif attributes.has_key?('default')
+            result.push(converter.convert("**По умолчанию:** `#{attributes['default'].to_json}`"))
+        end
 
         if attributes['minimum'] || attributes['maximum']
             range = '**Допустимые значения:** `'

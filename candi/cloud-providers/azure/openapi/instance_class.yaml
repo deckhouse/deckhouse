@@ -57,6 +57,7 @@ spec:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
                   x-description: Instance disk size in gigabytes.
+                  x-doc-default: 50
                   example: 40
                   type: integer
                 diskType:
@@ -68,6 +69,7 @@ spec:
                     ```shell
                     az vm list-skus -l westeurope --zone`
                     ```
+                  x-doc-default: "StandardSSD_LRS"
                 additionalTags:
                   type: object
                   description: |

@@ -7,8 +7,7 @@ EOF
 }
 
 function common_hooks::https::ensure_crds::main() {
-  # TODO: switch back to "x-description" once we've converted all CRDs to apiVersion "v1"
-  custom_fields_regexp="x-description"
+  custom_fields_regexp="(x-description|x-doc-default)"
 
   crds=$(for file in "$@"; do
     echo "---";
