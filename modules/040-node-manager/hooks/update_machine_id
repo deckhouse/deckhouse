@@ -39,8 +39,9 @@ EOF
 }
 
 function __main__() {
-  if [ ! -v D8_IS_TESTS_ENVIRONMENT ]; then
-    if ! kubectl -n d8-cloud-instance-manager get configmap flag-providerid-migrated >/dev/null 2>/dev/null; then
+  enabled_modules="$(values::get global.enabledModules)"
+  if [ ! -v D8_IS_TESTS_ENVIRONMENT ] && grep -s "cloud-provider-yandex" <<< "$enabled_modules" && kubectl get ns d8-cloud-instance-manager >/dev/null 2>&1; then
+    if ! kubectl -n d8-cloud-instance-manager get configmap flag-providerid-migrated >/dev/null 2>&1; then
       kubectl -n d8-cloud-instance-manager delete deploy machine-controller-manager || true
 
       while kubectl -n d8-cloud-instance-manager get po | grep machine-controller-manager 2>/dev/null >/dev/null; do
