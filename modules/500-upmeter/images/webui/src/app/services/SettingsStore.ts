@@ -1,23 +1,25 @@
 import {MuteItems} from "../i18n";
 
 
+type MuteOptions = Map<keyof MuteItems, boolean>
+
 // from=unix-time&to=unix-time&step=300&mute=Acd!InfMnt&expand=synthetic!control-plane
 export interface Settings {
   from: number;
   to: number|string;
   step: number;
   fmt: string;
-  mute: Map<keyof MuteItems, boolean>;
+  mute: MuteOptions;
   expand: Map<string, boolean>;
 }
 
 export class SettingsStore {
-  public static defaultMuteFlags = new Map<keyof MuteItems, boolean>([
+  public static defaultMuteFlags: MuteOptions = new Map([
     ["Acd", false],
     ["Mnt", true],
     ["InfAcd", true],
     ["InfMnt", true],
-  ]);
+  ]) ;
 
   load():Settings {
     let hash = location.hash.substr(1);
@@ -105,8 +107,8 @@ export class SettingsStore {
     return pairs.join("&");
   }
 
-  decodeMuteTypes(input:string):Map<keyof MuteItems, boolean> {
-    let res = new Map<keyof MuteItems, boolean>();
+  decodeMuteTypes(input:string):MuteOptions {
+    let res: MuteOptions = new Map();
     input = "!"+input+"!";
     for (let k of SettingsStore.defaultMuteFlags.keys()) {
       res.set(k, (input.indexOf("!" + k + "!") > -1));
@@ -114,7 +116,7 @@ export class SettingsStore {
     return res;
   }
 
-  encodeMuteTypes(mute:Map<keyof MuteItems, boolean>):string {
+  encodeMuteTypes(mute:MuteOptions):string {
     let res: string[] = [];
     for (let k of mute.keys()) {
       if (mute.get(k)) {
