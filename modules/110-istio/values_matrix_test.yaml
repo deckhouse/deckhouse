@@ -1,4 +1,5 @@
 global:
+  clusterName: "mycluster"
   highAvailability:
     __ConstantChoices__: [true, false]
   enabledModules: ["operator-prometheus-crd","cert-manager", "priority-class"]
@@ -27,6 +28,8 @@ global:
       common:
         kubeRbacProxy: hashstring
       istio:
+        federationMetadata: hashstring
+        federationMetadataDiscovery: hashstring
         kiali: hashstring
         operatorV1x8x1: hashstring
         operatorV1x8x2: hashstring
@@ -35,6 +38,7 @@ global:
         proxyv2V1x8x1: hashstring
         proxyv2V1x8x2: hashstring
   discovery:
+    clusterDomain: my.cluster
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
     d8SpecificNodeCountByRole:
@@ -45,12 +49,14 @@ global:
       - "1.16"
       - "1.19"
 istio:
+    federation:
+      enabled:
+        __ConstantChoices__: [true, false]
     tlsMode:
       __ConstantChoices__:
       - Mutual
       - MutualPermissive
       - "Off"
-    clusterName: mycluster
     internal:
         applicationNamespaces:
           __ConstantChoices__:
@@ -70,7 +76,16 @@ istio:
           __ConstantChoices__:
           -  [v1x8x1, v1x8x2]
           -  []
-    network: mynetwork
+        federations:
+          - ingressGateways:
+              - address: 1.1.1.1
+                port: 32224
+            name: qqq-local
+            publicServices:
+              - hostname: xxx
+                port: 123
+            spiffeEndpoint: https://istio.sandbox.polovov.ru/federation/spiffe-bundle-endpoint
+            trustDomain: qqq.local
     sidecar:
       includeOutboundIPRanges: ["*"]
       excludeOutboundIPRanges: ["1.2.3.4"]

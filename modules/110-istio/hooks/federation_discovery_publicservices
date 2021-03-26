@@ -1,0 +1,71 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    kubernetes:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/federations
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioFederation
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "trustDomain": .spec.trustDomain,
+          "metadataPublicServicesEndpoint": ((.spec.federationMetadata.endpoint | sub("/*$"; "")) + "/metadata-services" ),
+          "publicServicesCache": .status.metadataCache.publicServices
+        }
+    schedule:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/federations
+      crontab: "* * * * *"
+EOF
+}
+
+function __main__() {
+  if values::is_true istio.federation.enabled; then
+    for i in $(context::jq -r '.snapshots.federations | keys[]'); do
+      federationSpec="$(context::jq --argjson i "$i" -c '.snapshots.federations[$i] | .filterResult')"
+      federationName="$(jq                 -r '.name'                           <<< "$federationSpec")"
+      trustDomain="$(jq                    -r '.trustDomain'                    <<< "$federationSpec")"
+      publicServicesCache="$(jq            -r '.publicServicesCache'            <<< "$federationSpec")"
+      metadataPublicServicesEndpoint="$(jq -r '.metadataPublicServicesEndpoint' <<< "$federationSpec")"
+
+      if [[ "$trustDomain" == "$(values::get global.discovery.clusterDomain)" ]]; then continue; fi
+
+      isError=0
+      # try to fetch metadata from endpoint and try to unmarshal
+      if publicServices="$(curl -f -s --show-error "$metadataPublicServicesEndpoint" | jq -ec '.publicServices | sort')"; then
+        if jq -ne --argjson ig "$publicServices" --argjson igc "$publicServicesCache" '$ig != $igc' >/dev/null; then
+          patch="$(jq -n --argjson ps "$publicServices" '
+            {"metadataCache": {"publicServices": $ps, "publicServicesLastFetchTimestamp": (now | todateiso8601)}}
+          ')"
+        else
+          patch="$(jq -n '
+            {"metadataCache": {"publicServicesLastFetchTimestamp": (now | todateiso8601)}}
+          ')"
+        fi
+        kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "istiofederations" "$federationName" "$patch"
+      else
+        isError=1
+        echo >&2 "ERROR: Cannot fetch public services metadata endpoint $metadataPublicServicesEndpoint for IstioFederation $federationName."
+      fi
+
+      jq -n --argjson isError "$isError" --arg federationName "$federationName" --arg endpoint "$metadataPublicServicesEndpoint" '
+        {
+          "group":"federation_fetch_ps",
+          "name": "d8_istio_federation_metadata_endpoints_fetch_error_count",
+          "set": $isError,
+          "labels": {"federation_name": $federationName, "endpoint": $endpoint}
+        }
+      ' >> "$METRICS_PATH"
+    done
+  fi
+}
+
+hook::run "$@"

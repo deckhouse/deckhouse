@@ -1,4 +1,21 @@
 {{- range $revision := .Values.istio.internal.revisionsToInstall }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: istiod-{{ $revision }}
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+
 ---
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
@@ -15,6 +32,10 @@ spec:
 
     pilot:
       enabled: true
+      k8s:
+        env:
+          - name: PILOT_SKIP_VALIDATE_TRUST_DOMAIN
+            value: "true"
 
     ingressGateways:
     - name: istio-ingressgateway
@@ -36,6 +57,16 @@ spec:
 
   meshConfig:
     rootNamespace: d8-{{ $.Chart.Name }}
+    trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+    defaultConfig:
+      proxyMetadata:
+        ISTIO_META_DNS_CAPTURE: "true"
+  {{- if $.Values.istio.federation.enabled }}
+    caCertificates:
+    {{- range $federation := $.Values.istio.internal.federations }}
+    - spiffeBundleUrl: {{ $federation.spiffeEndpoint | quote }}
+    {{- end }}
+  {{- end }}
 
   values:
     global:
@@ -55,20 +86,18 @@ spec:
       proxy:
         image: {{ $.Values.global.modulesImages.registry }}/istio/proxyv2-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 2000m
-            memory: 1024Mi
+        resources: {}
         logLevel: warning
         componentLogLevel: "misc:error"
-  {{- $node_internal_cidrs := list }}
+  {{- $include_ip_ranges := list }}
+  {{- $include_ip_ranges = append $include_ip_ranges "169.254.40.20/32" }}
+  {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.podSubnet }}
+  {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.serviceSubnet }}
+  {{- $include_ip_ranges = append $include_ip_ranges $.Values.istio.sidecar.includeOutboundIPRanges }}
   {{- range $ip := $.Values.global.discovery.nodeInternalIPs }}
-    {{- $node_internal_cidrs = append $node_internal_cidrs (printf "%s/32" $ip) }}
+    {{- $include_ip_ranges = append $include_ip_ranges (printf "%s/32" $ip) }}
   {{- end }}
-        includeIPRanges:      "{{ $.Values.istio.sidecar.includeOutboundIPRanges | default (list $.Values.global.discovery.podSubnet $.Values.global.discovery.serviceSubnet ($node_internal_cidrs | join ",")) | join "," }}"
+        includeIPRanges:      "{{ $include_ip_ranges | join "," }}"
         excludeIPRanges:      "{{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," }}"
         excludeOutboundPorts: "{{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," }}"
         excludeInboundPorts:  "{{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," }}"
@@ -83,13 +112,14 @@ spec:
             cpu: 10m
             memory: 10Mi
 
-      priorityClassName: "system-cluster-critical"
-      trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+{{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | indent 6 }}
+
     pilot:
       autoscaleEnabled: false
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
       image: {{ $.Values.global.modulesImages.registry }}/istio/pilot-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "pilot%s" ($revision | title)) }}
       configNamespace: d8-{{ $.Chart.Name }}
+#TODO: affinity by revision
 {{- include "helm_lib_node_selector" (tuple $ "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $ "master") | indent 6 }}
     telemetry:

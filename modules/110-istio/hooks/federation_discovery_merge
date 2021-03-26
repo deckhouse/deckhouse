@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    kubernetes:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/federations
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioFederation
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "trustDomain": .spec.trustDomain,
+          "spiffeEndpoint": ((.spec.federationMetadata.endpoint | sub("/*$"; "")) + "/spiffe-bundle-endpoint"),
+          "ingressGateways": .status.metadataCache.ingressGateways,
+          "publicServices": .status.metadataCache.publicServices
+        }
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  federations="$(context::jq -c '[.snapshots.federations[].filterResult | select(.ingressGateways and .publicServices)]')"
+
+  values::set istio.internal.federations "$federations"
+}
+
+hook::run "$@"

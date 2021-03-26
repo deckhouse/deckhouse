@@ -7,7 +7,7 @@ function __config__() {
 }
 
 function __on_startup() {
-  common_hooks::https::ensure_crds::config $(module::path)/crds/*
+  common_hooks::https::ensure_crds::main $(module::path)/crds/*
 }
 
 hook::run "$@"

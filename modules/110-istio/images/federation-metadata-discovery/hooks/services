@@ -1,0 +1,36 @@
+#!/bin/bash -e
+
+for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
+  source $f
+done
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    kubernetes:
+    - name: public_services
+      apiVersion: v1
+      kind: Service
+      group: main
+      keepFullObjectsInMemory: false
+      labelSelector:
+        matchLabels:
+          federation.istio.deckhouse.io/public-service: ""
+      jqFilter: |
+        {
+          "hostname": (.metadata.name + "." + .metadata.namespace + ".svc.$CLUSTER_DOMAIN"),
+          "port": (.spec.ports[0] | .port)
+        }
+EOF
+}
+
+function __main__() {
+  context::jq '
+    {
+      "publicServices": [
+        .snapshots.public_services[] | {"hostname": .filterResult.hostname, "port": .filterResult.port}
+      ]
+    }' > /metadata/services.json
+}
+
+hook::run "$@"

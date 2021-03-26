@@ -2,8 +2,16 @@ istio:
   auth: {}
   tlsMode: "Off" # MutualPermissive Mutual
   sidecar: {}
+  federation:
+    ingressGateway:
+      inlet: NodePort
+  discovery:
+    federations:
+      publicServices: []
+      ingressGateways: []
+      trustDomains: []
   internal:
     ca: {}
+    federations: []
     supportedVersions:
-    - 1.8.1
-    - 1.8.2
+    - 1.9.1-trustca

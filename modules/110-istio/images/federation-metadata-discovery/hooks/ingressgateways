@@ -1,0 +1,95 @@
+#!/bin/bash -e
+
+for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
+  source $f
+done
+
+function __config__() {
+  if [ "$INLET" == "LoadBalancer" ]; then
+    cat << EOF
+      configVersion: v1
+      kubernetes:
+      - name: ingressgateway_service
+        apiVersion: v1
+        kind: Service
+        group: main-lb
+        keepFullObjectsInMemory: false
+        namespace:
+          nameSelector:
+            matchNames: [d8-istio]
+        nameSelector:
+          matchNames: [ingressgateway]
+        jqFilter: |
+          {
+            "address": (.status.loadBalancer.ingress[0].ip // .status.loadBalancer.ingress[0].hostname // null),
+            "port": (.spec.ports[] | select(.name == "tls") | .port)
+          }
+EOF
+  elif [ "$INLET" == "NodePort" ]; then
+    cat << EOF
+      configVersion: v1
+      kubernetes:
+      - name: ingressgateway_service
+        apiVersion: v1
+        kind: Service
+        group: main-np
+        keepFullObjectsInMemory: false
+        namespace:
+          nameSelector:
+            matchNames: [d8-istio]
+        nameSelector:
+          matchNames: [ingressgateway]
+        jqFilter: |
+          {
+            "port": (.spec.ports[] | select(.name == "tls") | .nodePort)
+          }
+      - name: pods
+        apiVersion: v1
+        kind: Pod
+        group: main-np
+        keepFullObjectsInMemory: false
+        namespace:
+          nameSelector:
+            matchNames: [d8-istio]
+        labelSelector:
+          matchLabels:
+            app: ingressgateway
+        jqFilter: |
+          {
+            "nodeName": .spec.nodeName
+          }
+      - name: nodes
+        apiVersion: v1
+        kind: Node
+        group: main-np
+        keepFullObjectsInMemory: false
+        jqFilter: |
+          {
+            "name": .metadata.name,
+            "address": (.status.addresses[] | select(.type == "ExternalIP") | .address)
+          }
+EOF
+  fi
+}
+
+function __on_group::main-lb() {
+  context::jq '
+    {
+      "ingressGateways": [
+        .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
+      ]
+    }' > /metadata/ingressgateways.json
+}
+
+function __on_group::main-np() {
+  context::jq '
+    .snapshots.ingressgateway_service[0].filterResult.port as $port |
+    [.snapshots.pods[].filterResult.nodeName] as $nodes |
+    {
+      "ingressGateways": [
+        .snapshots.nodes[].filterResult | .name as $name | select($nodes | index($name)) | {"address": .address, "port": $port}
+      ]
+    }' > /metadata/ingressgateways.json
+}
+
+hook::run "$@"

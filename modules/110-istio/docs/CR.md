@@ -97,3 +97,28 @@ title: "Модуль istio: Custom Resources"
 [Reference](https://istio.io/latest/docs/reference/config/networking/sidecar/)
 
 Данный ресурс позволяет ограничить количество сервисов, о которых будет передана информация в сайдкар istio-proxy.
+
+## Федерация
+
+### IstioFederation
+
+Cluster-wide ресурс.
+
+* `spec`:
+  * `trustDomain` — TrustDomain удалённого кластера. Обязательный параметр, но на данный момент не используется, так как Istio не умеет сопоставлять TrustDomain и корневой CA.
+    * Формат — строка.
+    * Пример — `mycluster.local`.
+  * `federationMetadata` — настройки, касающиеся метаданных удалённого кластера:
+    * `endpoint` — HTTPS-url, по которому опубликованы метаданные удалённого кластера.
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: example-cluster
+spec:
+  federationMetadata:
+    endpoint: https://istio.k8s.example.com/federation/
+  trustDomain: example.local
+```
