@@ -1,0 +1,34 @@
+{{- if .Values.istio.federation.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: federation-ingressgateway
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: federation:ingressgateway
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: federation:ingressgateway
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: federation:ingressgateway
+subjects:
+- kind: ServiceAccount
+  name: federation-ingressgateway
+{{- end }}

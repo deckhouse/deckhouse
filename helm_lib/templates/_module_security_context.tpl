@@ -1,3 +1,12 @@
+{{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_custom" (list . 1000 1000) }} */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with custom user and group */ -}}
+{{- define "helm_lib_module_pod_security_context_run_as_user_custom" }}
+securityContext:
+  runAsNonRoot: true
+  runAsUser: {{ index . 1 }}
+  runAsGroup: {{ index . 2 }}
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_nobody" . }} */ -}}
 {{- /* returns PodSecurityContext parameters for Pod with user and group nobody */ -}}
 {{- define "helm_lib_module_pod_security_context_run_as_user_nobody" }}

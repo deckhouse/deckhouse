@@ -1,0 +1,20 @@
+{{- if .Values.istio.federation.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: federation-gateway
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod")) | indent 2 }}
+spec:
+  selector:
+    app: ingressgateway
+  servers:
+    - port:
+        number: 15443
+        name: tls
+        protocol: TLS
+      tls:
+        mode: AUTO_PASSTHROUGH
+      hosts:
+        - "*.{{ $.Values.global.discovery.clusterDomain }}"
+{{- end }}

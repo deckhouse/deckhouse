@@ -35,6 +35,8 @@ modulesImages:
       kubeRbacProxy: hashstring
     istio:
       kiali: kialihashstring
+      federationMetadata: kialihashstring
+      federationMetadataDiscovery: kialihashstring
       operatorV1x8x0alpha1: ov180a1hashstring
       operatorV1x8x1: ov181hashstring
       pilotV1x8x0alpha1: piv180a1hashstring
@@ -56,6 +58,7 @@ const istioValues = `
       globalRevision: v1x8x1
       operatorRevisionsToInstall:  []
       revisionsToInstall: []
+      federations: []
       ca:
         cert: mycert
         key: mykey
@@ -213,6 +216,45 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 					"root-cert.pem":"bXlyb290"
 				}
 `))
+		})
+	})
+
+	Context("There are some federations", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.revisionsToInstall", `[v1x8x1]`)
+			f.ValuesSetFromYaml("istio.internal.operatorRevisionsToInstall", `[v1x8x1]`)
+			f.ValuesSet("istio.federation.enabled", true)
+			f.ValuesSetFromYaml("istio.internal.federations", `
+- name: neighbour-0
+  trustDomain: n.n0
+  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
+  ingressGateways:
+  - address: 1.1.1.1
+    port: 123
+  publicServices:
+  - hostname: xxx.yyy
+    port: 456
+`)
+			f.HelmRender()
+		})
+
+		It("ServiceEntry and DestinationRule must be created", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			se := f.KubernetesResource("ServiceEntry", "d8-istio", "neighbour-0-xxx-yyy")
+			dr := f.KubernetesResource("DestinationRule", "d8-istio", "neighbour-0-xxx-yyy")
+
+			Expect(se.Exists()).To(BeTrue())
+			Expect(dr.Exists()).To(BeTrue())
+
+			Expect(se.Field("spec.hosts.0").String()).To(Equal("xxx.yyy"))
+			Expect(se.Field("spec.endpoints").String()).To(MatchYAML(`
+            - address: 1.1.1.1
+              ports:
+                http1: 123
+            `))
 		})
 	})
 })

@@ -1,0 +1,71 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    kubernetes:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/federations
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioFederation
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "trustDomain": .spec.trustDomain,
+          "metadataIngressGatewaysEndpoint": ((.spec.federationMetadata.endpoint | sub("/*$"; "")) + "/metadata-ingressgateways" ),
+          "ingressGatewaysCache": .status.metadataCache.ingressGateways
+        }
+    schedule:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/federations
+      crontab: "* * * * *"
+EOF
+}
+
+function __main__() {
+  if values::is_true istio.federation.enabled; then
+    for i in $(context::jq -r '.snapshots.federations | keys[]'); do
+      federationSpec="$(context::jq --argjson i "$i" -c '.snapshots.federations[$i] | .filterResult')"
+      federationName="$(jq                  -r '.name'                            <<< "$federationSpec")"
+      trustDomain="$(jq                     -r '.trustDomain'                     <<< "$federationSpec")"
+      ingressGatewaysCache="$(jq            -r '.ingressGatewaysCache'            <<< "$federationSpec")"
+      metadataIngressGatewaysEndpoint="$(jq -r '.metadataIngressGatewaysEndpoint' <<< "$federationSpec")"
+
+      if [[ "$trustDomain" == "$(values::get global.discovery.clusterDomain)" ]]; then continue; fi
+
+      isError=0
+      # try to fetch metadata from endpoint and try to unmarshal
+      if ingressGateways="$(curl -f -s --show-error "$metadataIngressGatewaysEndpoint" | jq -ec '.ingressGateways | sort')"; then
+        if jq -ne --argjson ig "$ingressGateways" --argjson igc "$ingressGatewaysCache" '$ig != $igc' >/dev/null; then
+          patch="$(jq -n --argjson ig "$ingressGateways" '
+            {"metadataCache": {"ingressGateways": $ig, "ingressGatewaysLastFetchTimestamp": (now | todateiso8601)}}
+          ')"
+        else
+          patch="$(jq -n '
+            {"metadataCache": {"ingressGatewaysLastFetchTimestamp": (now | todateiso8601)}}
+          ')"
+        fi
+        kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "istiofederations" "$federationName" "$patch"
+      else
+        isError=1
+        echo >&2 "ERROR: Cannot fetch ingressgateways metadata endpoint $metadataIngressGatewaysEndpoint for IstioFederation $federationName."
+      fi
+
+      jq -n --argjson isError "$isError" --arg federationName "$federationName" --arg endpoint "$metadataIngressGatewaysEndpoint" '
+        {
+          "group":"federation_fetch_ig",
+          "name": "d8_istio_federation_metadata_endpoints_fetch_error_count",
+          "set": $isError,
+          "labels": {"federation_name": $federationName, "endpoint": $endpoint}
+        }
+      ' >> "$METRICS_PATH"
+    done
+  fi
+}
+
+hook::run "$@"

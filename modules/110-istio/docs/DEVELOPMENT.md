@@ -17,7 +17,7 @@ searchable: false
 Для добавления новой версии:
 * Добавить images по аналогии с предыдущими версиями.
 * Добавить новую версию в values.yaml (`istio.internal.supportedVersions`).
-* Добавить crd-all.gen.yaml и crd-operator.yaml в папку crds по аналогии.
+* Актуализировать crd-all.gen.yaml и crd-operator.yaml в папке crds.
 * Освежить дашборды графаны:
   * Извлечь json-описания дашборд из манифеста samples/addons/grafana.yaml, отформатировать их с помощью jq и сложить в соответствующие json-ки в /monitoring/grafana-dashboards/istio/XXX.json.
   * Найти все range'и и заменить на `$__interval_sx4`:

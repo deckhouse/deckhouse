@@ -34,6 +34,11 @@ func skipObjectIfNeeded(o *storage.StoreObject) bool {
 	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-ingress-nginx" {
 		return true
 	}
+	// Istio kiali needs to patch index.html file
+	if o.Unstructured.GetKind() == "Deployment" && o.Unstructured.GetNamespace() == "d8-istio" &&
+		o.Unstructured.GetName() == "kiali" {
+		return true
+	}
 
 	return false
 }

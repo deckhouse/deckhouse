@@ -1,0 +1,16 @@
+- name: kubernetes.istio.federation_metadata_endpoints
+  rules:
+    - alert: D8IstioFederationMetadataEndpointDoesntWork
+      expr: max by (federation_name, endpoint) (d8_istio_federation_metadata_endpoints_fetch_error_count == 1)
+      for: 5m
+      labels:
+        severity_level: "6"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_federation_metadata_endpoint_failed: D8IstioFederationMetadataEndpointFailed,tier=~tier
+        plk_grouped_by__d8_istio_federation_metadata_endpoint_failed: D8IstioFederationMetadataEndpointFailed,tier=~tier
+        description: |
+          Metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch from d8.
+          Reproducing: `curl {{$labels.endpoint}} | jq -e .`
+        summary: Federation metadata endpoint failed
