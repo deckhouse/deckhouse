@@ -27,7 +27,7 @@ import (
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.
-func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
+func NewStorage(rootDir string, bashibleContext *template.Context) (*Storage, error) {
 
 	renderer := template.NewStepsRenderer(bashibleContext, rootDir, "all", template.GetVersionContextKey)
 

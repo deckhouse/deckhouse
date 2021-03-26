@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func NewContext(factory informers.SharedInformerFactory, configMapName, configMapKey string) Context {
+func NewContext(factory informers.SharedInformerFactory, configMapName, configMapKey string) *Context {
 	c := Context{
 		configMapName: configMapName,
 		configMapKey:  configMapKey,
@@ -19,7 +19,7 @@ func NewContext(factory informers.SharedInformerFactory, configMapName, configMa
 
 	c.subscribe(factory)
 
-	return c
+	return &c
 }
 
 // Context manages bashible template context
