@@ -5,23 +5,34 @@
   {{- $sc_index := index . 1  -}}
   {{- $sc_name := index . 2  -}}
   {{- $module_values := include "helm_lib_module_values" $context | fromYaml -}}
+  {{- $annotations := dict -}}
+
+  {{- $volume_expansion_mode_offline := false -}}
+  {{- range $module_name := list "cloud-provider-azure" "cloud-provider-yandex" "cloud-provider-vsphere" }}
+    {{- if has $module_name $context.Values.global.enabledModules }}
+      {{- $volume_expansion_mode_offline = true }}
+    {{- end }}
+  {{- end }}
+
+  {{- if $volume_expansion_mode_offline }}
+    {{- $_ := set $annotations "storageclass.deckhouse.io/volume-expansion-mode" "offline" }}
+  {{- end }}
 
   {{- if hasKey $module_values.internal "defaultStorageClass" }}
     {{- if eq $module_values.internal.defaultStorageClass $sc_name }}
-annotations:
-  storageclass.kubernetes.io/is-default-class: "true"
+      {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
     {{- end }}
   {{- else }}
     {{- if eq $sc_index 0 }}
       {{- if $context.Values.global.discovery.defaultStorageClass }}
         {{- if eq $context.Values.global.discovery.defaultStorageClass $sc_name }}
-annotations:
-  storageclass.kubernetes.io/is-default-class: "true"
+          {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
         {{- end }}
       {{- else }}
-annotations:
-  storageclass.kubernetes.io/is-default-class: "true"
+        {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
       {{- end }}
     {{- end }}
   {{- end }}
+
+{{- (dict "annotations" $annotations) | toYaml -}}
 {{- end -}}

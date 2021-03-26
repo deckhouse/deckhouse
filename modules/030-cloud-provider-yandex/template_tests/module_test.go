@@ -24,7 +24,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex"]
   modules:
     placement: {}
   modulesImages:
@@ -166,6 +166,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiSSDSC.Exists()).To(BeTrue())
 
 			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 
@@ -210,8 +211,9 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
 
-			Expect(csiHDDSC.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(csiHDDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(csiSSDSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 		})

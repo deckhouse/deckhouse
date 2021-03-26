@@ -25,7 +25,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-vsphere"]
   modules:
     placement: {}
   modulesImages:
@@ -200,9 +200,10 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(scMydsname2.Exists()).To(BeTrue())
 
 			Expect(scMydsname1.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
-			Expect(scMydsname2.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(scMydsname2.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 		})
 	})
 
@@ -273,8 +274,9 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(scMydsname1.Exists()).To(BeTrue())
 			Expect(scMydsname2.Exists()).To(BeTrue())
 
-			Expect(scMydsname1.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(scMydsname1.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(scMydsname2.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 		})
