@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  site:
+    image: $WERF_WEB_BACKEND_DOCKER_IMAGE_NAME
+    command: "/app/server"
+    environment:
+      WERF_LOG_VERBOSE: "on"
+      LOG_LEVEL: "debug"
+      URL_VALIDATION: "false"
+    networks:
+      - deckhouse
+    volumes:
+      - ".helm/releasechannels.json:/app/releasechannels/releasechannels.json:ro"
+  front:
+    image: nginx:latest
+    volumes:
+      - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
+    ports:
+      - "80:80"
+    networks:
+      - deckhouse
+
+networks:
+  deckhouse:
+    name: deckhouse

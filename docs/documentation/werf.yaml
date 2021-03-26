@@ -1,23 +1,12 @@
-image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ env "BASE_NGINX_ALPINE" }}
-ansible:
-  setup:
-  - name: "Copy nginx.conf"
-    copy:
-      content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/nginx.conf" | indent 8 }}
-      dest: /etc/nginx/nginx.conf
-import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
-  add: /app/_site
-  to: /usr/share/nginx/html
-  before: setup
+{{ $BASE_NGINX_ALPINE := "nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555" }}
+
+project: deckhouse-web
+configVersion: 1
+
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+artifact: static-pages
 from: jekyll/jekyll:3.8
-mount:
-  - from: build_dir
-    to: /usr/local/bundle
+fromCacheVersion: 20210402
 ansible:
   install:
     - shell: |
@@ -97,40 +86,17 @@ ansible:
         chdir: /srv/jekyll-data/documentation
     - name: "Generate sidebars"
       shell: |
-        export MODULES_DIR=modules_ru
+        export MODULES_DIR=modules_en
         /bin/bash ./modules_make_data > _data/sidebars/modules.yml2 &&  sed '1,+4d' _data/sidebars/modules.yml >> _data/sidebars/modules.yml2  && mv -f _data/sidebars/modules.yml2 _data/sidebars/modules.yml
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - copy:
-        content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/_config.yml" | indent 10 }}
-        dest: /tmp/_config_additional.yml
-    - copy:
-        content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/topnav.yml" | indent 10 }}
-        dest: /srv/jekyll-data/site/_data/topnav.yml
-    - name: "Generate documentation static"
-      shell: |
+    - shell: |
         mkdir -m 777 -p /app/_site/
-        JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
+        JEKYLL_ENV=production jekyll build -d /app/_site/
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Generate main static"
-      shell: |
-        JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/site/
-    - shell: |
-        cp -Rf /app/_site/site/assets /app/_site/documentation/
-        cp -Rf /app/_site/site/images /app/_site/documentation/
-        cp -Rf /app/_site/site/includes /app/_site/documentation/
-        cp -Rf /app/_site/site/ru/includes /app/_site/documentation/ru
-        cp -Rf /app/_site/site/en/includes /app/_site/documentation/en
-        cp -Rf /app/_site/site/ru /app/_site/documentation/
-        cp -Rf /app/_site/site/en /app/_site/documentation/
     - name: "Link checking"
       shell: |
         exit 0 || (bundle exec htmlproofer \
@@ -149,14 +115,15 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
+    - site/_config.yml
+    - site/Gemfile
+    - site/Gemfile.lock
     - documentation
-    - site
   excludePaths:
   - '**/werf*.yaml'
   - '**/docker-compose.yml'
   - '**/.werf'
   - '**/.helm'
-  - site/pages/INDEX*.md
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
@@ -222,3 +189,18 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+---
+image: web
+from: {{ $BASE_NGINX_ALPINE }}
+ansible:
+  setup:
+  - name: "Setup /etc/nginx/nginx.conf"
+    copy:
+      content: |
+{{ .Files.Get ".werf/nginx.conf" | indent 8 }}
+      dest: /etc/nginx/nginx.conf
+import:
+- artifact: static-pages
+  add: /app/_site
+  to: /app/
+  before: setup

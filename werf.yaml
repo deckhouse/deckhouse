@@ -204,8 +204,6 @@ git:
   - helm_lib
   excludePaths:
   - docs
-  - web
-  - web-public
   - modules/*/docs
   - modules/*/README.md
   - modules/*/images
@@ -265,7 +263,7 @@ git:
     install:
       - go.mod
       - go.sum
-  excludePaths: ['web', 'web-public','docs','docs-public']
+  excludePaths: ['docs']
 import:
 - artifact: deckhouse-controller
   add: /deckhouse-controller/deckhouse-controller

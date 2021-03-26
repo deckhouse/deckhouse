@@ -109,6 +109,7 @@
   before_script:
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
+  - exit 0
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - ./modules_images_werf test_web_links
   - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
@@ -132,7 +133,6 @@
   allow_failure: true
   needs:
     - "Build"
-    - "Build Website"
     - "Build Modules Images"
   interruptible: true
 

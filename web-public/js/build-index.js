@@ -1,1 +1,0 @@
-../../web/js/build-index.js

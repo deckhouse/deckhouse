@@ -1,0 +1,79 @@
+{{ $BASE_GOLANG_ALPINE := "golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab" }}
+{{ $BASE_DEBIAN := "debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299" }}
+
+project: deckhouse-web
+configVersion: 1
+
+---
+artifact: web-static
+from: jekyll/builder:3.8
+fromCacheVersion: 20210401
+ansible:
+  install:
+    - shell: |
+        apk add rsync
+        gem update bundler
+    - name: "Install Dependencies"
+      shell: bundle install
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/site/
+  beforeSetup:
+    - name: "Build static files"
+      shell: |
+        export JEKYLL_ENV=production
+        mkdir -m 777 -p /app/_site/
+        jekyll build -d /app/_site/ --config _config.yml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/site/
+git:
+- add: /docs/site
+  to: /srv/jekyll-data/site
+  owner: jekyll
+  group: jekyll
+  excludePaths:
+  - '**/*.sh'
+  - werf*.yaml
+  - docker-compose.yml
+  - .werf
+  - .helm
+  - backend
+  stageDependencies:
+    install: ['Gemfile','Gemfile.lock']
+    beforeSetup: '**/*'
+---
+artifact: web-backend-srv
+from: {{ $BASE_GOLANG_ALPINE }}
+fromCacheVersion: 20210401
+ansible:
+  install:
+    - name: Build apis
+      shell: |
+        go get -d -v ./
+        go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/
+      args:
+        executable: /bin/bash
+        chdir: /go/src/app
+git:
+  - add: /docs/site/backend
+    to: /go/src/app
+    stageDependencies:
+      install: '**/*'
+---
+image: web-backend
+docker:
+  WORKDIR: /app
+from: {{ $BASE_DEBIAN }}
+ansible:
+  install:
+    - shell: apt update && apt install -yq git curl jq
+import:
+  - artifact: web-backend-srv
+    add: /go/src/app/server
+    to: /app/server
+    before: setup
+  - artifact: web-static
+    add: /app/_site
+    to: /app/root
+    before: setup
