@@ -13,7 +13,6 @@ positive:
         clusterType: "Static"
         mastersCount: 3
         kops: False
-        deprecatedResourcesInHelmReleases: 0
         masterIsDedicated: True
         masterMinCPU: 4
         masterMinMemory: 8265010916

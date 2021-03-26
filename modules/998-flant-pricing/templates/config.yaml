@@ -11,7 +11,7 @@ prometheus:
     host_filter: false
     max_wal_time: 360h
     scrape_configs:
-    - job_name: 'deckhouse'
+    - job_name: 'flant-pricing'
       params:
         module: [http_2xx]  # Look for a HTTP 200 response.
       static_configs:
@@ -24,6 +24,8 @@ prometheus:
       - source_labels: [job]
         target_label: cluster_uuid
         replacement: {{ .Values.global.discovery.clusterUUID }}
+      - regex: hook|instance
+        action: labeldrop
     remote_write:
     - url: {{ .Values.flantPricing.promscale.url }}
       basic_auth:

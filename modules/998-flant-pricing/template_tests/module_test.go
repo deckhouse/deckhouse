@@ -64,7 +64,6 @@ internal:
   clusterType: Cloud
   mastersCount: 3
   kops: true
-  deprecatedResourcesInHelmReleases: 100
   masterIsDedicated: true
   masterMinCPU: 4
   masterMinMemory: 800000
@@ -131,8 +130,6 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
   value: "3"
 - name: FP_KOPS
   value: "1"
-- name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
-  value: "100"
 - name: FP_MASTER_IS_DEDICATED
   value: "1"
 - name: FP_MASTER_MIN_CPU

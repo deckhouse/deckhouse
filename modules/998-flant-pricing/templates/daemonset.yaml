@@ -81,8 +81,6 @@ spec:
           value: {{ .Values.flantPricing.internal.mastersCount | quote }}
         - name: FP_KOPS
           value: {{ .Values.flantPricing.internal.kops | int | quote }}
-        - name: FP_DEPRECATED_RESOURCES_IN_HELM_RELEASES
-          value: {{ .Values.flantPricing.internal.deprecatedResourcesInHelmReleases | quote }}
         - name: FP_MASTER_IS_DEDICATED
           value: {{ .Values.flantPricing.internal.masterIsDedicated | int | quote }}
         - name: FP_MASTER_MIN_CPU

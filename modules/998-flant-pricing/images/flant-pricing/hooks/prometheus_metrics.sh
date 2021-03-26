@@ -20,7 +20,7 @@ EOF
 # Makes query to prometheus and returns resulting json.
 # $1 - promql
 function prometheus_query() {
-  curl_args=(-s --connect-timeout 10 --max-time 10 -k -XGET -G -k --cert /etc/ssl/prometheus-api-client-tls/tls.crt --key /etc/ssl/prometheus-api-client-tls/tls.key)
+  curl_args=(-s -f --connect-timeout 10 --max-time 10 -k -XGET -G -k --cert /etc/ssl/prometheus-api-client-tls/tls.crt --key /etc/ssl/prometheus-api-client-tls/tls.key)
   prom_url="https://prometheus.d8-monitoring:9090/api/v1/query"
   if ! prom_result="$(curl "${curl_args[@]}" "${prom_url}" --data-urlencode "query=${1}")"; then
     prom_result=""
@@ -103,7 +103,7 @@ function terraform_state_metrics() {
     prom_node_template_statuses="$(prometheus_query 'max(candi_converge_node_template_status) by (name,status) == 1')"
 
     if [[ -z "$prom_cluster_status" || -z "$prom_node_statuses" || -z "$prom_node_template_statuses" ]]; then
-      >&2 echo "ERROR: Crucial Prometheus queries failed. Skipping terraform_state metrics."
+      >&2 echo "INFO: Skipping terraform_state metrics, crucial Prometheus queries failed."
       return 0
     fi
 
@@ -157,24 +157,50 @@ function terraform_state_metrics() {
 }
 
 function helm_releases_metrics() {
-  helm_releases_metric_name="flant_pricing_helm_releases_count"
+  metric_name="flant_pricing_helm_releases_count"
   group="group_helm_releases_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
   prom_result="$(prometheus_query 'helm_releases_count')"
-  if [[ ! -z "$prom_result" ]]; then
-    jq --arg metric_name $helm_releases_metric_name --arg group "$group" '
-      .data.result[] |
-      {
-        "name": $metric_name,
-        "group": $group,
-        "set": (.value[1] | tonumber),
-        "labels": {
-          "helm_version": .metric.helm_version
-        }
-      }
-      ' <<< "$prom_result" >> $METRICS_PATH
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
   fi
+
+  jq --arg metric_name $metric_name --arg group "$group" '
+    .data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber),
+      "labels": {
+        "helm_version": .metric.helm_version
+      }
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
+}
+
+function helm_deprecated_resources_metrics() {
+  metric_name="flant_pricing_deprecated_resources_in_helm_releases"
+  group="group_helm_deprecated_resources_metrics"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+
+  prom_result="$(prometheus_query 'count(resource_versions_compatibility > 0)')"
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
+  fi
+
+  jq --arg metric_name $metric_name --arg group "$group" '
+    .data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber)
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
 }
 
 function expire_resource_metrics() {
@@ -192,7 +218,7 @@ function output_resource_metric() {
   value="$(jq -r '.data.result // [] | .[] | .value[1] // ""' <<< "$2")"
 
   if [[ "$value" == "" ]]; then
-    >&2 echo "ERROR: Skipping empty value metric $name for resource Kind $1."
+    >&2 echo "INFO: Skipping metric $name for resource Kind $1, empty value passed."
     return 0
   fi
 
@@ -222,26 +248,31 @@ function resources_metrics() {
 }
 
 function rps_metrics() {
-  rps_metric_name="flant_pricing_ingress_nginx_controllers_rps"
+  metric_name="flant_pricing_ingress_nginx_controllers_rps"
   group="group_helm_rps_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
   prom_result="$(prometheus_query 'sum(rate(ingress_nginx_overall_requests_total[20m])) or vector(0)')"
-  if [[ ! -z "$prom_result" ]]; then
-    jq --arg metric_name $rps_metric_name --arg group "$group" '.data.result[] |
-      {
-        "name": $metric_name,
-        "group": $group,
-        "set": (.value[1] | tonumber),
-        "labels": {}
-      }
-      ' <<< "$prom_result" >> $METRICS_PATH
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
   fi
+
+  jq --arg metric_name $metric_name --arg group "$group" '.data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber),
+      "labels": {}
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
 }
 
 function __main__() {
   terraform_state_metrics
   helm_releases_metrics
+  helm_deprecated_resources_metrics
   resources_metrics
   rps_metrics
 }
