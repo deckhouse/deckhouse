@@ -35,6 +35,8 @@ title: "Сloud provider — GCP: настройки"
 |---|---|---|
 | standard | none | pd-standard-not-replicated |
 | standard | regional | pd-standard-replicated |
+| balanced | none | pd-balanced-not-replicated |
+| balanced | regional | pd-balanced-replicated |
 | ssd | none | pd-ssd-not-replicated |
 | ssd | regional | pd-ssd-replicated |
 
@@ -58,3 +60,4 @@ cloudProviderGcp: |
     - pd-ssd-replicated
     default: pd-ssd-not-replicated
 ```
+

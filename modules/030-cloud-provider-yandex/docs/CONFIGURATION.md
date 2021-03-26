@@ -18,6 +18,7 @@ title: "Сloud provider — Yandex.Cloud: настройки"
 |---|---|
 | network-hdd | network-hdd |
 | network-ssd | network-ssd |
+| network-ssd-nonreplicated | network-ssd-nonreplicated |
 
 А также позволяет отфильтровать ненужные StorageClass, указанием их в параметре `exclude`.
 

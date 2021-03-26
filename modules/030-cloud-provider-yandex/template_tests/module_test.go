@@ -60,6 +60,8 @@ const moduleValues = `
       type: network-hdd
     - name: network-ssd
       type: network-ssd
+    - name: network-ssd-nonreplicated
+      type: network-ssd-nonreplicated
     providerDiscoveryData:
       zones: ["zonea", "zoneb"]
       zoneToSubnetIdMap:
@@ -113,6 +115,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			csiCredentials := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "csi-credentials")
 			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
 			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
+			csiSSDSCNonReplicated := f.KubernetesGlobalResource("StorageClass", "network-ssd-nonreplicated")
 
 			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:cloud-controller-manager")
@@ -164,6 +167,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiCredentials.Exists()).To(BeTrue())
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
 
 			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.deckhouse.io/volume-expansion-mode: offline
@@ -207,9 +211,11 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
 			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
+			csiSSDSCNonReplicated := f.KubernetesGlobalResource("StorageClass", "network-ssd-nonreplicated")
 
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
 
 			Expect(csiHDDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(csiSSDSC.Field("metadata.annotations").String()).To(MatchYAML(`

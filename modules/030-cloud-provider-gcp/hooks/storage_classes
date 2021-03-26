@@ -22,6 +22,16 @@ function __main__() {
       "replicationType": "regional-pd"
     },
     {
+      "name": "pd-balanced-not-replicated",
+      "type": "pd-balanced",
+      "replicationType": "none"
+    },
+    {
+      "name": "pd-balanced-replicated",
+      "type": "pd-balanced",
+      "replicationType": "regional-pd"
+    },
+    {
       "name": "pd-ssd-not-replicated",
       "type": "pd-ssd",
       "replicationType": "none"
