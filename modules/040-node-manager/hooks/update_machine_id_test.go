@@ -79,7 +79,7 @@ spec:
 `
 	)
 
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"enabledModules":["cloud-provider-yandex"]}}`, `{}`)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("Empty cluster", func() {
