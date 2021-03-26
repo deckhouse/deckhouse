@@ -16,7 +16,7 @@ import (
 const templateName = "bashible.sh.tpl"
 
 // NewStorage returns storage object that will work against API services.
-func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
+func NewStorage(rootDir string, bashibleContext *template.Context) (*Storage, error) {
 	templatePath := path.Join(rootDir, "bashible", templateName)
 
 	tplContent, err := ioutil.ReadFile(templatePath)
@@ -36,7 +36,7 @@ func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, err
 type Storage struct {
 	templateContent []byte
 	templateName    string
-	bashibleContext template.Context
+	bashibleContext *template.Context
 }
 
 // Render renders single script content by name

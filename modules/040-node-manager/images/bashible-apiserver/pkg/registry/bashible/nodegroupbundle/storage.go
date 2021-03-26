@@ -27,7 +27,7 @@ import (
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.
-func NewStorage(rootDir string, bashibleContext template.Context) (*Storage, error) {
+func NewStorage(rootDir string, bashibleContext *template.Context) (*Storage, error) {
 	renderer := template.NewStepsRenderer(bashibleContext, rootDir, "node-group", template.GetNodegroupContextKey)
 	return &Storage{renderer}, nil
 }
@@ -37,7 +37,7 @@ type Storage struct {
 }
 
 // Render renders single script content by name which is expected to be of form {bundle}.{node-group-name}
-// with hyphens as delimiters, e.g. `ubuntu-lts.master-flomaster`.
+// with hyphens as delimiters, e.g. `ubuntu-lts.master`.
 func (s Storage) Render(name string) (runtime.Object, error) {
 	data, err := s.renderer.Render(name)
 	if err != nil {

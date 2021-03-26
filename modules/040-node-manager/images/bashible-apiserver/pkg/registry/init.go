@@ -9,7 +9,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
-func GetStorage(rootDir string, bashibleContext template.Context) map[string]rest.Storage {
+func GetStorage(rootDir string, bashibleContext *template.Context) map[string]rest.Storage {
 
 	v1alpha1storage := map[string]rest.Storage{}
 
