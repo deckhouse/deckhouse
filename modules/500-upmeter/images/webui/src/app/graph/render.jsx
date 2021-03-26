@@ -10,7 +10,7 @@ import {GroupProbeTooltip} from "../components/GroupProbeTooltip";
 import {PieBoundingRect} from "../components/PieBoundingRect";
 
 // Services
-import {langPack} from "../i18n/en";
+import {getGroupSpec, getProbeSpec} from "../i18n/en";
 import {topTicks, calculateTopTicks} from './topticks';
 import {getEventsSrv} from "../services/EventsSrv";
 import {getTimeRangeSrv} from "../services/TimeRangeSrv";
@@ -89,8 +89,9 @@ export function renderGraphTable(dataset, settings) {
         .attr("class", "fas fa-fw fa-caret-right group-icon")
 
       // Add label
+      const {title: groupTitle} = getGroupSpec(item.group)
       cellEl.append("span")
-        .text(item.group)
+        .text(groupTitle)
         .attr("class", "group-label")
 
       cellEl.on('click', function (d) {
@@ -130,8 +131,9 @@ export function renderGraphTable(dataset, settings) {
       rowEl.classed(`row-probe`, true);
 
       // Add label
+      const {title: probeTitle} = getProbeSpec(item.group, item.probe)
       cellEl.append("span")
-        .text(item.probe)
+        .text(probeTitle)
         .attr("class", "probe-label")
     }
 
