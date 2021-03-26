@@ -14,7 +14,6 @@ properties:
     - clusterType
     - mastersCount
     - kops
-    - deprecatedResourcesInHelmReleases
     - masterIsDedicated
     - masterMinCPU
     - masterMinMemory
@@ -53,8 +52,6 @@ properties:
         type: integer
       kops:
         type: boolean
-      deprecatedResourcesInHelmReleases:
-        type: integer
       masterIsDedicated:
         type: boolean
       masterMinCPU:

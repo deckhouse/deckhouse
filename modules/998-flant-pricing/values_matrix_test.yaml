@@ -51,7 +51,6 @@ flantPricing:
       clusterType: Cloud
       mastersCount: 3
       kops: false
-      deprecatedResourcesInHelmReleases: 100
       masterIsDedicated: false
       masterMinCPU: 4
       masterMinMemory: 800000
