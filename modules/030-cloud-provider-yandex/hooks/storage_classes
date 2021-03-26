@@ -17,7 +17,7 @@ function __main__() {
         "name": .
       }
     ]
-    ' <<< '["network-hdd","network-ssd"]')"
+    ' <<< '["network-hdd","network-ssd","network-ssd-nonreplicated"]')"
   if values::has cloudProviderYandex.storageClass.exclude; then
     storage_classes="$(jq --arg exclude "$(values::get cloudProviderYandex.storageClass.exclude | jq -r 'join("|")')" '
       map(select(.name | test("^(\($exclude))$") | not))

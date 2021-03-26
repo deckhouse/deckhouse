@@ -66,6 +66,12 @@ const moduleValues = `
     - name: pd-standard-replicated
       type: pd-standard
       replicationType: regional-pd
+    - name: pd-balanced-not-replicated
+      type: pd-balanced
+      replicationType: none
+    - name: pd-balanced-replicated
+      type: pd-balanced
+      replicationType: regional-pd
     - name: pd-ssd-not-replicated
       type: pd-ssd
       replicationType: none
@@ -130,6 +136,8 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			pdCSIResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:csi:controller:external-resizer")
 			pdCSIStandardNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-not-replicated")
 			pdCSIStandardReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-replicated")
+			pdCSIBalancedNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-balanced-not-replicated")
+			pdCSIBalancedReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-balanced-replicated")
 			pdCSISSDNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-not-replicated")
 			pdCSISSDReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-replicated")
 
@@ -183,6 +191,8 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(pdCSIResizerCRB.Exists()).To(BeTrue())
 			Expect(pdCSIStandardNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSIStandardReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSIBalancedNotReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSIBalancedReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDReplicatedSC.Exists()).To(BeTrue())
 
@@ -223,16 +233,22 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			pdCSIStandardNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-not-replicated")
 			pdCSIStandardReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-standard-replicated")
+			pdCSIBalancedNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-balanced-not-replicated")
+			pdCSIBalancedReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-balanced-replicated")
 			pdCSISSDNotReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-not-replicated")
 			pdCSISSDReplicatedSC := f.KubernetesGlobalResource("StorageClass", "pd-ssd-replicated")
 
 			Expect(pdCSIStandardNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSIStandardReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSIBalancedNotReplicatedSC.Exists()).To(BeTrue())
+			Expect(pdCSIBalancedReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDReplicatedSC.Exists()).To(BeTrue())
 
 			Expect(pdCSIStandardNotReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(pdCSIStandardReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(pdCSIBalancedNotReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(pdCSIBalancedReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(pdCSISSDNotReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(pdCSISSDReplicatedSC.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"

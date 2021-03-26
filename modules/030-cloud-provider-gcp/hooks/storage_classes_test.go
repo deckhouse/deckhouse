@@ -33,6 +33,16 @@ cloudProviderGcp:
 			Expect(f.ValuesGet("cloudProviderGcp.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
+	"name": "pd-balanced-not-replicated",
+	"replicationType": "none",
+	"type": "pd-balanced"
+  },
+  {
+	"name": "pd-balanced-replicated",
+	"replicationType": "regional-pd",
+	"type": "pd-balanced"
+  },
+  {
 	"name": "pd-ssd-not-replicated",
 	"replicationType": "none",
 	"type": "pd-ssd"
