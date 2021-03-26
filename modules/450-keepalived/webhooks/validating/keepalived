@@ -31,13 +31,68 @@ EOF
 }
 
 function __main__() {
+  jq_new_instances_path='.review.request.object.spec.vrrpInstances'
+
+  jq_group_new_instances="
+    $jq_new_instances_path
+    | group_by(.id)"
+
+  jq_get_duplicated_new_instances="
+    $jq_group_new_instances
+    | map(select(length>1) | .[0])"
+
   allowed=true
   message=""
-  for id in $(context::jq -r '.review.request.object.spec.vrrpInstances[].id'); do
-    if context::jq -e --argjson id "$id" '[.snapshots.keepalived_instances[].filterResult.ids] | add | index($id)' >/dev/null; then
+
+  operation="$(context::jq -r '.review.request.operation')"
+  ids_to_check="$(context::jq -r "${jq_new_instances_path}[].id")"
+
+  # for update we need to skip checking ids in cluster
+  # for KeepalivedInstance with passed name
+  # because it is already present in cluster :-)
+  filtered_name=""
+  if [[ "$operation" == "UPDATE" ]]; then
+    filtered_name=$(context::jq -r '.review.request.name')
+  fi
+
+  # try to find duplicates in input ids
+  if context::jq -er "
+    $jq_get_duplicated_new_instances
+    | length > 0" > /dev/null;
+  then
+      # found duplicates
+      allowed=false
+      duplicated_ids="$(context::jq -r "
+        $jq_get_duplicated_new_instances
+        | [.[].id]
+        | join(\", \")"
+      )"
+      message="${message}vrrpInstance.id found duplicates for ids: $duplicated_ids; "
+
+      # does not skip verify using ids in clusters that
+      # new ids may be in cluster and we want to report about all errors
+
+      # deduplicate
+      ids_to_check="$(context::jq -er "
+        $jq_group_new_instances
+        | map(.[0])
+        | .[].id"
+      )"
+  fi
+
+  for id in $ids_to_check; do
+    if context::jq -e --argjson id "$id" --arg filter "$filtered_name" '
+      [
+        .snapshots.keepalived_instances[].filterResult
+        | select(.name != $filter)
+        | .ids
+      ] | flatten | index($id)
+   ' >/dev/null; then
+
       allowed=false
       message="${message}vrrpInstance.id '$id' is already in use; "
     fi
+
   done
 
   if [[ "$allowed" == "true" ]]; then
