@@ -115,6 +115,8 @@ function calculate_disk_size_and_retention() {
   effective_storage_class=$(values::get prometheus.internal.prometheus${prometheus_name^}.effectiveStorageClass)
   is_sc_allow_expansion=$(jq -r --arg name "$effective_storage_class" '.[$name]' <<< "$storage_classes")
 
+  volume_expansion_mode=$(context::jq -r --arg name "$effective_storage_class" '.snapshots.sc[].object | select(.metadata.name == $name) | .metadata.annotations."storageclass.deckhouse.io/volume-expansion-mode"')
+
   if [ "$(context::jq -r --arg name $prometheus_name '[.snapshots.pvc[].object | select(.metadata.labels.prometheus == $name)] | length')" -gt "0" ]; then
     # If at least one pvc exists
 
@@ -144,7 +146,7 @@ function calculate_disk_size_and_retention() {
     if values::has prometheus.internal.prometheus${prometheus_name^}.diskUsage; then
       disk_usage="$(values::get prometheus.internal.prometheus${prometheus_name^}.diskUsage)"
 
-      if [ "$is_sc_allow_expansion" == "true" ] && (( $disk_usage > 90 )) ; then
+      if [ "$volume_expansion_mode" != "offline" ] && [ "$is_sc_allow_expansion" == "true" ] && (( $disk_usage > 90 )) ; then
         new_pvc_size_gigabytes=$(( pvc_size_gigabytes + 5 ))
 
         disk_resize_limit_gigabytes="300"

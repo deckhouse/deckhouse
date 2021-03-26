@@ -257,7 +257,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(scFast.Exists()).To(BeTrue())
 			Expect(scSlow.Exists()).To(BeTrue())
 
-			Expect(scFast.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(scFast.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(scSlow.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))

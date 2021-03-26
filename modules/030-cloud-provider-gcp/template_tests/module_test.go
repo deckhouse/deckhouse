@@ -231,9 +231,9 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(pdCSISSDNotReplicatedSC.Exists()).To(BeTrue())
 			Expect(pdCSISSDReplicatedSC.Exists()).To(BeTrue())
 
-			Expect(pdCSIStandardNotReplicatedSC.Field("metadata.annotations").Exists()).To(BeFalse())
-			Expect(pdCSIStandardReplicatedSC.Field("metadata.annotations").Exists()).To(BeFalse())
-			Expect(pdCSISSDNotReplicatedSC.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(pdCSIStandardNotReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(pdCSIStandardReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(pdCSISSDNotReplicatedSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(pdCSISSDReplicatedSC.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))

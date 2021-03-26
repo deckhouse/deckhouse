@@ -194,8 +194,8 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(st1StorageClass.Exists()).To(BeTrue())
 			Expect(iopsStorageClass.Exists()).To(BeTrue())
 
-			Expect(gp2StorageClass.Field("metadata.annotations").Exists()).To(BeFalse())
-			Expect(st1StorageClass.Field("metadata.annotations").Exists()).To(BeFalse())
+			Expect(gp2StorageClass.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(st1StorageClass.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(iopsStorageClass.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
