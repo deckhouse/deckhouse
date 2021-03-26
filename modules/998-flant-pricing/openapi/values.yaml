@@ -69,3 +69,5 @@ properties:
             type: string
           key:
             type: string
+          certificate_updated:
+            type: boolean
