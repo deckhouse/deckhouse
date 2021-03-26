@@ -9,10 +9,14 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/ReneKroon/ttlcache"
 	"github.com/coreos/pkg/capnslog"
+	"github.com/felixge/httpsnoop"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -82,6 +86,8 @@ type Handler struct {
 	Cache        *ttlcache.Cache
 	reverseProxy *httputil.ReverseProxy
 	crowdClient  *CrowdClient
+
+	PrometheusRegistry *prometheus.Registry
 }
 
 var _ http.Handler = &Handler{}
@@ -104,8 +110,57 @@ func (h *Handler) Run() {
 
 	h.crowdClient = NewCrowdClient(h.CrowdBaseURL, h.CrowdApplicationLogin, h.CrowdApplicationPassword, h.CrowdGroups)
 
-	http.Handle("/", h)
+	h.PrometheusRegistry = prometheus.NewRegistry()
+	requestCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Count of all HTTP requests.",
+	}, []string{"handler", "code", "method"})
+
+	err := h.PrometheusRegistry.Register(requestCounter)
+	if err != nil {
+		logger.Fatalf("cannot register prometheus metrics: %s", err)
+	}
+
+	err = h.PrometheusRegistry.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	if err != nil {
+		logger.Fatalf("cannot register process metrics: %s", err)
+	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		m := httpsnoop.CaptureMetrics(h, w, r)
+		requestCounter.With(prometheus.Labels{
+			"handler": "/",
+			"code":    strconv.Itoa(m.Code),
+			"method":  r.Method,
+		}).Inc()
+	})
+	http.Handle("/metrics", promhttp.HandlerFor(h.PrometheusRegistry, promhttp.HandlerOpts{}))
 	http.HandleFunc("/healthz", healthz)
+	caCert, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	if err != nil {
+		logger.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		},
+	}
+	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		_, err := client.Get(h.KubernetesAPIServerURL + "/version")
+		if err != nil {
+			logger.Error(err)
+			http.Error(w, "Error", http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}
+	})
+
 	logger.Fatal(http.ListenAndServe(h.ListenAddress, nil))
 }
 
@@ -125,6 +180,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Printf("%s %v -- [%s] %s%s %v", basicLogin, groups, r.Method, r.Host, r.RequestURI, r.Header)
+
 	h.modifyRequest(w, r, basicLogin, groups)
 }
 
