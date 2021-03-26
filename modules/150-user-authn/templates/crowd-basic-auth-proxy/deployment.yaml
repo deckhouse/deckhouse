@@ -101,7 +101,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /healthz
+            path: /ready
             port: 7332
             scheme: HTTP
           periodSeconds: 10
