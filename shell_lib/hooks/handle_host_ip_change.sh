@@ -38,7 +38,7 @@ function common_hooks::handle_host_ip_change::main() {
   for key in $(jq -rc 'keys[]' <<< "${pods}"); do
     pod=$(jq -rc --arg key "$key" '.[$key | tonumber]' <<< "${pods}")
 
-    if jq -rce '.filterResult.hostIP | not' <<< "$pod"; then
+    if jq -rce '.filterResult.hostIP | not' <<< "$pod" >/dev/null; then
       # Pod doesn't exist, we can skip it
       continue
     fi
