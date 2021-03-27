@@ -64,7 +64,7 @@ EOF
 
   cert_json="$(cat <<EOF
 {
-  "CN": "user-authz-webhook",
+  "CN": "webhook-handler",
   "hosts": [
     "${svc_host}",
     "${svc_fqdn}",
