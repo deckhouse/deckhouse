@@ -67,7 +67,7 @@ if [[ "$should_install_containerd" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
   bb-apt-install $desired_version
 
-  VERSION="v1.20.0"
+  VERSION="v{{ .kubernetesVersion }}.0"
   curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-${VERSION}-linux-amd64.tar.gz --output crictl-${VERSION}-linux-amd64.tar.gz
   tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
   rm -f crictl-$VERSION-linux-amd64.tar.gz

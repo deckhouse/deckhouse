@@ -12,7 +12,8 @@ global:
         csiExternalResizer: imagehash
         csiNodeDriverRegistrar: imagehash
       cloudProviderOpenstack:
-        cinderCsiPlugin: imagehash
+        cinderCsiPlugin116: imagehash
+        cinderCsiPlugin119: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
   discovery:

@@ -1,4 +1,7 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- if hasKey .Values.global.modulesImages.tags.cloudProviderAzure $ccmImageName }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -13,7 +16,7 @@ spec:
     name: cloud-controller-manager
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
+  {{- end }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -57,7 +60,7 @@ spec:
       containers:
         - name: azure-cloud-controller-manager
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
-          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/cloud-controller-manager:{{ .Values.global.modulesImages.tags.cloudProviderAzure.cloudControllerManager }}
+          image: {{ .Values.global.modulesImages.registry }}/cloud-provider-azure/cloud-controller-manager-{{ $kubernetesSemVer.Major }}-{{ $kubernetesSemVer.Minor }}:{{ index .Values.global.modulesImages.tags.cloudProviderAzure $ccmImageName }}
           command:
             - /usr/local/bin/cloud-controller-manager
             - --v=2
@@ -88,3 +91,4 @@ spec:
       - name: config
         secret:
           secretName: cloud-controller-manager
+{{- end }}

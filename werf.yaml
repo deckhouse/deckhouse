@@ -65,20 +65,12 @@ ansible:
       dest: /usr/local/bin/yq
       mode: +x
 
-  - name: "Install kubectl 1.16"
-    get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.16.{{ index $CandiVersionMap "k8s" "1.16" "patch" }}/bin/linux/amd64/kubectl
-      dest: /usr/local/bin/kubectl-1.16
-      checksum: sha256:{{ index $CandiVersionMap "k8s" "1.16" "kubectl" "checksum" }}
-      mode: +x
-
-  - name: "Install kubectl 1.19"
-    get_url:
-      url: https://storage.googleapis.com/kubernetes-release/release/v1.19.{{ index $CandiVersionMap "k8s" "1.19" "patch" }}/bin/linux/amd64/kubectl
-      dest: /usr/local/bin/kubectl-1.19
-      checksum: sha256:{{ index $CandiVersionMap "k8s" "1.19" "kubectl" "checksum" }}
-      mode: +x
-
+  - name: "Install kubectl"
+    shell: |
+{{- range $k8sVersion := tuple "1.16" "1.19" }}
+      curl -L https://storage.googleapis.com/kubernetes-release/release/v{{ $k8sVersion }}.{{ index $CandiVersionMap "k8s" $k8sVersion "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl-{{ $k8sVersion }}
+      chmod +x /usr/local/bin/kubectl-{{ $k8sVersion }}
+{{- end }}
   - name: "Install kubectl wrapper"
     copy:
       content: |

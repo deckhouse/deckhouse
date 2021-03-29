@@ -41,14 +41,13 @@ const globalValues = `
         csiExternalAttacher116: imagehash
         csiExternalProvisioner119: imagehash
         csiExternalAttacher119: imagehash
-        csiExternalResizer: imagehash
-        csiNodeDriverRegistrar: imagehash
+        csiExternalResizer116: imagehash
+        csiExternalResizer119: imagehash
+        csiNodeDriverRegistrar116: imagehash
+        csiNodeDriverRegistrar119: imagehash
       cloudProviderAzure:
-        csiNodeDriverRegistrar: imagehash
-        simpleBridge: imagehash
-        cloudControllerManager: imagehash
-        azureCsiPlugin: imagehash
-        livenessprobe: imagehash
+        cloudControllerManager116: imagehash
+        cloudControllerManager119: imagehash
         azurediskCsi: imagehash
   discovery:
     d8SpecificNodeCountByRole:

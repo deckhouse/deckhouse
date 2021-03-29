@@ -5,7 +5,7 @@ title: Control Plane Kubeadm
 Go-шаблоны для подготовки конфигурации kubeadm. 
 
 * `config.yaml.tpl` - основная конфигурация
-* `kustomize/` -  патчи, применяемые к компонентам control-plane при подготовке кластера Kubernetes
+* `patches/` -  патчи, применяемые к компонентам control-plane при подготовке кластера Kubernetes
 
 Используются при создании первого узла в кластере и в модуле [control-plane-manager](/modules/040-control-plane-manager/).
 

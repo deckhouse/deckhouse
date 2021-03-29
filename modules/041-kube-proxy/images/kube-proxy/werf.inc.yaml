@@ -1,0 +1,7 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: k8s.gcr.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}
+{{- end }}

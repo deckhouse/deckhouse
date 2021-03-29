@@ -1,0 +1,127 @@
+Index: pkg/common/connectionmanager/zones.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/connectionmanager/zones.go b/pkg/common/connectionmanager/zones.go
+--- a/pkg/common/connectionmanager/zones.go	(revision 1fa841dbb4017f0ec82e2093072db211c73b7f41)
++++ b/pkg/common/connectionmanager/zones.go	(revision 1abbba9ed149b7785b22f995870eb86068d83ec5)
+@@ -101,8 +101,13 @@
+ 		return nil, err
+ 	}
+ 
++	var dcConfig []string
++	if tmpVsi.Cfg != nil {
++		dcConfig = strings.Split(tmpVsi.Cfg.Datacenters, ",")
++	}
++
+ 	// More than 1 DC in this VC
+-	if numOfDc > 1 {
++	if (numOfDc > 1 && len(dcConfig) > 1) || (numOfDc > 1 && dcConfig == nil) {
+ 		klog.Info("Multi Datacenter configuration detected")
+ 		return cm.getDIFromMultiVCorDC(ctx, zoneLabel, regionLabel, zoneLooking, regionLooking)
+ 	}
+@@ -116,12 +121,23 @@
+ 		return nil, err
+ 	}
+ 
+-	discoveryInfo := &ZoneDiscoveryInfo{
+-		VcServer:   vc,
+-		DataCenter: datacenterObjs[0],
+-	}
++	if dcConfig == nil {
++		return &ZoneDiscoveryInfo{
++			VcServer:   vc,
++			DataCenter: datacenterObjs[0],
++		}, nil
++	} else {
++		for _, dc := range datacenterObjs {
++			if strings.TrimPrefix(dc.Name(), "/") == dcConfig[0] {
++				return &ZoneDiscoveryInfo{
++					VcServer:   vc,
++					DataCenter: dc,
++				}, nil
++			}
++		}
++		return nil, ErrUnsupportedConfiguration
+ 
+-	return discoveryInfo, nil
++	}
+ }
+ 
+ func (cm *ConnectionManager) getDIFromMultiVCorDC(ctx context.Context,
+Index: pkg/common/vclib/datacenter.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
+--- a/pkg/common/vclib/datacenter.go	(revision 1fa841dbb4017f0ec82e2093072db211c73b7f41)
++++ b/pkg/common/vclib/datacenter.go	(revision 1abbba9ed149b7785b22f995870eb86068d83ec5)
+@@ -23,6 +23,7 @@
+ 	"path"
+ 	"path/filepath"
+ 	"strings"
++	"time"
+ 
+ 	"github.com/vmware/govmomi/find"
+ 	"github.com/vmware/govmomi/object"
+@@ -646,7 +647,7 @@
+ 			VslmCreateSpecBackingSpec: types.VslmCreateSpecBackingSpec{
+ 				Datastore: ds,
+ 			},
+-			ProvisioningType: string(types.BaseConfigInfoDiskFileBackingInfoProvisioningTypeThin),
++			ProvisioningType: string(types.BaseConfigInfoDiskFileBackingInfoProvisioningTypeLazyZeroedThick),
+ 		},
+ 	}
+ 
+@@ -784,6 +785,49 @@
+ 	return nil, ErrNoDiskIDFound
+ }
+ 
++func (dc *Datacenter) ExtendFirstClassDisk(ctx context.Context, diskID string, newCapacityInMB int64) error {
++	newClient, err := vslm.NewClient(ctx, dc.Client())
++	if err != nil {
++		return err
++	}
++
++	m := vslm.NewGlobalObjectManager(newClient)
++
++	task, err := m.ExtendDisk(ctx, types.ID{Id: diskID}, newCapacityInMB)
++	klog.Warningf("Extending disk %v with newCapacityInMB %v", diskID, newCapacityInMB)
++	if err != nil {
++		klog.Errorf("Extend(%s) failed. Err: %v", diskID, err)
++		return err
++	}
++
++	taskResult, err := task.Wait(ctx, 30*time.Second)
++	klog.Warningf("taskResult: %v", taskResult)
++	if err != nil {
++		klog.Errorf("Wait(%s) failed. Err: %v", diskID, err)
++		return err
++	}
++
++	return nil
++}
++
++func (dc *Datacenter) CountFirstClassDiskAssociations(ctx context.Context, diskID string) (count int, err error) {
++	newClient, err := vslm.NewClient(ctx, dc.Client())
++	if err != nil {
++		return 0, err
++	}
++
++	m := vslm.NewGlobalObjectManager(newClient)
++
++	associations, err := m.RetrieveAssociations(ctx, []types.ID{{Id: diskID}})
++	klog.Warningf("Associations %v", associations[0].VmDiskAssociation)
++	if err != nil {
++		klog.Errorf("RetrieveAssociations(%s) failed. Err: %v", diskID, err)
++		return 0, err
++	}
++
++	return len(associations[0].VmDiskAssociation), nil
++}
++
+ // DeleteFirstClassDisk deletes an FCD.
+ func (dc *Datacenter) DeleteFirstClassDisk(ctx context.Context,
+ 	datastoreName string, datastoreType ParentDatastoreType, diskID string) error {

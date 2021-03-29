@@ -56,8 +56,8 @@
   {{- $context := index . 0 }}
   {{- $tpl_context := index . 1 }}
 kubeadm-config.yaml: {{ tpl ($context.Files.Get "kubeadm/config.yaml.tpl") $tpl_context | b64enc }}
-  {{- range $kustomize_file, $_ := $context.Files.Glob "kubeadm/kustomize/*" }}
-kubeadm-kustomize-{{ base $kustomize_file }}: {{ tpl ($context.Files.Get $kustomize_file) $tpl_context | b64enc }}
+  {{- range $patch_file, $_ := $context.Files.Glob "kubeadm/patches/*" }}
+{{ base $patch_file }}: {{ tpl ($context.Files.Get $patch_file) $tpl_context | b64enc }}
   {{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}

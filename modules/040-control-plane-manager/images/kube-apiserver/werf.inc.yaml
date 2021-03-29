@@ -1,6 +1,7 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
-  {{- $patch := $value.patch | toString }}
+  {{- $patch := toString $value.patch }}
+  {{- $v := semver $version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
@@ -37,8 +38,8 @@ shell:
   - |
     cat <<EOF > .kube-version
     KUBE_GIT_VERSION='v{{ printf "%s.%s" $version $patch }}'
-    KUBE_GIT_MAJOR='{{ $version }}'
-    KUBE_GIT_MINOR='{{ $patch }}'
+    KUBE_GIT_MAJOR='{{ $v.Major }}'
+    KUBE_GIT_MINOR='{{ $v.Minor }}'
     KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
     KUBE_GIT_TREE_STATE='archive'
     EOF

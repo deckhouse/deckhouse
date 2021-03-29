@@ -51,9 +51,9 @@ apiVersions:
       kubernetesVersion:
         type: string
         enum:
-        - "1.15"
         - "1.16"
         - "1.19"
+        - "1.20"
     oneOf:
     - properties:
         clusterType:

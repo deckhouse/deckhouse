@@ -1,6 +1,3 @@
-###
-### controller
-###
 {{- define "csi_controller_args" }}
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/config/cloud-config"
@@ -27,21 +24,6 @@
   readOnly: true
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s/cloud-provider-openstack/cinder-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderOpenstack.cinderCsiPlugin)}}
-
-{{- $csiControllerConfig := dict }}
-{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
-{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
-{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
-{{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
-{{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
-
-{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
-
-###
-### node
-###
-
 {{- define "csi_node_args" }}
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/config/cloud-config"
@@ -67,12 +49,28 @@
   readOnly: true
 {{- end }}
 
-{{- $csiNodeConfig := dict }}
-{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
-{{- $_ := set $csiNodeConfig "driverFQDN" "cinder.csi.openstack.org" }}
-{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $csiImageName := join "" (list "cinderCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- if hasKey .Values.global.modulesImages.tags.cloudProviderOpenstack $csiImageName }}
 
-{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+  {{- $csiControllerImage := (printf "%s/cloud-provider-openstack/cinder-csi-plugin-%s-%s:%s" .Values.global.modulesImages.registry (toString $kubernetesSemVer.Major) (toString $kubernetesSemVer.Minor) (index .Values.global.modulesImages.tags.cloudProviderOpenstack $csiImageName)) }}
+
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" "cinder.csi.openstack.org" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}

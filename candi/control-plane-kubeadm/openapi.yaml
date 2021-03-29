@@ -88,11 +88,33 @@ apiVersions:
             properties:
               patch:
                 type: [string, number]
-              kubectl:
-                type: object
-                properties:
-                  checksum:
-                    type: string
               cni_version:
                 type: string
               bashible: *bashible
+              ccm:
+                type: object
+                properties:
+                  openstack:
+                    type: string
+                  yandex:
+                    type: string
+                  aws:
+                    type: string
+                  vsphere:
+                    type: string
+                  azure:
+                    type: string
+                  gcp:
+              csi:
+                type: object
+                properties:
+                  openstack:
+                    type: string
+                  provisioner:
+                    type: string
+                  attacher:
+                    type: string
+                  resizer:
+                    type: string
+                  registrar:
+                    type: string

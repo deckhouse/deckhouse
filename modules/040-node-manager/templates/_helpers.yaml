@@ -1,5 +1,5 @@
 {{- define "kubernetes_version_enabled" }}
-  {{- if semverCompare "<= 1.16 || >= 1.19" .Values.global.discovery.kubernetesVersion }}
+  {{- if not (semverCompare "= 1.17 || = 1.18" .Values.global.discovery.kubernetesVersion) }}
     not empty string
   {{- end }}
 {{- end }}

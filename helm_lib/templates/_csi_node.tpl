@@ -10,8 +10,11 @@
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
 
-  {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common "csiNodeDriverRegistrar" }}
-  {{- $driverRegistrarImage := printf "%s/common/csi-node-driver-registrar:%s" $context.Values.global.modulesImages.registry $driverRegistrarImageTag }}
+  {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
+
+  {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+  {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common $driverRegistrarImageName }}
+  {{- $driverRegistrarImage := printf "%s/common/csi-node-driver-registrar-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $driverRegistrarImageTag }}
 
   {{- if (include "helm_lib_cluster_has_non_static_nodes" $context) }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

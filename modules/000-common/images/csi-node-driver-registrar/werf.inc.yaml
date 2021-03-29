@@ -1,0 +1,8 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.registrar }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: k8s.gcr.io/sig-storage/csi-node-driver-registrar:{{ $value.csi.registrar }}
+  {{- end }}
+{{- end }}

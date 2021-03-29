@@ -20,7 +20,6 @@ shell:
   - apk add --no-cache jq curl bash gettext grep
   install:
   - curl -L https://storage.googleapis.com/kubernetes-release/release/v1.19.{{ index $.CandiVersionMap "k8s" "1.19" "patch" }}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
-  - echo "{{ index $.CandiVersionMap "k8s" "1.19" "kubectl" "checksum" }}  /usr/local/bin/kubectl" | sha256sum -c
   - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl-certinfo_1.4.1_linux_amd64 -o /usr/local/bin/cfssl-certinfo
   - curl -L https://github.com/cloudflare/cfssl/releases/download/v1.4.1/cfssl_1.4.1_linux_amd64 -o /usr/local/bin/cfssl
   - chmod +x /usr/local/bin/kubectl /usr/local/bin/cfssl-certinfo /usr/local/bin/cfssl

@@ -5,6 +5,7 @@ include:
   - '.gitlab/ci_templates/build.yml'
   - '.gitlab/ci_templates/cleanup.yml'
   - '.gitlab/ci_templates/tests.yml'
+  - '.gitlab/ci_templates/cloud-tests.yml'
   - '.gitlab/ci_templates/deploy.yml'
 
 variables:
@@ -19,6 +20,8 @@ stages:
   - build_modules_images
   - build
   - testing
+  - cloud_testing_docker
+  - cloud_testing_containerd
   - deploy
   - deploy_website
   - cleanup_registry
@@ -59,8 +62,8 @@ OpenAPI Test Cases:
   tags:
     - werf-distributed
 
-Cloud layouts Tests (manual):
-  extends: .Cloud layouts Tests template
+Cloud layouts Tests docker (manual):
+  extends: .Cloud layouts Tests template for docker
   tags:
     - cloud-layouts
   except:
@@ -73,8 +76,22 @@ Cloud layouts Tests (manual):
     - rock-solid
   when: manual
 
-Cloud layouts Tests vSphere (manual):
-  extends: .Cloud layouts Tests vSphere template
+Cloud layouts Tests containerd (manual):
+  extends: .Cloud layouts Tests template for containerd
+  tags:
+    - cloud-layouts
+  except:
+    refs:
+      - schedules
+      - alpha
+      - beta
+      - early-access
+      - stable
+      - rock-solid
+  when: manual
+
+Cloud layouts Tests vSphere docker (manual):
+  extends: .Cloud layouts Tests vSphere template for docker
   tags:
     - cloud-layouts-vsphere
   except:
@@ -87,8 +104,22 @@ Cloud layouts Tests vSphere (manual):
     - rock-solid
   when: manual
 
-Cloud layouts Tests (scheduled):
-  extends: .Cloud layouts Tests template
+Cloud layouts Tests vSphere containerd (manual):
+  extends: .Cloud layouts Tests vSphere template for containerd
+  tags:
+    - cloud-layouts-vsphere
+  except:
+    refs:
+      - schedules
+      - alpha
+      - beta
+      - early-access
+      - stable
+      - rock-solid
+  when: manual
+
+Cloud layouts Tests for docker (scheduled):
+  extends: .Cloud layouts Tests template for docker
   tags:
     - cloud-layouts
   only:
@@ -96,13 +127,31 @@ Cloud layouts Tests (scheduled):
     - $CLOUD_LAYOUTS_SCHEDULE
   when: always
 
-Cloud layouts Tests vSphere (scheduled):
-  extends: .Cloud layouts Tests vSphere template
+Cloud layouts Tests for containerd (scheduled):
+  extends: .Cloud layouts Tests template for containerd
+  tags:
+    - cloud-layouts
+  only:
+    variables:
+      - $CLOUD_LAYOUTS_SCHEDULE
+  when: always
+
+Cloud layouts Tests vSphere for docker (scheduled):
+  extends: .Cloud layouts Tests vSphere template for docker
   tags:
     - cloud-layouts-vsphere
   only:
     variables:
     - $CLOUD_LAYOUTS_SCHEDULE
+  when: always
+
+Cloud layouts Tests vSphere for containerd (scheduled):
+  extends: .Cloud layouts Tests vSphere template for containerd
+  tags:
+    - cloud-layouts-vsphere
+  only:
+    variables:
+      - $CLOUD_LAYOUTS_SCHEDULE
   when: always
 
 Hooks Configuration Tests:
