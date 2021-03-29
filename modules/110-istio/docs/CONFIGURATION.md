@@ -6,7 +6,7 @@ title: "Модуль istio: настройки"
 
 ```yaml
 data:
-  openvpnEnabled: "true"
+  istioEnabled: "true"
 ```
 
 ## Параметры
