@@ -2,19 +2,19 @@ if bb-yum-repo? d8-kubernetes/x86_64; then
   exit 0
 fi
 
+# TODO problem with keys in kubernetes repo, so we disable repo_gpgcheck
 cat > /etc/yum.repos.d/d8-kubernetes.repo << "EOF"
 [d8-kubernetes]
 name=Kubernetes
 baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
 enabled=1
 gpgcheck=1
-repo_gpgcheck=1
+repo_gpgcheck=0
 gpgkey=file:///etc/pki/rpm-gpg/d8-kubernetes-yum file:///etc/pki/rpm-gpg/d8-kubernetes-rpm-package
 EOF
 
 cat > /etc/pki/rpm-gpg/d8-kubernetes-yum << EOF
 -----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1
 
 mQENBFUd6rIBCAD6mhKRHDn3UrCeLDp7U5IE7AhhrOCPpqGF7mfTemZYHf/5Jdjx
 cOxoSFlK7zwmFr3lVqJ+tJ9L1wd1K6P7RrtaNwCiZyeNPf/Y86AJ5NJwBe0VD0xH
@@ -43,8 +43,35 @@ xF9dHtydgdyDyyNJol9CGo71Fsqd9+K5CAaurBDG4LaMFroz9ArN6NN4/QyCLrun
 Kssk1asUjvVGGuK1BmbNNnY+hbF+/pv5O/m/Ss9ob663Unjumf6RiC1Rop2wnPW6
 aLofMroBpwN/QLQKSwl0obsw5axlwHjF47Eli7Lo247opx0TPz9fIRSMi4g6WFhN
 3SEfwT9IQFtdd+3v9UFALnA2rjSLM+L7pYUr97U7jYMinNDvj2iBhDV6h17E82Ev
-N6QpHdeEas1cn3mvko7XRWuwsU13wg==
-=4CNh
+N6QpHdeEas1cn3mvko7XRWuwsU13wpkBDQRfyX5eAQgA0z1F3ZDbtOe1/j90k1cQ
+syaVNjJ/rVGpinUnVWpmxnmBSDXKfxBsDRoXW9GtQWx7NUlmGW88IeHevqd5OAAc
+1TDvkaTLv2gcfROWjp+XPBsx42f1RGoXqiy4UlHEgswoUmXDeY89IUxoZgBmr4jL
+ekTM0n2yIWT49ZA8wYhndEMHf6zj5ya+LWj67kd3nAY4R7YtfwTBnf5Y9Be80Jwo
+6ez66oKRDwU/I6PcF9sLzsl7MEiPxrH2xYmjiXw52Hp4GhIPLBfrt1jrNGdtHEq+
+pEu+ih6U32tyY2LHx7fDQ8PMOHtx/D8EMzYkT/bV3jAEikM93pjI/3pOh8Y4oWPa
+hQARAQABtLpnTGludXggUmFwdHVyZSBBdXRvbWF0aWMgU2lnbmluZyBLZXkgKC8v
+ZGVwb3QvZ29vZ2xlMy9wcm9kdWN0aW9uL2JvcmcvY2xvdWQtcmFwdHVyZS9rZXlz
+L2Nsb3VkLXJhcHR1cmUtcHVia2V5cy9jbG91ZC1yYXB0dXJlLXNpZ25pbmcta2V5
+LTIwMjAtMTItMDMtMTZfMDhfMDUucHViKSA8Z2xpbnV4LXRlYW1AZ29vZ2xlLmNv
+bT6JASgEEwEIABwFAl/Jfl4JEItXxcKDb0vrAhsDBQkDwwqwAhkBAABBeggAmnpK
+6OmlCSXd5lba7SzjnsFfHrdY3qeXsJqTq3sP6Wo0VQXiG1dWsFZ9P/BHHpxXo5j+
+lhXHQlqLg1SEv0JkRUFfTemFzfD4sGpa0Vd20yhQR5MGtXBB+AGnwhqNHA7yW/Dd
+yZzP0Zm9Skhiq+2V6ZpC7WFaq+h4M5frJ65R9F8LJea90sr6gYL0WE0CmaSqpgRH
+dbnYnlaC0hffPJCnjQ4xWvkNUo2Txlvl7pIBPJAVG0g8fGPKugrM4d1VWPuSVHqo
+pkYCdgA2Nv95RLQGTrZsHAZYWNHD1laoGteBO5ExkligulvejX8vSuy+GKafJ0zB
+K7rNfNWqsMDXzKp6Z7kBDQRfyX5eAQgAw0ofinQXjYyHJVVZ0SrdEE+efd8heFlW
+bf04DbmhGebypJ6KFVSKvnCSH2P95VKqvE3uHRI6HbRcinuV7noKOqo87PE2BXQg
+B16V0aFKJU9eJvqpCfK4Uq6TdE8SI1iWyXZtzZa4E2puUSicN0ocqTVMcqJZx3pV
+8asigwpMQUg5kesXHX7d8HUJeSJCAMMXup8sJklLaZ3Ri0SXSa2iYmlhdiAYxTYN
+70xGI+HqHoWXeF67xMi1azGymeZun9aOkFEbs0q1B/SU/4r2agpoT6aLApV119G2
+4vStGf/rlcpOr++prNzudKyKtC9GHoTPBvvqphjuNtftKgi5HQ+f4wARAQABiQEf
+BBgBCAATBQJfyX5eCRCLV8XCg29L6wIbDAAAGxoIAMO5YUlhJWaRldUiNm9itujw
+fd31SNbUGFd+1iBJQibGoxfv2Q3ySdnep3LkEpXh+VkXHHOIWXysMrAP3qaqwp8H
+O8irE6GeLMPMbCRdVLUORDbZHQK1YgSR0uGNlWeQxFJq+RIIRrWRYfWumi6HjFTP
+562Qi7LQ1aDyhKS6JB7v4HmwsH0/5/VNXaJRSKL4OnigApecTsfq83AFae0eD+du
+4337nc93SjHS4T67LRtMOWG8nzz8FjDj6fpFBeOXmHUe5CipNPVayTZBBidCkEOo
+pqkdU59JMruHL5H6pwlBdK65+wnQai0gr9UEYYK+kwoUH+8p1rD8+YBnVY4d7SM=
+=XoKl
 -----END PGP PUBLIC KEY BLOCK-----
 EOF
 
