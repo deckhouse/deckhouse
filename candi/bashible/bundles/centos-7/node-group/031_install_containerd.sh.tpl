@@ -7,6 +7,7 @@ post-install() {
     bb-flag-set reboot
     bb-flag-unset there-was-containerd-installed
   fi
+  systemctl daemon-reload
   systemctl enable containerd.service
 {{ if ne .runType "ImageBuilding" -}}
   systemctl restart containerd.service
@@ -71,6 +72,18 @@ if [[ "$should_install_containerd" == true ]]; then
   curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-${VERSION}-linux-amd64.tar.gz --output crictl-${VERSION}-linux-amd64.tar.gz
   tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
   rm -f crictl-$VERSION-linux-amd64.tar.gz
+
+  VERSION_WERF_CONTAINERD="v1.4.3+werf-fix.2"
+  CHECKSUM_WERF_CONTAINERD="5b78321535c6c299d03f8cfb8b28bf88a7fc9c60cd29b79f52810906472ad86f"
+  curl -L https://github.com/flant/containerd/releases/download/$VERSION_WERF_CONTAINERD/containerd --output /usr/local/bin/containerd
+  echo "$CHECKSUM_WERF_CONTAINERD /usr/local/bin/containerd" | sha256sum -c
+  chmod +x /usr/local/bin/containerd
+  mkdir -p /etc/systemd/system/containerd.service.d
+  bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
+[Service]
+ExecStart=
+ExecStart=-/usr/local/bin/containerd
+EOF
 fi
 
 {{- end }}

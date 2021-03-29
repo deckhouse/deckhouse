@@ -41,9 +41,10 @@ if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
   bb-apt-remove containerd.io
-  rm -rf /var/lib/containerd/ /var/run/containerd /usr/local/bin/crictl /etc/containerd/config.toml
+  rm -rf /var/lib/containerd/ /var/run/containerd /usr/local/bin/crictl /etc/containerd/config.toml /usr/local/bin/containerd /etc/systemd/system/containerd.service.d
   # Pod kubelet-eviction-thresholds-exporter in cri=Containerd mode mounts /var/run/docker.sock, /var/run/docker.sock will be a directory and newly installed docker won't run.
   rm -rf /var/run/docker.sock
+  systemctl daemon-reload
   bb-log-info "Setting reboot flag due to cri being updated"
   bb-flag-set reboot
 fi
