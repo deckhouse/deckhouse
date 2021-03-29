@@ -1,0 +1,45 @@
+Index: pkg/cloudprovider/vsphere/instances.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/vsphere/instances.go b/pkg/cloudprovider/vsphere/instances.go
+--- a/pkg/cloudprovider/vsphere/instances.go	(revision 1abbba9ed149b7785b22f995870eb86068d83ec5)
++++ b/pkg/cloudprovider/vsphere/instances.go	(revision 2e65b4201b6297e2e2bb35ca99d5cb8f991d98f7)
+@@ -163,13 +163,14 @@
+ 		return true, nil
+ 	}
+ 
+-	if err := i.nodeManager.DiscoverNode(uid, cm.FindVMByUUID); err == nil {
++	err := i.nodeManager.DiscoverNode(uid, cm.FindVMByUUID)
++	if err == nil {
+ 		klog.V(2).Info("instances.InstanceExistsByProviderID() EXISTS with ", uid)
+-		return true, err
++		return true, nil
+ 	}
+ 
+ 	klog.V(4).Info("instances.InstanceExistsByProviderID() NOT FOUND with ", uid)
+-	return false, nil
++	return false, err
+ }
+ 
+ // InstanceShutdownByProviderID returns true if the instance is in safe state to detach volumes
+Index: pkg/cloudprovider/vsphere/instances_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/vsphere/instances_test.go b/pkg/cloudprovider/vsphere/instances_test.go
+--- a/pkg/cloudprovider/vsphere/instances_test.go	(revision 1abbba9ed149b7785b22f995870eb86068d83ec5)
++++ b/pkg/cloudprovider/vsphere/instances_test.go	(revision 2e65b4201b6297e2e2bb35ca99d5cb8f991d98f7)
+@@ -190,8 +190,8 @@
+ 	}
+ 
+ 	exists, err := instances.InstanceExistsByProviderID(ctx, providerID)
+-	if err != nil {
+-		t.Errorf("InstanceExistsByProviderID failed err=%v", err)
++	if err == nil {
++		t.Errorf("InstanceExistsByProviderID expected failure but err=nil")
+ 	}
+ 	if exists {
+ 		t.Error("InstanceExistsByProviderID excepted not exists")

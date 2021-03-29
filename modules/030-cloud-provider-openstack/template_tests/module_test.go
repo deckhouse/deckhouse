@@ -39,6 +39,8 @@ const globalValues = `
         csiExternalResizer: imagehash
         csiNodeDriverRegistrar: imagehash
       cloudProviderOpenstack:
+        cinderCsiPlugin116: imagehash
+        cinderCsiPlugin119: imagehash
         csiNodeDriverRegistrar: imagehash
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash

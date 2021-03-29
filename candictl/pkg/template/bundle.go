@@ -139,8 +139,8 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 			data: templateData,
 		},
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", "kustomize"),
-			to:   filepath.Join(bashibleDir, "kubeadm", "kustomize"),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", "patches"),
+			to:   filepath.Join(bashibleDir, "kubeadm", "patches"),
 			data: templateData,
 		},
 	}

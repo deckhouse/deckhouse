@@ -1,7 +1,12 @@
+{{- $experimentalOption := "--experimental-patches" -}}
+{{- if semverCompare "<1.19" .kubernetesVersion -}}
+  {{- $experimentalOption = "--experimental-kustomize" -}}
+{{- end -}}
+
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
-kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml -k /var/lib/bashible/kubeadm/kustomize
-kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml -k /var/lib/bashible/kubeadm/kustomize
+kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
+kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase addon kube-proxy --config /var/lib/bashible/kubeadm/config.yaml
 

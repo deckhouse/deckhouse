@@ -1,0 +1,35 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.openstack }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_DEBIAN" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+    add: /src/cinder-csi-plugin
+    to: /bin/cinder-csi-plugin
+    before: setup
+shell:
+  beforeInstall:
+  - apt update
+  - apt install ca-certificates e2fsprogs mount xfsprogs udev -y
+  - rm -rf /var/lib/apt/lists/*
+docker:
+  ENV:
+    DEBIAN_FRONTEND: noninteractive
+    container: docker
+  ENTRYPOINT: ["/bin/cinder-csi-plugin"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+from: {{ env "BASE_GOLANG_BUSTER" }}
+shell:
+  beforeInstall:
+  - apt update
+  - apt install git mercurial rsync patch -y
+  install:
+  - mkdir /src
+  - wget https://github.com/kubernetes/cloud-provider-openstack/archive/{{ $value.csi.openstack }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/ && \
+  - cd /src
+  - make cinder-csi-plugin
+  {{- end }}
+{{- end }}

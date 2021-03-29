@@ -1,0 +1,13 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.ccm.yandex }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: flant/yandex-cloud-controller-manager:{{ $value.ccm.yandex }}
+shell:
+  beforeInstall:
+    - apk add --no-cache ca-certificates
+docker:
+  ENTRYPOINT: ["/bin/yandex-cloud-controller-manager"]
+  {{- end }}
+{{- end }}

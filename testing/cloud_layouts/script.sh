@@ -189,4 +189,8 @@ ENDSSH
   fi
 done
 
+ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
+kubectl -n d8-system logs deploy/deckhouse
+ENDSSH
+
 exit 0

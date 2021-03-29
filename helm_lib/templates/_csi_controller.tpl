@@ -22,8 +22,9 @@
   {{- $attacherImageTag := index $context.Values.global.modulesImages.tags.common $attacherImageName }}
   {{- $attacherImage := printf "%s/common/csi-external-attacher-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $attacherImageTag }}
 
-  {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common "csiExternalResizer" }}
-  {{- $resizerImage := printf "%s/common/csi-external-resizer:%s" $context.Values.global.modulesImages.registry $resizerImageTag }}
+  {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
+  {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common $resizerImageName }}
+  {{- $resizerImage := printf "%s/common/csi-external-resizer-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $resizerImageTag }}
 
   {{- if $provisionerImageTag }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

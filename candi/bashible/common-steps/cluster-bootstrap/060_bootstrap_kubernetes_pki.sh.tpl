@@ -9,7 +9,7 @@ function subst_config() {
 }
 
 subst_config /var/lib/bashible/kubeadm/config.yaml
-for file in $(find /var/lib/bashible/kubeadm/kustomize/*.yaml); do
+for file in $(find /var/lib/bashible/kubeadm/patches/*.yaml); do
   subst_config "$file"
 done
 {{- end }}

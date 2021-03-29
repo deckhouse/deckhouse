@@ -6,13 +6,17 @@ set -Eeuo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
 
+# Base env
+CLUSTER_PKI_DIR=/pki
+CONFIG_DIR=/config
+ROOTFS_DIR=
 MAX_RETRIES=42
 
 >&2 echo "Setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node..."
 attempt=0
 until
   node_data="$(
-    kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+    kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
     {
       "resourceVersion": .metadata.resourceVersion,
       "isApproved": (.metadata.annotations | has("control-plane-manger.deckhouse.io/approved")),
@@ -27,7 +31,7 @@ do
     exit 1
   fi
   kubectl \
-    --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
+    --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf annotate node "$(hostname -s)" \
     --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
     control-plane-manger.deckhouse.io/waiting-for-approval= || { echo "Retry setting control-plane-manger.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
 done
@@ -35,7 +39,7 @@ done
 >&2 echo "Waiting for control-plane-manger.deckhouse.io/approved= annotation on our Node..."
 attempt=0
 until
-  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+  kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
   jq -e '.metadata.annotations | has("control-plane-manger.deckhouse.io/approved")' >/dev/null
 do
   attempt=$(( attempt + 1 ))
@@ -50,18 +54,13 @@ done
 
 >&2 echo "Waiting for all image-holder containers will be ready..."
 until
-  kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-system get po ${MY_POD_NAME} -o json | \
+  kubectl --kubeconfig=$ROOTFS_DIR/etc/kubernetes/kubelet.conf -n kube-system get po ${MY_POD_NAME} -o json | \
   jq -e '.status.containerStatuses | [ .[] | select(.name != "control-plane-manager").ready] | all == true' >/dev/null
 do
   echo "Waiting for all image-holder containers will be ready..."
   echo "Retry in 10sec..."
   sleep 10
 done
-
-# Base env
-CLUSTER_PKI_DIR=/pki
-CONFIG_DIR=/config
-ROOTFS_DIR=
 
 # Configuration checksum
 CONFIGURATION_CHECKSUM=$(cat "${BASH_SOURCE[0]}" $CONFIG_DIR/* | sha256sum | cut -d" " -f1)
@@ -75,7 +74,7 @@ if [[ -f $ROOTFS_DIR/etc/kubernetes/deckhouse/last_applied_configuration_checksu
 fi
 
 # verify Kubernetes version
-declare -A supported_kubernetes_versions=( ["1.15"]="1.16" ["1.16"]="1.16" ["1.17"]="1.17" ["1.18"]="1.18" ["1.19"]="1.19")
+declare -A supported_kubernetes_versions=( ["1.15"]="1.16" ["1.16"]="1.16" ["1.17"]="1.17" ["1.18"]="1.18" ["1.19"]="1.19" ["1.20"]="1.20")
 if [[ -z "${supported_kubernetes_versions[$KUBERNETES_VERSION]}" ]]; then
   echo " * Kubernetes version v$KUBERNETES_VERSION is not supported"
   exit 1
@@ -171,6 +170,22 @@ function install_files_if_changed() {
   done
 }
 
+function remove_orphan_files() {
+  src_dir=$1
+  echo " * Remove orphan files from $src_dir"
+  # shellcheck disable=SC2045
+  for orphan_file in $(ls "$src_dir"); do
+    case $orphan_file in
+      kube-apiserver.yaml|etcd.yaml|kube-controller-manager.yaml|kube-scheduler.yaml)
+        continue
+        ;;
+      *)
+        remove_file_or_directory_if_exists "$src_dir/$orphan_file"
+        ;;
+    esac
+  done
+}
+
 function certificate_valid_for() {
   not_after=$(cfssl certinfo -cert - | jq .not_after -r | sed 's/\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)T\([0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}\).*/\1 \2/')
   echo $(("$(date --date="$not_after" +%s)" - "$(date +%s)"))
@@ -183,7 +198,7 @@ function generate_or_renew_certificate() {
     certificate=$ROOTFS_DIR/etc/kubernetes/pki/$2
     tmp_certificate=$TMP_ROOTFS_DIR/etc/kubernetes/pki/$2
   fi
-  kubeadm_cmd="$kubeadm_binary init phase certs $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
+  kubeadm_cmd="$kubeadm_binary init phase certs $1 --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml"
 
   echo "Generate or renew $1 certificate ($certificate.crt)"
   if [[ -f $certificate.crt ]] ; then
@@ -238,7 +253,7 @@ function generate_or_renew_certificate() {
 function generate_or_renew_kubeconfig() {
   kubeconfig=$ROOTFS_DIR/etc/kubernetes/$1.conf
   tmp_kubeconfig=$TMP_ROOTFS_DIR/etc/kubernetes/$1.conf
-  kubeadm_cmd="$kubeadm_binary init phase kubeconfig $1 --config /etc/kubernetes/deckhouse/kubeadm/config.yaml"
+  kubeadm_cmd="$kubeadm_binary init phase kubeconfig $1 --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml"
 
   echo "Generate or renew $kubeconfig"
   if [[ -f $kubeconfig ]] ; then
@@ -282,19 +297,27 @@ function generate_or_renew_kubeconfig() {
   echo " * Done!"
 }
 
-
 function converge_component() {
   component=$1
   manifest=$ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml
   tmp_manifest=$TMP_ROOTFS_DIR/etc/kubernetes/manifests/$component.yaml
-  checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/kustomize/999-${component}-checksum.yaml
+
+  case $KUBERNETES_VERSION in
+    1.16 | 1.17 | 1.18)
+      experimental_option="--experimental-kustomize"
+      checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/999-${component}-checksum.yaml
+      ;;
+    *)
+      experimental_option="--experimental-patches"
+      checksum_patch=$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/${component}999checksum.yaml
+      ;;
+  esac
+
   if [[ "$component" != "etcd" ]] ; then
-    # TODO Switch to "--experimental-patches" once deckhouse stops supporting Kubernetes <1.19
-    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+    kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
   else
-    # TODO Switch to "--experimental-patches" once deckhouse stops supporting Kubernetes <1.19
-    kubeadm_cmd="$kubeadm_binary init phase etcd local --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
-    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --experimental-kustomize /etc/kubernetes/deckhouse/kubeadm/kustomize/"
+    kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
+    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml --${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
   fi
 
   echo "Converge $component"
@@ -375,7 +398,7 @@ END
   echo
 }
 
-etcd_manifest_path="/etc/kubernetes/manifests/etcd.yaml"
+etcd_manifest_path="$ROOTFS_DIR/etc/kubernetes/manifests/etcd.yaml"
 if [ -f "${etcd_manifest_path}" ] ; then
   etcd_advertise_address="$(grep -Po '(?<=--advertise-client-urls=https://).+(?=:2379)' "$etcd_manifest_path")"
   etcd_member_name="$(grep -Po '(?<=--name=).+' "$etcd_manifest_path")"
@@ -397,26 +420,31 @@ if [ -f "${etcd_manifest_path}" ] ; then
   fi
 fi
 
-kubelet_kubeconfig="/etc/kubernetes/kubelet.conf"
+kubelet_kubeconfig="$ROOTFS_DIR/etc/kubernetes/kubelet.conf"
 if ! kubectl --kubeconfig ${kubelet_kubeconfig} config view -o json | jq '.clusters[0].cluster.server' -r | grep 'https://127.0.0.1:6445\|https://kubernetes:6445' > /dev/null ; then
   >&2 echo "ERROR: kubelet should be configured to access apiserver via kube-api-proxy (through https://127.0.0.1:6445 or https://kubernetes:6445). Probably node is not managed by node-manager."
   exit 1
 fi
 
-if ! kubectl --kubeconfig ${kubelet_kubeconfig} get node $(hostname -s) >/dev/null ; then
+if ! kubectl --kubeconfig ${kubelet_kubeconfig} get node "$(hostname -s)" >/dev/null ; then
   >&2 echo "ERROR: update is unsafe to proceed because api-server is not accessible with ${kubelet_kubeconfig} kubeconfig."
   exit 1
 fi
 
 # Generate configuration for kubeadm
 mkdir -p $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm
+mkdir -p $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches
 if [[ -z "$MY_IP" ]] ; then
   echo "Fatal error: \$MY_IP is empty"
   exit 1
 fi
 echo "Install kubeadm configuration"
+remove_orphan_files "$ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches"
+
 install_file_if_changed --envsubst $CONFIG_DIR/kubeadm-config.yaml $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml -o root -g root -m 0644
-install_files_if_changed --envsubst $CONFIG_DIR/kubeadm-kustomize- $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/kustomize
+for component in etcd kube-apiserver kube-controller-manager kube-scheduler; do
+  install_file_if_changed --envsubst $CONFIG_DIR/${component}.yaml.tpl $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/${component}.yaml -o root -g root -m 0644
+done
 echo " * Done!"
 echo
 
