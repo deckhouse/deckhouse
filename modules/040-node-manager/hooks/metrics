@@ -5,6 +5,9 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    settings:
+      executionMinInterval: 5s
+      executionBurst: 3
     kubernetes:
     - name: machine_deployments
       queue: /modules/$(module::name::kebab_case)/metrics
