@@ -38,6 +38,8 @@
   - werf build-and-publish
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
       echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;
+      docker pull $(werf stage image dev);
+      docker pull $(werf stage image dev/install);
       docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
       docker image push $DESTINATION_IMAGE;
       docker image rmi $DESTINATION_IMAGE;
