@@ -166,7 +166,7 @@ func (c *deploymentDeletionChecker) Check() check.Error {
 }
 
 func createDeploymentObject() *appsv1.Deployment {
-	name := util.RandomIdentifier("upmeter-control-plane-manager")
+	name := util.RandomIdentifier("upmeter-controller-manager")
 	replicas := int32(1)
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -177,10 +177,10 @@ func createDeploymentObject() *appsv1.Deployment {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"app":           "upmeter-control-plane-manager",
+				"app":           "upmeter-controller-manager",
 				"upmeter-agent": util.AgentUniqueId(),
 				"upmeter-group": "control-plane",
-				"upmeter-probe": "control-plane-manager",
+				"upmeter-probe": "controller-manager",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{

@@ -117,8 +117,7 @@ const langPack: LangPack = {
                 reasonUnknown: "kube-apiserver is not available or probe execution is skipped because previous probe was not yet finished",
                 reasonNodata: REASON_AGENTS_STOPPED,
             },
-            // FIXME "control-plane-manager" is a mistake and is to be renamed in future
-            "control-plane-manager": {
+            "controller-manager": {
                 title: "Controller Manager",
                 description: "Every 1 minute a Deployment is created and deleted",
                 reasonUp: "deployment successfully created, and its Pod became <code>Pending</code>. Afterwards, the deployment successfully deleted",

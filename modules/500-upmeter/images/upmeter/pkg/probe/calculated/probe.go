@@ -13,7 +13,7 @@ func Load() []*Probe {
 			probe: "horizontal-pod-autoscaler",
 			mergeIds: []string{
 				"monitoring-and-autoscaling/prometheus-metrics-adapter",
-				"control-plane/control-plane-manager",
+				"control-plane/controller-manager",
 			},
 		},
 	}

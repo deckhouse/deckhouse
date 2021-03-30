@@ -49,7 +49,7 @@ func ControlPlane(access *kubernetes.Access) []runnerConfig {
 			},
 		}, {
 			group:  groupName,
-			probe:  "control-plane-manager", // FIXME rename to "controller-manager", migrate the DB
+			probe:  "controller-manager",
 			check:  "_",
 			period: time.Minute,
 			config: checker.DeploymentLifecycle{

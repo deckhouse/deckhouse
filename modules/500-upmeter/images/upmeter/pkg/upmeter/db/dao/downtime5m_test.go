@@ -33,7 +33,7 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 		"control-plane": {
 			"access",
 			"basic",
-			"control-plane-manager",
+			"controller-manager",
 			"namespace",
 			"scheduler",
 		},
@@ -110,7 +110,7 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 		"control-plane": {
 			"access",
 			"basic",
-			"control-plane-manager",
+			"controller-manager",
 			"namespace",
 			"scheduler",
 		},
@@ -166,7 +166,7 @@ func Test_FillOneDay(t *testing.T) {
 		"control-plane": {
 			"access",
 			"basic",
-			"control-plane-manager",
+			"controller-manager",
 			"namespace",
 			"scheduler",
 		},
@@ -222,7 +222,7 @@ func Test_Fill_Year(t *testing.T) {
 		"control-plane": {
 			"access",
 			"basic",
-			"control-plane-manager",
+			"controller-manager",
 			"namespace",
 			"scheduler",
 		},
