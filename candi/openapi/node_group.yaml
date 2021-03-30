@@ -57,10 +57,10 @@ spec:
           type: integer
           description: "Number of overprovisioned instances in the group."
           jsonPath: .status.standby
-        - name: Error
+        - name: Status
           type: string
-          description: "Error message about possible problems with the group handling."
-          jsonPath: .status.conditionSummary.errorMessage
+          description: "Status message about group handling."
+          jsonPath: .status.conditionSummary.statusMessage
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
@@ -137,8 +137,8 @@ spec:
                 conditionSummary:
                   type: object
                   properties:
-                    errorMessage:
-                      description: "Error message about possible problems with the group handling."
+                    statusMessage:
+                      description: "Status message about group handling."
                       type: string
                     ready:
                       description: "Status of the condition summary."
