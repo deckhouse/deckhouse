@@ -80,7 +80,8 @@ spec:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
       volumes:
         - name: certs
-          emptyDir: {}
+          secret:
+            secretName: bashible-api-server-tls
 ---
 apiVersion: v1
 kind: ConfigMap

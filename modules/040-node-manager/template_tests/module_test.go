@@ -450,6 +450,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerAWS)
+				setBashibleAPIServerTLSValues(f)
 				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
@@ -463,6 +464,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerAWS)
+			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
 
@@ -556,6 +558,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
 		})
 	})
 
@@ -563,6 +567,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerGCP)
+				setBashibleAPIServerTLSValues(f)
 				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
@@ -576,6 +581,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerGCP)
+			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
 
@@ -670,6 +676,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
 		})
 	})
 
@@ -677,6 +685,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Describe("Openstack faulty config", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", faultyNodeManagerOpenstack)
+				setBashibleAPIServerTLSValues(f)
 				f.HelmRender()
 			})
 
@@ -689,6 +698,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
+				setBashibleAPIServerTLSValues(f)
 				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
@@ -702,6 +712,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
+			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
 
@@ -834,6 +845,8 @@ ccc: ddd
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
 		})
 	})
 
@@ -841,6 +854,7 @@ ccc: ddd
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerVsphere)
+				setBashibleAPIServerTLSValues(f)
 				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
@@ -854,6 +868,7 @@ ccc: ddd
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerVsphere)
+			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
 
@@ -948,6 +963,8 @@ ccc: ddd
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
 		})
 	})
 
@@ -955,6 +972,7 @@ ccc: ddd
 		Describe("With manual-rollout-id", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("nodeManager", nodeManagerYandex)
+				setBashibleAPIServerTLSValues(f)
 				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
 				f.HelmRender()
 			})
@@ -968,6 +986,7 @@ ccc: ddd
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerYandex)
+			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
 
@@ -1062,12 +1081,15 @@ ccc: ddd
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
 		})
 	})
 
 	Context("Static", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerStatic)
+			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
 
@@ -1160,6 +1182,8 @@ ccc: ddd
 
 			Expect(roleBindings["bashible"].Exists()).To(BeTrue())
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
+
+			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
 		})
 	})
 })
