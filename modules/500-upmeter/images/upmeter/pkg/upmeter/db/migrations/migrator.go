@@ -56,6 +56,9 @@ func (m *MigratorService) Apply(dbCtx *context.DbContext) error {
 	if _, ok := versions["V0002"]; !ok {
 		V0002_Up(m)
 	}
+	if _, ok := versions["V0003"]; !ok {
+		V0003_Up(m)
+	}
 
 	return nil
 }
