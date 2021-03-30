@@ -6,6 +6,9 @@ function __config__() {
   cat << EOF
     configVersion: v1
     afterHelm: 10
+    settings:
+      executionMinInterval: 5s
+      executionBurst: 3
     kubernetes:
     - name: ngs
       group: main

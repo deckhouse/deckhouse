@@ -5,11 +5,14 @@ source /deckhouse/shell_lib.sh
 function __config__() {
   cat << EOF
     configVersion: v1
+    settings:
+      executionMinInterval: 5s
+      executionBurst: 3
     kubernetes:
     - name: ngs
       group: monkey
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)
+      queue: /modules/$(module::name::kebab_case)/chaos_monkey
       waitForSynchronization: false
       executeHookOnEvent: []
       executeHookOnSynchronization: false
@@ -24,7 +27,7 @@ function __config__() {
     - name: nodes
       group: monkey
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)
+      queue: /modules/$(module::name::kebab_case)/chaos_monkey
       waitForSynchronization: false
       executeHookOnEvent: []
       executeHookOnSynchronization: false
@@ -42,7 +45,7 @@ function __config__() {
     - name: machines
       group: monkey
       keepFullObjectsInMemory: false
-      queue: /modules/$(module::name::kebab_case)
+      queue: /modules/$(module::name::kebab_case)/chaos_monkey
       waitForSynchronization: false
       executeHookOnEvent: []
       executeHookOnSynchronization: false
