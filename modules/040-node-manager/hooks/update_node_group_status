@@ -103,16 +103,16 @@ EOF
 # $2 — ng error message or empty string
 # $3 — latest machine failure or empty string
 function _set_ng_condition_summary() {
-  error_message=$(echo "$2" "$3" | xargs)
+  status_message=$(echo "$2" "$3" | xargs)
   ready="True"
-  if [ ! -z "$error_message" ]; then
+  if [ ! -z "$status_message" ]; then
       ready="False"
   fi
-  patch="$(jq -ns --arg ready "$ready" --arg error_message "$error_message" '
+  patch="$(jq -ns --arg ready "$ready" --arg status_message "$status_message" '
 {
   "conditionSummary": {
     "ready": $ready,
-    "errorMessage": $error_message
+    "statusMessage": $status_message
   }
 }')"
     kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${patch}"

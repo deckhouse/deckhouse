@@ -268,7 +268,7 @@ status:
 
 		It("Min and max must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":1,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [], "conditionSummary": {"errorMessage": "", "ready": "True"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":1,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [], "conditionSummary": {"statusMessage": "", "ready": "True"}}`))
 		})
 	})
 
@@ -280,8 +280,8 @@ status:
 
 		It("Min, max, desired, instances, nodes, ready must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":2,"instances":2,"nodes":2,"ready":1,"upToDate": 2, "lastMachineFailures": [], "conditionSummary": {"errorMessage": "", "ready": "True"}}`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [], "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "conditionSummary": {"errorMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "ready": "False"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","max":5,"min":1,"desired":2,"instances":2,"nodes":2,"ready":1,"upToDate": 2, "lastMachineFailures": [], "conditionSummary": {"statusMessage": "", "ready": "True"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [], "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "conditionSummary": {"statusMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "ready": "False"}}`))
 		})
 	})
 
@@ -293,8 +293,8 @@ status:
 
 		It("Nodes, ready must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","nodes":2,"ready":1,"upToDate": 2, "conditionSummary": {"errorMessage": "", "ready": "True"}}`))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"nodes":0,"ready":0,"upToDate": 0, "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "conditionSummary": {"errorMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "ready": "False"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","nodes":2,"ready":1,"upToDate": 2, "conditionSummary": {"statusMessage": "", "ready": "True"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"nodes":0,"ready":0,"upToDate": 0, "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "conditionSummary": {"statusMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "ready": "False"}}`))
 		})
 	})
 
@@ -306,7 +306,7 @@ status:
 
 		It("NG's status.lastMachineFailures must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.","lastUpdateTime":"2020-05-15T15:01:15Z","state":"Failed","type":"Create"},"name":"machine-ng-2-aaa","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.","lastUpdateTime":"2020-05-15T15:01:13Z","state":"Failed","type":"Create"},"name":"machine-ng-2-bbb","ownerRef":"korker-3e52ee98-8649499f7"}], "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",  "conditionSummary": {"errorMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.", "ready": "False"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.","lastUpdateTime":"2020-05-15T15:01:15Z","state":"Failed","type":"Create"},"name":"machine-ng-2-aaa","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.","lastUpdateTime":"2020-05-15T15:01:13Z","state":"Failed","type":"Create"},"name":"machine-ng-2-bbb","ownerRef":"korker-3e52ee98-8649499f7"}], "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",  "conditionSummary": {"statusMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.", "ready": "False"}}`))
 		})
 	})
 
@@ -318,7 +318,7 @@ status:
 
 		It("NG's status.lastMachineFailures must be filled", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.","lastUpdateTime":"2020-05-15T15:01:15Z","state":"Failed","type":"Create"},"name":"machine-ng-2-aaa","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.","lastUpdateTime":"2020-05-15T15:01:13Z","state":"Failed","type":"Create"},"name":"machine-ng-2-bbb","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.","lastUpdateTime":"2020-05-15T15:05:12Z","state":"Failed","type":"Create"},"name":"machine-ng-2-ccc","ownerRef":"korker-3e52ee98-8649499f7"}], "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",  "conditionSummary": {"errorMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.", "ready": "False"}}`))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"max":9,"min":6,"desired":6,"instances":0,"nodes":0,"ready":0,"upToDate": 0, "lastMachineFailures": [{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #2.","lastUpdateTime":"2020-05-15T15:01:15Z","state":"Failed","type":"Create"},"name":"machine-ng-2-aaa","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found.","lastUpdateTime":"2020-05-15T15:01:13Z","state":"Failed","type":"Create"},"name":"machine-ng-2-bbb","ownerRef":"korker-3e52ee98-8649499f7"},{"lastOperation":{"description":"Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.","lastUpdateTime":"2020-05-15T15:05:12Z","state":"Failed","type":"Create"},"name":"machine-ng-2-ccc","ownerRef":"korker-3e52ee98-8649499f7"}], "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.",  "conditionSummary": {"statusMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Cloud provider message - rpc error: code = FailedPrecondition desc = Image not found #3.", "ready": "False"}}`))
 		})
 	})
 })
