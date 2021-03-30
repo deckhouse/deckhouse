@@ -441,6 +441,7 @@ ansible:
 ---
 image: candictl-tests
 fromImage: base-for-go
+fromCacheVersion: "1"
 git:
 - add: /candictl
   to: /candictl
