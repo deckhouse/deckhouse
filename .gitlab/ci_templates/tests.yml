@@ -5,7 +5,7 @@
   script:
   - pwd
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
@@ -31,7 +31,7 @@
   script:
   - pwd
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
@@ -57,7 +57,7 @@
   script:
   - pwd
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
   - source ./testing/kcov_disabled.sh
   - rm -rf testing/kcov-report
@@ -124,7 +124,7 @@
   script:
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - ./modules_images_werf test_web_links
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
   - werf run --config werf-web.yaml dev/web-public --docker-options="--rm --entrypoint cat" -- /usr/share/nginx/html/link_test_report.txt | tee ${REPORT_FILE}
   - echo -e "\n#################################################\nPublic site link checking report...\n"
@@ -156,7 +156,7 @@
   script:
   - pwd
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
   - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
   except:
@@ -177,7 +177,7 @@
   script:
     - pwd
     - eval "${STAGES_STORAGE_LOGIN_CMD}"
-    - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+    - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
     - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
     - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse -e "TERM=xterm-256color""
@@ -202,7 +202,7 @@
   script:
     - pwd
     - eval "${STAGES_STORAGE_LOGIN_CMD}"
-    - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+    - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
     - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
     - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"

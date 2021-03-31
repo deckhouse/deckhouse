@@ -16,6 +16,7 @@ stages:
 
 variables:
   WERF_STAGES_REPO_BASE: ${CI_REGISTRY_IMAGE}
+  WERF_CHANNEL: "ea"
   TEST_TIMEOUT: "15m"
 
 Build Modules Images:

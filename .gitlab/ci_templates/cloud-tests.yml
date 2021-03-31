@@ -5,7 +5,7 @@
   script: &script
   - pwd
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
   - mkdir -p layouts-tests-tmp
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
@@ -152,7 +152,7 @@
   script: &vsphere_script
     - pwd
     - eval "${STAGES_STORAGE_LOGIN_CMD}"
-    - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+    - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
     - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
     - mkdir -p layouts-tests-tmp
     - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"

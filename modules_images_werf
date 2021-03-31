@@ -79,7 +79,7 @@ fi
 SUBCOMMAND=$1
 shift
 
-type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL:-ea} --as-file)
 type werf && source $(werf ci-env gitlab --verbose --as-file)
 
 case "$SUBCOMMAND" in
