@@ -633,7 +633,7 @@
           "expr": "rate(redis_net_input_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ input }}",
+          "legendFormat": "input",
           "refId": "A",
           "step": 2
         },
@@ -642,7 +642,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{ output }}",
+          "legendFormat": "output",
           "refId": "B",
           "step": 2
         }
