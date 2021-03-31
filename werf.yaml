@@ -255,9 +255,6 @@ docker:
     GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
 
 ---
-artifact: kcov
-from: flant/kcov-alpine:v0.6
----
 image: tests
 fromImage: base-for-go
 fromCacheVersion: 2020-05-08.1
@@ -278,10 +275,6 @@ import:
   add: /libjq
   to: /libjq
   before: setup
-- artifact: kcov
-  add: /usr/bin/kcov
-  to: /usr/bin/kcov
-  before: setup
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
@@ -299,17 +292,6 @@ ansible:
 
   - name: "Install dlv"
     command: go get github.com/go-delve/delve/cmd/dlv
-
-  - name: "Add group for kcov"
-    group:
-      name: kcov-runner
-      gid: 998
-  - name: "Add user for kcov"
-    user:
-      name: kcov-runner
-      group: kcov-runner
-      uid: 999
-      shell: /bin/bash
 
   - raw: rm -rf /var/cache/apk/*
 
