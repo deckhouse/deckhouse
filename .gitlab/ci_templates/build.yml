@@ -33,7 +33,7 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - type multiwerf && source $(multiwerf use 1.1 ea --as-file)
+  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
   - werf build-and-publish
   - if [[ -n ${CI_COMMIT_TAG} ]]; then

@@ -12,6 +12,7 @@ variables:
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_STAGES_REPO_BASE: ${REGISTRY_STAGES_HOST}
   WERF_STAGES_STORAGE_REPO_IMPLEMENTATION: default
+  WERF_CHANNEL: "ea"
   STAGES_STORAGE_LOGIN_CMD: "docker login -u ${REGISTRY_STAGES_USER} -p ${REGISTRY_STAGES_PASSWORD} ${WERF_STAGES_REPO_BASE}"
   TEST_TIMEOUT: "15m"
 
