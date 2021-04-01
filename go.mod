@@ -7,7 +7,7 @@ require (
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210318173605-65f01a49f656 // branch: master
-	github.com/flant/shell-operator v1.0.0-rc.2.0.20210318171436-f4a0b109c0e3 // branch: master
+	github.com/flant/shell-operator v1.0.1-0.20210401174712-041657a02ccb // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3
@@ -33,16 +33,13 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-replace github.com/flant/shell-operator => github.com/flant/shell-operator v1.0.0-rc.2.0.20210309133328-81e5d893a769
-
-replace github.com/flant/addon-operator => github.com/flant/addon-operator v1.0.0-rc.1.0.20210309135336-e01d3f8c5ffb
-
 replace github.com/deckhouse/deckhouse/candictl => ./candictl
 
+// TODO uncomment when shell-operator migrates to client-go 0.20.0
 // TODO remove when https://github.com/helm/helm/pull/8371 will be merged and released.
 //replace helm.sh/helm/v3 => github.com/diafour/helm/v3 v3.2.5-0.20200630114452-b734742e3342 // branch: fix_tpl_performance_3_2_4
 
-// TODO remove when shell-operator migrates to client-go 0.18.0
+// TODO remove replaces below when shell-operator migrates to client-go 0.20.0
 // TODO remove ./helm-mod directory as well!
 replace helm.sh/helm/v3 => ./helm-mod
 
