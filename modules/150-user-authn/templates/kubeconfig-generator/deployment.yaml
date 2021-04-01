@@ -45,23 +45,13 @@ spec:
       - name: config
         configMap:
           name: kubeconfig-generator
-{{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
-      - name: ca-certificates
-        secret:
-          secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
-          items:
-          - key: tls.crt
-            path: idp-ca.crt
-{{- end }}
       containers:
       - name: kubeconfig-generator
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}/user-authn/kubeconfig-generator:{{ .Values.global.modulesImages.tags.userAuthn.kubeconfigGenerator }}
         command:
-        - "/bin/sh"
-        - "-l"
-        - "-c"
-        - "update-ca-certificates; /app/bin/dex-k8s-authenticator --config config.yaml"
+        - "/app/bin/dex-k8s-authenticator"
+        - "--config=config.yaml"
         ports:
         - name: http
           containerPort: 5555
@@ -77,11 +67,6 @@ spec:
         - name: config
           subPath: config.yaml
           mountPath: /app/config.yaml
-{{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
-        - name: ca-certificates
-          mountPath: "/usr/local/share/ca-certificates/"
-          readOnly: true
-{{- end }}
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
