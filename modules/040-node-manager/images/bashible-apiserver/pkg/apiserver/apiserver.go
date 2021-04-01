@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -114,11 +113,13 @@ func (c completedConfig) New() (*BashibleServer, error) {
 	if err != nil {
 		panic("cannot create informer " + err.Error())
 	}
-	bashibleContext := template.NewContext(factory, configMapName, configMapKey)
+
+	cachesManager := bashibleregistry.NewCachesManager()
+	bashibleContext := template.NewContext(factory, configMapName, configMapKey, cachesManager)
 
 	// Template-based REST API
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(bashible.GroupName, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = bashibleregistry.GetStorage(templatesRootDir, bashibleContext)
+	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = bashibleregistry.GetStorage(templatesRootDir, bashibleContext, cachesManager)
 
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		return nil, err

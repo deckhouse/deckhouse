@@ -11,15 +11,20 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func NewContext(factory informers.SharedInformerFactory, configMapName, configMapKey string) *Context {
+func NewContext(factory informers.SharedInformerFactory, configMapName, configMapKey string, updateHandler UpdateHandler) *Context {
 	c := Context{
 		configMapName: configMapName,
 		configMapKey:  configMapKey,
+		updateHandler: updateHandler,
 	}
 
 	c.subscribe(factory)
 
 	return &c
+}
+
+type UpdateHandler interface {
+	OnUpdate()
 }
 
 // Context manages bashible template context
@@ -30,6 +35,8 @@ type Context struct {
 	configMapName string
 	configMapKey  string
 	hasSynced     bool
+
+	updateHandler UpdateHandler
 
 	// data (taken by configMapKey from configmap) maps `contextKey` to `contextValue`,
 	// the being arbitrary data for a combination of os, nodegroup, & kubeversion
@@ -83,6 +90,9 @@ func (c *Context) update(configMapData map[string]string) {
 	}
 
 	yaml.Unmarshal([]byte(value), &c.data)
+
+	c.updateHandler.OnUpdate()
+
 }
 
 // Get retrieves a copy of context for the given configMapKey.
