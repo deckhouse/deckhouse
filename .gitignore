@@ -35,8 +35,6 @@ venv/
 .vscode
 .editorconfig
 
-kcov-report
-
 *-tfstate/
 .terraform/
 

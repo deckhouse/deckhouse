@@ -1,7 +1,6 @@
 package sandbox_runner
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -67,24 +66,6 @@ func WithEnvSetToFilePath(envName string) EnvOption {
 func WithSourceDirectory(fromPath string, toPath string) SandboxOption {
 	return func(conf sandboxConfig) error {
 		return copy.Copy(fromPath, toPath)
-	}
-}
-
-func WithKcovWrapper(tmpDir string) SandboxOption {
-	return func(conf sandboxConfig) error {
-		kcovPath, err := exec.LookPath("kcov")
-		if err != nil {
-			return fmt.Errorf("cannot find kcov binary: %w", err)
-		}
-
-		// TODO: do something about path constants
-		newArgs := []string{kcovPath, tmpDir, "--exclude-pattern=shell-operator"}
-		newArgs = append(newArgs, conf.cmd.Args...)
-
-		conf.cmd.Path = kcovPath
-		conf.cmd.Args = newArgs
-
-		return nil
 	}
 }
 

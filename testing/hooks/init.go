@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -24,7 +23,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"golang.org/x/sys/unix"
 	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -39,10 +37,6 @@ import (
 var (
 	globalTmpDir string
 	moduleName   string
-)
-
-const (
-	globalKcovDir = "/deckhouse/testing/kcov-report"
 )
 
 func (hec *HookExecutionConfig) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
@@ -396,21 +390,6 @@ func (hec *HookExecutionConfig) RunHook() {
 	hec.Session.Wait(10)
 	Expect(hec.Session.ExitCode()).To(Equal(0))
 
-	if os.Getenv("KCOV_DISABLED") != "yes" {
-		// let's re-run --config again, but this time with kcov wrapper
-		// it is required since kcov quietly eats all the stdout
-		kcovConfigCmd := &exec.Cmd{
-			Path: hec.HookPath,
-			Args: []string{hec.HookPath, "--config"},
-			Dir:  "/deckhouse",
-			Env:  append(os.Environ(), hookEnvs...),
-		}
-		sandbox_runner.Run(kcovConfigCmd,
-			sandbox_runner.WithKcovWrapper(globalKcovDir),
-			sandbox_runner.AsUser(999, 998),
-		)
-	}
-
 	out := hec.Session.Out.Contents()
 	var parsedConfig json.RawMessage
 	Expect(yaml.Unmarshal(out, &parsedConfig)).To(Succeed())
@@ -465,10 +444,6 @@ func (hec *HookExecutionConfig) RunHook() {
 		sandbox_runner.WithFile(ValuesFile.Name(), hec.values.JSONRepr),
 		sandbox_runner.WithFile(ConfigValuesFile.Name(), hec.configValues.JSONRepr),
 		sandbox_runner.WithFile(BindingContextFile.Name(), []byte(hec.BindingContexts.JSON)),
-	}
-	if os.Getenv("KCOV_DISABLED") != "yes" {
-		options = append(options, sandbox_runner.WithKcovWrapper(globalKcovDir))
-		options = append(options, sandbox_runner.AsUser(999, 998))
 	}
 
 	hec.Session = sandbox_runner.Run(hookCmd, options...)
@@ -570,52 +545,6 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	// TODO Kubernetes patch not supported for Go Hooks now.
 	// https://github.com/flant/shell-operator/issues/94
 }
-
-var _ = BeforeSuite(func() {
-	var err error
-
-	if os.Getenv("KCOV_DISABLED") == "yes" {
-		return
-	}
-	By("Initing temporary directories")
-	unix.Umask(0o000)
-	globalTmpDir, err = TempDirWithPerms("", "", 0o777)
-	Expect(err).ToNot(HaveOccurred())
-	_ = os.Mkdir(globalKcovDir, 0o777)
-
-	dummyDirsFile, err := os.Open("/deckhouse/testing/dummy_dirs")
-	if err != nil {
-		panic(err)
-	}
-
-	sc := bufio.NewScanner(dummyDirsFile)
-	for sc.Scan() {
-		dir := sc.Text()
-
-		cmd := &exec.Cmd{
-			Path: filepath.Join(dir, "dummy"),
-			Args: []string{filepath.Join(dir, "dummy")},
-			Dir:  "/deckhouse",
-		}
-
-		res := sandbox_runner.Run(cmd,
-			sandbox_runner.WithKcovWrapper(globalKcovDir),
-			sandbox_runner.AsUser(999, 998),
-		)
-
-		if res.ExitCode() != 0 {
-			panic(fmt.Sprintf(
-				"Exit %v\nStdout:\n%s\nStderr:\n%s\n",
-				res.ExitCode(),
-				string(res.Out.Contents()),
-				string(res.Err.Contents()),
-			))
-		}
-	}
-	if err := sc.Err(); err != nil {
-		panic("scan file error: " + err.Error())
-	}
-})
 
 var _ = AfterSuite(func() {
 	By("Removing temporary directories")
