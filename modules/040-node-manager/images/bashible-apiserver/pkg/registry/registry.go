@@ -23,6 +23,7 @@ import (
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 )
 
 type TemplateStorage interface {
@@ -35,24 +36,25 @@ type TemplateStorage interface {
 	NewList() runtime.Object
 }
 
-// RESTInPeace is just a simple function that panics on error. Otherwise returns
-// the given storage object. It is meant to be a wrapper for bashible
-// registries. One can use REST struct (above) in the first arg.
-func RESTInPeace(storage TemplateStorage, err error) *REST {
+// REST implements a RESTStorage for API services against etcd
+type REST struct {
+	storage TemplateStorage
+	cache   cache.ThreadSafeStore
+}
+
+func RESTInPeace(storage TemplateStorage, err error, cache cache.ThreadSafeStore) *REST {
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
 		panic(err)
 	}
-	return NewREST(storage)
+	return NewREST(storage, cache)
 }
 
-// REST implements a RESTStorage for API services against etcd
-type REST struct {
-	storage TemplateStorage
-}
-
-func NewREST(storage TemplateStorage) *REST {
-	return &REST{storage: storage}
+func NewREST(storage TemplateStorage, cache cache.ThreadSafeStore) *REST {
+	return &REST{
+		storage: storage,
+		cache:   cache,
+	}
 }
 
 // --------------------------------------------------------------------------------
@@ -60,12 +62,18 @@ func NewREST(storage TemplateStorage) *REST {
 //
 
 func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	// TODO cache me maybe https://github.com/deckhouse/deckhouse/issues/1291
-	obj, err := r.storage.Render(name)
-	if err != nil {
-		return nil, err // TODO form status error
+	obj, exists := r.cache.Get(name)
+	if !exists {
+		var err error
+		obj, err = r.storage.Render(name)
+
+		if err != nil {
+			return nil, err // TODO form status error
+		}
+		r.cache.Add(name, obj)
 	}
-	return obj, nil
+
+	return obj.(runtime.Object), nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
