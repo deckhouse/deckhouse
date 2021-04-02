@@ -45,10 +45,9 @@ if [[ ! -d "$cwd" ]]; then
 fi
 
 ssh_private_key_path="$cwd/sshkey"
-ssh_public_key_path="$cwd/sshkey.pub"
 rm -f "$ssh_private_key_path"
-ssh-keygen -b 2048 -t rsa -f "$ssh_private_key_path" -q -N "" <<< y
-ssh_public_key=$(<"$ssh_public_key_path")
+base64 -d <<< "$SSH_KEY" > "$ssh_private_key_path"
+chmod 0600 "$ssh_private_key_path"
 
 if [[ -z "$KUBERNETES_VERSION" ]]; then
   # shellcheck disable=SC2016
@@ -76,52 +75,49 @@ fi
 if [[ "$PROVIDER" == "Yandex.Cloud" ]]; then
   # shellcheck disable=SC2016
   env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
-      SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" SSH_PUBLIC_KEY="$ssh_public_key" \
+      SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
       KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${SSH_PUBLIC_KEY}' \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   ssh_user="ubuntu"
 elif [[ "$PROVIDER" == "GCP" ]]; then
   # shellcheck disable=SC2016
-  env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" SSH_PUBLIC_KEY="$ssh_public_key" \
+  env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" \
       KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON} ${SSH_PUBLIC_KEY}' \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   ssh_user="user"
 elif [[ "$PROVIDER" == "AWS" ]]; then
   # shellcheck disable=SC2016
   env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
-      SSH_PUBLIC_KEY="$ssh_public_key" \
       KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY} ${SSH_PUBLIC_KEY}' \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   ssh_user="ubuntu"
 elif [[ "$PROVIDER" == "Azure" ]]; then
   # shellcheck disable=SC2016
   env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
-      CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" SSH_PUBLIC_KEY="$ssh_public_key" \
+      CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" \
       KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SSH_PUBLIC_KEY} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID}' \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   ssh_user="azureuser"
 elif [[ "$PROVIDER" == "OpenStack" ]]; then
   # shellcheck disable=SC2016
   env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-  SSH_PUBLIC_KEY="$ssh_public_key" \
       KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SSH_PUBLIC_KEY} ${OS_PASSWORD}'  \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
   ssh_user="ubuntu"
 elif [[ "$PROVIDER" == "vSphere" ]]; then
   # shellcheck disable=SC2016
   env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-  SSH_PUBLIC_KEY="$ssh_public_key" \
       KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SSH_PUBLIC_KEY} ${VSPHERE_PASSWORD}'  \
+      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
   ssh_user="ubuntu"
 else
@@ -139,12 +135,28 @@ if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$cwd/bootstra
   exit 1
 fi
 
+>&2 echo "Starting the process, if you'd like to pause the cluster deletion, ssh to cluster \"ssh $ssh_user@$master_ip\" and execute \"kubectl create configmap pause-the-test\""
+
 >&2 echo 'Waiting 10 minutes until Machine provisioning finishes'
 sleep 600
 
 for ((i=0; i<3; i++)); do
   if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
 set -Eeuo pipefail
+
+function cleanup_delay() {
+  while true; do
+    if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
+      break
+    fi
+
+    >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
+
+    sleep 30
+  done
+}
+
+trap cleanup_delay EXIT
 
 for ((i=0; i<10; i++)); do
   smoke_mini_addr=$(kubectl -n d8-upmeter get ep smoke-mini -o json | jq -re '.subsets[].addresses[0] | .ip') && break
