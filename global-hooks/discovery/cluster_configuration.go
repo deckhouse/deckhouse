@@ -1,156 +1,95 @@
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/utils/values_store"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/candictl/pkg/config"
 )
 
-var _ = sdk.Register(&ClusterDiscoveryHook{})
-
-type ClusterDiscoveryHook struct {
-	sdk.CommonGoHook
+type ClusterConfigurationYaml struct {
+	Content []byte
 }
 
-func (c *ClusterDiscoveryHook) Metadata() sdk.HookMetadata {
-	return c.CommonMetadataFromRuntime()
-}
-
-func (c *ClusterDiscoveryHook) Config() *sdk.HookConfig {
-	return c.CommonGoHook.Config(&sdk.HookConfig{
-		YamlConfig: `
-    configVersion: v1
-    kubernetes:
-    - name: cluster_configuration
-      group: main
-      keepFullObjectsInMemory: false
-      apiVersion: v1
-      kind: Secret
-      namespace:
-        nameSelector:
-          matchNames: [kube-system]
-      nameSelector:
-        matchNames: [d8-cluster-configuration]
-      jqFilter: '.data."cluster-configuration.yaml" | @base64d'
-`,
-		MainHandler: c.Main,
-	})
-}
-
-/**
-Original shell hook:
-
-function set_values_from_cluster_configuration_yaml() {
-  cluster_configuration_json=$(echo "$1" | deckhouse-controller helper cluster-configuration | jq -r '.clusterConfiguration')
-
-  values::set global.clusterConfiguration "$cluster_configuration_json"
-
-  values::set global.discovery.podSubnet "$(echo "$cluster_configuration_json" | jq -r '.podSubnetCIDR')"
-  values::set global.discovery.serviceSubnet "$(echo "$cluster_configuration_json" | jq -r '.serviceSubnetCIDR')"
-}
-
-function __main__() {
-  if context::has snapshots.cluster_configuration.0; then
-    set_values_from_cluster_configuration_yaml "$(context::get snapshots.cluster_configuration.0.filterResult)"
-  else
-    values::unset global.clusterConfiguration
-  fi
-}
-
-*/
-func (c *ClusterDiscoveryHook) Main(input *sdk.BindingInput) (*sdk.BindingOutput, error) {
-	out := &sdk.BindingOutput{
-		MemoryValuesPatches: &utils.ValuesPatch{
-			Operations: []*utils.ValuesPatchOperation{},
-		},
+func (*ClusterConfigurationYaml) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := go_hook.ConvertUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
 	}
 
-	s, ok := input.BindingContext.Snapshots["cluster_configuration"]
-	if ok && len(s) > 0 {
+	cc := &ClusterConfigurationYaml{}
+
+	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
+	if !ok {
+		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
+	}
+
+	cc.Content = ccYaml
+
+	return cc, err
+}
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:              "clusterConfiguration",
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
+			Filterable:        &ClusterConfigurationYaml{},
+		},
+	},
+}, clusterConfiguration)
+
+func clusterConfiguration(input *go_hook.HookInput) error {
+	currentConfig, ok := input.Snapshots["clusterConfiguration"]
+
+	// no cluster configuration — unset global value if there is one.
+	if !ok {
+		if input.Values.Values.ExistsP("global.clusterConfiguration") {
+			input.Values.Remove("global.clusterConfiguration")
+		}
+	}
+
+	if ok && len(currentConfig) > 0 {
 		var err error
 
 		// FilterResult is a YAML encoded as a JSON string. Unmarshal it.
-		configYaml, err := JSONStringToGoString(s[0].FilterResult)
-		if err != nil {
-			return nil, err
-		}
+		configYamlBytes := currentConfig[0].(*ClusterConfigurationYaml)
 
 		var metaConfig *config.MetaConfig
-		metaConfig, err = config.ParseConfigFromData(configYaml)
+		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		ops := []*utils.ValuesPatchOperation{}
+		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)
 
-		ops = append(ops, &utils.ValuesPatchOperation{
-			Op:    "add",
-			Path:  "/global/clusterConfiguration",
-			Value: metaConfig.ClusterConfig,
-		})
-
-		podSubnetCIDR, ok := metaConfig.ClusterConfig["podSubnetCIDR"]
-		if ok {
-			ops = append(ops, &utils.ValuesPatchOperation{
-				Op:    "add",
-				Path:  "/global/discovery/podSubnet",
-				Value: podSubnetCIDR,
-			})
-			//values::set global.discovery.podSubnet "$(echo "$cluster_configuration_json" | jq -r '.podSubnetCIDR')"
+		if podSubnetCIDR, ok := metaConfig.ClusterConfig["podSubnetCIDR"]; ok {
+			input.Values.Set("global.discovery.podSubnet", podSubnetCIDR)
 		} else {
-			return nil, fmt.Errorf("no podSubnetCIDR field in clusterConfiguration")
+			return fmt.Errorf("no podSubnetCIDR field in clusterConfiguration")
 		}
 
-		serviceSubnetCIDR, ok := metaConfig.ClusterConfig["serviceSubnetCIDR"]
-		if ok {
-			ops = append(ops, &utils.ValuesPatchOperation{
-				Op:    "add",
-				Path:  "/global/discovery/serviceSubnet",
-				Value: serviceSubnetCIDR,
-			})
-			//values::set global.discovery.serviceSubnet "$(echo "$cluster_configuration_json" | jq -r '.serviceSubnetCIDR')"
+		if serviceSubnetCIDR, ok := metaConfig.ClusterConfig["serviceSubnetCIDR"]; ok {
+			input.Values.Set("global.discovery.serviceSubnet", serviceSubnetCIDR)
 		} else {
-			return nil, fmt.Errorf("no serviceSubnetCIDR field in clusterConfiguration")
+			return fmt.Errorf("no serviceSubnetCIDR field in clusterConfiguration")
 		}
 
-		clusterDomain, ok := metaConfig.ClusterConfig["clusterDomain"]
-		if ok {
-			ops = append(ops, &utils.ValuesPatchOperation{
-				Op:    "add",
-				Path:  "/global/discovery/clusterDomain",
-				Value: clusterDomain,
-			})
+		if serviceSubnetCIDR, ok := metaConfig.ClusterConfig["clusterDomain"]; ok {
+			input.Values.Set("global.discovery.clusterDomain", serviceSubnetCIDR)
 		} else {
-			return nil, fmt.Errorf("no clusterDomain field in clusterConfiguration")
-		}
-
-		out.MemoryValuesPatches.Operations = ops
-	} else {
-		// no cluster configuration — unset global value if there is one.
-		vs := values_store.NewValuesStoreFromValues(input.Values)
-		if vs.Get("global.clusterConfiguration").Exists() {
-			out.MemoryValuesPatches.Operations = []*utils.ValuesPatchOperation{
-				{
-					Op:   "remove",
-					Path: "/global/clusterConfiguration",
-				},
-			}
+			return fmt.Errorf("no clusterDomain field in clusterConfiguration")
 		}
 	}
 
-	return out, nil
-}
-
-func JSONStringToGoString(jsonString string) (string, error) {
-	var res string
-	err := json.Unmarshal([]byte(jsonString), &res)
-	if err != nil {
-		return "", err
-	}
-	return res, nil
+	return nil
 }
