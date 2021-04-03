@@ -24,10 +24,11 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 
 	// There is no Session for go hooks, so this matcher is just ignored
 	if hec.GoHook != nil {
-		if hec.GoHookError != nil {
-			return false, hec.GoHookError
+		if hec.GoHookOut != nil {
+			if hec.GoHookOut.Error != nil {
+				return false, hec.GoHookOut.Error
+			}
 		}
-
 		return true, nil
 	}
 

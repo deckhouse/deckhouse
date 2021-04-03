@@ -79,6 +79,9 @@ metadata:
 		It("node-1: set providerID; node-2: skip; node-3: set providerID; node-4: skip; node-5: set providerID", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
+			// Two patches — for node-1 and node-3
+			Expect(len(f.KubernetesResourcePatch)).To(Equal(3))
+
 			Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.providerID").String()).To(Equal(`static://`))
 			Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.providerID").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Node", "", "node-3").Field("spec.providerID").String()).To(Equal(`static://`))

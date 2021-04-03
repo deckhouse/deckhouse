@@ -9,13 +9,13 @@ require (
 	github.com/blang/semver v3.5.0+incompatible
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210402062614-5a3d3d440037 // branch: master
-	github.com/flant/shell-operator v1.0.1-0.20210402061915-a583609302e9 // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210318173605-65f01a49f656 // branch: master
+	github.com/flant/shell-operator v1.0.0-rc.2.0.20210318171436-f4a0b109c0e3 // branch: master
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.12.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spaolacci/murmur3 v1.1.0
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.5.1
 	github.com/vmware/govmomi v0.21.0
 	go.etcd.io/etcd v3.3.22+incompatible
 	go.uber.org/zap v1.15.0 // indirect
