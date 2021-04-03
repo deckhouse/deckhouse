@@ -134,7 +134,7 @@ spec:
                   apiVersion: v1
                   resource: daemonsets
                   subresource: prometheus-metrics
-                  name: proxy-{{ $crd.name }}-failover
+                  name: proxy-failover
         ports:
         - containerPort: 10355
           name: https-metrics

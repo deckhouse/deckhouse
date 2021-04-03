@@ -11,10 +11,10 @@ metadata:
  name: main
 spec:
   ingressClass: nginx
-  inlet: LoadBalancer
-  hsts: true
-  acceptRequestsFrom:
-  - 1.2.3.4/24
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
   resourcesRequests:
     mode: VPA
     vpa:
@@ -86,4 +86,21 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
+## Пример для Bare Metal
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: HostWithFailover
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    value: frontend
+```
 {% endraw %}
