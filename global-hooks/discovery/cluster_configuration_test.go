@@ -3,14 +3,14 @@ package hooks
 import (
 	"encoding/base64"
 
-	_ "github.com/flant/addon-operator/sdk"
+	_ "github.com/flant/addon-operator/sdk/registry"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
+var _ = Describe("Global hooks :: discovery/cluster_configuration ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -110,7 +110,7 @@ data:
 
 		Context("d8-cluster-configuration Secret got deleted", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 1))
 				f.RunHook()
 			})
 
@@ -126,7 +126,7 @@ data:
 		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 0))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts("", 1))
 			f.RunHook()
 		})
 

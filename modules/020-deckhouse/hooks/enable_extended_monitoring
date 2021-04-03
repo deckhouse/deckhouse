@@ -1,0 +1,17 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    afterHelm: 10
+EOF
+}
+
+function __main__() {
+  kubernetes::patch_jq "" namespace/d8-system ".metadata.annotations += {\"extended-monitoring.flant.com/enabled\":\"\"}"
+  kubernetes::patch_jq "" namespace/kube-system ".metadata.annotations += {\"extended-monitoring.flant.com/enabled\":\"\"}"
+}
+
+hook::run $@
