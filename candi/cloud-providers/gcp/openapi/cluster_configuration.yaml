@@ -56,6 +56,12 @@ apiVersions:
               disableExternalIP:
                 type: boolean
                 enum: [true, false]
+          zones:
+            type: array
+            items:
+              type: string
+            minItems: 1
+            uniqueItems: true
       nodeGroups:
         type: array
         items:
@@ -111,6 +117,12 @@ apiVersions:
                 disableExternalIP:
                   type: boolean
                   enum: [true, false]
+            zones:
+              type: array
+              items:
+                type: string
+              minItems: 1
+              uniqueItems: true
       layout:
         type: string
         enum: [Standard, WithoutNAT]
@@ -137,6 +149,12 @@ apiVersions:
             type: string
           serviceAccountJSON:
             type: string
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
     oneOf:
     - required: [layout]
       properties:

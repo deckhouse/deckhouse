@@ -41,5 +41,4 @@ locals {
   additional_sg_names = lookup(local.instance_class, "additionalSecurityGroups", [])
   security_group_names = (local.layout == "standard" || local.layout == "standardWithNoRouter") ? concat([local.prefix], local.additional_sg_names) : local.additional_sg_names
   metadata_tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.instance_class, "additionalTags", {}))
-  zones = lookup(local.ng, "zones", null)
 }

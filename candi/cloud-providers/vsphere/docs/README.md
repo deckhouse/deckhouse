@@ -135,7 +135,9 @@ title: Cloud provider - Vsphere
     ```
 
   * Опциональный параметр.
-
+* `zones` — ограничение набора зон, в которых разрешено создавать ноды.
+  * Обязательный параметр.
+  * Формат — массив строк.
 ### Standard
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQolOJQw4clYDug78Mr7rvX7wYPsb2uVhab5cDZrzBKq76Ox6dZhgoBXuq-ta8DRC2grjNUcfEq_AR8/pub?w=667&h=516)
@@ -178,6 +180,9 @@ nodeGroups:
     datastore: dev/lun_1
     mainNetwork: k8s-msk/test_187
 sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+zones:
+- ru-central1-a
+- ru-central1-b
 ```
 
 ## Конфигурация vSphere

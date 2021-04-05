@@ -13,6 +13,6 @@ output "cloud_discovery_data" {
       "additionalNetworks" = [openstack_networking_network_v2.internal.name]
       "securityGroups" = module.network_security.security_group_names
     }
-    "zones" = data.openstack_compute_availability_zones_v2.zones.names
+    "zones" = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
   }
 }

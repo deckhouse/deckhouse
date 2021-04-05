@@ -5,9 +5,7 @@ data "google_compute_subnetwork" "kube" {
 data "google_compute_zones" "available" {}
 
 locals {
-  zones       = length(local.configured_zones) > 0 ? local.configured_zones : data.google_compute_zones.available.names
-  zones_count = length(local.zones)
-  zone        = local.zones[var.nodeIndex % local.zones_count]
+  zone        = element(local.zones, var.nodeIndex)
 }
 
 resource "google_compute_address" "static" {

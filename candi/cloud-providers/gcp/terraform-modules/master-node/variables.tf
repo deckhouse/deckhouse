@@ -32,7 +32,8 @@ locals {
   ssh_key                      = var.providerClusterConfiguration.sshKey
   ssh_user                     = "user"
   disable_external_ip          = var.providerClusterConfiguration.layout == "WithoutNAT" ? false : lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "disableExternalIP", true)
-  configured_zones             = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", [])
+  actual_zones                 = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.google_compute_zones.available.names, var.providerClusterConfiguration.zones)) : data.google_compute_zones.available.names
+  zones                        = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
   additional_network_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalNetworkTags", [])
   service_account_client_email = jsondecode(var.providerClusterConfiguration.provider.serviceAccountJSON).client_email
   additional_labels            = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalLabels", null))

@@ -1,7 +1,14 @@
+locals {
+  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
+  zones = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
+}
+
 module "security_groups" {
   source = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
   security_group_names = local.security_group_names
 }
+
+data "openstack_compute_availability_zones_v2" "zones" {}
 
 data "openstack_images_image_v2" "image" {
   name = local.image_name
@@ -48,7 +55,7 @@ resource "openstack_compute_instance_v2" "node" {
   key_pair = local.prefix
   config_drive = local.config_drive
   user_data = var.cloudConfig == "" ? "" : base64decode(var.cloudConfig)
-  availability_zone = local.zones == null ? null : element(local.zones, var.nodeIndex)
+  availability_zone = element(local.zones, var.nodeIndex)
 
   dynamic "network" {
     for_each = openstack_networking_port_v2.port

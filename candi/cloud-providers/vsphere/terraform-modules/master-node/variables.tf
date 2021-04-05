@@ -34,13 +34,11 @@ variable "clusterUUID" {
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
 
-  mng                   = var.providerClusterConfiguration.masterNodeGroup
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
 
-  config_zones    = var.providerClusterConfiguration.zones
-  ng_zones        = lookup(local.mng, "zones", [])
-  effective_zones = length(local.ng_zones) > 0 ? local.ng_zones : local.config_zones
-  zone            = element(local.effective_zones, var.nodeIndex)
+  actual_zones    = var.providerClusterConfiguration.zones
+  zones           = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
+  zone            = element(local.zones, var.nodeIndex)
 
   base_resource_pool    = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
   default_resource_pool = join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix])

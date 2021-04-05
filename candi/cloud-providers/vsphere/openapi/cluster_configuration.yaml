@@ -24,6 +24,7 @@ apiVersions:
             type: array
             items:
               type: string
+            minItems: 1
             uniqueItems: true
           instanceClass:
             type: object
@@ -129,6 +130,7 @@ apiVersions:
               type: array
               items:
                 type: string
+              minItems: 1
               uniqueItems: true
             instanceClass:
               type: object
@@ -224,6 +226,7 @@ apiVersions:
         type: array
         items:
           type: string
+        minItems: 1
         uniqueItems: true
       baseResourcePool:
         type: string

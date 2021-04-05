@@ -50,6 +50,8 @@ apiVersions:
             type: array
             items:
               type: string
+            minItems: 1
+            uniqueItems: true
           instanceClass:
             type: object
             required: [machineSize, urn]
@@ -87,6 +89,8 @@ apiVersions:
               type: array
               items:
                 type: string
+              minItems: 1
+              uniqueItems: true
             nodeTemplate:
               properties:
                 labels:
@@ -151,6 +155,12 @@ apiVersions:
             type: string
           tenantId:
             type: string
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
     oneOf:
     - required: [layout]
       properties:
