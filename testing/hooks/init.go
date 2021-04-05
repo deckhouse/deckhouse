@@ -14,15 +14,17 @@ import (
 
 	// Define Register func and Registry object to import go-hooks.
 	"github.com/flant/addon-operator/pkg/module_manager"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/addon-operator/sdk/registry"
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	"github.com/flant/shell-operator/test/hook/context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/sirupsen/logrus/hooks/test"
 	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -63,7 +65,7 @@ type CustomCRD struct {
 type HookExecutionConfig struct {
 	tmpDir                   string // FIXME
 	HookPath                 string
-	GoHook                   sdk.GoHook
+	GoHook                   go_hook.GoHook
 	values                   *values_store.ValuesStore
 	configValues             *values_store.ValuesStore
 	hookConfig               string // <hook> --config output
@@ -71,14 +73,13 @@ type HookExecutionConfig struct {
 	IsKubeStateInited        bool
 	KubeState                string // yaml string
 	ObjectStore              object_store.ObjectStore
-	KubernetesResourcePatch  KubernetesPatch
 	BindingContexts          BindingContextsSlice
 	BindingContextController *context.BindingContextController
 	extraHookEnvs            []string
 	ValuesValidator          *validation.ValuesValidator
+	GoHookError              error
 
-	Session   *gexec.Session
-	GoHookOut *sdk.HookOutput
+	Session *gexec.Session
 }
 
 func (hec *HookExecutionConfig) RegisterCRD(group, version, kind string, namespaced bool) {
@@ -161,7 +162,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	hasGoHook, err := utils.FileExists(goHookPath)
 	if err == nil && hasGoHook {
 		goHookName := filepath.Base(goHookPath)
-		for _, h := range registry.Registry().Hooks() {
+		for _, h := range sdk.Registry().Hooks() {
 			if strings.Contains(goHookPath, h.Metadata().Path) {
 				hec.GoHook = h
 				break
@@ -263,23 +264,10 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 			globalHook := module_manager.NewGlobalHook(m.Name, m.Path)
 			globalHook.WithGoHook(hec.GoHook)
 
-			var yamlConfigBytes []byte
-
 			goConfig := hec.GoHook.Config()
-			if goConfig.YamlConfig != "" {
-				yamlConfigBytes = []byte(goConfig.YamlConfig)
-			}
-
-			if len(yamlConfigBytes) > 0 {
-				err = globalHook.WithConfig(yamlConfigBytes)
-				if err != nil {
-					panic(fmt.Errorf("fail load hook YAML config: %v", err))
-				}
-			} else if goConfig != nil {
-				err := globalHook.WithGoConfig(goConfig)
-				if err != nil {
-					panic(fmt.Errorf("fail load hook golang config: %v", err))
-				}
+			err := globalHook.WithGoConfig(goConfig)
+			if err != nil {
+				panic(fmt.Errorf("fail load hook golang config: %v", err))
 			}
 
 			hec.BindingContextController.WithHook(&globalHook.Hook)
@@ -480,14 +468,11 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
-		kubePatch, err := NewKubernetesPatch(kubernetesPatchBytes)
+		kubePatch := NewKubernetesPatch(hec.ObjectStore)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		patchedObjects, err := kubePatch.Apply(hec.ObjectStore)
+		err := kubePatch.Apply(kubernetesPatchBytes)
 		Expect(err).ToNot(HaveOccurred())
-
-		hec.ObjectStore = patchedObjects
-		hec.KubernetesResourcePatch = kubePatch
 	}
 }
 
@@ -513,37 +498,52 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	hookInput := &sdk.HookInput{
-		BindingContexts: hec.BindingContexts.BindingContexts,
-		Values:          values,
-		ConfigValues:    convigValues,
-		Envs: map[string]string{
-			"ADDON_OPERATOR_NAMESPACE": "tests",
-			"DECKHOUSE_POD":            "tests",
-			"D8_IS_TESTS_ENVIRONMENT":  "yes",
-			"PATH":                     os.Getenv("PATH"),
-		},
-	}
-
-	out, err := hec.GoHook.Run(hookInput)
+	patchableValues, err := go_hook.NewPatchableValues(values)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	if out.MemoryValuesPatches != nil {
-		patchedValuesBytes, err := out.MemoryValuesPatches.Apply(hec.values.JSONRepr)
+	patchableConfigValues, err := go_hook.NewPatchableValues(convigValues)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
+	for _, bCtx := range hec.BindingContexts.BindingContexts {
+		for snapBindingName, snaps := range bCtx.Snapshots {
+			for _, snapshot := range snaps {
+				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
+			}
+		}
+	}
+
+	// TODO: assert on metrics
+	var metricsOperation []operation.MetricOperation
+	// TODO: assert on logging hook
+	logger, _ := test.NewNullLogger()
+
+	hookInput := &go_hook.HookInput{
+		Snapshots:     formattedSnapshots,
+		Values:        patchableValues,
+		ConfigValues:  patchableConfigValues,
+		Metrics:       &metricsOperation,
+		LogEntry:      logger.WithField("output", "gohook"),
+		ObjectPatcher: NewKubernetesPatch(hec.ObjectStore),
+	}
+
+	hec.GoHookError = hec.GoHook.Run(hookInput)
+
+	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
+		valuesPatch := addonutils.NewValuesPatch()
+		valuesPatch.Operations = patches
+		patchedValuesBytes, err := valuesPatch.ApplyIgnoreNonExistentPaths(hec.values.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
 		hec.values = values_store.NewStoreFromRawJSON(patchedValuesBytes)
 	}
 
-	if out.ConfigValuesPatches != nil {
-		patchedConfigValuesBytes, err := out.ConfigValuesPatches.Apply(hec.configValues.JSONRepr)
+	if patches := hookInput.ConfigValues.GetPatches(); len(patches) != 0 {
+		valuesPatch := addonutils.NewValuesPatch()
+		valuesPatch.Operations = patches
+		patchedConfigValuesBytes, err := valuesPatch.ApplyIgnoreNonExistentPaths(hec.configValues.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
 		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
 	}
-
-	hec.GoHookOut = out
-
-	// TODO Kubernetes patch not supported for Go Hooks now.
-	// https://github.com/flant/shell-operator/issues/94
 }
 
 var _ = AfterSuite(func() {
