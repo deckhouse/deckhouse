@@ -28,8 +28,9 @@ global:
       common:
         kubeRbacProxy: hashstring
       istio:
-        federationMetadata: hashstring
-        federationMetadataDiscovery: hashstring
+        apiProxy: hashstring
+        metadataExporter: hashstring
+        metadataDiscovery: hashstring
         kiali: hashstring
         operatorV1x8x1: hashstring
         operatorV1x8x2: hashstring
@@ -49,6 +50,9 @@ global:
       - "1.16"
       - "1.19"
 istio:
+    multicluster:
+      enabled:
+        __ConstantChoices__: [true, false]
     federation:
       enabled:
         __ConstantChoices__: [true, false]
@@ -84,8 +88,20 @@ istio:
             publicServices:
               - hostname: xxx
                 port: 123
-            spiffeEndpoint: https://istio.sandbox.polovov.ru/federation/spiffe-bundle-endpoint
+            spiffeEndpoint: https://istio.examaple.com/federation/spiffe-bundle-endpoint
             trustDomain: qqq.local
+        multiclusters:
+          - spiffeEndpoint: https://istio.example.com/federation/spiffe-bundle-endpoint
+            name: zzz
+            apiHost: zzz.example.com
+        clientCertificate:
+          cert: ccc
+          key: bbb
+        apiProxyListenCertificate:
+          cert: ddd
+          key: eee
+        remoteRootCAs:
+        -  ["aaa","bbb"]
     sidecar:
       includeOutboundIPRanges: ["*"]
       excludeOutboundIPRanges: ["1.2.3.4"]
