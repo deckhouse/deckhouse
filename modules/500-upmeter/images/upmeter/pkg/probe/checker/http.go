@@ -53,7 +53,7 @@ type httpVerifier interface {
 
 // newGetRequest prepares request object for given URL with auth token
 func newGetRequest(endpoint, authToken string) (*http.Request, check.Error) {
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, check.ErrUnknown("cannot create request: %s", err)
 	}

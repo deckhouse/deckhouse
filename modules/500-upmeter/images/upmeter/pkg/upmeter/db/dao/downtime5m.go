@@ -12,13 +12,13 @@ import (
 
 const CreateTableDowntime5m_latest = `
 CREATE TABLE IF NOT EXISTS downtime5m (
-	timeslot INTEGER NOT NULL,
-    success_seconds INTEGER NOT NULL,
-    fail_seconds INTEGER NOT NULL,
-    unknown_seconds INTEGER NOT NULL,
-    nodata_seconds INTEGER NOT NULL,
-    group_name TEXT NOT NULL,
-    probe_name TEXT NOT NULL
+	timeslot        INTEGER NOT NULL,
+	success_seconds INTEGER NOT NULL,
+	fail_seconds    INTEGER NOT NULL,
+	unknown_seconds INTEGER NOT NULL,
+	nodata_seconds  INTEGER NOT NULL,
+	group_name      TEXT    NOT NULL,
+	probe_name      TEXT    NOT NULL
 )
 `
 
@@ -110,7 +110,7 @@ func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, ref check.ProbeRef) (Dow
 	return entity, nil
 }
 
-func (d *Downtime5mDao) ListByRange(from, to, step int64) ([]Downtime5mEntity, error) {
+func (d *Downtime5mDao) ListByRange(from, to int64) ([]Downtime5mEntity, error) {
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mByTimeslotRange, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("select for TimeslotRange: %v", err)

@@ -18,8 +18,8 @@ type PublicStatusResponse struct {
 }
 
 type PublicStatusHandler struct {
-	DbCtx      *dbcontext.DbContext
-	CrdMonitor *crd.Monitor
+	DbCtx           *dbcontext.DbContext
+	DowntimeMonitor *crd.DowntimeMonitor
 }
 
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +31,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	statuses, status, err := entity.CurrentStatusForGroups(h.DbCtx, h.CrdMonitor)
+	statuses, status, err := entity.CurrentStatusForGroups(h.DbCtx, h.DowntimeMonitor)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error getting current status\n", http.StatusInternalServerError)

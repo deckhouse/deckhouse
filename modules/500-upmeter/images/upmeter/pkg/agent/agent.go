@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -9,6 +10,7 @@ import (
 	"upmeter/pkg/agent/manager"
 	"upmeter/pkg/agent/sender"
 	"upmeter/pkg/app"
+	"upmeter/pkg/check"
 	"upmeter/pkg/kubernetes"
 )
 
@@ -43,10 +45,12 @@ func NewDefaultAgent(ctx context.Context) *Agent {
 		log.Infof("Register calculated probe %s", calc.Id())
 	}
 
-	a.upmeterClient = sender.CreateUpmeterClient(app.UpmeterHost, app.UpmeterPort)
+	timeout := 10 * time.Second
+	a.upmeterClient = sender.NewUpmeterClient(app.UpmeterHost, app.UpmeterPort, timeout)
 	// TODO move context to Start methods
-	a.sender = sender.NewSender(context.Background(), a.upmeterClient)
-	a.executor = executor.NewProbeExecutor(context.Background(), probeManager, a.sender.DowntimeEpisodesCh)
+	ch := make(chan []check.DowntimeEpisode)
+	a.sender = sender.NewSender(context.Background(), a.upmeterClient, ch)
+	a.executor = executor.NewProbeExecutor(context.Background(), probeManager, ch)
 
 	return a
 }

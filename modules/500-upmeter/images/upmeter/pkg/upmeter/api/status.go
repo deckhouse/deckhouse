@@ -24,8 +24,8 @@ type StatusResponse struct {
 }
 
 type StatusRangeHandler struct {
-	DbCtx      *dbcontext.DbContext
-	CrdMonitor *crd.Monitor
+	DbCtx           *dbcontext.DbContext
+	DowntimeMonitor *crd.DowntimeMonitor
 }
 
 func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +85,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	incidents := h.CrdMonitor.FilterDowntimeIncidents(stepRanges.From, stepRanges.To, groupName, muteDowntimeTypes)
+	incidents := h.DowntimeMonitor.FilterDowntimeIncidents(stepRanges.From, stepRanges.To, groupName, muteDowntimeTypes)
 
 	statuses := entity.CalculateStatuses(episodes, incidents, stepRanges.Ranges, groupName, probeName)
 
