@@ -11,8 +11,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func NewContext(factory informers.SharedInformerFactory, configMapName, configMapKey string, updateHandler UpdateHandler) *Context {
-	c := Context{
+func NewContext(factory informers.SharedInformerFactory, configMapName, configMapKey string, updateHandler UpdateHandler) *BashibleContext {
+	c := BashibleContext{
 		configMapName: configMapName,
 		configMapKey:  configMapKey,
 		updateHandler: updateHandler,
@@ -23,12 +23,16 @@ func NewContext(factory informers.SharedInformerFactory, configMapName, configMa
 	return &c
 }
 
+type Context interface {
+	Get(contextKey string) (map[string]interface{}, error)
+}
+
 type UpdateHandler interface {
 	OnUpdate()
 }
 
-// Context manages bashible template context
-type Context struct {
+// BashibleContext manages bashible template context
+type BashibleContext struct {
 	rw sync.RWMutex
 
 	// configMapKey in configmap to parse
@@ -43,7 +47,7 @@ type Context struct {
 	data map[string]interface{}
 }
 
-func (c *Context) subscribe(factory informers.SharedInformerFactory) chan struct{} {
+func (c *BashibleContext) subscribe(factory informers.SharedInformerFactory) chan struct{} {
 	ch := make(chan map[string]string)
 	stopInformer := make(chan struct{})
 
@@ -79,7 +83,7 @@ func (c *Context) subscribe(factory informers.SharedInformerFactory) chan struct
 	return stopUpdater
 }
 
-func (c *Context) update(configMapData map[string]string) {
+func (c *BashibleContext) update(configMapData map[string]string) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
@@ -98,7 +102,7 @@ func (c *Context) update(configMapData map[string]string) {
 // Get retrieves a copy of context for the given configMapKey.
 //
 // TODO In future, node group name will be passed instead of a configMapKey.
-func (c *Context) Get(contextKey string) (map[string]interface{}, error) {
+func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
