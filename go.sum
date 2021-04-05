@@ -85,8 +85,8 @@ github.com/evanphx/json-patch v4.9.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLi
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/flant/addon-operator v1.0.0-rc.1.0.20210402062614-5a3d3d440037 h1:RuCeyJLM9zYd+mXKtftpuZsq1YJ9e46OhrKmY+dalm8=
-github.com/flant/addon-operator v1.0.0-rc.1.0.20210402062614-5a3d3d440037/go.mod h1:m3lfU+Z8PtNBv932nyKmymf/SQ3b9PjuucZ92K70/AI=
+github.com/flant/addon-operator v1.0.0-rc.1.0.20210405091050-06119d4337fc h1:W7DgSwhORZjXGtWNtgSKpmFvPtnheKYU/UB7X+HEoWc=
+github.com/flant/addon-operator v1.0.0-rc.1.0.20210405091050-06119d4337fc/go.mod h1:m3lfU+Z8PtNBv932nyKmymf/SQ3b9PjuucZ92K70/AI=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWDDKFlwgETsT1OiXD1gZtRHcNxAs1lc=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=

@@ -65,7 +65,7 @@ type CustomCRD struct {
 type HookExecutionConfig struct {
 	tmpDir                   string // FIXME
 	HookPath                 string
-	GoHook                   go_hook.GoHook
+	GoHook                   *sdk.HookWithMetadata
 	values                   *values_store.ValuesStore
 	configValues             *values_store.ValuesStore
 	hookConfig               string // <hook> --config output
@@ -163,8 +163,8 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 	if err == nil && hasGoHook {
 		goHookName := filepath.Base(goHookPath)
 		for _, h := range sdk.Registry().Hooks() {
-			if strings.Contains(goHookPath, h.Metadata().Path) {
-				hec.GoHook = h
+			if strings.Contains(goHookPath, h.Metadata.Path) {
+				hec.GoHook = &h
 				break
 			}
 		}
@@ -259,12 +259,12 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 
 		if hec.GoHook != nil {
 			// create GlobalHook or Module and convert its config
-			m := hec.GoHook.Metadata()
+			m := hec.GoHook.Metadata
 			// tests are only for schedule and kubernetes bindings, so we can test all hooks as global hooks
 			globalHook := module_manager.NewGlobalHook(m.Name, m.Path)
-			globalHook.WithGoHook(hec.GoHook)
+			globalHook.WithGoHook(hec.GoHook.Hook)
 
-			goConfig := hec.GoHook.Config()
+			goConfig := hec.GoHook.Hook.Config()
 			err := globalHook.WithGoConfig(goConfig)
 			if err != nil {
 				panic(fmt.Errorf("fail load hook golang config: %v", err))
@@ -527,7 +527,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		ObjectPatcher: NewKubernetesPatch(hec.ObjectStore),
 	}
 
-	hec.GoHookError = hec.GoHook.Run(hookInput)
+	hec.GoHookError = hec.GoHook.Hook.Run(hookInput)
 
 	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
 		valuesPatch := addonutils.NewValuesPatch()
