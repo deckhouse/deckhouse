@@ -1,7 +1,8 @@
 locals {
   security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
   volume_type_map = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
-  zone = element(keys(local.volume_type_map), var.nodeIndex)
+  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
+  zone = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type = local.volume_type_map[local.zone]
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
   root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
@@ -46,6 +47,8 @@ module "security_groups" {
   layout_security_group_ids = module.network_security_info.security_group_ids
   layout_security_group_names = module.network_security_info.security_group_names
 }
+
+data "openstack_compute_availability_zones_v2" "zones" {}
 
 data "openstack_compute_keypair_v2" "ssh" {
   name = local.prefix

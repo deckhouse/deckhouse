@@ -38,6 +38,7 @@ locals {
   image_offer        = local.urn[1]
   image_sku          = local.urn[2]
   image_version      = local.urn[3]
-  zones              = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", ["1", "2", "3"])
+  actual_zones       = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
+  zones              = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
   additional_tags    = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {}))
 }

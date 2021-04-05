@@ -40,7 +40,8 @@ locals {
   ssh_key                      = var.providerClusterConfiguration.sshKey
   ssh_user                     = "user"
   disable_external_ip          = var.providerClusterConfiguration.layout == "WithoutNAT" ? false : lookup(local.node_group.instanceClass, "disableExternalIP", true)
-  configured_zones             = lookup(local.node_group, "zones", [])
+  actual_zones                 = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.google_compute_zones.available.names, var.providerClusterConfiguration.zones)) : data.google_compute_zones.available.names
+  zones                        = lookup(local.node_group, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.node_group["zones"])) : local.actual_zones
   additional_network_tags      = lookup(local.node_group.instanceClass, "additionalNetworkTags", [])
   service_account_client_email = jsondecode(var.providerClusterConfiguration.provider.serviceAccountJSON).client_email
   additional_labels            = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.node_group.instanceClass, "additionalLabels", {}))

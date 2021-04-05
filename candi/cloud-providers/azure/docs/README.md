@@ -82,7 +82,9 @@ title: "Cloud provider — Azure: Развертывание"
 * `peeredVNets` — массив `VNet's`, с которыми будет объединена сеть кластера. Сервис-аккаунт должен иметь доступ ко всем перечисленным `VNet`. Если доступа нет, то пиринг необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
     * `resourceGroupName` — имя группы ресурсов, в которой находится VNet.
     * `vnetName` — имя VNet.
-
+* `zones` — ограничение набора зон, в которых разрешено создавать ноды.
+  * Опциональный параметр.
+  * Формат — массив строк.
 ### Standard
 * Для кластера создаётся отдельная [resorce group](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal).
 * По умолчанию каждому инстансу динамически выделается один внешний IP-адрес, который используется только для доступа в интернет. На каждый IP для SNAT доступно 64000 портов.

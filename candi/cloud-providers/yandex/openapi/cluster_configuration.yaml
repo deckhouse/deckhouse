@@ -167,6 +167,14 @@ apiVersions:
         - cloudID
         - folderID
         - serviceAccountJSON
+      zones:
+        type: array
+        items:
+          enum:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-c
+        uniqueItems: true
     oneOf:
     - required: [layout]
       properties:

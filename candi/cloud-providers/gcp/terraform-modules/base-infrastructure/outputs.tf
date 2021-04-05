@@ -4,7 +4,7 @@ output "cloud_discovery_data" {
     "kind"              = "GCPCloudDiscoveryData"
     "networkName"       = google_compute_network.kube.name
     "subnetworkName"    = google_compute_subnetwork.kube.name
-    "zones"             = data.google_compute_zones.available.names
+    "zones"             = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.google_compute_zones.available.names, var.providerClusterConfiguration.zones)) : data.google_compute_zones.available.names
     "disableExternalIP" = var.providerClusterConfiguration.layout == "WithoutNAT" ? false : true
     "instances" = {
       "image"       = var.providerClusterConfiguration.masterNodeGroup.instanceClass.image

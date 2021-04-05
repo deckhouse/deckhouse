@@ -16,9 +16,12 @@ locals {
     "ru-central1-b" = data.yandex_vpc_subnet.kube_b
     "ru-central1-c" = data.yandex_vpc_subnet.kube_c
   }
-  configured_zones = lookup(local.ng, "zones", [])
-  subnets = length(local.configured_zones) > 0 ? [for z in local.configured_zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
+
+  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
+  zones = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
+  subnets = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
   internal_subnet = element(local.subnets, var.nodeIndex)
+
   assign_external_ip_address = (local.external_subnet_id == null) && (length(local.external_ip_addresses) > 0) ? true : false
   external_ip = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
 }

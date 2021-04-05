@@ -42,6 +42,9 @@ apiVersions:
           zones:
             type: array
             items:
+              type: string
+            minItems: 1
+            uniqueItems: true
           additionalTags:
             type: object
             additionalProperties:
@@ -102,6 +105,9 @@ apiVersions:
             zones:
               type: array
               items:
+                type: string
+              minItems: 1
+              uniqueItems: true
             additionalTags:
               type: object
               additionalProperties:
@@ -147,6 +153,12 @@ apiVersions:
             type: string
           region:
             type: string
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
     allOf:
     - oneOf:
       - required: [layout, standard]

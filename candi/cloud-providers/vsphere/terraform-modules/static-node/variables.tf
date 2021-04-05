@@ -42,10 +42,9 @@ locals {
 
   node_group_name = local.ng.name
 
-  config_zones    = var.providerClusterConfiguration.zones
-  ng_zones        = lookup(local.ng, "zones", [])
-  effective_zones = length(local.ng_zones) > 0 ? local.ng_zones : local.config_zones
-  zone            = element(local.effective_zones, var.nodeIndex)
+  actual_zones    = var.providerClusterConfiguration.zones
+  zones           = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
+  zone            = element(local.zones, var.nodeIndex)
 
   base_resource_pool    = trim(lookup(var.providerClusterConfiguration, "baseResourcePool", ""), "/")
   default_resource_pool = join("/", local.base_resource_pool != "" ? [local.base_resource_pool, local.prefix] : [local.prefix])

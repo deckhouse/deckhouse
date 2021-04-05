@@ -18,6 +18,12 @@ apiVersions:
         type: object
         additionalProperties:
           type: string
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
       masterNodeGroup:
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]

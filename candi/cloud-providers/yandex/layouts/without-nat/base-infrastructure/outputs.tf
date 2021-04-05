@@ -6,7 +6,7 @@ output "cloud_discovery_data" {
     "routeTableID" = module.vpc_components.route_table_id
     "defaultLbTargetGroupNetworkId" = local.network_id
     "internalNetworkIDs" = [local.network_id]
-    "zones" = keys(module.vpc_components.zone_to_subnet_id_map)
+    "zones" = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(module.vpc_components.zone_to_subnet_id_map), var.providerClusterConfiguration.zones)) : keys(module.vpc_components.zone_to_subnet_id_map)
     "zoneToSubnetIdMap" = module.vpc_components.zone_to_subnet_id_map
     "shouldAssignPublicIPAddress" = true
   }

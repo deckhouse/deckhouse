@@ -8,7 +8,7 @@ locals {
       "imageName" = local.image_name
       "mainNetwork" = data.openstack_networking_network_v2.internal.name
     }
-    "zones" = data.openstack_compute_availability_zones_v2.zones.names
+    "zones" = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
   }
   data_load_balancer = {
     "loadBalancer": {

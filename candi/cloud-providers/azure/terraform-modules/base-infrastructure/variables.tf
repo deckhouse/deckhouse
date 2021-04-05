@@ -29,7 +29,7 @@ locals {
   location                    = var.providerClusterConfiguration.provider.location
   vnet_cidr                   = var.providerClusterConfiguration.vNetCIDR
   subnet_cidr                 = var.providerClusterConfiguration.subnetCIDR
-  zones                       = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", ["1", "2", "3"])
+  zones                       = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(["1", "2", "3"], var.providerClusterConfiguration.zones)) : ["1", "2", "3"]
   peered_vnets                = { for vpc in lookup(var.providerClusterConfiguration, "peeredVNets", []) : vpc.vnetName => vpc }
   enable_nat_gateway          = lookup(var.providerClusterConfiguration, "enableNatGateway", false)
   additional_tags             = lookup(var.providerClusterConfiguration, "tags", {})
