@@ -25,6 +25,7 @@ title: "Модуль monitoring-applications"
 Если это не возможно, предлагается воспользоваться двумя аннотациями: `prometheus.deckhouse.io/port: номер_порта` для указания порта и `prometheus.deckhouse.io/tls: "true"`, если сбор метрик будет проходить по HTTPS.
 3. Указать дополнительные аннотации для более тонкой настройки:
     * `prometheus.deckhouse.io/path` — путь для сбора метрик (по умолчанию: `/metrics`)
+    * `prometheus.deckhouse.io/query-param-$name` — аргумент $name=$value для GET query (по умолчанию: ``)
     * `prometheus.deckhouse.io/allow-unready-pod` — разрешает сбор метрик с подов в любом состоянии (по умолчанию метрики собираются только с подов в состоянии Ready).
     * `prometheus.deckhouse.io/sample-limit` — сколько семплов разрешено собирать с пода (значение лимита по умолчанию можно посмотреть в таблице выше).
 
