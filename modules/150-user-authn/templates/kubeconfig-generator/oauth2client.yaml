@@ -12,6 +12,8 @@ name: kubeconfig-generator
 secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret }}
 redirectURIs:
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
+- http://localhost:8000
+- http://localhost:18000
 {{- end }}
 
 {{- if $context.Values.userAuthn.kubeconfigGenerator}}
@@ -28,5 +30,7 @@ name: kubeconfig-generator-{{ $index }}
 secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret }}
 redirectURIs:
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}
+- http://localhost:8000
+- http://localhost:18000
   {{- end }}
 {{- end }}
