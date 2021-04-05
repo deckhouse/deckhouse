@@ -1,7 +1,3 @@
-if bb-apt-repo? https://nginx.org/packages/ubuntu/; then
-  exit 0
-fi
-
 bb-apt-key-add <<END
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v2.0.22 (GNU/Linux)
@@ -32,5 +28,9 @@ Va3l3WuB+rgKjsQ=
 =EWWI
 -----END PGP PUBLIC KEY BLOCK-----
 END
+
+if bb-apt-repo? https://nginx.org/packages/ubuntu/; then
+  exit 0
+fi
 
 bb-apt-repo-add deb https://nginx.org/packages/ubuntu/ "$(lsb_release -cs)" nginx
