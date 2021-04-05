@@ -18,6 +18,7 @@ apiVersions:
       cloud:
         type: object
         required: [provider]
+        additionalProperties: false
         properties:
           provider:
             type: string
@@ -54,6 +55,31 @@ apiVersions:
         - "1.16"
         - "1.19"
         - "1.20"
+      packagesProxy:
+        type: object
+        additionalProperties: false
+        properties:
+          uri:
+            type: string
+          username:
+            type: string
+          password:
+            type: string
+        oneOf:
+          - properties:
+              uri:
+                type: string
+            additionalProperties: false
+            required: [uri]
+          - properties:
+              uri:
+                type: string
+              username:
+                type: string
+              password:
+                type: string
+            additionalProperties: false
+            required: [uri, username, password]
     oneOf:
     - properties:
         clusterType:

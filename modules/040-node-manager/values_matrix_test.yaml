@@ -39,7 +39,7 @@ global:
       - customTolerationKeys:
           - "test-1"
           - "test-2/master"
-
+  clusterConfiguration: {}
 nodeManager:
   allowedBundles:
     __ConstantChoices__:

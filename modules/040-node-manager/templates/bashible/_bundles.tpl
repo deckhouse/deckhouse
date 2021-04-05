@@ -9,10 +9,14 @@
   {{- $_ := set $normal "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses }}
   {{- $_ := set $normal "kubernetesCA"       $context.Values.nodeManager.internal.kubernetesCA }}
 
-  {{- $tpl_context_common := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
+  {{- $tpl_context_common := dict }}
   {{- $_ := set $tpl_context_common "runType" "Normal" }}
   {{- $_ := set $tpl_context_common "Template" $context.Template }}
   {{- $_ := set $tpl_context_common "normal"   $normal }}
+
+  {{- if hasKey $context.Values.global.clusterConfiguration "packagesProxy" }}
+    {{- $_ := set $tpl_context_common "packagesProxy" $context.Values.global.clusterConfiguration.packagesProxy }}
+  {{- end }}
 
   {{- $tpl_context_common | toYaml }}
 {{- end -}}
@@ -107,7 +111,9 @@
   {{- $bundle  := index . 1 -}}
   {{- $ng      := index . 2 -}}
 
-  {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
+  {{- $common_tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
+  {{- $candi_version_map := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
+  {{- $tpl_context := merge $common_tpl_context $candi_version_map }}
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $ng.kubernetesVersion }}
   {{- $_ := set $tpl_context "cri" $ng.cri.type }}
@@ -149,7 +155,10 @@
   {{- $bundle  := index . 1 -}}
   {{- $kubernetes_version := index . 2 -}}
 
-  {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
+  {{- $common_tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
+  {{- $candi_version_map := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
+  {{- $tpl_context := merge $common_tpl_context $candi_version_map }}
+
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $kubernetes_version }}
 
