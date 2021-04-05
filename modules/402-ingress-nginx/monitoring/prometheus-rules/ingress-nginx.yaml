@@ -66,3 +66,23 @@
         `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`
       summary: >
         Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.type }} errors.
+  - alert: D8NginxIngressDeprecated
+    expr: max(d8_nginx_ingress_deprecated > 0)
+    labels:
+      severity_level: "9"
+      # after migrating alert to new module, we have to use old module name in labels to
+      # avoid creating new events in Polk
+      d8_module: nginx_ingress
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_incident_initial_status: "todo"
+      description: |
+        Модуль nginx-ingress объявлен устаревшим и больше не поддерживается.
+
+        Необходимо использовать новый модуль ingress-nginx.
+        * Выберите подходящий Inlet внимательно прочитав документацию.
+        * Убедитесь что в кластере не используется rewrite-target-migration (rwr).
+        * По окончании миграции отключите модуль nginxIngress в configmap deckhouse `nginxIngressEnabled: "false"`
+      summary: |
+        В кластере используется устаревший модуль nginx-ingress

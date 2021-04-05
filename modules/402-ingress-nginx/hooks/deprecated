@@ -1,0 +1,23 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+    configVersion: v1
+    beforeHelm: 1
+    schedule:
+    - crontab: "*/10 * * * *"
+EOF
+}
+
+function __main__() {
+  enabled=0
+  if values::array_has global.enabledModules "nginx-ingress" ; then
+    enabled=1
+  fi
+
+  jq -rc '{"name":"d8_nginx_ingress_deprecated", "set": .}' <<< "${enabled}" >> $METRICS_PATH
+}
+
+hook::run $@
