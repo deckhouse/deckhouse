@@ -9,7 +9,7 @@ import (
 // e.g.
 //     `ubuntu-lts.master`  for nodegroup bundles
 //     `ubuntu-lts.1-19`    for generic bundles
-func parseName(name string) (string, string, error) {
+func ParseName(name string) (string, string, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("name: %q must comply with format {os}.{target} using hyphens as innner delimiters", name)
@@ -22,7 +22,7 @@ func parseName(name string) (string, string, error) {
 
 // GetNodegroupContextKey parses context configMapKey for nodegroup bundles
 func GetNodegroupContextKey(name string) (string, error) {
-	os, ng, err := parseName(name)
+	os, ng, err := ParseName(name)
 	if err != nil {
 		return "", fmt.Errorf("bad os name: %v", err)
 	}
@@ -31,7 +31,7 @@ func GetNodegroupContextKey(name string) (string, error) {
 
 // GetVersionContextKey parses context configMapKey for kubernetes bundles
 func GetVersionContextKey(name string) (string, error) {
-	os, version, err := parseName(name)
+	os, version, err := ParseName(name)
 	if err != nil {
 		return "", fmt.Errorf("bad os name: %v", err)
 	}
@@ -41,7 +41,7 @@ func GetVersionContextKey(name string) (string, error) {
 
 // GetBashibleContextKey parses context configMapKey bashible
 func GetBashibleContextKey(name string) (string, error) {
-	os, nodegroup, err := parseName(name)
+	os, nodegroup, err := ParseName(name)
 	if err != nil {
 		return "", fmt.Errorf("bad bashible name: %v", err)
 	}

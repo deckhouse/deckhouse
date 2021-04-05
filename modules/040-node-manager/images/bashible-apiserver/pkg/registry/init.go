@@ -9,15 +9,15 @@ import (
 	"bashible-apiserver/pkg/template"
 )
 
-func GetStorage(rootDir string, bashibleContext *template.Context, manager CachesManager) map[string]rest.Storage {
-
+func GetStorage(rootDir string, bashibleContext *template.BashibleContext, manager CachesManager) map[string]rest.Storage {
 	v1alpha1storage := map[string]rest.Storage{}
 
 	bashiblesStorage, err := bashible.NewStorage(rootDir, bashibleContext)
 	v1alpha1storage["bashibles"] = RESTInPeace(bashiblesStorage, err, manager.GetCache())
 
-	k8sStorege, err := kubernetesbundle.NewStorage(rootDir, bashibleContext)
-	v1alpha1storage["kubernetesbundles"] = RESTInPeace(k8sStorege, err, manager.GetCache())
+	// TODO remove kubernetesbundles. nodegroupbundles contains k8s and ng bundles both
+	k8sStorage, err := kubernetesbundle.NewEmptyStorage()
+	v1alpha1storage["kubernetesbundles"] = RESTInPeace(k8sStorage, err, manager.GetCache())
 
 	ngStorage, err := nodegroupbundle.NewStorage(rootDir, bashibleContext)
 	v1alpha1storage["nodegroupbundles"] = RESTInPeace(ngStorage, err, manager.GetCache())

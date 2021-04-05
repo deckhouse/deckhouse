@@ -6,7 +6,7 @@ import (
 
 const versionMap = "versionMap"
 
-func NewStepsRenderer(bashibleContext *Context, rootDir string, target string, nameMapper NameMapper) *StepsRenderer {
+func NewStepsRenderer(bashibleContext Context, rootDir string, target string, nameMapper NameMapper) *StepsRenderer {
 	return &StepsRenderer{
 		bashibleContext: bashibleContext,
 		rootDir:         rootDir,
@@ -16,7 +16,7 @@ func NewStepsRenderer(bashibleContext *Context, rootDir string, target string, n
 }
 
 type StepsRenderer struct {
-	bashibleContext *Context
+	bashibleContext Context
 	rootDir         string
 	contextName     NameMapper
 	target          string

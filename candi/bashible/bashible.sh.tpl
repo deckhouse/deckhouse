@@ -148,17 +148,7 @@ function main() {
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    # Convert, say, `1.19` to `1-19`. Dot is the delimiter of context parts, but
-    # parts themselves contain only hyphens. That is the convention of bashible
-    # apiserver meant to make name parsing easier.
-    KUBE_VERSION="$(echo {{ .kubernetesVersion }} | sed 's/\./-/g')"
-
-    k8s_steps_collection="$( get_bundle kubernetesbundle "${BUNDLE}.${KUBE_VERSION}" | jq -rc '.data')"
     ng_steps_collection="$(  get_bundle nodegroupbundle  "${BUNDLE}.${NODE_GROUP}"   | jq -rc '.data')"
-
-    for step in $(jq -r 'to_entries[] | .key' <<< "$k8s_steps_collection"); do
-      jq -r --arg step "$step" '.[$step] // ""' <<< "$k8s_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
-    done
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
