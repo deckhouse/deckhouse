@@ -25,6 +25,9 @@
 - sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_path]
   regex: (.+)
   targetLabel: __metrics_path__
+- action: labelmap
+  regex: __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_query_param_(.+)
+  replacement: __param_${1}
 - sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_sample_limit]
   regex: (.+)
   targetLabel: __sample_limit__
