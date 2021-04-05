@@ -1,0 +1,151 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"github.com/sirupsen/logrus"
+	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
+	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
+	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
+	kwhmutating "github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"net/http"
+	"os"
+)
+
+type config struct {
+	certFile string
+	keyFile  string
+}
+
+func initFlags() config {
+	cfg := config{}
+
+	fl := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fl.StringVar(&cfg.certFile, "tls-cert-file", "", "TLS certificate file")
+	fl.StringVar(&cfg.keyFile, "tls-key-file", "", "TLS key file")
+
+	fl.Parse(os.Args[1:])
+	return cfg
+}
+
+func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		// If not a pod just continue the mutation chain(if there is one) and don't do nothing.
+		return &kwhmutating.MutatorResult{}, nil
+	}
+
+	if pod.Spec.Subdomain == "" {
+		// do nothing if there isn't spec.subdomain
+		return &kwhmutating.MutatorResult{
+			MutatedObject: pod,
+		}, nil
+	}
+
+	volume := corev1.Volume{
+		Name: "etc-hosts",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
+
+	volumeMountInit := corev1.VolumeMount{
+		Name:      "etc-hosts",
+		MountPath: "/mnt/",
+		ReadOnly:  false,
+	}
+
+	volumeMount := corev1.VolumeMount{
+		Name:      "etc-hosts",
+		MountPath: "/etc/hosts",
+		SubPath:   "hosts",
+		ReadOnly:  true,
+	}
+
+	var podHostname string
+	if pod.Spec.Hostname != "" {
+		podHostname = pod.Spec.Hostname
+	} else {
+		podHostname = pod.Name
+	}
+
+	runAsUser := int64(65534)
+	runAsGroup := int64(65534)
+	initContainer := corev1.Container{
+		Name:         "render-etc-hosts-with-cluster-domain-aliases",
+		Image:        os.Getenv("INIT_CONTAINER_IMAGE"),
+		VolumeMounts: []corev1.VolumeMount{volumeMountInit},
+		Command:      []string{"/render-etc-hosts-with-cluster-domain-aliases"},
+		Env: []corev1.EnvVar{
+			{Name: "POD_HOSTNAME", Value: podHostname},
+			{Name: "POD_NAMESPACE", Value: pod.Namespace},
+			{Name: "POD_SUBDOMAIN", Value: pod.Spec.Subdomain},
+			{Name: "CLUSTER_DOMAIN", Value: os.Getenv("CLUSTER_DOMAIN")},
+			{Name: "CLUSTER_DOMAIN_ALIASES", Value: os.Getenv("CLUSTER_DOMAIN_ALIASES")},
+			{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"all"},
+			},
+			RunAsUser:  &runAsUser,
+			RunAsGroup: &runAsGroup,
+		},
+	}
+
+	pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
+	pod.Spec.ImagePullSecrets = append(pod.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "deckhouse-registry-kube-dns"})
+
+	for i := range pod.Spec.Containers {
+		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, volumeMount)
+	}
+
+	for i := range pod.Spec.InitContainers {
+		pod.Spec.InitContainers[i].VolumeMounts = append(pod.Spec.InitContainers[i].VolumeMounts, volumeMount)
+	}
+
+	// add to the very beginning of initContainers
+	pod.Spec.InitContainers = append([]corev1.Container{initContainer}, pod.Spec.InitContainers...)
+
+	return &kwhmutating.MutatorResult{
+		MutatedObject: pod,
+	}, nil
+}
+
+func main() {
+	logrusLogEntry := logrus.NewEntry(logrus.New())
+	logrusLogEntry.Logger.SetLevel(logrus.DebugLevel)
+	logger := kwhlogrus.NewLogrus(logrusLogEntry)
+
+	cfg := initFlags()
+
+	mt := kwhmutating.MutatorFunc(addInitContainerToPod)
+
+	mcfg := kwhmutating.WebhookConfig{
+		ID:      "addHostAliasesToPod",
+		Obj:     &corev1.Pod{},
+		Mutator: mt,
+		Logger:  logger,
+	}
+	wh, err := kwhmutating.NewWebhook(mcfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error creating webhook: %s", err)
+		os.Exit(1)
+	}
+
+	// Get the handler for our webhook.
+	whHandler, err := kwhhttp.HandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: logger})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error creating webhook handler: %s", err)
+		os.Exit(1)
+	}
+	logger.Infof("Listening on :8080")
+	err = http.ListenAndServeTLS(":8080", cfg.certFile, cfg.keyFile, whHandler)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
+		os.Exit(1)
+	}
+}

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+HOSTS_FILE=/mnt/hosts
+
+cat > $HOSTS_FILE << EOF
+127.0.0.1	localhost
+::1		localhost ip6-localhost ip6-loopback
+fe00::0		ip6-localnet
+fe00::0		ip6-mcastprefix
+fe00::1		ip6-allnodes
+fe00::2		ip6-allrouters
+${POD_IP}	${POD_HOSTNAME}.${POD_SUBDOMAIN}.${POD_NAMESPACE}.svc.${CLUSTER_DOMAIN}	${POD_HOSTNAME}
+EOF
+
+for alias in ${CLUSTER_DOMAIN_ALIASES}; do
+  echo "${POD_IP}	${POD_HOSTNAME}.${POD_SUBDOMAIN}.${POD_NAMESPACE}.svc.${alias}" >> $HOSTS_FILE
+done
