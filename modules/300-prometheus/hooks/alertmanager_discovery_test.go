@@ -9,10 +9,7 @@ User-stories:
 package hooks
 
 import (
-	"github.com/flant/addon-operator/sdk"
-	_ "github.com/flant/addon-operator/sdk/registry"
-	hook "github.com/flant/shell-operator/pkg/hook/binding_context"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	_ "github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -79,7 +76,6 @@ metadata:
 spec:
   ports:
   - port: 83
-    name: test
 `
 	)
 
@@ -94,7 +90,7 @@ spec:
 		It("snapshots must be empty; prometheus.internal.alertmanagers must be '{}'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Get("0.snapshots.alertmanager_services").Array()).To(BeEmpty())
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(Equal("{}"))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers").Exists()).ToNot(BeTrue())
 		})
 	})
 
@@ -106,7 +102,7 @@ spec:
 
 		It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}]}'`, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(Equal(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}]}`))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}]}`))
 		})
 
 		Context("Two more special services added", func() {
@@ -117,59 +113,9 @@ spec:
 
 			It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":"test"}]}'`, func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(Equal(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":"test"}]}`))
+				Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":83}]}`))
 			})
 		})
 
-	})
-})
-
-// MergeAlertManagers test
-var _ = Describe("Prometheus hooks :: alertmanager discovery :: go funcs ::", func() {
-	Context("MergeAlertManagers ::", func() {
-		It("should return '{}' if no 'alertmanager_services' snapshot", func() {
-			in := &sdk.BindingInput{
-				BindingContext: hook.BindingContext{
-					Binding:   "main",
-					Type:      "Group",
-					Snapshots: map[string][]types.ObjectAndFilterResult{},
-				},
-			}
-			in.BindingContext.Metadata.Group = "main"
-			out, err := MergeAlertManagers(in)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(out).Should(Equal(struct{}{}))
-		})
-
-		It("should merge filterResults in 'alertmanager_services' snapshot", func() {
-			in := &sdk.BindingInput{
-				BindingContext: hook.BindingContext{
-					Binding: "main",
-					Type:    "Group",
-					Snapshots: map[string][]types.ObjectAndFilterResult{
-						"alertmanager_services": {
-							{
-								FilterResult: `{"prometheus":"prom-one", "service":{"name":"srvOne", "namespace": "nsOne", "pathPrefix": "/prom", "port": 12}}`,
-							},
-							{
-								FilterResult: `{"prometheus":"prom-one", "service":{"name":"srvTwo", "namespace": "nsTwo", "pathPrefix": "/prom-two", "port": "prom-port"}}`,
-							},
-							{
-								FilterResult: `{"prometheus":"long-term", "service":{"name":"srvLongTerm", "namespace": "nsOne", "pathPrefix": "/long-prom", "port": 9090}}`,
-							},
-						},
-					},
-				},
-			}
-			in.BindingContext.Metadata.Group = "main"
-			out, err := MergeAlertManagers(in)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(out).Should(BeAssignableToTypeOf(map[string][]interface{}{}))
-			Expect(out).Should(HaveKey("long-term"))
-			Expect(out).Should(HaveKey("prom-one"))
-			m := out.(map[string][]interface{})
-			Expect(m["long-term"]).Should(HaveLen(1))
-			Expect(m["prom-one"]).Should(HaveLen(2))
-		})
 	})
 })
