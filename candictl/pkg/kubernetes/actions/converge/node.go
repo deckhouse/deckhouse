@@ -236,3 +236,31 @@ func DeleteNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) erro
 		return err
 	})
 }
+
+func requestNodeExists(kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
+	_, err := kubeCl.
+		CoreV1().
+		Nodes().
+		Get(nodeName, metav1.GetOptions{})
+
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.IsNotFound(err) {
+		return false, nil
+	}
+
+	return true, err
+}
+
+func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
+	exists := false
+	err := retry.StartLoop(fmt.Sprintf("Checking node exists %s", nodeName), 5, 2, func() error {
+		var err error
+		exists, err = requestNodeExists(kubeCl, nodeName)
+		return err
+	})
+
+	return exists, err
+}

@@ -25,6 +25,14 @@ const (
 
 func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string) error {
 	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
+
+	nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+	if err != nil {
+		return err
+	} else if nodeExists {
+		return fmt.Errorf("node with name %s exists in cluster", nodeName)
+	}
+
 	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
 
 	runner := terraform.NewRunnerFromConfig(cfg, step).
@@ -48,6 +56,14 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 
 func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string) (*terraform.PipelineOutputs, error) {
 	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, masterNodeGroupName, index)
+
+	nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
+	if existsErr != nil {
+		return nil, existsErr
+	} else if nodeExists {
+		return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
+	}
+
 	nodeConfig := cfg.NodeGroupConfig(masterNodeGroupName, index, cloudConfig)
 
 	runner := terraform.NewRunnerFromConfig(cfg, "master-node").
@@ -214,7 +230,7 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 
 	if replicas > len(nodeGroupState.State) {
 		err := log.Process("converge", fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
-			return c.addNewNodeGroup(&nodeGroup)
+			return c.addNewNodesToGroup(&nodeGroup)
 		})
 		if err != nil {
 			return err
@@ -287,7 +303,7 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 	return nil
 }
 
-func (c *Controller) addNewNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
+func (c *Controller) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error {
 	count := len(nodeGroup.State)
 	index := 0
 
@@ -295,6 +311,7 @@ func (c *Controller) addNewNodeGroup(nodeGroup *NodeGroupGroupOptions) error {
 
 	for nodeGroup.Replicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, nodeGroup.Name, index)
+
 		if _, ok := nodeGroup.State[candidateName]; !ok {
 			var err error
 			if nodeGroup.Name == masterNodeGroupName {
