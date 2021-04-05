@@ -1,5 +1,26 @@
+From 4a029c3aa84bcc97ae2040429007132e10ea1b0c Mon Sep 17 00:00:00 2001
+From: "m.nabokikh" <maksim.nabokikh@flant.com>
+Date: Tue, 30 Mar 2021 13:41:08 +0400
+Subject: [PATCH] patch
+
+---
+ dex-auth.go                     | 65 +++++++++++++++++++++++--
+ entrypoint.sh                   |  2 +-
+ main.go                         |  7 +++
+ templates.go                    | 15 ++++++
+ templates/kubeconfig.html       |  7 ++-
+ templates/linux-mac-common.html | 20 +++++---
+ templates/linux-tab.html        | 17 ++++++-
+ templates/mac-tab.html          | 13 ++++-
+ templates/raw-config-tab.html   | 86 +++++++++++++++++++++++++++++++++
+ templates/warning.html          | 42 ++++++++++++++++
+ templates/windows-tab.html      | 15 ++++--
+ 11 files changed, 271 insertions(+), 18 deletions(-)
+ create mode 100644 templates/raw-config-tab.html
+ create mode 100644 templates/warning.html
+
 diff --git a/dex-auth.go b/dex-auth.go
-index 2a52d1d..cf41394 100644
+index 2a52d1d..245d512 100644
 --- a/dex-auth.go
 +++ b/dex-auth.go
 @@ -2,6 +2,7 @@ package main
@@ -10,7 +31,7 @@ index 2a52d1d..cf41394 100644
  	"encoding/json"
  	"fmt"
  	"io/ioutil"
-@@ -17,6 +18,37 @@ import (
+@@ -17,6 +18,36 @@ import (
  
  const exampleAppState = "Vgn2lp5QnymFtLntKX5dM8k773PwcM87T4hQtiESC1q8wkUBgw5D3kH0r5qJ"
  
@@ -35,7 +56,7 @@ index 2a52d1d..cf41394 100644
 +	return clusters, nil
 +}
 +
-+func newCookie(clusters []string) *http.Cookie{
++func newCookie(clusters []string) *http.Cookie {
 +	cookie := http.Cookie{Name: "clusters", Path: "/"}
 +
 +	newCookieValue, _ := json.Marshal(clusters)
@@ -44,11 +65,10 @@ index 2a52d1d..cf41394 100644
 +	return &cookie
 +}
 +
-+
  func (cluster *Cluster) oauth2Config(scopes []string) *oauth2.Config {
  
  	return &oauth2.Config{
-@@ -29,8 +61,7 @@ func (cluster *Cluster) oauth2Config(scopes []string) *oauth2.Config {
+@@ -29,8 +60,7 @@ func (cluster *Cluster) oauth2Config(scopes []string) *oauth2.Config {
  }
  
  func (config *Config) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +78,7 @@ index 2a52d1d..cf41394 100644
  		http.Redirect(w, r, path.Join(config.Web_Path_Prefix, "login", config.Clusters[0].Name), http.StatusSeeOther)
  	} else {
  		renderIndex(w, config)
-@@ -38,9 +69,32 @@ func (config *Config) handleIndex(w http.ResponseWriter, r *http.Request) {
+@@ -38,9 +68,32 @@ func (config *Config) handleIndex(w http.ResponseWriter, r *http.Request) {
  }
  
  func (cluster *Cluster) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +87,7 @@ index 2a52d1d..cf41394 100644
 +		log.Printf("Error while decoding cookie: %v", err)
 +	}
 +	skipAlreadyLogged := r.URL.Query().Get("skip_already_logged")
-+    if skipAlreadyLogged == "" {
++	if skipAlreadyLogged == "" {
 +		for _, clusterName := range clusters {
 +			if clusterName == cluster.Name {
 +				cluster.renderWarning(w, clusterName)
@@ -91,7 +111,7 @@ index 2a52d1d..cf41394 100644
  
  	log.Printf("Handling login-uri for: %s", cluster.Name)
  	authCodeURL := cluster.oauth2Config(scopes).AuthCodeURL(exampleAppState, oauth2.AccessTypeOffline)
-@@ -59,7 +113,6 @@ func (cluster *Cluster) handleCallback(w http.ResponseWriter, r *http.Request) {
+@@ -59,7 +112,6 @@ func (cluster *Cluster) handleCallback(w http.ResponseWriter, r *http.Request) {
  	userErrorMsg := "Invalid token request"
  
  	log.Printf("Handling callback for: %s", cluster.Name)
@@ -99,7 +119,7 @@ index 2a52d1d..cf41394 100644
  	ctx := oidc.ClientContext(r.Context(), cluster.Client)
  	oauth2Config := cluster.oauth2Config(nil)
  	switch r.Method {
-@@ -136,6 +189,13 @@ func (cluster *Cluster) handleCallback(w http.ResponseWriter, r *http.Request) {
+@@ -136,6 +188,13 @@ func (cluster *Cluster) handleCallback(w http.ResponseWriter, r *http.Request) {
  		IdpCaPem = cast.ToString(content)
  	}
  
@@ -233,12 +253,108 @@ index 35763de..5f3e73e 100644
          <div id="IDToken" class="tabcontent">
            {{ template "id-token-content" . }}
          </div>
+diff --git a/templates/linux-mac-common.html b/templates/linux-mac-common.html
+index 3a79790..14cd029 100644
+--- a/templates/linux-mac-common.html
++++ b/templates/linux-mac-common.html
+@@ -80,14 +80,20 @@ EOF</code></pre>
+       <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt=""/>
+     </button>
+   <pre><code>kubectl config set-credentials {{ .Username }}-{{ .ClusterName }} \
+-    --auth-provider=oidc \
+-    --auth-provider-arg="idp-issuer-url={{ .Issuer }}" \
+-    --auth-provider-arg="client-id={{ .ClientID }}" \
+-    --auth-provider-arg="client-secret={{ .ClientSecret }}" \
+-    --auth-provider-arg="refresh-token={{ .RefreshToken }}" \
+-    --auth-provider-arg="id-token={{ .IDToken }}"
++    --exec-api-version=client.authentication.k8s.io/v1beta1 \
++    --exec-command=kubectl \
++    --exec-arg=oidc-login \
++    --exec-arg=get-token \
++    --exec-arg=--oidc-issuer-url={{ .Issuer }} \
++    --exec-arg=--oidc-client-id={{ .ClientID }} \
++    --exec-arg=--oidc-client-secret={{ .ClientSecret }} \
++    --exec-arg=--oidc-extra-scope=email \
++    --exec-arg=--oidc-extra-scope=profile \
++    --exec-arg=--oidc-extra-scope=groups \
++    --exec-arg=--oidc-extra-scope=offline_access \
++    --exec-arg=--oidc-extra-scope="audience:server:client_id:kubernetes"
+   {{- if or (.IDPCaURI) (.IDPCaPem) }} \
+-    --auth-provider-arg=idp-certificate-authority=${HOME}/.kube/certs/{{ .ClusterName }}/idp-ca.crt
++    --exec-arg=--certificate-authority=${HOME}/.kube/certs/{{ .ClusterName }}/idp-ca.crt
+   {{- end }}</code></pre>
+   </div>
+ 
+diff --git a/templates/linux-tab.html b/templates/linux-tab.html
+index 65a33d7..1af4906 100644
+--- a/templates/linux-tab.html
++++ b/templates/linux-tab.html
+@@ -1,7 +1,7 @@
+ {{ define "linux-tab-content" }}
+   <h3>Install and Set Up kubectl</h3>
+   <div>
+-  See 
++  See
+   <a title="Install and setup kubectl" href="https://kubernetes.io/docs/tasks/tools/install-kubectl/">
+     https://kubernetes.io/docs/tasks/tools/install-kubectl
+   </a>
+@@ -14,5 +14,20 @@
+   </p>
+   {{ end }}
+   </div>
++  <p>
++    Install kubelogin plugin via <i>Github releases (Linux)</i> or <i>Krew</i>:
++    <div class="command">
++      <button class="btn" style="float:right" data-clipboard-snippet="">
++        <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt=""/>
++      </button>
++      <pre><code>wget -O ~/kubelogin.zip \
++  https://github.com/int128/kubelogin/releases/download/v1.23.0/kubelogin_linux_amd64.zip && \
++  unzip ~/kubelogin.zip -d ./kubelogin-tmp && \
++  rm ~/kubelogin.zip && \
++  chmod +x ./kubelogin-tmp/kubelogin && \
++  mv ./kubelogin-tmp/kubelogin /usr/local/bin/kubectl-oidc_login &&
++  rm -rf ./kubelogin-tmp</code></pre>
++    </div>
++  </p>
+   {{ template "linux-mac-common" . }}
+ {{ end }}
+diff --git a/templates/mac-tab.html b/templates/mac-tab.html
+index 2935cf1..b858c95 100644
+--- a/templates/mac-tab.html
++++ b/templates/mac-tab.html
+@@ -1,7 +1,7 @@
+ {{ define "mac-tab-content" }}
+   <h3>Install and Set Up kubectl</h3>
+   <div>
+-  See 
++  See
+   <a title="Install and setup kubectl" href="https://kubernetes.io/docs/tasks/tools/install-kubectl/">
+     https://kubernetes.io/docs/tasks/tools/install-kubectl
+   </a>
+@@ -14,5 +14,14 @@
+   </p>
+   {{ end }}
+   </div>
++  <p>
++    Install kubelogin plugin via <i>Homebrew (macOS)</i> or <i>Krew</i>:
++    <div class="command">
++      <button class="btn" style="float:right" data-clipboard-snippet="">
++        <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt=""/>
++      </button>
++      <pre><code>brew install int128/kubelogin/kubelogin</code></pre>
++    </div>
++  </p>
+   {{ template "linux-mac-common" . }}
+-{{ end }}
+\ No newline at end of file
++{{ end }}
 diff --git a/templates/raw-config-tab.html b/templates/raw-config-tab.html
 new file mode 100644
-index 0000000..8707542
+index 0000000..5a177c5
 --- /dev/null
 +++ b/templates/raw-config-tab.html
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,86 @@
 +{{ define "raw-config-tab-content" }}
 +  <p>
 +  {{ if .IDPCaURI }}
@@ -290,21 +406,26 @@ index 0000000..8707542
 +    <button class="btn" style="float:right" data-clipboard-snippet="">
 +      <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt="">
 +    </button>
-+    <pre><code>
-+apiVersion: v1
++<pre><code>apiVersion: v1
 +kind: Config
 +preferences: {}
 +users:
 +- name: {{ .Username }}-{{ .ClusterName }}
 +  user:
-+    auth-provider:
-+      config:
-+        client-id: {{ .ClientID }}
-+        client-secret: {{ .ClientSecret }}
-+        id-token: {{ .IDToken }}
-+        idp-issuer-url: {{ .Issuer }}
-+        refresh-token: {{ .RefreshToken }}
-+      name: oidc
++    exec:
++      apiVersion: client.authentication.k8s.io/v1beta1
++      args:
++      - oidc-login
++      - get-token
++      - --oidc-issuer-url={{ .Issuer }}
++      - --oidc-client-id={{ .ClientID }}
++      - --oidc-client-secret={{ .ClientSecret }}
++      - --oidc-extra-scope=email
++      - --oidc-extra-scope=profile
++      - --oidc-extra-scope=groups
++      - --oidc-extra-scope=offline_access
++      - --oidc-extra-scope=audience:server:client_id:kubernetes
++      command: kubectl
 +clusters:
 +- name: {{ .ClusterName }}
 +  cluster:
@@ -317,8 +438,7 @@ index 0000000..8707542
 +    cluster: {{ .ClusterName }}
 +    user: {{ .Username }}-{{ .ClusterName }}
 +  name: {{ .Username }}-{{ .ClusterName }}
-+current-context: {{ .Username }}-{{ .ClusterName }}
-+    </code></pre>
++current-context: {{ .Username }}-{{ .ClusterName }}</code></pre>
 +  </div>
 +{{ end }}
 diff --git a/templates/warning.html b/templates/warning.html
@@ -369,3 +489,39 @@ index 0000000..59433de
 +    </div>
 +  </body>
 +</html>
+diff --git a/templates/windows-tab.html b/templates/windows-tab.html
+index a1e2b00..82cf3ce 100644
+--- a/templates/windows-tab.html
++++ b/templates/windows-tab.html
+@@ -14,7 +14,16 @@
+     </a>
+     </p>
+     {{ end }}
+-  </div>
++      <p>
++        Install kubelogin plugin via <i>Chocolatey (Windows)</i> or <i>Krew</i>:
++      <div class="command">
++        <button class="btn" style="float:right" data-clipboard-snippet="">
++          <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt=""/>
++        </button>
++        <pre><code>choco install kubelogin</code></pre>
++      </div>
++      </p>
++    </div>
+ 
+   {{ if .IDPCaURI }}
+     <h3>Copy IDP CA Certificate From URL</h3>
+@@ -95,8 +104,8 @@ EOF</code></pre>
+     <button class="btn" style="float:right" data-clipboard-snippet="">
+       <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt=""/>
+     </button>
+-  <pre><code>kubectl config set-credentials {{ .Username }}-{{ .ClusterName }} --auth-provider=oidc --auth-provider-arg=idp-issuer-url={{ .Issuer }} --auth-provider-arg=client-id={{ .ClientID }} --auth-provider-arg=client-secret={{ .ClientSecret }} --auth-provider-arg=refresh-token={{ .RefreshToken }} --auth-provider-arg=id-token={{ .IDToken }}
+-  {{- if or (.IDPCaURI) (.IDPCaPem) }} --auth-provider-arg=idp-certificate-authority=${HOME}/.kube/certs/{{ .ClusterName }}/idp-ca.crt
++  <pre><code>kubectl config set-credentials {{ .Username }}-{{ .ClusterName }} --exec-api-version=client.authentication.k8s.io/v1beta1 --exec-command=kubectl --exec-arg=oidc-login --exec-arg=get-token --exec-arg=--oidc-issuer-url={{ .Issuer }} --exec-arg=--oidc-client-id={{ .ClientID }} --exec-arg=--oidc-client-secret={{ .ClientSecret }} --exec-arg=--oidc-extra-scope=email --exec-arg=--oidc-extra-scope=profile --exec-arg=--oidc-extra-scope=groups --exec-arg=--oidc-extra-scope=offline_access --exec-arg=--oidc-extra-scope="audience:server:client_id:kubernetes"
++  {{- if or (.IDPCaURI) (.IDPCaPem) }} --exec-arg=--certificate-authority=${HOME}/.kube/certs/{{ .ClusterName }}/idp-ca.crt
+   {{- end }}</code></pre>
+   </div>
+   <div class="command">
+-- 
+2.23.0
+
