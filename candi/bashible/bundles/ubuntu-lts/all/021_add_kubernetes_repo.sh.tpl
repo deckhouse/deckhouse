@@ -1,7 +1,3 @@
-if bb-apt-repo? http://apt.kubernetes.io/; then
-  exit 0
-fi
-
 bb-apt-key-add <<END
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
@@ -61,5 +57,9 @@ GOpIjdQpk5woHa21NEj2nJu128U2JUB8CQhGvR3+P57ogWscFyrnP8s=
 =oEYy
 -----END PGP PUBLIC KEY BLOCK-----
 END
+
+if bb-apt-repo? http://apt.kubernetes.io/; then
+  exit 0
+fi
 
 bb-apt-repo-add deb http://apt.kubernetes.io/ kubernetes-xenial main
