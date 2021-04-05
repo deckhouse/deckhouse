@@ -36,3 +36,21 @@ func CalculateAdjustedStepRanges(from, to, step int64) dao.StepRanges {
 	}
 	return res
 }
+
+// AdjustStep makes sure that the step is a multiple of 300.
+func AdjustStep(step int64) int64 {
+	if step <= 300 {
+		return 300
+	}
+	if step%300 == 0 {
+		return step
+	}
+	return (step / 300) * 300
+}
+
+func AdjustTo(to int64, step int64) int64 {
+	if to%step == 0 {
+		return to
+	}
+	return ((to / step) + 1) * step
+}

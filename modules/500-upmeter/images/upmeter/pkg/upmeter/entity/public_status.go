@@ -23,7 +23,7 @@ const failStatus = "Outage"
 
 // CurrentStatusForGroups returns total statuses for each group
 // for the current partial 5m timeslot plus previous full 5m timeslot.
-func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.Monitor) ([]GroupStatusInfo, string, error) {
+func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMonitor) ([]GroupStatusInfo, string, error) {
 	/*
 		select group, probe from downtime
 	*/

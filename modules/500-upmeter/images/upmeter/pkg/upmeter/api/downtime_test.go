@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	"upmeter/pkg/check"
 	"upmeter/pkg/upmeter/db"
 )
 
@@ -29,7 +30,7 @@ func Test_DowntimeHandler(t *testing.T) {
 	}{
 		{
 			"empty array is a success",
-			`[]`,
+			`{"origin":"","episodes":[]}`,
 			func(t *testing.T) {
 				g := NewWithT(t)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -44,7 +45,7 @@ func Test_DowntimeHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 			// pass 'nil' as the third parameter.
-			req, err := http.NewRequest("POST", "/downtime", strings.NewReader(tt.data))
+			req, err := http.NewRequest(http.MethodPost, "/downtime", strings.NewReader(tt.data))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -53,8 +54,10 @@ func Test_DowntimeHandler(t *testing.T) {
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			rr = httptest.NewRecorder()
 
-			handler := new(DowntimeHandler)
-			handler.DbCtx = dbCtx
+			handler := &DowntimeHandler{
+				DbCtx:       dbCtx,
+				RemoteWrite: &exporterMock{},
+			}
 
 			// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 			// directly and pass in our Request and ResponseRecorder.
@@ -64,4 +67,10 @@ func Test_DowntimeHandler(t *testing.T) {
 		})
 	}
 
+}
+
+type exporterMock struct{}
+
+func (e *exporterMock) Export(string, []*check.DowntimeEpisode, int64) error {
+	return nil
 }

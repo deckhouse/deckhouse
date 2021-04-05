@@ -133,7 +133,7 @@ func requestSmokeMiniEndpoint(ctx context.Context, ip string, path string) ([]by
 	}
 	smokeUrl := fmt.Sprintf("http://%s:8080%s", ip, path)
 
-	req, err := http.NewRequest("GET", smokeUrl, nil)
+	req, err := http.NewRequest(http.MethodGet, smokeUrl, nil)
 	if err != nil {
 		log.Errorf("Create GET request: %v", err)
 		return nil, 0, err

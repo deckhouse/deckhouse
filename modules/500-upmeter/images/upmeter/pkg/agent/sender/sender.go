@@ -2,34 +2,38 @@ package sender
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/check"
+	"upmeter/pkg/probe/util"
+	"upmeter/pkg/upmeter/api"
 )
 
 const MaxBatchSize = 64
 
 type Sender struct {
-	DowntimeEpisodesCh chan []check.DowntimeEpisode
-	BufferLock         sync.RWMutex
-	Buffer             []check.DowntimeEpisode
-	Client             *UpmeterClient
+	recv       chan []check.DowntimeEpisode
+	bufferLock sync.RWMutex
+	buffer     []check.DowntimeEpisode
+	client     *UpmeterClient
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewSender(ctx context.Context, client *UpmeterClient) *Sender {
+func NewSender(ctx context.Context, client *UpmeterClient, recv chan []check.DowntimeEpisode) *Sender {
 	s := &Sender{
-		DowntimeEpisodesCh: make(chan []check.DowntimeEpisode),
-		BufferLock:         sync.RWMutex{},
-		Buffer:             make([]check.DowntimeEpisode, 0),
+		recv:       recv,
+		bufferLock: sync.RWMutex{},
+		buffer:     make([]check.DowntimeEpisode, 0),
 	}
 	s.ctx, s.cancel = context.WithCancel(ctx)
-	s.Client = client
+	s.client = client
 	return s
 }
 
@@ -37,39 +41,8 @@ func NewSender(ctx context.Context, client *UpmeterClient) *Sender {
 // 1. All results are placed in a Buffer.
 // 2. The result is deleted from the buffer after successful submission to Upmeter.
 func (s *Sender) Start() {
-	// buffer writer
-	go func() {
-		for {
-			select {
-			case episodes := <-s.DowntimeEpisodesCh:
-				s.BufferLock.Lock()
-				// TODO buffer should be persistent — sqlite or something
-				s.Buffer = append(s.Buffer, episodes...)
-				s.BufferLock.Unlock()
-			case <-s.ctx.Done():
-				log.Info("Sender: stop episode receiver")
-				return
-			}
-		}
-	}()
-
-	// A buffer reader and sender.
-	// Try to send a Buffer every 5 sec.
-	go func() {
-		sendTimer := time.NewTicker(5 * time.Second)
-
-		for {
-			select {
-			case <-sendTimer.C:
-				now := time.Now().Unix()
-				// TODO return len and catch error. Stop if error, send next batch if len > 0.
-				s.SendEpisodes(now)
-			case <-s.ctx.Done():
-				log.Info("Sender: stop episodes sender")
-				return
-			}
-		}
-	}()
+	go s.receiveLoop()
+	go s.sendLoop()
 }
 
 func (s *Sender) Stop() {
@@ -78,46 +51,111 @@ func (s *Sender) Stop() {
 	}
 }
 
+// buffer writer
+func (s *Sender) receiveLoop() {
+	for {
+		select {
+		case episodes := <-s.recv:
+			s.bufferLock.Lock()
+			// TODO buffer should be persistent — sqlite or something
+			s.buffer = append(s.buffer, episodes...)
+			s.bufferLock.Unlock()
+		case <-s.ctx.Done():
+			log.Info("Sender: stop episode receiver")
+			return
+		}
+	}
+}
+
+// A buffer reader and sender.
+// Try to send a Buffer every 5 sec.
+func (s *Sender) sendLoop() {
+	tick := time.NewTicker(5 * time.Second)
+
+	for {
+		select {
+		case <-tick.C:
+			err := s.Send()
+			if err != nil {
+				log.Errorf("sending failed: %v", err)
+			}
+		case <-s.ctx.Done():
+			log.Info("Sender: stop episodes sender")
+			return
+		}
+	}
+}
+
 // Naive WAL implementation
 // Check Buffer and send no more than 64 items at once.
-func (s *Sender) SendEpisodes(now int64) {
-	s.BufferLock.RLock()
-	var bufferLen = len(s.Buffer)
-	if bufferLen == 0 {
-		s.BufferLock.RUnlock()
-		return
+func (s *Sender) Send() error {
+	// TODO add loop to send a whole buffer, not just maximum batch size.
+
+	batch := s.getBatch()
+	if batch == nil {
+		// nothing to send
+		return nil
+	}
+
+	err := s.sendBatch(batch)
+	if err != nil {
+		return err
+	}
+
+	s.cleanBuffer(len(batch))
+
+	return nil
+}
+
+func (s *Sender) sendBatch(batch []check.DowntimeEpisode) error {
+	data := api.EpisodesPayload{
+		Origin:   util.AgentUniqueId(),
+		Episodes: batch,
+	}
+	body, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload to JSON: %v", err)
+	}
+	err = s.client.Send(body)
+	if err != nil {
+		return fmt.Errorf("failed to send data: %v", err)
+	}
+	return nil
+}
+
+func (s *Sender) getBatch() []check.DowntimeEpisode {
+	s.bufferLock.RLock()
+	defer s.bufferLock.RUnlock()
+
+	// decide of batch size
+	var bufSize = len(s.buffer)
+	if len(s.buffer) == 0 {
+		return nil
+	}
+	var batchSize = MaxBatchSize
+	if bufSize < MaxBatchSize {
+		batchSize = bufSize
 	}
 
 	// copy results to not lock a buffer for http writing
-	var batchSize = MaxBatchSize
-	if bufferLen < MaxBatchSize {
-		batchSize = bufferLen
-	}
-
-	var batchBuf = make([]check.DowntimeEpisode, batchSize)
+	var batch = make([]check.DowntimeEpisode, batchSize)
 	for i := 0; i < batchSize; i++ {
-		batchBuf[i] = s.Buffer[i]
+		batch[i] = s.buffer[i]
 	}
 
-	// unlock a buffer after copy
-	s.BufferLock.RUnlock()
+	return batch
+}
 
-	err := s.Client.Send(batchBuf)
-	if err != nil {
-		log.Errorf("Fail sending batch of len=%d to '%s' at %d: %v", len(batchBuf), s.Client.Ip, now, err)
-		return
-	}
-	log.Debugf("Send batch of len=%d (%d) to '%s' at %d ts", len(batchBuf), len(s.Buffer), s.Client.Ip, now)
+// cleanBuffer removes batch items from Buffer
+func (s *Sender) cleanBuffer(size int) {
+	s.bufferLock.Lock()
+	defer s.bufferLock.Unlock()
 
-	// TODO add loop to send a whole buffer, not just maximum batch size.
-
-	// Get write lock and remove batchSize items from Buffer
-	s.BufferLock.Lock()
-	if len(s.Buffer) == batchSize {
+	if len(s.buffer) == size {
 		// Recreate a Buffer as a "fresh" array if all items were sent
-		s.Buffer = make([]check.DowntimeEpisode, 0)
+		s.buffer = make([]check.DowntimeEpisode, 0)
 	} else {
-		s.Buffer = s.Buffer[batchSize:len(s.Buffer)]
+		// We don't expect to have argument "size" bigger than the buffer size
+		s.buffer = s.buffer[size:len(s.buffer)]
 	}
-	s.BufferLock.Unlock()
 }

@@ -22,23 +22,29 @@ func main() {
 	kpApp := kingpin.New("upmeter", "upmeter")
 
 	// Informer part
-	upCmd := kpApp.Command("start", "Start upmeter informer").
-		Action(func(c *kingpin.ParseContext) error {
-			sh_app.SetupLogging()
-			log.Info("Start upmeter informer")
-			informer := upmeter.NewDefaultInformer(context.Background())
-			err := informer.Start()
-			if err != nil {
-				os.Exit(1)
-			}
-			// Block action by waiting signals from OS.
-			utils_signal.WaitForProcessInterruption(func() {
-				informer.Stop()
-				os.Exit(1)
-			})
+	upCmd := kpApp.Command("start", "Start upmeter informer")
+	originsCount := upCmd.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
+		Required().
+		Int()
 
-			return nil
+	upCmd.Action(func(c *kingpin.ParseContext) error {
+		sh_app.SetupLogging()
+		log.Info("Starting upmeter informer")
+
+		informer := upmeter.NewInformer(*originsCount)
+		err := informer.Start(context.Background())
+		if err != nil {
+			log.Fatalf("cannot start informer: %v", err)
+		}
+
+		// Block action by waiting signals from OS.
+		utils_signal.WaitForProcessInterruption(func() {
+			informer.Stop()
+			os.Exit(1)
 		})
+
+		return nil
+	})
 	sh_app.DefineKubeClientFlags(upCmd)
 	sh_app.DefineLoggingFlags(upCmd)
 
@@ -46,12 +52,14 @@ func main() {
 	agCmd := kpApp.Command("agent", "Start upmeter agent").
 		Action(func(c *kingpin.ParseContext) error {
 			sh_app.SetupLogging()
-			log.Infof("Start upmeter agent. Id=%s", util.AgentUniqueId())
+			log.Infof("Starting upmeter agent. Id=%s", util.AgentUniqueId())
+
 			upmeterAgent := agent.NewDefaultAgent(context.Background())
 			err := upmeterAgent.Start()
 			if err != nil {
 				os.Exit(1)
 			}
+
 			// Block 'main' by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption(func() {
 				upmeterAgent.Stop()

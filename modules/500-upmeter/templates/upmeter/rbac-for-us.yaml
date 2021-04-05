@@ -13,7 +13,9 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
 rules:
   - apiGroups: ["deckhouse.io"]
-    resources: ["downtimes"]
+    resources:
+      - downtimes
+      - upmeterremotewrites
     verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

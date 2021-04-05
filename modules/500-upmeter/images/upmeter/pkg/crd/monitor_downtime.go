@@ -10,21 +10,21 @@ import (
 	"upmeter/pkg/check"
 )
 
-type Monitor struct {
+type DowntimeMonitor struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	Monitor kube_events_manager.Monitor
 }
 
-func NewMonitor(ctx context.Context) *Monitor {
-	m := &Monitor{}
+func NewMonitor(ctx context.Context) *DowntimeMonitor {
+	m := &DowntimeMonitor{}
 	m.ctx, m.cancel = context.WithCancel(ctx)
 	m.Monitor = kube_events_manager.NewMonitor()
 	m.Monitor.WithContext(m.ctx)
 	return m
 }
 
-func (m *Monitor) Start() error {
+func (m *DowntimeMonitor) Start() error {
 	m.Monitor.WithConfig(&kube_events_manager.MonitorConfig{
 		Metadata: struct {
 			MonitorId    string
@@ -33,7 +33,7 @@ func (m *Monitor) Start() error {
 			MetricLabels map[string]string
 		}{
 			"monitor-crds",
-			"moditor-crds",
+			"monitor-crds",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -41,7 +41,7 @@ func (m *Monitor) Start() error {
 		ApiVersion:              "deckhouse.io/v1alpha1",
 		Kind:                    "Downtime",
 		NamespaceSelector:       nil,
-		LogEntry:                log.WithField("component", "crd-monitor"),
+		LogEntry:                log.WithField("component", "downtime-monitor"),
 		KeepFullObjectsInMemory: true,
 	})
 	// Load initial CRD list
@@ -54,11 +54,11 @@ func (m *Monitor) Start() error {
 	return nil
 }
 
-func (m *Monitor) Stop() {
+func (m *DowntimeMonitor) Stop() {
 	m.Monitor.Stop()
 }
 
-func (m *Monitor) GetDowntimeIncidents() []check.DowntimeIncident {
+func (m *DowntimeMonitor) GetDowntimeIncidents() []check.DowntimeIncident {
 	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
 		res = append(res, ConvertToDowntimeIncidents(obj.Object)...)
@@ -66,7 +66,7 @@ func (m *Monitor) GetDowntimeIncidents() []check.DowntimeIncident {
 	return res
 }
 
-func (m *Monitor) FilterDowntimeIncidents(from, to int64, group string, muteDowntimeTypes []string) []check.DowntimeIncident {
+func (m *DowntimeMonitor) FilterDowntimeIncidents(from, to int64, group string, muteDowntimeTypes []string) []check.DowntimeIncident {
 	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
 		incidents := ConvertToDowntimeIncidents(obj.Object)

@@ -1,0 +1,1 @@
+{{- include "helm_lib_grafana_dashboard_definitions" . }}

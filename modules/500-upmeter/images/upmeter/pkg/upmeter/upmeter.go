@@ -6,6 +6,8 @@ import (
 	"net/http"
 	// Install default pprof endpoint.
 	_ "net/http/pprof"
+	"os"
+	"time"
 
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
@@ -19,6 +21,7 @@ import (
 	"upmeter/pkg/upmeter/db"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/migrations"
+	"upmeter/pkg/upmeter/remotewrite"
 )
 
 // Informer initializes all dependencies:
@@ -29,115 +32,126 @@ import (
 // If everything is ok, it starts http server.
 
 type Informer struct {
-	ctx    context.Context
+	kubernetesClient kube.KubernetesClient
+
+	dbPath string
+	dbCtx  *dbcontext.DbContext
+
+	originsCount          int
+	remoteWriteController *remotewrite.Controller
+	downtimeMonitor       *crd.DowntimeMonitor
+
 	cancel context.CancelFunc
-
-	DbPath string
-	DbCtx  *dbcontext.DbContext
-
-	KubernetesClient kube.KubernetesClient
-	MetricStorage    *metric_storage.MetricStorage
-
-	CrdMonitor *crd.Monitor
 }
 
-func NewInformer(ctx context.Context) *Informer {
-	inf := &Informer{}
-	inf.ctx, inf.cancel = context.WithCancel(ctx)
-	return inf
-}
+func NewInformer(originsCount int) *Informer {
+	kubeClient := kube.NewKubernetesClient()
+	kubeClient.WithContextName(shapp.KubeContext)
+	kubeClient.WithConfigPath(shapp.KubeConfig)
+	kubeClient.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	kubeClient.WithMetricStorage(metric_storage.NewMetricStorage())
 
-func NewDefaultInformer(ctx context.Context) *Informer {
-	inf := NewInformer(ctx)
-	inf.DbPath = app.DowntimeDbPath
+	return &Informer{
+		kubernetesClient: kubeClient,
 
-	// Metric storage
-	inf.MetricStorage = metric_storage.NewMetricStorage()
-
-	// Kubernetes client
-	inf.KubernetesClient = kube.NewKubernetesClient()
-	inf.KubernetesClient.WithContextName(shapp.KubeContext)
-	inf.KubernetesClient.WithConfigPath(shapp.KubeConfig)
-	inf.KubernetesClient.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
-	inf.KubernetesClient.WithMetricStorage(inf.MetricStorage)
-
-	return inf
+		dbPath:       app.DowntimeDbPath,
+		originsCount: originsCount,
+	}
 }
 
 func (inf *Informer) WithDbPath(path string) {
-	inf.DbPath = path
+	inf.dbPath = path
 }
 
-func (inf *Informer) Start() error {
+func (inf *Informer) Start(ctx context.Context) error {
+	ctx, inf.cancel = context.WithCancel(ctx)
 	var err error
 
-	err = inf.KubernetesClient.Init()
+	logLevel, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		logLevel = log.ErrorLevel
+	}
+	log.SetLevel(logLevel)
+
+	err = inf.kubernetesClient.Init()
 	if err != nil {
 		return fmt.Errorf("init kubernetes client: %v", err)
 	}
 
-	// CRD Monitor
-	inf.CrdMonitor = crd.NewMonitor(inf.ctx)
-	inf.CrdMonitor.Monitor.WithKubeClient(inf.KubernetesClient)
-	err = inf.CrdMonitor.Start()
-	if err != nil {
-		return fmt.Errorf("start CRD monitor: %v", err)
-	}
-
 	// Setup db context with connection pool.
-	inf.DbCtx, err = db.Connect(inf.DbPath)
+	inf.dbCtx, err = db.Connect(inf.dbPath)
 	if err != nil {
-		return fmt.Errorf("db connect with pool: %v", err)
+		return fmt.Errorf("cannot connect to database with pool: %v", err)
 	}
 
 	// Apply migrations
-	err = migrations.Migrator.Apply(inf.DbCtx)
+	err = migrations.Migrator.Apply(inf.dbCtx)
 	if err != nil {
-		return fmt.Errorf("db migrate: %v", err)
+		return fmt.Errorf("cannot migrate database: %v", err)
+	}
+
+	// Downtime CR  configMonitor
+	inf.downtimeMonitor = crd.NewMonitor(ctx)
+	inf.downtimeMonitor.Monitor.WithKubeClient(inf.kubernetesClient)
+	err = inf.downtimeMonitor.Start()
+	if err != nil {
+		return fmt.Errorf("cannot start downtimes.deckhouse.io monitor: %v", err)
+	}
+
+	logger := log.StandardLogger()
+
+	// Metrics controller
+	logger.Debugf("creating controller")
+	config := &remotewrite.ControllerConfig{
+		// collecting/exporting episodes as metrics
+		Period: 2 * time.Second,
+		// monitor configs in kubernetes
+		Kubernetes: inf.kubernetesClient,
+		// read metrics and track exporter state in the DB
+		DbCtx:        inf.dbCtx,
+		OriginsCount: inf.originsCount,
+		Logger:       logger,
+	}
+	controller := config.Controller()
+	logger.Debugf("starting controller")
+	err = controller.Start(ctx)
+	if err != nil {
+		logger.Debugf("starting controller... did't happen: %v", err)
+		return fmt.Errorf("cannot start remote_write controller: %v", err)
 	}
 
 	// Setup API handlers
-	probeListHandler := new(api.ProbeListHandler)
-	probeListHandler.DbCtx = inf.DbCtx
-	http.Handle("/api/probe", probeListHandler)
-
-	statusHandler := new(api.StatusRangeHandler)
-	statusHandler.CrdMonitor = inf.CrdMonitor
-	statusHandler.DbCtx = inf.DbCtx
-	http.Handle("/api/status/range", statusHandler)
-
-	publicStatusHandler := new(api.PublicStatusHandler)
-	publicStatusHandler.CrdMonitor = inf.CrdMonitor
-	publicStatusHandler.DbCtx = inf.DbCtx
-	http.Handle("/public/api/status", publicStatusHandler)
-
-	downtimeHandler := new(api.DowntimeHandler)
-	downtimeHandler.DbCtx = inf.DbCtx
-	http.Handle("/downtime", downtimeHandler)
-
-	statsHandler := new(api.StatsHandler)
-	statsHandler.DbCtx = inf.DbCtx
-	http.Handle("/stats", statsHandler)
+	http.Handle("/api/probe", &api.ProbeListHandler{DbCtx: inf.dbCtx})
+	http.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: inf.dbCtx, DowntimeMonitor: inf.downtimeMonitor})
+	http.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: inf.dbCtx, DowntimeMonitor: inf.downtimeMonitor})
+	http.Handle("/downtime", &api.DowntimeHandler{DbCtx: inf.dbCtx, RemoteWrite: controller})
+	http.Handle("/stats", &api.StatsHandler{DbCtx: inf.dbCtx})
 
 	// Kubernetes probes
-	http.HandleFunc("/healthz", inf.Healthz)
-	http.HandleFunc("/ready", inf.Ready)
+	http.HandleFunc("/healthz", writeOk)
+	http.HandleFunc("/ready", writeOk)
 
-	// Start http server
-	log.Fatal(http.ListenAndServe(app.UpmeterListenHost+":"+app.UpmeterListenPort, nil))
+	logger.Debugf("starting HTTP server")
+
+	// Start http server. It blocks, that's why it is the last here.
+	err = http.ListenAndServe(app.UpmeterListenHost+":"+app.UpmeterListenPort, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (inf *Informer) Stop() {
-	if inf.cancel != nil {
-		inf.cancel()
+	if inf.cancel == nil {
+		return
 	}
+	inf.cancel()
+	inf.downtimeMonitor.Stop()
+	inf.remoteWriteController.Stop()
+
 }
 
-func (inf *Informer) Healthz(w http.ResponseWriter, r *http.Request) {
-	_, _ = w.Write([]byte("OK"))
-}
-
-func (inf *Informer) Ready(w http.ResponseWriter, r *http.Request) {
+func writeOk(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("OK"))
 }

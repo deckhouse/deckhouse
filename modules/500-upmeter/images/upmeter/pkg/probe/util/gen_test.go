@@ -1,16 +1,20 @@
 package util
 
 import (
-	"fmt"
 	"testing"
 )
 
-func Test_RndAlphaNum(t *testing.T) {
-	t.SkipNow()
-	fmt.Println(RndAlphaNum(5))
+func Test_AgentUniqueId(t *testing.T) {
+	a, b := AgentUniqueId(), AgentUniqueId()
+	if a != b {
+		t.Errorf("expected %q == %q", a, b)
+	}
 }
 
 func Test_RandomIdentifier(t *testing.T) {
-	t.SkipNow()
-	fmt.Println(RandomIdentifier("upmeter-test-object"))
+	prefix := "upmeter-test-object"
+	a, b := RandomIdentifier(prefix), RandomIdentifier(prefix)
+	if a == b {
+		t.Errorf("expected %q != %q", a, b)
+	}
 }

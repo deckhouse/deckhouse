@@ -11,13 +11,13 @@ import (
 
 const CreateTableDowntime30s_latest = `
 CREATE TABLE IF NOT EXISTS downtime30s (
-	timeslot INTEGER NOT NULL,
-    success_seconds INTEGER NOT NULL,
-    fail_seconds INTEGER NOT NULL,
-    unknown_seconds INTEGER NOT NULL,
-    nodata_seconds INTEGER NOT NULL,
-    group_name TEXT NOT NULL,
-    probe_name TEXT NOT NULL
+	timeslot        INTEGER NOT NULL,
+	success_seconds INTEGER NOT NULL,
+	fail_seconds    INTEGER NOT NULL,
+	unknown_seconds INTEGER NOT NULL,
+	nodata_seconds  INTEGER NOT NULL,
+	group_name      TEXT    NOT NULL,
+	probe_name      TEXT    NOT NULL
 )
 `
 
@@ -97,26 +97,28 @@ type Downtime30sEntity struct {
 	DowntimeEpisode check.DowntimeEpisode
 }
 
-func (d *Downtime30sDao) ListByTimestamp(tm int64) ([]Downtime30sEntity, error) {
-	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslot, tm)
+func (d *Downtime30sDao) ListByTimestamp(slot int64) ([]Downtime30sEntity, error) {
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslot, slot)
 	if err != nil {
-		return nil, fmt.Errorf("select for timestamp: %v", err)
+		return nil, fmt.Errorf("cannot query SELECT: %v", err)
 	}
 	defer rows.Close()
 
 	var res = make([]Downtime30sEntity, 0)
 	for rows.Next() {
 		var entity = Downtime30sEntity{}
-		err := rows.Scan(&entity.Rowid,
+		err := rows.Scan(
+			&entity.Rowid,
 			&entity.DowntimeEpisode.TimeSlot,
 			&entity.DowntimeEpisode.SuccessSeconds,
 			&entity.DowntimeEpisode.FailSeconds,
 			&entity.DowntimeEpisode.UnknownSeconds,
 			&entity.DowntimeEpisode.NoDataSeconds,
 			&entity.DowntimeEpisode.ProbeRef.Group,
-			&entity.DowntimeEpisode.ProbeRef.Probe)
+			&entity.DowntimeEpisode.ProbeRef.Probe,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("row to Downtime30sEntity: %v", err)
+			return nil, fmt.Errorf("cannot parse: %v", err)
 		}
 		res = append(res, entity)
 	}
@@ -137,46 +139,50 @@ func (d *Downtime30sDao) GetSimilar(downtime check.DowntimeEpisode) (Downtime30s
 	}
 
 	var entity = Downtime30sEntity{}
-	err = rows.Scan(&entity.Rowid,
+	err = rows.Scan(
+		&entity.Rowid,
 		&entity.DowntimeEpisode.TimeSlot,
 		&entity.DowntimeEpisode.SuccessSeconds,
 		&entity.DowntimeEpisode.FailSeconds,
 		&entity.DowntimeEpisode.UnknownSeconds,
 		&entity.DowntimeEpisode.NoDataSeconds,
 		&entity.DowntimeEpisode.ProbeRef.Group,
-		&entity.DowntimeEpisode.ProbeRef.Probe)
+		&entity.DowntimeEpisode.ProbeRef.Probe,
+	)
 	if err != nil {
 		return Downtime30sEntity{}, fmt.Errorf("row to Downtime30sEntity: %v", err)
 	}
 
 	// Assertion
 	if rows.Next() {
-		log.Errorf("Not consistent 30s data: more than one record selected for ts=%d, group='%s', probe='%s'", downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
+		log.Warnf("inconsistent 30s data: more than one record selected for ts=%d %s", downtime.TimeSlot, downtime.ProbeRef.Id())
 	}
 
 	return entity, nil
 }
 
-func (d *Downtime30sDao) ListForRange(start int64, end int64, group string, probe string) ([]Downtime30sEntity, error) {
-	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotRange, start, end, group, probe)
+func (d *Downtime30sDao) ListForRange(start int64, end int64, ref check.ProbeRef) ([]Downtime30sEntity, error) {
+	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotRange, start, end, ref.Group, ref.Probe)
 	if err != nil {
-		return nil, fmt.Errorf("select for range: %v", err)
+		return nil, fmt.Errorf("cannot query SELECT: %v", err)
 	}
 	defer rows.Close()
 
 	var res = make([]Downtime30sEntity, 0)
 	for rows.Next() {
 		var entity = Downtime30sEntity{}
-		err := rows.Scan(&entity.Rowid,
+		err := rows.Scan(
+			&entity.Rowid,
 			&entity.DowntimeEpisode.TimeSlot,
 			&entity.DowntimeEpisode.SuccessSeconds,
 			&entity.DowntimeEpisode.FailSeconds,
 			&entity.DowntimeEpisode.UnknownSeconds,
 			&entity.DowntimeEpisode.NoDataSeconds,
 			&entity.DowntimeEpisode.ProbeRef.Group,
-			&entity.DowntimeEpisode.ProbeRef.Probe)
+			&entity.DowntimeEpisode.ProbeRef.Probe,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("row to Downtime30sEntity: %v", err)
+			return nil, fmt.Errorf("cannot parse: %v", err)
 		}
 		res = append(res, entity)
 	}
