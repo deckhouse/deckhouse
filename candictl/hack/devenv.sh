@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -13,17 +13,23 @@ if [[ "x$id" == "x" ]]; then
      --detach \
      --rm \
      -v $HOME/.ssh/:/root/.ssh/ \
-     -v $(pwd)/../../candictl:/candictl \
-     -v $(pwd)/../../candi:/deckhouse/candi \
+     -v "$(pwd)/../../candictl:/candictl" \
+     -v "$(pwd)/../../candi:/deckhouse/candi" \
      registry.flant.com/sys/antiopa/dev/install:master \
      tail -f /dev/null)
+
+  echo -e "\n#3 Install dev dependencies\n==="
+
+  docker exec "$id" apk add go
+  # install linter
+  docker exec -i "$id" sh -c 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)"/bin v1.32.2'
+  docker exec "$id" sh -c 'ln -fs /root/go/bin/golangci-lint /usr/local/bin/golangci-lint'
+
   echo "Run new container with ID: ${id}"
 else
   echo "Container found: ${id}"
 fi
 
-echo -e "\n#3 Install dev dependencies\n==="
-docker exec ${id} apk add go
 
 echo -e "\n#4 Exec into Docker Container\n==="
-docker exec -it ${id} bash
+docker exec -it  -w /candictl/hack/ "$id" bash

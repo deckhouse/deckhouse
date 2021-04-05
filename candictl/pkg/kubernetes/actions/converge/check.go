@@ -135,11 +135,8 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 
 		// track missed
 		for _, nodeName := range expectedNodeNames(metaConfig, group.Name, group.Replicas) {
-			statistics.Node = append(statistics.Node, NodeCheckResult{
-				Group:  group.Name,
-				Name:   nodeName,
-				Status: AbsentStatus,
-			})
+			result := getStatusForMissedNode(kubeCl, nodeName, group.Name, &allErrs)
+			statistics.Node = append(statistics.Node, result)
 		}
 	}
 
@@ -167,11 +164,8 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 			}
 
 			for _, nodeName := range missedNodes {
-				statistics.Node = append(statistics.Node, NodeCheckResult{
-					Group:  nodeGroupName,
-					Name:   nodeName,
-					Status: AbsentStatus,
-				})
+				result := getStatusForMissedNode(kubeCl, nodeName, nodeGroupName, &allErrs)
+				statistics.Node = append(statistics.Node, result)
 			}
 		} else if replicas < len(nodeGroupState.State) {
 			sortedNodeNames, err := sortNodesByIndex(nodeGroupState.State)
@@ -239,7 +233,7 @@ func expectedNodeNames(cfg *config.MetaConfig, nodeGroupName string, replicas in
 }
 
 func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
-	var nameByIndex map[int]string
+	nameByIndex := make(map[int]string)
 	order := make([]int, 0, len(nodesState))
 
 	for nodeName := range nodesState {
@@ -259,4 +253,25 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 	}
 
 	return names, nil
+}
+
+func getStatusForMissedNode(kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
+	status := AbsentStatus
+
+	exists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+
+	if err != nil {
+		*allErrs = multierror.Append(*allErrs, err)
+		status = ErrorStatus
+	}
+
+	if exists {
+		status = ErrorStatus
+	}
+
+	return NodeCheckResult{
+		Group:  nodeGroupName,
+		Name:   nodeName,
+		Status: status,
+	}
 }
