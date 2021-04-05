@@ -49,7 +49,7 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.16"
+kubernetesVersion: "1.19"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 ---

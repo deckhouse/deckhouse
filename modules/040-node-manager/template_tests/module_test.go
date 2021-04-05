@@ -37,6 +37,11 @@ discovery:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.19.8
+clusterConfiguration:
+  packagesProxy:
+    url: "http://aaa.bbb:80"
+    username: "test"
+    password: "test"
 `
 
 const nodeManagerAWS = `
