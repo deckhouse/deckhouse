@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  kubernetes:
+  - name: statefulsets
+    group: main
+    keepFullObjectsInMemory: false
+    apiVersion: apps/v1
+    kind: Statefulset
+    jqFilter: |
+      {
+        "namespace": .metadata.namespace
+      }
+EOF
+}
+
+function __main__() {
+  values::set kubeDns.internal.stsNamespaces "$(context::jq -c '[.snapshots.statefulsets[].filterResult.namespace] | unique')"
+}
+
+hook::run "$@"
