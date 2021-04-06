@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+   configVersion: v1
+   schedule:
+   - name: check User expiration
+     queue: /modules/$(module::name::kebab_case)
+     crontab: "*/5 * * * *"
+     group: main
+   kubernetes:
+   - name: user
+     group: main
+     keepFullObjectsInMemory: false
+     queue: /modules/$(module::name::kebab_case)
+     apiVersion: deckhouse.io/v1alpha1
+     kind: User
+     executeHookOnSynchronization: false
+     executeHookOnEvent: []
+     jqFilter: '{"name": .metadata.name, "expireAt": .status.expireAt }'
+EOF
+}
+
+
+function __main__() {
+  context::jq -rc '.snapshots.user | .[].filterResult | select(.expireAt!=null)' | while read -r userCRD ; do
+    expireAt=$(jq -rc '.expireAt' <<< "${userCRD}")
+    expireTS=$(date --date="$expireAt" +%s)
+    currentTS=$(date +%s)
+    if [ "$expireTS" -le "$currentTS" ]; then
+      userName=$(jq -rc '.name' <<< "${userCRD}")
+      kubernetes::delete_if_exists::non_blocking "" User/"$userName"
+    fi
+  done
+}
+
+hook::run "$@"

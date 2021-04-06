@@ -281,6 +281,7 @@ spec:
   groups:
   - Everyone
   - admins
+  ttl: 24h
 ```
 {% endraw %}
 
