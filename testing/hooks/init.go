@@ -532,7 +532,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
 		valuesPatch := addonutils.NewValuesPatch()
 		valuesPatch.Operations = patches
-		patchedValuesBytes, err := valuesPatch.ApplyIgnoreNonExistentPaths(hec.values.JSONRepr)
+		patchedValuesBytes, err := valuesPatch.ApplyStrict(hec.values.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
 		hec.values = values_store.NewStoreFromRawJSON(patchedValuesBytes)
 	}
@@ -540,7 +540,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	if patches := hookInput.ConfigValues.GetPatches(); len(patches) != 0 {
 		valuesPatch := addonutils.NewValuesPatch()
 		valuesPatch.Operations = patches
-		patchedConfigValuesBytes, err := valuesPatch.ApplyIgnoreNonExistentPaths(hec.configValues.JSONRepr)
+		patchedConfigValuesBytes, err := valuesPatch.ApplyStrict(hec.configValues.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
 		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
 	}
