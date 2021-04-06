@@ -60,6 +60,27 @@ spec:
                   x-description: 'Static user groups.'
                   items:
                     type: string
+                ttl:
+                  type: string
+                  pattern: '^\d+(?:m|h)$'
+                  description: |
+                    Время жизни учетной записи пользователя
+                    * Задается в виде строки с указанием time unit: 30m | 24h
+                    * Указать поле ttl можно только 1 раз, при повторном изменении - дата expireAt не обновляется
+                  x-description: 'Static user TTL.'
+                  example: '24h'
+            status:
+              type: object
+              properties:
+                expireAt:
+                  type: string
+                  description: |
+                    Дата окончания учетной записи пользователя
+                    * Появляется только при заполнении поля .spec.ttl
+                    * При достижении этой даты - учетная запись будет удалена
+                    * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя
+      subresources:
+        status: {}
       additionalPrinterColumns:
         - jsonPath: .spec.email
           name: Email
@@ -67,3 +88,7 @@ spec:
         - jsonPath: .spec.groups
           name: Groups
           type: string
+        - jsonPath: .status.expireAt
+          name: Expire_at
+          type: string
+          format: date-time

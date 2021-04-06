@@ -22,6 +22,7 @@ import (
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	"github.com/flant/shell-operator/test/hook/context"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -435,6 +436,12 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 
 	hec.Session = sandbox_runner.Run(hookCmd, options...)
+	if hec.Session.ExitCode() != 0 {
+		By("Shell hook execution failed", func() {
+			fmt.Fprintf(GinkgoWriter, hookColoredOutput("stdout", hec.Session.Out.Contents()))
+			fmt.Fprintf(GinkgoWriter, hookColoredOutput("stderr", hec.Session.Err.Contents()))
+		})
+	}
 
 	valuesJSONPatchBytes, err := ioutil.ReadAll(ValuesJSONPatchFile)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -474,6 +481,32 @@ func (hec *HookExecutionConfig) RunHook() {
 		err := kubePatch.Apply(kubernetesPatchBytes)
 		Expect(err).ToNot(HaveOccurred())
 	}
+}
+
+// hookColoredOutput colored stdout and stderr streams for shell hooks
+func hookColoredOutput(stream string, text []byte) string {
+	if len(text) == 0 {
+		text = []byte("\n") // line sticks together
+	}
+
+	var preamble string
+	switch stream {
+	case "stdout":
+		preamble = "Hook stdout:"
+		if !config.DefaultReporterConfig.NoColor {
+			preamble = "\u001B[33mHook stdout:\u001B[0m"
+			text = []byte(fmt.Sprintf("\u001B[93m%s\u001B[0m", text))
+		}
+
+	case "stderr":
+		preamble = "Hook stderr:"
+		if !config.DefaultReporterConfig.NoColor {
+			preamble = "\u001B[33mHook stderr:\u001B[0m"
+			text = []byte(fmt.Sprintf("\u001B[35m%s\u001B[0m", text))
+		}
+	}
+
+	return fmt.Sprintf("%s %s", preamble, text)
 }
 
 func (hec *HookExecutionConfig) RunGoHook() {

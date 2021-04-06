@@ -1,6 +1,8 @@
 package hooks
 
 import (
+	"time"
+
 	. "github.com/benjamintf1/unmarshalledmatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,6 +37,7 @@ spec:
   - Admins
   - Everyone
   password: password
+  ttl: 30m
 `))
 				f.RunHook()
 			})
@@ -53,6 +56,44 @@ spec:
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf"
 }]`))
+
+				Expect(
+					f.KubernetesResource("User", "", "admin").Field("status.expireAt").Time(),
+				).Should(
+					BeTemporally("~", time.Now().Add(30*time.Minute), time.Second),
+				)
+			})
+
+			When("User resource changed", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@example.com
+  groups:
+  - Admins
+  - Everyone
+  password: password
+  ttl: 60m
+status:
+  expireAt: "2020-02-02T22:22:22Z"
+`))
+					f.RunHook()
+				})
+
+				It("Should not change expire time", func() {
+					t, err := time.Parse(time.RFC3339, "2020-02-02T22:22:22Z")
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(
+						f.KubernetesResource("User", "", "admin").Field("status.expireAt").Time(),
+					).Should(
+						BeTemporally("==", t),
+					)
+				})
 			})
 
 			Context("With deleting User object", func() {
