@@ -1,7 +1,9 @@
 package check
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 )
@@ -92,5 +94,109 @@ func ExpectEpisode(g *WithT, ep DowntimeEpisode, success, fail, unknown, nodata 
 	}
 	if nodata >= 0 {
 		g.Expect(ep.NoDataSeconds).Should(BeEquivalentTo(nodata), "Check NoData, ep: %+v", ep)
+	}
+}
+
+func Test_NewDowntimeEpisode(t *testing.T) {
+	ref := ProbeRef{}
+	start := time.Unix(0, 0)
+	duration := 30 * time.Second
+
+	tests := []struct {
+		name  string
+		stats Stats
+		want  DowntimeEpisode
+	}{
+		{
+			name: "zeros",
+			want: DowntimeEpisode{},
+		}, {
+			name:  "1/1 up",
+			stats: Stats{Expected: 1, Up: 1},
+			want:  DowntimeEpisode{SuccessSeconds: 30},
+		}, {
+			name:  "1/1 down",
+			stats: Stats{Expected: 1, Down: 1},
+			want:  DowntimeEpisode{FailSeconds: 30},
+		}, {
+			name:  "1/1 unknown",
+			stats: Stats{Expected: 1, Unknown: 1},
+			want:  DowntimeEpisode{UnknownSeconds: 30},
+		}, {
+			name:  "1/1 nodata",
+			stats: Stats{Expected: 1},
+			want:  DowntimeEpisode{NoDataSeconds: 30},
+		}, {
+			name:  "1/30 nodata",
+			stats: Stats{Expected: 30},
+			want:  DowntimeEpisode{NoDataSeconds: 30},
+		}, {
+			name:  "1/30 up",
+			stats: Stats{Expected: 30, Up: 1},
+			want:  DowntimeEpisode{SuccessSeconds: 1, NoDataSeconds: 29},
+		}, {
+			name:  "1/30 down",
+			stats: Stats{Expected: 30, Down: 1},
+			want:  DowntimeEpisode{FailSeconds: 1, NoDataSeconds: 29},
+		}, {
+			name:  "1/30 unknown",
+			stats: Stats{Expected: 30, Unknown: 1},
+			want:  DowntimeEpisode{UnknownSeconds: 1, NoDataSeconds: 29},
+		}, {
+			name:  "15/30 up",
+			stats: Stats{Expected: 30, Up: 15},
+			want:  DowntimeEpisode{SuccessSeconds: 15, NoDataSeconds: 15},
+		}, {
+			name:  "15/30 down",
+			stats: Stats{Expected: 30, Down: 15},
+			want:  DowntimeEpisode{FailSeconds: 15, NoDataSeconds: 15},
+		}, {
+			name:  "15/30 unknown",
+			stats: Stats{Expected: 30, Unknown: 15},
+			want:  DowntimeEpisode{UnknownSeconds: 15, NoDataSeconds: 15},
+		}, {
+			name:  "30/30 up",
+			stats: Stats{Expected: 30, Up: 30},
+			want:  DowntimeEpisode{SuccessSeconds: 30},
+		}, {
+			name:  "30/30 down",
+			stats: Stats{Expected: 30, Down: 30},
+			want:  DowntimeEpisode{FailSeconds: 30},
+		}, {
+			name:  "30/30 unknown",
+			stats: Stats{Expected: 30, Unknown: 30},
+			want:  DowntimeEpisode{UnknownSeconds: 30},
+		}, {
+			name: "10+10+10/30 unknown",
+			stats: Stats{
+				Expected: 30,
+				Up:       10,
+				Down:     10,
+				Unknown:  10},
+			want: DowntimeEpisode{
+				SuccessSeconds: 10,
+				FailSeconds:    10,
+				UnknownSeconds: 10,
+			},
+		}, {
+			name: "10+10/30 unknown",
+			stats: Stats{
+				Expected: 30,
+				Down:     10,
+				Unknown:  10},
+			want: DowntimeEpisode{
+				FailSeconds:    10,
+				UnknownSeconds: 10,
+				NoDataSeconds:  10,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewDowntimeEpisode(ref, start, duration, tt.stats); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewDowntimeEpisode() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

@@ -31,15 +31,19 @@ func main() {
 		sh_app.SetupLogging()
 		log.Info("Starting upmeter informer")
 
-		informer := upmeter.NewInformer(*originsCount)
-		err := informer.Start(context.Background())
+		informer := upmeter.New(*originsCount)
+		ctx, cancel := context.WithCancel(context.Background())
+
+		err := informer.Start(ctx)
 		if err != nil {
+			cancel()
 			log.Fatalf("cannot start informer: %v", err)
 		}
 
 		// Block action by waiting signals from OS.
 		utils_signal.WaitForProcessInterruption(func() {
-			informer.Stop()
+			// FIXME the shutdown is still not graceful
+			cancel()
 			os.Exit(1)
 		})
 
@@ -54,15 +58,19 @@ func main() {
 			sh_app.SetupLogging()
 			log.Infof("Starting upmeter agent. Id=%s", util.AgentUniqueId())
 
-			upmeterAgent := agent.NewDefaultAgent(context.Background())
-			err := upmeterAgent.Start()
+			ctx, cancel := context.WithCancel(context.Background())
+
+			agent := agent.NewDefaultAgent()
+			err := agent.Start(ctx)
 			if err != nil {
+				cancel()
 				os.Exit(1)
 			}
 
 			// Block 'main' by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption(func() {
-				upmeterAgent.Stop()
+				// FIXME the shutdown is still not graceful
+				cancel()
 				os.Exit(1)
 			})
 			return nil

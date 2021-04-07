@@ -25,37 +25,35 @@ type Agent struct {
 	access *kubernetes.Access
 }
 
-func NewAgent(ctx context.Context) *Agent {
+func NewAgent() *Agent {
 	a := &Agent{}
-	a.ctx, a.cancel = context.WithCancel(ctx)
 	return a
 }
 
 // Return agent with wired dependencies
-func NewDefaultAgent(ctx context.Context) *Agent {
-	a := NewAgent(ctx)
+func NewDefaultAgent() *Agent {
+	a := NewAgent()
 
 	// Probe manager
 	a.access = &kubernetes.Access{}
 	probeManager := manager.New(a.access)
 	for _, probe := range probeManager.Runners() {
-		log.Infof("Register probe %s", probe.Id())
+		log.Infof("Register probe %s", probe.ProbeRef().Id())
 	}
 	for _, calc := range probeManager.Calculators() {
-		log.Infof("Register calculated probe %s", calc.Id())
+		log.Infof("Register calculated probe %s", calc.ProbeRef().Id())
 	}
 
 	timeout := 10 * time.Second
 	a.upmeterClient = sender.NewUpmeterClient(app.UpmeterHost, app.UpmeterPort, timeout)
-	// TODO move context to Start methods
 	ch := make(chan []check.DowntimeEpisode)
-	a.sender = sender.NewSender(context.Background(), a.upmeterClient, ch)
-	a.executor = executor.NewProbeExecutor(context.Background(), probeManager, ch)
+	a.sender = sender.New(a.upmeterClient, ch)
+	a.executor = executor.New(probeManager, ch)
 
 	return a
 }
 
-func (a *Agent) Start() error {
+func (a *Agent) Start(ctx context.Context) error {
 	// Initialize kube client from kubeconfig and service account token from filesystem.
 	err := a.access.Init()
 	if err != nil {
@@ -63,8 +61,8 @@ func (a *Agent) Start() error {
 		return err
 	}
 
-	a.sender.Start()
-	a.executor.Start()
+	a.sender.Start(ctx)
+	a.executor.Start(ctx)
 
 	// block
 	var ch = make(chan struct{})

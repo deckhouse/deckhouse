@@ -1,8 +1,6 @@
 package calculated
 
 import (
-	"fmt"
-
 	"upmeter/pkg/check"
 )
 
@@ -46,30 +44,12 @@ type Probe struct {
 	mergeIds []string
 }
 
-func (p *Probe) Id() string {
-	return p.ref.Id()
+func (p *Probe) ProbeRef() check.ProbeRef {
+	return *p.ref
 }
 
-// Calc merges episodes of multiple probes into a new episode.
-//
-// The algorithm maximizes fail, then unknown, then nodata, and then fills success with time left.
-func (p *Probe) Calc(episodes map[string]*check.DowntimeEpisode, stepSeconds int64) (*check.DowntimeEpisode, error) {
-	var result *check.DowntimeEpisode
-
-	for _, id := range p.mergeIds {
-		ep, ok := episodes[id]
-		if !ok {
-			return nil, fmt.Errorf("no episode for probe id=%s", id)
-		}
-
-		if result == nil {
-			result = ep
-			continue
-		}
-
-		worsen(result, ep, stepSeconds)
-	}
-
-	result.ProbeRef = *p.ref
-	return result, nil
+func (p *Probe) MergeIds() []string {
+	ids := make([]string, len(p.mergeIds))
+	copy(ids, p.mergeIds)
+	return ids
 }

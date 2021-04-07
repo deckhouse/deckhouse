@@ -19,12 +19,6 @@ func New(access *kubernetes.Access) *Manager {
 	return m
 }
 
-func (m *Manager) SendTo(send chan check.Result) {
-	for _, runner := range m.runners {
-		runner.SendTo(send)
-	}
-}
-
 func (m *Manager) Runners() []*check.Runner {
 	return m.runners
 }
@@ -37,7 +31,7 @@ func filterRunners(ps []*check.Runner) []*check.Runner {
 	var newList = make([]*check.Runner, 0)
 
 	for _, p := range ps {
-		if check.IsProbeEnabled(p.Id()) {
+		if check.IsProbeEnabled(p.ProbeRef().Id()) {
 			newList = append(newList, p)
 		}
 	}
@@ -49,7 +43,7 @@ func filterCalculators(ps []*calculated.Probe) []*calculated.Probe {
 	var newList = make([]*calculated.Probe, 0)
 
 	for _, p := range ps {
-		if check.IsProbeEnabled(p.Id()) {
+		if check.IsProbeEnabled(p.ProbeRef().Id()) {
 			newList = append(newList, p)
 		}
 	}

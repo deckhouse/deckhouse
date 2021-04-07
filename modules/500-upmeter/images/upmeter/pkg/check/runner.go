@@ -10,14 +10,13 @@ import (
 type Runner struct {
 	// defined by check
 
-	probeRef  *ProbeRef
-	checkName string
+	ref       *ProbeRef
+	CheckName string
 	checker   Checker
 	period    time.Duration
 
 	// defined by lifecycle
 
-	send  chan<- Result
 	state *state
 }
 
@@ -27,39 +26,34 @@ func NewRunner(groupName, probeName, checkName string, period time.Duration, che
 		Probe: probeName,
 	}
 	return &Runner{
-		period:    period,
-		probeRef:  ref,
-		checkName: checkName,
+		ref:       ref,
+		CheckName: checkName,
 		checker:   checker,
-		state:     &state{firstRun: true},
+		period:    period,
+		state:     &state{},
 	}
 }
 
-func (r *Runner) SendTo(send chan<- Result) {
-	r.send = send
+func (r *Runner) ProbeRef() ProbeRef {
+	return *r.ref
 }
 
-func (r *Runner) Id() string {
-	if r.probeRef != nil {
-		return r.probeRef.Id()
-	}
-	return ""
-}
-
-func (r *Runner) Run(start time.Time) {
+func (r *Runner) Run(start time.Time) Result {
 	r.state.Start(start)
+	defer r.state.Done()
 
-	go func() {
-		status := StatusSuccess
-		err := r.checker.Check()
-		if err != nil {
-			r.Logger().Errorf(err.Error())
-			status = err.Status()
-		}
-		r.send <- r.Result(status)
+	status := Up
+	err := r.checker.Check()
+	if err != nil {
+		r.Logger().Errorf(err.Error())
+		status = err.Status()
+	}
 
-		r.state.Stop()
-	}()
+	return NewResult(*r.ref, r.CheckName, status)
+}
+
+func (r *Runner) Period() time.Duration {
+	return r.period
 }
 
 func (r *Runner) ShouldRun(when time.Time) bool {
@@ -68,18 +62,13 @@ func (r *Runner) ShouldRun(when time.Time) bool {
 
 func (r *Runner) Logger() *log.Entry {
 	return log.
-		WithField("group", r.probeRef.Group).
-		WithField("probe", r.probeRef.Probe)
-}
-
-func (r *Runner) Result(status Status) Result {
-	return NewResult(*r.probeRef, r.checkName, status)
+		WithField("group", r.ref.Group).
+		WithField("probe", r.ref.Probe)
 }
 
 type state struct {
 	lastStart time.Time
 	running   bool
-	firstRun  bool
 }
 
 // ShouldRun checks that the probe can be run. Returns true if the probe is not
@@ -97,7 +86,6 @@ func (s *state) Start(t time.Time) {
 	s.lastStart = t
 }
 
-func (s *state) Stop() {
+func (s *state) Done() {
 	s.running = false
-	s.firstRun = false
 }

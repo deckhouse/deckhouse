@@ -2,82 +2,80 @@ package api
 
 import (
 	"fmt"
-	"regexp"
+	"strconv"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
+type timerange struct {
+	from, to, step int64
+}
+
 // DecodeFromToStep decodes 3 arguments
-func DecodeFromToStep(fromArg, toArg, stepArg []string) (from int64, to int64, step int64, err error) {
-	now := time.Now().Unix()
-	var hasFrom bool
-	var hasTo bool
-	if len(fromArg) > 0 && fromArg[0] != "" {
-		hasFrom = true
-		from, err = ParseSecondsOrDuration(fromArg[0])
+func DecodeFromToStep(fromArg, toArg, stepArg string) (timerange, error) {
+	var (
+		hasFrom = fromArg != ""
+		hasTo   = toArg != ""
+		hasStep = stepArg != ""
+		err     error
+	)
+	r := timerange{step: 30}
+
+	if hasFrom {
+		r.from, err = parseTimestamp(fromArg)
 		if err != nil {
-			log.Errorf("parse from='%s' as time duration: %v", fromArg[0], err)
-			return 0, 0, 0, err
+			return r, fmt.Errorf("from=%q is not timestamp: %v", fromArg, err)
 		}
 	}
-	if len(toArg) > 0 && toArg[0] != "" {
-		hasTo = true
-		to, err = ParseSecondsOrDuration(toArg[0])
+
+	if hasTo {
+		r.to, err = parseTimestamp(toArg)
 		if err != nil {
-			log.Errorf("parse to='%s' as time duration: %v", toArg[0], err)
-			return 0, 0, 0, err
+			return r, fmt.Errorf("to=%q is not timestamp: %v", toArg, err)
 		}
 	}
-	if len(stepArg) > 0 && stepArg[0] != "" {
-		step, err = ParseSecondsOrDuration(stepArg[0])
+
+	if hasStep {
+		r.step, err = parseDuration(stepArg)
 		if err != nil {
-			log.Errorf("parse step='%s' as time duration: %v", stepArg[0], err)
-			return 0, 0, 0, err
+			return r, fmt.Errorf("step=%q is not duration: %v", stepArg, err)
 		}
-	} else {
-		step = 30
+	}
+
+	// "from-to" variant
+	if hasFrom && hasTo {
+		return r, nil
 	}
 
 	// "Last" variant
 	// TODO is it expected?
-	// TODO do not adjust at this time, it should be done by CalculateStepRagnge
+	// TODO do not adjust at this time, it should be done by CalculateStepRange
 	if hasFrom && !hasTo {
-		return now - from, now, step, nil
+		now := time.Now().Unix()
+		r.from = now - r.from
+		r.to = now
+		return r, nil
 	}
-	// "from-to" variant
-	if hasFrom && hasTo {
-		return from, to, step, nil
-	}
+
 	// something wrong
-	return 0, 0, 0, fmt.Errorf("bad arguments")
+	return r, fmt.Errorf("bad arguments")
 }
 
-var digitsRe = regexp.MustCompile(`^\d+$`)
+func parseTimestamp(s string) (int64, error) {
+	return strconv.ParseInt(s, 10, 64)
+}
 
-func ParseSecondsOrDuration(in string) (int64, error) {
-	if digitsRe.MatchString(in) {
-		in += "s"
-	}
-	dur, err := time.ParseDuration(in)
+func parseDuration(s string) (int64, error) {
+	dur, err := time.ParseDuration(s)
 	if err != nil {
-		return 0, err
+		return parseTimestamp(s)
 	}
 	return int64(dur.Seconds()), nil
 }
 
-func DecodeMuteDowntimeTypes(in []string) []string {
-	defaults := []string{
-		"Maintenance",
-		"InfraMaintenance",
-		"InfraAccident",
-	}
-	if len(in) == 0 || in[0] == "" {
-		return defaults
-	}
+func decodeMuteDowntimeTypes(in string) []string {
 	res := []string{}
-	muteTypes := strings.Split(in[0], ",")
+	muteTypes := strings.Split(in, "!")
 	for _, muteType := range muteTypes {
 		switch muteType {
 		case "Mnt":
@@ -85,13 +83,10 @@ func DecodeMuteDowntimeTypes(in []string) []string {
 		case "Acd":
 			res = append(res, "Accident")
 		case "InfMnt":
-			res = append(res, "InfraMaintenance")
+			res = append(res, "InfrastructureMaintenance")
 		case "InfAcd":
-			res = append(res, "InfraAccident")
+			res = append(res, "InfrastructureAccident")
 		}
-	}
-	if len(res) == 0 {
-		return defaults
 	}
 	return res
 }

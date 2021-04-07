@@ -23,9 +23,9 @@ type PublicStatusHandler struct {
 }
 
 func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("PublicStatus", r.RemoteAddr, r.RequestURI)
+	log.Infoln("PublicStatus", r.RemoteAddr, r.RequestURI)
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "%d GET is required\n", http.StatusMethodNotAllowed)
 		return

@@ -7,14 +7,14 @@ import (
 func ErrFail(format string, a ...interface{}) Error {
 	return checkError{
 		err:    fmt.Errorf(format, a...),
-		result: StatusFail,
+		status: Down,
 	}
 }
 
 func ErrUnknown(format string, a ...interface{}) Error {
 	return checkError{
 		err:    fmt.Errorf(format, a...),
-		result: StatusUnknown,
+		status: Unknown,
 	}
 }
 
@@ -25,13 +25,13 @@ type Error interface {
 
 type checkError struct {
 	err    error
-	result Status
+	status Status
 }
 
-func (pe checkError) Error() string {
-	return pe.err.Error()
+func (e checkError) Error() string {
+	return e.err.Error()
 }
 
-func (pe checkError) Status() Status {
-	return pe.result
+func (e checkError) Status() Status {
+	return e.status
 }
