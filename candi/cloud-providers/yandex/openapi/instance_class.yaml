@@ -128,6 +128,15 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:
                     type: string
+                networkType:
+                  type: string
+                  enum:
+                  - STANDARD
+                  - SOFTWARE_ACCELERATED
+                  description: |
+                    Тип сети: STANDARD или SOFTWARE_ACCELERATED
+                  x-description: |
+                    Network type: STANDARD or SOFTWARE_ACCELERATED
   scope: Cluster
   names:
     plural: yandexinstanceclasses
