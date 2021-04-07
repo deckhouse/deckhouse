@@ -10,6 +10,16 @@ import (
 	dbcontext "upmeter/pkg/upmeter/db/context"
 )
 
+const (
+	everyProbePlaceholder      = "__all__"
+	aggregatedProbePlaceholder = "__total__"
+)
+
+// __all__ and __total__ probes should select all probes
+func areAllProbesRequested(probeName string) bool {
+	return probeName == everyProbePlaceholder || probeName == aggregatedProbePlaceholder
+}
+
 const CreateTableDowntime5m_latest = `
 CREATE TABLE IF NOT EXISTS downtime5m (
 	timeslot        INTEGER NOT NULL,
@@ -20,44 +30,6 @@ CREATE TABLE IF NOT EXISTS downtime5m (
 	group_name      TEXT    NOT NULL,
 	probe_name      TEXT    NOT NULL
 )
-`
-
-const SelectDowntime5mByTimeslotGroupProbe = `
-SELECT
-  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
-FROM downtime5m
-WHERE
-  timeslot = ? AND group_name = ? AND probe_name = ?
-`
-
-const SelectDowntime5mByTimeslotRange = `
-SELECT
-  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
-FROM downtime5m
-WHERE
-  timeslot >= ? AND timeslot < ?
-`
-
-const SelectDowntime5mGroupProbe = `
-SELECT DISTINCT group_name, probe_name
-FROM downtime5m
-ORDER BY 1, 2
-`
-
-const InsertDowntime5m = `
-INSERT INTO downtime5m (timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name)
-VALUES
-(?, ?, ?, ?, ?, ?, ?)
-`
-
-const UpdateDowntime5m = `
-UPDATE downtime5m
-SET
-    success_seconds=?,
-    fail_seconds=?,
-    unknown_seconds=?,
-    nodata_seconds=?
-WHERE rowid=?
 `
 
 type Downtime5mEntity struct {
@@ -78,6 +50,14 @@ func NewDowntime5mDao(dbCtx *dbcontext.DbContext) *Downtime5mDao {
 }
 
 func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, ref check.ProbeRef) (Downtime5mEntity, error) {
+	const SelectDowntime5mByTimeslotGroupProbe = `
+	SELECT
+	  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
+	FROM downtime5m
+	WHERE
+	  timeslot = ? AND group_name = ? AND probe_name = ?
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mByTimeslotGroupProbe, slot5m, ref.Group, ref.Probe)
 	if err != nil {
 		return Downtime5mEntity{}, fmt.Errorf("select for TimeslotGroupProbe: %v", err)
@@ -111,6 +91,14 @@ func (d *Downtime5mDao) GetBySlotAndProbe(slot5m int64, ref check.ProbeRef) (Dow
 }
 
 func (d *Downtime5mDao) ListByRange(from, to int64) ([]Downtime5mEntity, error) {
+	const SelectDowntime5mByTimeslotRange = `
+	SELECT
+	  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
+	FROM downtime5m
+	WHERE
+	  timeslot >= ? AND timeslot < ?
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mByTimeslotRange, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("select for TimeslotRange: %v", err)
@@ -139,6 +127,14 @@ func (d *Downtime5mDao) ListByRange(from, to int64) ([]Downtime5mEntity, error) 
 }
 
 func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName string) ([]check.DowntimeEpisode, error) {
+	const SelectDowntime5mByTimeslotRange = `
+	SELECT
+	  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
+	FROM downtime5m
+	WHERE
+	  timeslot >= ? AND timeslot < ?
+	`
+
 	query := SelectDowntime5mByTimeslotRange
 	queryArgs := []interface{}{
 		from,
@@ -150,7 +146,7 @@ func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName
 	}
 
 	// __all__ and __total__ probes should select all probes
-	if !(strings.HasPrefix(probeName, "__") || strings.HasSuffix(probeName, "__")) {
+	if !areAllProbesRequested(probeName) {
 		query += " AND probe_name = ?"
 		queryArgs = append(queryArgs, probeName)
 	}
@@ -185,36 +181,35 @@ func (d *Downtime5mDao) ListEpisodesByRange(from, to int64, groupName, probeName
 // ListEpisodeSumsForRanges returns sums of seconds for each group_name+probe_name to reduce
 // calculations over full table.
 // FIXME rewrite this quick hack code.
-func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupName, probeName string) ([]check.DowntimeEpisode, error) {
+func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges check.StepRanges, ref check.ProbeRef) ([]check.DowntimeEpisode, error) {
 	var res = make([]check.DowntimeEpisode, 0)
 
 	var queryParts = map[string]string{
-		"select": `SELECT
-		sum(success_seconds), sum(fail_seconds), sum(unknown_seconds), sum(nodata_seconds)`,
-		"from":  "FROM downtime5m",
-		"where": "WHERE timeslot >= ? AND timeslot < ?",
+		"select": `SELECT sum(success_seconds), sum(fail_seconds), sum(unknown_seconds), sum(nodata_seconds)`,
+		"from":   "FROM downtime5m",
+		"where":  "WHERE timeslot >= ? AND timeslot < ?",
 	}
 
 	for _, stepRange := range stepRanges.Ranges {
 		selectPart := queryParts["select"]
 		where := queryParts["where"]
-		groupBy := []string{} // GROUP BY group_name, probe_name
+		var groupBy []string // GROUP BY group_name, probe_name
 
 		queryArgs := []interface{}{
-			stepRange[0],
-			stepRange[1],
+			stepRange.From,
+			stepRange.To,
 		}
-		if groupName != "" {
+		if ref.Group != "" {
 			selectPart += ", group_name"
 			where += " AND group_name = ?"
-			queryArgs = append(queryArgs, groupName)
+			queryArgs = append(queryArgs, ref.Group)
 			groupBy = append(groupBy, "group_name")
 		}
 
 		// __all__ and __total__ probes should select all probes
-		if !(strings.HasPrefix(probeName, "__") || strings.HasSuffix(probeName, "__")) {
+		if !areAllProbesRequested(ref.Probe) {
 			where += " AND probe_name = ?"
-			queryArgs = append(queryArgs, probeName)
+			queryArgs = append(queryArgs, ref.Probe)
 		}
 		selectPart += ", probe_name"
 		groupBy = append(groupBy, "probe_name")
@@ -229,8 +224,8 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 		if err != nil {
 			return nil, fmt.Errorf("select for TimeslotRange: %v", err)
 		}
-
 		defer rows.Close()
+
 		for rows.Next() {
 			var entity = Downtime5mEntity{}
 			var err error
@@ -261,7 +256,7 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 			if err != nil {
 				return nil, fmt.Errorf("row to Downtime5mEntity: %v", err)
 			}
-			entity.DowntimeEpisode.TimeSlot = stepRange[0]
+			entity.DowntimeEpisode.TimeSlot = stepRange.From
 			res = append(res, entity.DowntimeEpisode)
 		}
 	}
@@ -270,6 +265,12 @@ func (d *Downtime5mDao) ListEpisodeSumsForRanges(stepRanges StepRanges, groupNam
 }
 
 func (d *Downtime5mDao) ListGroupProbe() ([]check.ProbeRef, error) {
+	const SelectDowntime5mGroupProbe = `
+	SELECT DISTINCT group_name, probe_name
+	FROM downtime5m
+	ORDER BY 1, 2
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime5mGroupProbe)
 	if err != nil {
 		return nil, fmt.Errorf("select group and probe: %v", err)
@@ -291,6 +292,12 @@ func (d *Downtime5mDao) ListGroupProbe() ([]check.ProbeRef, error) {
 }
 
 func (d *Downtime5mDao) Insert(downtime check.DowntimeEpisode) error {
+	const InsertDowntime5m = `
+	INSERT INTO downtime5m (timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name)
+	VALUES
+	(?, ?, ?, ?, ?, ?, ?)
+	`
+
 	_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime5m,
 		downtime.TimeSlot,
 		downtime.SuccessSeconds, downtime.FailSeconds,
@@ -300,6 +307,16 @@ func (d *Downtime5mDao) Insert(downtime check.DowntimeEpisode) error {
 }
 
 func (d *Downtime5mDao) Update(rowid int64, downtime check.DowntimeEpisode) error {
+	const UpdateDowntime5m = `
+	UPDATE downtime5m
+	SET
+	    success_seconds=?,
+	    fail_seconds=?,
+	    unknown_seconds=?,
+	    nodata_seconds=?
+	WHERE rowid=?
+	`
+
 	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime5m,
 		downtime.SuccessSeconds, downtime.FailSeconds,
 		downtime.UnknownSeconds, downtime.NoDataSeconds,

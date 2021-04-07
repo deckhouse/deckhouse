@@ -12,249 +12,204 @@ import (
 	"upmeter/pkg/check"
 )
 
-const exportIntervalSeconds = 30
-const schedulePeriod = 100 * time.Millisecond
-const scrapePeriod = time.Second
+const (
+	exportPeriod = 30 * time.Second
+	scrapePeriod = 200 * time.Millisecond
+)
+
+func seriesSize() int {
+	return int(exportPeriod / scrapePeriod)
+}
 
 type ProbeExecutor struct {
 	probeManager *manager.Manager
 	metrics      *metric_storage.MetricStorage
 
-	// receiving results from checks
+	// to receive results from runners
 	recv    chan check.Result
-	results map[string]*check.Result
+	series  map[string]*check.StatusSeries
+	results map[string]*check.ProbeResult
 
-	// sending episodes to upmeter server
-	send     chan []check.DowntimeEpisode
-	episodes map[string]*check.DowntimeEpisode
-
-	lastScrapeTimestamp int64
-	lastExportTimestamp int64
-
-	ctx    context.Context
-	cancel context.CancelFunc
+	// to send a bunch of episodes further
+	send chan []check.DowntimeEpisode
 }
 
-func NewProbeExecutor(ctx context.Context, mgr *manager.Manager, send chan []check.DowntimeEpisode) *ProbeExecutor {
+func New(mgr *manager.Manager, send chan []check.DowntimeEpisode) *ProbeExecutor {
 	p := &ProbeExecutor{
 		recv:    make(chan check.Result),
-		results: make(map[string]*check.Result),
+		series:  make(map[string]*check.StatusSeries),
+		results: make(map[string]*check.ProbeResult),
+
+		probeManager: mgr,
+		send:         send,
 	}
-	p.ctx, p.cancel = context.WithCancel(ctx)
-	p.probeManager = mgr
-	p.send = send
 	return p
 }
 
-func (e *ProbeExecutor) Start() {
-	// Set result chan
-	e.probeManager.SendTo(e.recv)
-
-	// Checks scheduler
-	go func() {
-		// The minimal period to spawn runners
-		restartTick := time.NewTicker(schedulePeriod)
-
-		for {
-			select {
-			case <-e.ctx.Done():
-				restartTick.Stop()
-				// TODO stop probes
-				// TODO signal to main
-				return
-			case <-restartTick.C:
-				e.run()
-			}
-		}
-	}()
-
-	// Scraper
-	// Synced read/write of e.results and e.episodes
-	go func() {
-		scrapeTick := time.NewTicker(scrapePeriod)
-		for {
-			select {
-			case <-e.ctx.Done():
-				scrapeTick.Stop()
-				return
-			case <-scrapeTick.C:
-				e.scrape()
-			case result := <-e.recv:
-				id := result.ProbeRef.Id()
-
-				log.Debugf("probe '%s' result %+v", id, result.CheckResults)
-
-				storedResult, ok := e.results[id]
-				if !ok {
-					storedResult = &check.Result{
-						ProbeRef: result.ProbeRef,
-					}
-					e.results[id] = storedResult
-				}
-				storedResult.SetCheckStatus(result)
-			}
-		}
-	}()
+func (e *ProbeExecutor) Start(ctx context.Context) {
+	go e.runTicker(ctx)
+	go e.scrapeTicker(ctx)
 }
 
-func (e *ProbeExecutor) Stop() {
-	if e.cancel != nil {
-		e.cancel()
+// runTicker is the scheduler for probe checks
+func (e *ProbeExecutor) runTicker(ctx context.Context) {
+	ticker := time.NewTicker(scrapePeriod)
+
+	for {
+		select {
+		case <-ticker.C:
+			// TODO: pass context to checks
+			e.run()
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
 	}
 }
 
-// run checks if probe is running and restart them.
+// scrapeTicker collects probe check results and schedules the exporting of episodes.
+func (e *ProbeExecutor) scrapeTicker(ctx context.Context) {
+	// we want to be able to align with the real exportPeriod in time and to spawn before we run a probe
+	ticker := time.NewTicker(scrapePeriod)
+
+	for {
+		select {
+		case <-ticker.C:
+			err := e.scrape()
+			if err != nil {
+				log.Fatalf("cannot scrape results: %v", err)
+			}
+		case result := <-e.recv:
+			err := e.collect(result)
+			if err != nil {
+				log.Fatalf("cannot collect results: %v", err)
+			}
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+// run checks if probe is running and restarts them
 func (e *ProbeExecutor) run() {
 	// rounding lets us avoid inaccuracies in time comparison
-	now := time.Now().Round(schedulePeriod)
+	now := time.Now().Round(scrapePeriod)
+
 	for _, runner := range e.probeManager.Runners() {
 		if !runner.ShouldRun(now) {
 			continue
 		}
 
-		runner.Run(now)
+		id := runner.ProbeRef().Id()
 
-		// Increase probe running counter
-		e.metrics.CounterAdd("upmeter_agent_probe_run_total",
-			1.0, map[string]string{"probe": runner.Id()})
+		// prepare the slot for the scraped series
+		if _, ok := e.series[id]; !ok {
+			e.series[id] = check.NewStatusSeries(seriesSize())
+		}
+
+		// prepare the slot for the results aggregator
+		if _, ok := e.results[id]; !ok {
+			e.results[id] = check.NewProbeResult(runner.ProbeRef())
+		}
+
+		// run!
+		runner := runner // avoid closure capturing
+		go func() {
+			e.recv <- runner.Run(now)
+
+			// Increase probe running counter
+			e.metrics.CounterAdd(
+				"upmeter_agent_probe_run_total",
+				1.0,
+				map[string]string{"probe": runner.ProbeRef().Id()},
+			)
+		}()
 	}
+}
+
+// collect stores the check result in the intermediate format
+func (e *ProbeExecutor) collect(checkResult check.Result) error {
+	id := checkResult.ProbeRef.Id()
+
+	probeResult, ok := e.results[id]
+	if !ok {
+		return fmt.Errorf("no result key prepared for probe %q", id)
+	}
+
+	probeResult.Add(checkResult)
+	return nil
 }
 
 // scrape checks probe results
-func (e *ProbeExecutor) scrape() {
-	if e.episodes == nil {
-		e.episodes = make(map[string]*check.DowntimeEpisode)
+func (e *ProbeExecutor) scrape() error {
+	var (
+		now        = time.Now()
+		exportTime = now.Round(exportPeriod)
+		scrapeTime = now.Round(scrapePeriod)
+	)
+
+	for id, probeResult := range e.results {
+		err := e.series[id].Add(probeResult.Status())
+		if err != nil {
+			return fmt.Errorf("cannot add series for probe %q: %v", id, err)
+		}
 	}
 
-	// rounding fixes go ticker inaccuracy
-	now := time.Now().Round(scrapePeriod).Unix()
-	e.recalcEpisodes(now)
-	e.lastScrapeTimestamp = now
-
-	// Send to sender every 30 seconds.
-	shouldExport := e.updateLastExportTime(now)
-	if !shouldExport {
-		return
+	if exportTime != scrapeTime {
+		return nil
 	}
-	e.export()
 
-	e.episodes = nil
+	episodeStart := exportTime.Add(-exportPeriod)
+	err := e.export(episodeStart)
+	if err != nil {
+		return fmt.Errorf("cannot export episodes: %v", err)
+	}
+
+	return nil
 }
 
 // export copies scraped results and sends them to sender along as evaluates computed probes.
-func (e *ProbeExecutor) export() {
-	episodes := make([]check.DowntimeEpisode, 0)
+func (e *ProbeExecutor) export(start time.Time) error {
+	var episodes []check.DowntimeEpisode
 
-	for _, ep := range e.episodes {
-		fmt.Println("exporting", ep.DumpString())
-		episodes = append(episodes, *ep)
+	// collect episodes for calculated probes
+	for _, calc := range e.probeManager.Calculators() {
+		series, err := calcSeries(e.series, calc.MergeIds())
+		if err != nil {
+			return fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
+		}
+		ep := check.NewDowntimeEpisode(calc.ProbeRef(), start, exportPeriod, series.Stats())
+		episodes = append(episodes, ep)
 	}
 
-	// FIXME this is incorrect. The calculation of a correct downtime episode from two other downtime episodes is
-	//       impossible. Without original time points, we cannot know how these downtime episodes overlap.
-	//
-	//      For example, consider 2 similar downtime episodes that look like this {success: 15, fail: 15}.
-	//      How do they overlap?
-	//
-	//		1. Edge case: 100% overlap
-	//
-	//		 	|    15s    |    15s    |
-	//		1	|---fail----|--success--|	 50% downtime
-	//		2	|---fail----|--success--|	 50% downtime
-	//		result	|---fail----|--success--|	 50% downtime
-	//
-	//		2. Edge case: 0% overlap
-	//
-	//		 	|    15s    |    15s    |
-	//		1	|--success--|---fail----|	 50% downtime
-	//		2	|---fail----|--success--|	 50% downtime
-	//		result	|---fail----|---fail----|	100% downtime
-	//
-	//      For now, calc.Calc method picks biggest fail of two episodes like they fully overlap in fail,
-	//      in unknown, and in nodata intervals, and overlap in success by the remains.
-	for _, calc := range e.probeManager.Calculators() {
-		ep, err := calc.Calc(e.episodes, exportIntervalSeconds)
-		if err != nil {
-			log.Errorf("cannot calculate probe id=%s: %v", calc.Id(), err)
-			continue
-		}
-		fmt.Println("exporting", ep.DumpString())
-		episodes = append(episodes, *ep)
+	// collect episodes for real probes
+	for id, probeResult := range e.results {
+		series := e.series[id]
+		ep := check.NewDowntimeEpisode(probeResult.ProbeRef(), start, exportPeriod, series.Stats())
+		episodes = append(episodes, ep)
+		series.Clean()
 	}
 
 	e.send <- episodes
+
+	return nil
 }
 
-func (e *ProbeExecutor) recalcEpisodes(now int64) {
-	timeslot := (now / 30) * 30
+func calcSeries(byId map[string]*check.StatusSeries, ids []string) (*check.StatusSeries, error) {
+	acc := check.NewStatusSeries(seriesSize())
 
-	// 1 second by contract, because scraping period is 1 second and downtime episode aggregates intervals
-	// with seconds precision
-	var delta int64 = 1
-
-	var noDataDelta int64
-	if e.lastScrapeTimestamp == 0 {
-		// proper NoData for first 30 sec episode at start. We take delta into account because we always
-		// spread data with it.
-		noDataDelta = now - timeslot - delta
-	}
-
-	for id, result := range e.results {
-		episode, ok := e.episodes[id]
+	for _, id := range ids {
+		series, ok := byId[id]
 		if !ok {
-			episode = &check.DowntimeEpisode{
-				ProbeRef:      result.ProbeRef,
-				TimeSlot:      timeslot,
-				NoDataSeconds: exportIntervalSeconds,
-			}
-			e.episodes[id] = episode
+			return nil, fmt.Errorf("series for %q is not present", id)
 		}
 
-		// Move spent time to an acknowledged status
-		episode.NoDataSeconds -= delta
-		switch result.Value() {
-		case check.StatusFail:
-			episode.FailSeconds += delta
-		case check.StatusSuccess:
-			episode.SuccessSeconds += delta
-		case check.StatusUnknown:
-			episode.UnknownSeconds += delta
-		}
-
-		// Correct possible inaccuracy
-		episode.NoDataSeconds -= noDataDelta
-		episode.Correct(exportIntervalSeconds)
-
-		// Log some asserts
-		if episode.FailSeconds > exportIntervalSeconds {
-			log.Warnf("Probe '%s' fail time %ds exceeds export interval %ds\n", id, episode.FailSeconds, exportIntervalSeconds)
-		}
-		if episode.SuccessSeconds > exportIntervalSeconds {
-			log.Warnf("Probe '%s' success time %ds exceeds export interval %ds\n", id, episode.FailSeconds, exportIntervalSeconds)
+		err := acc.Merge(series)
+		if err != nil {
+			return nil, fmt.Errorf("cannot merge status series: %v", err)
 		}
 	}
-}
 
-func (e *ProbeExecutor) updateLastExportTime(now int64) bool {
-	if e.lastExportTimestamp == 0 {
-		// Export at start only if now is a 30 second mark
-		if now%exportIntervalSeconds == 0 {
-			e.lastExportTimestamp = now
-			return true
-		}
-
-		// Set lastExportTimestamp to the interval start for future calls
-		e.lastExportTimestamp = (now / exportIntervalSeconds) * exportIntervalSeconds
-		return false
-	}
-
-	// Export if now is a 30 second mark or past it
-	start := (e.lastExportTimestamp / exportIntervalSeconds) * exportIntervalSeconds
-	end := start + exportIntervalSeconds
-	if now >= end {
-		e.lastExportTimestamp = now
-		return true
-	}
-
-	return false
+	return acc, nil
 }

@@ -44,7 +44,7 @@ type Informer struct {
 	cancel context.CancelFunc
 }
 
-func NewInformer(originsCount int) *Informer {
+func New(originsCount int) *Informer {
 	kubeClient := kube.NewKubernetesClient()
 	kubeClient.WithContextName(shapp.KubeContext)
 	kubeClient.WithConfigPath(shapp.KubeConfig)
@@ -124,7 +124,7 @@ func (inf *Informer) Start(ctx context.Context) error {
 	http.Handle("/api/probe", &api.ProbeListHandler{DbCtx: inf.dbCtx})
 	http.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: inf.dbCtx, DowntimeMonitor: inf.downtimeMonitor})
 	http.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: inf.dbCtx, DowntimeMonitor: inf.downtimeMonitor})
-	http.Handle("/downtime", &api.DowntimeHandler{DbCtx: inf.dbCtx, RemoteWrite: controller})
+	http.Handle("/downtime", &api.AddEpisodesHandler{DbCtx: inf.dbCtx, RemoteWrite: controller})
 	http.Handle("/stats", &api.StatsHandler{DbCtx: inf.dbCtx})
 
 	// Kubernetes probes
@@ -140,16 +140,6 @@ func (inf *Informer) Start(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (inf *Informer) Stop() {
-	if inf.cancel == nil {
-		return
-	}
-	inf.cancel()
-	inf.downtimeMonitor.Stop()
-	inf.remoteWriteController.Stop()
-
 }
 
 func writeOk(w http.ResponseWriter, r *http.Request) {

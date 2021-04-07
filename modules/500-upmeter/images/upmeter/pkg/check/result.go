@@ -2,47 +2,56 @@ package check
 
 type Status int64
 
+// We rely on this order: Fail < Success < Unknown, nodata is the inevitable zero value for initialized
+// status series that is not meant to be used outside of the package.
 const (
-	StatusFail Status = iota
-	StatusSuccess
-	StatusUnknown
+	nodata Status = iota
+	Down
+	Up
+	Unknown
 )
 
-// Runner represents probe result. It contains results for each probe's checkss.
+// Result represents check result
 type Result struct {
-	ProbeRef        ProbeRef
-	CheckResults    map[string]Status
-	FailDescription string
-}
-
-// SetCheckStatus updates check results
-func (r *Result) SetCheckStatus(next Result) {
-	if next.CheckResults == nil {
-		return
-	}
-	if len(r.CheckResults) == 0 {
-		r.CheckResults = make(map[string]Status)
-	}
-	for k, v := range next.CheckResults {
-		r.CheckResults[k] = v
-	}
-}
-
-// Value deduces the probe result. It does it by minimizing check results: Fail < Success < Unknown
-func (r *Result) Value() Status {
-	var res = StatusUnknown
-	for _, v := range r.CheckResults {
-		if v < res {
-			res = v
-		}
-	}
-	return res
+	ProbeRef  *ProbeRef
+	CheckName string
+	Status    Status
 }
 
 // NewResult creates result struct for a check
 func NewResult(ref ProbeRef, checkName string, status Status) Result {
 	return Result{
-		ProbeRef:     ref,
-		CheckResults: map[string]Status{checkName: status},
+		ProbeRef:  &ref,
+		CheckName: checkName,
+		Status:    status,
 	}
+}
+
+// ProbeResult represents multiple checks results and deduces the common one.
+type ProbeResult struct {
+	ref      *ProbeRef
+	statuses map[string]Status
+}
+
+func NewProbeResult(ref ProbeRef) *ProbeResult {
+	return &ProbeResult{
+		ref:      &ref,
+		statuses: make(map[string]Status),
+	}
+}
+
+func (a *ProbeResult) Add(r Result) {
+	a.statuses[r.CheckName] = r.Status
+}
+
+func (a *ProbeResult) Status() Status {
+	var acc Status
+	for _, s := range a.statuses {
+		acc = mergeStrategy(acc, s)
+	}
+	return acc
+}
+
+func (a *ProbeResult) ProbeRef() ProbeRef {
+	return *a.ref
 }

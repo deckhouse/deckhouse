@@ -17,42 +17,34 @@ import (
 const MaxBatchSize = 64
 
 type Sender struct {
+	client *UpmeterClient
+
 	recv       chan []check.DowntimeEpisode
 	bufferLock sync.RWMutex
 	buffer     []check.DowntimeEpisode
-	client     *UpmeterClient
 
-	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewSender(ctx context.Context, client *UpmeterClient, recv chan []check.DowntimeEpisode) *Sender {
+func New(client *UpmeterClient, recv chan []check.DowntimeEpisode) *Sender {
 	s := &Sender{
-		recv:       recv,
-		bufferLock: sync.RWMutex{},
-		buffer:     make([]check.DowntimeEpisode, 0),
+		client: client,
+		recv:   recv,
+		buffer: make([]check.DowntimeEpisode, 0),
 	}
-	s.ctx, s.cancel = context.WithCancel(ctx)
-	s.client = client
 	return s
 }
 
 // Start runs two go routines to behave as a naive WAL:
 // 1. All results are placed in a Buffer.
 // 2. The result is deleted from the buffer after successful submission to Upmeter.
-func (s *Sender) Start() {
-	go s.receiveLoop()
-	go s.sendLoop()
-}
-
-func (s *Sender) Stop() {
-	if s.cancel != nil {
-		s.cancel()
-	}
+func (s *Sender) Start(ctx context.Context) {
+	go s.receiveLoop(ctx)
+	go s.sendLoop(ctx)
 }
 
 // buffer writer
-func (s *Sender) receiveLoop() {
+func (s *Sender) receiveLoop(ctx context.Context) {
 	for {
 		select {
 		case episodes := <-s.recv:
@@ -60,7 +52,7 @@ func (s *Sender) receiveLoop() {
 			// TODO buffer should be persistent — sqlite or something
 			s.buffer = append(s.buffer, episodes...)
 			s.bufferLock.Unlock()
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Info("Sender: stop episode receiver")
 			return
 		}
@@ -69,7 +61,7 @@ func (s *Sender) receiveLoop() {
 
 // A buffer reader and sender.
 // Try to send a Buffer every 5 sec.
-func (s *Sender) sendLoop() {
+func (s *Sender) sendLoop(ctx context.Context) {
 	tick := time.NewTicker(5 * time.Second)
 
 	for {
@@ -79,7 +71,7 @@ func (s *Sender) sendLoop() {
 			if err != nil {
 				log.Errorf("sending failed: %v", err)
 			}
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			log.Info("Sender: stop episodes sender")
 			return
 		}

@@ -1,77 +1,195 @@
 package entity
 
 import (
+	"reflect"
 	"testing"
 
-	. "github.com/onsi/gomega"
+	"upmeter/pkg/check"
 )
 
 func Test_CalculateAdjustedStepRanges(t *testing.T) {
-	g := NewWithT(t)
+	type args struct {
+		from, to, step int64
+	}
 
-	steps := CalculateAdjustedStepRanges(0, 300, 300)
-	g.Expect(steps.Ranges).Should(HaveLen(1))
-	g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(0))
-	g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(300))
-	// g.Expect(steps.Ranges[1][0]).Should(BeEquivalentTo(300))
-	// g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(600))
+	tests := []struct {
+		name string
+		args args
+		want []check.Range
+	}{
+		{
+			name: "Single range",
+			args: args{from: 0, to: 300, step: 300},
+			want: []check.Range{{From: 0, To: 300}},
+		}, {
+			name: "Adjusts",
+			args: args{from: 21, to: 663, step: 321},
+			want: []check.Range{
+				{From: 300, To: 600},
+				{From: 600, To: 900}},
+		}, {
+			name: "Bigger step (1h)",
+			args: args{from: 21, to: 10000, step: 3600},
+			want: []check.Range{
+				{From: 3600, To: 7200},
+				{From: 7200, To: 10800}},
+		}, {
+			name: "Step ranges used in status_test.go",
+			args: args{from: 0, to: 900, step: 300},
+			want: []check.Range{
+				{From: 0, To: 300},
+				{From: 300, To: 600},
+				{From: 600, To: 900}},
+		}, {
+			name: "Step ranges used in status_test.go",
+			args: args{from: 0, to: 1200, step: 600},
+			want: []check.Range{
+				{From: 0, To: 600},
+				{From: 600, To: 1200}},
+		}, {
+			name: "Big step 3000",
+			args: args{from: 3500, to: 10000, step: 3000},
+			want: []check.Range{
+				{From: 6000, To: 9000},
+				{From: 9000, To: 12000}},
+		}, {
+			name: "Big step 7200",
+			args: args{from: 10000, to: 70000, step: 7200},
+			want: []check.Range{
+				{From: 14400, To: 21600},
+				{From: 21600, To: 28800},
+				{From: 28800, To: 36000},
+				{From: 36000, To: 43200},
+				{From: 43200, To: 50400},
+				{From: 50400, To: 57600},
+				{From: 57600, To: 64800},
+				{From: 64800, To: 72000}},
+		}, {
+			name: "Real timestamps",
+			args: args{from: 1603180029, to: 1603784829, step: 86400},
+			want: []check.Range{
+				{From: 1603238400, To: 1603324800},
+				{From: 1603324800, To: 1603411200},
+				{From: 1603411200, To: 1603497600},
+				{From: 1603497600, To: 1603584000},
+				{From: 1603584000, To: 1603670400},
+				{From: 1603670400, To: 1603756800},
+				{From: 1603756800, To: 1603843200}},
+		},
+	}
 
-	// Adjusts
-	steps = CalculateAdjustedStepRanges(21, 663, 321)
-	g.Expect(steps.Ranges).Should(HaveLen(2))
-	g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(300))
-	g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(600))
-	g.Expect(steps.Ranges[1][0]).Should(BeEquivalentTo(600))
-	g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(900))
-	// g.Expect(steps.Ranges[2][0]).Should(BeEquivalentTo(600))
-	// g.Expect(steps.Ranges[2][1]).Should(BeEquivalentTo(900))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CalculateAdjustedStepRanges(tt.args.from, tt.args.to, tt.args.step).Ranges
 
-	// Bigger step (1h)
-	steps = CalculateAdjustedStepRanges(21, 10000, 3600)
-	g.Expect(steps.Ranges).Should(HaveLen(2))
-	// g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(0))
-	// g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(3600))
-	g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(3600))
-	g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(7200))
-	g.Expect(steps.Ranges[1][0]).Should(BeEquivalentTo(7200))
-	g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(10800))
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CalculateAdjustedStepRanges() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
-	// Step ranges used in status_test.go
-	steps = CalculateAdjustedStepRanges(0, 900, 300)
-	g.Expect(steps.Ranges).Should(HaveLen(3))
-	g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(0))
-	g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(300))
-	g.Expect(steps.Ranges[1][0]).Should(BeEquivalentTo(300))
-	g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(600))
-	g.Expect(steps.Ranges[2][0]).Should(BeEquivalentTo(600))
-	g.Expect(steps.Ranges[2][1]).Should(BeEquivalentTo(900))
-	// Step ranges used in status_test.go
-	steps = CalculateAdjustedStepRanges(0, 1200, 600)
-	g.Expect(steps.Ranges).Should(HaveLen(2))
-	g.Expect(steps.Ranges[0][0]).Should(BeEquivalentTo(0))
-	g.Expect(steps.Ranges[0][1]).Should(BeEquivalentTo(600))
-	g.Expect(steps.Ranges[1][0]).Should(BeEquivalentTo(600))
-	g.Expect(steps.Ranges[1][1]).Should(BeEquivalentTo(1200))
+func TestAlignStep(t *testing.T) {
 
-	// Big step
-	steps = CalculateAdjustedStepRanges(10000, 70000, 7200)
-	g.Expect(steps.Ranges).Should(HaveLen((70000 - 10000) / 7200))
-	step := steps.Ranges[0]
-	g.Expect(step[0]).Should(BeEquivalentTo(14400))
-	g.Expect(step[1]).Should(BeEquivalentTo(14400 + 7200))
-	step = steps.Ranges[len(steps.Ranges)-1]
-	g.Expect(step[0]).Should(BeEquivalentTo(72000 - 7200))
-	g.Expect(step[1]).Should(BeEquivalentTo(72000))
+	tests := []struct {
+		name string
+		arg  int64
+		want int64
+	}{
+		{name: "-1 is 300", arg: -1, want: 300},
+		{name: "0 is 300", arg: 0, want: 300},
+		{name: "299 is 300", arg: 256, want: 300},
 
-	// Real timestamps
-	steps = CalculateAdjustedStepRanges(1603180029, 1603784829, 86400)
-	g.Expect(steps.From).Should(BeEquivalentTo(1603238400))
-	g.Expect(steps.To).Should(BeEquivalentTo(1603843200))
-	g.Expect(steps.Ranges).Should(HaveLen(7))
-	// step := steps.Ranges[0]
-	// g.Expect(step[0]).Should(BeEquivalentTo(7200))
-	// g.Expect(step[1]).Should(BeEquivalentTo(7200 * 2))
-	// step = steps.Ranges[len(steps.Ranges)-1]
-	// g.Expect(step[0]).Should(BeEquivalentTo(72000 - 7200))
-	// g.Expect(step[1]).Should(BeEquivalentTo(72000))
+		{name: "300 is 300", arg: 300, want: 300},
+		{name: "301 is 300", arg: 300, want: 300},
+		{name: "599 is 300", arg: 300, want: 300},
+
+		{name: "600 is 600", arg: 600, want: 600},
+		{name: "601 is 600", arg: 601, want: 600},
+		{name: "899 is 600", arg: 899, want: 600},
+
+		{name: "900 is 900", arg: 900, want: 900},
+		{name: "901 is 900", arg: 901, want: 900},
+		{name: "1199 is 900", arg: 1199, want: 900},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := alignStep(tt.arg); got != tt.want {
+				t.Errorf("alignStep() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAlignEdge(t *testing.T) {
+	type args struct {
+		to   int64
+		step int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{
+			name: "1, 1",
+			args: args{to: 1, step: 1},
+			want: 1,
+		},
+
+		// 300
+		{
+			name: "1, 300",
+			args: args{to: 1, step: 300},
+			want: 300,
+		},
+		{
+			name: "300, 300",
+			args: args{to: 300, step: 300},
+			want: 300,
+		},
+
+		// 600
+		{
+			name: "301, 300",
+			args: args{to: 301, step: 300},
+			want: 600,
+		},
+		{
+			name: "599, 300",
+			args: args{to: 599, step: 300},
+			want: 600,
+		},
+		{
+			name: "600, 300",
+			args: args{to: 600, step: 300},
+			want: 600,
+		},
+
+		// 900
+		{
+			name: "601, 300",
+			args: args{to: 601, step: 300},
+			want: 900,
+		},
+		{
+			name: "899, 300",
+			args: args{to: 899, step: 300},
+			want: 900,
+		},
+		{
+			name: "900, 300",
+			args: args{to: 900, step: 300},
+			want: 900,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := alignEdge(tt.args.to, tt.args.step); got != tt.want {
+				t.Errorf("alignEdge() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

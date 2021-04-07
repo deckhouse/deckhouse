@@ -54,7 +54,7 @@ func Test_DowntimeHandler(t *testing.T) {
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			rr = httptest.NewRecorder()
 
-			handler := &DowntimeHandler{
+			handler := &AddEpisodesHandler{
 				DbCtx:       dbCtx,
 				RemoteWrite: &exporterMock{},
 			}

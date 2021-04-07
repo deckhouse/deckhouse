@@ -17,13 +17,9 @@ type StatsHandler struct {
 
 // TODO make better stats!
 func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("Stats", r.RemoteAddr, r.RequestURI)
+	log.Infoln("Stats", r.RemoteAddr, r.RequestURI)
 
-	daoCtx := h.DbCtx.Start()
-	defer daoCtx.Stop()
-
-	dao30s := dao.NewDowntime30sDao(daoCtx)
-	stats, err := dao30s.Stats()
+	stats, err := getStats(h.DbCtx)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusBadRequest, err)
@@ -39,4 +35,12 @@ func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(out)
+}
+
+func getStats(dbctx *dbcontext.DbContext) ([]string, error) {
+	daoCtx := dbctx.Start()
+	defer daoCtx.Stop()
+
+	dao30s := dao.NewDowntime30sDao(daoCtx)
+	return dao30s.Stats()
 }

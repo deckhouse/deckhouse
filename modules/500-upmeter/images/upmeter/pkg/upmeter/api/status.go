@@ -29,74 +29,29 @@ type StatusRangeHandler struct {
 }
 
 func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("StatusRange", r.RemoteAddr, r.RequestURI)
+	log.Infoln("StatusRange", r.RemoteAddr, r.RequestURI)
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "%d GET is required\n", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Check parameters
-	from, to, step, err := DecodeFromToStep(r.URL.Query()["from"], r.URL.Query()["to"], r.URL.Query()["step"])
+	input, err := parseStatusInput(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
+		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Adjust range to step slots.
-	stepRanges := entity.CalculateAdjustedStepRanges(from, to, step)
-	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",
-		from, to, step,
-		stepRanges.From, stepRanges.To, stepRanges.Step)
 
-	groupNameList := r.URL.Query()["group"]
-	if len(groupNameList) == 0 || groupNameList[0] == "" {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: 'group' is required\n", http.StatusInternalServerError)
-		return
-	}
-	groupName := groupNameList[0]
-
-	probeNameList := r.URL.Query()["probe"]
-	probeName := ""
-	if len(probeNameList) > 0 {
-		probeName = probeNameList[0]
-	}
-
-	muteDowntimeTypesArgs := r.URL.Query()["muteDowntimeTypes"]
-	muteDowntimeTypes := DecodeMuteDowntimeTypes(muteDowntimeTypesArgs)
-	if len(muteDowntimeTypes) == 0 {
-		muteDowntimeTypes = []string{
-			"Maintenance",
-			"InfrastructureMaintenance",
-			"InfrastructureAccident",
-		}
-	}
-
-	daoCtx := h.DbCtx.Start()
-	defer daoCtx.Stop()
-
-	dao5m := dao.NewDowntime5mDao(daoCtx)
-	episodes, err := dao5m.ListEpisodeSumsForRanges(stepRanges, groupName, probeName)
+	resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, input)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
+		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	incidents := h.DowntimeMonitor.FilterDowntimeIncidents(stepRanges.From, stepRanges.To, groupName, muteDowntimeTypes)
-
-	statuses := entity.CalculateStatuses(episodes, incidents, stepRanges.Ranges, groupName, probeName)
-
-	out, err := json.Marshal(&StatusResponse{
-		Statuses: statuses,
-		Step:     stepRanges.Step,
-		From:     stepRanges.From,
-		To:       stepRanges.To,
-		//Episodes:  episodes, // To much data, only for debug.
-		Incidents: incidents,
-	})
+	respJSON, err := json.Marshal(resp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
@@ -106,5 +61,78 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	w.Write(out)
+	w.Write(respJSON)
+}
+
+type statusInput struct {
+	timerange timerange
+	probe     check.ProbeRef
+	muteTypes []string
+}
+
+func parseStatusInput(r *http.Request) (*statusInput, error) {
+	query := r.URL.Query()
+
+	timerange, err := DecodeFromToStep(query.Get("from"), query.Get("to"), query.Get("step"))
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse time range: %v", err)
+	}
+
+	groupName := query.Get("group")
+	probeName := query.Get("probe")
+	if groupName == "" {
+		return nil, fmt.Errorf("'group' is required")
+	}
+
+	muteDowntimeTypes := decodeMuteDowntimeTypes(query.Get("muteDowntimeTypes"))
+
+	parsed := &statusInput{
+		timerange: timerange,
+		probe:     check.ProbeRef{Group: groupName, Probe: probeName},
+		muteTypes: muteDowntimeTypes,
+	}
+
+	return parsed, nil
+}
+
+func getStatus(dbctx *dbcontext.DbContext, monitor *crd.DowntimeMonitor, input *statusInput) (*StatusResponse, error) {
+	// Adjust range to step slots.
+	stepRanges := entity.CalculateAdjustedStepRanges(input.timerange.from, input.timerange.to, input.timerange.step)
+
+	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",
+		input.timerange.from, input.timerange.to, input.timerange.step,
+		stepRanges.From, stepRanges.To, stepRanges.Step)
+
+	daoCtx := dbctx.Start()
+	defer daoCtx.Stop()
+
+	dao5m := dao.NewDowntime5mDao(daoCtx)
+	episodes, err := dao5m.ListEpisodeSumsForRanges(stepRanges, input.probe)
+	if err != nil {
+		return nil, err
+	}
+
+	muteDowntimeTypes := input.muteTypes
+	if len(muteDowntimeTypes) == 0 {
+		muteDowntimeTypes = []string{
+			"Maintenance",
+			"InfrastructureMaintenance",
+			"InfrastructureAccident",
+		}
+	}
+
+	incidents := monitor.FilterDowntimeIncidents(stepRanges.From, stepRanges.To, input.probe.Group, muteDowntimeTypes)
+
+	statuses := entity.CalculateStatuses(episodes, incidents, stepRanges.Ranges, input.probe)
+
+	body := &StatusResponse{
+		Statuses: statuses,
+		Step:     stepRanges.Step,
+		From:     stepRanges.From,
+		To:       stepRanges.To,
+		//Episodes:  episodes, // To much data, only for debug.
+		Incidents: incidents,
+	}
+
+	return body, nil
 }

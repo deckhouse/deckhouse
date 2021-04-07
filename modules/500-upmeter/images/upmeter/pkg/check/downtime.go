@@ -2,8 +2,7 @@ package check
 
 import (
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
+	"time"
 
 	"upmeter/pkg/util"
 )
@@ -16,6 +15,25 @@ type DowntimeEpisode struct {
 	SuccessSeconds int64    `json:"success"` // seconds of success state during the slot range [timeslot;timeslot+30)
 	UnknownSeconds int64    `json:"unknown"` // seconds of "unknown" state
 	NoDataSeconds  int64    `json:"nodata"`  // seconds without data
+}
+
+func NewDowntimeEpisode(ref ProbeRef, start time.Time, duration time.Duration, stats Stats) DowntimeEpisode {
+	var (
+		failureSec = timeInSeconds(duration, int64(stats.Down), int64(stats.Expected))
+		successSec = timeInSeconds(duration, int64(stats.Up), int64(stats.Expected))
+		unknownSec = timeInSeconds(duration, int64(stats.Unknown), int64(stats.Expected))
+		nodata     = int64(stats.Expected - stats.Down - stats.Up - stats.Unknown)
+		nodataSec  = timeInSeconds(duration, nodata, int64(stats.Expected))
+	)
+
+	return DowntimeEpisode{
+		ProbeRef:       ref,
+		TimeSlot:       start.Unix(),
+		FailSeconds:    failureSec,
+		SuccessSeconds: successSec,
+		UnknownSeconds: unknownSec,
+		NoDataSeconds:  nodataSec,
+	}
 }
 
 func (e DowntimeEpisode) IsInRange(from int64, to int64) bool {
@@ -32,55 +50,6 @@ func (e DowntimeEpisode) Avail() int64 {
 
 func (e DowntimeEpisode) Total() int64 {
 	return e.SuccessSeconds + e.FailSeconds + e.UnknownSeconds + e.NoDataSeconds
-}
-
-func (e *DowntimeEpisode) Correct(step int64) {
-	if e.Total() <= step {
-		return
-	}
-
-	log.Errorf("Episode for '%s' requires correction: %d!=%d. Success=%d, fail=%d, unknown=%d, nodata=%d",
-		e.ProbeRef.Id(), e.Total(), step, e.SuccessSeconds, e.FailSeconds, e.UnknownSeconds, e.NoDataSeconds)
-
-	delta := step - e.Total()
-
-	if e.NoDataSeconds > 0 {
-		if e.NoDataSeconds >= delta {
-			e.NoDataSeconds -= delta
-			return
-		}
-		delta -= e.NoDataSeconds
-		e.NoDataSeconds = 0
-	}
-
-	// NoDataSeconds == 0
-	if e.UnknownSeconds > 0 {
-		if e.UnknownSeconds >= delta {
-			e.UnknownSeconds -= delta
-			return
-		}
-		delta -= e.UnknownSeconds
-		e.UnknownSeconds = 0
-	}
-
-	// NoDataSeconds == UnknownSeconds == 0
-	if e.FailSeconds > 0 {
-		if e.FailSeconds >= delta {
-			e.FailSeconds -= delta
-			return
-		}
-		delta -= e.FailSeconds
-		e.FailSeconds = 0
-	}
-
-	if e.SuccessSeconds > 0 {
-		if e.SuccessSeconds >= delta {
-			e.SuccessSeconds -= delta
-			return
-		}
-		e.SuccessSeconds = 0
-	}
-
 }
 
 func (e DowntimeEpisode) IsCorrect(step int64) bool {
@@ -180,11 +149,11 @@ type DowntimeIncident struct {
 	DowntimeName string   // a checkName of a Downtime custom resource
 }
 
-// AffectedDuration returns count of seconds between 'from' and 'to'
+// MuteDuration returns the count of seconds between 'from' and 'to'
 // that are affected by this incident for particular 'group'.
-func (d DowntimeIncident) MuteDuration(from, to int64, group string) int64 {
+func (d DowntimeIncident) MuteDuration(rng Range, group string) int64 {
 	// Not in range
-	if d.Start >= to || d.End < from {
+	if d.Start >= rng.To || d.End < rng.From {
 		return 0
 	}
 
@@ -200,13 +169,26 @@ func (d DowntimeIncident) MuteDuration(from, to int64, group string) int64 {
 	}
 
 	// Calculate mute duration for range [from; to]
-	start := d.Start
-	if d.Start < from {
-		start = from
-	}
-	end := d.End
-	if d.End > to {
-		end = to
-	}
+	var (
+		start = util.Max(d.Start, rng.From)
+		end   = util.Min(d.End, rng.To)
+	)
+
 	return end - start
+}
+
+func timeInSeconds(d time.Duration, counts, total int64) int64 {
+	if total == 0 {
+		return 0
+	}
+
+	return int64(d.Seconds() * float64(counts) / float64(total))
+}
+
+type Stats struct {
+	Expected, Up, Down, Unknown int
+}
+
+func (s Stats) String() string {
+	return fmt.Sprintf("(Σ%d ↑%d ↓%d ?%d)", s.Expected, s.Up, s.Down, s.Unknown)
 }

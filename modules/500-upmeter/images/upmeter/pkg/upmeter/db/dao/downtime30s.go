@@ -21,64 +21,6 @@ CREATE TABLE IF NOT EXISTS downtime30s (
 )
 `
 
-const SelectDowntime30SecByTimeslot = `
-SELECT
-  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
-FROM downtime30s
-WHERE
-  timeslot = ?
-`
-
-const SelectDowntime30SecByTimeslotRange = `
-SELECT
-  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
-FROM downtime30s
-WHERE
-      timeslot >= ? AND timeslot < ?
-      AND group_name = ? AND probe_name = ?
-`
-
-const SelectDowntime30SecByTimeslotGroupProbe = `
-SELECT
-  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
-FROM downtime30s
-WHERE
-  timeslot = ? AND group_name = ? AND probe_name = ?
-`
-
-const SelectDowntime30SecGroupProbe = `
-SELECT DISTINCT group_name, probe_name
-FROM downtime30s
-ORDER BY 1, 2
-`
-
-const SelectDowntime30SecStats = `
-SELECT timeslot, count(timeslot)
-FROM downtime30s
-GROUP BY timeslot
-`
-
-const InsertDowntime30Sec = `
-INSERT INTO downtime30s (timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name)
-VALUES
-(?, ?, ?, ?, ?, ?, ?)
-`
-
-const UpdateDowntime30SecById = `
-UPDATE downtime30s
-SET
-    success_seconds=?,
-    fail_seconds=?,
-    unknown_seconds=?,
-    nodata_seconds=?
-WHERE rowid=?
-`
-
-const DeleteDowntime30SecByEarlierTimestamp = `
-DELETE FROM downtime30s
-WHERE timeslot < ?
-`
-
 type Downtime30sDao struct {
 	DbCtx    *dbcontext.DbContext
 	ConnPool *dbcontext.ConnPool
@@ -98,6 +40,14 @@ type Downtime30sEntity struct {
 }
 
 func (d *Downtime30sDao) ListByTimestamp(slot int64) ([]Downtime30sEntity, error) {
+	const SelectDowntime30SecByTimeslot = `
+	SELECT  rowid, timeslot, 
+		success_seconds, fail_seconds, unknown_seconds, nodata_seconds, 
+		group_name, probe_name
+	FROM downtime30s
+	WHERE timeslot = ?
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslot, slot)
 	if err != nil {
 		return nil, fmt.Errorf("cannot query SELECT: %v", err)
@@ -127,6 +77,16 @@ func (d *Downtime30sDao) ListByTimestamp(slot int64) ([]Downtime30sEntity, error
 }
 
 func (d *Downtime30sDao) GetSimilar(downtime check.DowntimeEpisode) (Downtime30sEntity, error) {
+	const SelectDowntime30SecByTimeslotGroupProbe = `
+	SELECT  rowid, timeslot, 
+		success_seconds, fail_seconds, unknown_seconds, nodata_seconds, 
+		group_name, probe_name
+	FROM downtime30s
+	WHERE   timeslot = ?    AND 
+		group_name = ?  AND 
+		probe_name = ?
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotGroupProbe, downtime.TimeSlot, downtime.ProbeRef.Group, downtime.ProbeRef.Probe)
 	if err != nil {
 		return Downtime30sEntity{}, fmt.Errorf("select for timestamp: %v", err)
@@ -162,6 +122,15 @@ func (d *Downtime30sDao) GetSimilar(downtime check.DowntimeEpisode) (Downtime30s
 }
 
 func (d *Downtime30sDao) ListForRange(start int64, end int64, ref check.ProbeRef) ([]Downtime30sEntity, error) {
+	const SelectDowntime30SecByTimeslotRange = `
+	SELECT
+	  rowid, timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name
+	FROM downtime30s
+	WHERE
+	      timeslot >= ? AND timeslot < ?
+	      AND group_name = ? AND probe_name = ?
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecByTimeslotRange, start, end, ref.Group, ref.Probe)
 	if err != nil {
 		return nil, fmt.Errorf("cannot query SELECT: %v", err)
@@ -191,6 +160,11 @@ func (d *Downtime30sDao) ListForRange(start int64, end int64, ref check.ProbeRef
 }
 
 func (d *Downtime30sDao) ListGroupProbe() ([]check.ProbeRef, error) {
+	const SelectDowntime30SecGroupProbe = `
+	SELECT DISTINCT group_name, probe_name
+	FROM downtime30s
+	ORDER BY 1, 2
+	`
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecGroupProbe)
 	if err != nil {
 		return nil, fmt.Errorf("select group and probe: %v", err)
@@ -211,6 +185,12 @@ func (d *Downtime30sDao) ListGroupProbe() ([]check.ProbeRef, error) {
 }
 
 func (d *Downtime30sDao) Stats() ([]string, error) {
+	const SelectDowntime30SecStats = `
+	SELECT timeslot, count(timeslot)
+	FROM downtime30s
+	GROUP BY timeslot
+	`
+
 	rows, err := d.DbCtx.StmtRunner().Query(SelectDowntime30SecStats)
 	if err != nil {
 		return nil, fmt.Errorf("select stats: %v", err)
@@ -230,14 +210,7 @@ func (d *Downtime30sDao) Stats() ([]string, error) {
 
 func (d *Downtime30sDao) SaveBatch(downtimes []check.DowntimeEpisode) error {
 	for _, downtime := range downtimes {
-		_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime30Sec,
-			downtime.TimeSlot,
-			downtime.SuccessSeconds,
-			downtime.FailSeconds,
-			downtime.UnknownSeconds,
-			downtime.NoDataSeconds,
-			downtime.ProbeRef.Group,
-			downtime.ProbeRef.Probe)
+		err := d.Insert(downtime)
 		if err != nil {
 			return err
 		}
@@ -246,6 +219,12 @@ func (d *Downtime30sDao) SaveBatch(downtimes []check.DowntimeEpisode) error {
 }
 
 func (d *Downtime30sDao) Insert(downtime check.DowntimeEpisode) error {
+	const InsertDowntime30Sec = `
+	INSERT INTO downtime30s (timeslot, success_seconds, fail_seconds, unknown_seconds, nodata_seconds, group_name, probe_name)
+	VALUES
+	(?, ?, ?, ?, ?, ?, ?)
+	`
+
 	_, err := d.DbCtx.StmtRunner().Exec(InsertDowntime30Sec,
 		downtime.TimeSlot,
 		downtime.SuccessSeconds,
@@ -258,6 +237,16 @@ func (d *Downtime30sDao) Insert(downtime check.DowntimeEpisode) error {
 }
 
 func (d *Downtime30sDao) Update(rowid int64, downtime check.DowntimeEpisode) error {
+	const UpdateDowntime30SecById = `
+	UPDATE downtime30s
+	SET
+	    success_seconds=?,
+	    fail_seconds=?,
+	    unknown_seconds=?,
+	    nodata_seconds=?
+	WHERE rowid=?
+	`
+
 	_, err := d.DbCtx.StmtRunner().Exec(UpdateDowntime30SecById,
 		downtime.SuccessSeconds,
 		downtime.FailSeconds,
@@ -271,6 +260,11 @@ func (d *Downtime30sDao) Update(rowid int64, downtime check.DowntimeEpisode) err
 }
 
 func (d *Downtime30sDao) DeleteEarlierThen(tm int64) error {
+	const DeleteDowntime30SecByEarlierTimestamp = `
+	DELETE FROM downtime30s
+	WHERE timeslot < ?
+	`
+
 	_, err := d.DbCtx.StmtRunner().Exec(DeleteDowntime30SecByEarlierTimestamp, tm)
 	if err != nil {
 		return err

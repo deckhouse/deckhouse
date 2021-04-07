@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"upmeter/pkg/check"
 	"upmeter/pkg/crd"
 	dbcontext "upmeter/pkg/upmeter/db/context"
 	"upmeter/pkg/upmeter/db/dao"
@@ -78,7 +79,8 @@ func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMon
 
 		incidents := monitor.FilterDowntimeIncidents(from, to, groupName, muteDowntimeTypes)
 
-		statuses := CalculateStatuses(episodes, incidents, stepRanges.Ranges, groupName, totalProbeName)
+		ref := check.ProbeRef{Group: groupName, Probe: totalProbeName}
+		statuses := CalculateStatuses(episodes, incidents, stepRanges.Ranges, ref)
 
 		// Asserts
 		if _, ok := statuses[groupName]; !ok {
