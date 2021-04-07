@@ -8,6 +8,7 @@ function __config__() {
   kubernetes:
   - name: statefulsets
     group: main
+    queue: /modules/$(module::name::kebab_case)/sts_discovery
     keepFullObjectsInMemory: false
     apiVersion: apps/v1
     kind: Statefulset
