@@ -11,3 +11,4 @@ prometheus:
     prometheusLongterm: {}
     grafana: {}
     remoteWrite: []
+    alertmanagers: {}
