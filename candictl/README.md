@@ -49,14 +49,14 @@ cloud:
   prefix: main
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.16"
+kubernetesVersion: "1.19"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.example.com/deckhouse
+  imagesRepo: registry.flant.com/sys/antiopa
   registryDockerCfg: | # base64 encoded section of docker.auths {"auths":{"registry.example.com":{"username":"oauth2","password":"token"}}}
     eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJ1c2VybmFtZSI6Im9hdXRoMiIsInBhc3N3b3JkIjoidG9rZW4ifX19Cg==
   releaseChannel: Stable
@@ -64,6 +64,8 @@ deckhouse:
     global:
       clusterName: main
       project: pivot
+    nginxIngressEnabled: false
+    prometheusMadisonIntegrationEnabled: false
 ```
 Этих параметров достаточно для установки Kubernetes-кластера на Bare Metal. 
 Единственным условием будет указание дополнительного параметра `--ssh-host` при запуске команды для создания кластера.
