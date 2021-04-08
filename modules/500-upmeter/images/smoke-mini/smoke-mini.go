@@ -7,7 +7,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -17,6 +19,7 @@ var (
 	listenHost              = "0.0.0.0"
 	listenPort              = "8080"
 	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	ready                   = true
 )
 
 func init() {
@@ -24,6 +27,7 @@ func init() {
 }
 
 func main() {
+	http.HandleFunc("/ready", readyHandler)
 	http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/error", errorHandler)
 	http.HandleFunc("/api", apiHandler)
@@ -33,7 +37,25 @@ func main() {
 	http.HandleFunc("/neighbor-via-service", neighborViaServiceHandler)
 	http.HandleFunc("/prometheus", prometheusHandler)
 
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		ready = false
+		log.Info(sig)
+	}()
+
 	log.Fatal(http.ListenAndServe(listenHost+":"+listenPort, nil))
+}
+
+func readyHandler(w http.ResponseWriter, r *http.Request) {
+	if ready {
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(500)
+	}
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -233,8 +255,3 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "ok")
 }
-
-// // TODO check neighbours via service
-// func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Fprintf(w, "ok")
-// }
