@@ -19,6 +19,9 @@ function __config__() {
     cat << "EOF"
     configVersion: v1
     beforeHelm: 20
+    settings:
+      executionMinInterval: 30s
+      executionBurst: 1
     schedule:
     - name: vpacrontab
       group: vpa
