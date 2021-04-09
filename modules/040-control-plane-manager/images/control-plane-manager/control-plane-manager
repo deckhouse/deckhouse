@@ -317,7 +317,7 @@ function converge_component() {
     kubeadm_cmd="$kubeadm_binary init phase control-plane ${component#kube-} --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
   else
     kubeadm_cmd="$kubeadm_binary init phase etcd local --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
-    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml --${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
+    kubeadm_etcd_join_cmd="$kubeadm_binary -v=5 join phase control-plane-join etcd --config $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/config.yaml ${experimental_option} $ROOTFS_DIR/etc/kubernetes/deckhouse/kubeadm/patches/"
   fi
 
   echo "Converge $component"
