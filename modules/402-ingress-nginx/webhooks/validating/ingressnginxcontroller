@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: ingressnginxcontrollers-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["ingressnginxcontrollers"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  if context::jq -e -r '.review.request.name | endswith("-failover")' >/dev/null 2>&1; then
+    # -failover suffix is reserved kfor HostWithFailover inlet
+    # To avoid collisions, we should forbid saving controllers with such name.
+    cat <<EOF > $VALIDATING_RESPONSE_PATH
+{"allowed":false, "message":"it is forbidden to create IngressNginxController with '-failover' suffix"}
+EOF
+  else
+    cat <<EOF > $VALIDATING_RESPONSE_PATH
+{"allowed":true}
+EOF
+  fi
+}
+
+hook::run $@
