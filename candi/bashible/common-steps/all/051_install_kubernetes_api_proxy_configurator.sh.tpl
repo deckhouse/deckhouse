@@ -9,7 +9,13 @@ bb-sync-file /var/lib/bashible/kubernetes-api-proxy-configurator.sh - << "EOF"
 #!/bin/bash
 
 function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+  attempt=0
+  until kubectl --request-timeout 20s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "2" ]; then
+      exit 1
+    fi
+  done
 }
 
 # Read from command args
