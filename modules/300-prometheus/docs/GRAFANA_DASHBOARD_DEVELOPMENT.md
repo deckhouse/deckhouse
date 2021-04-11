@@ -190,7 +190,25 @@ search: grafana разработка графиков
 
 #### Перед пушем новых дашбордов необходимо удалить упоминание реальных доменов
 
-Перед пушем изменений в репозиторий необходимо убедиться, что домены, которые могли импортнуться из Grafana были подготовлены скриптом `prepare_dashboards.sh`. Убеждаемся, что домен, был добавлен в данный скрипт и вы запустили его перед пушем. Он sed'нет используемые домены в dashboard.
+Перед пушем изменений в репозиторий необходимо убедиться, что домены, которые могли импортнуться из Grafana были удалены из json-файла.
+
+Пример скрипта для удаления:
+```bash
+
+listOfDomains="
+google.com
+mycompany.com
+"
+
+listOfDashboards=$(find dashboards/* -name "*json")
+
+for dashboard in $listOfDashboards; do
+  for domain in $listOfDomains; do
+    sed -i -E  "s/([^\"]+$domain)/example.com/g" $dashboard
+  done
+done
+
+```
 
 
 ### TODO
