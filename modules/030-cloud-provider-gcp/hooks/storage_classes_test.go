@@ -24,7 +24,7 @@ cloudProviderGcp:
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 

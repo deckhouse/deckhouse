@@ -210,7 +210,7 @@ metadata:
 			Context("Cluster with ngs ready for chaos", func() {
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
-					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 					f.AddHookEnv("RANDOM_SEED=7")
 					f.RunHook()
 				})
@@ -228,7 +228,7 @@ metadata:
 			Context("Cluster with broken large ng", func() {
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLargeBroken + stateNodes + stateMachines)
-					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 					f.AddHookEnv("RANDOM_SEED=7")
 					f.RunHook()
 				})
@@ -246,7 +246,7 @@ metadata:
 			Context("Cluster with large ready ng and victim machine", func() {
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines + stateMachineVictim)
-					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 					f.AddHookEnv("RANDOM_SEED=7")
 					f.RunHook()
 				})
@@ -264,7 +264,7 @@ metadata:
 			Context("Hook isn't lucky to run monkey. All machines must survive.", func() {
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
-					f.BindingContexts.Set(f.RunSchedule("* * * * *"))
+					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 					f.AddHookEnv("RANDOM_SEED=0")
 					f.RunHook()
 				})

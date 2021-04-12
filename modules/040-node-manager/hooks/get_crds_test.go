@@ -465,7 +465,7 @@ metadata:
 	Context("Schedule: Proper cluster with two pairs of NG+IC, provider secret and two extra NodeGroups — static and hybrid", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret + stateNGStaticAndHybrid)
-			f.BindingContexts.Set(f.RunSchedule("*/10 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunHook()
 		})
 

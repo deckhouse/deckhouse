@@ -74,17 +74,6 @@ data:
 			})
 
 		})
-
-		It("Must be executed successfully", func() {
-			By("podNetworkMode must be host-gw", func() {
-				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
-				f.BindingContexts.Set(BeforeHelmContext)
-				f.RunHook()
-				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
-			})
-
-		})
-
 		It("Must be executed successfully", func() {
 			By("podNetworkMode must be host-gw", func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateWithEmptyFlannelConfig))
@@ -100,5 +89,33 @@ data:
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
 			})
 		})
+
 	})
+
+	// BeforeHelm without snapshots.
+	Context("BeforeHelm on empty cluster", func() {
+		It("Should use config values", func() {
+			By("podNetworkMode must be host-gw", func() {
+				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.RunHook()
+				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
+			})
+
+		})
+	})
+
+	// BeforeHelm without snapshot.
+	Context("BeforeHelm on cluster with Secret", func() {
+		It("Should use value from Secret", func() {
+			By("podNetworkMode must be vxlan", func() {
+				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.KubeStateSet(state)
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.RunHook()
+				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("vxlan"))
+			})
+		})
+	})
+
 })

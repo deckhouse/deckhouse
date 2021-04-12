@@ -112,7 +112,7 @@ var _ = Describe("Node manager hooks :: bashible-apiserver :: gen webhook certs 
 
 		Context("when fire onBeforeHelm event", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(BeforeHelmContext)
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()
 			})
 

@@ -43,7 +43,7 @@ data:
 
 	Context("With DoNotNeed option", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "DoNotNeed")
 			f.RunHook()
 		})
@@ -55,7 +55,7 @@ data:
 
 	Context("With Custom option and ca in config", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCAMode", "Custom")
 			f.ValuesSet("userAuthn.controlPlaneConfigurator.dexCustomCA", "testca")
 			f.RunHook()

@@ -12,7 +12,7 @@ var _ = Describe("Global hooks :: deckhouse_version ", func() {
 
 	Context("Unknown deckhouse version", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(OnStartupContext)
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 

@@ -40,7 +40,7 @@ cloudProviderOpenstack:
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -75,7 +75,7 @@ cloudProviderOpenstack:
 
 	Context("Cluster has minimal cloudProviderOpenstack configuration with excluded storage classes and default specified", func() {
 		BeforeEach(func() {
-			b.BindingContexts.Set(BeforeHelmContext)
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
 			b.RunHook()
 		})
 

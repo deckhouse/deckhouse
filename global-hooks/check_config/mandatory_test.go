@@ -31,7 +31,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 
 	Context("Both `global.project` and `global.clusterName` aren't set", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(OnStartupContext)
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 
@@ -43,7 +43,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 	Context("`global.project` is set; `global.clusterName` isn't set", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("global.project", "ppp")
-			f.BindingContexts.Set(OnStartupContext)
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 
@@ -55,7 +55,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 	Context("`global.project` isn't set; `global.clusterName` is set", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("global.clusterName", "ccc")
-			f.BindingContexts.Set(OnStartupContext)
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 
@@ -68,7 +68,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("global.project", "ppp")
 			f.ConfigValuesSet("global.clusterName", "ccc")
-			f.BindingContexts.Set(OnStartupContext)
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
 			f.RunHook()
 		})
 

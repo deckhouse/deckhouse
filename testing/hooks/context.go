@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/flant/addon-operator/pkg/hook/types"
-	binding_context "github.com/flant/shell-operator/pkg/hook/binding_context"
+	"github.com/flant/shell-operator/pkg/hook/binding_context"
 	. "github.com/flant/shell-operator/pkg/hook/types"
 	"github.com/flant/shell-operator/test/hook/context"
 	"github.com/tidwall/gjson"
@@ -64,56 +63,15 @@ func (bcs *BindingContextsSlice) String() string {
 	return bcs.JSON
 }
 
-var (
-	OnStartupContext  = OnStartupGeneratedBindingContext()
-	BeforeHelmContext = BeforeHelmGeneratedBindingContext()
-	AfterHelmContext  = AfterHelmGeneratedBindingContext()
-)
-
-func ScheduleBindingContext(name string) context.GeneratedBindingContexts {
+// SimpleBindingGeneratedBindingContext is a helper to create empty binding contexts for OnStartup/Schedule/AfterHelm/etc.
+func SimpleBindingGeneratedBindingContext(binding BindingType) context.GeneratedBindingContexts {
 	bc := binding_context.BindingContext{
-		Binding: "schedule",
+		Binding: string(binding),
 	}
-	bc.Metadata.BindingType = Schedule
+	bc.Metadata.BindingType = binding
 
 	return context.GeneratedBindingContexts{
-		Rendered:        fmt.Sprintf(`[{"binding":"schedule","name":%q}]`, name),
-		BindingContexts: []binding_context.BindingContext{bc},
-	}
-}
-
-func OnStartupGeneratedBindingContext() context.GeneratedBindingContexts {
-	bc := binding_context.BindingContext{
-		Binding: "onStartup",
-	}
-	bc.Metadata.BindingType = OnStartup
-
-	return context.GeneratedBindingContexts{
-		Rendered:        `[{"binding":"onStartup"}]`,
-		BindingContexts: []binding_context.BindingContext{bc},
-	}
-}
-
-func BeforeHelmGeneratedBindingContext() context.GeneratedBindingContexts {
-	bc := binding_context.BindingContext{
-		Binding: "beforeHelm",
-	}
-	bc.Metadata.BindingType = types.BeforeHelm
-
-	return context.GeneratedBindingContexts{
-		Rendered:        `[{"binding":"beforeHelm"}]`,
-		BindingContexts: []binding_context.BindingContext{bc},
-	}
-}
-
-func AfterHelmGeneratedBindingContext() context.GeneratedBindingContexts {
-	bc := binding_context.BindingContext{
-		Binding: "afterHelm",
-	}
-	bc.Metadata.BindingType = types.AfterHelm
-
-	return context.GeneratedBindingContexts{
-		Rendered:        `[{"binding":"afterHelm"}]`,
+		Rendered:        fmt.Sprintf(`[{"binding":"%s"}]`, string(binding)),
 		BindingContexts: []binding_context.BindingContext{bc},
 	}
 }

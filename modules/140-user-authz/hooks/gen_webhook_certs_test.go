@@ -106,7 +106,7 @@ var _ = Describe("User Authz hooks :: gen webhook certs ::", func() {
 
 	Context("Empty cluster, onBeforeHelm", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.RunHook()
 		})

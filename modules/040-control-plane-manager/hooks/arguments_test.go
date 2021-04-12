@@ -18,7 +18,7 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: arguments ::", 
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 

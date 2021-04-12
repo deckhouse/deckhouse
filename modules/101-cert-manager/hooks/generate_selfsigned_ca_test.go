@@ -15,7 +15,7 @@ var _ = Describe("Cert Manager hooks :: generate selfsigned ca ::", func() {
 
 	Context("Without secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 

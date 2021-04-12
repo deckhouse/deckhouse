@@ -194,7 +194,7 @@ data:
 	Context("Namespaces and all types of secrets are in cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(stateNamespaces + stateSecretsOriginal + stateSecretsNeutral + stateSecretsExtra + stateSecretsOutDated + stateSecretsUpToDate)
-			f.BindingContexts.Set(f.RunSchedule("0 3 * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
 			f.RunHook()
 		})
 

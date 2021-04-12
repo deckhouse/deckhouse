@@ -33,7 +33,7 @@ var _ = Describe("Prometheus-madison hooks :: madison revoke ::", func() {
 					Body:       rc,
 				}, nil)
 
-			f.BindingContexts.Set(f.RunSchedule("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
 		})
 
@@ -55,7 +55,7 @@ var _ = Describe("Prometheus-madison hooks :: madison revoke ::", func() {
 					Body:       ioutil.NopCloser(bytes.NewBuffer(nil)),
 				}, nil)
 
-			f.BindingContexts.Set(f.RunSchedule("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
 		})
 
