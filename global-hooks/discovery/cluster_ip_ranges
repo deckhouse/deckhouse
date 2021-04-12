@@ -6,13 +6,6 @@ function __config__() {
   cat << EOF
     configVersion: v1
     kubernetes:
-    - name: node_internal_ips
-      group: node_internal_ips
-      keepFullObjectsInMemory: false
-      kind: Node
-      apiVersion: v1
-      jqFilter: '[.status.addresses[]? | select (.type == "InternalIP") | .address]'
-
     - name: pod_subnet_by_component
       group: pod_subnet
       keepFullObjectsInMemory: false
@@ -97,12 +90,6 @@ function __config__() {
       jqFilter: '.data."cluster-configuration.yaml"'
 EOF
 
-}
-
-### nodeInternalIPs
-function __on_group::node_internal_ips() {
-  node_internal_ips="$(context::jq -r '[.snapshots.node_internal_ips[] | .filterResult] | add | sort')"
-  values::set global.discovery.nodeInternalIPs "$node_internal_ips"
 }
 
 ### podSubnet
