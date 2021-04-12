@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
@@ -114,6 +115,10 @@ func (s *SSH) Cmd() *exec.Cmd {
 
 	sshCmd := exec.Command("ssh", args...)
 	sshCmd.Env = env
+	// Start ssh with the new process group to prevent early stop by SIGINT from the shell.
+	sshCmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
 
 	s.Executor = process.NewDefaultExecutor(sshCmd)
 

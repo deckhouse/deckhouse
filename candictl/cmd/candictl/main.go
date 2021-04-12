@@ -104,7 +104,6 @@ func main() {
 
 	kpApp.Version("v0.1.0").Author("Flant")
 
-	waitCh := make(chan struct{}, 1)
 	go func() {
 		command, err := kpApp.Parse(os.Args[1:])
 		if err != nil {
@@ -112,15 +111,10 @@ func main() {
 			log.ErrorLn(err)
 			exitCode = 1
 		}
-		waitCh <- struct{}{}
+		tomb.Shutdown()
 	}()
 
-	select {
-	case <-tomb.StopCh():
-	case <-waitCh:
-		tomb.Shutdown()
-	}
-
+	// Block "main" function until teardown callbacks are finished.
 	tomb.WaitShutdown()
 	os.Exit(exitCode)
 }

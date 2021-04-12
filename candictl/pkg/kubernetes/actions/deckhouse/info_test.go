@@ -70,7 +70,7 @@ testModule:
 				return err
 			},
 		}
-		if err := task.Create(); err != nil {
+		if err := task.CreateOrUpdate(); err != nil {
 			t.Fatalf("%s: Unexpected error: %v", tc.name, err)
 		}
 

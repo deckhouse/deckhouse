@@ -14,7 +14,7 @@ type Client struct {
 
 func (s *Client) Start() (*Client, error) {
 	if s.Settings == nil {
-		return nil, fmt.Errorf("Possible bug in ssh client: session should be created before start.")
+		return nil, fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 	s.Agent = frontend.NewAgent(s.Settings)
 	return s, s.Agent.Start()

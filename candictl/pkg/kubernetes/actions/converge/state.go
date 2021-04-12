@@ -80,6 +80,25 @@ func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error)
 	return state, err
 }
 
+// Create secret for node with group settings only.
+func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, settings []byte) error {
+	task := actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+			return err
+		},
+	}
+	return retry.StartLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10, task.CreateOrUpdate)
+}
+
 func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte) error {
 	if len(tfState) == 0 {
 		return fmt.Errorf("Terraform state is not found in outputs.")
@@ -99,7 +118,7 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 			return err
 		},
 	}
-	return retry.StartLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10, task.Create)
+	return retry.StartLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10, task.CreateOrUpdate)
 }
 
 func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
@@ -152,12 +171,46 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	return retry.StartLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10, func() error {
 		var allErrs *multierror.Error
 		for _, task := range tasks {
-			if err := task.Create(); err != nil {
+			if err := task.CreateOrUpdate(); err != nil {
 				allErrs = multierror.Append(allErrs, err)
 			}
 		}
 		return allErrs.ErrorOrNil()
 	})
+}
+
+// SaveNodeIntermediateTerraformState is a method to patch Secret with node state.
+// It patches a "node-tf-state" key with terraform state or create a new secret if new node is created.
+//
+// settings can be nil for master node.
+//
+// The difference between master node and static node: master node has
+// no key "node-group-settings.json" with group settings.
+func SaveNodeIntermediateTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, outputs *terraform.PipelineOutputs, settings []byte) error {
+	if outputs == nil || len(outputs.TerraformState) == 0 {
+		return fmt.Errorf("terraform state is not found in outputs")
+	}
+
+	task := actions.ManifestTask{
+		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
+		Manifest: func() interface{} {
+			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, outputs.TerraformState, settings)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			return err
+		},
+		PatchData: func() interface{} {
+			return manifests.PatchWithNodeTerraformState(outputs.TerraformState)
+		},
+		PatchFunc: func(patchData []byte) error {
+			secretName := manifests.SecretNameForNodeTerraformState(nodeName)
+			// MergePatch is used because we need to replace one field in "data".
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(secretName, types.MergePatchType, patchData)
+			return err
+		},
+	}
+	return retry.StartSilentLoop(fmt.Sprintf("Save intermediate Terraform state for Node %q", nodeName), 45, 10, task.PatchOrCreate)
 }
 
 func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
@@ -178,7 +231,7 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 		},
 	}
 
-	err := retry.StartLoop("Save Cluster Terraform state", 45, 10, task.Create)
+	err := retry.StartLoop("Save Cluster Terraform state", 45, 10, task.CreateOrUpdate)
 	if err != nil {
 		return err
 	}
@@ -202,6 +255,27 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 	})
 }
 
+// Save only terraform state, cloud-provider-discovery-data is not updated.
+func SaveClusterIntermediateTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
+	if outputs == nil || len(outputs.TerraformState) == 0 {
+		return fmt.Errorf("terraform state is not found in outputs")
+	}
+
+	task := actions.ManifestTask{
+		Name: `Secret "d8-cluster-terraform-state"`,
+		PatchData: func() interface{} {
+			return manifests.PatchWithTerraformState(outputs.TerraformState)
+		},
+		PatchFunc: func(patch []byte) error {
+			// MergePatch is used because we need to replace one field in "data".
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(manifests.TerraformClusterStateName, types.MergePatchType, patch)
+			return err
+		},
+	}
+
+	return retry.StartSilentLoop("Save Cluster intermediate Terraform state", 45, 10, task.Patch)
+}
+
 func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) error {
 	return retry.StartLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10, func() error {
 		return kubeCl.CoreV1().Secrets("d8-system").Delete(secretName, &metav1.DeleteOptions{})
@@ -220,4 +294,16 @@ func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
 		return nil
 	})
 	return clusterUUID, err
+}
+
+func NewClusterStateSaver(kubeCl *client.KubernetesClient) *terraform.StateSaver {
+	return terraform.NewStateSaver(func(outputs *terraform.PipelineOutputs) error {
+		return SaveClusterIntermediateTerraformState(kubeCl, outputs)
+	})
+}
+
+func NewNodeStateSaver(kubeCl *client.KubernetesClient, nodeName string, nodeGroup string, nodeGroupSettings []byte) *terraform.StateSaver {
+	return terraform.NewStateSaver(func(outputs *terraform.PipelineOutputs) error {
+		return SaveNodeIntermediateTerraformState(kubeCl, nodeName, nodeGroup, outputs, nodeGroupSettings)
+	})
 }

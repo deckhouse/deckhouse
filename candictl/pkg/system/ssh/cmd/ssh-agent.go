@@ -35,7 +35,10 @@ func (a *SSHAgent) Start() error {
 	a.agentCmd = exec.Command(SSHAgentPath, "-D")
 	a.agentCmd.Env = os.Environ()
 	a.agentCmd.Dir = "/"
-	a.agentCmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	// Start ssh-agent with the new session to prevent terminal allocation and early stop by SIGINT.
+	a.agentCmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+	}
 
 	a.Executor = process.NewDefaultExecutor(a.agentCmd)
 	// a.EnableLive()

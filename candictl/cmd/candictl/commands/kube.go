@@ -14,6 +14,7 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -36,6 +37,11 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 				return err
 			}
 		}
+
+		doneCh := make(chan struct{})
+		tomb.RegisterOnShutdown("wait kubernetes-api-connection to stop", func() {
+			<-doneCh
+		})
 
 		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 		// auto init
@@ -65,6 +71,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 		}
 
 		TestCommandDelay()
+		close(doneCh)
 
 		return nil
 	})

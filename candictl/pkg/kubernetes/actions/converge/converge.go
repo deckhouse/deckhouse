@@ -2,6 +2,7 @@ package converge
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -23,6 +24,8 @@ const (
 	noNodesConfirmationMessage = `Cluster has no nodes created by Terraform. Do you want to continue and create nodes?`
 )
 
+var ErrConvergeInterrupted = errors.New("Interrupted.")
+
 func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string) error {
 	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
 
@@ -34,6 +37,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	}
 
 	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
+	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 
 	runner := terraform.NewRunnerFromConfig(cfg, step).
 		WithVariables(nodeConfig).
@@ -41,12 +45,18 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		WithAutoApprove(true)
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
+	runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
+
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, cfg.FindTerraNodeGroup(nodeGroupName))
+	if tomb.IsInterrupted() {
+		return ErrConvergeInterrupted
+	}
+
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
 	if err != nil {
 		return err
 	}
@@ -72,9 +82,16 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		WithAutoApprove(true)
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
+	// Node group settings are not required for master node secret.
+	runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, masterNodeGroupName, nil))
+
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
+	}
+
+	if tomb.IsInterrupted() {
+		return nil, ErrConvergeInterrupted
 	}
 
 	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
@@ -155,9 +172,15 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 			WithState(clusterState)
 		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
+		baseRunner.WithIntermediateStateSaver(NewClusterStateSaver(kubeCl))
+
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
 			return err
+		}
+
+		if tomb.IsInterrupted() {
+			return ErrConvergeInterrupted
 		}
 
 		if err := SaveClusterTerraformState(kubeCl, outputs); err != nil {
@@ -348,14 +371,26 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 
 	pipelineForMaster := nodeGroup.Step == "master-node"
 
-	updateFunc := terraform.OnlyState
+	extractOutputFunc := terraform.OnlyState
+	nodeGroupName := nodeGroup.Name
+	var nodeGroupSettingsFromConfig []byte
 	if pipelineForMaster {
-		updateFunc = terraform.GetMasterNodeResult
+		extractOutputFunc = terraform.GetMasterNodeResult
+		nodeGroupName = masterNodeGroupName
+	} else {
+		// Node group settings are only for the static node.
+		nodeGroupSettingsFromConfig = c.config.FindTerraNodeGroup(nodeGroup.Name)
 	}
 
-	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, updateFunc)
+	nodeRunner.WithIntermediateStateSaver(NewNodeStateSaver(c.client, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+
+	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
 		return err
+	}
+
+	if tomb.IsInterrupted() {
+		return ErrConvergeInterrupted
 	}
 
 	if pipelineForMaster {
@@ -364,7 +399,6 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 			return err
 		}
 	} else {
-		nodeGroupSettingsFromConfig := c.config.FindTerraNodeGroup(nodeGroup.Name)
 		err = SaveNodeTerraformState(c.client, nodeName, nodeGroup.Name, outputs.TerraformState, nodeGroupSettingsFromConfig)
 		if err != nil {
 			return err
@@ -406,9 +440,16 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
+		nodeRunner.WithIntermediateStateSaver(NewNodeStateSaver(c.client, name, nodeGroup.Name, nil))
+
 		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))
 			continue
+		}
+
+		if tomb.IsInterrupted() {
+			allErrs = multierror.Append(allErrs, ErrConvergeInterrupted)
+			return allErrs.ErrorOrNil()
 		}
 
 		if err := DeleteNode(c.client, name); err != nil {

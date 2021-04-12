@@ -290,7 +290,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 
 	return log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
-			err := task.Create()
+			err := task.CreateOrUpdate()
 			if err != nil {
 				return err
 			}
@@ -343,7 +343,7 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 		},
 	}
 
-	return log.Process("default", "Create Deployment", task.Create)
+	return log.Process("default", "Create Deployment", task.CreateOrUpdate)
 }
 
 func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {

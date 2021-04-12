@@ -32,6 +32,10 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("LOGGER_TYPE")).
 		Default("pretty").
 		EnumVar(&LoggerType, "pretty", "simple", "json")
+	cmd.Flag("tmp-dir", "Set temporary directory for debug purposes.").
+		Envar(configEnvName("TMP_DIR")).
+		Default(TmpDirName).
+		StringVar(&TmpDirName)
 }
 
 func DefineSkipResourcesFlags(cmd *kingpin.CmdClause) {
