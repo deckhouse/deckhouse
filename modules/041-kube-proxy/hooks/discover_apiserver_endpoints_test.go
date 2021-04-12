@@ -7,7 +7,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: discover_apiserver_endpoints ::", func() {
+var _ = Describe("Modules :: kube-proxy :: hooks :: discover_apiserver_endpoints ::", func() {
 	const (
 		stateSingleAddress = `
 apiVersion: v1

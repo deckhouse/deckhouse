@@ -3,7 +3,6 @@ package library
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,6 +17,44 @@ import (
 )
 
 func GetModulesImagesTags(modulePath string) (map[string]map[string]string, error) {
+	var (
+		tags      map[string]map[string]string
+		searchGit bool
+	)
+
+	fi, err := os.Stat(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
+	if err != nil || fi.Size() == 0 {
+		searchGit = true
+	}
+
+	if searchGit {
+		tags, err = getModulesImagesTagsFromGit(modulePath)
+	} else {
+		tags, err = getModulesImagesTagsFromLocalPath(modulePath)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return tags, err
+}
+
+func getModulesImagesTagsFromLocalPath(modulePath string) (map[string]map[string]string, error) {
+	var tags map[string]map[string]string
+
+	imageTagsRaw, err := ioutil.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(imageTagsRaw, &tags)
+	if err != nil {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
+func getModulesImagesTagsFromGit(modulePath string) (map[string]map[string]string, error) {
 	tags := make(map[string]map[string]string)
 
 	for _, path := range []string{modulePath, filepath.Join(filepath.Dir(modulePath), "000-common")} {
@@ -86,36 +123,16 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	}
 
 	// 3. Get image tags
-	imageTagsRaw, err := ioutil.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_tags.json"))
-	if err != nil || len(imageTagsRaw) == 0 {
-		moduleImagesValues = map[string]map[string]map[string]map[string]map[string]string{
-			"global": {
-				"modulesImages": {
-					"tags": {},
-				},
+	tags, err := GetModulesImagesTags(modulePath)
+	if err != nil {
+		return nil, err
+	}
+	moduleImagesValues = map[string]map[string]map[string]map[string]map[string]string{
+		"global": {
+			"modulesImages": {
+				"tags": tags,
 			},
-		}
-
-		tags, err := GetModulesImagesTags(modulePath)
-		if err != nil {
-			return nil, err
-		}
-
-		moduleImagesValues["global"]["modulesImages"]["tags"] = tags
-	} else {
-		var imageTags map[string]map[string]string
-		err = json.Unmarshal(imageTagsRaw, &imageTags)
-		if err != nil {
-			return nil, fmt.Errorf("can't unmarshal JSON: %s\n%s", err, imageTagsRaw)
-		}
-
-		moduleImagesValues = map[string]map[string]map[string]map[string]map[string]string{
-			"global": {
-				"modulesImages": {
-					"tags": imageTags,
-				},
-			},
-		}
+		},
 	}
 
 	// 4. Get user-supplied values
