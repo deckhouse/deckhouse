@@ -199,7 +199,7 @@ git:
   - shell-operator/frameworks/shell
   - shell_lib.sh
   - shell_lib
-  - entrypoint.sh
+  - deckhouse-controller/entrypoint.sh
   - jq_lib
   - helm_lib
   excludePaths:
