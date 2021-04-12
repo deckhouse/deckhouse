@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/candictl/pkg/app"
@@ -463,9 +464,12 @@ func (e *Executor) ProcessWait() {
 				return
 			case <-e.stopCh:
 				e.stop = true
-				// prevent next readings from closed channel
+				// Prevent next readings from the closed channel.
 				e.stopCh = nil
-				err := e.cmd.Process.Kill()
+				// The usual e.cmd.Process.Kill() is not working for the process
+				// started with the new process group (Setpgid: true).
+				// Negative pid number is used to send a signal to all processes in the group.
+				err := syscall.Kill(-e.cmd.Process.Pid, syscall.SIGKILL)
 				if err != nil {
 					e.killError = err
 				}

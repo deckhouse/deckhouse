@@ -118,7 +118,7 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 					return err
 				},
 			}
-			if err := manifestTask.Create(); err != nil {
+			if err := manifestTask.CreateOrUpdate(); err != nil {
 				return err
 			}
 		}

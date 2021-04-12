@@ -299,15 +299,25 @@ func generateSecret(name, namespace string, data map[string][]byte, labels map[s
 	}
 }
 
+const TerraformClusterStateName = "d8-cluster-terraform-state"
+
 func SecretWithTerraformState(data []byte) *apiv1.Secret {
 	return generateSecret(
-		"d8-cluster-terraform-state",
+		TerraformClusterStateName,
 		"d8-system",
 		map[string][]byte{
 			"cluster-tf-state.json": data,
 		},
 		nil,
 	)
+}
+
+func PatchWithTerraformState(stateData []byte) interface{} {
+	return map[string]interface{}{
+		"data": map[string]interface{}{
+			"cluster-tf-state.json": stateData,
+		},
+	}
 }
 
 func SecretWithClusterConfig(data []byte) *apiv1.Secret {
@@ -341,13 +351,17 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	return generateSecret("d8-static-cluster-configuration", "kube-system", data, nil)
 }
 
+func SecretNameForNodeTerraformState(nodeName string) string {
+	return "d8-node-terraform-state-" + nodeName
+}
+
 func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {
 		body["node-group-settings.json"] = settings
 	}
 	return generateSecret(
-		"d8-node-terraform-state-"+nodeName,
+		SecretNameForNodeTerraformState(nodeName),
 		"d8-system",
 		body,
 		map[string]string{
@@ -356,6 +370,14 @@ func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []b
 			"node.deckhouse.io/terraform-state": "",
 		},
 	)
+}
+
+func PatchWithNodeTerraformState(stateData []byte) interface{} {
+	return map[string]interface{}{
+		"data": map[string]interface{}{
+			"node-tf-state.json": stateData,
+		},
+	}
 }
 
 func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {

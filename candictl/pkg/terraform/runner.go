@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/candictl/pkg/app"
@@ -40,7 +41,7 @@ const (
 
 var (
 	ErrRunnerStopped         = errors.New("Terraform runner was stopped.")
-	ErrTerraformApplyAborted = errors.New("terraform apply aborted")
+	ErrTerraformApplyAborted = errors.New("Terraform apply aborted.")
 )
 
 type Runner struct {
@@ -59,6 +60,8 @@ type Runner struct {
 	changesInPlan      int
 
 	stateCache cache.Cache
+
+	stateSaver *StateSaver
 
 	cmd     *exec.Cmd
 	confirm func() *input.Confirmation
@@ -149,6 +152,11 @@ func (r *Runner) WithSkipChangesOnDeny(flag bool) *Runner {
 	return r
 }
 
+func (r *Runner) WithIntermediateStateSaver(saver *StateSaver) *Runner {
+	r.stateSaver = saver
+	return r
+}
+
 func (r *Runner) Init() error {
 	if r.stopped {
 		return ErrRunnerStopped
@@ -211,6 +219,16 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
+		var err error
+
+		if r.stateSaver != nil {
+			err = r.stateSaver.Start(r)
+			if err != nil {
+				return err
+			}
+			defer r.stateSaver.Stop()
+		}
+
 		skip, err := r.handleChanges()
 		if err != nil {
 			return err
@@ -317,6 +335,10 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 }
 
 func (r *Runner) Destroy() error {
+	if r.stopped {
+		return ErrRunnerStopped
+	}
+
 	if r.statePath == "" {
 		return fmt.Errorf("no state found, try to run terraform apply first")
 	}
@@ -327,8 +349,19 @@ func (r *Runner) Destroy() error {
 		}
 	}
 
-	r.stopped = true
+	// TODO: why is this line here?
+	// r.stopped = true
 	return log.Process("default", "terraform destroy ...", func() error {
+		var err error
+
+		if r.stateSaver != nil {
+			err = r.stateSaver.Start(r)
+			if err != nil {
+				return err
+			}
+			defer r.stateSaver.Stop()
+		}
+
 		args := []string{
 			"destroy",
 			"-no-color",
@@ -338,7 +371,7 @@ func (r *Runner) Destroy() error {
 		}
 		args = append(args, r.workingDir)
 
-		if _, err := r.execTerraform(args...); err != nil {
+		if _, err = r.execTerraform(args...); err != nil {
 			return err
 		}
 
@@ -373,15 +406,37 @@ func (r *Runner) getState() ([]byte, error) {
 	return ioutil.ReadFile(r.statePath)
 }
 
+// Stop interrupts the current runner command and sets
+// a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
+	if r.cmd != nil && !r.stopped {
+		log.DebugF("Runner Stop is called for %s. Interrupt terraform process by pid: %d\n", r.name, r.cmd.Process.Pid)
+		// 1. Terraform exits immediately on SIGTERM, so SIGINT is used here
+		//    to interrupt it gracefully even when main process caught the SIGTERM.
+		// 2. Negative pid is used to send signal to the process group
+		//    started by "Setpgid: true" to prevent double signaling
+		//    from shell and from us.
+		//    See also pkg/system/ssh/cmd/ssh.go
+		_ = syscall.Kill(-r.cmd.Process.Pid, syscall.SIGINT)
+	}
 	r.stopped = true
+	// Wait until the running terraform command stops.
 	for r.cmd != nil {
 		time.Sleep(50 * time.Millisecond)
+	}
+	// Wait until the StateSaver saves the Secret for Apply and Destroy commands.
+	if r.stateSaver != nil && r.stateSaver.IsStarted() {
+		<-r.stateSaver.DoneCh()
 	}
 }
 
 func (r *Runner) execTerraform(args ...string) (int, error) {
 	r.cmd = terraformCmd(args...)
+	// Start terraform as a leader of the new process group to prevent
+	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
+	r.cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
 
 	stdout, err := r.cmd.StdoutPipe()
 	if err != nil {

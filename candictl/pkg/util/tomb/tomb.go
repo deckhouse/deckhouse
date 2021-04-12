@@ -1,7 +1,6 @@
 package tomb
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -14,13 +13,9 @@ import (
 var callbacks teardownCallbacks
 
 func init() {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	callbacks = teardownCallbacks{
-		waitCh: make(chan struct{}, 1),
-		stopCh: make(chan struct{}, 1),
-		Ctx:    ctx,
-		Cancel: cancel,
+		waitCh:        make(chan struct{}, 1),
+		interruptedCh: make(chan struct{}, 1),
 	}
 }
 
@@ -36,11 +31,8 @@ type teardownCallbacks struct {
 	exhausted        bool
 	notInterruptable bool
 
-	waitCh chan struct{}
-	stopCh chan struct{}
-
-	Ctx    context.Context
-	Cancel context.CancelFunc
+	waitCh        chan struct{}
+	interruptedCh chan struct{}
 }
 
 func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
@@ -48,27 +40,32 @@ func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	defer c.mutex.Unlock()
 
 	c.data = append(c.data, callback{Name: name, Do: cb})
-	log.DebugF("callback added, callbacks in queue: %d\n", len(c.data))
+	log.DebugF("teardown callback '%s' added, callbacks in queue: %d\n", name, len(c.data))
 }
 
 func (c *teardownCallbacks) shutdown() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// FIFO order to shutdown fundamental things last
-	log.DebugF("teardown started, queue length: %d\n", len(c.data))
-	// FIFO order to shutdown fundamental things last
-
-	for i := len(c.data) - 1; i >= 0; i-- {
-		cb := c.data[i]
-		cb.Do()
-		c.data[i] = callback{Name: "Stub", Do: func() {}}
-		log.DebugF("callback called: %s %d\n", cb.Name, i)
+	// Prevent double shutdown.
+	if c.exhausted {
+		return
 	}
 
-	log.DebugLn("teardown stopped")
+	log.DebugF("teardown started, queue length: %d\n", len(c.data))
+
+	// Run callbacks in FIFO order to shutdown fundamental things last.
+	for i := len(c.data) - 1; i >= 0; i-- {
+		cb := c.data[i]
+		log.DebugF("teardown callback %d: '%s' started\n", i, cb.Name)
+		cb.Do()
+		c.data[i] = callback{Name: "Stub", Do: func() {}}
+		log.DebugF("teardown callback %d: '%s' done\n", i, cb.Name)
+	}
+
+	log.DebugLn("teardown is finished")
 	c.exhausted = true
-	c.waitCh <- struct{}{}
+	close(c.waitCh)
 }
 
 func (c *teardownCallbacks) wait() {
@@ -87,12 +84,13 @@ func WaitShutdown() {
 	callbacks.wait()
 }
 
-func Ctx() context.Context {
-	return callbacks.Ctx
-}
-
-func StopCh() chan struct{} {
-	return callbacks.stopCh
+func IsInterrupted() bool {
+	select {
+	case <-callbacks.interruptedCh:
+		return true
+	default:
+	}
+	return false
 }
 
 func WithoutInterruptions(fn func()) {
@@ -113,21 +111,24 @@ Select:
 		if callbacks.notInterruptable {
 			goto Select
 		}
+
+		// Wait for the second signal to kill the main process immediately.
 		go func() {
 			<-interruptCh
-			log.ErrorLn("Killed by interrupting process twice.")
+			log.ErrorLn("Killed by signal twice.")
 			os.Exit(1)
 		}()
-		callbacks.Cancel()
 
-		StopCh() <- struct{}{}
+		// Close interrupted channel to signal interruptable loops to stop.
+		close(callbacks.interruptedCh)
+
+		// Run all registered teardown callbacks and print an explanation at the end.
 		callbacks.data = append([]callback{{
 			Name: "Shutdown message",
 			Do: func() {
 				log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
 			},
 		}}, callbacks.data...)
-
 		Shutdown()
 	default:
 		os.Exit(1)
