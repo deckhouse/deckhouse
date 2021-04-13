@@ -20,6 +20,7 @@ data:
       "RemovePodsViolatingNodeAffinity":
         enabled: false
 {{- end }}
+
 {{- if .Values.descheduler.removePodsViolatingInterPodAntiAffinity }}
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: true
@@ -27,6 +28,7 @@ data:
       "RemovePodsViolatingInterPodAntiAffinity":
         enabled: false
 {{- end }}
+
 {{- if .Values.descheduler.removeDuplicates }}
       "RemoveDuplicates":
         enabled: true
@@ -34,20 +36,62 @@ data:
       "RemoveDuplicates":
         enabled: false
 {{- end }}
+
 {{- if .Values.descheduler.lowNodeUtilization }}
       "LowNodeUtilization":
-         enabled: true
-         params:
-           nodeResourceUtilizationThresholds:
-             thresholds:
-               "cpu" : 40
-               "memory": 50
-               "pods": 40
-             targetThresholds:
-               "cpu" : 80
-               "memory": 90
-               "pods": 80
+        enabled: true
+        params:
+          nodeResourceUtilizationThresholds:
+            thresholds:
+              "cpu" : 40
+              "memory": 50
+              "pods": 40
+            targetThresholds:
+              "cpu" : 80
+              "memory": 90
+              "pods": 80
 {{- else }}
       "LowNodeUtilization":
+        enabled: false
+{{- end }}
+
+{{- if .Values.descheduler.removePodsViolatingNodeTaints }}
+      "RemovePodsViolatingNodeTaints":
+        enabled: true
+{{- else }}
+      "RemovePodsViolatingNodeTaints":
+        enabled: false
+{{- end }}
+
+{{- if .Values.descheduler.removePodsViolatingTopologySpreadConstraint }}
+      "RemovePodsViolatingTopologySpreadConstraint":
+        enabled: true
+{{- else }}
+      "RemovePodsViolatiRemovePodsViolatingTopologySpreadConstraintngNodeAffinity":
+        enabled: false
+{{- end }}
+
+{{- if .Values.descheduler.removePodsHavingTooManyRestarts }}
+      "RemovePodsHavingTooManyRestarts":
+        enabled: true
+        params:
+          podsHavingTooManyRestarts:
+            podRestartThreshold: 100
+            includingInitContainers: true
+{{- else }}
+      "RemovePodsHavingTooManyRestarts":
+        enabled: false
+{{- end }}
+
+{{- if .Values.descheduler.podLifeTime }}
+      "PodLifeTime":
+        enabled: true
+        params:
+          podLifeTime:
+            maxPodLifeTimeSeconds: 86400
+            podStatusPhases:
+            - "Pending"
+{{- else }}
+      "PodLifeTime":
         enabled: false
 {{- end }}
