@@ -17,3 +17,4 @@ global:
       - {}
       - tolerations:
         - operator: Exists
+descheduler: {}

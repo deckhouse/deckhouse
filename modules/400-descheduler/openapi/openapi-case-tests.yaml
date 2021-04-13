@@ -1,0 +1,18 @@
+positive:
+  configValues:
+    - removePodsViolatingNodeAffinity: true
+      removePodsViolatingInterPodAntiAffinity: true
+      removeDuplicates: true
+      lowNodeUtilization: true
+      removePodsViolatingNodeTaints: true
+      removePodsViolatingTopologySpreadConstraint: true
+      removePodsHavingTooManyRestarts: true
+      podLifeTime: true
+    - removePodsViolatingNodeAffinity: false
+      removePodsViolatingInterPodAntiAffinity: false
+      removeDuplicates: false
+      lowNodeUtilization: false
+      removePodsViolatingNodeTaints: false
+      removePodsViolatingTopologySpreadConstraint: false
+      removePodsHavingTooManyRestarts: false
+      podLifeTime: false
