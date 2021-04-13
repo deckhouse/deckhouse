@@ -133,6 +133,7 @@ spec:
                   enum:
                   - STANDARD
                   - SOFTWARE_ACCELERATED
+                  default: STANDARD
                   description: |
                     Тип сети: STANDARD или SOFTWARE_ACCELERATED
                   x-description: |
