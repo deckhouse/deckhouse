@@ -1,0 +1,20 @@
+/:
+  title:
+    en: Overview
+    ru: Общие сведения
+  url: /
+/modules:
+  title: ""
+/modules/010-priority-class:
+  title:
+    ru: Модуль priority-class
+    en: The priority-class module
+  url: /modules/010-priority-class/
+/modules/035-cni-flannel:
+  title: cni-flannel
+  url: /modules/035-cni-flannel/
+/modules/035-cni-flannel/configuration.html:
+  title:
+    en: Configuring
+    ru: Настройки
+  url: /modules/035-cni-flannel/configuration.html

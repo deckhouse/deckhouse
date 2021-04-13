@@ -1,0 +1,55 @@
+{{- $_ := set . "Version" ( splitList "/" .Values.global.doc_version | last ) }}
+{{- $_ := set . "VersionURLNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" ) }}
+{{- $_ := set . "VersionDNSNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" | replace "." "-dot-" ) }}
+{{- $host := .Values.global.url }}
+
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-hash: sha1
+    nginx.ingress.kubernetes.io/session-cookie-name: ingress_route
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+{{- if (eq .Values.global.env "web-early") }}
+      auth_request_set $saml_authorization $upstream_http_authorization;
+      proxy_set_header Authorization $saml_authorization;
+{{- end }}
+      proxy_set_header X-Original-URI         $request_uri;
+      ssi on;
+      ssi_silent_errors on;
+{{- include "rewrites" . | indent 6 }}
+{{- if or (eq .Values.global.env "web-production") (eq .Values.global.env "web-test") }}
+    nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+    nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.deckhouse-{{ .Values.global.env }}.svc.cluster.local/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+{{- else if (eq .Values.global.env "web-early") }}
+    nginx.ingress.kubernetes.io/auth-url: "http://{{ .Chart.Name }}-saml-authenticator.deckhouse-{{ .Values.global.env }}.svc.cluster.local/saml/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "/saml/login"
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-url: http://basic-auth.kube-basic-auth.svc.cluster.local/deckhouse
+{{- end }}
+spec:
+  tls:
+  - hosts:
+      - {{ $host }}
+{{- if eq .Values.global.env "web-production" }}
+      - www.{{ $host }}
+{{- end }}
+    secretName: tls-{{ $host }}
+  rules:
+  - host: {{ $host }}
+    http:
+      paths:
+      - path: /ru/documentation/{{ .VersionURLNormalized }}
+        backend:
+          serviceName: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
+          servicePort: http
+      - path: /en/documentation/{{ .VersionURLNormalized }}
+        backend:
+          serviceName: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
+          servicePort: http
+---

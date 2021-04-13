@@ -1,0 +1,70 @@
+topnav_title: Deckhouse
+site_title: Deckhouse
+company_name:
+  en: Flant
+  ru: Флант
+company_url:
+  en: https://flant.com
+  ru: https://flant.ru
+url: https://deckhouse.io
+site_description: "TODO: Short site description"
+github_repo_path: /deckhouse/deckhouse
+
+assets:
+  precompile: ['**/*.*']
+
+social_links:
+  ru:
+    telegram: https://t.me/deckhouse
+  en:
+    telegram: https://t.me/deckhouse
+
+output: web
+
+exclude:
+- .idea/
+- .gitignore
+- vendor
+- Gemfile.lock
+- Gemfile
+- backend
+- '*.sh'
+- docker-compose.yml
+- modules_make_data
+- modules_menu_skip
+- cluster_local
+
+highlighter: rouge
+feedback_disable: true
+
+plugins:
+  - jekyll-assets
+
+markdown: kramdown
+kramdown:
+ input: GFM
+ auto_ids: true
+ hard_wrap: false
+ syntax_highlighter: rouge
+ parse_block_html: true
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+      comments: false
+      searchable: true
+      topnav: topnav
+      output: web
+      sidebar: main
+      multilang: true
+      lang: en
+  - scope:
+      path: "modules_ru"
+      type: "pages"
+    values:
+      lang: ru
+
+timezone: Europe/Moscow

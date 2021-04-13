@@ -16,6 +16,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: deckhouse-web-basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
     nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite ^/$ /ru/ permanent;
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;

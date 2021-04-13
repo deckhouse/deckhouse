@@ -1,13 +1,35 @@
-Build Website:
+Main web build:
   stage: build
-  before_script:
-  - export WERF_CONFIG=werf-web.yaml
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
+  variables:
+    WERF_DIR: "docs/site"
+    WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
+    WERF_LOG_VERBOSE: "on"
+    WERF_LOOSE_GITERMINISM: "true"
   script:
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL}  --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL}  --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
-  - if [ "$CI_COMMIT_REF_NAME" == "master" ] ; then export WERF_TAG_GIT_BRANCH=master ; fi
-  - werf build-and-publish
+  - werf build
+  except:
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
+  tags:
+  - werf-distributed
+  interruptible: true
+
+Doc web build:
+  stage: build
+  variables:
+    WERF_DIR: "docs/documentation"
+    WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
+    WERF_LOG_VERBOSE: "on"
+  script:
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL}  --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - werf build
   except:
   - schedules
   - alpha
@@ -28,20 +50,19 @@ Web links test:
 
 .web_base_deploy: &web_base_deploy
   stage: deploy_website
+  before_script:
+  - export WERF_NAMESPACE="deckhouse-${CI_ENVIRONMENT_SLUG}"
+  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
-  - werf deploy
-    --config werf-web.yaml
-    --helm-chart-dir=web-public/.helm
+  - type multiwerf && source $(multiwerf use 1.2 alpha --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - werf converge
     --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
     --set "global.env=${CI_ENVIRONMENT_SLUG}"
-    --namespace deckhouse-$CI_ENVIRONMENT_SLUG
-    --release deckhouse-$CI_ENVIRONMENT_SLUG
   needs:
   - "Build"
-  - "Build Modules Images"
-  - "Build Website"
+  - "Doc web build"
+  - "Main web build"
   - "Web links test"
   except:
   - schedules
@@ -53,12 +74,26 @@ Web links test:
   tags:
   - werf-distributed
 
-deckhouse.test.flant.com:
+(Test) Main Deploy:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
-  before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
+    WERF_DIR: "docs/site"
+    WERF_RELEASE: "deckhouse-site"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+  environment:
+    name: web-test
+    url: https://deckhouse.test.flant.com
+  when: manual
+
+(Test) Doc Deploy :
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
+    WERF_DIR: "docs/documentation"
+    WERF_RELEASE: "deckhouse-doc-$CI_COMMIT_REF_NAME"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
   environment:
     name: web-test
     url: https://deckhouse.test.flant.com
@@ -68,8 +103,6 @@ early.deckhouse.io:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
-  before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   environment:
     name: web-early
     url: https://early.deckhouse.io
@@ -79,8 +112,6 @@ deckhouse.io:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
-  before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   environment:
     name: web-production
     url: https://deckhouse.io
@@ -91,11 +122,11 @@ deckhouse.io:
 
 Web cleanup:
   stage: cleanup_registry
-  before_script:
-  - export WERF_CONFIG=werf-web.yaml
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
+  variables:
+    WERF_DIR: "docs/site"
+    WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
   script:
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   - werf cleanup

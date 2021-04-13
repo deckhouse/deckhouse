@@ -1,1 +1,0 @@
-../../web/js/details.js

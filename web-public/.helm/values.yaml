@@ -1,4 +1,0 @@
-ingress:
-  secret_name:
-    _default: ingress-le-tls
-    web-production: star-flant-com

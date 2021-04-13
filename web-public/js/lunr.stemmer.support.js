@@ -1,1 +1,0 @@
-../../web/js/lunr.stemmer.support.js

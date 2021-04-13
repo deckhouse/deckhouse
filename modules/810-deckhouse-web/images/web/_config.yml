@@ -1,0 +1,13 @@
+local_mode: true
+
+exclude:
+- .idea/
+- .gitignore
+- vendor
+- Gemfile.lock
+- Gemfile
+- backend
+- '*.sh'
+- docker-compose.yml
+- modules_make_data
+- modules_menu_skip
