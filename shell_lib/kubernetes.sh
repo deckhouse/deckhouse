@@ -87,8 +87,16 @@ function kubernetes::delete_if_exists::non_cascading() {
 # $3 plural kind (i.e. openstackmachineclasses)
 # $4 resourceName (i.e. some-resource-aabbcc)
 # $5 json merge patch body
+function kubernetes::merge_patch() {
+  jq -c '{operation: "MergePatch", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", name: "'${4}'", mergePatch: .}' </dev/stdin >> ${KUBERNETES_PATCH_PATH}
+}
+
+# $1 namespace
+# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $3 plural kind (i.e. openstackmachineclasses)
+# $4 resourceName (i.e. some-resource-aabbcc)
+# $5 json merge patch body
 function kubernetes::status::merge_patch() {
-  split_and_verify_resource "$2"
   jq -nc --argjson mergePatch "${5}" '{operation: "MergePatch", namespace: "'${1}'", apiVersion: "'${2}'", kind: "'${3}'", name: "'${4}'", subresource: "status", mergePatch: {"status": $mergePatch}}' >> ${KUBERNETES_PATCH_PATH}
 }
 
