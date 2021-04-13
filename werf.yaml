@@ -239,7 +239,7 @@ ansible:
 
   # Because of https://github.com/flant/werf/issues/1741 just make symlink for the entry point
   - name: "Make symlink for deckhouse entrypoint in the right location"
-    shell: ln -s /deckhouse/entrypoint.sh /deckhouse/deckhouse
+    shell: ln -s /deckhouse/deckhouse-controller/entrypoint.sh /deckhouse/deckhouse
 
   - name: "Run deckhouse from nobody"
     file:

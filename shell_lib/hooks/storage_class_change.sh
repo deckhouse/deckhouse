@@ -134,14 +134,15 @@ function common_hooks::storage_class_change::pvc_deleted() {
 
 function common_hooks::storage_class_change::main() {
   namespace="$1"
-  statefulset_name="$2"
+  object_kind="$2"
+  object_name="$3"
   internal_path=""
-  if [ $# -gt 2 ]; then
-    internal_path=".$3"
+  if [ $# -gt 3 ]; then
+    internal_path=".$4"
   fi
   config_storage_class_param_name="storageClass"
-  if [ $# -gt 3 ]; then
-    config_storage_class_param_name="$4"
+  if [ $# -gt 4 ]; then
+    config_storage_class_param_name="$5"
   fi
 
   module_name="$(module::name::camel_case)"
@@ -173,7 +174,7 @@ function common_hooks::storage_class_change::main() {
       kubernetes::delete_if_exists::non_blocking "$namespace" "persistentvolumeclaim/$pvc_name"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/$pvc_name !!!"
     done
-    kubernetes::delete_if_exists "$namespace" "statefulset/$statefulset_name"
-    echo "!!! NOTICE: storage class changed, deleting statefulset/$statefulset_name !!!"
+    kubernetes::delete_if_exists "$namespace" "$object_kind/$object_name"
+    echo "!!! NOTICE: storage class changed, deleting $object_kind/$object_name !!!"
   fi
 }
