@@ -5,13 +5,13 @@ istio:
   federation:
     ingressGateway:
       inlet: NodePort
-  discovery:
-    federations:
-      publicServices: []
-      ingressGateways: []
-      trustDomains: []
+  multicluster: {}
   internal:
     ca: {}
+    clientCertificate: {}
+    apiProxyListenCertificate: {}
     federations: []
+    multiclusters: []
+    remoteRootCAs: []
     supportedVersions:
     - 1.9.1-trustca

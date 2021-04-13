@@ -1,0 +1,111 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    kubernetes:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioFederation
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "rootCAEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/root-cert.pem"),
+          "rootCA": .status.metadataCache.rootCA,
+          "trustDomain": .spec.trustDomain
+        }
+    - name: multiclusters
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioMulticluster
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "rootCAEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/root-cert.pem"),
+          "rootCA": .status.metadataCache.rootCA
+        }
+    schedule:
+    - name: remote
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      crontab: "* * * * *"
+EOF
+}
+
+function __main__() {
+  if values::is_true istio.federation.enabled; then
+    for i in $(context::jq -r '.snapshots.federations | keys[]'); do
+      federationSpec="$(context::jq --argjson i "$i" -c '.snapshots.federations[$i] | .filterResult')"
+      federationName="$(jq -r '.name'           <<< "$federationSpec")"
+      trustDomain="$(jq    -r '.trustDomain'    <<< "$federationSpec")"
+      rootCAEndpoint="$(jq -r '.rootCAEndpoint' <<< "$federationSpec")"
+      rootCACache="$(jq    -r '.rootCA'         <<< "$federationSpec")"
+
+      if [[ "$trustDomain" == "$(values::get global.discovery.clusterDomain)" ]]; then continue; fi
+
+      isError=0
+      # try to fetch pem from endpoint
+      if rootCA="$(curl -f -s --show-error "$rootCAEndpoint")"; then
+        if [[ "$rootCA" != "$rootCACache" ]]; then
+          patch="$(jq -n --arg rca "$rootCA" '{"metadataCache":{"rootCA": $rca, "rootCALastFetchTimestamp": (now | todateiso8601)}}')"
+        else
+          patch="$(jq -n '{"metadataCache":{"rootCALastFetchTimestamp": (now | todateiso8601)}}')"
+        fi
+        kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "istiofederations" "$federationName" "$patch"
+      else
+        isError=1
+        echo >&2 "ERROR: Cannot fetch root CA endpoint $rootCAEndpoint for IstioFederation $federationName."
+      fi
+
+      jq -n --argjson isError "$isError" --arg federationName "$federationName" --arg endpoint "$rootCAEndpoint" '
+        {
+          "group":"federation_fetch_rootca",
+          "name": "d8_istio_federation_metadata_endpoints_fetch_error_count",
+          "set": $isError,
+          "labels": {"federation_name": $federationName, "endpoint": $endpoint}
+        }
+      ' >> "$METRICS_PATH"
+    done
+  fi
+
+  if values::is_true istio.multicluster.enabled; then
+    for i in $(context::jq -r '.snapshots.multiclusters | keys[]'); do
+      multiclusterSpec="$(context::jq --argjson i "$i" -c '.snapshots.multiclusters[$i] | .filterResult')"
+      multiclusterName="$(jq -r '.name'           <<< "$multiclusterSpec")"
+      rootCAEndpoint="$(jq   -r '.rootCAEndpoint' <<< "$multiclusterSpec")"
+      rootCACache="$(jq      -r '.rootCA'         <<< "$multiclusterSpec")"
+
+      isError=0
+      # try to fetch pem from endpoint
+      if rootCA="$(curl -f -s --show-error "$rootCAEndpoint")"; then
+        if [[ "$rootCA" != "$rootCACache" ]]; then
+          patch="$(jq -n --arg rca "$rootCA" '{"metadataCache":{"rootCA": $rca, "rootCALastFetchTimestamp": (now | todateiso8601)}}')"
+        else
+          patch="$(jq -n '{"metadataCache":{"rootCALastFetchTimestamp": (now | todateiso8601)}}')"
+        fi
+        kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "istiomulticlusters" "$multiclusterName" "$patch"
+      else
+        isError=1
+        echo >&2 "ERROR: Cannot fetch root CA endpoint $rootCAEndpoint for IstioMulticluster $multiclusterName."
+      fi
+
+      jq -n --argjson isError "$isError" --arg multiclusterName "$multiclusterName" --arg endpoint "$rootCAEndpoint" '
+        {
+          "group":"multicluster_fetch_rootca",
+          "name": "d8_istio_multicluster_metadata_endpoints_fetch_error_count",
+          "set": $isError,
+          "labels": {"multicluster_name": $multiclusterName, "endpoint": $endpoint}
+        }
+      ' >> "$METRICS_PATH"
+    done
+  fi
+}
+
+hook::run "$@"

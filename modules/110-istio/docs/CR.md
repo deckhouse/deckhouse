@@ -108,8 +108,7 @@ Cluster-wide ресурс.
   * `trustDomain` — TrustDomain удалённого кластера. Обязательный параметр, но на данный момент не используется, так как Istio не умеет сопоставлять TrustDomain и корневой CA.
     * Формат — строка.
     * Пример — `mycluster.local`.
-  * `federationMetadata` — настройки, касающиеся метаданных удалённого кластера:
-    * `endpoint` — HTTPS-url, по которому опубликованы метаданные удалённого кластера.
+  * `metadataEndpoint` — HTTPS-url, по которому опубликованы метаданные удалённого кластера.
 
 Пример:
 ```yaml
@@ -118,7 +117,25 @@ kind: IstioFederation
 metadata:
   name: example-cluster
 spec:
-  federationMetadata:
-    endpoint: https://istio.k8s.example.com/federation/
+  metadataEndpoint: https://istio.k8s.example.com/metadata/
   trustDomain: example.local
+```
+
+## Мультикластер
+
+### IstioMulticluster
+
+Cluster-wide ресурс.
+
+* `spec`:
+  * `metadataEndpoint` — HTTPS-url, по которому опубликованы метаданные удалённого кластера.
+
+Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: example-cluster
+spec:
+  metadataEndpoint: https://istio.k8s.example.com/metadata/
 ```

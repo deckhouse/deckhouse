@@ -34,9 +34,10 @@ modulesImages:
     common:
       kubeRbacProxy: hashstring
     istio:
-      kiali: kialihashstring
-      federationMetadata: kialihashstring
-      federationMetadataDiscovery: kialihashstring
+      apiProxy: hashstring
+      metadataExporter: hashstring
+      metadataDiscovery: hashstring
+      kiali: hashstring
       operatorV1x8x0alpha1: ov180a1hashstring
       operatorV1x8x1: ov181hashstring
       pilotV1x8x0alpha1: piv180a1hashstring
@@ -59,6 +60,10 @@ const istioValues = `
       operatorRevisionsToInstall:  []
       revisionsToInstall: []
       federations: []
+      multiclusters: []
+      clientCertificate:
+        cert: ccert
+        key: ckey
       ca:
         cert: mycert
         key: mykey

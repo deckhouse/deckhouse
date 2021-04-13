@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
 )
 
@@ -79,7 +80,15 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerMetadataServices(w http.ResponseWriter, r *http.Request) {
+func httpHandlerFederationServices(w http.ResponseWriter, r *http.Request) {
+	verify := r.Header.Get("ssl-client-verify")
+	subject := r.Header.Get("ssl-client-subject-dn")
+	matched, _ := regexp.Match(`(^|,)CN=deckhouse(,|$)`,[]byte(subject))
+	if verify != "SUCCESS" || matched != true {
+		http.Error(w, "Proper client certificate with CN=deckhouse wasn't provided.", http.StatusUnauthorized)
+		return
+	}
+
 	data, err := ioutil.ReadFile("/metadata/services.json")
 	if err != nil {
 		http.Error(w, "Error reading services.json", http.StatusInternalServerError)
@@ -89,13 +98,39 @@ func httpHandlerMetadataServices(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerMetadataIngressgateways(w http.ResponseWriter, r *http.Request) {
+func httpHandlerFederationIngressgateways(w http.ResponseWriter, r *http.Request) {
+	verify := r.Header.Get("ssl-client-verify")
+	subject := r.Header.Get("ssl-client-subject-dn")
+	matched, _ := regexp.Match(`(^|,)CN=deckhouse(,|$)`,[]byte(subject))
+	if verify != "SUCCESS" || matched != true {
+		http.Error(w, "Proper client certificate with CN=deckhouse wasn't provided.", http.StatusUnauthorized)
+		return
+	}
+
 	data, err := ioutil.ReadFile("/metadata/ingressgateways.json")
 	if err != nil {
 		http.Error(w, "Error reading ingressgateways.json", http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprint(w, string(data))
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
+func httpHandlerMulticlusterAPIHost(w http.ResponseWriter, r *http.Request) {
+	verify := r.Header.Get("ssl-client-verify")
+	subject := r.Header.Get("ssl-client-subject-dn")
+	matched, _ := regexp.Match(`(^|,)CN=deckhouse(,|$)`,[]byte(subject))
+	if verify != "SUCCESS" || matched != true {
+		http.Error(w, "Proper client certificate with CN=deckhouse wasn't provided.", http.StatusUnauthorized)
+		return
+	}
+
+	apiHost := os.Getenv("MULTICLUSTER_API_HOST")
+	if len(apiHost) == 0 {
+		http.Error(w, "Error reading api host", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, apiHost)
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
@@ -109,6 +144,16 @@ func httpHandlerSpiffeBundleEndpoint(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+func httpHandlerRootCert(w http.ResponseWriter, r *http.Request) {
+	data, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		http.Error(w, "Error reading " + certPath, http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
 func main() {
 	renderSpiffeBundleJSON()
 
@@ -118,9 +163,16 @@ func main() {
 
 	router := http.NewServeMux()
 	router.Handle("/healthz", http.HandlerFunc(httpHandlerHealthz))
-	router.Handle("/federation/spiffe-bundle-endpoint", http.HandlerFunc(httpHandlerSpiffeBundleEndpoint))
-	router.Handle("/federation/metadata-services", http.HandlerFunc(httpHandlerMetadataServices))
-	router.Handle("/federation/metadata-ingressgateways", http.HandlerFunc(httpHandlerMetadataIngressgateways))
+	router.Handle("/metadata/public/spiffe-bundle-endpoint", http.HandlerFunc(httpHandlerSpiffeBundleEndpoint))
+	router.Handle("/metadata/public/root-cert.pem", http.HandlerFunc(httpHandlerRootCert))
+
+	if os.Getenv("FEDERATION_ENABLED") == "true" {
+		router.Handle("/metadata/private/federation-services", http.HandlerFunc(httpHandlerFederationServices))
+		router.Handle("/metadata/private/federation-ingressgateways", http.HandlerFunc(httpHandlerFederationIngressgateways))
+	}
+	if os.Getenv("MULTICLUSTER_ENABLED") == "true" {
+		router.Handle("/metadata/private/multicluster-api-host", http.HandlerFunc(httpHandlerMulticlusterAPIHost))
+	}
 
 	server := &http.Server{
 		Addr:         listenAddr,

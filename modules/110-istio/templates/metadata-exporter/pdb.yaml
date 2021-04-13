@@ -1,4 +1,4 @@
-{{- if .Values.istio.federation.enabled }}
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -6,12 +6,12 @@ metadata:
   annotations:
     helm.sh/hook: post-upgrade, post-install
     helm.sh/hook-delete-policy: before-hook-creation
-  name: federation-metadata
+  name: metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "federation-metadata")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | indent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
-      app: federation-metadata
+      app: metadata-exporter
 {{- end }}

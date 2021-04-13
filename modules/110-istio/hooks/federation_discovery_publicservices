@@ -8,7 +8,7 @@ function __config__() {
     kubernetes:
     - name: federations
       group: main
-      queue: /modules/$(module::name::kebab_case)/federations
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
       apiVersion: deckhouse.io/v1alpha1
       kind: IstioFederation
       keepFullObjectsInMemory: false
@@ -16,18 +16,23 @@ function __config__() {
         {
           "name": .metadata.name,
           "trustDomain": .spec.trustDomain,
-          "metadataPublicServicesEndpoint": ((.spec.federationMetadata.endpoint | sub("/*$"; "")) + "/metadata-services" ),
+          "metadataPublicServicesEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/private/federation-services" ),
           "publicServicesCache": .status.metadataCache.publicServices
         }
     schedule:
     - name: federations
       group: main
-      queue: /modules/$(module::name::kebab_case)/federations
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
       crontab: "* * * * *"
 EOF
 }
 
 function __main__() {
+  if ! values::has istio.internal.clientCertificate.cert; then
+    2>&1 echo "WARNING: Client certificate for fetching remote metadata endpoints isn't discovered yet. Retry in 1min."
+    return 0
+  fi
+
   if values::is_true istio.federation.enabled; then
     for i in $(context::jq -r '.snapshots.federations | keys[]'); do
       federationSpec="$(context::jq --argjson i "$i" -c '.snapshots.federations[$i] | .filterResult')"
@@ -40,7 +45,14 @@ function __main__() {
 
       isError=0
       # try to fetch metadata from endpoint and try to unmarshal
-      if publicServices="$(curl -f -s --show-error "$metadataPublicServicesEndpoint" | jq -ec '.publicServices | sort')"; then
+      if publicServices="$(
+        curl \
+          -f -s --show-error \
+          --cert <(values::get istio.internal.clientCertificate.cert) \
+          --key  <(values::get istio.internal.clientCertificate.key) \
+          "$metadataPublicServicesEndpoint" | jq -ec '.publicServices | sort'
+      )"
+      then
         if jq -ne --argjson ig "$publicServices" --argjson igc "$publicServicesCache" '$ig != $igc' >/dev/null; then
           patch="$(jq -n --argjson ps "$publicServices" '
             {"metadataCache": {"publicServices": $ps, "publicServicesLastFetchTimestamp": (now | todateiso8601)}}

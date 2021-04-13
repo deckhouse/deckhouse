@@ -1,4 +1,4 @@
-module spiffe-bundle-generator
+module metadata-exporter
 
 go 1.16
 

@@ -1,17 +1,17 @@
-{{- if .Values.istio.federation.enabled }}
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: federation-metadata
+  name: metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "federation-metadata" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: federation-metadata
+    name: metadata-exporter
   updatePolicy:
     updateMode: "Auto"
   {{- end }}
@@ -19,32 +19,43 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: federation-metadata
+  name: metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "federation-metadata")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | indent 2 }}
 spec:
 {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
   selector:
     matchLabels:
-      app: federation-metadata
+      app: metadata-exporter
   template:
     metadata:
       labels:
-        app: federation-metadata
+        app: metadata-exporter
     spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "operator")) | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metadata-exporter")) | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
-      serviceAccountName: federation
+      serviceAccountName: metadata-exporter
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - name: federation-metadata
+      - name: metadata-exporter
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/istio/federation-metadata:{{ $.Values.global.modulesImages.tags.istio.federationMetadata }}
+        image: {{ $.Values.global.modulesImages.registry }}/istio/metadata-exporter:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}
         imagePullPolicy: IfNotPresent
+        env:
+  {{- if .Values.istio.federation.enabled }}
+        - name: FEDERATION_ENABLED
+          value: "true"
+  {{- end }}
+  {{- if .Values.istio.multicluster.enabled }}
+        - name: MULTICLUSTER_ENABLED
+          value: "true"
+        - name: MULTICLUSTER_API_HOST
+          value: {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
+  {{- end }}
         ports:
         - name: http
           containerPort: 8080
@@ -70,9 +81,10 @@ spec:
           mountPath: /certs/
         - name: metadata
           mountPath: /metadata/
-      - name: federation-metadata-discovery
+  {{- if .Values.istio.federation.enabled }}
+      - name: metadata-discovery
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/istio/federation-metadata-discovery:{{ $.Values.global.modulesImages.tags.istio.federationMetadataDiscovery }}
+        image: {{ $.Values.global.modulesImages.registry }}/istio/metadata-discovery:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}
         imagePullPolicy: IfNotPresent
         env:
         - name: DEBUG_UNIX_SOCKET
@@ -89,6 +101,7 @@ spec:
           mountPath: /metadata/
         - name: tmp
           mountPath: /tmp/
+  {{- end }}
       volumes:
       - name: istio-ca-root-cert
         configMap:

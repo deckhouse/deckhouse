@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("Istio hooks :: federation_discovery_ingressgateways ::", func() {
-	f := HookExecutionConfigInit(`{"istio":{"federation":{}}}`, "")
+	f := HookExecutionConfigInit(`{"istio":{"federation":{},"internal":{"clientCertificate":{"cert":"ccc","key":"kkk"}}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)
 
 	Context("Empty cluster and minimal settings", func() {
@@ -55,8 +55,7 @@ metadata:
   name: proper-federation-0
 spec:
   trustDomain: "p.f0"
-  federationMetadata:
-    endpoint: "file:///tmp/proper-federation-0/"
+  metadataEndpoint: "file:///tmp/proper-federation-0/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -65,8 +64,7 @@ metadata:
   name: proper-federation-1
 spec:
   trustDomain: "p.f1"
-  federationMetadata:
-    endpoint: "file:///tmp/proper-federation-1/"
+  metadataEndpoint: "file:///tmp/proper-federation-1/"
 status:
   metadataCache:
     ingressGateways:
@@ -78,16 +76,15 @@ metadata:
   name: proper-federation-2
 spec:
   trustDomain: "p.f2"
-  federationMetadata:
-    endpoint: "file:///tmp/proper-federation-2/"
+  metadataEndpoint: "file:///tmp/proper-federation-2/"
 status:
   metadataCache:
     ingressGateways:
     - {"address": "some-actual.host-1", "port": 111}
     - {"address": "some-actual.host-2", "port": 111}
 `))
-			_ = os.Mkdir("/tmp/proper-federation-0", 0755)
-			ioutil.WriteFile("/tmp/proper-federation-0/metadata-ingressgateways", []byte(`
+			_ = os.MkdirAll("/tmp/proper-federation-0/private/", 0755)
+			ioutil.WriteFile("/tmp/proper-federation-0/private/federation-ingressgateways", []byte(`
 {
   "ingressGateways": [
     {"address": "a.b.c", "port": 123},
@@ -95,16 +92,16 @@ status:
   ]
 }
 `), 0644)
-			_ = os.Mkdir("/tmp/proper-federation-1", 0755)
-			ioutil.WriteFile("/tmp/proper-federation-1/metadata-ingressgateways", []byte(`
+			_ = os.MkdirAll("/tmp/proper-federation-1/private", 0755)
+			ioutil.WriteFile("/tmp/proper-federation-1/private/federation-ingressgateways", []byte(`
 {
   "ingressGateways": [
     {"address": "some-actual.host", "port": 111}
   ]
 }
 `), 0644)
-			_ = os.Mkdir("/tmp/proper-federation-2", 0755)
-			ioutil.WriteFile("/tmp/proper-federation-2/metadata-ingressgateways", []byte(`
+			_ = os.MkdirAll("/tmp/proper-federation-2/private", 0755)
+			ioutil.WriteFile("/tmp/proper-federation-2/private/federation-ingressgateways", []byte(`
 {
   "ingressGateways": [
     {"address": "some-actual.host-2", "port": 111},
@@ -162,8 +159,7 @@ metadata:
   name: improper-federation-0
 spec:
   trustDomain: "i.f0"
-  federationMetadata:
-    endpoint: "https://some-improper-hostname-0/federation/"
+  metadataEndpoint: "https://some-improper-hostname-0/metadata/"
 `))
 
 			f.RunHook()
@@ -173,7 +169,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			stderrBuff := string(f.Session.Err.Contents())
-			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Cannot fetch ingressgateways metadata endpoint https://some-improper-hostname-0/federation/metadata-ingressgateways for IstioFederation improper-federation-0.`))
+			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Cannot fetch ingressgateways metadata endpoint https://some-improper-hostname-0/metadata/private/federation-ingressgateways for IstioFederation improper-federation-0.`))
 		})
 	})
 })

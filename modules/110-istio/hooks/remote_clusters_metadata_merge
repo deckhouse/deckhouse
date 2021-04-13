@@ -1,0 +1,54 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    kubernetes:
+    - name: federations
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioFederation
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "trustDomain": .spec.trustDomain,
+          "spiffeEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/spiffe-bundle-endpoint"),
+          "ingressGateways": .status.metadataCache.ingressGateways,
+          "publicServices": .status.metadataCache.publicServices,
+          "rootCA": .status.metadataCache.rootCA
+        }
+    - name: multiclusters
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioMulticluster
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "spiffeEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/spiffe-bundle-endpoint"),
+          "apiHost": .status.metadataCache.apiHost,
+          "rootCA": .status.metadataCache.rootCA
+        }
+    beforeHelm: 10
+EOF
+}
+
+function __main__() {
+  federations="$(context::jq -c '[.snapshots.federations[].filterResult | select(.ingressGateways and .publicServices) | del(.rootCA)]')"
+  multiclusters="$(context::jq -c '[.snapshots.multiclusters[].filterResult | select(.rootCA and .apiHost) | del(.rootCA)]')"
+  remoteRootCAs="$(context::jq -c '
+    [.snapshots.federations[].filterResult | select(.rootCA) | .rootCA] +
+    [.snapshots.multiclusters[].filterResult | select(.rootCA) | .rootCA]
+  ')"
+
+  values::set istio.internal.federations "$federations"
+  values::set istio.internal.multiclusters "$multiclusters"
+  values::set istio.internal.remoteRootCAs "$remoteRootCAs"
+}
+
+hook::run "$@"

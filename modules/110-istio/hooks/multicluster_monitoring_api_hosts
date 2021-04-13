@@ -1,0 +1,53 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    schedule:
+    - name: multiclusters
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      crontab: "* * * * *"
+EOF
+}
+
+function __main__() {
+  if ! values::has istio.internal.clientCertificate.cert; then
+    2>&1 echo "WARNING: Client certificate for checking remote api hosts isn't discovered yet. Retry in 1min."
+    return 0
+  fi
+
+  if values::is_true istio.multicluster.enabled; then
+    for i in $(values::jq -r '.istio.internal.multiclusters | keys[]'); do
+      multiclusterSpec="$(values::get istio.internal.multiclusters.$i)"
+      multiclusterName="$(jq -r '.name'    <<< "$multiclusterSpec")"
+      apiHost="$(jq          -r '.apiHost' <<< "$multiclusterSpec")"
+
+      # try to fetch kubernetes version from apiHost and try to unmarshal response
+      if curl \
+          -f -s --show-error \
+          --cert <(values::get istio.internal.clientCertificate.cert) \
+          --key  <(values::get istio.internal.clientCertificate.key) \
+          "https://${apiHost}/version" | jq -e .major >/dev/null
+      then
+        isError=0
+      else
+        isError=1
+        echo >&2 "ERROR: Cannot fetch api host metadata endpoint $apiHostEndpoint for IstioMulticluster $multiclusterName."
+      fi
+
+      jq -n --argjson isError "$isError" --arg multiclusterName "$multiclusterName" --arg apiHost "$apiHost" '
+        {
+          "group":"multicluster_check_api_host",
+          "name": "d8_istio_multicluster_api_host_check_error_count",
+          "set": $isError,
+          "labels": {"multicluster_name": $multiclusterName, "api_host": $apiHost}
+        }
+      ' >> "$METRICS_PATH"
+    done
+  fi
+}
+
+hook::run "$@"

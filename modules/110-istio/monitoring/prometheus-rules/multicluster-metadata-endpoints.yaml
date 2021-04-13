@@ -1,0 +1,21 @@
+- name: kubernetes.istio.multicluster_metadata_endpoints
+  rules:
+    - alert: D8IstioMulticlusterMetadataEndpointDoesntWork
+      expr: max by (multicluster_name, endpoint) (d8_istio_multicluster_metadata_endpoints_fetch_error_count == 1)
+      for: 5m
+      labels:
+        severity_level: "6"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier
+        plk_grouped_by__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier
+        description: |
+          Metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch by d8 hook.
+          Reproducing:
+          ```
+          CERT="$(kubectl -n d8-istio get secret client-cert -o json | jq -r '.data."tls.crt"' | base64 -d)"
+          KEY="$(kubectl -n d8-istio get secret client-cert -o json | jq -r '.data."tls.key"' | base64 -d)"
+          curl {{$labels.endpoint}} --cert <(echo "$CERT") --key <(echo "$KEY")
+          ```
+        summary: Multicluster metadata endpoint failed
