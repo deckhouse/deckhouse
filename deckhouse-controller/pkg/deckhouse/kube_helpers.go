@@ -3,15 +3,14 @@ package deckhouse
 import (
 	"fmt"
 
+	addon_operator_app "github.com/flant/addon-operator/pkg/app"
 	client "github.com/flant/shell-operator/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	addon_operator_app "github.com/flant/addon-operator/pkg/app"
-
-	"flant/deckhouse-controller/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 )
 
 func GetCurrentPod(klient client.KubernetesClient) (pod *v1.Pod, err error) {
@@ -49,7 +48,7 @@ func GetDeploymentOfCurrentPod(klient client.KubernetesClient) (deployment *apps
 	}
 
 	if len(rs.OwnerReferences) == 0 {
-		return nil, fmt.Errorf("ReplicaSet/%s of current pod has no owner", rs.Name)
+		return nil, fmt.Errorf("a ReplicaSet/%s of current pod has no owner", rs.Name)
 	}
 
 	for _, ownerRef := range rs.OwnerReferences {
@@ -75,7 +74,7 @@ func UpdateDeployment(klient client.KubernetesClient, deployment *appsv1.Deploym
 	case errors.IsConflict(err):
 		// Deployment is modified in the meanwhile, query the latest version
 		// and modify the retrieved object.
-		return fmt.Errorf("Deployment/%s manifest changed during update: %v", deployment.Name, err)
+		return fmt.Errorf("manifest for Deployment/%s is changed during update: %v", deployment.Name, err)
 	case err != nil:
 		return err
 	default:

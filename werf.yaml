@@ -214,7 +214,7 @@ git:
   - global-hooks/**/*.go
 import:
 - artifact: deckhouse-controller
-  add: /deckhouse-controller/deckhouse-controller
+  add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   before: setup
 - artifact: jq
@@ -266,7 +266,7 @@ git:
   excludePaths: ['docs']
 import:
 - artifact: deckhouse-controller
-  add: /deckhouse-controller/deckhouse-controller
+  add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   before: setup
 - artifact: libjq
@@ -316,78 +316,56 @@ artifact: deckhouse-controller
 fromImage: base-for-go
 fromCacheVersion: "20210413"
 git:
-- add: /deckhouse-controller
-  to: /deckhouse-controller
-  excludePaths:
-  - development
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
-    - go-build.sh
-- add: /candictl
-  to: /candictl
-  excludePaths:
-  - development
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
 - add: /
-  to: /
+  to: /src
   includePaths:
+    - candictl
+    - deckhouse-controller
+    - global-hooks/**/*.go
+    - go_lib/**/*.go
+    - helm-mod
+    - modules/**/*.go
     - go.mod
     - go.sum
+  excludePaths:
+    - candictl/development
+    - deckhouse-controller/development
   stageDependencies:
     install:
-    - go.mod
-    - go.sum
-- add: /global-hooks
-  to: /global-hooks
-  includePaths:
-    - "**/*.go"
-  stageDependencies:
+      - candictl/go.mod
+      - candictl/go.sum
+      - helm-mod/go.mod
+      - helm-mod/go.sum
+      - go.mod
+      - go.sum
     setup:
-      - "**/*.go"
-- add: /modules
-  to: /modules
-  includePaths:
-    - "**/*.go"
-  stageDependencies:
-    setup:
-      - "**/*.go"
-- add: /go_lib
-  to: /go_lib
-  includePaths:
-    - "**/*.go"
-  stageDependencies:
-    setup:
-      - "**/*.go"
+      - candictl/**/*.go
+      - deckhouse-controller/**/*.go
+      - deckhouse-controller/go-build.sh
+      - helm-mod/**/*.go
+      - global-hooks/**/*.go
+      - go_lib/**/*.go
+      - modules/**/*.go
+
 import:
 - artifact: libjq
   add: /libjq
   to: /libjq
   before: setup
-ansible:
+
+shell:
   beforeInstall:
-  - apk:
-      name: git,ca-certificates,gcc,libc-dev
-      update_cache: yes
-  - raw: rm -rf /var/cache/apk/*
+  - apk add --no-cache git ca-certificates gcc libc-dev
+  - mkdir /src /out
 
   install:
-  - shell: go mod download
-    args:
-      chdir: /deckhouse-controller
+  - cd /src
+  - go mod download
 
   setup:
-  - command: /deckhouse-controller/go-build.sh /libjq
-    args:
-      chdir: /deckhouse-controller
+  - cd /src/deckhouse-controller
+  - ./go-build.sh /libjq
+  - mv deckhouse-controller /out
 
 ---
 artifact: candictl

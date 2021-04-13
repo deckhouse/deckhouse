@@ -1,18 +1,17 @@
 package helpers
 
 import (
+	"errors"
+
+	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	candiapp "github.com/deckhouse/deckhouse/candictl/cmd/candictl/commands"
-
-	sh_app "github.com/flant/shell-operator/pkg/app"
-
-	"flant/deckhouse-controller/pkg/helpers/aws"
-	"flant/deckhouse-controller/pkg/helpers/etcd"
-	"flant/deckhouse-controller/pkg/helpers/fnv"
-	"flant/deckhouse-controller/pkg/helpers/openstack"
-	"flant/deckhouse-controller/pkg/helpers/unit"
-	"flant/deckhouse-controller/pkg/helpers/vsphere"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/aws"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/fnv"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/unit"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/vsphere"
 )
 
 func DefineHelperCommands(kpApp *kingpin.Application) {
@@ -66,17 +65,8 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 
 	{
 		etcdCommand := helpersCommand.Command("etcd", "etcd helpers.")
-		etcdServiceMoveCommand := etcdCommand.Command("move-service", "Update service namespace/name.")
-		etcdEndpoint := etcdServiceMoveCommand.Arg("endpoint", "String").Required().String()
-		etcdCaFile := etcdServiceMoveCommand.Arg("caFile", "String").Required().String()
-		etcdCertFile := etcdServiceMoveCommand.Arg("certFile", "String").Required().String()
-		etcdKeyFile := etcdServiceMoveCommand.Arg("keyFile", "String").Required().String()
-		etcdServiceNamespace := etcdServiceMoveCommand.Arg("namespace", "String").Required().String()
-		etcdServiceName := etcdServiceMoveCommand.Arg("name", "String").Required().String()
-		etcdServiceNewNamespace := etcdServiceMoveCommand.Arg("new-namespace", "String").Required().String()
-		etcdServiceNewName := etcdServiceMoveCommand.Arg("new-name", "String").Required().String()
-		etcdServiceMoveCommand.Action(func(c *kingpin.ParseContext) error {
-			return etcd.MoveService(*etcdEndpoint, *etcdCaFile, *etcdCertFile, *etcdKeyFile, *etcdServiceNamespace, *etcdServiceName, *etcdServiceNewNamespace, *etcdServiceNewName)
+		etcdCommand.Action(func(c *kingpin.ParseContext) error {
+			return errors.New("helper etcd move-service is deprecated")
 		})
 	}
 

@@ -9,10 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
-	"flant/deckhouse-controller/pkg/helpers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/utils"
 )
 
-type ZonesToSubnetIdMap map[string]string
+type ZonesToSubnetIDMap map[string]string
 
 func MapZoneToSubnets() error {
 	sess := session.Must(session.NewSession())
@@ -28,7 +28,7 @@ func MapZoneToSubnets() error {
 		return fmt.Errorf("list of availability zones is empty, or an error was returned: %v", err)
 	}
 
-	var zonesToSubnetMap = make(ZonesToSubnetIdMap)
+	var zonesToSubnetMap = make(ZonesToSubnetIDMap)
 	for _, az := range availZones.AvailabilityZones {
 		subnets, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
 			Filters: []*ec2.Filter{

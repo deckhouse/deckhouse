@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 
-	"flant/deckhouse-controller/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 )
 
 // Secrets are loaded as in Kubernetes source code
@@ -45,7 +45,7 @@ type DockerConfigEntry struct {
 	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
-// Anonymous auth for unknown registries
+// AnonymousAuth is an empty entry for unknown registries
 var AnonymousAuth = DockerConfigEntry{}
 
 // DockerCfgAuths stores all available registries and their auths
@@ -65,17 +65,17 @@ func LoadDockerRegistrySecret(bytes []byte) error {
 			isAuths = hasKey
 		}
 	} else {
-		return fmt.Errorf("bad JSON structure: should be an object.")
+		return fmt.Errorf("bad JSON structure: should be an object")
 	}
 
 	if isAuths {
 		// unmarshal as DockerConfigJson
-		tmpConfigJson := DockerConfigJSON{}
-		err := json.Unmarshal(bytes, &tmpConfigJson)
+		tmpConfigJSON := DockerConfigJSON{}
+		err := json.Unmarshal(bytes, &tmpConfigJSON)
 		if err != nil {
 			return err
 		}
-		DockerCfgAuths = tmpConfigJson.Auths
+		DockerCfgAuths = tmpConfigJSON.Auths
 	} else {
 		// copy all from top keys
 		err := json.Unmarshal(bytes, &DockerCfgAuths)

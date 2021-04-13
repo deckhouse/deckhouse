@@ -5,24 +5,24 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/alecthomas/kingpin.v2"
-
+	ad_app "github.com/flant/addon-operator/pkg/app"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/alecthomas/kingpin.v2"
 
-	ad_app "github.com/flant/addon-operator/pkg/app"
-
-	"flant/deckhouse-controller/pkg/app"
-	"flant/deckhouse-controller/pkg/deckhouse"
-	"flant/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/deckhouse"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 )
 
 // Variables with component versions. They set by 'go build' command.
-var DeckhouseVersion = "dev"
-var AddonOperatorVersion = "dev"
-var ShellOperatorVersion = "dev"
+var (
+	DeckhouseVersion     = "dev"
+	AddonOperatorVersion = "dev"
+	ShellOperatorVersion = "dev"
+)
 
 func main() {
 	sh_app.Version = ShellOperatorVersion
@@ -67,7 +67,7 @@ func main() {
 		})
 	// Set default log type as json
 	sh_app.LogType = app.DeckhouseLogTypeDefault
-	sh_app.KubeClientQpsDefault = app.DeckshouseKubeClientQpsDefault
+	sh_app.KubeClientQpsDefault = app.DeckshouseKubeClientQPSDefault
 	sh_app.KubeClientBurstDefault = app.DeckshouseKubeClientBurstDefault
 	app.DefineStartCommandFlags(startCmd)
 	ad_app.DefineStartCommandFlags(kpApp, startCmd)

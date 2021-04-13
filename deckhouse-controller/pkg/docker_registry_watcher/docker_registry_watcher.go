@@ -9,12 +9,11 @@ import (
 	"strings"
 	"time"
 
+	utils_file "github.com/flant/shell-operator/pkg/utils/file"
 	"github.com/google/go-containerregistry/pkg/name"
 	log "github.com/sirupsen/logrus"
 
-	utils_file "github.com/flant/shell-operator/pkg/utils/file"
-
-	"flant/deckhouse-controller/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 )
 
 var logEntry = log.WithField("operator.component", "RegistryWatcher")
@@ -80,37 +79,37 @@ func (w *dockerRegistryWatcher) Init() error {
 	}
 
 	// Secret type: kubernetes.io/dockerconfigjson
-	configJsonExists, err1 := utils_file.FileExists(path.Join(w.RegistrySecretPath, ".dockerconfigjson"))
+	configJSONExists, err1 := utils_file.FileExists(path.Join(w.RegistrySecretPath, ".dockerconfigjson"))
 	// Secret type: kubernetes.io/dockercfg
 	cfgExists, err2 := utils_file.FileExists(path.Join(w.RegistrySecretPath, ".dockercfg"))
 
-	if !configJsonExists && !cfgExists {
-		return fmt.Errorf("No .dockerconfigjson or .dockercfg in a secret directory: watcher is disabled now, %v, %v", err1, err2)
+	if !configJSONExists && !cfgExists {
+		return fmt.Errorf("no .dockerconfigjson or .dockercfg in a secret directory: watcher is disabled now, %v, %v", err1, err2)
 	}
 
 	var readErr error
 	var secretBytes []byte
-	if configJsonExists {
+	if configJSONExists {
 		secretBytes, readErr = ioutil.ReadFile(path.Join(w.RegistrySecretPath, ".dockerconfigjson"))
 		if readErr != nil {
-			return fmt.Errorf("Cannot read registry secret from .dockerconfigjson: %s", readErr)
+			return fmt.Errorf("cannot read registry secret from .dockerconfigjson: %s", readErr)
 		}
 		if len(secretBytes) == 0 {
-			return fmt.Errorf("Registry secret in .dockerconfigjson is empty")
+			return fmt.Errorf("registry secret in .dockerconfigjson is empty")
 		}
 	} else {
 		secretBytes, readErr = ioutil.ReadFile(path.Join(w.RegistrySecretPath, ".dockercfg"))
 		if readErr != nil {
-			return fmt.Errorf("Cannot read registry secret from .dockercfg: %s", readErr)
+			return fmt.Errorf("cannot read registry secret from .dockercfg: %s", readErr)
 		}
 		if len(secretBytes) == 0 {
-			return fmt.Errorf("Registry secret in .dockercfg is empty")
+			return fmt.Errorf("registry secret in .dockercfg is empty")
 		}
 	}
 
 	err := LoadDockerRegistrySecret(secretBytes)
 	if err != nil {
-		return fmt.Errorf("Cannot load registry secret: %s", err)
+		return fmt.Errorf("cannot load registry secret: %s", err)
 	}
 
 	registries := []string{}
@@ -185,12 +184,12 @@ func (w *dockerRegistryWatcher) WithRegistrySecretPath(secretPath string) {
 // this method should be called until api-server returns object with non-empty imageID.
 func (w *dockerRegistryWatcher) GetImageInfo() {
 	logEntry.Debugf("Retrieve image name and id from kube-api")
-	podImageName, podImageId := w.ImageInfoCallback()
+	podImageName, podImageID := w.ImageInfoCallback()
 	if podImageName == "" {
 		logEntry.Warnf("Cannot get image name from pod status. Will request kubernetes api-server again.")
 		return
 	}
-	if podImageId == "" {
+	if podImageID == "" {
 		logEntry.Infof("Image ID for pod is empty. Will request kubernetes api-server again.")
 		return
 	}
@@ -205,7 +204,7 @@ func (w *dockerRegistryWatcher) GetImageInfo() {
 
 	w.ImageName = podImageName
 
-	w.ImageDigest, err = FindImageDigest(podImageId)
+	w.ImageDigest, err = FindImageDigest(podImageID)
 	if err != nil {
 		logEntry.Errorf("Find image digest: %s", err)
 		w.ImageUpdatedCallback("NO_DIGEST_FOUND")
