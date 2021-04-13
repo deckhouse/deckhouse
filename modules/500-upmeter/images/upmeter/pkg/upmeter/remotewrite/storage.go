@@ -22,7 +22,7 @@ func newStorage(ctx *dbcontext.DbContext, originsCount int) *storage {
 	}
 }
 
-func (s *storage) Add(syncID SyncIdentifier, origin string, episodes []*check.DowntimeEpisode) error {
+func (s *storage) Add(syncID SyncIdentifier, origin string, episodes []*check.Episode) error {
 	var entities []dao.ExportEpisodeEntity
 	for _, ep := range episodes {
 		entity := dao.ExportEpisodeEntity{
@@ -36,13 +36,13 @@ func (s *storage) Add(syncID SyncIdentifier, origin string, episodes []*check.Do
 	return s.dao.Save(entities)
 }
 
-func (s *storage) Get(syncID SyncIdentifier) ([]*check.DowntimeEpisode, error) {
+func (s *storage) Get(syncID SyncIdentifier) ([]*check.Episode, error) {
 	entities, err := s.dao.GetEarliestEpisodes(string(syncID), s.originsCount)
 	if err != nil {
 		return nil, err
 	}
 
-	episodes := make([]*check.DowntimeEpisode, 0)
+	episodes := make([]*check.Episode, 0)
 	for i := range entities {
 		episodes = append(episodes, &entities[i].Episode)
 	}

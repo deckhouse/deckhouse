@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,8 +15,8 @@ import (
 )
 
 type EpisodesPayload struct {
-	Origin   string                  `json:"origin"`
-	Episodes []check.DowntimeEpisode `json:"episodes"`
+	Origin   string          `json:"origin"`
+	Episodes []check.Episode `json:"episodes"`
 }
 
 type AddEpisodesHandler struct {
@@ -38,7 +39,7 @@ func (h *AddEpisodesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decode DowntimeEpisodes json from body
+	// Decode Episodes json from body
 	decoder := json.NewDecoder(r.Body)
 	var data EpisodesPayload
 	err := decoder.Decode(&data)
@@ -75,14 +76,14 @@ func save(dbctx *dbcontext.DbContext, remoteWrite remotewrite.Exporter, data Epi
 
 	log.Debugf("exporting 30s episodes by agent=%s", origin)
 
-	err := remoteWrite.Export(origin, saved30s, 30)
+	err := remoteWrite.Export(origin, saved30s, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("error saving 30s episode for remote_write export: %v", err)
 	}
 
 	log.Debugf("exporting 5m episodes by agent=%s", origin)
 
-	err = remoteWrite.Export(origin, saved5m, 300)
+	err = remoteWrite.Export(origin, saved5m, 5*time.Minute)
 	if err != nil {
 		return fmt.Errorf("error saving 5m episode for remote_write export: %v", err)
 	}

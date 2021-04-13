@@ -1,0 +1,187 @@
+package check
+
+import (
+	"fmt"
+	"time"
+
+	utime "upmeter/pkg/time"
+	"upmeter/pkg/util"
+)
+
+// Episode with time counters and start aligned to 30s or 5m
+type Episode struct {
+	ProbeRef ProbeRef      `json:"probeRef"`
+	TimeSlot time.Time     `json:"ts"`      // timestamp: 30s or 5m time slot (timestamp that is a multiple of 30 seconds or 5 min)
+	Down     time.Duration `json:"fail"`    // seconds of fail state during the slot range [timeslot;timeslot+30)
+	Up       time.Duration `json:"success"` // seconds of success state during the slot range [timeslot;timeslot+30)
+	Unknown  time.Duration `json:"unknown"` // seconds of "unknown" state
+	NoData   time.Duration `json:"nodata"`  // seconds without data
+}
+
+func NewEpisode(ref ProbeRef, start time.Time, step time.Duration, counters Stats) Episode {
+	var (
+		total   = step * time.Duration(counters.Expected)
+		up      = step * time.Duration(counters.Up)
+		down    = step * time.Duration(counters.Down)
+		unknown = step * time.Duration(counters.Unknown)
+		nodata  = total - up - down - unknown
+	)
+
+	return Episode{
+		ProbeRef: ref,
+		TimeSlot: start,
+		Up:       up,
+		Down:     down,
+		Unknown:  unknown,
+		NoData:   nodata,
+	}
+}
+
+func (e Episode) IsInRange(from int64, to int64) bool {
+	return e.TimeSlot.Unix() >= from && e.TimeSlot.Unix() < to
+}
+
+func (e Episode) Known() time.Duration {
+	return e.Up + e.Down
+}
+
+func (e Episode) Avail() time.Duration {
+	return e.Up + e.Down + e.Unknown
+}
+
+func (e Episode) Total() time.Duration {
+	return e.Up + e.Down + e.Unknown + e.NoData
+}
+
+func (e Episode) IsCorrect(step time.Duration) bool {
+	return e.Total() <= step
+}
+
+func (e Episode) CombineSeconds(o Episode, slotSize time.Duration) Episode {
+	target := Episode{
+		ProbeRef: ProbeRef{
+			Group: e.ProbeRef.Group,
+			Probe: e.ProbeRef.Probe,
+		},
+		TimeSlot: e.TimeSlot,
+	}
+
+	// Combined NoData is a minimum of unavailable seconds.
+	// Episodes can be incomplete, so use slotSize for proper calculation.
+	targetAvail := utime.Longest(e.Avail(), o.Avail())
+	target.NoData = slotSize - targetAvail
+
+	target.Up = utime.Longest(e.Up, o.Up)
+
+	failUnknown := targetAvail - target.Up
+
+	// '==' is a "fail=0, unknown=0" case
+	// '<' case is impossible, but who knows.
+	if failUnknown <= 0 {
+		target.Unknown = 0
+		target.Down = 0
+		return target
+	}
+
+	// Success and Fail seconds are filling Unknown, but not more than
+	// maximum sum of known seconds.
+	maxKnown := utime.Longest(e.Known(), o.Known())
+	allowedFail := maxKnown - target.Up
+
+	if allowedFail == failUnknown {
+		target.Down = allowedFail
+		target.Unknown = 0
+	}
+	if allowedFail < failUnknown {
+		target.Down = allowedFail
+		target.Unknown = failUnknown - allowedFail
+	}
+	if allowedFail > failUnknown {
+		// Impossible. targetAvail is always greater than maxKnown.
+		target.Down = failUnknown
+		target.Unknown = 0
+	}
+
+	return target
+}
+
+func (e Episode) EqualTimers(a Episode) bool {
+	if e.Up != a.Up {
+		return false
+	}
+	if e.Down != a.Down {
+		return false
+	}
+	if e.Unknown != a.Unknown {
+		return false
+	}
+	if e.NoData != a.NoData {
+		return false
+	}
+	return true
+}
+
+func (e Episode) String() string {
+	return fmt.Sprintf("start=%s probe='%s' s=%s f=%s u=%s n=%s",
+		e.TimeSlot.Format(time.StampMilli),
+		e.ProbeRef.Id(),
+		e.Up,
+		e.Down,
+		e.Unknown,
+		e.NoData,
+	)
+}
+
+// ByTimeSlot implements sort.Interface based on the TimeSlot field.
+type ByTimeSlot []Episode
+
+func (a ByTimeSlot) Len() int           { return len(a) }
+func (a ByTimeSlot) Less(i, j int) bool { return a[j].TimeSlot.After(a[i].TimeSlot) }
+func (a ByTimeSlot) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
+// DowntimeIncident defines a long lasting downtime. It is stored in cluster as a CR.
+type DowntimeIncident struct {
+	Start        int64 // start of downtime ()
+	End          int64 // end of downtime ()
+	Duration     int64 // duration in seconds
+	Type         string
+	Description  string
+	Affected     []string // a list of affected groups
+	DowntimeName string   // a checkName of a Downtime custom resource
+}
+
+// MuteDuration returns the count of seconds between 'from' and 'to'
+// that are affected by this incident for particular 'group'.
+func (d DowntimeIncident) MuteDuration(rng Range, group string) time.Duration {
+	// Not in range
+	if d.Start >= rng.To || d.End < rng.From {
+		return 0
+	}
+
+	isAffected := false
+	for _, affectedGroup := range d.Affected {
+		if group == affectedGroup {
+			isAffected = true
+			break
+		}
+	}
+	if !isAffected {
+		return 0
+	}
+
+	// Calculate mute duration for range [from; to]
+	var (
+		start = util.Max(d.Start, rng.From)
+		end   = util.Min(d.End, rng.To)
+	)
+
+	return time.Duration(end-start) * time.Second
+}
+
+type Stats struct {
+	Expected, Up, Down, Unknown int
+}
+
+func (s Stats) String() string {
+	return fmt.Sprintf("(Σ%d ↑%d ↓%d ?%d)", s.Expected, s.Up, s.Down, s.Unknown)
+}

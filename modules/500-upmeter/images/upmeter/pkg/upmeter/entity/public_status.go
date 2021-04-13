@@ -31,7 +31,7 @@ func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMon
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	dao5m := dao.NewDowntime5mDao(daoCtx)
+	dao5m := dao.NewEpisodeDao5m(daoCtx)
 	probeRefs, err := dao5m.ListGroupProbe()
 	if err != nil {
 		log.Errorf("List groups: %v", err)
@@ -61,7 +61,7 @@ func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMon
 	// Request 3 latest timeslots.
 	nowSeconds := time.Now().Unix()
 	var step int64 = 300
-	from := (nowSeconds/step)*step - step*2
+	from := nowSeconds - (nowSeconds % step) - 2*step
 	to := from + 3*step
 
 	stepRanges := CalculateAdjustedStepRanges(from, to, step)
@@ -71,7 +71,9 @@ func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMon
 	var currentStatuses = make([]GroupStatusInfo, 0)
 
 	for _, groupName := range groups {
-		episodes, err := dao5m.ListEpisodesByRange(from, to, groupName, totalProbeName)
+		ref := check.ProbeRef{Group: groupName, Probe: totalProbeName}
+
+		episodes, err := dao5m.ListEpisodesByRange(from, to, ref)
 		if err != nil {
 			log.Errorf("List episodes: %+v", err)
 			return nil, "", errors.New("")
@@ -79,7 +81,6 @@ func CurrentStatusForGroups(dbCtx *dbcontext.DbContext, monitor *crd.DowntimeMon
 
 		incidents := monitor.FilterDowntimeIncidents(from, to, groupName, muteDowntimeTypes)
 
-		ref := check.ProbeRef{Group: groupName, Probe: totalProbeName}
 		statuses := CalculateStatuses(episodes, incidents, stepRanges.Ranges, ref)
 
 		// Asserts

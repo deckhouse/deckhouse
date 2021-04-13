@@ -10,18 +10,18 @@ import (
 	"upmeter/pkg/check"
 )
 
-func convEpisodes2Timeseries(timeslot time.Time, episodes []*check.DowntimeEpisode, commonLabels []*prompb.Label) []*prompb.TimeSeries {
+func convEpisodes2Timeseries(timeslot time.Time, episodes []*check.Episode, commonLabels []*prompb.Label) []*prompb.TimeSeries {
 	tss := make([]*prompb.TimeSeries, 0)
 
 	for _, ep := range episodes {
-		labels := []*prompb.Label{}
+		var labels []*prompb.Label
 		labels = append(labels, episodeLabels(ep)...)
 		labels = append(labels, commonLabels...)
 
-		nodata := ep.NoDataSeconds
-		fail := ep.FailSeconds
-		unknown := ep.UnknownSeconds
-		success := ep.SuccessSeconds
+		nodata := ep.NoData
+		fail := ep.Down
+		unknown := ep.Unknown
+		success := ep.Up
 
 		tss = append(tss,
 			statusTimeseries(timeslot, success, withLabel(labels, &prompb.Label{Name: "status", Value: "up"})),
@@ -33,13 +33,13 @@ func convEpisodes2Timeseries(timeslot time.Time, episodes []*check.DowntimeEpiso
 	return tss
 }
 
-func statusTimeseries(timeslot time.Time, value int64, labels []*prompb.Label) *prompb.TimeSeries {
+func statusTimeseries(timeslot time.Time, value time.Duration, labels []*prompb.Label) *prompb.TimeSeries {
 	return &prompb.TimeSeries{
 		Labels: labels,
 		Samples: []prompb.Sample{
 			{
 				Timestamp: timeslot.Unix() * 1e3, // milliseconds
-				Value:     float64(value * 1e3),  // milliseconds
+				Value:     float64(value.Milliseconds()),
 			},
 		},
 	}
@@ -53,7 +53,7 @@ func withLabel(originalLabels []*prompb.Label, statusLabel *prompb.Label) []*pro
 	return labels
 }
 
-func episodeLabels(ep *check.DowntimeEpisode) []*prompb.Label {
+func episodeLabels(ep *check.Episode) []*prompb.Label {
 	return []*prompb.Label{
 		{
 			Name:  "__name__",

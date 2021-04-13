@@ -7,18 +7,18 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"upmeter/pkg/check"
-	"upmeter/pkg/util"
+	utime "upmeter/pkg/time"
 )
 
 type StatusInfo struct {
 	TimeSlot  int64                    `json:"ts"`
 	StartDate string                   `json:"start"`
 	EndDate   string                   `json:"end"`
-	Up        int64                    `json:"up"`
-	Down      int64                    `json:"down"`
-	Unknown   int64                    `json:"unknown"`
-	Muted     int64                    `json:"muted"`
-	NoData    int64                    `json:"nodata"`
+	Up        time.Duration            `json:"up"`
+	Down      time.Duration            `json:"down"`
+	Unknown   time.Duration            `json:"unknown"`
+	Muted     time.Duration            `json:"muted"`
+	NoData    time.Duration            `json:"nodata"`
 	Downtimes []check.DowntimeIncident `json:"downtimes"`
 }
 
@@ -31,11 +31,11 @@ func NewEmptyStatusInfo(stepRange check.Range) *StatusInfo {
 	}
 }
 
-func (s *StatusInfo) AddEpisode(episode check.DowntimeEpisode) {
-	s.Up += episode.SuccessSeconds
-	s.Down += episode.FailSeconds
-	s.Unknown += episode.UnknownSeconds
-	s.NoData -= episode.SuccessSeconds + episode.FailSeconds + episode.UnknownSeconds
+func (s *StatusInfo) AddEpisode(episode check.Episode) {
+	s.Up += episode.Up
+	s.Down += episode.Down
+	s.Unknown += episode.Unknown
+	s.NoData -= episode.Up + episode.Down + episode.Unknown
 }
 
 func (s *StatusInfo) Add(info *StatusInfo) {
@@ -46,18 +46,11 @@ func (s *StatusInfo) Add(info *StatusInfo) {
 	s.Muted += info.Muted
 }
 
-func (s *StatusInfo) SetSeconds(up int64, down int64, unknown int64, nodata int64) {
-	s.Up = up
-	s.Down = down
-	s.Unknown = unknown
-	s.NoData = nodata
-}
-
-func (s *StatusInfo) Known() int64 {
+func (s *StatusInfo) Known() time.Duration {
 	return s.Up + s.Down
 }
 
-func (s *StatusInfo) Avail() int64 {
+func (s *StatusInfo) Avail() time.Duration {
 	return s.Up + s.Down + s.Unknown
 }
 
@@ -80,11 +73,11 @@ const totalProbeName = "__total__"
 
 /**
 CalculateStatuses returns arrays of StatusInfo objects for each group and probe.
-Each StatusInfo object is combined from DowntimeEpisodes for a step range.
+Each StatusInfo object is combined from Episodes for a step range.
 If grouping is "group", then all probes in group are summed up and
 probe name is "__total__".
 
-Method considers that there is only one DowntimeEpisode for probe and TimeSlot.
+Method considers that there is only one Episode for probe and Start.
 
 Example output:
 
@@ -100,7 +93,7 @@ testGroup:
     up: 300
     down: 0
 */
-func CalculateStatuses(episodes []check.DowntimeEpisode, incidents []check.DowntimeIncident, stepRanges []check.Range, ref check.ProbeRef) map[string]map[string][]StatusInfo {
+func CalculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncident, stepRanges []check.Range, ref check.ProbeRef) map[string]map[string][]StatusInfo {
 	episodes = FilterDisabledProbesFromEpisodes(episodes)
 
 	// Combine multiple episodes for the same probe and timeslot.
@@ -110,7 +103,7 @@ func CalculateStatuses(episodes []check.DowntimeEpisode, incidents []check.Downt
 	// map[string]map[string]map[int64]*StatusInfo
 	statuses := CreateEmptyStatusesTable(episodes, stepRanges, ref)
 
-	// Sum up episodes for each probe by TimeSlot within each step range.
+	// Sum up episodes for each probe by Start within each step range.
 	// TODO various optimizations can be applied here.
 	for _, stepRange := range stepRanges {
 		for _, episode := range episodes {
@@ -130,21 +123,22 @@ func CalculateStatuses(episodes []check.DowntimeEpisode, incidents []check.Downt
 	return TransformTimestampedMapsToSortedArrays(statuses, ref)
 }
 
-// Each group/probe should have only 1 DowntimeEpisode per Timeslot.
-func CombineEpisodesByTimeslot(episodes []check.DowntimeEpisode) []check.DowntimeEpisode {
+// Each group/probe should have only 1 Episode per Start.
+func CombineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
 	var idx = make(map[string]map[int64][]int)
 	for i, episode := range episodes {
 		probeId := episode.ProbeRef.Id()
 		if _, ok := idx[probeId]; !ok {
 			idx[probeId] = make(map[int64][]int)
 		}
-		if _, ok := idx[probeId][episode.TimeSlot]; !ok {
-			idx[probeId][episode.TimeSlot] = make([]int, 0)
+		start := episode.TimeSlot.Unix()
+		if _, ok := idx[probeId][start]; !ok {
+			idx[probeId][start] = make([]int, 0)
 		}
-		idx[probeId][episode.TimeSlot] = append(idx[probeId][episode.TimeSlot], i)
+		idx[probeId][start] = append(idx[probeId][start], i)
 	}
 
-	var newEpisodes = make([]check.DowntimeEpisode, 0)
+	var newEpisodes = make([]check.Episode, 0)
 	for _, timeslots := range idx {
 		for _, indices := range timeslots {
 			ep := episodes[indices[0]]
@@ -167,11 +161,8 @@ func CalculateTotalForStepRange(statuses map[string]map[string]map[int64]*Status
 		// Total Down is a minimum knownSeconds - total Up
 		// Total Unknown is a step seconds - minimum known seconds
 		var (
-			upSeconds      []int64
-			downSeconds    []int64
-			unknownSeconds []int64
-			maxKnown       int64
-			maxAvail       int64
+			uptimes, downtimes, unknowntimes []time.Duration
+			maxKnown, maxAvail               time.Duration
 		)
 
 		for probe, infos := range probes {
@@ -183,16 +174,18 @@ func CalculateTotalForStepRange(statuses map[string]map[string]map[int64]*Status
 			}
 
 			info := infos[stepRange.From]
-			upSeconds = append(upSeconds, info.Up)
-			downSeconds = append(downSeconds, info.Down)
-			unknownSeconds = append(unknownSeconds, info.Unknown)
-			maxKnown = util.Max(maxKnown, info.Known())
-			maxAvail = util.Max(maxAvail, info.Avail())
+
+			uptimes = append(uptimes, info.Up)
+			downtimes = append(downtimes, info.Down)
+			unknowntimes = append(unknowntimes, info.Unknown)
+
+			maxKnown = utime.Longest(maxKnown, info.Known())
+			maxAvail = utime.Longest(maxAvail, info.Avail())
 		}
 
-		totalStatusInfo.Up = util.Min(upSeconds...)
+		totalStatusInfo.Up = utime.Shortest(uptimes...)
 		// down should not be less then known and not more then avail.
-		totalStatusInfo.Down = util.ClampToRange(util.Max(downSeconds...), 0, maxAvail-totalStatusInfo.Up)
+		totalStatusInfo.Down = utime.ClampToRange(utime.Longest(downtimes...), 0, maxAvail-totalStatusInfo.Up)
 		totalStatusInfo.Unknown = maxAvail - totalStatusInfo.Up - totalStatusInfo.Down
 		totalStatusInfo.NoData = stepRange.Diff() - maxAvail
 
@@ -210,7 +203,7 @@ func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents 
 		for _, stepRange := range stepRanges {
 			var (
 				stepDuration     = stepRange.Diff()
-				muteDuration     int64
+				muteDuration     time.Duration
 				relatedDowntimes []check.DowntimeIncident
 			)
 
@@ -220,7 +213,7 @@ func UpdateMute(statuses map[string]map[string]map[int64]*StatusInfo, incidents 
 				if m == 0 {
 					continue
 				}
-				muteDuration = util.Max(muteDuration, m)
+				muteDuration = utime.Longest(muteDuration, m)
 				relatedDowntimes = append(relatedDowntimes, incident)
 			}
 
@@ -298,7 +291,7 @@ func CalculateTotalForPeriod(statuses map[string]map[string]map[int64]*StatusInf
 	}
 }
 
-func CreateEmptyStatusesTable(episodes []check.DowntimeEpisode, stepRanges []check.Range, ref check.ProbeRef) map[string]map[string]map[int64]*StatusInfo {
+func CreateEmptyStatusesTable(episodes []check.Episode, stepRanges []check.Range, ref check.ProbeRef) map[string]map[string]map[int64]*StatusInfo {
 	// Create empty statuses for each probe.
 	statuses := map[string]map[string]map[int64]*StatusInfo{}
 
@@ -375,8 +368,8 @@ func TransformTimestampedMapsToSortedArrays(statuses map[string]map[string]map[i
 	return res
 }
 
-func FilterDisabledProbesFromEpisodes(episodes []check.DowntimeEpisode) []check.DowntimeEpisode {
-	res := make([]check.DowntimeEpisode, 0)
+func FilterDisabledProbesFromEpisodes(episodes []check.Episode) []check.Episode {
+	res := make([]check.Episode, 0)
 
 	for _, episode := range episodes {
 		if check.IsProbeEnabled(episode.ProbeRef.Id()) {

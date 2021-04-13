@@ -104,7 +104,7 @@ func Test_ExportEpisodeDAO_Delete_LetsResurrect(t *testing.T) {
 	originsCount := 1
 
 	entities, opts := genExportEntities(genOpts{n: 9, origins: randOrigins(originsCount)})
-	slot := time.Unix(entities[0].Episode.TimeSlot, 0)
+	slot := entities[0].Episode.TimeSlot
 
 	// Create
 	err := storage.Save(entities)
@@ -284,7 +284,7 @@ func Test_ExportEpisodeDAO_MultipleOrigins_Get_PrefersEarliestUnfulfilledDespite
 		originsCount = 3
 		nEarly       = 2
 
-		lateSlot      = time.Now()
+		lateSlot      = time.Now().Round(time.Second)
 		fulfilledSlot = lateSlot.Add(-10 * time.Minute)
 		earlySlot     = fulfilledSlot.Add(-10 * time.Minute)
 
@@ -321,7 +321,7 @@ func Test_ExportEpisodeDAO_MultipleOrigins_Get_PrefersEarliestUnfulfilledDespite
 	got, _ := storage.GetEarliestEpisodes(syncId, originsCount)
 
 	g.Expect(got).To(HaveLen(nEarly), "should find only one entity")
-	g.Expect(got[0].Episode.TimeSlot).To(Equal(earlySlot.Unix()), "should have earliest timeslot")
+	g.Expect(got[0].Episode.TimeSlot).To(Equal(earlySlot), "should have earliest timeslot")
 	g.Expect(got[0].Origins.Size()).To(Equal(earlyOrigins.Size()), "should have unfulfilled origins")
 }
 
@@ -352,26 +352,27 @@ func Test_ExportEpisodeDAO_MultipleOrigins_Get_ReturnsExpiredEvenWhenNoneFulfill
 
 	// Setup: generate data
 	var (
-		h22ago      = time.Now().Add(-22 * time.Hour).Unix()
-		h23ago      = time.Now().Add(-23 * time.Hour).Unix()
-		hExpiredAgo = time.Now().Add(-24 * time.Hour).Unix()
+		now         = time.Now().Truncate(time.Second)
+		h22ago      = now.Add(-22 * time.Hour)
+		h23ago      = now.Add(-23 * time.Hour)
+		hExpiredAgo = now.Add(-24 * time.Hour)
 		nExpired    = 5
 	)
 
 	late, opts := genExportEntities(genOpts{
 		n:         4,
-		slotInt64: h22ago,
+		slotInt64: h22ago.Unix(),
 		origins:   randOrigins(1),
 	})
 	mid, _ := genExportEntities(genOpts{
 		n:         6,
-		slotInt64: h23ago,
+		slotInt64: h23ago.Unix(),
 		origins:   randOrigins(1),
 		syncID:    opts.syncID,
 	})
 	expired, _ := genExportEntities(genOpts{
 		n:         nExpired,
-		slotInt64: hExpiredAgo,
+		slotInt64: hExpiredAgo.Unix(),
 		origins:   randOrigins(1),
 		syncID:    opts.syncID,
 	})
@@ -423,16 +424,16 @@ func assertExportEpisodesEqual(g *WithT, e1, e2 ExportEpisodeEntity) {
 	g.Expect(a.ProbeRef.Probe).To(Equal(b.ProbeRef.Probe))
 	g.Expect(a.TimeSlot).To(Equal(b.TimeSlot))
 
-	g.Expect(a.SuccessSeconds).To(Equal(b.SuccessSeconds))
-	g.Expect(a.FailSeconds).To(Equal(b.FailSeconds))
-	g.Expect(a.UnknownSeconds).To(Equal(b.UnknownSeconds))
-	g.Expect(a.NoDataSeconds).To(Equal(b.NoDataSeconds))
+	g.Expect(a.Up).To(Equal(b.Up))
+	g.Expect(a.Down).To(Equal(b.Down))
+	g.Expect(a.Unknown).To(Equal(b.Unknown))
+	g.Expect(a.NoData).To(Equal(b.NoData))
 
 }
 
 func setSlot(entities []ExportEpisodeEntity, slot int64) {
 	for i := range entities {
-		entities[i].Episode.TimeSlot = slot
+		entities[i].Episode.TimeSlot = time.Unix(slot, 0)
 	}
 }
 
@@ -453,7 +454,7 @@ func genExportEntities(opts genOpts) ([]ExportEpisodeEntity, genOpts) {
 
 	// generate
 	var entities []ExportEpisodeEntity
-	for _, ep := range newRandomDowntimeEpisodes(opts.n) {
+	for _, ep := range newRandomEpisodes(opts.n) {
 		entity := ExportEpisodeEntity{
 			Episode: *ep,
 			SyncID:  *opts.syncID,
@@ -469,20 +470,20 @@ func genExportEntities(opts genOpts) ([]ExportEpisodeEntity, genOpts) {
 	if opts.slotInt64 > 0 {
 		setSlot(entities, opts.slotInt64)
 	} else {
-		opts.slotInt64 = entities[0].Episode.TimeSlot
+		opts.slotInt64 = (entities[0].Episode.TimeSlot.Unix())
 	}
 	opts.slot = time.Unix(opts.slotInt64, 0)
 
 	return entities, opts
 }
 
-func newRandomDowntimeEpisodes(n int) []*check.DowntimeEpisode {
+func newRandomEpisodes(n int) []*check.Episode {
 
 	// shared data
 	var slotSize int64 = 30
-	slot := time.Now().Truncate(time.Duration(slotSize) * time.Second).Unix()
+	slot := time.Now().Truncate(time.Duration(slotSize) * time.Second)
 
-	episodes := make([]*check.DowntimeEpisode, 0)
+	episodes := make([]*check.Episode, 0)
 	for ; n > 0; n-- {
 		// different data
 		var (
@@ -495,13 +496,13 @@ func newRandomDowntimeEpisodes(n int) []*check.DowntimeEpisode {
 			nodata  = slotSize - success - fail - unknown
 		)
 
-		ep := check.DowntimeEpisode{
-			SuccessSeconds: success,
-			FailSeconds:    fail,
-			UnknownSeconds: unknown,
-			NoDataSeconds:  nodata,
-			ProbeRef:       check.ProbeRef{Group: group, Probe: probe},
-			TimeSlot:       slot,
+		ep := check.Episode{
+			Up:       time.Second * time.Duration(success),
+			Down:     time.Second * time.Duration(fail),
+			Unknown:  time.Second * time.Duration(unknown),
+			NoData:   time.Second * time.Duration(nodata),
+			ProbeRef: check.ProbeRef{Group: group, Probe: probe},
+			TimeSlot: slot,
 		}
 
 		episodes = append(episodes, &ep)

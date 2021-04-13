@@ -113,7 +113,7 @@ const langPack: LangPack = {
                 title: "Basic Functionality",
                 description: "Every 5s a ConfigMap is created and deleted.",
                 reasonUp: "configMap successfully created and deleted",
-                reasonDown: "error occured during the creation or deletion of the ConfigMap",
+                reasonDown: "error occurred during the creation or deletion of the ConfigMap",
                 reasonUnknown: "kube-apiserver is not available or probe execution is skipped because previous probe was not yet finished",
                 reasonNodata: REASON_AGENTS_STOPPED,
             },
@@ -122,7 +122,7 @@ const langPack: LangPack = {
                 description: "Every 1 minute a Deployment is created and deleted",
                 reasonUp: "deployment successfully created, and its Pod became <code>Pending</code>. Afterwards, the deployment successfully deleted",
                 reasonDown: "created Pod is not become <code>Pending</code> after 10 seconds",
-                reasonUnknown: "error occured during creation or deletion, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+                reasonUnknown: "error occurred during creation or deletion, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
                 reasonNodata: REASON_AGENTS_STOPPED,
             },
             "namespace": {
@@ -281,14 +281,46 @@ function renderTooltips() {
     }
 }
 
-// Shortcut, let it fail anyway
-export function getGroupSpec(group: string): tooltipData {
-    return langPack.group[group]
+
+function fallbackTooltip(input: Partial<tooltipData>): tooltipData {
+    const fallbackTooltipData = {
+        title: "...",
+        description: "...",
+        reasonUp: "...",
+        reasonDown: "...",
+        reasonUnknown: "...",
+        reasonNodata: "...",
+    }
+
+    return {
+        ...fallbackTooltipData,
+        ...input
+    }
 }
 
-// Shortcut, let it fail anyway
+export function getGroupSpec(group: string): tooltipData {
+    const spec = langPack.group[group]
+    if (spec) {
+        return spec
+    }
+
+    return fallbackTooltip({title: `Group ${group}`})
+}
+
 export function getProbeSpec(group: string, probe: string): tooltipData {
-    return langPack.probe[group][probe]
+    const probeSpecs = langPack.probe[group]
+    if (!probeSpecs) {
+        // we might miss the group
+        return fallbackTooltip({title: `${group}/${probe}`})
+    }
+
+    const spec = probeSpecs[probe]
+    if (!spec) {
+        // we have the group, so the title of probe is the probe key
+        return fallbackTooltip({title: probe})
+    }
+
+    return spec
 }
 
 

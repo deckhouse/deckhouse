@@ -41,6 +41,6 @@ func getStats(dbctx *dbcontext.DbContext) ([]string, error) {
 	daoCtx := dbctx.Start()
 	defer daoCtx.Stop()
 
-	dao30s := dao.NewDowntime30sDao(daoCtx)
+	dao30s := dao.NewEpisodeDao30s(daoCtx)
 	return dao30s.Stats()
 }

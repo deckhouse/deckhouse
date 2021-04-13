@@ -1,4 +1,5 @@
 ARG BASE_NGINX_ALPINE
+
 FROM node:14-alpine3.12 as builder
 # dependencies for favicon generator
 RUN apk add python2 python3 vips make build-base

@@ -87,6 +87,8 @@ spec:
         env:
           - name: UPMETER_DB_PATH
             value: /db/downtime.db.sqlite
+          - name: UPMETER_DB_MIGRATIONS_PATH
+            value: "/data/migrations/server"
           - name: UPMETER_LISTEN_HOST
             value: 127.0.0.1
           - name: UPMETER_LISTEN_PORT

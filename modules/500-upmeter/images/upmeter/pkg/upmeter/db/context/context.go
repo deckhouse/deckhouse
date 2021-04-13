@@ -18,7 +18,11 @@ func NewDbContext() *DbContext {
 
 // Connect opens a DB without pooling. Mainly for tests.
 func (c *DbContext) Connect(path string) error {
-	dbh, err := OpenDB(path)
+	return c.ConnectWithOptions(path, nil)
+}
+
+func (c *DbContext) ConnectWithOptions(path string, params map[string]string) error {
+	dbh, err := Open(path, params)
 	if err != nil {
 		return err
 	}

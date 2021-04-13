@@ -1,18 +1,19 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import {css, cx} from "emotion"
 
 import {Tooltip} from "@grafana/ui";
 import {getTimeRangeSrv} from "../services/TimeRangeSrv";
 import {PieTooltip} from "./PieTooltip";
+import {Episode} from "../services/DatasetSrv";
 
 export interface Props {
-  width: number
-  onClick: ()=>void
-  data: any
+  size: number
+  onClick: () => void
+  episode: Episode
   className?: string
 }
 
-export class PieBoundingRect extends Component<Props> {
+export class PieBoundingRect extends Component<Props, any> {
   constructor(props: Props) {
     super(props);
   }
@@ -55,17 +56,21 @@ export class PieBoundingRect extends Component<Props> {
     } else {
       style = css`cursor: default`
     }
+
+    const tooltip = <PieTooltip episode={this.props.episode}/>
+    const {size, className} = this.props
+
     return (
-      <Tooltip content={<PieTooltip data={this.props.data}/>} placement="right-start">
-        <rect x={-this.props.width/2}
-              y={-this.props.width/2}
-              width={this.props.width}
-              height={this.props.width}
-              fill="rgba(0,0,0,0)"
-              className={cx(style, this.props.className)}
-              onClick={this.onClick}
-      />
-      </Tooltip>
-  );
+        <Tooltip content={tooltip} placement="right-start">
+          <rect x={-size / 2}
+                y={-size / 2}
+                width={size}
+                height={size}
+                fill="rgba(0,0,0,0)"
+                className={cx(style, className)}
+                onClick={this.onClick}
+          />
+        </Tooltip>
+    );
   }
 }

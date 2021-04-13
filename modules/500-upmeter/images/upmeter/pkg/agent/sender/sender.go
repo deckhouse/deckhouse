@@ -19,18 +19,18 @@ const MaxBatchSize = 64
 type Sender struct {
 	client *UpmeterClient
 
-	recv       chan []check.DowntimeEpisode
+	recv       chan []check.Episode
 	bufferLock sync.RWMutex
-	buffer     []check.DowntimeEpisode
+	buffer     []check.Episode
 
 	cancel context.CancelFunc
 }
 
-func New(client *UpmeterClient, recv chan []check.DowntimeEpisode) *Sender {
+func New(client *UpmeterClient, recv chan []check.Episode) *Sender {
 	s := &Sender{
 		client: client,
 		recv:   recv,
-		buffer: make([]check.DowntimeEpisode, 0),
+		buffer: make([]check.Episode, 0),
 	}
 	return s
 }
@@ -99,7 +99,7 @@ func (s *Sender) Send() error {
 	return nil
 }
 
-func (s *Sender) sendBatch(batch []check.DowntimeEpisode) error {
+func (s *Sender) sendBatch(batch []check.Episode) error {
 	data := api.EpisodesPayload{
 		Origin:   util.AgentUniqueId(),
 		Episodes: batch,
@@ -115,7 +115,7 @@ func (s *Sender) sendBatch(batch []check.DowntimeEpisode) error {
 	return nil
 }
 
-func (s *Sender) getBatch() []check.DowntimeEpisode {
+func (s *Sender) getBatch() []check.Episode {
 	s.bufferLock.RLock()
 	defer s.bufferLock.RUnlock()
 
@@ -130,7 +130,7 @@ func (s *Sender) getBatch() []check.DowntimeEpisode {
 	}
 
 	// copy results to not lock a buffer for http writing
-	var batch = make([]check.DowntimeEpisode, batchSize)
+	var batch = make([]check.Episode, batchSize)
 	for i := 0; i < batchSize; i++ {
 		batch[i] = s.buffer[i]
 	}
@@ -145,7 +145,7 @@ func (s *Sender) cleanBuffer(size int) {
 
 	if len(s.buffer) == size {
 		// Recreate a Buffer as a "fresh" array if all items were sent
-		s.buffer = make([]check.DowntimeEpisode, 0)
+		s.buffer = make([]check.Episode, 0)
 	} else {
 		// We don't expect to have argument "size" bigger than the buffer size
 		s.buffer = s.buffer[size:len(s.buffer)]
