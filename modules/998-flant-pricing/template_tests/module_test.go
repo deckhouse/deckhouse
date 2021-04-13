@@ -46,6 +46,7 @@ contacts: 10
 doNotChargeForRockSolid: false
 plan: "Standard"
 planIsBoughtAsBundle: false
+auxiliaryCluster: false
 promscale: {}
 ***REMOVED***:
   team: ""
@@ -137,6 +138,8 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 - name: FP_MASTER_MIN_MEMORY
   value: "800000"
 - name: FP_PLAN_IS_BOUGHT_AS_BUNDLE
+  value: "0"
+- name: FP_AUXILIARY_CLUSTER
   value: "0"
 - name: FP_DO_NOT_CHARGE_FOR_ROCK_SOLID
   value: "0"

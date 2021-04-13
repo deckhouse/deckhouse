@@ -21,6 +21,11 @@ properties:
     default: false
     description: |
       Куплен ли "пакет".
+  auxiliaryCluster:
+    type: boolean
+    default: false
+    description: |
+      Этот кластер является вспомогательным.
   promscale:
     type: object
     default: {}

@@ -41,6 +41,7 @@ flantPricing:
     kubeconfig: "/root/.kube/config"
     context: ""
   planIsBoughtAsBundle: false
+  auxiliaryCluster: false
   internal:
     __ConstantChoices__:
     - releaseChannel: Alpha
