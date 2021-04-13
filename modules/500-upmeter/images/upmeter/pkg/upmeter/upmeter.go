@@ -34,8 +34,9 @@ import (
 type Informer struct {
 	kubernetesClient kube.KubernetesClient
 
-	dbPath string
-	dbCtx  *dbcontext.DbContext
+	dbPath          string
+	dbMigrationPath string
+	dbCtx           *dbcontext.DbContext
 
 	originsCount          int
 	remoteWriteController *remotewrite.Controller
@@ -54,13 +55,11 @@ func New(originsCount int) *Informer {
 	return &Informer{
 		kubernetesClient: kubeClient,
 
-		dbPath:       app.DowntimeDbPath,
 		originsCount: originsCount,
-	}
-}
 
-func (inf *Informer) WithDbPath(path string) {
-	inf.dbPath = path
+		dbPath:          app.DatabasePath,
+		dbMigrationPath: app.DatabaseMigrationsPath,
+	}
 }
 
 func (inf *Informer) Start(ctx context.Context) error {
@@ -85,7 +84,7 @@ func (inf *Informer) Start(ctx context.Context) error {
 	}
 
 	// Apply migrations
-	err = migrations.Migrator.Apply(inf.dbCtx)
+	err = migrations.MigrateDatabase(inf.dbCtx, inf.dbMigrationPath)
 	if err != nil {
 		return fmt.Errorf("cannot migrate database: %v", err)
 	}
@@ -134,7 +133,7 @@ func (inf *Informer) Start(ctx context.Context) error {
 	logger.Debugf("starting HTTP server")
 
 	// Start http server. It blocks, that's why it is the last here.
-	err = http.ListenAndServe(app.UpmeterListenHost+":"+app.UpmeterListenPort, nil)
+	err = http.ListenAndServe(app.ListenHost+":"+app.ListenPort, nil)
 	if err != nil {
 		return err
 	}

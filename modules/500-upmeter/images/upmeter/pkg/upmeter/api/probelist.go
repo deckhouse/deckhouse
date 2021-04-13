@@ -45,7 +45,7 @@ func getRefs(dbctx *dbcontext.DbContext) ([]check.ProbeRef, error) {
 	daoCtx := dbctx.Start()
 	defer daoCtx.Stop()
 
-	dao5m := dao.NewDowntime5mDao(daoCtx)
+	dao5m := dao.NewEpisodeDao5m(daoCtx)
 	probeRefs, err := dao5m.ListGroupProbe()
 	if err != nil {
 		return nil, err

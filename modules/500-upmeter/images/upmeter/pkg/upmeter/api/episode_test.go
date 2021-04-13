@@ -1,10 +1,13 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 
@@ -12,7 +15,7 @@ import (
 	"upmeter/pkg/upmeter/db"
 )
 
-func Test_DowntimeHandler(t *testing.T) {
+func Test_AddEpisodesHandler(t *testing.T) {
 	g := NewWithT(t)
 
 	// setup database
@@ -71,6 +74,58 @@ func Test_DowntimeHandler(t *testing.T) {
 
 type exporterMock struct{}
 
-func (e *exporterMock) Export(string, []*check.DowntimeEpisode, int64) error {
+func (e *exporterMock) Export(string, []*check.Episode, time.Duration) error {
 	return nil
+}
+
+func Test_EpisodePayload(t *testing.T) {
+	tests := []struct {
+		name string
+		want EpisodesPayload
+	}{
+		{
+			name: "empty",
+			want: EpisodesPayload{},
+		}, {
+			name: "only origin",
+			want: EpisodesPayload{
+				Origin: "booo",
+			},
+		}, {
+			name: "with an episode",
+			want: EpisodesPayload{
+				Origin: "xxxx",
+				Episodes: []check.Episode{
+					{
+						ProbeRef: check.ProbeRef{Group: "Grrr", Probe: "Prrr"},
+						TimeSlot: time.Now().Add(-time.Hour).Truncate(30 * time.Second),
+						Up:       27 * time.Second,
+						Down:     300 * time.Millisecond,
+						Unknown:  700 * time.Millisecond,
+						NoData:   2 * time.Second,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := json.Marshal(tt.want)
+			if err != nil {
+				t.Errorf("cannot marshal episode payload to JSON err=%v", err)
+			}
+
+			var got EpisodesPayload
+			err = json.Unmarshal(marshalled, &got)
+
+			if err != nil {
+				t.Errorf("cannot unmarshal episode payload JSON err=%v", err)
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("unmarshalled payload does match: want=%v, got=%v", tt.want, got)
+			}
+		})
+	}
 }

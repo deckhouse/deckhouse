@@ -26,8 +26,8 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	dao30s := NewDowntime30sDao(daoCtx)
-	dao5m := NewDowntime5mDao(daoCtx)
+	dao30s := NewEpisodeDao30s(daoCtx)
+	dao5m := NewEpisodeDao5m(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -45,7 +45,7 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 		},
 	}
 
-	firstTs := ((time.Now().Unix() - (24 * 60 * 60)) / 300) * 300
+	epoch := time.Now().Add(-24 * time.Hour).Truncate(5 * time.Minute)
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			log.Infof("gen episodes for %s/%s", groupName, probeName)
@@ -53,32 +53,32 @@ func Test_Fill_RandomDB_For_Today(t *testing.T) {
 			// 30 sec
 			tsCount := 24 * 60 * 2
 			for i := 0; i < tsCount; i++ {
-				downtime := check.DowntimeEpisode{
+				downtime := check.Episode{
 					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
-					TimeSlot:       firstTs + int64(30*i),
-					FailSeconds:    int64(i%30 - i%7 - i%3),
-					SuccessSeconds: int64(30 - i%30 - i%7 - i%3),
-					UnknownSeconds: int64(i % 7),
-					NoDataSeconds:  int64(i % 3),
+					TimeSlot: epoch.Add(time.Duration(i) * 30 * time.Second),
+					Down:     time.Second * time.Duration(i%30-i%7-i%3),
+					Up:       time.Second * time.Duration(30-i%30-i%7-i%3),
+					Unknown:  time.Second * time.Duration(i%7),
+					NoData:   time.Second * time.Duration(i%3),
 				}
 				dao30s.Insert(downtime)
 			}
 
 			// 5min
 			step5m := 5 * 60
-			tsCount = 24 * 60 * 60 / step5m
+			tsCount = 24 * 12 // 12 episodes per hour
 			for i := 0; i < tsCount; i++ {
-				downtime := check.DowntimeEpisode{
+				downtime := check.Episode{
 					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
-					TimeSlot:       firstTs + int64(step5m*i),
-					FailSeconds:    int64(i % step5m),
-					SuccessSeconds: int64(step5m - i%step5m),
+					TimeSlot: epoch.Add(time.Duration(i) * 5 * time.Minute), // firstTs + int64(step5m*i),
+					Down:     time.Second * time.Duration(i%step5m),
+					Up:       time.Second * time.Duration(step5m-i%step5m),
 				}
 				dao5m.Insert(downtime)
 			}
@@ -101,10 +101,10 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	migrator := migrations.NewMigratorService()
-	migrator.Apply(dbCtx)
+	err = migrations.MigrateDatabase(dbCtx, "../migrations/server")
+	g.Expect(err).ShouldNot(HaveOccurred())
 
-	dao30s := NewDowntime30sDao(daoCtx)
+	dao30s := NewEpisodeDao30s(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -122,21 +122,21 @@ func Test_Fill_30s_OneDay(t *testing.T) {
 		},
 	}
 
-	firstTs := time.Now().Unix() - (24 * 60 * 60)
+	epoch := time.Now().Add(-24 * time.Hour)
 	tsCount := 24 * 60 * 2
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			for i := 0; i < tsCount; i++ {
-				downtime := check.DowntimeEpisode{
+				downtime := check.Episode{
 					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
-					TimeSlot:       firstTs + int64(30*i),
-					FailSeconds:    int64(i%30 - i%4 - i%5),
-					SuccessSeconds: int64(30 - i%30 - i%4 - i%5),
-					UnknownSeconds: int64(i % 4),
-					NoDataSeconds:  int64(i % 5),
+					TimeSlot: epoch.Add(time.Duration(i) * 30 * time.Second),
+					Down:     time.Second * time.Duration(i%30-i%4-i%5),
+					Up:       time.Second * time.Duration(30-i%30-i%4-i%5),
+					Unknown:  time.Second * time.Duration(i%4),
+					NoData:   time.Second * time.Duration(i%5),
 				}
 				err = dao30s.Insert(downtime)
 				g.Expect(err).ShouldNot(HaveOccurred())
@@ -157,10 +157,10 @@ func Test_FillOneDay(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	migrator := migrations.NewMigratorService()
-	migrator.Apply(dbCtx)
+	err = migrations.MigrateDatabase(dbCtx, "../migrations/server")
+	g.Expect(err).ShouldNot(HaveOccurred())
 
-	dao5m := NewDowntime5mDao(daoCtx)
+	dao5m := NewEpisodeDao5m(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -178,21 +178,21 @@ func Test_FillOneDay(t *testing.T) {
 		},
 	}
 
-	firstTs := time.Now().Unix() - (24 * 60 * 60)
-	tsCount := 24 * (60 / 5)
+	epoch := time.Now().Add(-24 * time.Hour)
+	tsCount := 24 * 12 // 12 episodes per hour
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			for i := 0; i < tsCount; i++ {
-				downtime := check.DowntimeEpisode{
+				downtime := check.Episode{
 					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
-					TimeSlot:       firstTs + int64(300*i),
-					FailSeconds:    int64(i%300 - i%37 - i%13),
-					SuccessSeconds: int64(300 - i%300 - i%37 - i%13),
-					UnknownSeconds: int64(i % 37),
-					NoDataSeconds:  int64(i % 13),
+					TimeSlot: epoch.Add(time.Duration(i) * 5 * time.Minute),
+					Down:     time.Second * time.Duration(i%300-i%37-i%13),
+					Up:       time.Second * time.Duration(300-i%300-i%37-i%13),
+					Unknown:  time.Second * time.Duration(i%37),
+					NoData:   time.Second * time.Duration(i%13),
 				}
 				dao5m.Insert(downtime)
 			}
@@ -213,10 +213,10 @@ func Test_Fill_Year(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	migrator := migrations.NewMigratorService()
-	migrator.Apply(dbCtx)
+	err = migrations.MigrateDatabase(dbCtx, "../migrations/server")
+	g.Expect(err).ShouldNot(HaveOccurred())
 
-	dao5m := NewDowntime5mDao(daoCtx)
+	dao5m := NewEpisodeDao5m(daoCtx)
 
 	groupProbes := map[string][]string{
 		"control-plane": {
@@ -234,21 +234,21 @@ func Test_Fill_Year(t *testing.T) {
 		},
 	}
 
-	firstTs := time.Now().Unix() - (365 * 24 * 60 * 60)
-	tsCount := 365 * 24 * (60 / 5)
+	epoch := time.Now().Add(-365 * 24 * time.Hour)
+	tsCount := 365 * 24 * 12 // 12 episodes per hour
 	for groupName, probeNames := range groupProbes {
 		for _, probeName := range probeNames {
 			for i := 0; i < tsCount; i++ {
-				downtime := check.DowntimeEpisode{
+				downtime := check.Episode{
 					ProbeRef: check.ProbeRef{
 						Group: groupName,
 						Probe: probeName,
 					},
-					TimeSlot:       firstTs + int64(300*i),
-					FailSeconds:    int64(i%300 - i%31 - i%17),
-					SuccessSeconds: int64(300 - i%300 - i%31 - i%17),
-					UnknownSeconds: int64(i % 17),
-					NoDataSeconds:  int64(i % 31),
+					TimeSlot: epoch.Add(time.Duration(i) * 5 * time.Minute),
+					Down:     time.Second * time.Duration(i%300-i%31-i%17),
+					Up:       time.Second * time.Duration(300-i%300-i%31-i%17),
+					Unknown:  time.Second * time.Duration(i%17),
+					NoData:   time.Second * time.Duration(i%31),
 				}
 				dao5m.Insert(downtime)
 			}

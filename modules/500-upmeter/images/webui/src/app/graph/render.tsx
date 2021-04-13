@@ -11,10 +11,13 @@ import {PieBoundingRect} from "../components/PieBoundingRect";
 
 // Services
 import {getGroupSpec, getProbeSpec} from "../i18n/en";
-import {topTicks, calculateTopTicks} from './topticks';
+import {calculateTopTicks} from './topticks';
 import {getEventsSrv} from "../services/EventsSrv";
 import {getTimeRangeSrv} from "../services/TimeRangeSrv";
 import {availabilityPercent} from "../util/humanSeconds";
+import {Episode, LegacySettings, StatusRange} from 'app/services/DatasetSrv';
+import {Dataset} from 'app/services/Dataset';
+
 
 // Groups layout from https://bl.ocks.org/Andrew-Reid/960819e98873bbaf035bbf6bd2774b40
 // Pie from https://observablehq.com/@d3/donut-chart
@@ -23,24 +26,23 @@ import {availabilityPercent} from "../util/humanSeconds";
 // Format numbers https://github.com/d3/d3-format
 
 // Settings
-const pieBoxWidth = 60,
-  pieSpace = 15,
-  pieInnerRadius = 0.67,
-  legendWidth = 250,
-  topTicksHeight = 30,
-  leftPadding = 30,
-  rightPadding = 30
-;
+const pieBoxWidth = 60;
+// const pieSpace = 15;
+// const pieInnerRadius = 0.67;
+// const legendWidth = 250;
+// const topTicksHeight = 30;
+// const leftPadding = 30;
+// const rightPadding = 30;
 
-let width = leftPadding + legendWidth + (12*(pieBoxWidth + pieSpace) + pieSpace) + rightPadding;
-let height = topTicksHeight + 5 * (pieBoxWidth + pieSpace) + pieSpace;
+// let width = leftPadding + legendWidth + (12 * (pieBoxWidth + pieSpace) + pieSpace) + rightPadding;
+// let height = topTicksHeight + 5 * (pieBoxWidth + pieSpace) + pieSpace;
 
 //let root = d3.select("#graph")
 //  .attr("width", width)
 //  .attr("height", height)
 //  .attr("viewBox", [0, 0, width, height]);
 
-export function renderGraphTable(dataset, settings) {
+export function renderGraphTable(dataset: Dataset, settings: LegacySettings) {
   let root = d3.select('#graph');
 
   // Always recreate everything
@@ -66,10 +68,10 @@ export function renderGraphTable(dataset, settings) {
     .append("div")
     .attr("data-group-id", d => d.group)
     .attr("data-probe-id", d => d.probe)
-    .attr("class","graph-row")
+    .attr("class", "graph-row")
 
   // Labels for group and probes.
-  groupsEnter.each(function(item){
+  groupsEnter.each(function (item) {
     let rowEl = d3.select(this);
     let cellEl = rowEl
       .append("div")
@@ -89,7 +91,7 @@ export function renderGraphTable(dataset, settings) {
         .attr("class", "fas fa-fw fa-caret-right group-icon")
 
       // Add label
-      const {title: groupTitle} = getGroupSpec(item.group)
+      const { title: groupTitle } = getGroupSpec(item.group)
       cellEl.append("span")
         .text(groupTitle)
         .attr("class", "group-label")
@@ -104,7 +106,7 @@ export function renderGraphTable(dataset, settings) {
         settings.groupState[item.group].expanded = expanded;
         getTimeRangeSrv().onExpandGroup(item.group, expanded);
 
-        probeRows.each(function(){
+        probeRows.each(function () {
           let rowEl = d3.select(this)
           let probeId = rowEl.attr('data-probe-id');
           if (probeId === "__total__") {
@@ -120,8 +122,8 @@ export function renderGraphTable(dataset, settings) {
         iconEl.classed("fa-caret-right", !settings.groupState[item.group].expanded);
 
         // trigger event to re-render graph
-        if (!settings.groupState[item.group]["probe-data-loaded"]){
-          getEventsSrv().fireEvent("UpdateGroupProbes", {group: item.group})
+        if (!settings.groupState[item.group]["probe-data-loaded"]) {
+          getEventsSrv().fireEvent("UpdateGroupProbes", { group: item.group })
         }
       });
 
@@ -131,7 +133,7 @@ export function renderGraphTable(dataset, settings) {
       rowEl.classed(`row-probe`, true);
 
       // Add label
-      const {title: probeTitle} = getProbeSpec(item.group, item.probe)
+      const { title: probeTitle } = getProbeSpec(item.group, item.probe)
       cellEl.append("span")
         .text(probeTitle)
         .attr("class", "probe-label")
@@ -141,10 +143,10 @@ export function renderGraphTable(dataset, settings) {
       .attr("class", "group-probe-info")
 
     ReactDOM.render(
-      <Tooltip content={<GroupProbeTooltip groupName={item.group} probeName={item.probe}/>} placement="right-start">
+      <Tooltip content={<GroupProbeTooltip groupName={item.group} probeName={item.probe} />} placement="right-start">
         <Icon name="fa-info-circle" className="group-probe-info" />
       </Tooltip>
-        ,
+      ,
       infoEl.node()
     )
   });
@@ -152,28 +154,28 @@ export function renderGraphTable(dataset, settings) {
 
   // Each row has empty cell to define initial height for empty rows
   groupsEnter.append("div")
-      //.text("Data for group '" + group + "'")
-      .attr("class", "graph-cell cell-data")
-      .append("svg")
-      .attr("width", pieBoxWidth)
-      .attr("height", pieBoxWidth)
+    //.text("Data for group '" + group + "'")
+    .attr("class", "graph-cell cell-data")
+    .append("svg")
+    .attr("width", pieBoxWidth)
+    .attr("height", pieBoxWidth)
 
 }
 
-export function updateTicks(dataset, settings) {
+export function updateTicks(dataset: Dataset, settings: LegacySettings) {
   let root = d3.select("#graph div.top-ticks")
   // Always recreate top ticks
   root.selectAll("div.top-tick").remove();
 
-  calculateTopTicks(dataset, settings);
+  const topTicks = calculateTopTicks(dataset, settings);
 
-  topTicks.forEach(function(tick, i) {
+  topTicks.forEach((tick) =>
     root.append("div")
       .attr("data-timeslot", tick.ts)
       .attr("class", "top-tick")
       .append("span")
-      .text(tick.text);
-  });
+      .text(tick.text)
+  );
 
   // 'Total' label
   root.append("div")
@@ -182,21 +184,23 @@ export function updateTicks(dataset, settings) {
     .text("Total");
 }
 
-export function renderGroupData(dataset, settings, group, data) {
+export function renderGroupData(_: Dataset, settings: any, group: string, data: StatusRange) {
   let rowEl = d3.select(`#graph div[data-group-id=${group}][data-probe-id="__total__"]`);
   rowEl.selectAll(".cell-data").remove();
   if (!data["statuses"] || !data["statuses"][group]["__total__"]) {
     console.log("Bad group data", data);
   }
-  data["statuses"][group]["__total__"].forEach(function(item, i) {
+  data["statuses"][group]["__total__"].forEach(function (item, i) {
     let cell = rowEl.append("div")
       //.text("Data for group '" + group + "'")
       .attr("class", "graph-cell cell-data");
 
+    const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ")
+
     let svg = cell.append("svg")
-        .attr("width", pieBoxWidth)
-        .attr("height", pieBoxWidth)
-        .attr("viewBox", [0, 0, pieBoxWidth, pieBoxWidth]);
+      .attr("width", pieBoxWidth)
+      .attr("height", pieBoxWidth)
+      .attr("viewBox", viewBox);
 
     drawOnePie(svg, settings, item, "group")
   })
@@ -205,13 +209,14 @@ export function renderGroupData(dataset, settings, group, data) {
 
   // add empty boxes into probe rows to prevent stripe background on expand
   let rows = d3.selectAll(`#graph div[data-group-id=${group}].graph-row`);
-  rows.each(function(item){
+  rows.each(function (item: any) {
     if (item.probe === "__total__") {
       return
     }
+
     let rowEl = d3.select(this);
     rowEl.selectAll(".cell-data").remove();
-    for (let i = 0; i<piesCount; i ++) {
+    for (let i = 0; i < piesCount; i++) {
       rowEl.append("div")
         .attr("class", "graph-cell cell-data")
         .append("svg")
@@ -222,7 +227,7 @@ export function renderGroupData(dataset, settings, group, data) {
   })
 }
 
-export function renderGroupProbesData(settings, group, data) {
+export function renderGroupProbesData(settings: LegacySettings, group: string, data: StatusRange) {
   let root = d3.select("#graph");
 
   let statuses = data["statuses"]
@@ -239,21 +244,23 @@ export function renderGroupProbesData(settings, group, data) {
       rowEl.selectAll(".cell-data").remove();
 
       let cellCount = probes[probe].length;
-      probes[probe].forEach(function(item, i) {
-        let cell = rowEl.append("div")
+      probes[probe].forEach(function (item, i) {
+        const cell = rowEl.append("div")
           .attr("class", "graph-cell cell-data");
 
-        if (i === 0 ) {
+        if (i === 0) {
           cell.classed("first-in-row", true);
         }
-        if (i === cellCount-1 ) {
+        if (i === cellCount - 1) {
           cell.classed("last-in-row", true);
         }
 
-        let svg = cell.append("svg")
+        const viewBox = [0, 0, pieBoxWidth, pieBoxWidth].join(" ")
+
+        const svg = cell.append("svg")
           .attr("width", pieBoxWidth)
           .attr("height", pieBoxWidth)
-          .attr("viewBox", [0, 0, pieBoxWidth, pieBoxWidth]);
+          .attr("viewBox", viewBox);
 
         drawOnePie(svg, settings, item, "probe")
       })
@@ -265,58 +272,68 @@ export function renderGroupProbesData(settings, group, data) {
 const pie = d3.pie()
   .padAngle(0)
   .sort(null)
-  .value(d => d.value);
+  .value(x => x.valueOf());
 
 const arcs = {
-  "group": function(){
+  "group": function () {
     const radius = pieBoxWidth / 2;
     return d3.arc().innerRadius(0).outerRadius(radius - 1);
   }(),
-  "probe": function(){
-    const radius = pieBoxWidth*0.8 / 2;
+  "probe": function () {
+    const radius = pieBoxWidth * 0.8 / 2;
     return d3.arc().innerRadius(0).outerRadius(radius - 1);
   }(),
 };
 
-const toPieData = function(d) {
-  return ["up", "down", "muted", "unknown", "nodata"].map(n => {
-    return {"name": n, "value": d[n]};
-  });
-};
 
-const drawOnePie = function(root, settings, data, pieType) {
-  let pieRoot = root.append("g")
-    .attr("class","statusPie")
+function toPieData(d: Episode): Array<{ name: string, valueOf(): number }> {
+  const fields = ["up", "down", "muted", "unknown", "nodata"]
+  const listedTimers: Array<{ name: string, valueOf(): number }> = []
+
+  for (const [field, value] of Object.entries(d)) {
+    if (!fields.includes(field)) {
+      continue
+    }
+    listedTimers.push({
+      name: field,
+      valueOf: () => +(value),
+    });
+  }
+
+  return listedTimers
+}
+
+
+function drawOnePie(root: any, settings: LegacySettings, episode: Episode, pieType: "group" | "probe") {
+  const halfWidth = pieBoxWidth / 2
+
+  const pieRoot = root.append("g")
+    .attr("class", "statusPie")
     .attr("height", pieBoxWidth)
     .attr("width", pieBoxWidth)
-    .attr("transform",function(d,i) {
-      return `translate(${pieBoxWidth/2},${pieBoxWidth/2})`;
-    })
+    .attr("transform", () => `translate(${halfWidth},${halfWidth})`)
 
   pieRoot.selectAll("path")
-    .data(pie(toPieData(data)))
+    .data(pie(toPieData(episode)))
     .join("path")
-    .attr("class", d => "pie-seg-"+d.data.name)
+    .attr("class", (d: { data: { name: string; }; }) => "pie-seg-" + d.data.name)
     .attr("d", arcs[pieType])
     .append("title")
-    .text(d => `${d.data.name}: ${d.data.value.toLocaleString()}`);
+    .text((d: { data: { name: string; valueOf(): number }; }) => `${d.data.name}: ${d.data.valueOf().toLocaleString()}`);
 
   // Add text with availability percents
   pieRoot.append("text")
-    .text(availabilityPercent(+data.up, +data.down, +data.muted, 2))
+    .text(availabilityPercent(+episode.up, +episode.down, +episode.muted, 2))
     .attr("class", `pie-text-${pieType}`);
 
   // Add a transparent rectangle to use
   // as a bounding box for click events and for tooltip hover events.
-  let boundingRectRoot = pieRoot.append("g")
+  const boundingRectRoot = pieRoot.append("g")
+
+  const onClick = () => getTimeRangeSrv().drillDownStep(+episode.ts)
 
   ReactDOM.render(
-    <PieBoundingRect
-      width={pieBoxWidth}
-      onClick={() => {
-        getTimeRangeSrv().drillDownStep(+data.ts)
-      }}
-      data={data} />,
+    <PieBoundingRect size={pieBoxWidth} episode={episode} onClick={onClick}/>,
     boundingRectRoot.node()
   )
 }

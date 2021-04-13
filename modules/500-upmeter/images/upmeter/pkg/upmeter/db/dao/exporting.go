@@ -55,7 +55,7 @@ func newSet(elems ...string) set {
 
 type ExportEpisodeEntity struct {
 	// Episode, just an episode
-	Episode check.DowntimeEpisode
+	Episode check.Episode
 	// SyncID is the id of a sync target for which this episodes is here
 	SyncID string
 	// Origins are unique sources IDs that have committed to the episode
@@ -75,16 +75,16 @@ var (
 
 const sqlCreateExportTable = `
 CREATE TABLE IF NOT EXISTS export_episodes (
-        sync_id       TEXT    NOT NULL,
-	timeslot      INTEGER NOT NULL,
-	group_name    TEXT    NOT NULL,
-	probe_name    TEXT    NOT NULL,
-	success       INTEGER NOT NULL,
-	fail          INTEGER NOT NULL,
-	unknown       INTEGER NOT NULL,
-	nodata        INTEGER NOT NULL,
-	origins       TEXT    NOT NULL,
-	origins_count INTEGER NOT NULL
+        sync_id         TEXT    NOT NULL,
+	timeslot        INTEGER NOT NULL,
+	group_name      TEXT    NOT NULL,
+	probe_name      TEXT    NOT NULL,
+	nano_up         INTEGER NOT NULL,
+	nano_down       INTEGER NOT NULL,
+	nano_unknown    INTEGER NOT NULL,
+	nano_unmeasured INTEGER NOT NULL,
+	origins         TEXT    NOT NULL,
+	origins_count   INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS sync_id_sorted ON export_episodes (sync_id, timeslot, group_name, probe_name);
 `
@@ -124,7 +124,7 @@ func (dao *ExportEpisodesDAO) Save(entities []ExportEpisodeEntity) error {
 func getExportEpisode(ctx *dbcontext.DbContext, filter ExportEpisodeEntity) (*ExportEpisodeEntity, error) {
 	const query = `
 	SELECT  sync_id, timeslot, group_name, probe_name,
-		success, fail, unknown, nodata,
+		nano_up, nano_down, nano_unknown, nano_unmeasured,
 		origins
 	FROM  export_episodes
 	WHERE   sync_id    = @sync_id    AND
@@ -136,7 +136,7 @@ func getExportEpisode(ctx *dbcontext.DbContext, filter ExportEpisodeEntity) (*Ex
 	rows, err := ctx.StmtRunner().Query(
 		query,
 		sql.Named("sync_id", filter.SyncID),
-		sql.Named("timeslot", filter.Episode.TimeSlot),
+		sql.Named("timeslot", filter.Episode.TimeSlot.Unix()),
 		sql.Named("group_name", filter.Episode.ProbeRef.Group),
 		sql.Named("probe_name", filter.Episode.ProbeRef.Probe),
 	)
@@ -164,22 +164,23 @@ func parseExportEpisodeEntities(rows *sql.Rows) ([]ExportEpisodeEntity, error) {
 			entity  ExportEpisodeEntity
 			origins string
 		)
-
+		var slotUnix int64
 		err := rows.Scan(
 			&entity.SyncID,
-			&entity.Episode.TimeSlot,
+			&slotUnix,
 			&entity.Episode.ProbeRef.Group,
 			&entity.Episode.ProbeRef.Probe,
-			&entity.Episode.SuccessSeconds,
-			&entity.Episode.FailSeconds,
-			&entity.Episode.UnknownSeconds,
-			&entity.Episode.NoDataSeconds,
+			&entity.Episode.Up,
+			&entity.Episode.Down,
+			&entity.Episode.Unknown,
+			&entity.Episode.NoData,
 			&origins,
 		)
 
 		if err != nil {
 			return nil, err
 		}
+		entity.Episode.TimeSlot = time.Unix(slotUnix, 0)
 		entity.Origins = parseSet(origins)
 
 		entities = append(entities, entity)
@@ -209,33 +210,33 @@ func saveExportEpisode(tx *dbcontext.DbContext, entity ExportEpisodeEntity) erro
 	const query = `
 	INSERT INTO export_episodes
 		(sync_id, timeslot, group_name, probe_name,
-		 success, fail, unknown, nodata,  
+		 nano_up, nano_down, nano_unknown, nano_unmeasured,  
 		 origins, origins_count) 
 	VALUES                      
 		(@sync_id, @timeslot, @group_name, @probe_name, 
-		 @success, @fail, @unknown, @nodata, 
+		 @nano_up, @nano_down, @nano_unknown, @nano_unmeasured, 
 		 @origins, @origins_count)
 	ON CONFLICT                 
 		(sync_id, timeslot, group_name, probe_name) 
 	DO UPDATE SET 
-		success       = @success,
-		fail          = @fail,
-		unknown       = @unknown,
-		nodata        = @nodata,
-		origins       = @origins,
-		origins_count = @origins_count;
+		nano_up         = @nano_up,
+		nano_down       = @nano_down,
+		nano_unknown    = @nano_unknown,
+		nano_unmeasured = @nano_unmeasured,
+		origins         = @origins,
+		origins_count   = @origins_count;
 	`
 
 	_, err := tx.StmtRunner().Exec(
 		query,
 		sql.Named("sync_id", entity.SyncID),
-		sql.Named("timeslot", entity.Episode.TimeSlot),
+		sql.Named("timeslot", entity.Episode.TimeSlot.Unix()),
 		sql.Named("group_name", entity.Episode.ProbeRef.Group),
 		sql.Named("probe_name", entity.Episode.ProbeRef.Probe),
-		sql.Named("success", entity.Episode.SuccessSeconds),
-		sql.Named("fail", entity.Episode.FailSeconds),
-		sql.Named("unknown", entity.Episode.UnknownSeconds),
-		sql.Named("nodata", entity.Episode.NoDataSeconds),
+		sql.Named("nano_up", entity.Episode.Up),
+		sql.Named("nano_down", entity.Episode.Down),
+		sql.Named("nano_unknown", entity.Episode.Unknown),
+		sql.Named("nano_unmeasured", entity.Episode.NoData),
 		sql.Named("origins", entity.Origins.String()),
 		sql.Named("origins_count", entity.Origins.Size()),
 	)
@@ -352,6 +353,7 @@ func getEarliestTimeSlot(ctx *dbcontext.DbContext, syncID string, originsCount i
 		}
 	}
 
+	// Slots are numbers there because this is not public interface
 	minSlot := util.Min(fulfilledSlot, commonSlot)
 	return minSlot, nil
 }
@@ -380,6 +382,8 @@ func getEarliestTimeSlotByOriginsCount(ctx *dbcontext.DbContext, syncID string, 
 		return 0, ErrNotFound
 	}
 
+	// Slot is kept as number here, because this is not a high-level interface function, and we are likely
+	// going to reuse the int64 value
 	var slot int64
 	err = rows.Scan(&slot)
 	if err != nil {
@@ -420,10 +424,12 @@ func getEarliestCommonTimeSlot(ctx *dbcontext.DbContext, syncID string) (int64, 
 	return slot, nil
 }
 
+// getExportEpisodesBySyncIDAndSlot finds the episode list by slot and sync ID. The slot is number here for convenience,
+// because it is not public interface.
 func getExportEpisodesBySyncIDAndSlot(ctx *dbcontext.DbContext, syncID string, slot int64) ([]ExportEpisodeEntity, error) {
 	const query = `
 	SELECT  sync_id, timeslot, group_name, probe_name, 
-		success, fail, unknown, nodata, 
+		nano_up, nano_down, nano_unknown, nano_unmeasured, 
 		origins 
 	FROM  export_episodes 
 	WHERE   sync_id  = @sync_id  AND 

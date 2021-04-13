@@ -21,7 +21,7 @@ type UpmeterClient struct {
 
 func NewUpmeterClient(ip, port string, timeout time.Duration) *UpmeterClient {
 	schema := "https"
-	if app.UpmeterTls == "false" {
+	if app.Tls == "false" {
 		schema = "http"
 	}
 
@@ -67,7 +67,7 @@ func NewHttpClient(timeout time.Duration) *http.Client {
 }
 
 func createSecureHttpClient(timeout time.Duration) (*http.Client, error) {
-	if app.UpmeterTls == "false" {
+	if app.Tls == "false" {
 		return nil, fmt.Errorf("TLS is off by client")
 	}
 
@@ -92,7 +92,7 @@ func createSecureHttpClient(timeout time.Duration) (*http.Client, error) {
 }
 
 func createHttpTransport() (*http.Transport, error) {
-	if app.UpmeterCaPath == "" {
+	if app.CaPath == "" {
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
@@ -102,9 +102,9 @@ func createHttpTransport() (*http.Transport, error) {
 	}
 
 	// Create transport with tls and CA certificate checking
-	caCertBytes, err := ioutil.ReadFile(app.UpmeterCaPath)
+	caCertBytes, err := ioutil.ReadFile(app.CaPath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", app.UpmeterCaPath, err)
+		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", app.CaPath, err)
 	}
 
 	caCertPool := x509.NewCertPool()

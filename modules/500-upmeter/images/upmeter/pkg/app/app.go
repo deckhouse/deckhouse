@@ -4,24 +4,36 @@ import (
 	"os"
 )
 
-var Namespace = "d8-upmeter"
-var UpmeterHost = "localhost"
-var UpmeterPort = "8091"
-var UpmeterListenHost = "0.0.0.0"
-var UpmeterListenPort = "8091"
-var DowntimeDbPath = "downtime.db.sqlite"
-var UpmeterCaPath = ""
-var UpmeterTls = "false"
+var (
+	Namespace = "d8-upmeter"
+
+	ServiceHost = "localhost"
+	ServicePort = "8091"
+
+	ListenHost = "0.0.0.0"
+	ListenPort = "8091"
+
+	DatabasePath           = "downtime.db.sqlite"
+	DatabaseMigrationsPath = "."
+
+	CaPath = ""
+	Tls    = "false"
+)
 
 func InitAppEnv() {
 	Namespace = StringFromEnv("NAMESPACE", Namespace)
-	UpmeterHost = StringFromEnv("UPMETER_SERVICE_HOST", UpmeterHost)
-	UpmeterPort = StringFromEnv("UPMETER_SERVICE_PORT", UpmeterPort)
-	UpmeterListenHost = StringFromEnv("UPMETER_LISTEN_HOST", UpmeterListenHost)
-	UpmeterListenPort = StringFromEnv("UPMETER_LISTEN_PORT", UpmeterListenPort)
-	DowntimeDbPath = StringFromEnv("UPMETER_DB_PATH", DowntimeDbPath)
-	UpmeterCaPath = StringFromEnv("UPMETER_CA_PATH", UpmeterCaPath)
-	UpmeterTls = StringFromEnv("UPMETER_TLS", UpmeterTls)
+
+	ServiceHost = StringFromEnv("UPMETER_SERVICE_HOST", ServiceHost)
+	ServicePort = StringFromEnv("UPMETER_SERVICE_PORT", ServicePort)
+
+	ListenHost = StringFromEnv("UPMETER_LISTEN_HOST", ListenHost)
+	ListenPort = StringFromEnv("UPMETER_LISTEN_PORT", ListenPort)
+
+	DatabasePath = StringFromEnv("UPMETER_DB_PATH", DatabasePath)
+	DatabaseMigrationsPath = StringFromEnv("UPMETER_DB_MIGRATIONS_PATH", DatabaseMigrationsPath)
+
+	CaPath = StringFromEnv("UPMETER_CA_PATH", CaPath)
+	Tls = StringFromEnv("UPMETER_TLS", Tls)
 }
 
 func StringFromEnv(envName string, defValue string) string {

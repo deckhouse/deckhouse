@@ -44,9 +44,10 @@ func NewDefaultAgent() *Agent {
 		log.Infof("Register calculated probe %s", calc.ProbeRef().Id())
 	}
 
-	timeout := 10 * time.Second
-	a.upmeterClient = sender.NewUpmeterClient(app.UpmeterHost, app.UpmeterPort, timeout)
-	ch := make(chan []check.DowntimeEpisode)
+	clientTimeout := 10 * time.Second
+	a.upmeterClient = sender.NewUpmeterClient(app.ServiceHost, app.ServicePort, clientTimeout)
+
+	ch := make(chan []check.Episode)
 	a.sender = sender.New(a.upmeterClient, ch)
 	a.executor = executor.New(probeManager, ch)
 

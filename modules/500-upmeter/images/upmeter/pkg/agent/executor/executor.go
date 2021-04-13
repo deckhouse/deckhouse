@@ -31,10 +31,10 @@ type ProbeExecutor struct {
 	results map[string]*check.ProbeResult
 
 	// to send a bunch of episodes further
-	send chan []check.DowntimeEpisode
+	send chan []check.Episode
 }
 
-func New(mgr *manager.Manager, send chan []check.DowntimeEpisode) *ProbeExecutor {
+func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
 	p := &ProbeExecutor{
 		recv:    make(chan check.Result),
 		series:  make(map[string]*check.StatusSeries),
@@ -171,7 +171,7 @@ func (e *ProbeExecutor) scrape() error {
 
 // export copies scraped results and sends them to sender along as evaluates computed probes.
 func (e *ProbeExecutor) export(start time.Time) error {
-	var episodes []check.DowntimeEpisode
+	var episodes []check.Episode
 
 	// collect episodes for calculated probes
 	for _, calc := range e.probeManager.Calculators() {
@@ -179,14 +179,14 @@ func (e *ProbeExecutor) export(start time.Time) error {
 		if err != nil {
 			return fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
 		}
-		ep := check.NewDowntimeEpisode(calc.ProbeRef(), start, exportPeriod, series.Stats())
+		ep := check.NewEpisode(calc.ProbeRef(), start, scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
 	}
 
 	// collect episodes for real probes
 	for id, probeResult := range e.results {
 		series := e.series[id]
-		ep := check.NewDowntimeEpisode(probeResult.ProbeRef(), start, exportPeriod, series.Stats())
+		ep := check.NewEpisode(probeResult.ProbeRef(), start, scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
 		series.Clean()
 	}

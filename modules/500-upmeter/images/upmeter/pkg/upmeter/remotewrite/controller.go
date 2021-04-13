@@ -15,7 +15,7 @@ import (
 )
 
 type Exporter interface {
-	Export(origin string, episodes []*check.DowntimeEpisode, slotSize int64) error
+	Export(origin string, episodes []*check.Episode, slotSize time.Duration) error
 }
 
 // ControllerConfig configures and creates a Controller
@@ -99,7 +99,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) Export(origin string, episodes []*check.DowntimeEpisode, slotSize int64) error {
+func (c *Controller) Export(origin string, episodes []*check.Episode, slotSize time.Duration) error {
 	return c.syncers.AddEpisodes(origin, episodes, slotSize)
 }
 

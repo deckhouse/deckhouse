@@ -38,7 +38,7 @@ func (c config) Probe() *Probe {
 	return &Probe{ref, c.mergeIds}
 }
 
-// Probe combines check.DowntimeEpisode for included probe IDs.
+// Probe combines check.Episode for included probe IDs.
 type Probe struct {
 	ref      *check.ProbeRef
 	mergeIds []string

@@ -131,38 +131,38 @@ func (s *syncer) export() error {
 }
 
 func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
-	var slot time.Time
+	var timestamp time.Time
 
 	episodes, err := s.storage.Get(s.syncID)
 	if err == dao.ErrNotFound {
-		return nil, slot, ErrSkip
+		return nil, timestamp, ErrSkip
 	}
 	if err != nil {
-		return nil, slot, err
+		return nil, timestamp, err
 	}
 
 	// Skip incomplete slots. Send only data from two slots ago and earlier.
-	//  - Current slot is incomplete.
-	//  - One slot ago is also incomplete, because the last 30s are sent after it finishes.
+	//  - Current timestamp is incomplete.
+	//  - One timestamp ago is also incomplete, because the last 30s are sent after it finishes.
 	//  - Two slots ago should be complete.
-	slot = time.Unix(episodes[0].TimeSlot, 0)
+	timestamp = episodes[0].TimeSlot
 	twoSlotsAgo := time.Now().Truncate(s.slotSize).Add(-2 * s.slotSize)
-	if slot.After(twoSlotsAgo) {
-		return nil, slot, ErrSkip
+	if timestamp.After(twoSlotsAgo) {
+		return nil, timestamp, ErrSkip
 	}
 	s.logger.Debugf("got %d episodes", len(episodes))
 
-	timeseries := convEpisodes2Timeseries(slot, episodes, s.labels)
+	timeseries := convEpisodes2Timeseries(timestamp, episodes, s.labels)
 
-	return timeseries, slot, nil
+	return timeseries, timestamp, nil
 }
 
-func (s *syncer) Add(origin string, episodes []*check.DowntimeEpisode) error {
+func (s *syncer) Add(origin string, episodes []*check.Episode) error {
 	return s.storage.Add(s.syncID, origin, episodes)
 }
 
-func (s *syncer) slotSizeSeconds() int64 {
-	return int64(s.slotSize.Seconds())
+func (s *syncer) slotSizeSeconds() time.Duration {
+	return s.slotSize
 }
 
 // exportingConfig is the configuration of metrics exporting
@@ -290,7 +290,7 @@ func (sc *syncers) delete(name string) {
 	delete(sc.syncers, name)
 }
 
-func (sc *syncers) AddEpisodes(origin string, episodes []*check.DowntimeEpisode, slotSize int64) error {
+func (sc *syncers) AddEpisodes(origin string, episodes []*check.Episode, slotSize time.Duration) error {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
