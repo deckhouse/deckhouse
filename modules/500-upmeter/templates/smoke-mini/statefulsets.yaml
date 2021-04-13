@@ -71,6 +71,7 @@ spec:
         - name: http
           containerPort: 8080
           protocol: TCP
+{{- if hasKey $sts "podSpecVersion" }}
 {{- if eq $sts.podSpecVersion "v3" }}
         readinessProbe:
           httpGet:
@@ -78,6 +79,7 @@ spec:
             path: /ready
           initialDelaySeconds: 0
           periodSeconds: 2
+{{- end }}
 {{- end }}
         env:
         - name: SMOKE_MINI_STS_LIST
