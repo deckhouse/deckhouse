@@ -55,6 +55,7 @@ function __main__() {
   output_metric "flant_pricing_plan_is_bought_as_bundle" "$FP_PLAN_IS_BOUGHT_AS_BUNDLE"
   output_metric "flant_pricing_do_not_charge_for_rock_solid" "$FP_DO_NOT_CHARGE_FOR_ROCK_SOLID"
   output_metric "flant_pricing_contacts" "$FP_CONTACTS"
+  output_metric "flant_pricing_auxiliary_cluster" "$FP_AUXILIARY_CLUSTER"
 
   if [[ "$FP_KUBEALL_TEAM" != "" && "$FP_KUBEALL_HOST" != "" ]]; then
     echo '
