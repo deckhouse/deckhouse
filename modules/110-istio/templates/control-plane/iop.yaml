@@ -96,7 +96,7 @@ spec:
   {{- $include_ip_ranges = append $include_ip_ranges "169.254.40.20/32" }}
   {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.podSubnet }}
   {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.serviceSubnet }}
-  {{- $include_ip_ranges = concat $.Values.istio.sidecar.includeOutboundIPRanges $include_ip_ranges }}
+  {{- $include_ip_ranges = concat ($.Values.istio.sidecar.includeOutboundIPRanges | default list) $include_ip_ranges }}
         includeIPRanges:      "{{ $include_ip_ranges | join "," }}"
         excludeIPRanges:      "{{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," }}"
         excludeOutboundPorts: "{{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," }}"
