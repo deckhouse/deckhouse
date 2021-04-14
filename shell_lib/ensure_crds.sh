@@ -3,15 +3,7 @@
 function common_hooks::https::ensure_crds::config() {
   cat << EOF
     configVersion: v1
-    kubernetes:
-    - name: crds
-      group: main
-      apiVersion: apiextensions.k8s.io/v1
-      kind: CustomResourceDefinition
-      keepFullObjectsInMemory: false
-      executeHookOnEvent: []
-      jqFilter: '.metadata.name'
-
+    onStartup: 10
 EOF
 }
 
@@ -34,12 +26,15 @@ function common_hooks::https::ensure_crds::main() {
         )
         else . end)')
 
+  cluster_crds="$(kubectl get crds -o json | jq '.items[].metadata.name')"
+
   for crd in "${crds_json[@]}"; do
     crd_name="$(jq -er '.metadata.name' <<< "$crd")"
 
     echo "$crd_name"
-    context::jq --arg name "$crd_name" '.snapshots.crds[].filterResult | select(contains($name))'
-    if context::jq -e --arg name "$crd_name" '.snapshots.crds[].filterResult | select(contains($name))' >/dev/null; then
+    jq --arg name "$crd_name" 'select(contains($name))' <<< "$cluster_crds"
+
+    if jq -e --arg name "$crd_name" 'select(contains($name))' <<< "$cluster_crds" >/dev/null; then
       apiVersion="$(jq -er '.apiVersion' <<< "$crd")"
       kubernetes::merge_patch "" "$apiVersion" "customresourcedefinitions" "$crd_name" <<< "$(jq -er '{"spec": .spec}' <<< "$crd")"
     else
