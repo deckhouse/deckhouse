@@ -20,18 +20,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:              "Endpoints",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"default"}}},
 			NameSelector:      &types.NameSelector{MatchNames: []string{"kubernetes"}},
-			Filterable:        &DiscoverAPIEPHook{},
+			Filterable:        &KubernetesAPIEndpoints{},
 		},
 	},
-}, discoveryAPIHandler)
+}, discoverAPIEndpointsHandler)
 
-// DiscoverAPIEPHook discovers kube api endpoints
-type DiscoverAPIEPHook struct {
+// KubernetesAPIEndpoints discovers kube api endpoints
+type KubernetesAPIEndpoints struct {
 	HostPort []string
 }
 
 // ApplyFilter filter like jqFilter: '[.subsets[] | "\(.addresses[].ip):\(.ports[].port)"]'
-func (mh DiscoverAPIEPHook) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func (mh KubernetesAPIEndpoints) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	endpoint := &v1.Endpoints{}
 	err := go_hook.ConvertUnstructured(obj, endpoint)
 	if err != nil {
@@ -50,17 +50,24 @@ func (mh DiscoverAPIEPHook) ApplyFilter(obj *unstructured.Unstructured) (go_hook
 	return &mh, nil
 }
 
-func discoveryAPIHandler(input *go_hook.HookInput) error {
+func discoverAPIEndpointsHandler(input *go_hook.HookInput) error {
 	ep, ok := input.Snapshots["kube_api_ep"]
 	if !ok {
 		return errors.New("no endpoints snapshot")
 	}
 
 	if len(ep) == 0 {
+		input.LogEntry.Error("kubernetes endpoints not found")
 		return nil
 	}
 
-	fpp := ep[0].(*DiscoverAPIEPHook)
+	fpp := ep[0].(*KubernetesAPIEndpoints)
+
+	if len(fpp.HostPort) == 0 {
+		return errors.New("no kubernetes apiserver endpoints host:port specified")
+	}
+
+	input.LogEntry.Infof("cluster master addresses: %v", fpp.HostPort)
 
 	input.Values.Set("kubeProxy.internal.clusterMasterAddresses", fpp.HostPort)
 
