@@ -15,9 +15,9 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="features/core.html"><h3 class="title card-benefits__title title--subtitle">Подсистема core</h3></a>
+            <a href="features/core.html"><h3 class="title card-benefits__title title--subtitle">The core subsystem</h3></a>
           <div class="text card-benefits__text">
-            <p>Ядро Deckhouse. Обеспечивает базовый функционал и управляет политикой обновления.</p>
+            <p>The core of Deckhouse. Provides basic functionality and manages the update policy.</p>
             <p class="card-benefits__faq"><a href="features/core-faq.html">FAQ</a></p>
 <!--            <ul class="main-page__usercases-list">-->
 <!--            <li>Как автоматически менять канал обновлений</li>-->
@@ -36,9 +36,9 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="features/auth.html"><h3 class="title card-benefits__title title--subtitle">Подсистема auth</h3></a>
+            <a href="features/auth.html"><h3 class="title card-benefits__title title--subtitle">The auth subsystem</h3></a>
           <div class="text card-benefits__text">
-            <p>Безопасное совместное использование кластера. Интеграция с внешними каталогами. Управление пользователями.</p>
+            <p>Secure cluster using. Integration with external directories. User management.</p>
 <!--            <p class="card-benefits__faq"><a href="features/auth-faq.html">FAQ</a></p>-->
 <!--            <ul class="main-page__usercases-list">-->
 <!--            <li>Настройка аутентификации через мой GitLab/Ldap/BitBucket/ActiveDirectory/ другой провайдер</li>-->
@@ -60,10 +60,10 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="features/candi.html"><h3 class="title card-benefits__title title--subtitle">Подсистема CandI</h3></a>
+            <a href="features/candi.html"><h3 class="title card-benefits__title title--subtitle">The CandI subsystem</h3></a>
           </div>
           <div class="text card-benefits__text">
-            <p>Управляет control-plane Kubernetes, настраивает узлы. Дает готовый к работе, актуальный кластер на любой инфраструктуре.</p>
+            <p>Manages Kubernetes control-plane and configures nodes. Provides a ready-to-use, up-to-date cluster on any infrastructure.</p>
 <!--            <p class="card-benefits__faq"><a href="features/candi-faq.html">FAQ</a></p>-->
           </div>
 <!--                       <ul class="main-page__usercases-list"> -->
@@ -83,9 +83,9 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="features/marm.html"><h3 class="title card-benefits__title title--subtitle">Подсистема marm</h3></a>
+            <a href="features/marm.html"><h3 class="title card-benefits__title title--subtitle">The marm subsystem</h3></a>
           <div class="text card-benefits__text">
-            <p>Настраиваемый мониторинг на базе Prometheus/Grafana с готовыми шаблонами для популярных приложений. Масштабирование с учетом мониторинга.</p>
+            <p>Customizable monitoring based on Prometheus/Grafana with ready-made templates for popular applications. Scaling with monitoring in mind.</p>
 <!--            <p class="card-benefits__faq"><a href="features/marm-faq.html">FAQ</a></p>-->
           </div>
 <!--            <ul class="main-page__usercases-list">-->
@@ -114,9 +114,9 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="modules/101-cert-manager/"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Must Have Collection</h3></a>
+            <a href="modules/101-cert-manager/"><h3 class="title card-benefits__title title--subtitle">Must Have module collection</h3></a>
           <div class="text card-benefits__text">
-            <p>Устанавливает Dashboard, Ingress на базе Nginx. Управляет SSL-сертификатами.</p>
+            <p>Installs Dashboard and Nginx-based Ingress. Manages SSL certificates.</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
 <!--            <ul class="main-page__usercases-list">-->
 <!--            <li>Как выдать выдать админские права в Dashboard.</li>-->
@@ -137,9 +137,9 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-              <a href="modules/050-network-policy-engine/"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Extended Networking Collection</h3></a>
+              <a href="modules/050-network-policy-engine/"><h3 class="title card-benefits__title title--subtitle">Extended Networking module collection</h3></a>
           <div class="text card-benefits__text">
-            <p>Доступ в кластер через VPN, сетевые политики доступа, ускорение работы с DNS (скоро еще и Istio).</p>
+            <p>Access to a cluster via VPN, network access policies, DNS booster, and Istio.</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
 <!--            <ul class="main-page__usercases-list">-->
 <!--            <li>Настройка доступа в кластер по VPN.</li>-->
@@ -160,9 +160,9 @@ toc: false
             </svg>
           </div>
           <div class="card-benefits__header">
-            <a href="modules/380-metallb/"><h3 class="title card-benefits__title title--subtitle">Набор модулей — Bare Metal Compatibility Collection</h3></a>
+            <a href="modules/380-metallb/"><h3 class="title card-benefits__title title--subtitle">Bare Metal Compatibility module collection</h3></a>
           <div class="text card-benefits__text">
-            <p>Балансировка в bare-metal кластерах на базе metallb и keepalived. Организация сетевого шлюза в кластере.</p>
+            <p>Balancing in bare-metal clusters based on metallb and keepalived. Cluster network gateway.</p>
 <!--            <p class="card-benefits__faq"><a href="./">FAQ</a></p>-->
 <!--            <ul class="main-page__usercases-list">-->
 <!--            <li>Как настроить плавающий IP.</li>-->

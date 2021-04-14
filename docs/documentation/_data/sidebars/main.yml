@@ -4,7 +4,7 @@ entries:
     - title:
         en: Home
         ru: Главная
-      url: /index.html
+      url: /
     - title:
         en: Overview
         ru: Общие сведения

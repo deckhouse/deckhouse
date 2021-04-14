@@ -11,7 +11,7 @@ module Jekyll
         page_depth = page_path_relative.scan(%r!/!).count - 1
         prefix = ""
         page_depth.times{ prefix = prefix + "../" }
-        prefix + path.sub(%r!^/!, "")
+        prefix + path.sub(%r!^/!, "./")
     end
 
     # get_lang_field_or_raise_error filter returns a field from argument hash
