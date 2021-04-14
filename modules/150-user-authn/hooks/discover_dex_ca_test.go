@@ -7,7 +7,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
+var _ = Describe("User Authn hooks :: discover dex ca ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"controlPlaneConfigurator":{}}, "controlPlaneConfigurator":{"enabled":true}, "https": {"mode":"CertManager"}}}`, "")
 
 	Context("With FromIngressSecret option and empty cluster", func() {

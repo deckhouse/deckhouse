@@ -11,10 +11,33 @@ var _ = Describe("User Authn hooks :: generate kubernetes dex client app secret 
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 
 	var clientAppSecret string
-
-	Context("Before helm", func() {
+	var testSecret = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-dex-client-app-secret
+  namespace: d8-user-authn
+data:
+  secret: QUJD # ABC
+`
+	Context("With secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.KubeStateSet(testSecret))
+			f.RunHook()
+		})
+
+		It("Should fill internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()).To(Equal("ABC"))
+		})
+	})
+
+	Context("With empty cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
 
@@ -25,11 +48,11 @@ var _ = Describe("User Authn hooks :: generate kubernetes dex client app secret 
 			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").Exists()).To(BeTrue())
 		})
 
-		Context("With another before helm", func() {
+		Context("With another run", func() {
 			BeforeEach(func() {
 				clientAppSecret = f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()
 
-				f.BindingContexts.Set(BeforeHelmContext)
+				f.BindingContexts.Set(f.KubeStateSet(testSecret))
 				f.RunHook()
 			})
 

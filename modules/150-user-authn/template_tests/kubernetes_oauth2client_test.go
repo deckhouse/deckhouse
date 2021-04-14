@@ -39,7 +39,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
 - name: test
   encodedName: justForTest
-  allowAccessToKubernetes: "true"
+  allowAccessToKubernetes: true
   namespace: d8-test
   credentials:
     appDexSecret: dexSecret

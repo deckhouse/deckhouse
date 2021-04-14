@@ -257,7 +257,7 @@ docker:
 ---
 image: tests
 fromImage: base-for-go
-fromCacheVersion: 2020-05-08.1
+fromCacheVersion: "20210413"
 git:
 - add: /
   to: /deckhouse
@@ -316,6 +316,7 @@ docker:
 ---
 artifact: deckhouse-controller
 fromImage: base-for-go
+fromCacheVersion: "20210413"
 git:
 - add: /deckhouse-controller
   to: /deckhouse-controller
@@ -356,6 +357,13 @@ git:
       - "**/*.go"
 - add: /modules
   to: /modules
+  includePaths:
+    - "**/*.go"
+  stageDependencies:
+    setup:
+      - "**/*.go"
+- add: /go_lib
+  to: /go_lib
   includePaths:
     - "**/*.go"
   stageDependencies:
@@ -415,7 +423,6 @@ ansible:
 ---
 image: candictl-tests
 fromImage: base-for-go
-fromCacheVersion: "1"
 git:
 - add: /candictl
   to: /candictl

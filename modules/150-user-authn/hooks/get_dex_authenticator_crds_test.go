@@ -82,7 +82,7 @@ spec:
       }
     ]
   },
-  "allowAccessToKubernetes": "",
+  "allowAccessToKubernetes": false,
   "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
   "credentials": {
     "cookieSecret": "testNext",
@@ -136,7 +136,7 @@ spec:
     "applicationIngressClassName": "nginx",
     "sendAuthorizationHeader": false
   },
-  "allowAccessToKubernetes": "true",
+  "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnmq4c2zdbonuge33bojsc2zdfpawwc5lunbsw45djmnqxi33szpzjzzeeeirsk",
   "credentials": {
     "cookieSecret": "testNext",
@@ -202,7 +202,7 @@ data:
     "applicationIngressClassName": "nginx",
     "sendAuthorizationHeader": false
   },
-  "allowAccessToKubernetes": "",
+  "allowAccessToKubernetes": false,
   "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
   "credentials": {
     "cookieSecret": "testNext",

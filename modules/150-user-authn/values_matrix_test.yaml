@@ -168,7 +168,7 @@ userAuthn:
             applicationIngressCertificateSecretName: dex-authenticator-tls
             applicationIngressClassName: nginx
             sendAuthorizationHeader: true
-          allowAccessToKubernetes: "true"
+          allowAccessToKubernetes: false
         - credentials:
             appDexSecret: plainstring
             cookieSecret: plainstring
@@ -185,4 +185,4 @@ userAuthn:
               - key: foo
                 operator: Equal
                 value: bar
-          allowAccessToKubernetes: null
+          allowAccessToKubernetes: true
