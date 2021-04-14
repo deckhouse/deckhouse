@@ -51,7 +51,7 @@ Web links test:
 .web_base_deploy: &web_base_deploy
   stage: deploy_website
   before_script:
-  - export WERF_NAMESPACE="deckhouse-${CI_ENVIRONMENT_SLUG}"
+  - export WERF_NAMESPACE=${WERF_NAMESPACE:-deckhouse-${CI_ENVIRONMENT_SLUG}}
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
   - type multiwerf && source $(multiwerf use 1.2 alpha --as-file)
@@ -92,7 +92,7 @@ Web links test:
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
     WERF_DIR: "docs/documentation"
-    WERF_RELEASE: "deckhouse-doc-$CI_COMMIT_REF_NAME"
+    WERF_RELEASE: "deckhouse-doc"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
   environment:
     name: web-test
