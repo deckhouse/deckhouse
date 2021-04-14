@@ -9,8 +9,8 @@ require (
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/fatih/color v1.9.0
 	github.com/flant/logboek v0.3.4
-	github.com/flant/shell-operator v1.0.0-beta.13
-	github.com/fsnotify/fsnotify v1.4.7
+	github.com/flant/shell-operator v1.0.0
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-openapi/spec v0.19.3
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/go-openapi/validate v0.19.7
@@ -24,6 +24,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904
+	golang.org/x/sys v0.0.0-20210414055047-fe65e336abe0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/satori/go.uuid.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.2.8
@@ -33,7 +34,7 @@ require (
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v0.17.0
 	k8s.io/klog v1.0.0
-	sigs.k8s.io/yaml v1.1.1-0.20191128155103-745ef44e09d6
+	sigs.k8s.io/yaml v1.2.0
 )
 
 // not working, need to migrate to github.com/alecthomas/kingpin in shell-operator and others

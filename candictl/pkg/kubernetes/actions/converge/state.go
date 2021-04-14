@@ -2,11 +2,12 @@ package converge
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/go-multierror"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -16,6 +17,11 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
+)
+
+var (
+	ErrNoIntermediateTerraformState = errors.New("terraform state is not found in outputs")
+	ErrNoTerraformState             = errors.New("Terraform state is not found in outputs.")
 )
 
 type NodeGroupTerraformState struct {
@@ -67,7 +73,7 @@ func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error)
 	err := retry.StartLoop("Get Cluster Terraform state from Kubernetes cluster", 5, 5, func() error {
 		clusterStateSecret, err := kubeCl.CoreV1().Secrets("d8-system").Get("d8-cluster-terraform-state", metav1.GetOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if k8errors.IsNotFound(err) {
 				// Return empty state, if there is no state in cluster. Need to skip cluster state apply in converge.
 				return nil
 			}
@@ -101,7 +107,7 @@ func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGro
 
 func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte) error {
 	if len(tfState) == 0 {
-		return fmt.Errorf("Terraform state is not found in outputs.")
+		return ErrNoTerraformState
 	}
 
 	task := actions.ManifestTask{
@@ -123,7 +129,7 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 
 func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
 	if len(tfState) == 0 {
-		return fmt.Errorf("Terraform state is not found in outputs.")
+		return ErrNoTerraformState
 	}
 
 	getTerraformStateManifest := func() interface{} {
@@ -188,7 +194,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 // no key "node-group-settings.json" with group settings.
 func SaveNodeIntermediateTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, outputs *terraform.PipelineOutputs, settings []byte) error {
 	if outputs == nil || len(outputs.TerraformState) == 0 {
-		return fmt.Errorf("terraform state is not found in outputs")
+		return ErrNoIntermediateTerraformState
 	}
 
 	task := actions.ManifestTask{
@@ -215,7 +221,7 @@ func SaveNodeIntermediateTerraformState(kubeCl *client.KubernetesClient, nodeNam
 
 func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
 	if outputs == nil || len(outputs.TerraformState) == 0 {
-		return fmt.Errorf("Terraform state is not found in outputs.")
+		return ErrNoTerraformState
 	}
 
 	task := actions.ManifestTask{
@@ -258,7 +264,7 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 // Save only terraform state, cloud-provider-discovery-data is not updated.
 func SaveClusterIntermediateTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
 	if outputs == nil || len(outputs.TerraformState) == 0 {
-		return fmt.Errorf("terraform state is not found in outputs")
+		return ErrNoIntermediateTerraformState
 	}
 
 	task := actions.ManifestTask{
@@ -296,14 +302,37 @@ func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
 	return clusterUUID, err
 }
 
+// NewClusterStateSaver returns StateSaver that saves intermediate terraform state to Secret.
+// ErrNoIntermediateTerraformState is ignored because state file may become zero-sized during
+// terraform apply.
+//
+// got FS event "/tmp/candictl/static-node-candictl.043483477.tfstate": WRITE
+// '/tmp/candictl/static-node-candictl.043483477.tfstate' stat: 6492 bytes, mode: -rw-------
+// openstack_networking_port_v2.port[0]: Creation complete after 7s [id=8e0aa9d1-07a4-4cfc-969b-96a52a8b182e]
+// openstack_compute_instance_v2.node: Creating...
+// got FS event "/tmp/candictl/static-node-candictl.043483477.tfstate": WRITE
+// '/tmp/candictl/static-node-candictl.043483477.tfstate' stat: 6492 bytes, mode: -rw-------
+// openstack_compute_instance_v2.node: Still creating... [10s elapsed]
+// got FS event "/tmp/candictl/static-node-candictl.043483477.tfstate": WRITE
+// '/tmp/candictl/static-node-candictl.043483477.tfstate' stat: 0 bytes, mode: -rw-------
+// got FS event "/tmp/candictl/static-node-candictl.043483477.tfstate": WRITE
+// '/tmp/candictl/static-node-candictl.043483477.tfstate' stat: 8840 bytes, mode: -rw-------
 func NewClusterStateSaver(kubeCl *client.KubernetesClient) *terraform.StateSaver {
 	return terraform.NewStateSaver(func(outputs *terraform.PipelineOutputs) error {
-		return SaveClusterIntermediateTerraformState(kubeCl, outputs)
+		err := SaveClusterIntermediateTerraformState(kubeCl, outputs)
+		if errors.Is(err, ErrNoIntermediateTerraformState) {
+			return nil
+		}
+		return err
 	})
 }
 
 func NewNodeStateSaver(kubeCl *client.KubernetesClient, nodeName string, nodeGroup string, nodeGroupSettings []byte) *terraform.StateSaver {
 	return terraform.NewStateSaver(func(outputs *terraform.PipelineOutputs) error {
-		return SaveNodeIntermediateTerraformState(kubeCl, nodeName, nodeGroup, outputs, nodeGroupSettings)
+		err := SaveNodeIntermediateTerraformState(kubeCl, nodeName, nodeGroup, outputs, nodeGroupSettings)
+		if errors.Is(err, ErrNoIntermediateTerraformState) {
+			return nil
+		}
+		return err
 	})
 }
