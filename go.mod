@@ -15,6 +15,7 @@ require (
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3
+	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gophercloud/gophercloud v0.12.0
@@ -26,12 +27,15 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/otiai10/copy v1.0.2
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.7.0
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/gjson v1.6.3
 	github.com/tidwall/sjson v1.1.2
 	github.com/vmware/govmomi v0.24.1
+	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
+	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
+	go.etcd.io/etcd/v3 v3.5.0-alpha.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/evanphx/json-patch.v4 v4.5.0
 	gopkg.in/yaml.v2 v2.3.0
@@ -40,6 +44,7 @@ require (
 	k8s.io/api v0.20.0
 	k8s.io/apiextensions-apiserver v0.20.0
 	k8s.io/apimachinery v0.20.0
+	k8s.io/client-go v0.20.0
 	sigs.k8s.io/yaml v1.2.0
 )
 
