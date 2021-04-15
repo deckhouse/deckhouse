@@ -88,7 +88,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 
 	outputs, err := OnlyState(s.runner)
 	if err != nil {
-		log.ErrorF("Parse intermediate state: %w\n", err)
+		log.ErrorF("Parse intermediate state: %v\n", err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 
 	err = s.saveStateFn(outputs)
 	if err != nil {
-		log.ErrorF("Save intermediate state: %w\n", err)
+		log.ErrorF("Save intermediate state: %v\n", err)
 		return
 	}
 
