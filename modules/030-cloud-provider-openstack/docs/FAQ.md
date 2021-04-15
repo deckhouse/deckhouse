@@ -1,0 +1,257 @@
+---
+title: "Сloud provider — OpenStack: FAQ"
+---
+
+## How do I set up LoadBalancer?
+
+**Note that Load Balancer must support Proxy Protocol to determine the client IP correctly.**
+
+### An example of IngressNginxController
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
+
+## How do I set up security policies on cluster nodes?
+
+There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in AWS:
+
+* Allow VMs on a different subnet to connect to cluster nodes;
+* Allow connecting to the ports of the static node so that the application can work;
+* Restrict access to external resources or other VMs in the cloud for security reasons;
+
+ДFor all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
+
+### Enabling additional security groups on static and master nodes
+
+This parameter can be set either in an existing cluster or when creating one. In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
+
+* for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
+* for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
+
+The `additionalSecurityGroups` field contains an array of strings with security group names.
+
+### Enabling additional security groups on ephemeral nodes
+
+You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](/modules/030-cloud-provider-openstack/configuration.html) module.
+
+## How do I create a hybrid cluster?
+
+A hybrid cluster combines bare-metal and openstack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
+
+1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`;
+2. Enable and [configure](configuration.html#параметры) the module.
+3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
+4. Create one or more [NodeManager](/modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
+
+**Caution!** Cloud-controller-manager synchronizes OpenStack and Kubernetes states by deleting in Kubernetes nodes that are not in OpenStack. In a hybrid cluster, such behavior does not always make sense. That is why cloud-controller-manager automatically skips Kubernetes nodes that do not have the `--cloud-provider=external` parameter (Deckhouse inserts `static://` into nodes in `.spec.providerID`, and cloud-controller-manager ignores them).
+
+### Configuration parameters
+
+> **Note (!)** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `OpenStackInstanceClass` parameters are changed. You can learn more in the [node-manager](/modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration). module's documentation.
+To authenticate using the `user-authn` module, you need to create a new `Generic` application in the project's Crowd.
+
+* `connection` — this section contains parameters required to connect to the cloud provider's API;
+  * `authURL` — an OpenStack Identity API URL.
+  * `caCert` — specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate;
+    * Format — a string; The certificate must have a PEM format.
+    * An optional parameter;
+  * `domainName` — the domain name;
+  * `tenantName` — the project name;
+    * Cannot be used together with `tenantID`;
+  * `tenantID` — the project id;
+    * Cannot be used together with `tenantName`;
+  * `username` — the name of the user that has full project privileges;
+  * `password` — the user's password;
+  * `region` — the OpenStack region where the cluster will be deployed;
+* `internalNetworkNames` — additional networks that are connected to the VM. cloud-controller-manager uses them to insert InternalIPs into `.status.addresses` in the Node API object.
+  * Format — an array of strings. For example:
+
+      ```yaml
+      internalNetworkNames:
+      - KUBE-3
+      - devops-internal
+      ```
+
+* `externalNetworkNames` — additional networks that are connected to the VM. cloud-controller-manager uses them to insert ExternalIPs into `.status.addresses` in the Node API object;
+  * Format — an array of strings. For example:
+
+      ```yaml
+      externalNetworkNames:
+      - KUBE-3
+      - devops-internal
+      ```
+
+* `podNetworkMode` — sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
+  * Possible values:
+    * `DirectRouting` — means that there is a direct routing between the nodes;
+    * `DirectRoutingWithPortSecurityEnabled` - direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports;
+      * **Caution!** Make sure that the `username` can edit AllowedAddressPairs on Ports connected to the `internalNetworkName` network. Generally, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set;
+    * `VXLAN` — direct routing between the nodes isn't available; VXLAN should be used;
+  * An optional parameter; By default, it is set to `DirectRoutingWithPortSecurityEnabled`;
+* `instances` — instance parameters that are used when creating virtual machines:
+  * `sshKeyPairName` — the name of the OpenStack `keypair` resource; it is used for provisioning instances;
+    * A mandatory parameter;
+    * Format — a string;
+  * `securityGroups` — a list of securityGroups to assign to the provisioned instances. Defines firewall rules for the provisioned instances;
+    * An optional parameter;
+    * Format — an array of strings;
+  * `imageName` — the name of the image;
+    * An optional parameter;
+    * Format — a string;
+  * `mainNetwork` — the path to the network that will serve as the primary network (the default gateway) for connecting to the VM;
+    * An optional parameter;
+    * Format — a string;
+  * `additionalNetworks` — a list of networks to connect to the instance;
+    * An optional parameter;
+    * Format — an array of strings;
+* `loadBalancer` — Load Balancer parameters:
+  * `subnetID` — an ID of the Neutron subnet to create the load balancer virtual IP in;
+    * Format — a string;
+    * An optional parameter;
+  * `floatingNetworkID` — an ID of the external network for floating IPs;
+    * Format — a string;
+    * An optional parameter;
+* `zones` — the default list of zones for provisioning instances. Can be redefined for each NodeGroup individually;
+  * Format — an array of strings;
+* `tags` — a dictionary of tags that will be available on all provisioned instances;
+  * An optional parameter;
+  * Format — key-value pairs;
+
+#### An example
+
+```yaml
+cloudProviderOpenstack: |
+  connection:
+    authURL: https://test.tests.com:5000/v3/
+    domainName: default
+    tenantName: default
+    username: jamie
+    password: nein
+    region: HetznerFinland
+  externalNetworkNames:
+  - public
+  internalNetworkNames:
+  - kube
+  instances:
+    sshKeyPairName: my-ssh-keypair
+    securityGroups:
+    - default
+    - allow-ssh-and-icmp
+  zones:
+  - zone-a
+  - zone-b
+  tags:
+    project: cms
+    owner: default
+```
+
+### Attaching storage devices to instances in a hybrid cluster
+
+To use PersistentVolumes on openstack nodes, you must create StorageClass with the appropriate OpenStack volume type. The `openstack volume type list` command lists all available types. Here is the example config for the `ceph-ssd` volume type:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ceph-ssd
+provisioner: csi-cinderplugin # have to be like this
+parameters:
+  type: ceph-ssd
+volumeBindingMode: WaitForFirstConsumer
+```
+
+## How do I create an image in OpenStack?
+
+1. Download the latest stable ubuntu 18.04 image: 
+
+    ```shell
+    curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
+    ```
+
+2. Prepare an OpenStack RC (openrc) file containing credentials for accessing the openstack API:
+
+    > The interface for getting an openrc file may differ depending on the OpenStack provider. If the provider has a standard interface for OpenStack, you can download the openrc file using the following [instruction](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
+
+3. Otherwise, install the OpenStack cli using this [instruction](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
+   Also, you can run the docker container and put an openrc file and a downloaded ubuntu image in it
+
+    ```shell
+    docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.mcs-openrc:/openrc jmcvea/openstack-client
+    ```
+
+4. Initialize the environment variables from the openrc file:
+
+    ```shell
+    source /openrc
+    ```
+
+5. Get a list of available disk types:
+
+    ```shell
+    / # openstack volume type list
+    +--------------------------------------+---------------+-----------+
+    | ID                                   | Name          | Is Public |
+    +--------------------------------------+---------------+-----------+
+    | 8d39c9db-0293-48c0-8d44-015a2f6788ff | ko1-high-iops | True      |
+    | bf800b7c-9ae0-4cda-b9c5-fae283b3e9fd | dp1-high-iops | True      |
+    | 74101409-a462-4f03-872a-7de727a178b8 | ko1-ssd       | True      |
+    | eadd8860-f5a4-45e1-ae27-8c58094257e0 | dp1-ssd       | True      |
+    | 48372c05-c842-4f6e-89ca-09af3868b2c4 | ssd           | True      |
+    | a75c3502-4de6-4876-a457-a6c4594c067a | ms1           | True      |
+    | ebf5922e-42af-4f97-8f23-716340290de2 | dp1           | True      |
+    | a6e853c1-78ad-4c18-93f9-2bba317a1d13 | ceph          | True      |
+    +--------------------------------------+---------------+-----------+
+    ```
+
+6. Create an image, pass the disk format to use (if OpenStack does not support local disks or these disks don't fit):
+
+    ```shell
+    openstack image create --private --disk-format qcow2 --container-format bare --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
+    ```
+
+7. Check that the image was created successfully:
+
+    ```text
+    / # openstack image show ubuntu-18-04-cloud-amd64
+    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | Field            | Value                                                                                                                                                                                                                                                                                    |
+    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | checksum         | 3443a1fd810f4af9593d56e0e144d07d                                                                                                                                                                                                                                                          |
+    | container_format | bare                                                                                                                                                                                                                                                                                      |
+    | created_at       | 2020-01-10T07:23:48Z                                                                                                                                                                                                                                                                      |
+    | disk_format      | qcow2                                                                                                                                                                                                                                                                                     |
+    | file             | /v2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/file                                                                                                                                                                                                                                      |
+    | id               | 01998f40-57cc-4ce3-9642-c8654a6d14fc                                                                                                                                                                                                                                                      |
+    | min_disk         | 0                                                                                                                                                                                                                                                                                         |
+    | min_ram          | 0                                                                                                                                                                                                                                                                                         |
+    | name             | ubuntu-18-04-cloud-amd64                                                                                                                                                                                                                                                                  |
+    | owner            | bbf506e3ece54e21b2acf1bf9db4f62c                                                                                                                                                                                                                                                          |
+    | properties       | cinder_img_volume_type='dp1-high-iops', direct_url='rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', locations='[{u'url': u'rbd://b0e441fc-c317-4acf-a606-cf74683978d2/images/01998f40-57cc-4ce3-9642-c8654a6d14fc/snap', u'metadata': {}}]' |
+    | protected        | False                                                                                                                                                                                                                                                                                     |
+    | schema           | /v2/schemas/image                                                                                                                                                                                                                                                                         |
+    | size             | 343277568                                                                                                                                                                                                                                                                                 |
+    | status           | active                                                                                                                                                                                                                                                                                    |
+    | tags             |                                                                                                                                                                                                                                                                                           |
+    | updated_at       | 2020-05-01T17:18:34Z                                                                                                                                                                                                                                                                      |
+    | virtual_size     | None                                                                                                                                                                                                                                                                                      |
+    | visibility       | private                                                                                                                                                                                                                                                                                   |
+    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    ```
