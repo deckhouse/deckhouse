@@ -26,7 +26,7 @@ metadata:
 spec:
   applicationDomain: "$(module::public_domain kiali)"
   sendAuthorizationHeader: true
-  applicationIngressCertificateSecretName: "$(module::https_secret_name "kiali-ingress-tls")"
+  applicationIngressCertificateSecretName: "$(module::https_secret_name "istio-ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else
