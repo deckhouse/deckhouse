@@ -74,7 +74,7 @@ func logHTTPReq(w *responseWriter, r *http.Request, startTime time.Time) {
 	if r.Header.Get("x-original-uri") != "" {
 		logentry += fmt.Sprintf(" x-original-uri:%s", r.Header.Get("x-original-uri"))
 	}
-	if w.Header().Get("X-Accel-Redirect") != "" {
+	if w.Header().Get("x-accel-redirect") != "" {
 		logentry += fmt.Sprintf(" x-redirect:%s", w.Header().Get("X-Accel-Redirect"))
 	}
 	log.Infoln(logentry)

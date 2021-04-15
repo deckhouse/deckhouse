@@ -79,10 +79,10 @@ func getRootRelease() (activeRelease string) {
 func (m *versionMenuType) getChannelMenuData(r *http.Request, releases *ReleasesStatusType) (err error) {
 	err = nil
 
-	m.CurrentLang = "en"
-	m.CurrentPageURLRelative = getDocPageURLRelative(r)
+	m.CurrentPageURLRelative = getDocPageURLRelative(r, false)
 	m.CurrentPageURL = getCurrentPageURL(r)
 	m.CurrentVersionURL = getVersionURL(r)
+	m.CurrentLang = getCurrentLang(r)
 
 	if isGroupChannelURL, _ := regexp.MatchString("v[0-9]+.[0-9]+-(alpha|beta|ea|stable|rock-solid)", m.CurrentVersionURL); isGroupChannelURL {
 		items := strings.Split(m.CurrentVersionURL, "-")
@@ -129,25 +129,29 @@ func (m *versionMenuType) getChannelMenuData(r *http.Request, releases *Releases
 func (m *versionMenuType) getVersionMenuData(r *http.Request) (err error) {
 	err = nil
 
-	m.CurrentPageURLRelative = getDocPageURLRelative(r)
+	m.CurrentPageURLRelative = getDocPageURLRelative(r, false)
 	m.CurrentPageURL = getCurrentPageURL(r)
 	m.CurrentVersionURL = getVersionURL(r)
 	m.CurrentVersion = URLToVersion(m.CurrentVersionURL)
 	m.CurrentLang = getCurrentLang(r)
 
 	if m.CurrentVersion == "" {
-		m.CurrentVersion = getRootRelease()
-		m.CurrentVersionURL = VersionToURL(m.CurrentVersion)
+		re := regexp.MustCompile(`^/[^/]/documentation/(.+)$`)
+		res := re.FindStringSubmatch(m.CurrentPageURL)
+		if res == nil {
+			m.MenuDocumentationLink = ""
+		} else {
+			m.CurrentVersion = getRootRelease()
+			m.CurrentVersionURL = VersionToURL(m.CurrentVersion)
+		}
 	}
 
 	re := regexp.MustCompile(`^(v[0-9]+)(\..+)?$`)
 	res := re.FindStringSubmatch(m.CurrentVersion)
-	if res == nil {
-		m.MenuDocumentationLink = fmt.Sprintf("/documentation/%s/", VersionToURL(m.CurrentVersion))
-	} else {
+	if res != nil {
 		if res[2] != "" {
 			// Version is not a group (MAJ.MIN), but the patch version
-			m.MenuDocumentationLink = fmt.Sprintf("/documentation/v%s/", VersionToURL(res[1]))
+			m.MenuDocumentationLink = fmt.Sprintf("/documentation/%s/", VersionToURL(res[1]))
 			m.AbsoluteVersion = m.CurrentVersion
 		} else {
 			m.MenuDocumentationLink = fmt.Sprintf("/documentation/%s/", VersionToURL(m.CurrentVersion))
@@ -179,7 +183,7 @@ func (m *versionMenuType) getVersionMenuData(r *http.Request) (err error) {
 func (m *versionMenuType) getGroupMenuData(r *http.Request) (err error) {
 	err = nil
 
-	m.CurrentPageURLRelative = getDocPageURLRelative(r)
+	m.CurrentPageURLRelative = getDocPageURLRelative(r, false)
 	m.CurrentPageURL = getCurrentPageURL(r)
 	m.CurrentVersionURL = getVersionURL(r)
 	m.CurrentVersion = URLToVersion(m.CurrentVersionURL)
@@ -367,7 +371,7 @@ func getCurrentPageURL(r *http.Request) (result string) {
 // Get the full page URL menu requested for
 // E.g /documentation/v1.2.3/reference/build_process.html
 func getCurrentLang(r *http.Request) (result string) {
-
+	result = "en"
 	originalURI, err := url.Parse(r.Header.Get("x-original-uri"))
 	if err != nil {
 		return
@@ -389,14 +393,14 @@ func getCurrentLang(r *http.Request) (result string) {
 // Get page URL menu requested for without a leading version suffix
 // E.g /reference/build_process.html for /documentation/v1.2.3/reference/build_process.html
 // if useURI == true - use requestURI instead of x-original-uri header value
-func getDocPageURLRelative(r *http.Request, useURI ...bool) (result string) {
+func getDocPageURLRelative(r *http.Request, useURI bool) (result string) {
 	var (
 		URLtoParse  string
 		originalURI *url.URL
 		err         error
 	)
 
-	if len(useURI) > 0 && useURI[0] {
+	if useURI {
 		originalURI, err = url.Parse(r.RequestURI)
 	} else {
 		originalURI, err = url.Parse(r.Header.Get("x-original-uri"))
@@ -411,10 +415,14 @@ func getDocPageURLRelative(r *http.Request, useURI ...bool) (result string) {
 	}
 	URLtoParse = originalURI.Path
 
-	re := regexp.MustCompile(`^/(ru|en)/documentation/[^/]+/(.+)$`)
+	re := regexp.MustCompile(`^/(ru|en)(/documentation/[^/]+)?/(.*)$`)
 	res := re.FindStringSubmatch(URLtoParse)
 	if res != nil {
-		result = res[2]
+		if len(res[2]) > 0 {
+			result = res[3]
+		} else {
+			result = fmt.Sprintf("%s/%s", res[2], res[3])
+		}
 	}
 	return
 }

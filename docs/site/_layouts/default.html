@@ -75,13 +75,13 @@
 <body>
 <div class="page container">
   <div class="page__content">
-    {%- include topnav.html %}
+    <!--#include virtual="/{{ page.lang }}/includes/topnav.html" -->
 
     <!-- Page Content -->
     {{ content }}
   </div>
 
-  {%- include footer.html %}
+  <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
 </div>
 
 </body>
