@@ -27,7 +27,7 @@ type DexUser struct {
 	ExpireAt string `json:"-"`
 }
 
-func (*DexUser) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from dex user: %v", err)
@@ -94,7 +94,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "users",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "User",
-			Filterable: &DexUser{},
+			FilterFunc: applyDexUserFilter,
 		},
 	},
 }, getDexUsers)

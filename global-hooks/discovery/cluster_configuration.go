@@ -16,9 +16,9 @@ type ClusterConfigurationYaml struct {
 	Content []byte
 }
 
-func (*ClusterConfigurationYaml) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := go_hook.ConvertUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:              "Secret",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
 			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
-			Filterable:        &ClusterConfigurationYaml{},
+			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
 	},
 }, clusterConfiguration)

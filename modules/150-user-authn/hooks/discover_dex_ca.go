@@ -21,9 +21,9 @@ type DexCA struct {
 	Data []byte `json:"data"`
 }
 
-func (*DexCA) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := go_hook.ConvertUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
 	}
@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"ingress-tls", "ingress-tls-customcertificate"},
 			},
-			Filterable: &DexCA{},
+			FilterFunc: applyDexCAFilter,
 		},
 	},
 }, discoverDexCA)

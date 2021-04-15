@@ -20,7 +20,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:              "Endpoints",
 			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"default"}}},
 			NameSelector:      &types.NameSelector{MatchNames: []string{"kubernetes"}},
-			Filterable:        &KubernetesAPIEndpoints{},
+			FilterFunc:        applyKubernetesAPIEndpointsFilter,
 		},
 	},
 }, discoverAPIEndpointsHandler)
@@ -30,13 +30,14 @@ type KubernetesAPIEndpoints struct {
 	HostPort []string
 }
 
-// ApplyFilter filter like jqFilter: '[.subsets[] | "\(.addresses[].ip):\(.ports[].port)"]'
-func (mh KubernetesAPIEndpoints) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	endpoint := &v1.Endpoints{}
-	err := go_hook.ConvertUnstructured(obj, endpoint)
+	err := sdk.FromUnstructured(obj, endpoint)
 	if err != nil {
 		return nil, err
 	}
+
+	mh := &KubernetesAPIEndpoints{}
 
 	for _, subset := range endpoint.Subsets {
 		for _, address := range subset.Addresses {
@@ -47,7 +48,7 @@ func (mh KubernetesAPIEndpoints) ApplyFilter(obj *unstructured.Unstructured) (go
 		}
 	}
 
-	return &mh, nil
+	return mh, nil
 }
 
 func discoverAPIEndpointsHandler(input *go_hook.HookInput) error {

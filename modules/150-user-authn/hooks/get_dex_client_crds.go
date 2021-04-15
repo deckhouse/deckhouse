@@ -30,7 +30,7 @@ type DexClientSecret struct {
 	Secret    []byte `json:"spec"`
 }
 
-func (*DexClient) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from dex client: %v", err)
@@ -52,9 +52,9 @@ func (*DexClient) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func (*DexClientSecret) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexClientSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := go_hook.ConvertUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert dex client secret to secret: %v", err)
 	}
@@ -77,7 +77,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "clients",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "DexClient",
-			Filterable: &DexClient{},
+			FilterFunc: applyDexClientFilter,
 		},
 		{
 			Name:       "credentials",
@@ -89,7 +89,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"name": "credentials",
 				},
 			},
-			Filterable: &DexClientSecret{},
+			FilterFunc: applyDexClientSecretFilter,
 		},
 	},
 }, getDexClient)

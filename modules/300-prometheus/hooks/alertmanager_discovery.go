@@ -20,9 +20,9 @@ type AlertmanagerServiceInfo struct {
 	Port       int32  `json:"port"`
 }
 
-func (*AlertmanagerService) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyAlertmanagerServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
-	err := go_hook.ConvertUnstructured(obj, service)
+	err := sdk.FromUnstructured(obj, service)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					Operator: "Exists",
 				},
 			}},
-			Filterable: &AlertmanagerService{},
+			FilterFunc: applyAlertmanagerServiceFilter,
 		},
 	},
 }, alertManagerHandler)
