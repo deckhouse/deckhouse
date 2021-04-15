@@ -23,7 +23,7 @@ ansible:
         export MODULES_SRC_DIR=/src/modules
         export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        ./modules_prepare.sh
+        bash ./modules_prepare.sh
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
@@ -46,41 +46,18 @@ ansible:
     - name: "Generate module configuration schemas"
       shell: |
         export MODULES_DIR=modules_en
-        for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' -print); do
-          module_path=$(echo $schema_path | cut -d\/ -f-2 )
-          module_name=$(echo $schema_path | cut -d\/ -f2 | cut -d- -f2-)
-          mkdir -p _data/schemas/${module_name}
-          cp -f $schema_path _data/schemas/${module_name}/
-          grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md
-          if [ $? -eq 0 ]; then
-            # Apply schema
-            echo "Generating schema ${schema_path} for ${module_path}/docs/CONFIGURATION.md"
-            sed -i "s#<!-- SCHEMA -->#\{\% include jsonschema_object.md object=site.data.schemas.${module_name}.config-values \%\}#" ${module_path}/docs/CONFIGURATION.md
-          else
-            echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
-          fi
-        done
+        bash ./modules_generate_configuration.sh
+        export MODULES_DIR=modules_ru
+        bash ./modules_generate_configuration.sh
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
     - name: "Generate CR schemas"
       shell: |
         export MODULES_DIR=modules_en
-        for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | sort); do
-          module_path=$(echo $schema_path | cut -d\/ -f-2 )
-          module_name=$(echo $schema_path | cut -d\/ -f2 | cut -d- -f2-)
-          schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\/#\.#")
-          mkdir -p _data/schemas/${module_name}/crds
-          cp -f $schema_path _data/schemas/${module_name}/crds/
-          grep -q '<!-- SCHEMA -->' ${module_path}/docs/CR.md &> /dev/null
-          if [ $? -eq 0 ]; then
-            # Apply schema
-            echo "OK: Generating schema ${schema_path} for ${module_path}/docs/CR.md"
-            sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd \}\}" ${module_path}/docs/CR.md
-          else
-            echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CR.md"
-          fi
-        done
+        bash ./modules_generate_cr.sh
+        export MODULES_DIR=modules_ru
+        bash ./modules_generate_cr.sh
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
@@ -136,55 +113,55 @@ git:
   includePaths: ['**/docs/','**/openapi/','**/crds/']
 # CRDs
 - add: /modules/010-user-authn-crd/crds
-  to: /srv/jekyll-data/modules/150-user-authn/crds
+  to: /src/modules/150-user-authn/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/openapi/node_group.yaml
-  to: /srv/jekyll-data/modules/040-node-manager/crds/node_group.yaml
+  to: /src/modules/040-node-manager/crds/node_group.yaml
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/aws/openapi/
-  to: /srv/jekyll-data/modules/030-cloud-provider-aws/crds/
+  to: /src/modules/030-cloud-provider-aws/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/azure/openapi/
-  to: /srv/jekyll-data/modules/030-cloud-provider-azure/crds/
+  to: /src/modules/030-cloud-provider-azure/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/gcp/openapi/
-  to: /srv/jekyll-data/modules/030-cloud-provider-gcp/crds/
+  to: /src/modules/030-cloud-provider-gcp/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/openstack/openapi/
-  to: /srv/jekyll-data/modules/030-cloud-provider-openstack/crds/
+  to: /src/modules/030-cloud-provider-openstack/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/vsphere/openapi/
-  to: /srv/jekyll-data/modules/030-cloud-provider-vsphere/crds/
+  to: /src/modules/030-cloud-provider-vsphere/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/yandex/openapi/
-  to: /srv/jekyll-data/modules/030-cloud-provider-yandex/crds/
+  to: /src/modules/030-cloud-provider-yandex/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /modules/010-prometheus-crd/crds/grafanadashboarddefinition.yaml
-  to: /srv/jekyll-data/modules/300-prometheus/crds/grafanadashboarddefinition.yaml
+  to: /src/modules/300-prometheus/crds/grafanadashboarddefinition.yaml
   owner: jekyll
   group: jekyll
   stageDependencies:
