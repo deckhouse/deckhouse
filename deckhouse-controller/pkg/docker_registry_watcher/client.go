@@ -11,7 +11,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"flant/deckhouse-controller/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 )
 
 func ImageDigest(ref name.Reference) (string, error) {
@@ -32,7 +32,7 @@ func GetImage(ref name.Reference) (v1.Image, error) {
 
 	img, err := remote.Image(ref,
 		remote.WithAuthFromKeychain(NewKeychain()),
-		remote.WithTransport(GetHttpTransport()))
+		remote.WithTransport(GetHTTPTransport()))
 
 	if err != nil {
 		return nil, fmt.Errorf("reading image %q: %v", ref, err)
@@ -52,8 +52,8 @@ func ParseReferenceOptions() []name.Option {
 	return options
 }
 
-func GetHttpTransport() (transport http.RoundTripper) {
-	if app.SkipTlsVerifyRegistry == "yes" {
+func GetHTTPTransport() (transport http.RoundTripper) {
+	if app.SkipTLSVerifyRegistry == "yes" {
 		// default http transport with InsecureSkipVerify
 		return &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -69,7 +69,6 @@ func GetHttpTransport() (transport http.RoundTripper) {
 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 			TLSNextProto:          make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
 		}
-	} else {
-		return http.DefaultTransport
 	}
+	return http.DefaultTransport
 }

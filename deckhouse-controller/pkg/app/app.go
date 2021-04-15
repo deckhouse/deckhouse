@@ -14,12 +14,12 @@ var ContainerName = "deckhouse"
 
 var FeatureWatchRegistry = "yes"
 var InsecureRegistry = "no"
-var SkipTlsVerifyRegistry = "no"
+var SkipTLSVerifyRegistry = "no"
 var RegistrySecretPath = "/etc/registrysecret"
 var RegistryErrorsMaxTimeBeforeRestart = time.Hour
 
 const DeckhouseLogTypeDefault = "json"
-const DeckshouseKubeClientQpsDefault = "20"
+const DeckshouseKubeClientQPSDefault = "20"
 const DeckshouseKubeClientBurstDefault = "40"
 
 const DeckhouseHookMetricsListenPort = "9651"
@@ -39,6 +39,6 @@ func DefineStartCommandFlags(cmd *kingpin.CmdClause) {
 		StringVar(&InsecureRegistry)
 	cmd.Flag("skip-tls-verify-registry", "Trust self signed certificate of registry (yes|no).").
 		Envar("DECKHOUSE_SKIP_TLS_VERIFY_REGISTRY").
-		Default(SkipTlsVerifyRegistry).
-		StringVar(&SkipTlsVerifyRegistry)
+		Default(SkipTLSVerifyRegistry).
+		StringVar(&SkipTLSVerifyRegistry)
 }

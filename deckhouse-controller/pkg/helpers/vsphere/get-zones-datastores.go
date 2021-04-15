@@ -21,7 +21,7 @@ import (
 	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/vim25/mo"
 
-	"flant/deckhouse-controller/pkg/helpers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/utils"
 )
 
 const (
@@ -307,15 +307,15 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 			datastoreType string
 			inventoryPath string
 		)
-		switch dsObject.(type) {
+		switch obj := dsObject.(type) {
 		case *object.Datastore:
 			datastoreType = datastoreTypeDatastore
-			inventoryPath = dsObject.(*object.Datastore).InventoryPath
+			inventoryPath = obj.InventoryPath
 		case *object.StoragePod:
 			datastoreType = datastoreTypeDatastoreCluster
-			inventoryPath = dsObject.(*object.StoragePod).InventoryPath
+			inventoryPath = obj.InventoryPath
 		default:
-			return nil, fmt.Errorf("\"%s\" is not a Datastore nor a DatastoreCluster", reflect.TypeOf(dsObject))
+			return nil, fmt.Errorf("'%s' is not a Datastore nor a DatastoreCluster", reflect.TypeOf(dsObject))
 		}
 
 		zds = append(zds, ZonedDataStore{

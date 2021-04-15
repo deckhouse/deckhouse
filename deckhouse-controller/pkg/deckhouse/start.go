@@ -6,16 +6,18 @@ import (
 	"regexp"
 	"time"
 
+	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
+	sh_app "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
-	"flant/deckhouse-controller/pkg/app"
-	"flant/deckhouse-controller/pkg/docker_registry_watcher"
-	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
-	sh_app "github.com/flant/shell-operator/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docker_registry_watcher"
 )
 
+// Ignore error: type name will be used as deckhouse.DeckhouseController by other packages, and that stutters
+//nolint:golint
 type DeckhouseController struct {
 	*addon_operator.AddonOperator
 	RegistryWatcher docker_registry_watcher.DockerRegistryWatcher
@@ -80,7 +82,6 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	registryWatcher.WithRegistrySecretPath(app.RegistrySecretPath)
 	registryWatcher.WithFatalCallback(func() {
 		os.Exit(1)
-		return
 	})
 	registryWatcher.WithErrorCallback(func() {
 		d.MetricStorage.CounterAdd("deckhouse_registry_check_total", 1.0, map[string]string{})
@@ -92,7 +93,6 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 			log.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
 			os.Exit(1)
 		}
-		return
 	})
 	registryWatcher.WithSuccessCallback(func() {
 		d.MetricStorage.CounterAdd("deckhouse_registry_check_total", 1.0, map[string]string{})
@@ -125,14 +125,14 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 }
 
 // UpdateDeploymentImageAndExit updates "deckhouseImageId" label of deployment/deckhouse
-func UpdateDeploymentImageAndExit(kubeClient kube.KubernetesClient, newImageId string) {
+func UpdateDeploymentImageAndExit(kubeClient kube.KubernetesClient, newImageID string) {
 	deployment, err := GetDeploymentOfCurrentPod(kubeClient)
 	if err != nil {
 		log.Errorf("Get deployment of current pod: %s", err)
 		return
 	}
 
-	deployment.Spec.Template.Labels["deckhouseImageId"] = NormalizeLabelValue(newImageId)
+	deployment.Spec.Template.Labels["deckhouseImageId"] = NormalizeLabelValue(newImageID)
 
 	err = UpdateDeployment(kubeClient, deployment)
 	if err != nil {
@@ -164,7 +164,7 @@ func NormalizeLabelValue(value string) string {
 // Image name should be taken from container spec. ContainerStatus contains bad image name
 // if multiple tags has one digest!
 // https://github.com/kubernetes/kubernetes/issues/51017
-func GetCurrentPodImageInfo(kubeClient kube.KubernetesClient) (imageName string, imageId string) {
+func GetCurrentPodImageInfo(kubeClient kube.KubernetesClient) (imageName string, imageID string) {
 	res, err := GetCurrentPod(kubeClient)
 	if err != nil {
 		log.Debugf("Get current pod info: %v", err)
@@ -180,7 +180,7 @@ func GetCurrentPodImageInfo(kubeClient kube.KubernetesClient) (imageName string,
 
 	for _, status := range res.Status.ContainerStatuses {
 		if status.Name == app.ContainerName {
-			imageId = status.ImageID
+			imageID = status.ImageID
 			break
 		}
 	}
