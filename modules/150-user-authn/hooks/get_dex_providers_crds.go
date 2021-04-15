@@ -10,7 +10,7 @@ import (
 
 type DexProvider map[string]interface{}
 
-func (*DexProvider) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexProviderFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from dex provider: %v", err)
@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "providers",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "DexProvider",
-			Filterable: &DexProvider{},
+			FilterFunc: applyDexProviderFilter,
 		},
 	},
 }, getDexProviders)

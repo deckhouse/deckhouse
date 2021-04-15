@@ -13,9 +13,9 @@ import (
 
 type KubernetesSecret []byte
 
-func (*KubernetesSecret) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyKubernetesSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := go_hook.ConvertUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
 	}
@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes-dex-client-app-secret"},
 			},
-			Filterable: &KubernetesSecret{},
+			FilterFunc: applyKubernetesSecretFilter,
 		},
 	},
 }, kubernetesDexClientAppSecret)

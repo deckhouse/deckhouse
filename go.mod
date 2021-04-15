@@ -10,7 +10,7 @@ require (
 	github.com/chr4/pwgen v1.1.0
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210407204541-58b4049a4535 // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210415105256-28e5f9ebe207 // branch: master
 	github.com/flant/shell-operator v1.0.1-0.20210402061915-a583609302e9 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0

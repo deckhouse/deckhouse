@@ -14,9 +14,9 @@ import (
 
 type Cert struct{}
 
-func (*Cert) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyCertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := go_hook.ConvertUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert selfsigned ca secret to secret: %v", err)
 	}
@@ -42,7 +42,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes-api-ca-key-pair"},
 			},
-			Filterable: &Cert{},
+			FilterFunc: applyCertFilter,
 		},
 	},
 }, generateSelfSignedCA)

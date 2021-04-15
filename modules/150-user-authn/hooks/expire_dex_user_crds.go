@@ -16,7 +16,7 @@ type DexUserExpire struct {
 	CheckExpire bool `json:"-"`
 }
 
-func (*DexUserExpire) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexUserExpireFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	status, ok, err := unstructured.NestedMap(obj.Object, "status")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get status from dex user: %v", err)
@@ -52,7 +52,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "users",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "User",
-			Filterable: &DexUserExpire{},
+			FilterFunc: applyDexUserExpireFilter,
 		},
 	},
 }, expireDexUsers)

@@ -36,7 +36,7 @@ type DexAuthenticatorSecret struct {
 	Credentials Credentials `json:"credentials"`
 }
 
-func (*DexAuthenticator) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from dex authenticator: %v", err)
@@ -66,9 +66,9 @@ func (*DexAuthenticator) ApplyFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}, nil
 }
 
-func (*DexAuthenticatorSecret) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDexAuthenticatorSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
-	err := go_hook.ConvertUnstructured(obj, secret)
+	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert dex authenticator secret to secret: %v", err)
 	}
@@ -95,7 +95,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "authenticators",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "DexAuthenticator",
-			Filterable: &DexAuthenticator{},
+			FilterFunc: applyDexAuthenticatorFilter,
 		},
 		{
 			Name:       "credentials",
@@ -107,7 +107,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"name": "credentials",
 				},
 			},
-			Filterable: &DexAuthenticatorSecret{},
+			FilterFunc: applyDexAuthenticatorSecretFilter,
 		},
 	},
 }, getDexAuthenticator)

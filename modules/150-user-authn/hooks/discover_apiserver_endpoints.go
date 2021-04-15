@@ -13,9 +13,9 @@ import (
 
 type KubernetesServicePort intstr.IntOrString
 
-func (*KubernetesServicePort) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyKubernetesServicePortFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
-	err := go_hook.ConvertUnstructured(obj, service)
+	err := sdk.FromUnstructured(obj, service)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes service to service: %v", err)
 	}
@@ -30,9 +30,9 @@ func (*KubernetesServicePort) ApplyFilter(obj *unstructured.Unstructured) (go_ho
 
 type KubernetesEndpoints []string
 
-func (*KubernetesEndpoints) ApplyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyKubernetesEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	endpoints := &v1.Endpoints{}
-	err := go_hook.ConvertUnstructured(obj, endpoints)
+	err := sdk.FromUnstructured(obj, endpoints)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes service endpoints to endpoints: %v", err)
 	}
@@ -62,7 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes"},
 			},
-			Filterable: &KubernetesServicePort{},
+			FilterFunc: applyKubernetesServicePortFilter,
 		},
 		{
 			Name:       "endpoints",
@@ -76,7 +76,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes"},
 			},
-			Filterable: &KubernetesEndpoints{},
+			FilterFunc: applyKubernetesEndpointsFilter,
 		},
 	},
 }, discoverApiserverEndpoints)
