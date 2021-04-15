@@ -579,7 +579,14 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	}
 }
 
+var _ = BeforeSuite(func() {
+	By("Setup testing env variable")
+	Expect(os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")).Should(Succeed())
+})
+
 var _ = AfterSuite(func() {
 	By("Removing temporary directories")
 	Expect(os.RemoveAll(globalTmpDir)).Should(Succeed())
+	By("Removing testing env variable")
+	Expect(os.Unsetenv("D8_IS_TESTS_ENVIRONMENT")).Should(Succeed())
 })
