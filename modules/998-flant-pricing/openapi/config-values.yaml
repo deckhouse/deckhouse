@@ -26,6 +26,11 @@ properties:
     default: false
     description: |
       Этот кластер является вспомогательным.
+  nodesDiscount:
+    type: integer
+    default: 0
+    description: |
+      Скидка за ноды в процентах, без символа %. Например: 10, 20, 30.
   promscale:
     type: object
     default: {}

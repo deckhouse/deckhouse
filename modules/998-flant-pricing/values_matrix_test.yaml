@@ -42,6 +42,7 @@ flantPricing:
     context: ""
   planIsBoughtAsBundle: false
   auxiliaryCluster: false
+  nodesDiscount: 0
   internal:
     __ConstantChoices__:
     - releaseChannel: Alpha

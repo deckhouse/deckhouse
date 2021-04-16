@@ -47,6 +47,7 @@ doNotChargeForRockSolid: false
 plan: "Standard"
 planIsBoughtAsBundle: false
 auxiliaryCluster: false
+nodesDiscount: 10
 promscale: {}
 ***REMOVED***:
   team: ""
@@ -141,6 +142,8 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
   value: "0"
 - name: FP_AUXILIARY_CLUSTER
   value: "0"
+- name: FP_NODES_DISCOUNT
+  value: "10"
 - name: FP_DO_NOT_CHARGE_FOR_ROCK_SOLID
   value: "0"
 - name: FP_CONTACTS
