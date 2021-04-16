@@ -14,7 +14,7 @@ type Client interface {
 
 type k8sClient struct {
 	*kubernetes.Clientset
-	dynamic.Interface
+	dynamicClient dynamic.Interface
 }
 
 func NewClient(options ...Option) (Client, error) {
@@ -49,7 +49,7 @@ func NewClient(options ...Option) (Client, error) {
 }
 
 func (k k8sClient) Dynamic() dynamic.Interface {
-	return k.Dynamic()
+	return k.dynamicClient
 }
 
 type k8sOptions struct {
