@@ -117,4 +117,23 @@ flantPricing:
 			Expect(d.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`false`))
 		})
 	})
+
+	e := HookExecutionConfigInit(initValuesCloudClusterWithStaticNodes, `{}`)
+
+	Context("Cloud cluster with static nodes and clusterType override", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
+			e.ValuesSet("flantPricing.clusterType", "Cloud")
+			e.RunHook()
+		})
+
+		It("Should work properly", func() {
+			Expect(c).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("flantPricing.internal.cloudProvider").String()).To(Equal(`openstack`))
+			Expect(e.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
+			Expect(e.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Cloud`))
+			Expect(e.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
+			Expect(e.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`true`))
+		})
+	})
 })

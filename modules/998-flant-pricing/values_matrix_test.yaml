@@ -42,6 +42,7 @@ flantPricing:
     context: ""
   planIsBoughtAsBundle: false
   auxiliaryCluster: false
+  clusterType: Hybrid
   nodesDiscount: 0
   internal:
     __ConstantChoices__:

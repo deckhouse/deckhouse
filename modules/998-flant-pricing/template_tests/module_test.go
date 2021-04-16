@@ -47,6 +47,7 @@ doNotChargeForRockSolid: false
 plan: "Standard"
 planIsBoughtAsBundle: false
 auxiliaryCluster: false
+clusterType: Hybrid
 nodesDiscount: 10
 promscale: {}
 ***REMOVED***:
@@ -63,7 +64,7 @@ internal:
   cloudProvider: AWS
   controlPlaneVersion: 1.14
   minimalKubeletVersion: 1.14
-  clusterType: Cloud
+  clusterType: Hybrid
   mastersCount: 3
   kops: true
   masterIsDedicated: true
@@ -127,7 +128,7 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 - name: FP_PLAN
   value: Standard
 - name: FP_CLUSTER_TYPE
-  value: Cloud
+  value: Hybrid
 - name: FP_MASTERS_COUNT
   value: "3"
 - name: FP_KOPS

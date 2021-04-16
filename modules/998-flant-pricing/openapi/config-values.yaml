@@ -26,6 +26,11 @@ properties:
     default: false
     description: |
       Этот кластер является вспомогательным.
+  clusterType:
+    type: string
+    enum: [ "Cloud", "Hybrid", "Static" ]
+    description: |
+      Задаёт тип кластера в экспортируемых метриках, отключая автоматическое определение.
   nodesDiscount:
     type: integer
     default: 0
