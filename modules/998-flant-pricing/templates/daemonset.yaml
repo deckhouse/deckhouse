@@ -91,6 +91,8 @@ spec:
           value: {{ .Values.flantPricing.planIsBoughtAsBundle | int | quote }}
         - name: FP_AUXILIARY_CLUSTER
           value: {{ .Values.flantPricing.auxiliaryCluster | int | quote }}
+        - name: FP_NODES_DISCOUNT
+          value: {{ .Values.flantPricing.nodesDiscount | int | quote }}
         - name: FP_DO_NOT_CHARGE_FOR_ROCK_SOLID
           value: {{ .Values.flantPricing.doNotChargeForRockSolid | quote | int | quote }}
         - name: FP_CONTACTS
