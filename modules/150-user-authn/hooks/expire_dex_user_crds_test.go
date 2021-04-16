@@ -53,7 +53,7 @@ spec:
   - Everyone
   password: password
 `)
-			f.BindingContexts.Set(f.RunSchedule("*/5 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
 		})
 

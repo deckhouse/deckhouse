@@ -327,8 +327,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 	Context("Cluster has expired, almost expired and actual tokens, also two NodeGroups with noodeType = Cloud and Static. Crontab ticked.", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(stateTokenExpired() + stateTokenAlmostExpired() + stateTokenActual() + stateTokenJunk + stateNGStatic + stateNGCloud)
-			f.BindingContexts.Set(ScheduleBindingContext("bootstrap_tokens_cron"))
-			f.BindingContexts.Set(f.RunSchedule("23 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("23 * * * *"))
 			f.RunHook()
 		})
 

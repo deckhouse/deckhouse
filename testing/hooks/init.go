@@ -12,12 +12,13 @@ import (
 	"runtime"
 	"strings"
 
-	// Define Register func and Registry object to import go-hooks.
+	. "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
+	. "github.com/flant/shell-operator/pkg/hook/types"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	"github.com/flant/shell-operator/test/hook/context"
@@ -25,6 +26,7 @@ import (
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -151,12 +153,19 @@ func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecution
 			panic(fmt.Errorf("get module name from working directory: %v", err))
 		}
 	}
+
+	// Catch logrus messages for LoadOpenAPISchemas.
+	buf := &bytes.Buffer{}
+	logrus.SetOutput(buf)
 	// TODO Is there a solution for ginkgo to have a shared validator for all tests in module?
 	hec.ValuesValidator = validation.NewValuesValidator()
 	err = values_validation.LoadOpenAPISchemas(hec.ValuesValidator, moduleName, modulePath)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, buf.String())
 		panic(fmt.Errorf("load module OpenAPI schemas for hook: %v", err))
 	}
+	// Set logrus output to GinkgoWriter to print only messages for failed specs.
+	logrus.SetOutput(GinkgoWriter)
 
 	// Search golang hook by name.
 	goHookPath := hec.HookPath + ".go"
@@ -303,15 +312,58 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) context.Genera
 	return hec.KubeStateSetAndWaitForBindingContexts(newKubeState, 0)
 }
 
-func (hec *HookExecutionConfig) RunSchedule(crontab string) context.GeneratedBindingContexts {
+// GenerateOnStartupContext returns binding context for OnStartup.
+func (hec *HookExecutionConfig) GenerateOnStartupContext() context.GeneratedBindingContexts {
+	return SimpleBindingGeneratedBindingContext(OnStartup)
+}
+
+// GenerateScheduleContext returns binding context for Schedule with needed snapshots.
+func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) context.GeneratedBindingContexts {
 	if hec.BindingContextController == nil {
-		return ScheduleBindingContext("Empty Schedule")
+		return SimpleBindingGeneratedBindingContext(Schedule)
 	}
 	contexts, err := hec.BindingContextController.RunSchedule(crontab)
 	if err != nil {
 		panic(err)
 	}
 	return contexts
+}
+
+func (hec *HookExecutionConfig) generateAllSnapshotsContext(binding BindingType) context.GeneratedBindingContexts {
+	if hec.BindingContextController == nil {
+		return SimpleBindingGeneratedBindingContext(binding)
+	}
+
+	contexts, err := hec.BindingContextController.RunBindingWithAllSnapshots(binding)
+	if err != nil {
+		panic(err)
+	}
+	return contexts
+}
+
+// GenerateBeforeHelmContext returns binding context for beforeHelm binding with all available snapshots.
+func (hec *HookExecutionConfig) GenerateBeforeHelmContext() context.GeneratedBindingContexts {
+	return hec.generateAllSnapshotsContext(BeforeHelm)
+}
+
+// GenerateAfterHelmContext returns binding context for afterHelm binding with all available snapshots.
+func (hec *HookExecutionConfig) GenerateAfterHelmContext() context.GeneratedBindingContexts {
+	return hec.generateAllSnapshotsContext(AfterHelm)
+}
+
+// GenerateAfterDeleteHelmContext returns binding context for afterDeleteHelm binding with all available snapshots.
+func (hec *HookExecutionConfig) GenerateAfterDeleteHelmContext() context.GeneratedBindingContexts {
+	return hec.generateAllSnapshotsContext(AfterDeleteHelm)
+}
+
+// GenerateBeforeAllContext returns binding context for beforeAll binding with all available snapshots.
+func (hec *HookExecutionConfig) GenerateBeforeAllContext() context.GeneratedBindingContexts {
+	return hec.generateAllSnapshotsContext(BeforeAll)
+}
+
+// GenerateAfterAllContext returns binding context for afterAll binding with all available snapshots.
+func (hec *HookExecutionConfig) GenerateAfterAllContext() context.GeneratedBindingContexts {
+	return hec.generateAllSnapshotsContext(AfterAll)
 }
 
 func (hec *HookExecutionConfig) KubeStateToKubeObjects() error {

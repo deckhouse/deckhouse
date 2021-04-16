@@ -12,7 +12,7 @@ var _ = Describe("User Authn hooks :: generate kubeconfig encoded names ::", fun
 
 	Context("Without kubeconfig in values", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -24,7 +24,7 @@ var _ = Describe("User Authn hooks :: generate kubeconfig encoded names ::", fun
 
 	Context("With kubeconfig in values", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSetFromYaml("userAuthn.kubeconfigGenerator", []byte(`[
 {"id": "kubeconfig-one", "masterURI": "127.0.0.1", "description": "test"},
 {"id": "kubeconfig-two", "masterURI": "test.example.com", "description": "test2"}

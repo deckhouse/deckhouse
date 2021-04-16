@@ -72,7 +72,7 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 
 	Context("BeforeHelm — nothing discovered, nothing configured", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -86,7 +86,7 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 		BeforeEach(func() {
 			f.ValuesSet("monitoringApplications.enabledApplications", []string{"nats", "redis"})
 			f.ValuesSet("monitoringApplications.discovery.enabledApplications", []string{"winword", "nats"})
-			f.BindingContexts.Set(BeforeHelmContext)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 

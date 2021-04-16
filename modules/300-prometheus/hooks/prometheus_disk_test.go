@@ -187,7 +187,7 @@ status:
 	Context("Empty cluster and Schedule", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)
-			f.BindingContexts.Set(f.RunSchedule("*/15 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
 			f.RunHook()
 		})
 
@@ -199,7 +199,7 @@ status:
 	Context("Cluster with storageClassExpensionFalse", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionFalse))
-			f.BindingContexts.Set(f.RunSchedule("*/15 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.RunHook()
@@ -217,7 +217,7 @@ status:
 	Context("Cluster with storageClassExpensionTrue", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionTrue))
-			f.BindingContexts.Set(f.RunSchedule("*/15 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.RunHook()
@@ -235,7 +235,7 @@ status:
 	Context("Cluster with storageClassExpensionTrue and pvc", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(pvcMain + pvcLt + storageClassExpensionTrue))
-			f.BindingContexts.Set(f.RunSchedule("*/15 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.RunHook()
@@ -253,7 +253,7 @@ status:
 	Context("Cluster with storageClassExpensionTrue and pvc", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(storageClassExpensionTrue + pvcMain + pvcLt))
-			f.BindingContexts.Set(f.RunSchedule("*/15 * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusMain.diskUsage", "91")

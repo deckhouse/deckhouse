@@ -10,8 +10,8 @@ require (
 	github.com/chr4/pwgen v1.1.0
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210415105256-28e5f9ebe207 // branch: master
-	github.com/flant/shell-operator v1.0.1-0.20210402061915-a583609302e9 // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210416054411-675b8d3efa88 // branch: master
+	github.com/flant/shell-operator v1.0.1-0.20210414105437-3aac020fdda5 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3
@@ -43,7 +43,7 @@ require (
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.20.0
 	k8s.io/apiextensions-apiserver v0.20.0
-	k8s.io/apimachinery v0.20.0
+	k8s.io/apimachinery v0.20.5
 	k8s.io/client-go v0.20.0
 	sigs.k8s.io/yaml v1.2.0
 )

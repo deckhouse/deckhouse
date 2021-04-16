@@ -50,7 +50,7 @@ flantPricing:
 
 	Context("Hybrid cluster and cloud-provider-openstack is enabled", func() {
 		BeforeEach(func() {
-			a.BindingContexts.Set(BeforeHelmContext)
+			a.BindingContexts.Set(a.GenerateBeforeHelmContext())
 			a.RunHook()
 		})
 
@@ -68,7 +68,7 @@ flantPricing:
 
 	Context("Static cluster", func() {
 		BeforeEach(func() {
-			b.BindingContexts.Set(BeforeHelmContext)
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
 			b.RunHook()
 		})
 
@@ -86,7 +86,7 @@ flantPricing:
 
 	Context("Cloud cluster with static nodes", func() {
 		BeforeEach(func() {
-			c.BindingContexts.Set(BeforeHelmContext)
+			c.BindingContexts.Set(c.GenerateBeforeHelmContext())
 			c.RunHook()
 		})
 
@@ -104,7 +104,7 @@ flantPricing:
 
 	Context("Kops cluster", func() {
 		BeforeEach(func() {
-			d.BindingContexts.Set(BeforeHelmContext)
+			d.BindingContexts.Set(d.GenerateBeforeHelmContext())
 			d.RunHook()
 		})
 

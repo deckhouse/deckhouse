@@ -241,7 +241,7 @@ env: production
 	b := HookExecutionConfigInit(initValuesStringB, `{}`)
 	Context("BeforeHelm", func() {
 		BeforeEach(func() {
-			b.BindingContexts.Set(BeforeHelmContext)
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
 			b.RunHook()
 		})
 
