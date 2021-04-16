@@ -41,6 +41,9 @@ function __main__() {
       kops=true
     fi
   fi
+  if values::has flantPricing.clusterType; then
+    cluster_type=$(values::get flantPricing.clusterType)
+  fi
   values::set flantPricing.internal.clusterType "$cluster_type"
   values::set flantPricing.internal.kops $kops
 
