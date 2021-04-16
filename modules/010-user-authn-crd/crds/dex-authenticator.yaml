@@ -25,13 +25,13 @@ spec:
           required:
             - spec
           description: |
-            При появлении объекта `DexAuthenticator` в неймспейсе будут созданы:
-            * Deployment с oauth2-proxy и redis
-            * Service, ведущий на Deployment с oauth2-proxy
-            * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса
-            * Secret'ы, необходимые для доступа к dex
+            After the `DexAuthenticator` object appears in the namespace, the following objects will be created:
+            * Deployment containig oauth2-proxy and redis containers
+            * Service, poining to a Deployment with an oauth2-proxy
+            * Ingress, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side
+            * Secrets, needed to access dex
 
-            **Важно!** При перезапуске pod'а с oauth2-proxy, при помощи refresh token'а будут получены и сохранены в память redis актуальные `access token` и `id token`.
+            **NOTE!** After restarting a pod with an oauth2-proxy, the current `access token` and `id token` will be queried (using the refresh token) and stored in a redis memory.
           properties:
             spec:
               type: object
@@ -42,47 +42,36 @@ spec:
               properties:
                 applicationDomain:
                   type: string
-                  x-description: 'Public domain that points to your application. Must be specified without HTTP scheme.'
-                  description: |
-                    Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в dex.
-                    **Нельзя** указывать HTTP схему (см. формат).
+                  description: 'Public domain that points to your application. Must be specified **without** HTTP scheme.'
                   example: 'my-app.domain.com'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
                   type: boolean
-                  x-description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
-                  description: |
-                    Флаг, который отвечает за отправку конечному приложению заголовка `Authorization: Bearer`.
-
-                    Включать **только** если приложение умеет обрабатывать такой заголовок.
+                  description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
                 applicationIngressCertificateSecretName:
                   type: string
-                  x-description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
-                  description: |
-                    Имя secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress-объекте приложения. Secret должен обязательно находится в том же неймспейсе, что и DexAuthenticator.
+                  description: 'Name of TLS-certificate secret specified in your application Ingress object to add to dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
                   example: 'ingress-tls'
                 applicationIngressClassName:
                   type: string
-                  x-description: 'Ingress class that serves your application ingress resource.'
-                  description: |
-                    Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain`).
+                  description: 'Ingress class that serves your application ingress resource.'
                   example: 'nginx'
                 keepUsersLoggedInFor:
                   type: string
-                  x-description: 'User session will be kept for specified amount of time even if user will not log in.'
                   description: |
-                    Отвечает за то, как долго пользовательская сессия будет считаться активной, если пользователь бездействует (указывается с суффиксом s, m или h).
+                    User session will be kept for specified amount of time even if user will not log in.
 
-                    **По умолчанию:** — `168h` (7 дней).
+                    Specified with  s, m or h suffix.
+
+                    **Default:** — `168h` (7 days).
                   example: '24h'
                 allowedGroups:
                   type: array
-                  x-description: 'Groups that the user should be in to authenticate successfully. Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).'
                   description: |
-                    Группы, пользователям которых разрешено проходить аутентификацию.
-                    Дополнительно параметр помогает ограничить список групп до тех, которые несут для приложения полезную информацию. Например, в случае если у пользователя более 50-ти групп, но приложению grafana мы хотим передать только определенные 5 групп.
+                    Groups that the user should be in to authenticate successfully.
+                    Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).'
 
-                    **По умолчанию:** разрешены все группы.
+                    All groups are allowed **by default**.
                   items:
                     type: string
                 whitelistSourceRanges:
@@ -111,46 +100,42 @@ spec:
                     description: |
                       Определяет `tolerations` для подов с dex-authenticator.
 
-                      Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
-                      Чтобы отключить автоматику нужно указать значение `false`.
+                      The `dex-authenticator` pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
 
-                      **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                      Use [automatic](/overview.html#выделение-узлов-под-определенный-вид-нагрузки) if not specified. Set `false` to turn off automatic.
+
+                      **Pattern**: Standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) object. Pods inherit this object AS IS.
                     properties:
                       effect:
                         description: |
-                          Определяет какому effect'у taint'а соответствует описываемый toleration. Пустой подразумевает соответствие любому effect.
+                          Effect indicates the taint effect to match. Empty means match all taint effects.
                         type: string
                         enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
                       key:
                         description: |
-                          Определяет какому ключу (key) taint'a соответствует описываемый toleration. Пустой подразумевает соответствие любому ключу.
+                          Key is the taint key that the toleration applies to. Empty means match all taint keys.
 
-                          Если ключ (key) не указан (пуст), то `operator` должен быть — `Exists`, что подразумевает соответствие любым `value` и `key`.
+                          If the key is empty, operator must be Exists; this combination means to match all values and all keys.
                         type: string
                       operator:
                         description: |
-                          Определяет отношение ключа (key) к значению (value) — должен ли ключ быть равен (`Equal`) значению, или допустимо существование ключа с любым значением.
+                          Operator represents a key's relationship to the value.
 
-                          Указание `Exists` равносильно допуску любого значения (для value), чтобы под с указанным toleration удовлетворял соответствующему taint.
-
-                          **По умолчанию**: `Equal`.
+                          Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.
                         type: string
                         enum: ["Exists", "Equal"]
+                        x-doc-default: Equal
                       tolerationSeconds:
                         description: |
-                          Определяет период времени в секундах, в течении которого планировщик должен ждать, прежде чем выгнать (evict) Pod с узла, если
-                          toleration перестал удовлетворять taint (справедливо **только** для effect `NoExecute`, иначе игнорируется).
-
-                          Если **не установлено**, то Pod не будет выгнан с узла, если toleration перестал удовлетворять taint. Если **установлен в ноль** (или отрицателен), то Pod будет выгнан с узла немедленно, если  toleration перестал удовлетворять taint.
-
-                          **По умолчанию**: не установлено.
+                          TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint.
+                          By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
                         format: int64
                         type: integer
                       value:
                         description: |
-                          Значение, которому должен удовлетворять toleration.
+                          Value is the taint value the toleration matches to.
 
-                          Должно быть пустым, если operator — `Exists`.
+                          If the operator is Exists, the value should be empty, otherwise just a regular string.
                         type: string
                     type: object
                   type: array

@@ -1,23 +1,17 @@
-type: object
 properties:
   apiserver:
-    type: object
-    default: {}
     description: |
-      `kube-apiserver` parameters.
+      Параметры `kube-apiserver`.
     properties:
       bindToWildcard:
-        type: boolean
-        default: false
         description: |
-          Bind to `0.0.0.0`.
+          Cлушать ли на `0.0.0.0`.
 
           По умолчанию apiserver слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
       certSANs:
-        type: array
         description: |
-          Array of [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), with which the apiserver certificate will be generated.
-            * In addition to the passed list, the following list is always used:
+          Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат apiserver'а.
+            * Кроме переданного списка, всегда используется и следующий список:
               * kubernetes
               * kubernetes.default
               * kubernetes.default.svc
@@ -26,81 +20,53 @@ properties:
               * 127.0.0.1
               * **current_hostname**
               * **hostIP**
-        items:
-          type: string
-          pattern: '^[0-9a-zA-Z\.-]+$'
       authn:
-        type: object
-        default: {}
         description: |
-          Optional authentication parameters for Kubernetes API clients. By default, they are taken from [`user-authn`](/modules/150-user-authn/) module ConfigMap.
+          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](/modules/150-user-authn/)
         properties:
           oidcIssuerURL:
-            type: string
             description: |
-              OIDC provider URL.
+              URL OIDC-провайдера.
           oidcCA:
-            type: string
             description: |
-              OIDC provider CA.
+              CA OIDC-провайдера.
       authz:
-        type: object
-        default: {}
         description: |
-          Optional authorization parameters for Kubernetes API clients. By default, they are taken from [`user-authz`](/modules/140-user-authz/) module ConfigMap.
+          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](/modules/140-user-authz/)
         properties:
           webhookURL:
-            type: string
             description: |
-              Authorization webhook URL.
+              URL authorization webhook'а.
           webhookCA:
-            type: string
             description: |
-              Authorization webhook CA.
+              CA authorization webhook'a.
       loadBalancer:
-        type: object
         description: |
           Если указано, будет создан сервис с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).
         properties:
           annotations:
-            type: object
             description: |
               Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
               > **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
           sourceRanges:
-            type: array
             description: |
               Список CIDR, которым разрешен доступ к API.
 
               Облачный провайдер может не поддерживать данную опцию и игнорировать её.
-            items:
-              type: string
-              pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\/[0-9]+$'
       auditPolicyEnabled:
-        type: boolean
-        default: false
         description: |
           Включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (`audit-policy` в ns `kube-system`).
   etcd:
-    type: object
     description: |
-      `etcd` parameters.
+      Параметры `etcd`.
     properties:
       externalMembersNames:
-        type: array
         description: |
-          `etcd` external members array (they will not be deleted).
-        items:
-          type: string
-          pattern: '^[0-9a-zA-Z\.-:\/]+$'
+          Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).
   nodeMonitorGracePeriodSeconds:
-    type: integer
-    default: 40
     description: |
-      The number of seconds after which the node will enter the `Unreachable` status in case of lost connection.
+      Число секунд, через которое узел перейдёт в состояние `Unreachable` при потере с ним связи.
   failedNodePodEvictionTimeoutSeconds:
-    type: integer
-    default: 300
     description: |
-      The number of seconds after which pods will be deleted from the node with the `Unreachable` status.
-      > **Note!** If you change the parameter, the pods  must be restarted.
+      Количество секунд, по прошествии которых, с узла в статусе `Unreachable` будут удалены поды.
+      > **Важно!** При изменении этого параметра потребуется перезапуск подов.

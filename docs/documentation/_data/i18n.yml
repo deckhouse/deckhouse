@@ -1,0 +1,69 @@
+common:
+  of:
+    en: of
+    ru: ""
+  array:
+    en: array
+    ru: массив
+  of_array:
+    en: arrays
+    ru: массивов
+  object:
+    en: object
+    ru: объект
+  of_object:
+    en: objects
+    ru: объектов
+  number:
+    en: number
+    ru: число
+  of_number:
+    en: number
+    ru: чисел
+  integer:
+    en: integer
+    ru: целочисленный
+  of_integer:
+    en: integers
+    ru: целых чисел
+  string:
+    en: string
+    ru: строка
+  of_string:
+    en: strings
+    ru: строк
+  boolean:
+    en: boolean
+    ru: булевый
+  of_boolean:
+    en: booleans
+    ru: булевых значений
+  allowed_values:
+    en: Allowed values
+    ru: допустимые значения
+  allowed_values_of_array:
+    en: of the array
+    ru: элемента массива
+  default_value:
+    en: default
+    ru: по умолчанию
+  example:
+    en: example
+    ru: пример
+  x-kubernetes-int-or-string:
+    en: integer or string
+    ru: строка или число
+  pattern:
+    en: pattern
+    ru: шаблон
+  length:
+    en: length
+    ru: длина
+  required_value_sentence:
+    en: Required value.
+    ru: Обязательный параметр.
+  not_required_value_sentence:
+    en: Not required value.
+    ru: Необязательный параметр.
+
+
