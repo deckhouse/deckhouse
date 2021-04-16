@@ -137,6 +137,9 @@ function terraform_state_metrics() {
     if [[ "$state_terranode_statuses" != "[]" ]]; then
       state_terranode_status="$(get_status "$state_terranode_statuses")"
     fi
+  elif [[ "${FP_CLUSTER_TYPE}" == "Cloud" ]]; then
+    state_cluster_status="missing"
+    state_master_status="missing"
   fi
 
   jq -nc --arg metric_name $summarized_metric_name --arg group "$group" \
