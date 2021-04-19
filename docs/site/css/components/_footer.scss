@@ -1,0 +1,71 @@
+@import "components/common/_variables.scss";
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1 0 auto;
+}
+
+.footer {
+  flex-shrink: 0;
+  background: $color-main;
+  font-size: $font-size-small;
+
+  &__content {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 50px 0;
+  }
+
+  &__navigation {
+    margin-left: auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    color: $color-inverse;
+
+    &-column {
+      margin-right: 50px;
+
+      @media (min-width: $container-breakpoint-lg) {
+        margin-right: 150px;
+      }
+
+      &:last-child {
+        margin-right: 0px;
+      }
+
+      &-title {
+        text-transform: uppercase;
+        margin-bottom: $spacing-l;
+      }
+    }
+
+    &-list {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+
+      li {
+        margin-bottom: $spacing-m;
+      }
+
+      a {
+        color: $color-inverse;
+        text-decoration: none;
+        font-weight: $font-weight-semibold;
+      }
+    }
+  }
+}

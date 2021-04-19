@@ -1,0 +1,27 @@
+@import "components/common/_variables.scss";
+
+.button {
+    display: inline-block;
+    text-decoration: none;
+    box-sizing: border-box;
+    padding: 0.75em 1.5em;
+    font-weight: $font-weight-semibold;
+    &_default {
+        color: $color-main;
+        border: 2px solid $color-main;
+    }
+    &_alt {
+        color: $color-inverse;
+        background: $color-alt;
+    }
+}
+
+.button-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    .button {
+        margin-right: 2em;
+    }
+}

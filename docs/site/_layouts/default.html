@@ -1,89 +1,23 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    {% include head.html %}
-    <script>
-        $(document).ready(function() {
-            // Initialize navgoco with default options
-            $("#mysidebar").navgoco({
-                caretHtml: '',
-                accordion: true,
-                openClass: 'active', // open
-                save: false, // leave false or nav highlighting doesn't work right
-                cookie: {
-                    name: 'navgoco',
-                    expires: false,
-                    path: '/'
-                },
-                slide: {
-                    duration: 400,
-                    easing: 'swing'
-                }
-            });
+  <!--#include virtual="/includes/head-site.html" -->
 
-            $("#collapseAll").click(function(e) {
-                e.preventDefault();
-                $("#mysidebar").navgoco('toggle', false);
-            });
-
-            $("#expandAll").click(function(e) {
-                e.preventDefault();
-                $("#mysidebar").navgoco('toggle', true);
-            });
-
-        });
-
-    </script>
-    <script>
-        $(function () {
-            $('[data-toggle="tooltip"]').tooltip()
-        })
-    </script>
-    <script>
-        $(document).ready(function() {
-            $("#tg-sb-link").click(function() {
-                $("#tg-sb-sidebar").toggle();
-                $("#tg-sb-content").toggleClass('col-md-9');
-                $("#tg-sb-content").toggleClass('col-md-12');
-                $("#tg-sb-icon").toggleClass('fa-toggle-on');
-                $("#tg-sb-icon").toggleClass('fa-toggle-off');
-            });
-        });
-    </script>
-    {% if page.datatable == true %}
-    <!-- Include the standard DataTables bits -->
-    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
-    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
-    <!-- First, this walks through the tables that occur between ...-begin
-         and ...-end and add the "datatable" class to them.
-         Then it invokes DataTable's standard initializer
-         Credit here: http://www.beardedhacker.com/blog/2015/08/28/add-class-attribute-to-markdown-table/
-      -->
-    <script>
-      $(document).ready(function(){
-          $('div.datatable-begin').nextUntil('div.datatable-end', 'table').addClass('display');
-          $('table.display').DataTable( {
-              paging: true,
-              stateSave: true,
-              searching: true
-          });
-       });
-    </script>
-    {% endif %}
+{%- if page.toc == false %}
+<script>
+    window.anchors_disabled = true;
+</script>
+{%- endif %}
 
 </head>
-<body>
-<div class="page container">
-  <div class="page__content">
-    <!--#include virtual="/{{ page.lang }}/includes/topnav.html" -->
 
-    <!-- Page Content -->
+<body>
+  <div class="content">
+    <!--#include virtual="/{{ page.lang }}/includes/header.html" -->
     {{ content }}
   </div>
-
-  <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
-</div>
-
+  <!--#include virtual="/includes/footer.html" -->
 </body>
 {% if site.google_analytics %}
 {% include google_analytics.html %}

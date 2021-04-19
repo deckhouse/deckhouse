@@ -1,0 +1,14 @@
+@import "components/common/_variables.scss";
+
+.lead {
+    padding: 50px 0;
+    background: $color-main;
+    color: $color-inverse;
+    &__content {
+        padding-left: $logo-spacing;
+        box-sizing: border-box;
+    }
+    h1 {
+        margin: 0;
+    }
+}

@@ -1,0 +1,10 @@
+@import "components/common/_variables.scss";
+
+.container {
+    width: $container-width-m;
+    @media (min-width: $container-breakpoint-lg) {
+        width: $container-width-lg;
+    }
+    margin-left: auto;
+    margin-right: auto;
+}
