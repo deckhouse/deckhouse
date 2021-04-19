@@ -1,0 +1,10 @@
+@import "components/common/_variables.scss";
+
+body {
+    font-family: 'Open Sans', sans-serif;
+    font-weight: $font-weight-regular;
+    font-size: $font-size-base;
+    line-height: 1.3;
+    color: $color-main;
+    letter-spacing: 0.02em;
+}

@@ -87,7 +87,7 @@
 }
 
 .layout-sidebar__content {
-    width: 860px;
+    flex: 1;
 }
 
 .sidebar {
@@ -303,6 +303,10 @@
     border-radius: 0px;
 }
 
+.docs {
+    margin-bottom: 50px;
+}
+
 .docs .hidden {
     display: none;
 }
@@ -511,7 +515,7 @@
     letter-spacing: -0.3px;
     line-height: 24px;
     border-radius: 10px;
-    margin-bottom: 50px;
+    margin-bottom: 15px;
 }
 
 .docs__information.active {

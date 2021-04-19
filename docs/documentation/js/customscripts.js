@@ -11,7 +11,9 @@ document.addEventListener("DOMContentLoaded", function() {
   /**
    * AnchorJS
    */
-  anchors.add('h2,h3,h4,h5');
+  if (window.anchors_disabled != true) {
+    anchors.add('h2,h3,h4,h5');
+  }
 
   $.getJSON('/config/data.json', {_: new Date().getTime()}).done(function (resp) {
     let deckhouseVersionInfo = "unknown";

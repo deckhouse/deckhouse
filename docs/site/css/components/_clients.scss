@@ -1,0 +1,46 @@
+@import "components/common/_variables.scss";
+
+.clients {
+    background: $color-smooth;
+    padding: 100px 0;
+    &__content {
+        padding-left: $logo-spacing;
+        box-sizing: border-box;
+    }
+    &__title {
+        margin-top: 0;
+        margin-bottom: $spacing-l;
+    }
+    &__items {
+        margin: 0;
+    }
+
+    &__item {
+        background: $color-inverse;
+        width: 450px;
+        box-sizing: border-box;
+        padding: 30px;
+        margin: 0 50px 0 0;
+        &-header {
+            margin-bottom: $spacing-l;
+        }
+        &-logo {
+            img {
+                height: 30px;
+            }
+        }
+        &-info {
+            margin-bottom: $spacing-l;
+            &:last-child {
+                margin-bottom: 0px;
+            }
+            &-label {
+                margin-bottom: $spacing-s;
+                font-weight: $font-weight-semibold;
+            }
+            &-value {
+                line-height: 1.5;
+            }
+        }
+    }
+}

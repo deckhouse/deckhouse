@@ -1,0 +1,46 @@
+@import "components/common/_variables.scss";
+
+.product-intro {
+    margin: 150px 0 200px;
+    &__content {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    &__about {
+        width: 50%;
+        @media (min-width: $container-breakpoint-lg) {
+            width: 40%;
+        }
+    }
+    &__logo {
+        margin-bottom: $spacing-l;
+    }
+    &__title {
+        margin-bottom: $spacing-l;
+        margin-left: $logo-spacing;
+    }
+    &__description {
+        margin-bottom: $spacing-l;
+        margin-left: $logo-spacing;
+    }
+    &__features {
+        margin-bottom: $spacing-l;
+        margin-left: $logo-spacing;
+    }
+    &__actions {
+        margin-left: $logo-spacing;
+    }
+    &__diagram {
+        padding-top: 75px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 50%;
+        img {
+            width: 100%;
+        }
+    }
+}

@@ -3,14 +3,14 @@ topnav:
 - title: Topnav
   items:
   - title:
-      ru: Установка
-      en: Installation
-    url: /installation.html
+      ru: Возможности
+      en: Features
+    url: /features.html
   - title:
       ru: Документация
       en: Documentation
     url: /documentation/v1/
   - title:
-      ru: Каналы обновлений
-      en: Release channels
-    url: /release_channels.html
+      ru: О нас
+      en: About us
+    url: /about_us.html
