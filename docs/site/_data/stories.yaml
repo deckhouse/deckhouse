@@ -1,0 +1,61 @@
+success-stories:
+  - id: "someproject"
+    business:
+      en: "Individual nutrition plans platform."
+      ru: "Individual nutrition plans platform."
+    challenge:
+      en: "Used Kubernetes under kOps before. Auto de-scaling was mandatory to control the costs of cloud infrastructure. Demanded increased stability of the Kubernetes clusters due to previous unexpected downtimes."
+      ru: "Used Kubernetes under kOps before. Auto de-scaling was mandatory to control the costs of cloud infrastructure. Demanded increased stability of the Kubernetes clusters due to previous unexpected downtimes."
+    solution:
+      en: "G-Plans has moved services to Kubernetes clusters created with the Deckhouse platform, enjoying our autoscaling module, and increased the services’ stability by reducing the downtime to desired SLA level (99,96%)."
+      ru: "G-Plans has moved services to Kubernetes clusters created with the Deckhouse platform, enjoying our autoscaling module, and increased the services’ stability by reducing the downtime to desired SLA level (99,96%)."
+  - id: "someproject"
+    business:
+      en: "Smart trading terminal and auto trading bots for cryptocurrency exchanges, designed to increase profits while reducing risk and minimizing loss for traders."
+      ru: "Smart trading terminal and auto trading bots for cryptocurrency exchanges, designed to increase profits while reducing risk and minimizing loss for traders."
+    challenge:
+      en: "3Commas deployed all microservices on VMs, lacking scalability and robustness under fast-growing traffic."
+      ru: "3Commas deployed all microservices on VMs, lacking scalability and robustness under fast-growing traffic."
+    solution:
+      en: "3Commas selected Deckhouse as the most convenient NoOps Kubernetes platform benefiting from autoscaling for a constantly growing business."
+      ru: "3Commas selected Deckhouse as the most convenient NoOps Kubernetes platform benefiting from autoscaling for a constantly growing business."
+  - id: "someproject"
+    business:
+      en: "Builds and operates ultra-low-cost networks for IoT devices."
+      ru: "Builds and operates ultra-low-cost networks for IoT devices."
+    challenge:
+      en: "Everynet had all microservices on bare-metal servers with concerns for the site reliability. Willing to move to Kubernetes."
+      ru: "Everynet had all microservices on bare-metal servers with concerns for the site reliability. Willing to move to Kubernetes."
+    solution:
+      en: "Everynet constructed a hyper fault-tolerant system using Kubernetes clusters deployed by Deckhouse and Flant expertise in high-load systems. No IoT data has been lost since then."
+      ru: "Everynet constructed a hyper fault-tolerant system using Kubernetes clusters deployed by Deckhouse and Flant expertise in high-load systems. No IoT data has been lost since then."
+  - id: "simple-texting"
+    business:
+      en: "All-in-one text messaging service."
+      ru: "All-in-one text messaging service."
+    challenge:
+      en: "SimpleTexting had all microservices on virtual machines, and had a requirement to support high-loads."
+      ru: "SimpleTexting had all microservices on virtual machines, and had a requirement to support high-loads."
+    solution:
+      en: "SimpleTexting selected Deckhouse as the most convenient NoOps Kubernetes platform benefiting from autoscaling for constantly growing incoming traffic."
+      ru: "SimpleTexting selected Deckhouse as the most convenient NoOps Kubernetes platform benefiting from autoscaling for constantly growing incoming traffic."
+  - id: "someproject"
+    business:
+      en: "Travel services."
+      ru: "Сервисы для путешествий."
+    challenge:
+      en: "Tripster had their clusters deployed on bare-metal, the main challenge was to control the deployment, update it and monitor the performance."
+      ru: "У Tripster были собственные bare-metal-кластеры, и главной задачей было получение возможности контроля развертывания и обновления кластеров, а также мониторинга их производительности ."
+    solution:
+      en: "Tripster onboarded Deckhouse platform and saved enormous efforts on managing bare-metal clusters and increased observability via ready-to-use alerting and dashboards."
+      ru: "Tripster onboarded Deckhouse platform and saved enormous efforts on managing bare-metal clusters and increased observability via ready-to-use alerting and dashboards."
+  - id: "someproject"
+    business:
+      en: "Classifieds in Central Asia region."
+      ru: "Classifieds in Central Asia region."
+    challenge:
+      en: "Lalafo didn’t use Kubernetes before; they decided to start, mainly due to high loads and the need for a failover solution."
+      ru: "Lalafo didn’t use Kubernetes before; they decided to start, mainly due to high loads and the need for a failover solution."
+    solution:
+      en: "Clusters deployed by Deckhouse in someproject ensure failover structure which takes advantage of Istio to organize a service mesh."
+      ru: "Clusters deployed by Deckhouse in someproject ensure failover structure which takes advantage of Istio to organize a service mesh."
