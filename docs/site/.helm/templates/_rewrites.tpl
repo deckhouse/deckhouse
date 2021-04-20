@@ -1,3 +1,3 @@
 {{- define "rewrites" }}
-rewrite ^/$ /ru/ permanent;
+rewrite ^/$ /en/ permanent;
 {{- end }}

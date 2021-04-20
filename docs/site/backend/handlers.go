@@ -87,7 +87,7 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get HTML content for /includes/topnav.html request
-func topnavHandler(w http.ResponseWriter, r *http.Request) {
+func headerHandler(w http.ResponseWriter, r *http.Request) {
 	_ = updateReleasesStatus()
 
 	versionMenu := versionMenuType{
@@ -95,12 +95,13 @@ func topnavHandler(w http.ResponseWriter, r *http.Request) {
 		HTMLContent:            "", // not used now
 		CurrentGroup:           "", // not used now
 		CurrentChannel:         "",
-		CurrentLang:            "",
 		CurrentVersion:         "",
+		CurrentLang:            "",
+		AbsoluteVersion:        "",
 		CurrentVersionURL:      "",
 		CurrentPageURLRelative: "",
+		CurrentPageURL:         "",
 		MenuDocumentationLink:  "",
-		AbsoluteVersion:        "",
 	}
 
 	_ = versionMenu.getVersionMenuData(r)
@@ -123,10 +124,12 @@ func groupMenuHandler(w http.ResponseWriter, r *http.Request) {
 		HTMLContent:            "", // not used now
 		CurrentGroup:           "", // not used now
 		CurrentChannel:         "",
-		CurrentLang:            "",
 		CurrentVersion:         "",
+		CurrentLang:            "",
+		AbsoluteVersion:        "",
 		CurrentVersionURL:      "",
 		CurrentPageURLRelative: "",
+		CurrentPageURL:         "",
 		MenuDocumentationLink:  "",
 	}
 
@@ -152,8 +155,10 @@ func channelMenuHandler(w http.ResponseWriter, r *http.Request) {
 		CurrentChannel:         "",
 		CurrentVersion:         "",
 		CurrentLang:            "",
+		AbsoluteVersion:        "",
 		CurrentVersionURL:      "",
 		CurrentPageURLRelative: "",
+		CurrentPageURL:         "",
 		MenuDocumentationLink:  "",
 	}
 
