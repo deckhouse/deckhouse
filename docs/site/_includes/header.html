@@ -1,5 +1,11 @@
 {% assign topnav = site.data[page.topnav].topnav %}
 
+{%- assign page_url_parts = page.url | split: '/' -%}
+{%- assign page_max_ind = page_url_parts.size | minus: 1 -%}
+{%- for i in (2..page_max_ind) %}
+{%- capture page_url_without_lang %}{{ page_url_without_lang }}/{{ page_url_parts[i] }}{% endcapture -%}
+{% endfor %}
+
 <header class="header">
   <div class="header__content container">
     <div class="header__logo">
@@ -10,38 +16,45 @@
     <ul class="header__navigation">
         {% for entry in topnav %}
             {% for item in entry.items %}
+            {%- assign item_url_parts = item.url | split: '/' -%}
             <li class="header__navigation-item
-                {% assign tmp = '/' | append: page.lang | append: item.url %}
-                {%- if page.url == tmp %} header__navigation-item_active{% endif %}">
+                {%- if page.mode == 'ssi' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
+                {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
+                {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
+                {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}">
                 <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title[page.lang] %}{{ item.title[page.lang] }}{% else %}{{ item.title }}{% endif -%}</a>
             </li>
             {% endfor %}
         {% endfor %}
-        {%- unless site.local_mode %}
         <li class="header__navigation-item header__navigation-item_parent submenu-parent">
           <a href="#">
               {%- if page.lang == "ru" %}
-                  Russian
+                  Русский
               {%- else %}
                   English
               {%- endif %}
-          </a>{% raw %}
+          </a>
           <div class="submenu-container">
             <ul class="submenu">
               <li data-proofer-ignore class="submenu-item">
-                  <a data-proofer-ignore href="/en{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}" class="submenu-item-link">
+                  <a data-proofer-ignore href="/en
+                  {%- if page.mode == 'ssi' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                  {%- else -%}{{ page_url_without_lang }}{%- endif %}"
+                     class="submenu-item-link">
                       English
                   </a>
               </li>
               <li data-proofer-ignore class="submenu-item">
-                  <a data-proofer-ignore href="/ru{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}" class="submenu-item-link">
-                      Russian
+                  <a data-proofer-ignore href="/ru
+                  {%- if page.mode == 'ssi' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                  {%- else -%}{{ page_url_without_lang }}{%- endif %}"
+                     class="submenu-item-link">
+                      Русский
                   </a>
               </li>
             </ul>
-          </div>{% endraw %}
+          </div>
         </li>
-        {%- endunless %}
     </ul>
   </div>
 </header>

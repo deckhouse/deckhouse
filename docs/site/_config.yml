@@ -62,6 +62,11 @@ defaults:
       multilang: true
       lang: en
   - scope:
+      path: "pages/includes"
+      type: "pages"
+    values:
+      mode: "ssi"
+  - scope:
       path: "modules_ru"
       type: "pages"
     values:

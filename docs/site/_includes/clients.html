@@ -10,7 +10,7 @@
     </h2>
 
     <div class="clients__items" data-slick>
-    {% for story in site.data.stories.success-stories %}
+    {% for story in site.data.stories[page.lang] %}
       <div class="clients__item">
         <div class="clients__item-header">
           <div class="clients__item-logo">
@@ -26,7 +26,7 @@
             {%- endif -%}
           </div>
           <div class="clients__item-info-value">
-            {{- story.business[page.lang] -}}
+            {{- story.business -}}
           </div>
         </div>
         <div class="clients__item-info">
@@ -38,7 +38,7 @@
             {%- endif -%}
           </div>
           <div class="clients__item-info-value">
-            {{- story.challenge[page.lang] -}}
+            {{- story.challenge -}}
           </div>
         </div>
         <div class="clients__item-info">
@@ -50,7 +50,7 @@
             {%- endif -%}
           </div>
           <div class="clients__item-info-value">
-            {{- story.solution[page.lang] -}}
+            {{- story.solution -}}
           </div>
         </div>
       </div>
