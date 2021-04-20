@@ -2,59 +2,59 @@
   <div class="clients__content container">
 
     <h2 class="text_h1 features-group__title">
+      {%- if page.lang=="ru" -%}
+      Истории успеха от наших клиентов
+      {%- else -%}
       Success stories from our clients
+      {%- endif -%}
     </h2>
 
     <div class="clients__items" data-slick>
-
-      {%
-        include client.html
-        id="someproject"
-        business="Individual nutrition plans platform."
-        challenge="Used Kubernetes under kOps before. Auto de-scaling was mandatory to control the costs of cloud infrastructure. Demanded increased stability of the Kubernetes clusters due to previous unexpected downtimes."
-        solution="G-Plans has moved services to Kubernetes clusters created with the Deckhouse platform, enjoying our autoscaling module, and increased the services’ stability by reducing the downtime to desired SLA level (99,96%)."
-      %}
-
-      {%
-        include client.html
-        id="someproject"
-        business="Smart trading terminal and auto trading bots for cryptocurrency exchanges, designed to increase profits while reducing risk and minimizing loss for traders."
-        challenge="3Commas deployed all microservices on VMs, lacking scalability and robustness under fast-growing traffic."
-        solution="3Commas selected Deckhouse as the most convenient NoOps Kubernetes platform benefiting from autoscaling for a constantly growing business."
-      %}
-
-      {%
-        include client.html
-        id="someproject"
-        business="Builds and operates ultra-low-cost networks for IoT devices."
-        challenge="Everynet had all microservices on bare-metal servers with concerns for the site reliability. Willing to move to Kubernetes."
-        solution="Everynet constructed a hyper fault-tolerant system using Kubernetes clusters deployed by Deckhouse and Flant expertise in high-load systems. No IoT data has been lost since then."
-      %}
-
-      {%
-        include client.html
-        id="simple-texting"
-        business="All-in-one text messaging service."
-        challenge="SimpleTexting had all microservices on virtual machines, and had a requirement to support high-loads."
-        solution="SimpleTexting selected Deckhouse as the most convenient NoOps Kubernetes platform benefiting from autoscaling for constantly growing incoming traffic."
-      %}
-
-      {%
-        include client.html
-        id="someproject"
-        business="Travel services."
-        challenge="Tripster had their clusters deployed on bare-metal, the main challenge was to control the deployment, update it and monitor the performance."
-        solution="Tripster onboarded Deckhouse platform and saved enormous efforts on managing bare-metal clusters and increased observability via ready-to-use alerting and dashboards."
-      %}
-
-      {%
-        include client.html
-        id="someproject"
-        business="Classifieds in Central Asia region."
-        challenge="Lalafo didn’t use Kubernetes before; they decided to start, mainly due to high loads and the need for a failover solution."
-        solution="Clusters deployed by Deckhouse in someproject ensure failover structure which takes advantage of Istio to organize a service mesh."
-      %}
-
+    {% for story in site.data.stories.success-stories %}
+      <div class="clients__item">
+        <div class="clients__item-header">
+          <div class="clients__item-logo">
+            <img src="{{ site.baseurl }}/images/clients/{{ story.id }}.svg" alt="{{ story.id }}" />
+          </div>
+        </div>
+        <div class="clients__item-info">
+          <div class="clients__item-info-label">
+            {%- if page.lang=="ru" -%}
+            Основной бизнес
+            {%- else -%}
+            Main business
+            {%- endif -%}
+          </div>
+          <div class="clients__item-info-value">
+            {{- story.business[page.lang] -}}
+          </div>
+        </div>
+        <div class="clients__item-info">
+          <div class="clients__item-info-label">
+            {%- if page.lang=="ru" -%}
+            Задача
+            {%- else -%}
+            Challenge
+            {%- endif -%}
+          </div>
+          <div class="clients__item-info-value">
+            {{- story.challenge[page.lang] -}}
+          </div>
+        </div>
+        <div class="clients__item-info">
+          <div class="clients__item-info-label">
+            {%- if page.lang=="ru" -%}
+            Решение
+            {%- else -%}
+            Solution
+            {%- endif -%}
+          </div>
+          <div class="clients__item-info-value">
+            {{- story.solution[page.lang] -}}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
     </div>
   </div>
 </section>
