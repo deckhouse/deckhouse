@@ -14,6 +14,10 @@
         color: $color-inverse;
         background: $color-alt;
     }
+    &_inverse {
+        color: $color-alt;
+        background: $color-inverse;
+    }
 }
 
 .button-group {
