@@ -1,4 +1,5 @@
 ---
+title: "Home"
 permalink: en/
 toc: false
 ---

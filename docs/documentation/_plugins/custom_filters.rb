@@ -14,6 +14,10 @@ module Jekyll
         prefix + path.sub(%r!^/!, "./")
     end
 
+    def endswith(text, query)
+      return text.end_with? query
+    end
+
     # get_lang_field_or_raise_error filter returns a field from argument hash
     # returns nil if hash is empty
     # returns hash[page.lang] if hash has the field

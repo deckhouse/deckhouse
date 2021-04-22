@@ -1,11 +1,5 @@
 {% assign topnav = site.data[page.topnav].topnav %}
 
-{%- assign page_url_parts = page.url | split: '/' -%}
-{%- assign page_max_ind = page_url_parts.size | minus: 1 -%}
-{%- for i in (2..page_max_ind) %}
-{%- capture page_url_without_lang %}{{ page_url_without_lang }}/{{ page_url_parts[i] }}{% endcapture -%}
-{% endfor %}
-
 <header class="header">
   <div class="header__content container">
     <div class="header__logo">

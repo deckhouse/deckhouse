@@ -93,6 +93,7 @@ git:
   group: jekyll
   includePaths:
     - site/_config.yml
+    - site/_includes/head.html
     - site/Gemfile
     - site/Gemfile.lock
     - documentation
