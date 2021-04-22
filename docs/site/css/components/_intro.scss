@@ -1,0 +1,55 @@
+@import "components/common/_variables.scss";
+
+.intro {
+    padding: 150px 0;
+    background: $color-main;
+    color: $color-inverse;
+    a {
+        color: $color-alt;
+        text-decoration: underline;
+    }
+    &__content {
+        padding-left: $logo-spacing;
+        box-sizing: border-box;
+    }
+    &__row {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+        & > * {
+            width: 40%;
+        }
+    }
+    &__title {
+        margin-top: 0;
+        margin-bottom: $spacing-l*3;
+        padding-bottom: $spacing-s;
+        border-bottom: 2px solid $color-inverse;
+    }
+    &__subtitle {
+        margin-top: 0;
+        margin-bottom: $spacing-l;
+    }
+    p {
+        margin: 0 0 $spacing-l 0;
+    }
+    &__product {
+        &:not(:last-child) {
+            margin-bottom: 50px;
+        }
+        &-title {
+            margin-bottom: $spacing-s;
+            padding-bottom: $spacing-s;
+            border-bottom: 2px solid $color-alt;
+        }
+        &-info {
+            line-height: 1.5;
+        }
+        &-extra {
+            margin-top: $spacing-l;
+            opacity: 0.6;
+            font-size: $font-size-small;
+        }
+    }
+}

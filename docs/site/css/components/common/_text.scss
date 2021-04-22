@@ -29,6 +29,11 @@
         font-weight: $font-weight-regular;
         line-height: 1.5;
     }
+    &_big {
+        font-size: $font-size-h3;
+        font-weight: $font-weight-regular;
+        line-height: 1.5;
+    }
     &_alt {
         color: $color-alt;
     }
