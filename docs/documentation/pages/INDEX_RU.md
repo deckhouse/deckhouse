@@ -1,4 +1,5 @@
 ---
+title: "Главная"
 permalink: ru/
 toc: false
 lang: ru

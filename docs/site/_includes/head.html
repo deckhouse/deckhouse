@@ -2,35 +2,55 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width">
 
-{%- if page.multilang %}
-<link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.url }}/ru{{ page.url | relative_url }}" />
-<link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.url }}/en{{ page.url | relative_url }}" />
-{%- endif %}
-
+<!-- title/descriptions -->
 {%- assign page_url_parts = page.url | split: '/' -%}
-{%- assign max_ind = page_url_parts.size | minus: 3 -%}
+{%- assign max_ind = page_url_parts.size | minus: 1 -%}
 {%- assign title_parts = "" | split: "" -%}
+{% assign is_directory = page.url | endswith: "/" %}
 
-{%- for i in (1..max_ind) %}
+{% if max_ind == 1 and include.mode=='documentation' %}{%- assign max_ind = 2 -%}{% endif %}
+
+{%- for i in (2..max_ind) %}
+
 {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
 {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+{%- capture page_url_without_lang %}{{ page_url_without_lang }}/{{ page_url_parts[i] }}{% endcapture -%}
 
-{%- assign breadcrumb = site.data.breadcrumbs[page.lang][current_breadcrumb_url] %}
-{%- unless breadcrumb %}
-{%- assign breadcrumb_err = "Check breadcrumbs.yml: " | append: current_breadcrumb_url | append: " not defined" %}
-{{ breadcrumb_err | raise_error }}
-{% endunless -%}
-{%- assign title_parts = title_parts | push: breadcrumb.title -%}
+{%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
+{%- if breadcrumb %}
+    {%- if breadcrumb.title[page.lang] %}
+    {%- assign title = breadcrumb.title[page.lang] %}
+    {% else %}
+    {%- assign title = breadcrumb.title %}
+    {% endif -%}
+    {%- assign title_parts = title_parts | push: title -%}
+{%- endif -%}
 {%- endfor %}
+
 {%- assign title_parts = title_parts | push: page.title -%}
+
+{%- if page_url_without_lang.size > 1 and is_directory %}
+{%- assign page_url_without_lang = page_url_without_lang | append: '/' %}
+{%- endif %}
 
 {%- assign generated_title = title_parts | reverse | join: " / " %}
 <title>{{ generated_title }} | {{ site.site_title }}</title>
 {% if page.description %}
     {%- assign description = page.description | strip_html | strip_newlines | truncate: 160 %}
 {% else %}
-    {%- assign description = site.site_description | strip_html | strip_newlines | truncate: 160 %}
+    {%- assign description = site.site_description[page.lang] | strip_html | strip_newlines | truncate: 160 %}
 {% endif %}
+
+<!-- multilang -->
+{%- if page.multilang %}
+    {%- if include.mode=='documentation' %}
+    {%- assign page_meta_url = site.canonical_url_prefix | append: (page_url_without_lang | relative_url) %}
+    {%- else %}
+    {%- assign page_meta_url = page_url_without_lang | relative_url %}
+    {% endif %}
+    <link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.url }}/ru{{ page_meta_url }}" />
+    <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.url }}/en{{ page_meta_url }}" />
+{%- endif %}
 
 <!-- Primary Meta Tags -->
 <meta name="title" content="{{ generated_title }} | {{ site.site_title }}">
@@ -48,5 +68,3 @@
 <meta property="twitter:url" content="{% if page.change_canonical %}{{ page.url | absolute_url }}{% else %}{{ site.url }}{{ page.url }}{% endif %}">
 <meta property="twitter:title" content="{{ generated_title }} | {{ site.site_title }}">
 <meta property="twitter:description" content="{{ description }}">
-
-{% include head-common.html %}

@@ -2,6 +2,7 @@
 <html>
 
 <head>
+  {% include head.html mode='documentation' %}
   <!--#include virtual="/includes/head-site.html" -->
 
 {%- if page.toc == false %}
@@ -17,7 +18,7 @@
     <!--#include virtual="/{{ page.lang }}/includes/header.html" -->
     {{ content }}
   </div>
-  <!--#include virtual="/includes/footer.html" -->
+  <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->
 </body>
 {% if site.google_analytics %}
 {% include google_analytics.html %}

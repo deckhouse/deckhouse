@@ -1,0 +1,61 @@
+columns:
+  en:
+  - items:
+      - title: Features
+        url: '/features.html'
+      - title: Get Started
+        url: '#'
+      - title: Documentation
+        url: '/documentation/v1/'
+  - title: Products
+    items:
+      - title: Kubernetes Platform CE
+        url: '#'
+      - title: Kubernetes Platform EE
+        url: '#'
+      - title: Commander
+        url: '#'
+  - title: Services
+    items:
+      - title: Training & Consulting
+        url: '#'
+      - title: Managed Kubernetes
+        external_url: 'https://flant.com/services/managed-kubernetes-as-a-service'
+  - title: About us
+    items:
+      - title: Company
+        external_url: 'https://flant.com/company/about-us'
+      - title: Clients
+        url: '#'
+      - title: Contact us
+        external_url: 'https://flant.com/company/contact-us'
+  ru:
+  - items:
+      - title: Возможности
+        url: '/features.html'
+      - title: Быстрый старт
+        url: '#'
+      - title: Документация
+        url: '/documentation/v1/'
+  - title: Продукты
+    items:
+      - title: Kubernetes Platform CE
+        url: '#'
+      - title: Kubernetes Platform EE
+        url: '#'
+      - title: Commander
+        url: '#'
+  - title: Сервисы
+    items:
+      - title: Обучение и Консалтинг
+        url: '#'
+      - title: Managed Kubernetes
+        external_url: 'https://flant.ru/services/managed-kubernetes-as-a-service'
+  - title: About us
+    items:
+      - title: Компания
+        external_url: 'https://flant.ru'
+      - title: Клиенты
+        external_url: 'https://flant.ru/clients'
+      - title: Контакты
+        external_url: 'https://flant.ru/company/contact-us'
