@@ -28,8 +28,8 @@ search: kube config generator
 
 Соответственно, один из этих модулей производит настройку `kube-apiserver` таким образом, что он становится OIDC-клиентом dex. В ряде других модулей Deckhouse также будет автоматически включена интеграция с dex, в том числе в модулях:
 - [prometheus](/modules/300-prometheus/)
-- [dashboard](/modules/500-dashboard/
-- [оpenvpn](/modules/500-openvpn/
+- [dashboard](/modules/500-dashboard/)
+- [оpenvpn](/modules/500-openvpn/)
 - и других...
 
 ### Возможность аутентификации в API Kubernetes по логину и паролю
