@@ -23,21 +23,6 @@ function __config__() {
         "chain": (.data."cert-chain.pem" | @base64d),
         "root":  (.data."root-cert.pem"  | @base64d)
       }
-  - name: secret_client
-    group: main
-    keepFullObjectsInMemory: false
-    apiVersion: v1
-    kind: Secret
-    nameSelector:
-      matchNames: ["client-cert"]
-    namespace:
-      nameSelector:
-        matchNames: ["d8-istio"]
-    jqFilter: |
-      {
-        "cert": (.data."tls.crt" | @base64d),
-        "key":  (.data."tls.key" | @base64d)
-      }
   - name: secret_api_proxy
     group: main
     keepFullObjectsInMemory: false
@@ -57,8 +42,6 @@ EOF
 }
 
 function __main__() {
-# TODO: don't ust clusterDomain in cert
-
   if values::has istio.ca; then
     values::set istio.internal.ca.cert  "$(values::get --required istio.ca.cert)"
     values::set istio.internal.ca.key   "$(values::get --required istio.ca.key)"
@@ -69,7 +52,7 @@ function __main__() {
   else
     ca="$(
       jo \
-        names="[$(jo O="$(values::get global.discovery.clusterDomain)")]" \
+        names="[$(jo O="d8-istio")]" \
         key="$(jo algo=rsa size=2048)" \
         ca="$(jo expiry=87600h)" | cfssl gencert -initca -
     )"
@@ -77,21 +60,6 @@ function __main__() {
     values::set istio.internal.ca.key   "$(jq '.key'  <<< "${ca}")"
     values::set istio.internal.ca.chain "$(jq '.cert' <<< "${ca}")"
     values::set istio.internal.ca.root  "$(jq '.cert' <<< "${ca}")"
-  fi
-
-  if context::has snapshots.secret_client.0; then
-    values::set istio.internal.clientCertificate "$(context::get snapshots.secret_client.0.filterResult)"
-  else
-    cert="$(
-      jo \
-        CN=deckhouse \
-        names="[$(jo O="$(values::get global.discovery.clusterDomain)")]" \
-        key="$(jo algo=rsa size=2048)" \
-        usages="$(jo -a "signing" "key encipherment" "client auth")" \
-        expiry="87600h" | cfssl gencert -ca <(values::get istio.internal.ca.cert) -ca-key <(values::get istio.internal.ca.key) -
-    )"
-    values::set istio.internal.clientCertificate.cert "$(jq '.cert' <<< "${cert}")"
-    values::set istio.internal.clientCertificate.key  "$(jq '.key'  <<< "${cert}")"
   fi
 
   if values::is_true istio.multicluster.enabled; then

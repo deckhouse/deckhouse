@@ -17,7 +17,7 @@ function __config__() {
           "name": .metadata.name,
           "trustDomain": .spec.trustDomain,
           "metadataPublicServicesEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/private/federation-services" ),
-          "publicServicesCache": .status.metadataCache.publicServices
+          "clusterUUID": .status.metadataCache.public.clusterUUID
         }
     schedule:
     - name: federations
@@ -28,8 +28,8 @@ EOF
 }
 
 function __main__() {
-  if ! values::has istio.internal.clientCertificate.cert; then
-    2>&1 echo "WARNING: Client certificate for fetching remote metadata endpoints isn't discovered yet. Retry in 1min."
+  if ! values::has istio.internal.remoteAuthnKeypair.priv; then
+    >&2 echo "WARNING: Authn keypair for signing requests to remote metadata endpoints isn't discovered yet. Retry in 1min."
     return 0
   fi
 
@@ -38,30 +38,37 @@ function __main__() {
       federationSpec="$(context::jq --argjson i "$i" -c '.snapshots.federations[$i] | .filterResult')"
       federationName="$(jq                 -r '.name'                           <<< "$federationSpec")"
       trustDomain="$(jq                    -r '.trustDomain'                    <<< "$federationSpec")"
-      publicServicesCache="$(jq            -r '.publicServicesCache'            <<< "$federationSpec")"
       metadataPublicServicesEndpoint="$(jq -r '.metadataPublicServicesEndpoint' <<< "$federationSpec")"
+      clusterUUID="$(jq                    -r '.clusterUUID'                    <<< "$federationSpec")"
 
       if [[ "$trustDomain" == "$(values::get global.discovery.clusterDomain)" ]]; then continue; fi
+      if [[ "$clusterUUID" == "null" ]];                                          then continue; fi
+
+      token="$(
+        deckhouse-controller helper crypto gen-jwt \
+          --private-key-path <(values::get istio.internal.remoteAuthnKeypair.priv) \
+          --claim iss=d8-istio \
+          --claim aud="$clusterUUID" \
+          --claim sub="$(values::get global.discovery.clusterUUID)" \
+          --claim scope=federation-services \
+          --ttl 1m
+      )"
+      if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+        echo $token > "/tmp/jwt-pss-$federationName"
+      fi
 
       isError=0
       # try to fetch metadata from endpoint and try to unmarshal
       if publicServices="$(
         curl \
-          -f -s --show-error \
-          --cert <(values::get istio.internal.clientCertificate.cert) \
-          --key  <(values::get istio.internal.clientCertificate.key) \
+          -f -s -m 3 --show-error \
+          --header "Authorization: Bearer $token" \
           "$metadataPublicServicesEndpoint" | jq -ec '.publicServices | sort'
       )"
       then
-        if jq -ne --argjson ig "$publicServices" --argjson igc "$publicServicesCache" '$ig != $igc' >/dev/null; then
-          patch="$(jq -n --argjson ps "$publicServices" '
-            {"metadataCache": {"publicServices": $ps, "publicServicesLastFetchTimestamp": (now | todateiso8601)}}
-          ')"
-        else
-          patch="$(jq -n '
-            {"metadataCache": {"publicServicesLastFetchTimestamp": (now | todateiso8601)}}
-          ')"
-        fi
+        patch="$(jq -n --argjson ps "$publicServices" '
+          {"metadataCache": {"publicServices": $ps, "publicServicesLastFetchTimestamp": (now | todateiso8601)}}
+        ')"
         kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "istiofederations" "$federationName" "$patch"
       else
         isError=1

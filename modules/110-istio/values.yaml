@@ -8,10 +8,9 @@ istio:
   multicluster: {}
   internal:
     ca: {}
-    clientCertificate: {}
     apiProxyListenCertificate: {}
     federations: []
     multiclusters: []
-    remoteRootCAs: []
+    remotePublicMetadata: {}
     supportedVersions:
     - 1.9.1-trustca

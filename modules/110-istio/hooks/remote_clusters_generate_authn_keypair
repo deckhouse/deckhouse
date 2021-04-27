@@ -1,0 +1,35 @@
+#!/bin/bash
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  kubernetes:
+  - name: secret
+    group: main
+    keepFullObjectsInMemory: false
+    apiVersion: v1
+    kind: Secret
+    nameSelector:
+      matchNames: ["d8-remote-authn-keypair"]
+    namespace:
+      nameSelector:
+        matchNames: ["d8-istio"]
+    jqFilter: |
+      {
+        "pub": (.data."pub.pem" | @base64d),
+        "priv":  (.data."priv.pem" | @base64d)
+      }
+EOF
+}
+
+function __main__() {
+  if context::has snapshots.secret.0; then
+    values::set istio.internal.remoteAuthnKeypair "$(context::get snapshots.secret.0.filterResult)"
+  else
+    values::set istio.internal.remoteAuthnKeypair "$(deckhouse-controller helper crypto gen-keypair)"
+  fi
+}
+
+hook::run "$@"

@@ -8,6 +8,7 @@ import (
 
 	candiapp "github.com/deckhouse/deckhouse/candictl/cmd/candictl/commands"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/aws"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/d8crypto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/fnv"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/unit"
@@ -67,6 +68,23 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		etcdCommand := helpersCommand.Command("etcd", "etcd helpers.")
 		etcdCommand.Action(func(c *kingpin.ParseContext) error {
 			return errors.New("helper etcd move-service is deprecated")
+		})
+	}
+
+	{
+		cryptoCommand := helpersCommand.Command("crypto", "RSA crypto helpers.")
+
+		cryptoGenKeypairCommand := cryptoCommand.Command("gen-keypair", "Generate ED25519 keypair.")
+		cryptoGenKeypairCommand.Action(func(c *kingpin.ParseContext) error {
+			return d8crypto.GenKeypair()
+		})
+
+		cryptoGenJWTCommand := cryptoCommand.Command("gen-jwt", "Generate JWT token.")
+		privateKeyPath := cryptoGenJWTCommand.Flag("private-key-path", "Path to private RSA key in PEM format.").Required().ExistingFile()
+		claims := cryptoGenJWTCommand.Flag("claim", "Claims for token (ex --claim iss=deckhouse --claim sub=akakiy).").Required().StringMap()
+		ttl := cryptoGenJWTCommand.Flag("ttl", "TTL duration (ex. 10s).").Required().Duration()
+		cryptoGenJWTCommand.Action(func(c *kingpin.ParseContext) error {
+			return d8crypto.GenJWT(*privateKeyPath, *claims, *ttl)
 		})
 	}
 

@@ -15,24 +15,28 @@ function __main__() {
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
 metadata:
- name: kiali
+ name: istio
  namespace: d8-istio
  labels:
    heritage: deckhouse
    module: istio
-   app: kiali
  annotations:
    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
-  applicationDomain: "$(module::public_domain kiali)"
+  applicationDomain: "$(module::public_domain istio)"
   sendAuthorizationHeader: true
   applicationIngressCertificateSecretName: "$(module::https_secret_name "istio-ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else
-    if kubectl -n d8-istio get dexauthenticator kiali >/dev/null 2>/dev/null ; then
-      kubectl -n d8-istio delete dexauthenticator kiali >/dev/null 2>/dev/null
+    if kubectl -n d8-istio get dexauthenticator istio >/dev/null 2>/dev/null ; then
+      kubectl -n d8-istio delete dexauthenticator istio >/dev/null 2>/dev/null
     fi
+  fi
+
+  # Migration 16.04.2021, delete after deploy
+  if kubectl -n d8-istio get dexauthenticator kiali >/dev/null 2>/dev/null ; then
+    kubectl -n d8-istio delete dexauthenticator kiali >/dev/null 2>/dev/null
   fi
 }
 

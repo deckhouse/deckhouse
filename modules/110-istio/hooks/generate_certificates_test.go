@@ -11,7 +11,7 @@ import (
 )
 
 var _ = Describe("Istio hooks :: generate_certificates ::", func() {
-	f := HookExecutionConfigInit(`{"global":{"discovery":{"clusterDomain":"cluster.flomaster"}},"istio":{"internal":{"ca":{},"clientCertificate":{},"apiProxyListenCertificate":{}}}}`, "")
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"clusterDomain":"cluster.flomaster"}},"istio":{"internal":{"ca":{},"apiProxyListenCertificate":{}}}}`, "")
 
 	Context("Empty cluster; empty values", func() {
 		BeforeEach(func() {
@@ -27,8 +27,6 @@ var _ = Describe("Istio hooks :: generate_certificates ::", func() {
 			Expect(f.ValuesGet("istio.internal.ca.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.ca.root").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.ca.chain").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("istio.internal.clientCertificate.key").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("istio.internal.clientCertificate.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.apiProxyListenCertificate.key").Exists()).To(BeFalse())
 			Expect(f.ValuesGet("istio.internal.apiProxyListenCertificate.cert").Exists()).To(BeFalse())
 
@@ -43,15 +41,7 @@ var _ = Describe("Istio hooks :: generate_certificates ::", func() {
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeTrue())
-			Expect(cert.Subject.Organization[0]).To(Equal("cluster.flomaster"))
-
-			clientCert := f.ValuesGet("istio.internal.clientCertificate.cert").String()
-			block, _ = pem.Decode([]byte(clientCert))
-			cert, err = x509.ParseCertificate(block.Bytes)
-			Expect(err).To(BeNil())
-			Expect(cert.IsCA).To(BeFalse())
-
-			Expect(cert.Subject.CommonName).To(Equal("deckhouse"))
+			Expect(cert.Subject.Organization[0]).To(Equal("d8-istio"))
 		})
 	})
 
@@ -70,8 +60,6 @@ var _ = Describe("Istio hooks :: generate_certificates ::", func() {
 			Expect(f.ValuesGet("istio.internal.ca.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.ca.root").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.ca.chain").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("istio.internal.clientCertificate.key").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("istio.internal.clientCertificate.cert").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.apiProxyListenCertificate.key").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.apiProxyListenCertificate.cert").Exists()).To(BeTrue())
 
@@ -83,30 +71,6 @@ var _ = Describe("Istio hooks :: generate_certificates ::", func() {
 
 			Expect(cert.Subject.CommonName).To(Equal("api-proxy"))
 			Expect(cert.DNSNames).To(Equal([]string{"api-proxy", "api-proxy.d8-istio", "api-proxy.d8-istio.svc"}))
-		})
-	})
-
-	Context("Secret client-cert is in cluster; values aren't set", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: client-cert
-  namespace: d8-istio
-data:
-  tls.crt: YWFh # aaa
-  tls.key: YmJi # bbb
-`))
-			f.RunHook()
-		})
-		It("Should add existing ca certificate to values", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-
-			Expect(f.ValuesGet("istio.internal.clientCertificate.cert").String()).To(Equal("aaa"))
-			Expect(f.ValuesGet("istio.internal.clientCertificate.key").String()).To(Equal("bbb"))
 		})
 	})
 

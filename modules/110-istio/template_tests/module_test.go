@@ -61,9 +61,9 @@ const istioValues = `
       revisionsToInstall: []
       federations: []
       multiclusters: []
-      clientCertificate:
-        cert: ccert
-        key: ckey
+      remoteAuthnKeypair:
+        priv: aaa
+        pub: bbb
       ca:
         cert: mycert
         key: mykey

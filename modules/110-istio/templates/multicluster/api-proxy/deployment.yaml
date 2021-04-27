@@ -48,6 +48,8 @@ spec:
         env:
         - name: CLUSTER_DOMAIN
           value: {{ .Values.global.discovery.clusterDomain }}
+        - name: CLUSTER_UUID
+          value: {{ .Values.global.discovery.clusterUUID }}
         ports:
         - name: https
           containerPort: 4443
@@ -71,9 +73,15 @@ spec:
         volumeMounts:
         - name: listen-cert
           mountPath: /listen-cert/
+        - name: remote-public-metadata
+          mountPath: /remote/
       volumes:
       - name: listen-cert
         secret:
           defaultMode: 420
           secretName: api-proxy-listen-cert
+      - name: remote-public-metadata
+        secret:
+          defaultMode: 420
+          secretName: d8-remote-clusters-public-metadata
 {{- end }}

@@ -46,6 +46,8 @@ spec:
         image: {{ $.Values.global.modulesImages.registry }}/istio/metadata-exporter:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}
         imagePullPolicy: IfNotPresent
         env:
+        - name: CLUSTER_UUID
+          value: {{ .Values.global.discovery.clusterUUID }}
   {{- if .Values.istio.federation.enabled }}
         - name: FEDERATION_ENABLED
           value: "true"
@@ -79,6 +81,11 @@ spec:
         volumeMounts:
         - name: istio-ca-root-cert
           mountPath: /certs/
+        - name: authn-keypair
+          mountPath: /keys/pub.pem
+          subPath: pub.pem
+        - name: remote-public-metadata
+          mountPath: /remote/
         - name: metadata
           mountPath: /metadata/
   {{- if .Values.istio.federation.enabled }}
@@ -106,6 +113,15 @@ spec:
       - name: istio-ca-root-cert
         configMap:
           name: istio-ca-root-cert
+      - name: authn-keypair
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: d8-remote-authn-keypair
+      - name: remote-public-metadata
+        secret:
+          defaultMode: 420
+          secretName: d8-remote-clusters-public-metadata
       - name: metadata
         emptyDir: {}
       - name: tmp

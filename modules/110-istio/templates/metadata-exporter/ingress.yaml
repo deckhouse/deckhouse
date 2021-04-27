@@ -12,11 +12,6 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | indent 2 }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
-
-    # auth-tls-verify-client="optional" because there is public path /metadata/public.
-    # Authorization for private path /metadata/private is being performed on backend by using headers `ssl-client-verify` and `ssl-client-subject-dn`.
-    nginx.ingress.kubernetes.io/auth-tls-verify-client: "optional"
-    nginx.ingress.kubernetes.io/auth-tls-secret: d8-{{ $.Chart.Name }}/remote-root-ca
 spec:
   rules:
   - host: {{ include "helm_lib_module_public_domain" (list . "istio") }}
