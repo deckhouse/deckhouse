@@ -11,8 +11,8 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: remote_clusters_discovery_root_ca ::", func() {
-	f := HookExecutionConfigInit(`{"istio":{"federation":{}}}`, "")
+var _ = Describe("Istio hooks :: remote_clusters_discovery_public_metadata ::", func() {
+	f := HookExecutionConfigInit(`{"istio":{"federation":{},"multicluster":{}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false)
 
@@ -30,7 +30,7 @@ var _ = Describe("Istio hooks :: remote_clusters_discovery_root_ca ::", func() {
 		})
 	})
 
-	Context("Empty cluster, minimal settings and federation is enabled", func() {
+	Context("Empty cluster, minimal settings, federation and multicluster are enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.federation.enabled", true)
 			f.ValuesSet("istio.multicluster.enabled", true)
@@ -46,7 +46,7 @@ var _ = Describe("Istio hooks :: remote_clusters_discovery_root_ca ::", func() {
 		})
 	})
 
-	Context("Proper federations only", func() {
+	Context("Proper federations and multiclusters only", func() {
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
 			f.ValuesSet("istio.multicluster.enabled", true)
@@ -70,9 +70,9 @@ spec:
 status: {}
 `))
 			_ = os.MkdirAll("/tmp/proper-federation-0/public", 0755)
-			ioutil.WriteFile("/tmp/proper-federation-0/public/root-cert.pem", []byte(`fff0`), 0644)
+			ioutil.WriteFile("/tmp/proper-federation-0/public/public.json", []byte(`{"a":"b"}`), 0644)
 			_ = os.MkdirAll("/tmp/proper-multicluster-0/public", 0755)
-			ioutil.WriteFile("/tmp/proper-multicluster-0/public/root-cert.pem", []byte(`mmm0`), 0644)
+			ioutil.WriteFile("/tmp/proper-multicluster-0/public/public.json", []byte(`{"x":"y"}`), 0644)
 
 			f.RunHook()
 		})
@@ -83,20 +83,20 @@ status: {}
 			stderrBuff := string(f.Session.Err.Contents())
 			Expect(stderrBuff).To(Equal(""))
 
-			tf0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.rootCALastFetchTimestamp").String())
+			tf0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			tm0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.rootCALastFetchTimestamp").String())
+			tm0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(tf0).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
 			Expect(tm0).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
 
-			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.rootCA").String()).To(Equal("fff0"))
-			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.rootCA").String()).To(Equal("mmm0"))
+			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.public").String()).To(MatchJSON(`{"a":"b"}`))
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.public").String()).To(MatchJSON(`{"x":"y"}`))
 		})
 	})
 
-	Context("Improper federation", func() {
+	Context("Improper federation and multicluster", func() {
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
 			f.ValuesSet(`istio.multicluster.enabled`, true)
@@ -125,8 +125,8 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			stderrBuff := string(f.Session.Err.Contents())
-			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Cannot fetch root CA endpoint https://some-improper-hostname-f/metadata/public/root-cert.pem for IstioFederation improper-federation-0.`))
-			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Cannot fetch root CA endpoint https://some-improper-hostname-m/metadata/public/root-cert.pem for IstioMulticluster improper-multicluster-0.`))
+			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Cannot fetch public metadata endpoint https://some-improper-hostname-f/metadata/public/public.json for IstioFederation improper-federation-0.`))
+			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Cannot fetch public metadata endpoint https://some-improper-hostname-m/metadata/public/public.json for IstioMulticluster improper-multicluster-0.`))
 		})
 	})
 })

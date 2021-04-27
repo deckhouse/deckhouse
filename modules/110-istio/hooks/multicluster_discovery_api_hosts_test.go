@@ -12,7 +12,19 @@ import (
 )
 
 var _ = Describe("Istio hooks :: multicluster_discovery_api_hosts ::", func() {
-	f := HookExecutionConfigInit(`{"istio":{"multicluster":{},"internal":{"clientCertificate":{"cert":"ccc","key":"kkk"}}}}`, "")
+	f := HookExecutionConfigInit(`{
+  "global":{
+    "discovery":{
+      "clusterUUID":"deadbeef-mycluster",
+      "clusterDomain": "my.cluster"
+    }
+  },
+  "istio":{"multicluster":{},"internal":{"remoteAuthnKeypair": {
+    "pub":"-----BEGIN ED25519 PUBLIC KEY-----\nMCowBQYDK2VwAyEAKWjdKDeIIT4xESCMhbol662vNMpq4DxFct8GvJ500Xs=\n-----END ED25519 PUBLIC KEY-----\n",
+    "priv":"-----BEGIN ED25519 PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIMgNk3rr2AmIIlkKTAM9fG6+hMKvwF+pMAT3ID3M0OFK\n-----END ED25519 PRIVATE KEY-----\n"
+  }}}
+}`, "")
+
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false)
 
 	Context("Empty cluster and minimal settings", func() {
@@ -55,7 +67,10 @@ metadata:
   name: proper-multicluster-0
 spec:
   metadataEndpoint: "file:///tmp/proper-multicluster-0/"
-status: {}
+status:
+  metadataCache:
+    public:
+      clusterUUID: deadbeef-pm0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -67,6 +82,8 @@ spec:
 status:
   metadataCache:
     apiHost: some-outdated.host
+    public:
+      clusterUUID: deadbeef-pm1
 `))
 			_ = os.MkdirAll("/tmp/proper-multicluster-0/private", 0755)
 			ioutil.WriteFile("/tmp/proper-multicluster-0/private/multicluster-api-host", []byte(`istio-api.0.com`), 0644)
@@ -106,6 +123,10 @@ metadata:
   name: improper-multicluster-0
 spec:
   metadataEndpoint: "https://some-improper-hostname-0/metadata/"
+status:
+  metadataCache:
+    public:
+      clusterUUID: deadbeef-im0
 `))
 
 			f.RunHook()

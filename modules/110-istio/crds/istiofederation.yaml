@@ -51,9 +51,16 @@ spec:
                 metadataCache:
                   type: object
                   properties:
-                    rootCA:
-                      type: string
-                    rootCALastFetchTimestamp:
+                    public:
+                      type: object
+                      properties:
+                        rootCA:
+                          type: string
+                        authnKeyPub:
+                          type: string
+                        clusterUUID:
+                          type: string
+                    publicLastFetchTimestamp:
                       type: string
                       format: date-time
                     ingressGateways:

@@ -14,22 +14,17 @@ EOF
 }
 
 function __main__() {
-  if ! values::has istio.internal.clientCertificate.cert; then
-    2>&1 echo "WARNING: Client certificate for checking remote api hosts isn't discovered yet. Retry in 1min."
-    return 0
-  fi
-
   if values::is_true istio.multicluster.enabled; then
     for i in $(values::jq -r '.istio.internal.multiclusters | keys[]'); do
       multiclusterSpec="$(values::get istio.internal.multiclusters.$i)"
       multiclusterName="$(jq -r '.name'    <<< "$multiclusterSpec")"
       apiHost="$(jq          -r '.apiHost' <<< "$multiclusterSpec")"
+      apiJWT="$(jq           -r '.apiJWT'  <<< "$multiclusterSpec")"
 
       # try to fetch kubernetes version from apiHost and try to unmarshal response
       if curl \
-          -f -s --show-error \
-          --cert <(values::get istio.internal.clientCertificate.cert) \
-          --key  <(values::get istio.internal.clientCertificate.key) \
+          -f -s -m 5 --show-error \
+          --header "Authorization: Bearer ${apiJWT}" \
           "https://${apiHost}/version" | jq -e .major >/dev/null
       then
         isError=0

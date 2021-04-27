@@ -13,8 +13,6 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/proxy-body-size: 2m
-    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
-    nginx.ingress.kubernetes.io/auth-tls-secret: d8-{{ $.Chart.Name }}/remote-root-ca
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;

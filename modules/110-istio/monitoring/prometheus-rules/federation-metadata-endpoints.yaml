@@ -12,10 +12,17 @@
         plk_grouped_by__d8_istio_federation_metadata_endpoint_failed: D8IstioFederationMetadataEndpointFailed,tier=~tier
         description: |
           Metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch by d8 hook.
-          Reproducing:
+          Reproducing request to public endpoint:
           ```
-          CERT="$(kubectl -n d8-istio get secret client-cert -o json | jq -r '.data."tls.crt"' | base64 -d)"
-          KEY="$(kubectl -n d8-istio get secret client-cert -o json | jq -r '.data."tls.key"' | base64 -d)"
-          curl {{$labels.endpoint}} --cert <(echo "$CERT") --key <(echo "$KEY")
+          curl {{$labels.endpoint}}
+          ```
+          Reproducing request to private endpoints (run from deckhouse pod):
+          ```
+          SCOPE="$(echo {{$labels.endpoint}} | sed -E -e 's/\/+$//' -e 's/^.*\///')"
+          KEY="$(deckhouse-controller module values istio -o json | jq -r .istio.internal.remoteAuthnKeypair.priv)"
+          LOCAL_CLUSTER_UUID="$(deckhouse-controller module values istio -o json | jq -r .global.discovery.clusterUUID)"
+          REMOTE_CLUSTER_UUID="$(kubectl get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+          TOKEN="$(deckhouse-controller helper crypto gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=$SCOPE --ttl 1h)"
+          curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
           ```
         summary: Federation metadata endpoint failed

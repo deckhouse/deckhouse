@@ -12,10 +12,10 @@
         plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteApiHostFailed,tier=~tier
         description: |
           Remote api host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed healthcheck by d8 monitoring hook.
-          Reproducing:
+
+          Reproducing (run from deckhouse pod):
           ```
-          CERT="$(kubectl -n d8-istio get secret client-cert -o json | jq -r '.data."tls.crt"' | base64 -d)"
-          KEY="$(kubectl -n d8-istio get secret client-cert -o json | jq -r '.data."tls.key"' | base64 -d)"
-          curl https://{{$labels.api_host}}/version --cert <(echo "$CERT") --key <(echo "$KEY")
+          TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.istio.internal.multiclusters[] | select(.apiHost == $ah) | .apiJWT')"
+          curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
           ```
         summary: Multicluster remote api host failed

@@ -11,11 +11,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
+	"strings"
 	"time"
+
+	jose "github.com/square/go-jose/v3"
 )
 
-var certPath = "/certs/root-cert.pem"
+var rootCAPath = "/certs/root-cert.pem"
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
 
 type spiffeKey struct {
@@ -32,9 +34,29 @@ type spiffeEndpoint struct {
 	Keys              []spiffeKey `json:"keys"`
 }
 
+type publicMetadata struct {
+	ClusterUUID string `json:"clusterUUID,omitempty"`
+	AuthnKeyPub string `json:"authnKeyPub,omitempty"`
+	RootCA      string `json:"rootCA,omitempty"`
+}
+
+// map[custerUUID]pubilcMetadata
+type remotePublicMetadata map[string]publicMetadata
+
+type jwtPayload struct {
+	Iss   string
+	Sub   string
+	Aud   string
+	Scope string
+	Nbf   int64
+	Exp   int64
+}
+
 var spiffeBundleJSON string
+var publicMetadataJSON string
+
 func renderSpiffeBundleJSON() {
-	pubPem, err := ioutil.ReadFile(certPath)
+	pubPem, err := ioutil.ReadFile(rootCAPath)
 	if err != nil {
 		panic("Cert file read error: " + err.Error())
 	}
@@ -71,66 +93,108 @@ func renderSpiffeBundleJSON() {
 	}
 
 	jsonbuf, err := json.MarshalIndent(se, "", "  ")
+	if err != nil {
+		panic("Error Marshall spiffe endpoint json: " + err.Error())
+	}
+
 	spiffeBundleJSON = string(jsonbuf)
 }
 
-//goland:noinspection SpellCheckingInspection
-func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Ok.")
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-func httpHandlerFederationServices(w http.ResponseWriter, r *http.Request) {
-	verify := r.Header.Get("ssl-client-verify")
-	subject := r.Header.Get("ssl-client-subject-dn")
-	matched, _ := regexp.Match(`(^|,)CN=deckhouse(,|$)`,[]byte(subject))
-	if verify != "SUCCESS" || matched != true {
-		http.Error(w, "Proper client certificate with CN=deckhouse wasn't provided.", http.StatusUnauthorized)
-		return
+func renderPublicMetadataJSON() {
+	clusterUUID := os.Getenv("CLUSTER_UUID")
+	if len(clusterUUID) == 0 {
+		panic("Error reading cluster UUID")
 	}
 
-	data, err := ioutil.ReadFile("/metadata/services.json")
+	authnKeyPubPem, err := ioutil.ReadFile("/keys/pub.pem")
 	if err != nil {
-		http.Error(w, "Error reading services.json", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, string(data))
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-}
-
-func httpHandlerFederationIngressgateways(w http.ResponseWriter, r *http.Request) {
-	verify := r.Header.Get("ssl-client-verify")
-	subject := r.Header.Get("ssl-client-subject-dn")
-	matched, _ := regexp.Match(`(^|,)CN=deckhouse(,|$)`,[]byte(subject))
-	if verify != "SUCCESS" || matched != true {
-		http.Error(w, "Proper client certificate with CN=deckhouse wasn't provided.", http.StatusUnauthorized)
-		return
+		panic("pub key file read error: " + err.Error())
 	}
 
-	data, err := ioutil.ReadFile("/metadata/ingressgateways.json")
+	rootCAPem, err := ioutil.ReadFile(rootCAPath)
 	if err != nil {
-		http.Error(w, "Error reading ingressgateways.json", http.StatusInternalServerError)
-		return
+		panic("root ca file read error: " + err.Error())
 	}
-	fmt.Fprint(w, string(data))
-	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+
+	pm := publicMetadata{
+		ClusterUUID: clusterUUID,
+		AuthnKeyPub: string(authnKeyPubPem),
+		RootCA:      string(rootCAPem),
+	}
+
+	jsonbuf, err := json.MarshalIndent(pm, "", "  ")
+	if err != nil {
+		panic("Error marshalling cluster public metadata to json: " + err.Error())
+	}
+
+	publicMetadataJSON = string(jsonbuf)
 }
 
-func httpHandlerMulticlusterAPIHost(w http.ResponseWriter, r *http.Request) {
-	verify := r.Header.Get("ssl-client-verify")
-	subject := r.Header.Get("ssl-client-subject-dn")
-	matched, _ := regexp.Match(`(^|,)CN=deckhouse(,|$)`,[]byte(subject))
-	if verify != "SUCCESS" || matched != true {
-		http.Error(w, "Proper client certificate with CN=deckhouse wasn't provided.", http.StatusUnauthorized)
+func checkAuthn(header http.Header, scope string) error {
+	reqTokenString := header.Get("Authorization")
+	if !strings.HasPrefix(reqTokenString, "Bearer ") {
+		fmt.Errorf("Bearer authorization required.")
+	}
+	reqTokenString = strings.TrimPrefix(reqTokenString, "Bearer ")
+
+	reqToken, err := jose.ParseSigned(reqTokenString)
+	if err != nil {
+		return err
+	}
+	payloadBytes := reqToken.UnsafePayloadWithoutVerification()
+
+	var payload jwtPayload
+	err = json.Unmarshal(payloadBytes, &payload)
+	if err != nil {
+		return err
+	}
+
+	remotePublicMetadataBytes, err := ioutil.ReadFile("/remote/remote-public-metadata.json")
+	if err != nil {
+		return err
+	}
+
+	var remotePublicMetadataMap remotePublicMetadata
+	err = json.Unmarshal(remotePublicMetadataBytes, &remotePublicMetadataMap)
+	if err != nil {
+		return err
+	}
+
+	if payload.Aud != os.Getenv("CLUSTER_UUID") {
+		return fmt.Errorf("JWT is signed for wrong destination cluster.")
+	}
+
+	if payload.Scope != scope {
+		return fmt.Errorf("JWT is signed for wrong scope.")
+	}
+
+	if payload.Exp < time.Now().UTC().Unix() {
+		return fmt.Errorf("JWT token expired.")
+	}
+
+	if _, ok := remotePublicMetadataMap[payload.Sub]; !ok {
+		return fmt.Errorf("JWT is signed for unknown source cluster.")
+	}
+	remoteAuthnKeyPubBlock, _ := pem.Decode([]byte(remotePublicMetadataMap[payload.Sub].AuthnKeyPub))
+	remoteAuthnKeyPub, err := x509.ParsePKIXPublicKey(remoteAuthnKeyPubBlock.Bytes)
+	if err != nil {
+		return err
+	}
+
+	if _, err := reqToken.Verify(remoteAuthnKeyPub); err != nil {
+		return fmt.Errorf("Cannot verify JWT token with known public key.")
+	}
+
+	return nil
+}
+
+func httpHandlerPubilcJSON(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET method is supported.", http.StatusMethodNotAllowed)
 		return
 	}
 
-	apiHost := os.Getenv("MULTICLUSTER_API_HOST")
-	if len(apiHost) == 0 {
-		http.Error(w, "Error reading api host", http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, apiHost)
+	fmt.Fprint(w, publicMetadataJSON)
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
@@ -144,18 +208,61 @@ func httpHandlerSpiffeBundleEndpoint(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerRootCert(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadFile(certPath)
+//goland:noinspection SpellCheckingInspection
+func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Ok.")
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
+func httpHandlerFederationServices(w http.ResponseWriter, r *http.Request) {
+	err := checkAuthn(r.Header, "federation-services")
 	if err != nil {
-		http.Error(w, "Error reading " + certPath, http.StatusInternalServerError)
+		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	data, err := ioutil.ReadFile("/metadata/services.json")
+	if err != nil {
+		http.Error(w, "Error reading services.json", http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprint(w, string(data))
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+func httpHandlerFederationIngressgateways(w http.ResponseWriter, r *http.Request) {
+	err := checkAuthn(r.Header, "federation-ingressgateways")
+	if err != nil {
+		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
+	}
+
+	data, err := ioutil.ReadFile("/metadata/ingressgateways.json")
+	if err != nil {
+		http.Error(w, "Error reading ingressgateways.json", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
+func httpHandlerMulticlusterAPIHost(w http.ResponseWriter, r *http.Request) {
+	err := checkAuthn(r.Header, "multicluster-api-host")
+	if err != nil {
+		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
+	}
+
+	apiHost := os.Getenv("MULTICLUSTER_API_HOST")
+	if len(apiHost) == 0 {
+		http.Error(w, "Error reading api host", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, apiHost)
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
 func main() {
 	renderSpiffeBundleJSON()
+	renderPublicMetadataJSON()
 
 	listenAddr := "0.0.0.0:8080"
 
@@ -164,7 +271,7 @@ func main() {
 	router := http.NewServeMux()
 	router.Handle("/healthz", http.HandlerFunc(httpHandlerHealthz))
 	router.Handle("/metadata/public/spiffe-bundle-endpoint", http.HandlerFunc(httpHandlerSpiffeBundleEndpoint))
-	router.Handle("/metadata/public/root-cert.pem", http.HandlerFunc(httpHandlerRootCert))
+	router.Handle("/metadata/public/public.json", http.HandlerFunc(httpHandlerPubilcJSON))
 
 	if os.Getenv("FEDERATION_ENABLED") == "true" {
 		router.Handle("/metadata/private/federation-services", http.HandlerFunc(httpHandlerFederationServices))

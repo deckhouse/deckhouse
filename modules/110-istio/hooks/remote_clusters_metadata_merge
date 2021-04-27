@@ -19,7 +19,7 @@ function __config__() {
           "spiffeEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/spiffe-bundle-endpoint"),
           "ingressGateways": .status.metadataCache.ingressGateways,
           "publicServices": .status.metadataCache.publicServices,
-          "rootCA": .status.metadataCache.rootCA
+          "public": .status.metadataCache.public
         }
     - name: multiclusters
       group: main
@@ -32,23 +32,46 @@ function __config__() {
           "name": .metadata.name,
           "spiffeEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/spiffe-bundle-endpoint"),
           "apiHost": .status.metadataCache.apiHost,
-          "rootCA": .status.metadataCache.rootCA
+          "public": .status.metadataCache.public
         }
     beforeHelm: 10
 EOF
 }
 
 function __main__() {
-  federations="$(context::jq -c '[.snapshots.federations[].filterResult | select(.ingressGateways and .publicServices) | del(.rootCA)]')"
-  multiclusters="$(context::jq -c '[.snapshots.multiclusters[].filterResult | select(.rootCA and .apiHost) | del(.rootCA)]')"
-  remoteRootCAs="$(context::jq -c '
-    [.snapshots.federations[].filterResult | select(.rootCA) | .rootCA] +
-    [.snapshots.multiclusters[].filterResult | select(.rootCA) | .rootCA]
+  federations="$(context::jq -c '[.snapshots.federations[].filterResult | select(.ingressGateways and .publicServices and .public) | del(.public)]')"
+  multiclusters="$(context::jq -c '[.snapshots.multiclusters[].filterResult | select(.apiHost and .public)]')"
+  remotePublicMetadata="$(context::jq -c '
+    [.snapshots.federations[].filterResult | select(.public) | .public] +
+    [.snapshots.multiclusters[].filterResult | select(.public) | .public] |
+    map({(.clusterUUID): (. | del(.clusterUUID))}) | add
   ')"
+
+  # The fastest solution to generate api JWT tokens for multicluster
+  # TODO: reorganize this
+  for i in $(jq -r 'keys[]' <<< "$multiclusters"); do
+    multiclusterName="$(jq -r --argjson i "$i" -c '.[$i].name'               <<< "$multiclusters")"
+    clusterUUID="$(jq      -r --argjson i "$i" -c '.[$i].public.clusterUUID' <<< "$multiclusters")"
+
+    token="$(
+      deckhouse-controller helper crypto gen-jwt \
+        --private-key-path <(values::get istio.internal.remoteAuthnKeypair.priv) \
+        --claim iss=d8-istio \
+        --claim aud="$clusterUUID" \
+        --claim sub="$(values::get global.discovery.clusterUUID)" \
+        --claim scope=api \
+        --ttl 8760h
+    )"
+    if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+      echo $token > "/tmp/jwt-api-$multiclusterName"
+    fi
+
+    multiclusters="$(jq --argjson i "$i" --arg token "$token" '.[$i].apiJWT = $token | del(.[$i].public)' <<< "$multiclusters")"
+  done
 
   values::set istio.internal.federations "$federations"
   values::set istio.internal.multiclusters "$multiclusters"
-  values::set istio.internal.remoteRootCAs "$remoteRootCAs"
+  values::set istio.internal.remotePublicMetadata "$remotePublicMetadata"
 }
 
 hook::run "$@"
