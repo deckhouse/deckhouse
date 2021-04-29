@@ -5,43 +5,75 @@ module Jekyll
       "<code class=\"highlighter-rouge\">#{name}</code>"
     end
 
-    def format_type(first_type, second_type)
-        result =    case first_type
-                      when "array" then "массив"
-                      when "object" then "объект"
-                      when "integer" then "целочисленный"
-                      when "string" then "строка"
-                      when "boolean" then "булевый"
-                      when "x-kubernetes-int-or-string" then "строка или число"
-                      else first_type
-                    end
-        if second_type
-            result += ' ' + case second_type
-                              when "array" then "массивов"
-                              when "object" then "объектов"
-                              when "integer" then "целых чисел"
-                              when "string" then "строк"
-                              when "boolean" then "булевых значений"
-                              when "x-kubernetes-int-or-string" then "строк или чисел"
-                              else "of #{second_type}"
-                            end
+    #
+    # Return localised description
+    # the source parameter is for object without i18n structure and for legacy support
+    def get_i18n_description(primaryLanguage, fallbackLanguage, source=nil)
+        if primaryLanguage and primaryLanguage.has_key?("description") then
+            result = primaryLanguage["description"]
+        elsif fallbackLanguage and fallbackLanguage.has_key?("description") then
+            result = fallbackLanguage["description"]
+        elsif source and source.has_key?("description") then
+            result = source["description"]
+        else
+            result = nil
         end
         result
     end
 
-    def format_attribute(name, attributes, parent)
+    def get_i18n_term(term)
+        lang = @context.registers[:page]["lang"]
+        i18n = @context.registers[:site].data["i18n"]["common"]
+
+        if ! i18n[term]
+            result = term
+            puts "NOTE: No i18n for the term '" + term + "'!"
+        else
+            result =i18n[term][lang]
+        end
+        result
+    end
+
+    def get_hash_value(input, *keys)
+        input ? input.dig(*keys) : nil
+    end
+
+    def format_type(first_type, second_type)
+        lang = @context.registers[:page]["lang"]
+        i18n = @context.registers[:site].data["i18n"]["common"]
+
+        if !i18n[first_type] then
+            result = first_type
+            puts "NOTE: No i18n for the '" + first_type + "' type!"
+        else
+            result = i18n[first_type][lang]
+        end
+        if second_type then
+            result += ' ' + i18n['of'][lang]
+            if !i18n[second_type] then
+                result += " #{second_type}"
+                puts "NOTE: No i18n for the 'of " + first_type + "' type!"
+            else
+                result += ' ' + i18n['of_' + second_type][lang]
+            end
+        end
+        result
+    end
+
+    def format_attribute(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
-        result.push(converter.convert(attributes['description'])) if attributes['description']
+
+        result.push(converter.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))) if attributes['description']
 
         if attributes.has_key?('x-doc-default')
-            result.push(converter.convert("**По умолчанию:** `#{attributes['x-doc-default'].to_json}`"))
+            result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['x-doc-default'].to_json}`"))
         elsif attributes.has_key?('default')
-            result.push(converter.convert("**По умолчанию:** `#{attributes['default'].to_json}`"))
+            result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default'].to_json}`"))
         end
 
         if attributes['minimum'] || attributes['maximum']
-            range = '**Допустимые значения:** `'
+            range = '**' + get_i18n_term("allowed_values").capitalize + ':** `'
             if attributes['minimum']
               comparator = attributes['exclusiveMinimum'] ? '<' : '<='
               range += "#{attributes['minimum'].to_json} #{comparator} "
@@ -56,19 +88,19 @@ module Jekyll
         end
 
         if attributes['enum']
-            enum_result = '**Допустимые значения'
+            enum_result = '**' + get_i18n_term("allowed_values").capitalize
             if name == "" and parent['type'] == 'array'
-                enum_result += ' элемента массива'
+                enum_result += ' ' + get_i18n_term("allowed_values_of_array")
             end
             result.push(converter.convert(enum_result + ':** ' + [*attributes['enum']].map { |e| "`#{e}`" }.join(', ')))
         end
 
         if attributes['pattern']
-            result.push(converter.convert("**Формат:** `#{attributes['pattern']}`"))
+            result.push(converter.convert('**' + get_i18n_term("pattern").capitalize + ":** `#{attributes['pattern']}`"))
         end
 
         if attributes['minLength'] || attributes['maxLength']
-            description = '**Длина:** `'
+            description = '**' + get_i18n_term('length').capitalize + ':** `'
             if attributes['minLength']
               description += "#{attributes['minLength'].to_json}"
             end
@@ -87,7 +119,7 @@ module Jekyll
         end
 
         if attributes.has_key?('example')
-            example =  '**Пример:** ' + if attributes['example'].is_a?(Hash) && attributes['example'].has_key?('oneOf')
+            example =  '**' + get_i18n_term('example').capitalize + ':** ' + if attributes['example'].is_a?(Hash) && attributes['example'].has_key?('oneOf')
                             attributes['example']['oneOf'].map { |e| "`#{e.to_json}`" }.join(' or ')
                         else
                             "`#{attributes['example'].to_json}`"
@@ -96,10 +128,10 @@ module Jekyll
         end
 
         if parent.has_key?('required') && parent['required'].include?(name)
-            result.push(converter.convert('**Обязательный параметр.**'))
+            result.push(converter.convert('**' + get_i18n_term('required_value_sentence')  + '**'))
         else
             #
-            # result.push(converter.convert('**Необязательный параметр.**'))
+            # result.push(converter.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
         end
         result
     end
@@ -108,8 +140,11 @@ module Jekyll
     # 1 - parameter name to render (string)
     # 2 - parameter attributes (hash)
     # 3 - parent item data (hash)
-    def format_schema(name, attributes, parent)
+    # 4 - object with primary language data
+    # 5 - object with language data which use if there is no data in primary language
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
+
         if name != ""
             result.push('<li>')
             attributes_type = ''
@@ -129,12 +164,12 @@ module Jekyll
             end
         end
 
-        result.push(format_attribute(name, attributes, parent))
+        result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage))
 
         if attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
-                result.push(format_schema(key, value, attributes ))
+                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key)))
             end
             result.push('</ul>')
         elsif attributes.has_key?('items')
@@ -142,14 +177,14 @@ module Jekyll
                 # object items
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
-                    result.push(format_schema(item_key, item_value, attributes['items'] ))
+                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key)))
                 end
                 result.push('</ul>')
             else
-                result.push(format_schema("", attributes['items'], attributes ))
+                result.push(format_schema("", attributes['items'], attributes, get_hash_value(primaryLanguage,'items'), get_hash_value(fallbackLanguage,'items') ))
             end
         else
-        #           result.push("no properties for #{name}")
+            # result.push("no properties for #{name}")
         end
         if name != ""
             result.push('</li>')
@@ -158,7 +193,18 @@ module Jekyll
     end
 
     def format_crd(input)
+        if ( @context.registers[:page]["lang"] == 'en' )
+            fallbackLanguageName = 'ru'
+        else
+            fallbackLanguageName = 'en'
+        end
         result = []
+        if !( input.has_key?('i18n'))
+           input['i18n'] = {}
+        end
+        if !( input['i18n'].has_key?('en'))
+           input['i18n']['en'] = { "spec" => input["spec"] }
+        end
         result.push('<div markdown="0">')
         if ( input.has_key?("spec") and input["spec"].has_key?("validation") and
            input["spec"]["validation"].has_key?("openAPIV3Schema")  ) or (input.has_key?("spec") and input["spec"].has_key?("versions"))
@@ -175,13 +221,28 @@ module Jekyll
                 end
 
                 if input["spec"]["validation"]["openAPIV3Schema"].has_key?("description")
-                   result.push(converter.convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
+                   if get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description") then
+                       result.push(converter.convert(get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description")))
+                   elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
+                       result.push(converter.convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"]))
+                   else
+                       result.push(converter.convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
+                   end
                 end
 
                 if input["spec"]["validation"]["openAPIV3Schema"].has_key?('properties')
                     result.push('<ul>')
                     input["spec"]["validation"]["openAPIV3Schema"]['properties'].sort.to_h.each do |key, value|
-                    result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"] ))
+                    _primaryLanguage = nil
+                    _fallbackLanguage = nil
+
+                    if  input['i18n'][@context.registers[:page]["lang"]] then
+                        _primaryLanguage = get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","properties",key)
+                    end
+                    if   input['i18n'][fallbackLanguageName] then
+                        _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
+                    end
+                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage ))
                     end
                     result.push('</ul>')
                 end
@@ -190,7 +251,7 @@ module Jekyll
 
                  result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
 
-                 if input["spec"]["versions"].length > 1 then
+                 if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
                      result.push('<div class="tabs">')
                      activeStatus=" active"
@@ -209,6 +270,9 @@ module Jekyll
 
                  activeStatus=" active"
                  input["spec"]["versions"].each do |item|
+                    _primaryLanguage = nil
+                    _fallbackLanguage = nil
+
                     if input["spec"]["versions"].length == 1 then
                         result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                         result.push('<br/>Version: ' + item['name'] + '</font></p>')
@@ -225,20 +289,48 @@ module Jekyll
                     end
 
                     if item.has_key?('schema') and item['schema'].has_key?('openAPIV3Schema') and
-                       item['schema']['openAPIV3Schema'].has_key?("description")
-                       result.push(converter.convert(item['schema']['openAPIV3Schema']['description']))
+                       item['schema']['openAPIV3Schema'].has_key?("description") then
+                       if  input['i18n'][@context.registers[:page]["lang"]] and
+                           get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
+                           input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
+                       result.push(converter.convert(input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"]))
+                       elsif input['i18n'][fallbackLanguageName] and
+                             get_hash_value(input['i18n'][fallbackLanguageName],"spec","versions") and
+                            input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
+                       result.push(converter.convert(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"]))
+                       else
+                           result.push(converter.convert(item["schema"]["openAPIV3Schema"]["description"]))
+                       end
                     end
 
                     if item['schema']['openAPIV3Schema'].has_key?('properties')
                         header = '<ul>'
                         item['schema']['openAPIV3Schema']['properties'].each do |key, value|
+                        _primaryLanguage = nil
+                        _fallbackLanguage = nil
                         # skip status object
                         next if key == 'status'
                         if header != '' then
                             result.push(header)
                             header = ''
                         end
-                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] ))
+
+                        if  input['i18n'][@context.registers[:page]["lang"]] and
+                            get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
+                            input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                        then
+                            _primaryLanguage = input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                            _primaryLanguage = get_hash_value(_primaryLanguage,'schema','openAPIV3Schema','properties',key)
+                        end
+                        if  input['i18n'][fallbackLanguageName] and
+                            get_hash_value(input['i18n'][fallbackLanguageName],"spec","versions") and
+                            input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                        then
+                            _fallbackLanguage = input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                            _fallbackLanguage = get_hash_value(_fallbackLanguage,'schema','openAPIV3Schema','properties',key)
+                        end
+
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage))
                         end
                         if header == '' then
                             result.push('</ul>')
@@ -251,6 +343,45 @@ module Jekyll
 
                  end
             end
+        end
+        result.push('</div>')
+        result.join
+    end
+
+    #
+    # Returns configuration module content from the openAPI spec
+    def format_configuration(input)
+        result = []
+        result.push('<div markdown="0">')
+        if !( input.has_key?('i18n'))
+           input['i18n'] = {}
+        end
+        if !( input['i18n'].has_key?('en'))
+           input['i18n']['en'] = { "properties" => input['properties'] }
+        end
+        if ( input.has_key?("properties"))
+           then
+            converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
+
+            result.push('<ul>')
+            input['properties'].sort.to_h.each do |key, value|
+                _primaryLanguage = nil
+                _fallbackLanguage = nil
+
+                if ( input['i18n'].has_key?(@context.registers[:page]["lang"]) and input['i18n'][@context.registers[:page]["lang"]].has_key?("properties") )
+                    _primaryLanguage = input['i18n'][@context.registers[:page]["lang"]]["properties"][key]
+                end
+                if ( @context.registers[:page]["lang"] == 'en' )
+                    fallbackLanguageName = 'ru'
+                else
+                    fallbackLanguageName = 'en'
+                end
+                if ( input['i18n'].has_key?(fallbackLanguageName) and input['i18n'][fallbackLanguageName].has_key?("properties") )
+                    _fallbackLanguage = input['i18n'][fallbackLanguageName]["properties"][key]
+                end
+                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage ))
+            end
+            result.push('</ul>')
         end
         result.push('</div>')
         result.join

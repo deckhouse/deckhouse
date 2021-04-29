@@ -5,5 +5,5 @@ properties:
     enum: ["host-gw", "vxlan"]
     default: "host-gw"
     description: |
-      Режим работы `host-gw` или `vxlan`.
-      > **ВНИМАНИЕ!!!** При переключении между `host-gw` и `vxlan` требуется **перезагрузка всех узлов** кластера!!! Изменять параметр можно **только** при использовании модуля **в bare-metal-кластерах**.
+      Work mode.
+      > **NOTE!!!** All cluster nodes must be rebooted after switching work mode. You can change the parameter **only** in bare-metal clusters.

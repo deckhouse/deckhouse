@@ -47,7 +47,7 @@ ansible:
       shell: |
         export MODULES_DIR=modules_en
         bash ./modules_generate_configuration.sh
-        export MODULES_DIR=modules_ru
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash ./modules_generate_configuration.sh
       args:
         executable: /bin/bash
@@ -72,6 +72,7 @@ ansible:
         mkdir -m 777 -p /app/_site/
         JEKYLL_ENV=production jekyll build -d /app/_site/
       args:
+        warn: false
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
     - name: "Link checking"

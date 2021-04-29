@@ -1,0 +1,146 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dexauthenticators.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Namespaced
+  names:
+    plural: dexauthenticators
+    singular: dexauthenticator
+    kind: DexAuthenticator
+    shortNames:
+      - dex-auth
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: |
+            При появлении объекта `DexAuthenticator` в неймспейсе будут созданы:
+            * Deployment с oauth2-proxy и redis
+            * Service, ведущий на Deployment с oauth2-proxy
+            * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса
+            * Secret'ы, необходимые для доступа к dex
+
+            **Важно!** При перезапуске pod'а с oauth2-proxy, при помощи refresh token'а будут получены и сохранены в память redis актуальные `access token` и `id token`.
+          properties:
+            spec:
+              properties:
+                applicationDomain:
+                  type: string
+                  description: |
+                    Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в dex.
+
+                    **Не должен** содержать HTTP-схему.
+                  example: 'my-app.domain.com'
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                sendAuthorizationHeader:
+                  type: boolean
+                  description: |
+                    Флаг, который отвечает за отправку конечному приложению заголовка `Authorization: Bearer`.
+
+                    Включать **только** если приложение умеет обрабатывать такой заголовок.
+                applicationIngressCertificateSecretName:
+                  type: string
+                  description: |
+                    Имя secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress-объекте приложения. Secret должен обязательно находится в том же неймспейсе, что и DexAuthenticator.
+                  example: 'ingress-tls'
+                applicationIngressClassName:
+                  type: string
+                  description: |
+                    Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain`).
+                  example: 'nginx'
+                keepUsersLoggedInFor:
+                  type: string
+                  description: |
+                    Отвечает за то, как долго пользовательская сессия будет считаться активной, если пользователь бездействует (указывается с суффиксом s, m или h).
+
+                    **По умолчанию:** — `168h` (7 дней).
+                  example: '24h'
+                allowedGroups:
+                  type: array
+                  description: |
+                    Группы, пользователям которых разрешено проходить аутентификацию.
+                    Дополнительно параметр помогает ограничить список групп до тех, которые несут для приложения полезную информацию. Например, в случае если у пользователя более 50-ти групп, но приложению grafana мы хотим передать только определенные 5 групп.
+
+                    **По умолчанию:** разрешены все группы.
+                  items:
+                    type: string
+                whitelistSourceRanges:
+                  type: array
+                  description: |
+                    Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу
+                  items:
+                    type: string
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+                    example: '192.168.42.0/24'
+                nodeSelector:
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Определяет `nodeSelector` для подов с dex-authenticator.
+
+                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+                    Чтобы отключить автоматику нужно указать значение `false`.
+
+                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                  type: object
+                tolerations:
+                  description: |
+                     Определяет `tolerations` для подов с dex-authenticator.
+
+                     Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+                     Чтобы отключить автоматику нужно указать значение `false`.
+
+                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                  items:
+                    properties:
+                      effect:
+                        description: |
+                          Определяет какому effect'у taint'а соответствует описываемый toleration. Пустой подразумевает соответствие любому effect.
+                        type: string
+                        enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+                      key:
+                        description: |
+                          Определяет какому ключу (key) taint'a соответствует описываемый toleration. Пустой подразумевает соответствие любому ключу.
+
+                          Если ключ (key) не указан (пуст), то `operator` должен быть — `Exists`, что подразумевает соответствие любым `value` и `key`.
+                        type: string
+                      operator:
+                        description: |
+                          Определяет отношение ключа (key) к значению (value) — должен ли ключ быть равен (`Equal`) значению, или допустимо существование ключа с любым значением.
+
+                          Указание `Exists` равносильно допуску любого значения (для value), чтобы под с указанным toleration удовлетворял соответствующему taint.
+
+                          **По умолчанию**: `Equal`.
+                        type: string
+                        enum: ["Exists", "Equal"]
+                      tolerationSeconds:
+                        description: |
+                          Определяет период времени в секундах, в течении которого планировщик должен ждать, прежде чем выгнать (evict) Pod с узла, если
+                          toleration перестал удовлетворять taint (справедливо **только** для effect `NoExecute`, иначе игнорируется).
+
+                          Если **не установлено**, то Pod не будет выгнан с узла, если toleration перестал удовлетворять taint. Если **установлен в ноль** (или отрицателен), то Pod будет выгнан с узла немедленно, если  toleration перестал удовлетворять taint.
+
+                          **По умолчанию**: не установлено.
+                        format: int64
+                        type: integer
+                      value:
+                        description: |
+                          Значение, которому должен удовлетворять toleration.
+
+                          Должно быть пустым, если operator — `Exists`.
+                        type: string
+                    type: object
+                  type: array
+      additionalPrinterColumns:
+        - jsonPath: .spec.applicationDomain
+          name: Domain
+          type: string

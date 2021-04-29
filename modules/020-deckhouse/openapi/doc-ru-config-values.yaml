@@ -1,52 +1,25 @@
-type: object
 properties:
   logLevel:
-    type: string
-    enum: ["Debug", "Info", "Error"]
     description: |
-      Deckhouse logging level.
-    default: "Info"
+      Уровень логирования Deckhouse.
   bundle:
-    type: string
-    enum: ["Default", "Minimal", "Managed"]
     description: |
-      Available Deckouse bundles. Defines modules that are enabled by default.
+      Вариант поставки Deckhouse. Определяет включенные по умолчанию модули.
         * `Default` — рекомендованный набор модулей для работы кластера: мониторинга, контроля авторизации, организации работы сети и других потребностей ([актуальный список](https://github.com/deckhouse/deckhouse/blob/master/modules/values-default.yaml)).
         * `Minimal` — минимально возможная поставка, которая включает единственный модуль (этот).
         * `Managed` - поставка для managed-кластеров от облачных провайдеров, например Google Kubernetes Engine (GKE).
-    default: "Default"
   releaseChannel:
-    type: string
-    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     description: |
-      Deckhouse release channel.
+      Канал обновлений Deckhouse.
 
       Порядок возрастания стабильности канала обновлений (от **наименее** стабильного, к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   nodeSelector:
-    type: object
-    additionalProperties:
-      type: string
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
-    type: array
     description: |
-      Like `spec.tolerations` for Kubernetes pod.
+      Структура, аналогичная  `spec.tolerations` Kubernetes pod.
 
-      Use [automatic](/overview.html#выделение-узлов-под-определенный-вид-нагрузки) if not specified. Set `false` to turn off automatic.
-    items:
-      type: object
-      properties:
-        effect:
-          type: string
-        key:
-          type: string
-        operator:
-          type: string
-        tolerationSeconds:
-          type: integer
-          format: int64
-        value:
-          type: string
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
