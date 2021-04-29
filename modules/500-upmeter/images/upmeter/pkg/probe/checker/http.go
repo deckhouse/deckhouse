@@ -68,6 +68,8 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 	if err != nil {
 		return nil, check.ErrUnknown("cannot dial %q: %v", req.URL, err)
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, check.ErrFail("got HTTP status %q", resp.Status)
 	}
@@ -76,7 +78,6 @@ func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 	if err != nil {
 		return nil, check.ErrFail("cannot read response body: %v", err)
 	}
-	defer resp.Body.Close()
 
 	return body, nil
 }
