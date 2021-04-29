@@ -20,6 +20,7 @@ linters-settings:
 linters:
   disable-all: true
   enable:
+  - bodyclose
   # - errcheck
   # - gci
   - gocritic
