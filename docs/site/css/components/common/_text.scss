@@ -1,6 +1,12 @@
 @import "components/common/_variables.scss";
 
 .text {
+    a {
+        color: $color-alt;
+        &:hover {
+            text-decoration: none;
+        }
+    }
     &_lead {
         font-weight: $font-weight-bold;
         line-height: 1.3;

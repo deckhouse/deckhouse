@@ -1,0 +1,25 @@
+@import "components/common/_variables.scss";
+
+.block {
+    padding: 150px 0;
+    &__content {
+        padding-left: $logo-spacing;
+        box-sizing: border-box;
+    }
+    &__columns {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        &_top {
+            align-items: flex-start;
+        }
+        & > * {
+            width: 45%;
+            @media (min-width: $container-breakpoint-lg) {
+                width: 40%;
+                margin-right: 10%;
+            }
+        }
+    }
+}

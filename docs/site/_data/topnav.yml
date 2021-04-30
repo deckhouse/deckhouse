@@ -7,6 +7,10 @@ topnav:
       en: Documentation
     url: /documentation/v1/
   - title:
+      ru: Продукты
+      en: Products
+    url: /products.html
+  - title:
       ru: Возможности
       en: Features
     url: /features.html
