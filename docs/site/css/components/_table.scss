@@ -1,0 +1,58 @@
+@import "components/common/_variables.scss";
+
+.table {
+    margin: 0;
+    padding: 0;
+    border: 2px solid $color-main;
+
+    line-height: 1.3;
+    border-spacing: 0;
+    td {
+        padding: 25px;
+        width: 150px;
+        min-height: 100px;
+        vertical-align: bottom;
+        &:not(:first-child) {
+            border-left: 2px solid $color-main;
+            & > div {
+                padding-bottom: 15px;
+                border-bottom: 2px solid #D8D8D8;
+                text-align: center;
+            }
+        }
+        &:first-child {
+            background: $color-main;
+            color: $color-inverse;
+            & > div {
+                padding-bottom: 15px;
+                border-bottom: 2px solid #FFFFFF;
+                text-align: left;
+                small {
+                    opacity: 0.6;
+                }
+            }
+        }
+    }
+    tr:first-child td:not(:first-child) {
+        background: $color-smooth;
+        & > div {
+            text-align: center;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+    }
+
+    &__cell {
+        &_gt {
+            background: $color-inverse !important;
+            color: $color-main !important;
+        }
+        &_bt {
+            border-top: 2px solid $color-main;
+        }
+        &_center {
+            text-align: center;
+            vertical-align: middle !important;
+        }
+    }
+}

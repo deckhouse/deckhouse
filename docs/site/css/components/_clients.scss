@@ -23,8 +23,17 @@
         margin: 0 50px 0 0;
         &-header {
             margin-bottom: $spacing-l;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
         }
         &-logo {
+            img {
+                height: 40px;
+            }
+        }
+        &-flag {
             img {
                 height: 30px;
             }
