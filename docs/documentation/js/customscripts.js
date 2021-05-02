@@ -2,8 +2,8 @@ $('#mysidebar').height($(".nav").height());
 
 $( document ).ready(function() {
     $('#search-input').on("keyup", function (e) {
-            if (e.target.value.length > 0 ) $(".header-search__results").addClass("active");
-            else $(".header-search__results").removeClass("active");
+            if (e.target.value.length > 0 ) $(".search__results").addClass("active");
+            else $(".search__results").removeClass("active");
           });
 });
 

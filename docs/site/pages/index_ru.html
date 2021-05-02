@@ -33,7 +33,9 @@ toc: false
         </li>
       </ul>
       <div class="product-intro__actions button-group">
+        {% unless site.mode == "local" %}
         <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
+        {% endunless %}
         <a href="#" class="button button_default">Read more</a>
       </div>
     </div>
@@ -66,7 +68,9 @@ toc: false
         </li>
       </ul>
       <div class="product-intro__actions button-group">
+        {% unless site.mode == "local" %}
         <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
+        {% endunless %}
         <a href="#" class="button button_default">Read more</a>
       </div>
     </div>

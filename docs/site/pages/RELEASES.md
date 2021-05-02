@@ -1,7 +1,7 @@
 ---
 title: Release channels
 permalink: en/release_channels.html
-layout: default
+layout: page
 toc: false
 ---
 {::options parse_block_html="false" /}
@@ -11,10 +11,10 @@ toc: false
 <div class="page__container page_releases">
 
 <div class="releases__info">
-<p>К кластерам, как элементам инфраструктуры, как правило предъявляются различные требования.</p>
-<p>Продуктивный кластер в отличие от кластера разработки имеет более высокие требования надежности, на нем нежелательно часто обновлять или изменять какие-либо компоненты без особой необходимости, компоненты должны быть максимально протестированы.
+<p>Clusters, as elements of the infrastructure, usually have different requirements.</p>
+<p>A production cluster, unlike a development cluster, has higher reliability requirements. Frequent updates and changes to components are undesirable on a productive cluster. Components should be tested as much as possible.
 </p>
-Чтобы покрыть самые частые случаи организации окружений, а также с целью повысить качество самого Deckhouse, мы используем <b>пять каналов обновлений</b>.
+We use <b>five release channels</b>.
 </div>
 
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
@@ -29,7 +29,7 @@ toc: false
             </div>
         </div>        
         <div class="releases__menu-item-description">
-            {{ channel.description }}
+            {{ channel.description[page.lang] }}
         </div>
     </div>
 {%- endfor %}

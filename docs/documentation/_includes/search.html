@@ -1,0 +1,27 @@
+<div class="search__results__counts"><span>{{ site.data.i18n.common.documents_found[page.lang] }}: </span><span id="search__results__counts__data"></span></div>
+
+<ul class="search__results__absent">{{ site.data.i18n.common.empty_search_result[page.lang] }}</ul>
+<ul id="search-results"></ul>
+
+<script>
+var documents=[
+{%- assign searchedpages = site.pages | where: "searchable", true | where: "lang", page.lang %}
+{%- for page in searchedpages %}
+{%- unless page.searchable == false %}
+{
+{%- capture search_content %}{{ page.content |  newline_to_br | strip_html | lstrip | rstrip | jsonify }}{%- endcapture -%}
+{%- capture removed_prefix %}/{{ page.lang }}/{%- endcapture -%}
+"title": "{{ page.title | escape }}",
+"url": "{{ page.url | remove_first: removed_prefix }}",
+"content": {% compact_string %}{{ search_content }}{% endcompact_string %} }
+{%- unless forloop.last %},{% endunless %}
+{%- endunless %}
+{%- endfor -%}
+];
+</script>
+
+<script type="text/javascript" src='{{ assets["lunr.js"].digest_path | true_relative_url }}'></script>
+<script type="text/javascript" src='{{ assets["lunr.stemmer.support.js"].digest_path | true_relative_url }}'></script>
+<script type="text/javascript" src='{{ assets["lunr.multi.js"].digest_path | true_relative_url }}'></script>
+<script type="text/javascript" src='{{ assets["lunr.ru.js"].digest_path | true_relative_url }}'></script>
+<script type="text/javascript" src='{{ assets["search.js"].digest_path | true_relative_url }}'></script>

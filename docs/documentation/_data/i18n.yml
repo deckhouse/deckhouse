@@ -65,5 +65,11 @@ common:
   not_required_value_sentence:
     en: Not required value.
     ru: Необязательный параметр.
+  documents_found:
+    ru: Найдено документов
+    en: Documents found
+  empty_search_result:
+    ru: Документов не найдено
+    en: No documents found
 
 

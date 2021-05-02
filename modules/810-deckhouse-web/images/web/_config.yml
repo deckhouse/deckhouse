@@ -1,4 +1,4 @@
-local_mode: true
+mode: local
 
 exclude:
 - .idea/

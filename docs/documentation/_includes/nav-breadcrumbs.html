@@ -28,7 +28,14 @@
       {%- endif -%}
       {%- endfor %}
    </ol>
-   {% unless site.local_mode %}
+    <!--start search-->
+    <div class="search">
+        <form action='{{ "search.html" | true_relative_url }}' method="get">
+        <input type="text" class="header-search__input" id="search-box" name="query" placeholder="{{site.data.strings.search_placeholder_text}}">
+        </form>
+    </div>
+    <!--end search-->
+   {% unless site.mode == "local" %}
    <div id="doc-versions-menu" class="channel-menu submenu-parent">
       <a data-proofer-ignore href="#">
           {%- if page.lang == "ru" %}
