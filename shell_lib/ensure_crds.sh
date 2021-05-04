@@ -11,6 +11,11 @@ function common_hooks::https::ensure_crds::main() {
   custom_fields_regexp="(x-description|x-doc-default)"
 
   crds=$(for file in "$@"; do
+    name=$(basename -- "$file")
+    if [[ $name == doc-* ]]; then
+      continue
+    fi
+    
     echo "---";
     # Prune custom fields
     cat "$file"
