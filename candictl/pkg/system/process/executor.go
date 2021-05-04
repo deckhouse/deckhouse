@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 	"time"
 
@@ -101,11 +102,14 @@ type Executor struct {
 
 	WaitHandler func(err error)
 
-	started   bool
-	stop      bool
-	waitCh    chan struct{}
-	stopCh    chan struct{}
-	waitError error
+	started bool
+	stop    bool
+	waitCh  chan struct{}
+	stopCh  chan struct{}
+
+	lockWaitError sync.RWMutex
+	waitError     error
+
 	killError error
 
 	timeout time.Duration
@@ -456,7 +460,7 @@ func (e *Executor) ProcessWait() {
 					// close(e.waitCh)
 					return
 				}
-				e.waitError = err
+				e.setWaitError(err)
 				if e.WaitHandler != nil {
 					e.WaitHandler(e.waitError)
 				}
@@ -512,9 +516,21 @@ func (e *Executor) Run() error {
 	}
 
 	<-e.waitCh
-	return e.waitError
+	return e.WaitError()
 }
 
 func (e *Executor) Cmd() *exec.Cmd {
 	return e.cmd
+}
+
+func (e *Executor) setWaitError(err error) {
+	defer e.lockWaitError.Unlock()
+	e.lockWaitError.Lock()
+	e.waitError = err
+}
+
+func (e *Executor) WaitError() error {
+	defer e.lockWaitError.RUnlock()
+	e.lockWaitError.RLock()
+	return e.waitError
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
@@ -35,17 +36,9 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		var sshClient *ssh.Client
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		return log.Process("bootstrap", "Install Deckhouse", func() error {
@@ -86,7 +79,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 			return err
 		}
 
-		err = operations.AskBecomePassword()
+		err = terminal.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -128,18 +121,9 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
-		var sshClient *ssh.Client
-		var err error
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		return log.Process("bootstrap", "Create resources", func() error {

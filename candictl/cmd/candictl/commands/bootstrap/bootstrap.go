@@ -15,6 +15,7 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
@@ -104,7 +105,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		err = operations.AskBecomePassword()
+		err = terminal.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -172,8 +173,8 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 				deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
-				app.SSHHost = masterOutputs.MasterIPForSSH
-				sshClient.Settings.Host = masterOutputs.MasterIPForSSH
+				app.SSHHosts = []string{masterOutputs.MasterIPForSSH}
+				sshClient.Settings.SetAvailableHosts(app.SSHHosts)
 
 				nodeIP = masterOutputs.NodeInternalIP
 				devicePath = masterOutputs.KubeDataDevicePath
@@ -181,7 +182,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 				deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
 
-				masterAddressesForSSH[masterNodeName] = app.SSHHost
+				masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 				return nil
 			})
 			if err != nil {
@@ -256,7 +257,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
 			for nodeName, address := range masterAddressesForSSH {
 				fakeSession := sshClient.Settings.Copy()
-				fakeSession.Host = address
+				fakeSession.SetAvailableHosts([]string{address})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
 			return nil

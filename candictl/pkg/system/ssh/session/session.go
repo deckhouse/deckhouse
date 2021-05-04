@@ -3,14 +3,25 @@ package session
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
+
+type Input struct {
+	PrivateKeys    []string
+	User           string
+	Port           string
+	BastionHost    string
+	BastionPort    string
+	BastionUser    string
+	ExtraArgs      string
+	AvailableHosts []string
+}
 
 // TODO rename to Settings
 // Session is used to store ssh settings
 type Session struct {
 	// input
 	PrivateKeys []string
-	Host        string
 	User        string
 	Port        string
 	BastionHost string
@@ -20,15 +31,67 @@ type Session struct {
 
 	// runtime
 	AuthSock string
+
+	lock           sync.RWMutex
+	host           string
+	availableHosts []string
+	remainingHosts []string
 }
 
-func NewSession() *Session {
-	return &Session{}
+func NewSession(input Input) *Session {
+	s := &Session{
+		PrivateKeys: input.PrivateKeys,
+		User:        input.User,
+		Port:        input.Port,
+		BastionHost: input.BastionHost,
+		BastionPort: input.BastionPort,
+		BastionUser: input.BastionUser,
+		ExtraArgs:   input.ExtraArgs,
+	}
+
+	s.SetAvailableHosts(input.AvailableHosts)
+
+	return s
+}
+
+func (s *Session) Host() string {
+	defer s.lock.RUnlock()
+	s.lock.RLock()
+	return s.host
+}
+
+// ChoiceNewHost choice new host for connection
+func (s *Session) ChoiceNewHost() {
+	defer s.lock.Unlock()
+	s.lock.Lock()
+
+	s.selectNewHost()
+}
+
+func (s *Session) SetAvailableHosts(hosts []string) {
+	defer s.lock.Unlock()
+	s.lock.Lock()
+
+	s.availableHosts = make([]string, len(hosts))
+	copy(s.availableHosts, hosts)
+
+	s.resetUsedHosts()
+	s.selectNewHost()
+}
+
+func (s *Session) CountHosts() int {
+	defer s.lock.RUnlock()
+	s.lock.RLock()
+
+	return len(s.availableHosts)
 }
 
 // RemoteAddress returns host or username@host
 func (s *Session) RemoteAddress() string {
-	addr := s.Host
+	defer s.lock.RUnlock()
+	s.lock.RLock()
+
+	addr := s.host
 	if s.User != "" {
 		addr = s.User + "@" + addr
 	}
@@ -36,6 +99,9 @@ func (s *Session) RemoteAddress() string {
 }
 
 func (s *Session) AuthSockEnv() string {
+	defer s.lock.RUnlock()
+	s.lock.RLock()
+
 	if s.AuthSock != "" {
 		return fmt.Sprintf("SSH_AUTH_SOCK=%s", s.AuthSock)
 	}
@@ -43,6 +109,9 @@ func (s *Session) AuthSockEnv() string {
 }
 
 func (s *Session) String() string {
+	defer s.lock.RUnlock()
+	s.lock.RLock()
+
 	builder := strings.Builder{}
 	builder.WriteString("ssh ")
 
@@ -60,9 +129,9 @@ func (s *Session) String() string {
 	}
 
 	if s.User != "" {
-		builder.WriteString(fmt.Sprintf("%s@%s", s.User, s.Host))
+		builder.WriteString(fmt.Sprintf("%s@%s", s.User, s.host))
 	} else {
-		builder.WriteString(s.Host)
+		builder.WriteString(s.host)
 	}
 
 	if s.Port != "" {
@@ -73,17 +142,49 @@ func (s *Session) String() string {
 }
 
 func (s *Session) Copy() *Session {
+	defer s.lock.RUnlock()
+	s.lock.RLock()
+
 	ses := &Session{}
 
 	ses.Port = s.Port
-	ses.Host = s.Host
 	ses.User = s.User
 	ses.BastionHost = s.BastionHost
 	ses.BastionPort = s.BastionPort
 	ses.BastionUser = s.BastionUser
 	ses.ExtraArgs = s.ExtraArgs
 	ses.AuthSock = s.AuthSock
+	ses.host = s.host
 
 	ses.PrivateKeys = append(ses.PrivateKeys, s.PrivateKeys...)
+
+	ses.availableHosts = make([]string, len(s.availableHosts))
+	copy(ses.availableHosts, s.availableHosts)
+
+	ses.resetUsedHosts()
+
 	return ses
+}
+
+// resetUsedHosts if all available host is used this function reset
+func (s *Session) resetUsedHosts() {
+	s.remainingHosts = make([]string, len(s.availableHosts))
+	copy(s.remainingHosts, s.availableHosts)
+}
+
+func (s *Session) selectNewHost() {
+	if len(s.availableHosts) == 0 {
+		s.host = ""
+		return
+	}
+
+	if len(s.remainingHosts) == 0 {
+		s.resetUsedHosts()
+	}
+
+	indx := 0
+	host := s.remainingHosts[indx]
+	s.remainingHosts = append(s.remainingHosts[:indx], s.remainingHosts[indx+1:]...)
+
+	s.host = host
 }

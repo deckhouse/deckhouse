@@ -10,8 +10,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/candictl/pkg/app"
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
-	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terminal"
 )
 
 func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -120,7 +120,7 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		}
 
-		err = operations.AskBecomePassword()
+		err = terminal.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		}
 
-		err = operations.AskBecomePassword()
+		err = terminal.AskBecomePassword()
 		if err != nil {
 			return err
 		}

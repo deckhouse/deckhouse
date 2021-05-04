@@ -18,7 +18,7 @@ var (
 	SSHBastionPort      = ""
 	SSHBastionUser      = os.Getenv("USER")
 	SSHUser             = os.Getenv("USER")
-	SSHHost             = ""
+	SSHHosts            = make([]string, 0)
 	SSHPort             = ""
 	SSHExtraArgs        = ""
 
@@ -44,9 +44,9 @@ func DefineSSHFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("SSH_USER")).
 		Default(SSHUser).
 		StringVar(&SSHUser)
-	cmd.Flag("ssh-host", "SSH destination host").
-		Envar(configEnvName("SSH_HOST")).
-		StringVar(&SSHHost)
+	cmd.Flag("ssh-host", "SSH destination hosts, can be specified multiple times").
+		Envar(configEnvName("SSH_HOSTS")).
+		StringsVar(&SSHHosts)
 	cmd.Flag("ssh-port", "SSH destination port").
 		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)

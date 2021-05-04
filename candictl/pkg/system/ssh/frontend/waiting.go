@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/candictl/pkg/app"
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
@@ -28,13 +27,16 @@ func (c *Check) WithDelaySeconds(seconds int) *Check {
 func (c *Check) AwaitAvailability() error {
 	time.Sleep(c.delay)
 	return retry.StartLoop("Waiting for SSH connection", 35, 5, func() error {
+		log.InfoF("Try to connect to %v host\n", c.Session.Host())
 		output, err := c.ExpectAvailable()
 		if err == nil {
 			return nil
 		}
 
 		log.InfoF(string(output))
-		return fmt.Errorf("host '%s' is not available", app.SSHHost)
+		oldHost := c.Session.Host()
+		c.Session.ChoiceNewHost()
+		return fmt.Errorf("host '%s' is not available", oldHost)
 	})
 }
 
