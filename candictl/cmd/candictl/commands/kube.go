@@ -12,7 +12,6 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
-	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/tomb"
 )
@@ -24,18 +23,9 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
-		var err error
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		doneCh := make(chan struct{})
@@ -93,18 +83,9 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		StringVar(&Name)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
-		var err error
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		err = log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {

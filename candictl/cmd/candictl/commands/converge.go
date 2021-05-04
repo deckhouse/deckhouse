@@ -49,18 +49,9 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
-		var err error
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		return runFunc(sshClient)

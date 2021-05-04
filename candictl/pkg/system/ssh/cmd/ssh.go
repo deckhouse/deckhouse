@@ -59,7 +59,9 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "ControlPersist=600s",
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "UserKnownHostsFile=.ssh_known_hosts",
-		"-o", "ServerAliveInterval=15",
+		"-o", "ServerAliveInterval=7",
+		"-o", "ServerAliveCountMax=2",
+		"-o", "ConnectTimeout=5",
 	}
 
 	if s.Session.ExtraArgs != "" {
@@ -106,7 +108,7 @@ func (s *SSH) Cmd() *exec.Cmd {
 		}...)
 	}
 
-	args = append(args, s.Session.Host)
+	args = append(args, s.Session.Host())
 
 	if s.CommandName != "" {
 		args = append(args, "--" /* cmd.Path */, s.CommandName)

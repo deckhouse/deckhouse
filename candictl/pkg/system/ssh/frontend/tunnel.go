@@ -10,7 +10,6 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/cmd"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/session"
-	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
 type Tunnel struct {
@@ -28,7 +27,6 @@ func NewTunnel(sess *session.Session, ttype string, address string) *Tunnel {
 		Session: sess,
 		Type:    ttype,
 		Address: address,
-		stopCh:  make(chan struct{}, 1),
 		errorCh: make(chan error, 1),
 	}
 }
@@ -91,21 +89,19 @@ func (t *Tunnel) Up() error {
 	return nil
 }
 
-func (t *Tunnel) HealthMonitor() error {
+func (t *Tunnel) HealthMonitor(errorOutCh chan<- error) {
+	defer log.DebugF("Tunnel health monitor stopped")
+	log.DebugF("Tunnel health monitor started")
+
+	t.stopCh = make(chan struct{}, 1)
+
 	for {
 		select {
 		case err := <-t.errorCh:
-			if err != nil {
-				log.ErrorF("Tunnel stopped with an error: %v. ", err)
-				log.InfoLn("Restarting a tunnel ...")
-			}
-			err = retry.StartSilentLoop("tunnel", 10, 5, t.Up)
-			if err != nil {
-				return err
-			}
+			errorOutCh <- err
 		case <-t.stopCh:
 			_ = t.sshCmd.Process.Kill()
-			return nil
+			return
 		}
 	}
 }
@@ -118,7 +114,8 @@ func (t *Tunnel) Stop() {
 		log.ErrorF("bug: down tunnel '%s': no session", t.String())
 		return
 	}
-	if t.sshCmd != nil {
+
+	if t.sshCmd != nil && t.stopCh != nil {
 		t.stopCh <- struct{}{}
 	}
 }

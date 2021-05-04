@@ -14,6 +14,7 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/candictl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/candictl/pkg/util/input"
@@ -113,6 +114,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var kubeCl *client.KubernetesClient
+		kubeCl, err = getClientOnce(sshClient, kubeCl)
+		if err != nil {
+			return err
+		}
+
 		if err := deleteResources(sshClient, kubeCl); err != nil {
 			return err
 		}
@@ -240,7 +246,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		if err := operations.AskBecomePassword(); err != nil {
+		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
 

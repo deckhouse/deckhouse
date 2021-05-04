@@ -12,6 +12,7 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/candictl/pkg/util/retry"
 )
 
 // KubernetesClient is a wrapper around KubernetesClient from shell-operator which is a wrapper around kubernetes.Interface
@@ -72,10 +73,22 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 		}
 	}
 
-	k.KubeProxy = k.SSHClient.KubeProxy()
-	port, err = k.KubeProxy.Start()
+	err = retry.StartLoop("Starting kube proxy", k.SSHClient.Settings.CountHosts(), 1, func() error {
+		log.InfoF("Using host %s\n", k.SSHClient.Settings.Host())
+
+		k.KubeProxy = k.SSHClient.KubeProxy()
+		port, err = k.KubeProxy.Start(-1)
+
+		if err != nil {
+			k.SSHClient.Settings.ChoiceNewHost()
+			return fmt.Errorf("start kube proxy: %v", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return "", fmt.Errorf("start kube proxy: %v", err)
+		return "", err
 	}
 
 	log.InfoF("Proxy started on port %s\n", port)

@@ -11,8 +11,8 @@ import (
 	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/candictl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/candictl/pkg/log"
-	"github.com/deckhouse/deckhouse/candictl/pkg/operations"
 	"github.com/deckhouse/deckhouse/candictl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/candictl/pkg/terminal"
 )
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -29,7 +29,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			}
 		}
 
-		err := operations.AskBecomePassword()
+		err := terminal.AskBecomePassword()
 		if err != nil {
 			return err
 		}
@@ -76,17 +76,9 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		var sshClient *ssh.Client
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			err = operations.AskBecomePassword()
-			if err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		installConfig, err := deckhouse.PrepareDeckhouseInstallConfig(metaConfig)

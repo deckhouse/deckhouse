@@ -40,17 +40,9 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.InfoLn("Check started ...\n")
 
-		var sshClient *ssh.Client
-		var err error
-		if app.SSHHost != "" {
-			sshClient, err = ssh.NewClientFromFlags().Start()
-			if err != nil {
-				return err
-			}
-
-			if err := operations.AskBecomePassword(); err != nil {
-				return err
-			}
+		sshClient, err := ssh.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)

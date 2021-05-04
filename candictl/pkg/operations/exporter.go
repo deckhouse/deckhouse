@@ -70,13 +70,9 @@ var (
 )
 
 func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
-	var sshClient *ssh.Client
-	var err error
-	if app.SSHHost != "" {
-		sshClient, err = ssh.NewClientFromFlags().Start()
-		if err != nil {
-			panic(err)
-		}
+	sshClient, err := ssh.NewInitClientFromFlags(false)
+	if err != nil {
+		panic(err)
 	}
 
 	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
