@@ -52,7 +52,7 @@ title: "Управление control plane: FAQ"
 
 ## Как убрать мастер, сохранив узел?
 
-1. Снять лейбл `node-role.kubernetes.io/master: ""` и дождаться, пока etcd member будет удален автоматически.
+1. Снять лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/master: ""`, затем дождаться, пока etcd member будет удален автоматически.
 2. Зайти на узел и выполнить следующие действия:
   ```shell
   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
