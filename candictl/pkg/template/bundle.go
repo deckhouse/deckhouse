@@ -25,7 +25,18 @@ type saveFromTo struct {
 }
 
 func logTemplatesData(name string, data map[string]interface{}) {
-	formattedData, _ := yaml.Marshal(data)
+	dataForLog := make(map[string]interface{})
+	for k, v := range data {
+		switch k {
+		case "k8s", "bashible":
+			// Hide fields from the version map
+			dataForLog[k] = "<hidden>"
+		default:
+			dataForLog[k] = v
+		}
+	}
+
+	formattedData, _ := yaml.Marshal(dataForLog)
 	_ = log.Process("default", fmt.Sprintf("%s data", name), func() error {
 		log.InfoF(string(formattedData))
 		return nil
