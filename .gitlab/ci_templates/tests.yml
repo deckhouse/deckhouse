@@ -102,6 +102,22 @@
   - "Build Modules Images"
   interruptible: true
 
+.Translation Validation template:
+  stage: testing
+  script:
+  - ./testing/validate_doc_changes.sh ${FOX_ACCESS_TOKEN}
+  except:
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
+  needs:
+  - "Build"
+  - "Build Modules Images"
+  interruptible: true
+
 .Web links test:
   stage: testing
   variables:
