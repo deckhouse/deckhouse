@@ -133,7 +133,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			WithMessage("Do you want to continue with Nodes state from local cache?").
 			WithYesByDefault()
 
-		if stateCache.InCache("nodes-state") && !confirmation.Ask() {
+		if stateCache.InCache("nodes-state") && confirmation.Ask() {
 			if err := stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 				return err
 			}
