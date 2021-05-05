@@ -52,7 +52,7 @@ All you need to do is to attach the `node-role.kubernetes.io/master: ""` label t
 
 ## КHow do I dismiss the master status while keeping the node?
 
-1. Remove the `node-role.kubernetes.io/master: ""` label and wait for the etcd member to be automatically deleted.
+1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/master: ""` labels, then wait for the etcd member to be automatically deleted.
 2. Exec to the node and run the following commands:
   ```shell
   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
