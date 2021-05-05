@@ -29,7 +29,6 @@ kubeProxyEnabled: true
 kubeDnsEnabled: true
 certManagerEnabled: true
 userAuthzEnabled: true
-controlPlaneConfiguratorEnabled: true
 operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
