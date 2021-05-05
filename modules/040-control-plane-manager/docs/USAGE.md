@@ -1,5 +1,5 @@
 ---
-title: "Managing control plane: configuration examples"
+title: "Managing control plane: usage"
 ---
 
 ```yaml
