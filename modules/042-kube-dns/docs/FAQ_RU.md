@@ -1,9 +1,6 @@
 ---
 title: "Модуль kube-dns: FAQ"
-type:
-
-- instruction search: DNS, domain, домен, clusterdomain
-
+search: DNS, domain, домен, clusterdomain
 ---
 
 ## Как «поменять» домен кластера без простоя?

@@ -1,5 +1,5 @@
 ---
-title: "Managing nodes: settings"
+title: "Managing nodes: configuration"
 ---
 
 Nodes are managed by the `node-manager` module (it is **enabled** by default).

@@ -1,5 +1,5 @@
 ---
-title: "The priority-class module: settings"
+title: "The priority-class module: configuration"
 ---
 
 This module is enabled by **default**.
