@@ -12,7 +12,7 @@
             {% for item in entry.items %}
             {%- assign item_url_parts = item.url | split: '/' -%}
             <li class="header__navigation-item
-                {%- if page.mode == 'ssi' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
+                {%- if page.mode == 'ssi' and site.mode != 'local' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
                 {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
                 {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
                 {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}">
@@ -32,7 +32,7 @@
             <ul class="submenu">
               <li data-proofer-ignore class="submenu-item">
                   <a data-proofer-ignore href="/en
-                  {%- if page.mode == 'ssi' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                  {%- if page.mode == 'ssi' and site.mode != 'local' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
                   {%- else -%}{{ page_url_without_lang }}{%- endif %}"
                      class="submenu-item-link">
                       English
@@ -40,7 +40,7 @@
               </li>
               <li data-proofer-ignore class="submenu-item">
                   <a data-proofer-ignore href="/ru
-                  {%- if page.mode == 'ssi' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+                  {%- if page.mode == 'ssi' and site.mode != 'local' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
                   {%- else -%}{{ page_url_without_lang }}{%- endif %}"
                      class="submenu-item-link">
                       Русский

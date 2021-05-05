@@ -1,7 +1,7 @@
 ---
 title: Каналы обновлений
 permalink: ru/release_channels.html
-layout: default
+layout: page
 toc: false
 lang: ru
 ---
@@ -30,7 +30,7 @@ lang: ru
             </div>
         </div>        
         <div class="releases__menu-item-description">
-            {{ channel.description }}
+            {{ channel.description[page.lang] }}
         </div>
     </div>
 {%- endfor %}

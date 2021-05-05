@@ -5,7 +5,7 @@ topnav:
   - title:
       ru: Документация
       en: Documentation
-    url: /
+    url: /overview.html
   - title:
       ru: Каналы обновлений
       en: Release channels
