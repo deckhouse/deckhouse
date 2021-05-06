@@ -43,7 +43,7 @@ import (
 //
 //
 // NOTE: Sync the content of this function among these files!
-//                 candictl/pkg/template/funcs.go
+//                 dhctl/pkg/template/funcs.go
 //  (you are here) helm-mod/pkg/engine/funcs.go
 //                 modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
 func funcMap() template.FuncMap {

@@ -152,7 +152,7 @@
     - "Build Modules Images"
   interruptible: true
 
-.Candictl Tests template:
+.Dhctl Tests template:
   stage: testing
   before_script:
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
@@ -161,7 +161,7 @@
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
-  - werf run candictl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/candictl/hack/" -- bash test.sh --gitlab
+  - werf run dhctl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/dhctl/hack/" -- bash test.sh --gitlab
   except:
   - schedules
   - alpha

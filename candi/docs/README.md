@@ -14,7 +14,7 @@ permalink: /candi/
     * [**node-manager**](/modules/040-node-manager/) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
     * **cloud-provider-**
         * [**openstack**](/modules/030-cloud-provider-openstack/) - модуль для взаимодействия с облаками на базе `OpenStack`.
-* Installer или [**candictl**](/candi/candictl.html) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
+* Installer или [**dhctl**](/candi/dhctl.html) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
 
 ## Installer
 
@@ -58,11 +58,11 @@ deckhouse:
 | GCPClusterConfiguration        | Конфигурации кластера Kubernetes в GCP | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
 | VsphereClusterConfiguration    | Конфигурации кластера Kubernetes в VSphere | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
 | YandexClusterConfiguration     | Конфигурации кластера Kubernetes в Yandex | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Данные для компиляции Bashible Bundle (используется только для candictl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
-| KubeadmConfigTemplateData      | Данные для компиляции Kubeadm config (используется только для candictl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
+| BashibleTemplateData           | Данные для компиляции Bashible Bundle (используется только для dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
+| KubeadmConfigTemplateData      | Данные для компиляции Kubeadm config (используется только для dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
-Процесс развертывания кластера при помощи `candictl` делится на несколько этапов:
+Процесс развертывания кластера при помощи `dhctl` делится на несколько этапов:
 
 #### Terraform
 Существуют три варианта запуска:
@@ -80,7 +80,7 @@ deckhouse:
 
 > State terraform'а будет сохранен в secret в namespace'е d8-system после каждой фазы
 
-**Внимание!!** для bare metal кластеров terraform не выполняется, вместо этого обязательным становится параметр командной строки `--ssh-host`, чтобы candictl знал, куда ему нужно подключиться.
+**Внимание!!** для bare metal кластеров terraform не выполняется, вместо этого обязательным становится параметр командной строки `--ssh-host`, чтобы dhctl знал, куда ему нужно подключиться.
 
 
 #### Static-cluster
@@ -116,11 +116,11 @@ Bundle представляет собой tar-архив со всеми нео
 Далее архив загружается по scp на сервер и распаковывается, после чего выполняется `/var/lib/bashible/bashible.sh --local`.
 
 #### Установка Deckhouse
-Для доступа к API только что созданного кластера Kubernetes candictl делает две вещи:
+Для доступа к API только что созданного кластера Kubernetes dhctl делает две вещи:
 * Запускает на сервере Kubernetes команду `kubectl proxy --port=0` для поднятия прокси на свободном порту.
 * Открывает ssh-туннель со свободного локального порта на порта прокси на удаленном сервере.
 
-После получения доступа к API `candictl` создает (или обновляет):
+После получения доступа к API `dhctl` создает (или обновляет):
 * Cluster Role `cluster-administrator`
 * Service Account для `deckhouse`
 * Cluster Role Binding роли `cluster-administrator` для sa `deckhouse`
@@ -134,12 +134,12 @@ Bundle представляет собой tar-архив со всеми нео
     * `d8-cluster-terraform-state`
     * `d8-node-terraform-state-.*`
 
- После установки `candictl` ожидает, когда pod `deckhouse` станет `Ready`. Readiness-проба устроена так, что контейнер переходит в состояние Ready только после того, как в очереди `deckhouse` не останется ни одного задания, связанного с установкой или обновлением модуля.
+ После установки `dhctl` ожидает, когда pod `deckhouse` станет `Ready`. Readiness-проба устроена так, что контейнер переходит в состояние Ready только после того, как в очереди `deckhouse` не останется ни одного задания, связанного с установкой или обновлением модуля.
  
- Состояние `Ready` - сигнал для `candictl`, что можно создать в кластере объект `NodeGroup` для master-узлов.
+ Состояние `Ready` - сигнал для `dhctl`, что можно создать в кластере объект `NodeGroup` для master-узлов.
  
 #### Создание дополнительных master-узлов и stateful-узлов
-При создании дополнительных узлов candictl взаимодействует с API Kubernetes. 
+При создании дополнительных узлов dhctl взаимодействует с API Kubernetes. 
 * Создает необходимые NodeGroup объекты
 * Дожидается появления Secret'ов, содержащих cloud-config для создания узлов в этой группе
 * Запускает соответствующий terraform (master-node  или static-node)
@@ -148,5 +148,5 @@ Bundle представляет собой tar-архив со всеми нео
 > Deckhouse-candi ожидает перехода узлов в каждой NodeGroup в состояние Ready, иначе процесс их создания будет завершен с ошибкой
 
 #### Создание дополнительных ресурсов
-При указании пути до файла с манифестами (флаг `--resources`), candictl отсортирует их по `apiGroup/kind`, дождется регистрации этих типов в API Kubernetes и создаст их.
-> Процесс описан подробнее в документации к candictl.
+При указании пути до файла с манифестами (флаг `--resources`), dhctl отсортирует их по `apiGroup/kind`, дождется регистрации этих типов в API Kubernetes и создаст их.
+> Процесс описан подробнее в документации к dhctl.

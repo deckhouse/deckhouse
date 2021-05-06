@@ -10,12 +10,12 @@ function cleanup() {
   cleanup_exit_code=0
 
   if [[ -z "$master_ip" ]]; then
-    candictl bootstrap-phase abort --config "$cwd/configuration.yaml" --yes-i-am-sane-and-i-understand-what-i-am-doing || cleanup_exit_code="$?"
+    dhctl bootstrap-phase abort --config "$cwd/configuration.yaml" --yes-i-am-sane-and-i-understand-what-i-am-doing || cleanup_exit_code="$?"
   else
     {
-      candictl destroy --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" --ssh-host "$master_ip" \
+      dhctl destroy --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" --ssh-host "$master_ip" \
         --yes-i-am-sane-and-i-understand-what-i-am-doing || \
-      candictl bootstrap-phase abort --config "$cwd/configuration.yaml" --yes-i-am-sane-and-i-understand-what-i-am-doing
+      dhctl bootstrap-phase abort --config "$cwd/configuration.yaml" --yes-i-am-sane-and-i-understand-what-i-am-doing
     } || cleanup_exit_code="$?"
   fi
 
@@ -125,10 +125,10 @@ else
   exit 1
 fi
 
-candictl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+dhctl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
 --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee "$cwd/bootstrap.log"
 
-# TODO: parse not the output of terraform, but last output of candictl
+# TODO: parse not the output of terraform, but last output of dhctl
 if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$cwd/bootstrap.log")"; then
   >&2 echo "ERROR: can't parse master_ip from bootstrap.log, attempting to abort bootstrap"
   test_failed="true"

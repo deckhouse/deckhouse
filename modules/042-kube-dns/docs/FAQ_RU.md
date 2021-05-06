@@ -14,4 +14,4 @@ search: DNS, domain, домен, clusterdomain
     - старый clusterDomain.
     - новый clusterDomain.
 1. Дождаться переката kube-apiserver.
-1. Поменять clusterDomain на новый в `candictl config edit cluster-configuration`
+1. Поменять clusterDomain на новый в `dhctl config edit cluster-configuration`

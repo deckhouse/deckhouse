@@ -160,13 +160,13 @@ tags:
 
 Поддерживаются сценарии:
 * bastion уже создан во внешней VPC.
-  * Создать базовую инфраструктуру — `candictl bootstrap-phase base-infra`.
+  * Создать базовую инфраструктуру — `dhctl bootstrap-phase base-infra`.
   * Настроить пиринг между внешней и свежесозданной VPC.
-  * Продолжить инсталляцию с указанием бастиона — `candictl bootstrap --ssh-bastion...`
+  * Продолжить инсталляцию с указанием бастиона — `dhctl bootstrap --ssh-bastion...`
 * bastion требуется поставить в свежесозданной VPC.
-  * Создать базовую инфраструктуру — `candictl bootstrap-phase base-infra`.
+  * Создать базовую инфраструктуру — `dhctl bootstrap-phase base-infra`.
   * Запустить вручную бастион в subnet <prefix>-public-0.
-  * Продолжить инсталляцию с указанием бастиона — `candictl bootstrap --ssh-bastion...`
+  * Продолжить инсталляцию с указанием бастиона — `dhctl bootstrap --ssh-bastion...`
 
 ## Рекомендуемая настройка IAM
 
@@ -438,13 +438,13 @@ IPv4 CIDR у обоих VPC должен различаться.
 * Выполнить бутстрап base-infrastructure кластера:
 
 ```
-candictl bootstrap-phase base-infra --config config
+dhctl bootstrap-phase base-infra --config config
 ```
 
 * Поднять пиринг по инструкции [выше](#как-поднять-пиринг-между-vpc).
 * Продолжить установку кластера, на вопрос про кеш терраформа нужно ответить "y":
 
 ```
-candictl bootstrap --config config --ssh-...
+dhctl bootstrap --config config --ssh-...
 
 ```

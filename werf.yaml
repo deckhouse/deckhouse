@@ -319,7 +319,7 @@ git:
 - add: /
   to: /src
   includePaths:
-    - candictl
+    - dhctl
     - deckhouse-controller
     - global-hooks/**/*.go
     - go_lib/**/*.go
@@ -328,18 +328,18 @@ git:
     - go.mod
     - go.sum
   excludePaths:
-    - candictl/development
+    - dhctl/development
     - deckhouse-controller/development
   stageDependencies:
     install:
-      - candictl/go.mod
-      - candictl/go.sum
+      - dhctl/go.mod
+      - dhctl/go.sum
       - helm-mod/go.mod
       - helm-mod/go.sum
       - go.mod
       - go.sum
     setup:
-      - candictl/**/*.go
+      - dhctl/**/*.go
       - deckhouse-controller/**/*.go
       - deckhouse-controller/go-build.sh
       - helm-mod/**/*.go
@@ -368,11 +368,11 @@ shell:
   - mv deckhouse-controller /out
 
 ---
-artifact: candictl
+artifact: dhctl
 fromImage: base-for-go
 git:
-  - add: /candictl
-    to: /candictl
+  - add: /dhctl
+    to: /dhctl
     stageDependencies:
       install:
         - go.mod
@@ -390,18 +390,18 @@ ansible:
   install:
     - shell: go mod download
       args:
-        chdir: /candictl
+        chdir: /dhctl
 
   setup:
     - command: ./build.sh
       args:
-        chdir: /candictl/hack
+        chdir: /dhctl/hack
 ---
-image: candictl-tests
+image: dhctl-tests
 fromImage: base-for-go
 git:
-- add: /candictl
-  to: /candictl
+- add: /dhctl
+  to: /dhctl
 ansible:
   beforeInstall:
     - apk:
@@ -578,9 +578,9 @@ ansible:
 image: dev/install
 fromImage: dev
 import:
-- artifact: candictl
-  add: /candictl/hack/candictl
-  to: /usr/bin/candictl
+- artifact: dhctl
+  add: /dhctl/hack/dhctl
+  to: /usr/bin/dhctl
   before: setup
 - artifact: terraform-provider-vsphere
   add: /terraform-provider-vsphere/terraform-provider-vsphere
@@ -597,9 +597,9 @@ docker:
 ansible:
   beforeInstall:
 
-  - name: "Add candictl completion"
+  - name: "Add dhctl completion"
     shell: |
-        echo 'eval "$(candictl --completion-script-bash)"' >> /etc/bashrc
+        echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
 
   - name: "Install dependencies"
     apk:
