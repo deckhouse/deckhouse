@@ -55,7 +55,7 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 	}
 
 	if module.GetHTTPSMode("userAuthn", input) == "OnlyInURI" {
-		if input.Values.Values.ExistsP(secretPath) {
+		if input.Values.Exists(secretPath) {
 			input.Values.Remove(secretPath)
 		}
 		return nil
@@ -68,7 +68,7 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 
 	if len(secret.Data) > 0 {
 		input.Values.Set(secretPath, string(secret.Data))
-	} else if input.Values.Values.ExistsP(secretPath) {
+	} else if input.Values.Exists(secretPath) {
 		input.Values.Remove(secretPath)
 	}
 

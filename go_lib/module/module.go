@@ -8,12 +8,14 @@ func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 		globalPath = "global.modules.https.mode"
 	)
 
-	if input.Values.Values.ExistsP(modulePath) {
-		return input.Values.Values.Path(modulePath).Data().(string)
+	v, ok := input.Values.GetOk(modulePath)
+	if ok {
+		return v.String()
 	}
 
-	if input.Values.Values.ExistsP(globalPath) {
-		return input.Values.Values.Path(globalPath).Data().(string)
+	v, ok = input.Values.GetOk(globalPath)
+	if ok {
+		return v.String()
 	}
 
 	panic("https mode is not defined")

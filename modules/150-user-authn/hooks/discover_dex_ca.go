@@ -63,9 +63,9 @@ func discoverDexCA(input *go_hook.HookInput) error {
 		customCAPath  = "userAuthn.controlPlaneConfigurator.dexCustomCA"
 	)
 
-	configuratorEnabled := input.Values.Values.Path("userAuthn.controlPlaneConfigurator.enabled").Data().(bool)
+	configuratorEnabled := input.Values.Get("userAuthn.controlPlaneConfigurator.enabled").Bool()
 	if !configuratorEnabled {
-		if input.ConfigValues.Values.ExistsP(dexCAPath) {
+		if input.ConfigValues.Exists(dexCAPath) {
 			input.Values.Remove(dexCAPath)
 		}
 		return nil
@@ -73,11 +73,11 @@ func discoverDexCA(input *go_hook.HookInput) error {
 
 	var dexCA string
 
-	dexCAModeFromConfig := input.Values.Values.Path(dexCAModePath).Data().(string)
+	dexCAModeFromConfig := input.Values.Get(dexCAModePath).String()
 
 	switch dexCAModeFromConfig {
 	case doNotNeedCAMode:
-		if input.ConfigValues.Values.ExistsP(dexCAPath) {
+		if input.ConfigValues.Exists(dexCAPath) {
 			input.Values.Remove(dexCAPath)
 		}
 	case fromIngressSecretCAMode:
@@ -93,17 +93,17 @@ func discoverDexCA(input *go_hook.HookInput) error {
 
 		if dexCA == "" {
 			input.LogEntry.Warnln("cannot get ca.crt or tls.crt from secret, his is ok for first run")
-			if input.ConfigValues.Values.ExistsP(dexCAPath) {
+			if input.ConfigValues.Exists(dexCAPath) {
 				input.Values.Remove(dexCAPath)
 			}
 			return nil
 		}
 	case customCAMode:
-		if !input.Values.Values.ExistsP(customCAPath) {
+		if !input.Values.Exists(customCAPath) {
 			return fmt.Errorf("dexCustomCA parameter is mandatory with dexCAMode = 'Custom'")
 		}
 
-		dexCA = input.Values.Values.Path(customCAPath).Data().(string)
+		dexCA = input.Values.Get(customCAPath).String()
 	}
 
 	input.Values.Set(dexCAPath, dexCA)

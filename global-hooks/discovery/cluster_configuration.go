@@ -53,7 +53,7 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 
 	// no cluster configuration — unset global value if there is one.
 	if !ok {
-		if input.Values.Values.ExistsP("global.clusterConfiguration") {
+		if input.Values.Exists("global.clusterConfiguration") {
 			input.Values.Remove("global.clusterConfiguration")
 		}
 	}
