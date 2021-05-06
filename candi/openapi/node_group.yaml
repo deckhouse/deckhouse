@@ -192,8 +192,16 @@ spec:
                       type: string
                       x-description: |
                         Container runtime type.
+
+                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        **Optional parameter.**
                       description: |
                         Тип сontainer runtime.
+
+                        Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` секрета `d8-cluster-configuration` в namespace `kube-system`), которая создается при инсталляции.
+
+                        **Необязательный параметр.**
                       enum:
                         - "Docker"
                         - "Containerd"
