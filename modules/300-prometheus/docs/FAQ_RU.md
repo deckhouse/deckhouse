@@ -274,4 +274,14 @@ route:
   - receiver: some-other-receiver
 ```
 
-С подробным описанием всех параметров можно ознакомится в [официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file). 
+С подробным описанием всех параметров можно ознакомиться в [официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
+
+## Почему нельзя установить разный scrapeInterval для отдельных таргетов?
+
+Наиболее [полный ответ](https://www.robustperception.io/keep-it-simple-scrape_interval-id) на этот вопрос даёт разработчик Prometheus Brian Brazil.
+Если коротко, то разные scrapeInterval'ы принесут следующие проблемы:
+* Увеличение сложности конфигурации
+* Проблемы при написании запросов и создании графиков
+* Короткие интервалы больше похожи на профилирование приложения, и, скорее всего, Prometheus не самый подходящий инструмент для этого
+
+Наиболее разумное значение для scrapeInterval находится в диапазоне 10-60s.
