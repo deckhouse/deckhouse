@@ -19,14 +19,14 @@ func kubeconfigNamesHandler(input *go_hook.HookInput) error {
 		encodedNamesPath = "userAuthn.internal.kubeconfigEncodedNames"
 	)
 
-	if !input.ConfigValues.Values.ExistsP(kubeconfigsPath) {
-		if input.ConfigValues.Values.ExistsP(encodedNamesPath) {
+	if !input.ConfigValues.Exists(kubeconfigsPath) {
+		if input.ConfigValues.Exists(encodedNamesPath) {
 			input.Values.Remove(encodedNamesPath)
 		}
 		return nil
 	}
 
-	kubeconfigsLength, err := input.ConfigValues.Values.ArrayCountP(kubeconfigsPath)
+	kubeconfigsLength, err := input.ConfigValues.ArrayCount(kubeconfigsPath)
 	if err != nil {
 		return fmt.Errorf("get %s length: %v", kubeconfigsPath, err)
 	}

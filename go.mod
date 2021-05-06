@@ -11,7 +11,7 @@ require (
 	github.com/chr4/pwgen v1.1.0
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210416054411-675b8d3efa88 // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210505133200-f39811813bee // branch: master
 	github.com/flant/shell-operator v1.0.1-0.20210414105437-3aac020fdda5 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
@@ -38,8 +38,8 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.6.3
-	github.com/tidwall/sjson v1.1.2
+	github.com/tidwall/gjson v1.7.5
+	github.com/tidwall/sjson v1.1.6
 	github.com/vmware/govmomi v0.24.1
 	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0

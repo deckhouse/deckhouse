@@ -26,17 +26,17 @@ type madisonResponse struct {
 }
 
 func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	project, ok := input.Values.Values.Path("global.project").Data().(string)
-	if !ok || project == "" {
+	project, ok := input.Values.GetOk("global.project")
+	if !ok || project.String() == "" {
 		input.LogEntry.Error("global project required")
 		return nil // cronjob was with allowFailure: true, so we just log errors
 	}
 
-	if !input.Values.Values.ExistsP("prometheusMadisonIntegration.madisonAuthKey") {
+	if !input.Values.Exists("prometheusMadisonIntegration.madisonAuthKey") {
 		return nil
 	}
 
-	key := input.Values.Values.Path("prometheusMadisonIntegration.madisonAuthKey").Data().(string)
+	key := input.Values.Get("prometheusMadisonIntegration.madisonAuthKey").String()
 
 	uri := fmt.Sprintf("https://madison.flant.com/api/%s/self_status/%s", project, key)
 

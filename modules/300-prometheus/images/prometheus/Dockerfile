@@ -21,7 +21,7 @@ RUN patch -p1 < sample_limit_annotation.patch && \
   patch -p1 < successfully_sent_metric.patch && \
   make build
 
-FROM quay.io/prometheus/busybox-linux-amd64@sha256:14d68ca3d69fceaa6224250c83d81d935c053fb13594c811038c461194599973
+FROM quay.io/prometheus/busybox-linux-amd64@sha256:de4af55df1f648a334e16437c550a2907e0aed4f0b0edf454b0b215a9349bdbb
 COPY --from=0 /prometheus/prometheus/prometheus                             /bin/prometheus
 COPY --from=0 /prometheus/prometheus/promtool                               /bin/promtool
 COPY --from=0 /prometheus/prometheus/documentation/examples/prometheus.yml  /etc/prometheus/prometheus.yml
