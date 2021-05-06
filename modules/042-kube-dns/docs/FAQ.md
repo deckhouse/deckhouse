@@ -14,4 +14,4 @@ Add the new domain and save the old one:
     - the old clusterDomain.
     - the new clusterDomain.
 1. Wait until kube-apiserver is restarted.
-1. Replace the old clusterDomain with the new one in `candictl config edit cluster-configuration`
+1. Replace the old clusterDomain with the new one in `dhctl config edit cluster-configuration`

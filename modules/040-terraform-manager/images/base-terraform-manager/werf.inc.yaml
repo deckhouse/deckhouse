@@ -1,9 +1,9 @@
 ---
-artifact: candictl
+artifact: dhctl
 from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
-- add: /candictl
-  to: /candictl
+- add: /dhctl
+  to: /dhctl
   excludePaths:
   - "**/*.md"
   stageDependencies:
@@ -23,21 +23,21 @@ ansible:
   install:
   - shell: go mod download
     args:
-      chdir: /candictl
+      chdir: /dhctl
 
   setup:
-  - command: /candictl/hack/build.sh
+  - command: /dhctl/hack/build.sh
     args:
-      chdir: /candictl/hack
+      chdir: /dhctl/hack
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ env "BASE_ALPINE" }}
 docker:
-  ENTRYPOINT: ["candictl"]
+  ENTRYPOINT: ["dhctl"]
 import:
-- artifact: candictl
-  add: /candictl/hack/candictl
-  to: /usr/bin/candictl
+- artifact: dhctl
+  add: /dhctl/hack/dhctl
+  to: /usr/bin/dhctl
   before: setup
 git:
 - add: /

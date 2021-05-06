@@ -47,8 +47,8 @@ Matrix Tests:
   tags:
     - werf-distributed
 
-Candictl Tests:
-  extends: .Candictl Tests template
+Dhctl Tests:
+  extends: .Dhctl Tests template
   tags:
     - werf-distributed
 

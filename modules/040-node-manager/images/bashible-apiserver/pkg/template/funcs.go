@@ -44,7 +44,7 @@ import (
 // version included in the FuncMap is a placeholder.
 //
 // NOTE: Sync the content of this function among these files!
-//                 candictl/pkg/template/funcs.go
+//                 dhctl/pkg/template/funcs.go
 //                 helm-mod/pkg/engine/funcs.go
 //  (you are here) modules/040-node-manager/images/bashible-apiserver/pkg/template/funcs.go
 //

@@ -6,13 +6,13 @@ import (
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	candiapp "github.com/deckhouse/deckhouse/candictl/cmd/candictl/commands"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/aws"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/d8crypto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/fnv"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/openstack"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/unit"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/vsphere"
+	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 )
 
 func DefineHelperCommands(kpApp *kingpin.Application) {
@@ -88,7 +88,7 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 		})
 	}
 
-	// candictl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	candiapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
-	candiapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand)
+	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
+	dhctlapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
+	dhctlapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand)
 }

@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.46.3 // indirect
-	github.com/deckhouse/deckhouse/candictl v0.0.0 // use non-existent version for replace
+	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/blang/semver v3.5.0+incompatible
@@ -60,7 +60,7 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-replace github.com/deckhouse/deckhouse/candictl => ./candictl
+replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
 // TODO uncomment when shell-operator migrates to client-go 0.20.0
 // TODO remove when https://github.com/helm/helm/pull/8371 will be merged and released.
