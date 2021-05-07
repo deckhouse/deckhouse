@@ -13,7 +13,7 @@ title: "Cloud provider — AWS: Развертывание"
   * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
   * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
   * `region` — имя AWS региона, в котором будут заказываться instances.
-* `masterNodeGroup` — спеки для описания NG мастера.
+* `masterNodeGroup` — спецификация для описания NodeGroup мастера.
   * `replicas` — сколько мастер-узлов создать.
   * `instanceClass` — частичное содержимое полей [AWSInstanceClass](/modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource). Допустимые параметры:
     * `instanceType`
@@ -23,8 +23,8 @@ title: "Cloud provider — AWS: Развертывание"
     * `diskSizeGb`
   * `zones` — ограниченный набор зон, в которых разрешено создавать мастер-ноды. Опциональный параметр.
   * `additionalTags` — дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
-* `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
-  * `name` — имя NG, будет использоваться для генерации имени нод.
+* `nodeGroups` — массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NodeGroup:
+  * `name` — имя NodeGroup, будет использоваться для генерации имени нод.
   * `replicas` — количество нод.
   * `instanceClass` — частичное содержимое полей [AWSInstanceClass](/modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource). Допустимые параметры:
     * `instanceType`
@@ -60,13 +60,13 @@ title: "Cloud provider — AWS: Развертывание"
   * обязательный параметр если не указан параметр для развёртывания в уже созданном VPC `existingVPCID` (см. ниже).
 * `existingVPCID` — ID существующего VPC, в котором будет развёрнута схема.
   * Обязательный параметр если не указан `vpcNetworkCIDR`.
-  * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадёт с ошибкой. На данный момент адоптнуть IG нельзя.
+  * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадёт с ошибкой. На данный момент адоптнуть Internet Gateway нельзя.
 * `nodeNetworkCIDR` — подсеть, в которой будут работать ноды кластера.
   * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC.
   * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
   * Необязательный, но рекомендованный параметр. По умолчанию — соответствует целому диапазону адресов VPC.
-> Если при создании кластера создаётся новая VPC и не указан `vpcNetworkCIDR`, то VPC будет создана с диапазоном, указанным в `nodeNetworkCIDR`,
-> таким образом вся VPC будет выделена под сети кластера, и соответственно не будет возможности добавить другие ресурсы в эту VPC.
+> Если при создании кластера создаётся новая VPC и не указан `vpcNetworkCIDR`, то VPC будет создана с диапазоном, указанным в `nodeNetworkCIDR`. 
+> Таким образом, вся VPC будет выделена под сети кластера и, соответственно, не будет возможности добавить другие ресурсы в эту VPC.
 >
 > Диапазон `nodeNetworkCIDR` распределяется по подсетям в зависимости от количества зон доступности в выбранном регионе. Например,
 > если указана `nodeNetworkCIDR: "10.241.1.0/20"` и в регионе 3 зоны доступности, то подсети будут созданы с маской `/22`.
@@ -79,7 +79,7 @@ title: "Cloud provider — AWS: Развертывание"
 
 **Важно!** Возможность использования публичных IP временно отозвана в связи с тем, что "публичные" инстансы не получают маршруты к подам на "серых" инстансах.
 
-В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway с общим и единственным source IP. Все узлы, созданные с помощью candi, опционально могут получить публичный IP (ElasticIP).
+В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway с общим и единственным source IP. Все узлы, созданные с помощью dhctl, опционально могут получить публичный IP (ElasticIP).
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSkzOWvLzAwB4hmIk4CP1-mj2QIxCyJg2VJvijFfdttjnV0quLpw7x87KtTC5v2I9xF5gVKpTK-aqyz/pub?w=812&h=655)
 <!--- Исходник: https://docs.google.com/drawings/d/1kln-DJGFldcr6gayVtFYn_3S50HFIO1PLTc1pC_b3L0/edit --->
@@ -165,12 +165,12 @@ tags:
   * Продолжить инсталляцию с указанием бастиона — `dhctl bootstrap --ssh-bastion...`
 * bastion требуется поставить в свежесозданной VPC.
   * Создать базовую инфраструктуру — `dhctl bootstrap-phase base-infra`.
-  * Запустить вручную бастион в subnet <prefix>-public-0.
-  * Продолжить инсталляцию с указанием бастиона — `dhctl bootstrap --ssh-bastion...`
+  * Запустить вручную bastion в subnet <prefix>-public-0.
+  * Продолжить инсталляцию с указанием bastion — `dhctl bootstrap --ssh-bastion...`
 
 ## Рекомендуемая настройка IAM
 
-Для работы cloud-provider и machine-controller-manager требуется доступ в API AWS из-под IAM-пользователя, который обладает достаточным набором прав.
+Для работы `cloud-provider` и `machine-controller-manager` требуется доступ в API AWS из-под IAM-пользователя, который обладает достаточным набором прав.
 
 ### JSON-спецификация Policy
 
@@ -311,7 +311,7 @@ tags:
 * Задать имя, например `D8CloudProviderAWS`
 * `Create Policy`
 * IAM -> Создать IAM User
-* Задать имя, например `d8-candi`
+* Задать имя, например, `deckhouse`
 * Выбрать `Programmatic access`
 * Next: Permissions
 * Выбрать вкладку `Attach existing policies directly`
@@ -350,14 +350,14 @@ CREATE-ACCESS-KEY()                                        CREATE-ACCESS-KEY()
 
 Создать User:
 ```
-aws iam create-user --user-name d8-candi
+aws iam create-user --user-name deckhouse
 
 {
     "User": {
         "Path": "/",
-        "UserName": "d8-candi",
+        "UserName": "deckhouse",
         "UserId": "AAAXXX",
-        "Arn": "arn:aws:iam::123:user/d8-candi",
+        "Arn": "arn:aws:iam::123:user/deckhouse",
         "CreateDate": "2020-08-27T03:05:42+00:00"
     }
 }
@@ -365,11 +365,11 @@ aws iam create-user --user-name d8-candi
 
 Разрешаем доступ к API и сохраняем пару `AccessKeyId` + `SecretAccessKey`:
 ```
-aws iam create-access-key --user-name d8-candi
+aws iam create-access-key --user-name d
 
 {
     "AccessKey": {
-        "UserName": "d8-candi",
+        "UserName": "deckhouse",
         "AccessKeyId": "XXXYYY",
         "Status": "Active",
         "SecretAccessKey": "ZZZzzz",
@@ -381,14 +381,14 @@ aws iam create-access-key --user-name d8-candi
 Объединяем User и Policy:
 
 ```
-aws iam attach-user-policy --user-name d8-candi --policy-arn arn:aws:iam::123:policy/D8MyPolicy
+aws iam attach-user-policy --user-name deckhouse --policy-arn arn:aws:iam::123:policy/D8MyPolicy
 ```
 
 ### Настройка IAM через terraform
 
 ```
 resource "aws_iam_user" "user" {
-  name = "d8-candi"
+  name = "deckhouse"
 }
 
 resource "aws_iam_access_key" "user" {
@@ -398,7 +398,7 @@ resource "aws_iam_access_key" "user" {
 resource "aws_iam_policy" "policy" {
   name        = "D8MyPolicy"
   path        = "/"
-  description = "Deckhouse candi policy"
+  description = "Deckhouse policy"
 
   policy = <<EOF
 <JSON-спецификация Policy>

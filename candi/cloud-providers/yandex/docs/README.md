@@ -14,7 +14,7 @@ title: "Cloud provider — Yandex: Развертывание"
   * `cloudID` — идентификатор облака.
   * `folderID` — идентификатор директории.
   * `serviceAccountJSON` — JSON, выдаваемый [yc iam key create](#права)
-* `masterNodeGroup` — спеки для описания NG мастера.
+* `masterNodeGroup` — спецификация для описания NodeGroup мастера.
   * `replicas` — сколько мастер-узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
   * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`.  Параметры, обозначенные **жирным** шрифтом уникальны для `YandexClusterConfiguration`. Допустимые параметры:
@@ -26,8 +26,8 @@ title: "Cloud provider — Yandex: Развертывание"
       * При отсутствии опции `externalSubnetID` нужно использовать или [зарезервированные белые IP адреса](#резервирование-белого-ip-адреса) или константу `Auto`.
       * При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP из указанной подсети.
     * **`externalSubnetID`** — при указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
-* `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
-  * `name` — имя NG, будет использоваться для генерации имени нод.
+* `nodeGroups` — массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NodeGroup:
+  * `name` — имя NodeGroup, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
   * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`.  Параметры, обозначенные **жирным** шрифтом уникальны для `YandexClusterConfiguration`. Допустимые параметры:
@@ -277,11 +277,11 @@ dhcpOptions:
 Service account key неудобно создавать через Terraform или web-интерфейс, потому что только `yc` выдаёт корректно отформатированный JSON с ключом.
 
 ```shell
-$ yc iam service-account create --name candi
+$ yc iam service-account create --name deckhouse
 id: ajee8jv6lj8t7eg381id
 folder_id: b1g1oe1s72nr8b95qkgn
 created_at: "2020-08-17T08:50:38Z"
-name: candi
+name: deckhouse
 
 $ yc resource-manager folder add-access-binding prod --role editor --subject serviceAccount:ajee8jv6lj8t7eg381id
 
