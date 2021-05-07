@@ -39,7 +39,11 @@ docker:
   {{- if semverCompare ">=1.19" $version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  {{- if semverCompare "<1.21" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
+  {{- else }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
+  {{- end }}
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches

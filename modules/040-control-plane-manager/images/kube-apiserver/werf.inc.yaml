@@ -19,10 +19,10 @@ docker:
   ENTRYPOINT: ["/usr/bin/kube-apiserver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
-  {{- if semverCompare "=1.15" $version }}
-from: golang:1.12-alpine3.11
-  {{- else }}
+  {{- if semverCompare "<1.21" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
+  {{- else }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
   {{- end }}
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
