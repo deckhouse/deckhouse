@@ -73,9 +73,6 @@ bashible: &bashible
           desiredVersion: "3.10.0-1127.8.2.el7.x86_64"
           allowedPattern: ""
 k8s:
-  '1.15':
-    patch: 12
-    cni_version: 0.8.6
   '1.16':
     patch: 15
     cni_version: 0.8.6
@@ -101,7 +98,7 @@ k8s:
     cni_version: 0.8.7
     bashible: *bashible
   '1.19':
-    patch: 9
+    patch: 10
     cni_version: 0.8.7
     bashible:
       <<: *bashible
@@ -144,7 +141,7 @@ k8s:
       resizer: v1.0.0
       registrar: v2.0.1
   '1.20':
-    patch: 5
+    patch: 6
     cni_version: 0.8.7
     bashible: *bashible
     ccm:
@@ -156,6 +153,23 @@ k8s:
       gcp: 880c0a9ded79c51a2be835b0872de3597cff059b
     csi:
       openstack: v1.20.1
+      provisioner: v2.1.0
+      attacher: v3.1.0
+      resizer: v1.1.0
+      registrar: v2.1.0
+  '1.21':
+    patch: 0
+    cni_version: 0.8.7
+    bashible: *bashible
+    ccm:
+      openstack: v1.21.0
+      yandex: v0.21.0
+      aws: d31100461a83378b658b1ab2c689d79987a0d863
+      vsphere: 6d76e17cad08d583b8ff6fc5c80f119807ed0f57
+      azure: v1.0.0
+      gcp: f385bda395a6a64d9964605ab0a69d071155f2e5
+    csi:
+      openstack: v1.21.0
       provisioner: v2.1.0
       attacher: v3.1.0
       resizer: v1.1.0

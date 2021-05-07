@@ -27,7 +27,7 @@ docker:
   ENTRYPOINT: ["/control-plane-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-from: {{ env "BASE_GOLANG_BUSTER" }}
+from: {{ env "BASE_GOLANG_16_BUSTER" }}
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches

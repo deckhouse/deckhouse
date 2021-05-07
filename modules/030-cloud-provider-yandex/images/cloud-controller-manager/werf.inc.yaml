@@ -3,11 +3,29 @@
   {{- if $value.ccm.yandex }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: flant/yandex-cloud-controller-manager:{{ $value.ccm.yandex }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+    add: /src/yandex-cloud-controller-manager
+    to: /usr/local/bin/cloud-controller-manager
+    before: setup
 shell:
   beforeInstall:
     - apk add --no-cache ca-certificates
 docker:
-  ENTRYPOINT: ["/bin/yandex-cloud-controller-manager"]
+  ENV:
+    container: docker
+  ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+from: {{ env "BASE_GOLANG_ALPINE" }}
+shell:
+  beforeInstall:
+    - apk add --no-cache make bash git mercurial patch rsync
+  install:
+    - mkdir /src
+    - wget https://github.com/flant/yandex-cloud-controller-manager/archive/{{ $value.ccm.yandex }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
   {{- end }}
 {{- end }}

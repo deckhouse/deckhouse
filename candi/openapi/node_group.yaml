@@ -181,6 +181,8 @@ spec:
                     - "1.17"
                     - "1.18"
                     - "1.19"
+                    - "1.20"
+                    - "1.21"
                 cri:
                   type: object
                   x-description: |
