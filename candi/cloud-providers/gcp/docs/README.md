@@ -17,7 +17,7 @@ title: "Cloud provider — GCP: Развертывание"
 * `peeredVPCs` — список GCP VPC networks, с которыми будет объединена сеть кластера. Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
 * `labels` — список лейблов, которые будут прикреплены ко всем ресурсам (которые это поддерживают) кластера. Подробнее про лейблы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
     * Формат — `key: value`.
-* `masterNodeGroup` — спека для описания NG мастера.
+* `masterNodeGroup` — спецификация для описания NodeGroup мастера.
     * `replicas` — сколько мастер-узлов создать.
     * `zones` — список зон, в которых допустимо создавать мастер-узлы.
     * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
@@ -29,8 +29,8 @@ title: "Cloud provider — GCP: Развертывание"
         * **`disableExternalIP`** — параметр доступен только для layout `Standard`.
             * `true` —  значение по умолчанию. Узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
             * `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
-* `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
-    * `name` — имя NG, будет использоваться для генерации имен нод.
+* `nodeGroups` — массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NodeGroup:
+    * `name` — имя NodeGroup, будет использоваться для генерации имен нод.
     * `replicas` — количество нод.
     * `zones` — список зон, в которых допустимо создавать статичные-узлы.
     * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
@@ -233,7 +233,7 @@ roles/networkmanagement.admin
 * экспортируем переменные
 ```shell
 export PROJECT=sandbox
-export SERVICE_ACCOUNT_NAME=k8s-test
+export SERVICE_ACCOUNT_NAME=deckhouse
 ```
 
 * выбираем проект
