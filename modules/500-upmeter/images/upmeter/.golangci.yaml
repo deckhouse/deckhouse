@@ -3,15 +3,15 @@ run:
 
 issues:
   exclude:
-  - ST1005.*
-  - "should not use dot imports"
-  - "don't use an underscore in package name"
+    - ST1005.*
+    - "should not use dot imports"
+    - "don't use an underscore in package name"
 
 linters-settings:
   gci:
-    local-prefixes: upmeter/
+    local-prefixes: d8.io/upmeter
   goimports:
-    local-prefixes: upmeter/
+    local-prefixes: d8.io/upmeter
   golint:
     min-confidence: 0
   errcheck:
@@ -20,15 +20,15 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-  - bodyclose
-  # - errcheck
-  # - gci
-  - gocritic
-  - gofmt
-  # - goimports
-  # - golint
-  - gosimple
-  - govet
-  - misspell
-  - sqlclosecheck
-  - unparam
+    # - errcheck
+    # - golint
+    # - gofumpt
+    - bodyclose
+    - gci
+    - gocritic
+    #- goimports
+    - gosimple
+    - govet
+    - misspell
+    - sqlclosecheck
+    - unparam

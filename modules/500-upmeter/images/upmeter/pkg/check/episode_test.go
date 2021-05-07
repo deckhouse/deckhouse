@@ -72,7 +72,7 @@ func Test_CombineSeconds(t *testing.T) {
 			ep1 := SimpleEpisode(tt.arg1)
 			ep2 := SimpleEpisode(tt.arg2)
 
-			got := ep1.CombineSeconds(ep2, tt.slotSize)
+			got := ep1.Combine(ep2, tt.slotSize)
 			want := SimpleEpisode(tt.want)
 
 			if !reflect.DeepEqual(got, want) {
@@ -250,7 +250,8 @@ func Test_NewEpisode(t *testing.T) {
 				Expected: 30,
 				Up:       10,
 				Down:     10,
-				Unknown:  10},
+				Unknown:  10,
+			},
 			want: Episode{
 				Up:      10 * time.Second,
 				Down:    10 * time.Second,
@@ -262,7 +263,8 @@ func Test_NewEpisode(t *testing.T) {
 			stats: Stats{
 				Expected: 30,
 				Down:     10,
-				Unknown:  10},
+				Unknown:  10,
+			},
 			want: Episode{
 				Down:    10 * time.Second,
 				Unknown: 10 * time.Second,

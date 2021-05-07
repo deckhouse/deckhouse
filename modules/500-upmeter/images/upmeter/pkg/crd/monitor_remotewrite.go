@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	v1 "upmeter/pkg/crd/v1"
+	v1 "d8.io/upmeter/pkg/crd/v1"
 )
 
 type RemoteWriteMonitor struct {

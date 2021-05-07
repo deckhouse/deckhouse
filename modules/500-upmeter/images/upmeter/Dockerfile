@@ -4,7 +4,7 @@ ARG BASE_GOLANG_ALPINE
 FROM $BASE_GOLANG_ALPINE as builder
 RUN apk add --update gcc musl-dev jq-dev oniguruma-dev curl
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-  | sh -s -- -b $(go env GOPATH)/bin v1.32.2
+  | sh -s -- -b $(go env GOPATH)/bin v1.39.0
 # install dependencies
 ADD /go.mod /app/go.mod
 WORKDIR /app
@@ -16,7 +16,8 @@ RUN $(go env GOPATH)/bin/golangci-lint run ./...
 RUN go build -ldflags "-linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
 
 FROM $BASE_ALPINE
-# for debug
-RUN apk add --update sqlite
-COPY --from=builder /app/pkg/upmeter/db/migrations /data/migrations
+# sqlite for debug
+RUN apk add --update sqlite tree
+COPY --from=builder /app/pkg/db/migrations/agent  /data/migrations/agent
+COPY --from=builder /app/pkg/db/migrations/server /data/migrations/server
 COPY --from=builder /upmeter /upmeter

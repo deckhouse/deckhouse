@@ -4,16 +4,15 @@ import (
 	"context"
 	"os"
 
+	sh_app "github.com/flant/shell-operator/pkg/app"
+	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
-
-	"upmeter/pkg/agent"
-	"upmeter/pkg/app"
-	"upmeter/pkg/probe/util"
-	"upmeter/pkg/upmeter"
+	"d8.io/upmeter/pkg/agent"
+	"d8.io/upmeter/pkg/app"
+	"d8.io/upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/server"
 )
 
 func main() {
@@ -21,7 +20,8 @@ func main() {
 
 	kpApp := kingpin.New("upmeter", "upmeter")
 
-	// Informer part
+	// Server
+
 	serverCommand := kpApp.Command("start", "Start upmeter informer")
 	originsCount := serverCommand.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
 		Required().
@@ -29,15 +29,15 @@ func main() {
 
 	serverCommand.Action(func(c *kingpin.ParseContext) error {
 		sh_app.SetupLogging()
-		log.Info("Starting upmeter informer")
+		log.Info("Starting upmeter server")
 
-		informer := upmeter.New(*originsCount)
+		srv := server.New(*originsCount)
 		ctx, cancel := context.WithCancel(context.Background())
 
-		err := informer.Start(ctx)
+		err := srv.Start(ctx)
 		if err != nil {
 			cancel()
-			log.Fatalf("cannot start informer: %v", err)
+			log.Fatalf("cannot start server: %v", err)
 		}
 
 		// Block action by waiting signals from OS.
@@ -53,19 +53,21 @@ func main() {
 	sh_app.DefineKubeClientFlags(serverCommand)
 	sh_app.DefineLoggingFlags(serverCommand)
 
-	// Agent part
+	// Agent
+
 	agentCommand := kpApp.Command("agent", "Start upmeter agent")
+
 	agentCommand.Action(func(c *kingpin.ParseContext) error {
 		sh_app.SetupLogging()
-		log.Infof("Starting upmeter agent. Id=%s", util.AgentUniqueId())
+		log.Infof("Starting upmeter agent. ID=%s", util.AgentUniqueId())
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		a := agent.NewDefaultAgent()
+		a := agent.New()
 		err := a.Start(ctx)
 		if err != nil {
 			cancel()
-			os.Exit(1)
+			log.Fatalf("cannot start agent: %v", err)
 		}
 
 		// Block 'main' by waiting signals from OS.

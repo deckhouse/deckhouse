@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/probe/util"
 )
 
 // Config is basically a checker constructor with verbose arguments

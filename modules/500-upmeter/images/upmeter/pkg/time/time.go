@@ -20,7 +20,7 @@ func Longest(ds ...time.Duration) time.Duration {
 
 // Shortest returns the Shortest duration among arguments
 func Shortest(ds ...time.Duration) time.Duration {
-	var shortest = time.Duration(math.MaxInt64)
+	shortest := time.Duration(math.MaxInt64)
 
 	for _, d := range ds {
 		if d < shortest {

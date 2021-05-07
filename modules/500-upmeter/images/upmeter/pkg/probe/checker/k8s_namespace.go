@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
-	k8s "upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/check"
+	k8s "d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/util"
 )
 
 // NamespaceLifecycle is a checker constructor and configurator

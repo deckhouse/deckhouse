@@ -6,8 +6,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 // MetricsAdapterApiAvailable is a checker constructor and configurator

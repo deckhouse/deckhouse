@@ -7,7 +7,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 type DowntimeMonitor struct {
@@ -76,7 +76,7 @@ func (m *DowntimeMonitor) FilterDowntimeIncidents(from, to int64, group string, 
 				continue
 			}
 			// filter by group name
-			var hasGroup = false
+			hasGroup := false
 			for _, groupName := range incident.Affected {
 				if group == groupName {
 					hasGroup = true

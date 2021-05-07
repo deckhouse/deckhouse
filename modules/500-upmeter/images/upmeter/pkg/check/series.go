@@ -4,9 +4,7 @@ import (
 	"fmt"
 )
 
-var (
-	ErrLimitReached = fmt.Errorf("limit reached")
-)
+var ErrLimitReached = fmt.Errorf("limit reached")
 
 type StatusSeries struct {
 	index  int

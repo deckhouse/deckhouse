@@ -52,6 +52,13 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "wildcard") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      volumes:
+      - name: data
+        hostPath:
+          type: DirectoryOrCreate
+          path: /var/lib/upmeter/agent
+      initContainers:
+{{ include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "data") | indent 6 }}
       containers:
         - name: agent
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 10 }}
@@ -59,6 +66,10 @@ spec:
           command:
             - /upmeter
             - agent
+          volumeMounts:
+          - mountPath: /db
+            name: data
+            readOnly: false
           env:
           - name: UPMETER_TLS
             value: "true"
@@ -66,6 +77,10 @@ spec:
             value: upmeter
           - name: UPMETER_SERVICE_PORT
             value: "443"
+          - name: UPMETER_DB_PATH
+            value: "/db/db.sqlite"
+          - name: UPMETER_DB_MIGRATIONS_PATH
+            value: "/data/migrations/agent"
           - name: NODE_NAME
             valueFrom:
               fieldRef:
