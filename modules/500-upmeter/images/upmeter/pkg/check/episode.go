@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	utime "upmeter/pkg/time"
-	"upmeter/pkg/util"
+	utime "d8.io/upmeter/pkg/time"
+	"d8.io/upmeter/pkg/util"
 )
 
 // Episode with time counters and start aligned to 30s or 5m
@@ -37,7 +37,7 @@ func NewEpisode(ref ProbeRef, start time.Time, step time.Duration, counters Stat
 	}
 }
 
-func (e Episode) IsInRange(from int64, to int64) bool {
+func (e Episode) IsInRange(from, to int64) bool {
 	return e.TimeSlot.Unix() >= from && e.TimeSlot.Unix() < to
 }
 
@@ -57,7 +57,7 @@ func (e Episode) IsCorrect(step time.Duration) bool {
 	return e.Total() <= step
 }
 
-func (e Episode) CombineSeconds(o Episode, slotSize time.Duration) Episode {
+func (e Episode) Combine(o Episode, slotSize time.Duration) Episode {
 	target := Episode{
 		ProbeRef: ProbeRef{
 			Group: e.ProbeRef.Group,

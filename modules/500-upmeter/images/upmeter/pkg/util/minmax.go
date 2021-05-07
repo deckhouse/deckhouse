@@ -2,7 +2,7 @@ package util
 
 import "math"
 
-func ClampToRange(value int64, from int64, to int64) int64 {
+func ClampToRange(value, from, to int64) int64 {
 	if value < from {
 		return from
 	}

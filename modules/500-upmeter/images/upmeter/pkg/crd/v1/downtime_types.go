@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 type DowntimeSpec struct {

@@ -27,8 +27,10 @@ func AgentUniqueId() string {
 	return AgentUniqueIdentifier
 }
 
-const alphaNumSymbols = "abcdefghijklmnopqrstuvwxyz01234567890123456789"
-const alphaNumCount = len(alphaNumSymbols)
+const (
+	alphaNumSymbols = "abcdefghijklmnopqrstuvwxyz01234567890123456789"
+	alphaNumCount   = len(alphaNumSymbols)
+)
 
 func RndAlphaNum(count int) string {
 	rand.Seed(time.Now().UnixNano())

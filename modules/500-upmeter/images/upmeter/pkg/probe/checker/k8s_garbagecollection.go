@@ -6,8 +6,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
-	k8s "upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	k8s "d8.io/upmeter/pkg/kubernetes"
 )
 
 // garbageCollectorChecker ensures objects can be listed and their deletion is complete
@@ -86,5 +86,4 @@ func (c *garbageCollectorChecker) Check() check.Error {
 		return check.ErrUnknown("garbage still present in %ss (names=%s): %v", c.kind, dumpNames(list), err)
 	}
 	return check.ErrUnknown("garbage still present in %ss (names=%s)", c.kind, dumpNames(list))
-
 }

@@ -1,10 +1,10 @@
 package manager
 
 import (
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe"
-	"upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
 )
 
 type Manager struct {
@@ -28,7 +28,7 @@ func (m *Manager) Calculators() []*calculated.Probe {
 }
 
 func filterRunners(ps []*check.Runner) []*check.Runner {
-	var newList = make([]*check.Runner, 0)
+	newList := make([]*check.Runner, 0)
 
 	for _, p := range ps {
 		if check.IsProbeEnabled(p.ProbeRef().Id()) {
@@ -40,7 +40,7 @@ func filterRunners(ps []*check.Runner) []*check.Runner {
 }
 
 func filterCalculators(ps []*calculated.Probe) []*calculated.Probe {
-	var newList = make([]*calculated.Probe, 0)
+	newList := make([]*calculated.Probe, 0)
 
 	for _, p := range ps {
 		if check.IsProbeEnabled(p.ProbeRef().Id()) {

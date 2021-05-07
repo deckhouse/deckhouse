@@ -162,7 +162,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 		{
 			name:    "nodata 0/0 + 0/0",
 			wantErr: false,
-		}, {
+		},
+		{
 			name:    "nodata 0/1 + 0/1",
 			wantErr: false,
 			args: args{
@@ -170,7 +171,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				srcSize: 1,
 			},
 			wantStats: Stats{Expected: 1},
-		}, {
+		},
+		{
 			name:    "nodata 0/5 + 0/5",
 			wantErr: false,
 			args: args{
@@ -178,7 +180,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				srcSize: 5,
 			},
 			wantStats: Stats{Expected: 5},
-		}, {
+		},
+		{
 			name:    "One up 1/1 + 1/1 up",
 			wantErr: false,
 			args: args{
@@ -191,7 +194,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 1,
 				Up:       1,
 			},
-		}, {
+		},
+		{
 			name:    "All up 3/5 + 3/5 up",
 			wantErr: false,
 			args: args{
@@ -204,7 +208,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Up:       3,
 			},
-		}, {
+		},
+		{
 			name:    "Up wins unknown from source 3/5 up + 3/5 unknown",
 			wantErr: false,
 			args: args{
@@ -217,7 +222,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Up:       3,
 			},
-		}, {
+		},
+		{
 			name:    "Up wins unknown from dest 3/5 unknown + 3/5 up",
 			wantErr: false,
 			args: args{
@@ -230,7 +236,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Up:       3,
 			},
-		}, {
+		},
+		{
 			name:    "Up wins unknown when mixed 3/5 ↑? + 3/5 ↑?",
 			wantErr: false,
 			args: args{
@@ -243,7 +250,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Up:       3,
 			},
-		}, {
+		},
+		{
 			name:    "Down everywhere 3/5 ↓ + 3/5 ↓",
 			wantErr: false,
 			args: args{
@@ -256,7 +264,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Down:     3,
 			},
-		}, {
+		},
+		{
 			name:    "Down wins when mixed 3/5 ↑↓? + 3/5 ↓?↓",
 			wantErr: false,
 			args: args{
@@ -284,7 +293,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Down:     4,
 			},
-		}, {
+		},
+		{
 			name:    "Source with extra 3/5 ... + 4/5 with unknown",
 			wantErr: false,
 			args: args{
@@ -298,7 +308,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Down:     3,
 				Unknown:  1,
 			},
-		}, {
+		},
+		{
 			name:    "Source with extra 3/5 ... + 4/5 with up",
 			wantErr: false,
 			args: args{
@@ -327,7 +338,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Expected: 5,
 				Down:     4,
 			},
-		}, {
+		},
+		{
 			name:    "Destination with extra 4/5 with unknown + 3/5 ...",
 			wantErr: false,
 			args: args{
@@ -341,7 +353,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Down:     3,
 				Unknown:  1,
 			},
-		}, {
+		},
+		{
 			name:    "Destination with extra 4/5 with up + 3/5 ...",
 			wantErr: false,
 			args: args{
@@ -370,7 +383,8 @@ func TestStatusSeries_Merge(t *testing.T) {
 				Down:     3,
 				Up:       1,
 			},
-		}, {
+		},
+		{
 			name:    "All the same 4/5 up + 3/5 down",
 			wantErr: false,
 			args: args{
@@ -389,7 +403,6 @@ func TestStatusSeries_Merge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			// setup series data
 			dst := NewStatusSeries(tt.args.dstSize)
 			src := NewStatusSeries(tt.args.srcSize)

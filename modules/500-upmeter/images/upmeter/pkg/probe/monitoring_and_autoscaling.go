@@ -3,8 +3,8 @@ package probe
 import (
 	"time"
 
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func MonitoringAndAutoscaling(access *kubernetes.Access) []runnerConfig {

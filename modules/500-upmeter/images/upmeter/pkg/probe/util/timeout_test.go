@@ -25,7 +25,6 @@ func Test_DoWithTimer(t *testing.T) {
 		fmt.Printf("job start\n")
 		time.Sleep(2 * time.Second)
 		fmt.Printf("job end\n")
-
 	},
 		func() {
 			fmt.Printf("job is timed out\n")
@@ -41,7 +40,8 @@ func Test_SequentialDoWithTimer(t *testing.T) {
 		"2-2dvav",
 		"3-triri",
 		"4-fourr",
-		"5-fivev"}
+		"5-fivev",
+	}
 
 	fmt.Printf("Success, with timeouts\n")
 	SequentialDoWithTimer(
@@ -142,5 +142,4 @@ func Test_SequentialDoWithTimer(t *testing.T) {
 			fmt.Printf(prefix+"%s Timed out\n", item)
 		},
 	)
-
 }

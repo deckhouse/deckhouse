@@ -29,32 +29,35 @@ func TestProbeResult_Status(t *testing.T) {
 			name: "Up,Down means Down",
 			added: []Result{
 				NewResult(ref, "x", Up),
-				NewResult(ref, "l", Down)},
+				NewResult(ref, "l", Down),
+			},
 			want: Down,
 		}, {
 			name: "Down,Up means Down",
 			added: []Result{
 				NewResult(ref, "x", Down),
-				NewResult(ref, "l", Up)},
+				NewResult(ref, "l", Up),
+			},
 			want: Down,
 		}, {
 			name: "Down changed by Up means Up",
 			added: []Result{
 				NewResult(ref, "x", Down),
-				NewResult(ref, "x", Up)},
+				NewResult(ref, "x", Up),
+			},
 			want: Up,
 		}, {
 			name: "Up changed by Down means Down",
 			added: []Result{
 				NewResult(ref, "x", Up),
-				NewResult(ref, "x", Down)},
+				NewResult(ref, "x", Down),
+			},
 			want: Down,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			pr := NewProbeResult(ref)
 			for _, res := range tt.added {
 				pr.Add(res)

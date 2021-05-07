@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func ControlPlane(access *kubernetes.Access) []runnerConfig {

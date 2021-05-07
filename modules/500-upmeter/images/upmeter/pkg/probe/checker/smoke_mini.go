@@ -10,8 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/probe/util"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator
@@ -127,7 +127,7 @@ func lookupAndShuffleIPs(addr string, resolveTimeout time.Duration) (ips []strin
 	return ips, true
 }
 
-func requestSmokeMiniEndpoint(ctx context.Context, ip string, path string) ([]byte, int, error) {
+func requestSmokeMiniEndpoint(ctx context.Context, ip, path string) ([]byte, int, error) {
 	if path == "" {
 		path = "/"
 	}
@@ -158,5 +158,4 @@ func requestSmokeMiniEndpoint(ctx context.Context, ip string, path string) ([]by
 		return nil, 0, nil
 	}
 	return respData, resp.StatusCode, nil
-
 }

@@ -23,6 +23,7 @@ modulesImages:
     common:
       kubeCaAuthProxy: tagstring
       kubeRbacProxy: tagstring
+      alpine: tagstring
     upmeter:
       smokeMini: tagstring
       status: tagstring

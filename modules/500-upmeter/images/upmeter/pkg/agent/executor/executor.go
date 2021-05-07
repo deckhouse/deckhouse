@@ -8,8 +8,8 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/agent/manager"
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/agent/manager"
+	"d8.io/upmeter/pkg/check"
 )
 
 const (
@@ -80,10 +80,7 @@ func (e *ProbeExecutor) scrapeTicker(ctx context.Context) {
 				log.Fatalf("cannot scrape results: %v", err)
 			}
 		case result := <-e.recv:
-			err := e.collect(result)
-			if err != nil {
-				log.Fatalf("cannot collect results: %v", err)
-			}
+			e.collect(result)
 		case <-ctx.Done():
 			ticker.Stop()
 			return
@@ -101,24 +98,10 @@ func (e *ProbeExecutor) run() {
 			continue
 		}
 
-		id := runner.ProbeRef().Id()
-
-		// prepare the slot for the scraped series
-		if _, ok := e.series[id]; !ok {
-			e.series[id] = check.NewStatusSeries(seriesSize())
-		}
-
-		// prepare the slot for the results aggregator
-		if _, ok := e.results[id]; !ok {
-			e.results[id] = check.NewProbeResult(runner.ProbeRef())
-		}
-
-		// run!
 		runner := runner // avoid closure capturing
 		go func() {
 			e.recv <- runner.Run(now)
 
-			// Increase probe running counter
 			e.metrics.CounterAdd(
 				"upmeter_agent_probe_run_total",
 				1.0,
@@ -129,16 +112,14 @@ func (e *ProbeExecutor) run() {
 }
 
 // collect stores the check result in the intermediate format
-func (e *ProbeExecutor) collect(checkResult check.Result) error {
+func (e *ProbeExecutor) collect(checkResult check.Result) {
 	id := checkResult.ProbeRef.Id()
-
 	probeResult, ok := e.results[id]
 	if !ok {
-		return fmt.Errorf("no result key prepared for probe %q", id)
+		probeResult = check.NewProbeResult(*checkResult.ProbeRef)
+		e.results[id] = probeResult
 	}
-
 	probeResult.Add(checkResult)
-	return nil
 }
 
 // scrape checks probe results
@@ -150,7 +131,12 @@ func (e *ProbeExecutor) scrape() error {
 	)
 
 	for id, probeResult := range e.results {
-		err := e.series[id].Add(probeResult.Status())
+		series, ok := e.series[id]
+		if !ok {
+			series = check.NewStatusSeries(seriesSize())
+			e.series[id] = series
+		}
+		err := series.Add(probeResult.Status())
 		if err != nil {
 			return fmt.Errorf("cannot add series for probe %q: %v", id, err)
 		}

@@ -7,9 +7,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/util"
 )
 
 // ConfigMapLifecycle is a checker constructor and configurator
@@ -103,7 +103,6 @@ func (c *configMapCreationChecker) Check() check.Error {
 	_, err := client.CoreV1().ConfigMaps(c.namespace).Create(c.configMap)
 	if err != nil {
 		return check.ErrUnknown("creating configMap %s/%s: %v", c.namespace, c.configMap.Name, err)
-
 	}
 
 	return nil
@@ -117,7 +116,6 @@ type configMapDeletionChecker struct {
 
 func (c *configMapDeletionChecker) BusyWith() string {
 	return fmt.Sprintf("deleting configmap %s/%s", c.namespace, c.configMap.Name)
-
 }
 
 func (c *configMapDeletionChecker) Check() check.Error {

@@ -8,7 +8,7 @@ import (
 
 // DoWithTimer runs jobCb in background and waits until it is done. When timerDuration
 // is passed and job is not done yet, onTimerCb is executed.
-func DoWithTimer(interval time.Duration, jobCb func(), onTimerCb func()) {
+func DoWithTimer(interval time.Duration, jobCb, onTimerCb func()) {
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 

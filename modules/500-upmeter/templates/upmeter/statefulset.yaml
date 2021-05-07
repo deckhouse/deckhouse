@@ -86,7 +86,7 @@ spec:
           - --origins={{ index .Values.global.discovery "clusterMasterCount" }}
         env:
           - name: UPMETER_DB_PATH
-            value: /db/downtime.db.sqlite
+            value: "/db/downtime.db.sqlite"
           - name: UPMETER_DB_MIGRATIONS_PATH
             value: "/data/migrations/server"
           - name: UPMETER_LISTEN_HOST

@@ -11,29 +11,32 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/app"
+	"d8.io/upmeter/pkg/app"
 )
 
-type UpmeterClient struct {
+type Client struct {
 	url    string
 	client *http.Client
 }
 
-func NewUpmeterClient(ip, port string, timeout time.Duration) *UpmeterClient {
+// FIXME: pass all app.* globals through agent config; remove "app" package
+func getEndpoint() string {
 	schema := "https"
 	if app.Tls == "false" {
 		schema = "http"
 	}
+	ip, port := app.ServiceHost, app.ServicePort
+	return fmt.Sprintf("%s://%s:%s/downtime", schema, ip, port)
+}
 
-	url := fmt.Sprintf("%s://%s:%s/downtime", schema, ip, port)
-
-	return &UpmeterClient{
-		url:    url,
+func NewClient(timeout time.Duration) *Client {
+	return &Client{
+		url:    getEndpoint(),
 		client: NewHttpClient(timeout),
 	}
 }
 
-func (c *UpmeterClient) Send(reqBody []byte) error {
+func (c *Client) Send(reqBody []byte) error {
 	req, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("cannot create POST request: %v", err)

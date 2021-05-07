@@ -8,9 +8,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
-	k8s "upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/util"
+	"d8.io/upmeter/pkg/check"
+	k8s "d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/util"
 )
 
 // DeploymentLifecycle is a checker constructor and configurator
@@ -68,7 +68,6 @@ func (c *deploymentLifecycleChecker) Check() check.Error {
  6. wait for the pod to disappear       (podDisappearTimeout, retry each 1 sec)
 */
 func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Checker {
-
 	deploymentCreated := withTimeout(
 		&deploymentCreationChecker{
 			access:     c.access,
@@ -119,7 +118,6 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 
 	timeout := c.deploymentCreationTimeout + c.deploymentDeletionTimeout + c.podAppearTimeout + c.podDisappearTimeout
 	return withTimeout(checker, timeout)
-
 }
 
 type deploymentCreationChecker struct {
@@ -138,7 +136,6 @@ func (c *deploymentCreationChecker) Check() check.Error {
 	_, err := client.AppsV1().Deployments(c.namespace).Create(c.deployment)
 	if err != nil {
 		return check.ErrUnknown("creating deployment/%s: %v", c.deployment.Name, err)
-
 	}
 
 	return nil

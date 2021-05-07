@@ -1,12 +1,11 @@
-module upmeter
+module d8.io/upmeter
 
-go 1.13
+go 1.16
 
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/flant/shell-operator v1.0.0-beta.13
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/snappy v0.0.3

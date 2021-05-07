@@ -1,7 +1,7 @@
 package calculated
 
 import (
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 func Load() []*Probe {

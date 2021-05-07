@@ -6,8 +6,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 // AllDaemonSetPodsReady is a checker constructor and configurator

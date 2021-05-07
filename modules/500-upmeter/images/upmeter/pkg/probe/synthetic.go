@@ -3,7 +3,7 @@ package probe
 import (
 	"time"
 
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func Synthetic() []runnerConfig {

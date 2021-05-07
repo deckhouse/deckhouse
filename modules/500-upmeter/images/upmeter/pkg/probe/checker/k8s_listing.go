@@ -7,10 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"upmeter/pkg/app"
-
-	"upmeter/pkg/check"
-	k8s "upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/app"
+	"d8.io/upmeter/pkg/check"
+	k8s "d8.io/upmeter/pkg/kubernetes"
 )
 
 // objectIsNotListedChecker ensures object is not in the list anymore
@@ -34,7 +33,6 @@ func (c *objectIsNotListedChecker) Check() check.Error {
 		return check.ErrFail("object %s/%s %s not deleted yet", c.namespace, c.kind, c.listOpts)
 	}
 	return nil
-
 }
 
 func listOptsByName(name string) *metav1.ListOptions {

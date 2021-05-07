@@ -13,7 +13,7 @@ var (
 	ListenHost = "0.0.0.0"
 	ListenPort = "8091"
 
-	DatabasePath           = "downtime.db.sqlite"
+	DatabasePath           = "upmeter.db"
 	DatabaseMigrationsPath = "."
 
 	CaPath = ""
@@ -36,7 +36,7 @@ func InitAppEnv() {
 	Tls = StringFromEnv("UPMETER_TLS", Tls)
 }
 
-func StringFromEnv(envName string, defValue string) string {
+func StringFromEnv(envName, defValue string) string {
 	newVal := os.Getenv(envName)
 	if newVal != "" {
 		return newVal

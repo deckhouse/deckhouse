@@ -15,8 +15,10 @@ func (p ProbeRef) Id() string {
 	return fmt.Sprintf("%s/%s", p.Group, p.Probe)
 }
 
-var enabledProbesList []string
-var disabledProbesList []string
+var (
+	enabledProbesList  []string
+	disabledProbesList []string
+)
 
 func IsProbeEnabled(probeId string) bool {
 	if enabledProbesList == nil {

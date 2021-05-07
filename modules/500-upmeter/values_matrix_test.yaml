@@ -24,6 +24,7 @@ global:
     tags:
       common:
         kubeRbacProxy: hashstring
+        alpine: hashstring
       upmeter:
         smokeMini: hashstring
         upmeter: hashstring
