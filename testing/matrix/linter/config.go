@@ -192,7 +192,7 @@ func (f *FileController) SaveValues() error {
 }
 
 func (f *FileController) ReturnValues() ([]string, error) {
-	var valuesFiles []string
+	valuesFiles := make([]string, 0, f.Queue.Len())
 	for f.Queue.Len() > 0 {
 		out, err := yaml.Marshal(f.Queue.PopFront())
 		if err != nil {

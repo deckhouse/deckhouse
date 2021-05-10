@@ -36,6 +36,7 @@ global:
 cloudProviderVsphere:
   __ConstantChoices__:
   - internal: # maximum
+      datacenter: test
       datastores:
       - name: mydsname
         path: /my/ds/path/mydsname

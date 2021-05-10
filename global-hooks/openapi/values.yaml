@@ -33,6 +33,9 @@ properties:
     type: object
     default: {}
     properties:
+      clusterDomain:
+        type: string
+        x-examples: [test]
       clusterControlPlaneIsHighlyAvailable:
         type: boolean
         x-examples: [true, false]

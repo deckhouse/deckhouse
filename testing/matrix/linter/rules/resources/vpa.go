@@ -8,24 +8,23 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 // ControllerMustHaveVPA fills linting error regarding VPA
-func ControllerMustHaveVPA(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
-	if !utils.ModuleEnabled(values, "vertical-pod-autoscaler-crd") {
+func ControllerMustHaveVPA(linter *rules.ObjectLinter) {
+	if !linter.CheckModuleEnabled("vertical-pod-autoscaler-crd") {
 		return
 	}
 
-	scope := newLintingScope(objectStore, lintRuleErrorsList)
+	scope := newLintingScope(linter.ObjectStore, linter.ErrorsList)
 
 	vpaTargets, vpaTolerationGroups := parseTargetsAndTolerationGroups(scope)
 
 	for index, object := range scope.Objects() {
 		// Skip non-pod controllers and modules which control VPA themselves
-		if !isPodController(object.Unstructured.GetKind()) || shouldSkipModuleResource(module.Name, &index) {
+		if !isPodController(object.Unstructured.GetKind()) || shouldSkipModuleResource(linter.Module.Name, &index) {
 			continue
 		}
 

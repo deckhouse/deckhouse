@@ -44,7 +44,7 @@ cloudProviderYandex:
       defaultLbTargetGroupNetworkId: deftarggroupnetid
       internalNetworkIDs: ["id1", "id2"]
       shouldAssignPublicIPAddress: true
-    routeTableID: testest
+      routeTableID: testest
     region: myreg
     providerClusterConfiguration:
       sshPublicKey: mysshkey

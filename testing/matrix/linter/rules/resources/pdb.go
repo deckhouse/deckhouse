@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 )
@@ -24,12 +25,12 @@ func (s *nsLabelSelector) Matches(namespace string, labelSet labels.Set) bool {
 
 // ControllerMustHavePDB adds linting errors if there are pods from pod controllers whihch are not covered
 // by a PodDisruptionBudget
-func ControllerMustHavePDB(objectStore *storage.UnstructuredObjectStore, lintRuleErrorsList *errors.LintRuleErrorsList) {
-	scope := newLintingScope(objectStore, lintRuleErrorsList)
+func ControllerMustHavePDB(linter *rules.ObjectLinter) {
+	scope := newLintingScope(linter.ObjectStore, linter.ErrorsList)
 
 	pdbSelectors, lerr := collectPDBSelectors(scope)
 	if !lerr.IsEmpty() {
-		lintRuleErrorsList.Add(lerr)
+		linter.ErrorsList.Add(lerr)
 		return
 	}
 
@@ -39,7 +40,7 @@ func ControllerMustHavePDB(objectStore *storage.UnstructuredObjectStore, lintRul
 		}
 
 		lerr := ensurePDBIsPresent(pdbSelectors, object)
-		lintRuleErrorsList.Add(lerr)
+		linter.ErrorsList.Add(lerr)
 	}
 }
 
