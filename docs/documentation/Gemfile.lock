@@ -57,6 +57,7 @@ GEM
       nokogiri (~> 1.8)
       pathutil (~> 0.16)
       sprockets (>= 3.3, < 4.1.beta)
+    jekyll-regex-replace (1.1.0)
     jekyll-sanity (1.6.0)
       jekyll (>= 3.1, < 5.0)
       pathutil (~> 0.16)
@@ -112,8 +113,9 @@ DEPENDENCIES
   html-proofer
   jekyll
   jekyll-assets
+  jekyll-regex-replace
   nokogiri (>= 1.10.8)
   sprockets (~> 3.7)
 
 BUNDLED WITH
-   2.1.4
+   2.2.15

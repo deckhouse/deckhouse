@@ -4,21 +4,18 @@ search: exclude
 ---
 
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  {% for post in site.posts %}
-  {% unless post.search == "exclude" %}
-  <url>
-    <loc>{{site.url}}{{post.url}}</loc>
-  </url>
-  {% endunless %}
-  {% endfor %}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
-
-  {% for page in site.pages %}
-  {% unless page.search == "exclude" %}
-  <url>
-    <loc>{{site.url}}{{ page.url}}</loc>
-  </url>
-  {% endunless %}
-  {% endfor %}
+    {%- assign pages=site.pages | where: "sitemap_include", true %}
+    {%- for page in pages %}
+    <url>
+        <loc>{{ site.url }}{{ site.canonical_url_prefix }}{{ page.url | relative_url }}</loc>
+        <xhtml:link rel="alternate" hreflang="ru" href="{{ site.url }}/en{{ site.canonical_url_prefix }}{{ page.url | relative_url }}" />
+        <xhtml:link rel="alternate" hreflang="en" href="{{ site.url }}/ru{{ site.canonical_url_prefix }}{{ page.url | relative_url }}" />
+        <lastmod>{{site.time | date: '%Y-%m-%d' }}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.5</priority>
+    </url>
+    {%- endfor %}
 </urlset>

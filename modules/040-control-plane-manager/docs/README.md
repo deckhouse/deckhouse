@@ -5,7 +5,6 @@ title: Managing control plane
 The `control-plane-manager` (CPM) module is responsible for managing the cluster's control plane components. It runs on all master nodes of the cluster (nodes that have the `node-role.kubernetes.io/master: ""` label).
 
 The control-plane-manager:
-
 - **Manages certificates** required for the operation of the control plane (renews certificates and re-issues them in response to configuration changes, among other things). This feature allows the CPM to automatically maintain a secure control plane configuration and quickly add additional SANs for organizing secure access to the Kubernetes API.
 - **Configures components**. The CPM module automatically creates the required configs and manifests of the control plane components.
 - **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.

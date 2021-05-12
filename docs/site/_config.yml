@@ -42,6 +42,7 @@ feedback_disable: true
 
 plugins:
   - jekyll-assets
+  - jekyll-regex-replace
 
 markdown: kramdown
 kramdown:
@@ -59,10 +60,12 @@ defaults:
       layout: "page"
       comments: false
       searchable: true
+      sitemap_include: true
       topnav: topnav
       output: web
       sidebar: main
       multilang: true
+      comparable: true
       lang: en
   - scope:
       path: "pages/includes"

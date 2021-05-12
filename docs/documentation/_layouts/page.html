@@ -3,6 +3,22 @@ layout: sidebar
 ---
 <div class="docs">
 
+    {%- if page.comparable %}
+    <div class="btn-group compare">
+        <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
+            Compare
+        </a>
+    </div>
+    <script>
+        $(document).ready(function(){
+            if (window.location.hostname.match(/flant.com|localhost/)) {
+                $('.compare').addClass('active');
+            }
+        });
+    </script>
+
+    {%- endif %}
+
     <h1 class="docs__title">{{ page.title }}</h1>
 
     {%- if page.simple_map == true %}
