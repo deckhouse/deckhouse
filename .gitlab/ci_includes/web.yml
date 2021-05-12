@@ -6,7 +6,7 @@ Main web build:
     WERF_LOG_VERBOSE: "on"
     WERF_LOOSE_GITERMINISM: "true"
   script:
-  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL}  --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - werf build
   except:
@@ -27,7 +27,7 @@ Doc web build:
     WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
     WERF_LOG_VERBOSE: "on"
   script:
-  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL}  --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - werf build
   except:
@@ -74,7 +74,7 @@ Web links test:
   tags:
   - werf-distributed
 
-(Test) Main Deploy:
+Test Main Deploy:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
@@ -87,7 +87,7 @@ Web links test:
     url: https://deckhouse.test.flant.com
   when: manual
 
-(Test) Doc Deploy :
+Test Doc Deploy :
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
@@ -99,25 +99,29 @@ Web links test:
     url: https://deckhouse.test.flant.com
   when: manual
 
-early.deckhouse.io:
+Stage Main Deploy:
   <<: *web_base_deploy
   variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
+    WERF_DIR: "docs/site"
+    WERF_RELEASE: "deckhouse-site"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
   environment:
-    name: web-early
-    url: https://early.deckhouse.io
+    name: web-stage
+    url: https://deckhouse.stage.flant.com
   when: manual
 
-deckhouse.io:
+Stage Doc Deploy :
   <<: *web_base_deploy
   variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
+    WERF_DIR: "docs/documentation"
+    WERF_RELEASE: "deckhouse-doc"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
   environment:
-    name: web-production
-    url: https://deckhouse.io
-  only:
-    - master
-    - /^release-.*$/
+    name: web-stage
+    url: https://deckhouse.stage.flant.com
   when: manual
 
 Web cleanup:
