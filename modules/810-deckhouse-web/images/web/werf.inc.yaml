@@ -108,6 +108,7 @@ ansible:
         cp -Rf /app/_site/site/en/includes /app/_site/documentation/en
         cp -Rf /app/_site/site/ru /app/_site/documentation/
         cp -Rf /app/_site/site/en /app/_site/documentation/
+        rm -rf /app/_site/documentation/compare/
     - name: "Link checking"
       shell: |
         exit 0 || (bundle exec htmlproofer \
