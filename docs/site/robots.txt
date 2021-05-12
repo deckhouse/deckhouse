@@ -1,2 +1,15 @@
+---
+layout: none
+permalink: /robots.txt
+search: exclude
+sitemap_include: false
+---
+
 User-agent: *
-Disallow: /
+Disallow: *.js
+Disallow: *?*
+Disallow: */compare/*
+Allow: /
+
+Sitemap: {{ site.url }}/sitemap.xml
+Host: {{ site.url }}

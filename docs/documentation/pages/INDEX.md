@@ -2,6 +2,7 @@
 title: "Home"
 permalink: en/
 toc: false
+comparable: false
 ---
 
 

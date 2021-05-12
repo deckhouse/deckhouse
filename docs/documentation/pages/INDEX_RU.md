@@ -3,6 +3,7 @@ title: "Главная"
 permalink: ru/
 toc: false
 lang: ru
+comparable: false
 ---
 
 {::options parse_block_html="false" /}

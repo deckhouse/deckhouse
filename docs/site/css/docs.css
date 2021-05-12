@@ -820,3 +820,11 @@
 .editme {
     float: right;
 }
+
+.docs .btn-group.compare {
+    float: right;
+    display: none
+}
+.docs  .btn-group.compare.active {
+    display: inline-block;
+}
