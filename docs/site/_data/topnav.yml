@@ -3,25 +3,25 @@ topnav:
 - title: Topnav
   items:
   - title:
+      ru: Возможности
+      en: Features
+    url: /features.html
+  - title:
       ru: Документация
       en: Documentation
     url: /documentation/v1/
+  - title:
+      ru: Сообщество
+      en: Community
+    url: /community.html
   - title:
       ru: Продукты
       en: Products
     url: /products.html
   - title:
-      ru: Возможности
-      en: Features
-    url: /features.html
-  - title:
       ru: Услуги
       en: Services
     url: /services.html
-  - title:
-      ru: Сообщество
-      en: Community
-    url: /community.html
   - title:
       ru: О нас
       en: About us
