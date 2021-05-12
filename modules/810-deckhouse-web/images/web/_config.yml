@@ -11,3 +11,19 @@ exclude:
 - docker-compose.yml
 - modules_make_data
 - modules_menu_skip
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+      comments: false
+      searchable: true
+      sitemap_include: false
+      topnav: topnav
+      output: web
+      sidebar: main
+      multilang: true
+      comparable: false
+      lang: en

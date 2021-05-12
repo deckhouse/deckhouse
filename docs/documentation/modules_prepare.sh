@@ -3,7 +3,6 @@
 #MODULES_SRC_DIR=/home/kar/fox/sys/antiopa/modules
 #MODULES_DST_EN=/tmp/mod_en
 #MODULES_DST_RU=/tmp/mod_ru
-#mkdir -p ${MODULES_DST_EN}  ${MODULES_DST_RU}
 
 page::has_frontmatter() {
     if [[ -f $1 ]]
@@ -17,6 +16,10 @@ page::has_frontmatter() {
     return 1
 }
 
+if [ -f modules_menu_skip ]; then
+  modules_skip_list=$(cat modules_menu_skip)
+fi
+
 pages=$(
 for i in $(find ${MODULES_SRC_DIR} -regex '.*.md' -print | sort); do
       if page::has_frontmatter "${i}"
@@ -29,7 +32,12 @@ done | sed "s|^${MODULES_SRC_DIR}/||" |  sed 's/_RU\.md/\.md/' | sed 's/\.md$//'
 
 for page in ${pages}; do
     absolute_path="${MODULES_SRC_DIR}/${page}"
-    #  page_dst=$(echo $page | sed 's|docs/||')
+    module_name=$(echo $page | cut -d\/ -f1)
+    skip=false
+    for el in $modules_skip_list ; do
+      if [[ $el == $module_name ]] ; then skip=true; break; fi
+    done
+    if [[ "$skip" == 'true' ]]; then continue; fi
     page_dst=$page
     mkdir -p $(echo "${MODULES_DST_EN}/${page_dst}" | sed -E 's|^(.+)/[^\/]+$|\1|') $(echo "${MODULES_DST_RU}/${page_dst}" | sed -E 's|^(.+)/[^\/]+$|\1|')
     if [[ -f "${absolute_path}.md" ]] && page::has_frontmatter "${absolute_path}.md"; then
@@ -50,5 +58,5 @@ for page in ${pages}; do
     fi
 done
 
-rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/ ${MODULES_DST_EN}/
-rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/ ${MODULES_DST_RU}/
+rsync -a --exclude='*.md' --exclude-from=modules_menu_skip ${MODULES_SRC_DIR}/ ${MODULES_DST_EN}/
+rsync -a --exclude='*.md' --exclude-from=modules_menu_skip ${MODULES_SRC_DIR}/ ${MODULES_DST_RU}/
