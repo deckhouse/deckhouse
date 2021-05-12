@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/resources"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/roles"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
@@ -60,10 +59,16 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 }
 
 type ObjectLinter struct {
-	ObjectStore *storage.UnstructuredObjectStore
-	ErrorsList  *errors.LintRuleErrorsList
-	Module      utils.Module
-	Values      string
+	ObjectStore    *storage.UnstructuredObjectStore
+	ErrorsList     *errors.LintRuleErrorsList
+	Module         utils.Module
+	Values         string
+	EnabledModules map[string]struct{}
+}
+
+func (l *ObjectLinter) CheckModuleEnabled(name string) bool {
+	_, ok := l.EnabledModules[name]
+	return ok
 }
 
 func (l *ObjectLinter) ApplyContainerRules(object storage.StoreObject) {
@@ -209,7 +214,9 @@ func containerPorts(object storage.StoreObject, containers []v1.Container) error
 func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	l.ErrorsList.Add(objectRecommendedLabels(object))
 	l.ErrorsList.Add(objectAPIVersion(object))
-	l.ErrorsList.Add(objectPriorityClass(l.Values, object))
+	if l.CheckModuleEnabled("priority-class") {
+		l.ErrorsList.Add(objectPriorityClass(object))
+	}
 
 	l.ErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(l.Module, object))
 	l.ErrorsList.Add(roles.ObjectRBACPlacement(l.Module, object))
@@ -284,11 +291,7 @@ func newConvertError(object storage.StoreObject, err error) errors.LintRuleError
 	)
 }
 
-func objectPriorityClass(values string, object storage.StoreObject) errors.LintRuleError {
-	if !utils.ModuleEnabled(values, "priority-class") {
-		return errors.EmptyRuleError
-	}
-
+func objectPriorityClass(object storage.StoreObject) errors.LintRuleError {
 	kind := object.Unstructured.GetKind()
 	converter := runtime.DefaultUnstructuredConverter
 
@@ -419,23 +422,4 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 	}
 
 	return errors.EmptyRuleError
-}
-
-func ApplyLintRules(module utils.Module, values string, objectStore *storage.UnstructuredObjectStore) error {
-	linter := ObjectLinter{
-		ObjectStore: objectStore,
-		Values:      values,
-		Module:      module,
-		ErrorsList:  &errors.LintRuleErrorsList{},
-	}
-
-	for _, object := range objectStore.Storage {
-		linter.ApplyObjectRules(object)
-		linter.ApplyContainerRules(object)
-	}
-
-	resources.ControllerMustHaveVPA(module, values, objectStore, linter.ErrorsList)
-	resources.ControllerMustHavePDB(objectStore, linter.ErrorsList)
-
-	return linter.ErrorsList.ConvertToError()
 }

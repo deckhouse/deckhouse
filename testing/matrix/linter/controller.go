@@ -1,13 +1,13 @@
 package linter
 
 import (
-	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
-	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/fatih/color"
@@ -19,15 +19,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/deckhouse/deckhouse/testing/library/values_validation"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/storage"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 var (
-	workersQuantity = runtime.NumCPU()
-
-	sep = regexp.MustCompile("(?:^|\\s*\n)---\\s*")
+	workersQuantity = runtime.NumCPU() * 8
 )
 
 type ModuleController struct {
@@ -69,27 +66,18 @@ func NewTask(index int, values string) *Task {
 type Worker struct {
 	id       int
 	tasksCh  <-chan *Task
-	errorsCh chan error
-	doneCh   chan struct{}
-
-	ctx context.Context
+	errorsCh chan<- error
 }
 
-func NewWorker(ctx context.Context, id int, tasksCh <-chan *Task, errorsCh chan error, doneCh chan struct{}) *Worker {
-	return &Worker{id: id, tasksCh: tasksCh, errorsCh: errorsCh, doneCh: doneCh, ctx: ctx}
+func NewWorker(id int, tasksCh <-chan *Task, errorsCh chan<- error) *Worker {
+	return &Worker{id: id, tasksCh: tasksCh, errorsCh: errorsCh}
 }
 
-func (w *Worker) Start(c *ModuleController) {
-	for {
-		select {
-		case task := <-w.tasksCh:
-			if err := lint(c, task); err != nil {
-				w.errorsCh <- err
-				return
-			}
-			w.doneCh <- struct{}{}
-
-		case <-w.ctx.Done():
+func (w *Worker) Start(wg *sync.WaitGroup, c *ModuleController) {
+	defer wg.Done()
+	for task := range w.tasksCh {
+		if err := lint(c, task); err != nil {
+			w.errorsCh <- err
 			return
 		}
 	}
@@ -105,28 +93,27 @@ func (c *ModuleController) Run() error {
 	tasksCh := make(chan *Task)
 	doneCh := make(chan struct{})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+	var wg sync.WaitGroup
 	for id := 0; id <= workersQuantity; id++ {
-		go NewWorker(ctx, id, tasksCh, errorsCh, doneCh).Start(c)
+		wg.Add(1)
+		go NewWorker(id, tasksCh, errorsCh).Start(&wg, c)
 	}
 
 	go func() {
 		for index, valuesData := range c.Values {
 			tasksCh <- NewTask(index, valuesData)
 		}
+
+		close(tasksCh)
+		wg.Wait()
+		close(doneCh)
 	}()
 
-	doneCounter := 0
 	for {
 		select {
 		case <-doneCh:
-			doneCounter++
-			if doneCounter == testCasesQuantity {
-				fmt.Print(testsSuccessful(c.Module.Name, testCasesQuantity))
-				return nil
-			}
+			fmt.Print(testsSuccessful(c.Module.Name, testCasesQuantity))
+			return nil
 		case s := <-signalCh:
 			fmt.Printf("\nReceived signal %s, exiting...\n", s)
 			return nil
@@ -136,42 +123,50 @@ func (c *ModuleController) Run() error {
 	}
 }
 
-func (c *ModuleController) RunRender(values string, objectStore *storage.UnstructuredObjectStore) error {
+func (c *ModuleController) RunRender(values string, objectStore *storage.UnstructuredObjectStore) (lintError error) {
 	var renderer helm.Renderer
 	renderer.Name = c.Module.Name
 	renderer.Namespace = c.Module.Namespace
-	renderer.LintMode = true
+	renderer.LintMode = false
+
 	files, err := renderer.RenderChart(c.Chart, values)
 	if err != nil {
-		return fmt.Errorf("helm chart render: %v", err)
+		lintError = fmt.Errorf("helm chart render: %v", err)
+		return
 	}
 
+	// Catch panic if cannot unmarshal the doc
+	// Decode method of yaml package is preferable because of lower resource consumption
+	var lastTest string
+	defer func() {
+		if r := recover(); r != nil {
+			lintError = fmt.Errorf(
+				manifestErrorMessage,
+				"panic during unmarshalling (probably because of yaml file is invalid)",
+				lastTest,
+			)
+		}
+	}()
+
 	for path, bigFile := range files {
-		bigFileTmp := strings.TrimSpace(bigFile)
-		docs := sep.Split(bigFileTmp, -1)
-		for _, d := range docs {
-			if d == "" {
-				continue
-			}
-			d = strings.TrimSpace(d)
-
+		lastTest = bigFile
+		dec := yaml.NewDecoder(strings.NewReader(bigFile))
+		for {
 			var node map[string]interface{}
-			err := yaml.Unmarshal([]byte(d), &node)
-			if err != nil {
-				return fmt.Errorf(manifestErrorMessage, err, numerateManifestLines(d))
+			if err := dec.Decode(&node); err == io.EOF {
+				break
 			}
-
 			if node == nil {
 				continue
 			}
 
-			err = objectStore.Put(path, node)
-			if err != nil {
-				return fmt.Errorf("helm chart object already exists: %v", err)
+			if err := objectStore.Put(path, node); err != nil {
+				lintError = fmt.Errorf("helm chart object already exists: %v", err)
+				return
 			}
 		}
 	}
-	return nil
+	return
 }
 
 func lint(c *ModuleController, task *Task) error {
@@ -187,7 +182,7 @@ func lint(c *ModuleController, task *Task) error {
 		return testsError(task.index, err, task.values)
 	}
 
-	err = rules.ApplyLintRules(c.Module, task.values, &objectStore)
+	err = ApplyLintRules(c.Module, task.values, &objectStore)
 	if err != nil {
 		return err
 

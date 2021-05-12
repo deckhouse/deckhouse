@@ -6,11 +6,9 @@ global:
   modules:
     publicDomainTemplate: "%s.example.com"
     placement:
-      __ConstantChoices__:
-      - {}
-      - customTolerationKeys:
-          - "test-1"
-          - "test-2/master"
+      customTolerationKeys:
+      - "test-1"
+      - "test-2/master"
     https:
       __ConstantChoices__:
         - certManager:
@@ -45,10 +43,7 @@ global:
     d8SpecificNodeCountByRole:
       system:
         __ConstantChoices__: [1, 3]
-    kubernetesVersion:
-      __ConstantChoices__:
-      - "1.16"
-      - "1.19"
+    kubernetesVersion: "1.19"
 istio:
     multicluster:
       enabled:
