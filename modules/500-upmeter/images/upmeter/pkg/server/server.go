@@ -4,20 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-
-	// Install default pprof endpoint.
 	_ "net/http/pprof"
 	"time"
 
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
-
-	// Import sqlite3 driver.
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/app"
 	"d8.io/upmeter/pkg/crd"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
@@ -34,25 +29,34 @@ import (
 // If everything is ok, it starts http server.
 
 type server struct {
-	dbPath          string
-	dbMigrationPath string
+	config *Config
 
-	originsCount int
+	logger *log.Logger
+
+	server                *http.Server
+	downtimeMonitor       *crd.DowntimeMonitor
+	remoteWriteController *remotewrite.Controller
 }
 
-func New(originsCount int) *server {
-	return &server{
-		originsCount: originsCount,
+type Config struct {
+	ListenHost string
+	ListenPort string
 
-		dbPath:          app.DatabasePath,
-		dbMigrationPath: app.DatabaseMigrationsPath,
+	DatabasePath           string
+	DatabaseMigrationsPath string
+
+	OriginsCount int
+}
+
+func New(config *Config, logger *log.Logger) *server {
+	return &server{
+		config: config,
+		logger: logger,
 	}
 }
 
 func (s *server) Start(ctx context.Context) error {
 	var err error
-
-	logger := log.StandardLogger()
 
 	kubeClient, err := initKubeClient()
 	if err != nil {
@@ -60,30 +64,48 @@ func (s *server) Start(ctx context.Context) error {
 	}
 
 	// Database connection with pool
-	dbCtx, err := migrations.GetMigratedDatabase(s.dbPath, s.dbMigrationPath)
+	dbCtx, err := migrations.GetMigratedDatabase(ctx, s.config.DatabasePath, s.config.DatabaseMigrationsPath)
 	if err != nil {
-		return fmt.Errorf("cannot connect to database: %v", err)
+		return fmt.Errorf("database not connected: %v", err)
 	}
 
 	// Downtime CR monitor
-	downtimeMonitor, err := initDowntimeMonitor(ctx, kubeClient)
+	s.downtimeMonitor, err = initDowntimeMonitor(ctx, kubeClient)
 	if err != nil {
 		return fmt.Errorf("cannot start downtimes.deckhouse.io monitor: %v", err)
 	}
 
 	// Metrics controller
-	controller, err := initMetricsController(ctx, dbCtx, kubeClient, s.originsCount, logger)
+	s.remoteWriteController, err = initRemoteWriteController(ctx, dbCtx, kubeClient, s.config.OriginsCount, s.logger)
 	if err != nil {
-		logger.Debugf("starting controller... did't happen: %v", err)
+		s.logger.Debugf("starting controller... did't happen: %v", err)
 		return fmt.Errorf("cannot start remote_write controller: %v", err)
 	}
 
 	go cleanOld30sEpisodes(ctx, dbCtx)
 
 	// Start http server. It blocks, that's why it is the last here.
-	logger.Debugf("starting HTTP server")
-	err = serveHttp(dbCtx, downtimeMonitor, controller)
+	s.logger.Debugf("starting HTTP server")
+	listenAddr := s.config.ListenHost + ":" + s.config.ListenPort
+	s.server = initHttpServer(dbCtx, s.downtimeMonitor, s.remoteWriteController, listenAddr)
+
+	err = s.server.ListenAndServe()
+	if err == http.ErrServerClosed {
+		return nil
+	}
+
 	return err
+}
+
+func (s *server) Stop() error {
+	err := s.server.Shutdown(context.Background())
+	if err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	s.remoteWriteController.Stop()
+	s.downtimeMonitor.Stop()
+
+	return nil
 }
 
 func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
@@ -95,40 +117,49 @@ func cleanOld30sEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext) {
 
 	storage := dao.NewEpisodeDao30s(conn)
 
-	tick := time.NewTicker(period)
+	ticker := time.NewTicker(period)
+
 	for {
 		select {
-		case <-tick.C:
+		case <-ticker.C:
 			deadline := time.Now().Truncate(period).Add(dayBack)
 			err := storage.DeleteUpTo(deadline)
 			if err != nil {
 				log.Errorf("cannot clean old episodes: %v", err)
 			}
 		case <-ctx.Done():
+			ticker.Stop()
 			return
 		}
 	}
 }
 
-func serveHttp(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller) error {
-	// Setup API handlers
-	http.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx})
-	http.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
-	http.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
-	http.Handle("/downtime", &api.AddEpisodesHandler{DbCtx: dbCtx, RemoteWrite: controller})
-	http.Handle("/stats", &api.StatsHandler{DbCtx: dbCtx})
-	// Kubernetes probes
-	http.HandleFunc("/healthz", writeOk)
-	http.HandleFunc("/ready", writeOk)
+func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *crd.DowntimeMonitor, controller *remotewrite.Controller, addr string) *http.Server {
+	mux := http.NewServeMux()
 
-	return http.ListenAndServe(app.ListenHost+":"+app.ListenPort, nil)
+	// Setup API handlers
+	mux.Handle("/api/probe", &api.ProbeListHandler{DbCtx: dbCtx})
+	mux.Handle("/api/status/range", &api.StatusRangeHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
+	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor})
+	mux.Handle("/downtime", &api.AddEpisodesHandler{DbCtx: dbCtx, RemoteWrite: controller})
+	mux.Handle("/stats", &api.StatsHandler{DbCtx: dbCtx})
+	// Kubernetes probes
+	mux.HandleFunc("/healthz", writeOk)
+	mux.HandleFunc("/ready", writeOk)
+
+	server := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	return server
 }
 
-func writeOk(w http.ResponseWriter, r *http.Request) {
+func writeOk(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("OK"))
 }
 
-func initMetricsController(ctx context.Context, dbCtx *dbcontext.DbContext, kubeClient kube.KubernetesClient, originsCount int, logger *log.Logger) (*remotewrite.Controller, error) {
+func initRemoteWriteController(ctx context.Context, dbCtx *dbcontext.DbContext, kubeClient kube.KubernetesClient, originsCount int, logger *log.Logger) (*remotewrite.Controller, error) {
 	config := &remotewrite.ControllerConfig{
 		// collecting/exporting episodes as metrics
 		Period: 2 * time.Second,
@@ -157,5 +188,7 @@ func initKubeClient() (kube.KubernetesClient, error) {
 	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
 	client.WithMetricStorage(metric_storage.NewMetricStorage())
 
+	// FIXME: Kubernetes client is configured successfully with 'out-of-cluster' config
+	//      operator.component=KubernetesAPIClient
 	return client, client.Init()
 }

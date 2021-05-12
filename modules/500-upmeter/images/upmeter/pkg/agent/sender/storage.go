@@ -70,7 +70,6 @@ func (w *wal) Clean(tx *dbcontext.DbContext, slot time.Time) error {
 func (w *wal) List(tx *dbcontext.DbContext) ([]check.Episode, error) {
 	// The EpisodeDao30s object contains hardcoded table name
 	db := dao.NewEpisodeDao30s(tx)
-
 	slot, err := db.GetEarliestTimeSlot()
 	if err != nil {
 		return nil, err

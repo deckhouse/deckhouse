@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -143,7 +144,7 @@ func Test_FillOneDay(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	err = migrations.MigrateDatabase(dbCtx, "../migrations/server")
+	err = migrations.MigrateDatabase(context.TODO(), dbCtx, "../migrations/server")
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	dao5m := NewEpisodeDao5m(daoCtx)
@@ -196,7 +197,7 @@ func Test_Fill_Year(t *testing.T) {
 	daoCtx := dbCtx.Start()
 	defer daoCtx.Stop()
 
-	err = migrations.MigrateDatabase(dbCtx, "../migrations/server")
+	err = migrations.MigrateDatabase(context.TODO(), dbCtx, "../migrations/server")
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	dao5m := NewEpisodeDao5m(daoCtx)

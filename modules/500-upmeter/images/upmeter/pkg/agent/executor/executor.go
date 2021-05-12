@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -32,6 +31,9 @@ type ProbeExecutor struct {
 
 	// to send a bunch of episodes further
 	send chan []check.Episode
+
+	stop chan struct{}
+	done chan struct{}
 }
 
 func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
@@ -42,47 +44,67 @@ func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
 
 		probeManager: mgr,
 		send:         send,
+
+		stop: make(chan struct{}),
+		done: make(chan struct{}),
 	}
 	return p
 }
 
-func (e *ProbeExecutor) Start(ctx context.Context) {
-	go e.runTicker(ctx)
-	go e.scrapeTicker(ctx)
+func (e *ProbeExecutor) Start() {
+	go e.runTicker()
+	go e.scrapeTicker()
 }
 
 // runTicker is the scheduler for probe checks
-func (e *ProbeExecutor) runTicker(ctx context.Context) {
+func (e *ProbeExecutor) runTicker() {
 	ticker := time.NewTicker(scrapePeriod)
 
 	for {
 		select {
 		case <-ticker.C:
-			// TODO: pass context to checks
 			e.run()
-		case <-ctx.Done():
+		case <-e.stop:
 			ticker.Stop()
+			e.done <- struct{}{}
 			return
 		}
 	}
 }
 
 // scrapeTicker collects probe check results and schedules the exporting of episodes.
-func (e *ProbeExecutor) scrapeTicker(ctx context.Context) {
-	// we want to be able to align with the real exportPeriod in time and to spawn before we run a probe
+func (e *ProbeExecutor) scrapeTicker() {
 	ticker := time.NewTicker(scrapePeriod)
 
 	for {
 		select {
+		case result := <-e.recv:
+			e.collect(result)
+
 		case <-ticker.C:
+			var (
+				now        = time.Now()
+				exportTime = now.Round(exportPeriod)
+				scrapeTime = now.Round(scrapePeriod)
+			)
+
 			err := e.scrape()
 			if err != nil {
 				log.Fatalf("cannot scrape results: %v", err)
 			}
-		case result := <-e.recv:
-			e.collect(result)
-		case <-ctx.Done():
+
+			if exportTime != scrapeTime {
+				continue
+			}
+
+			episodeStart := exportTime.Add(-exportPeriod)
+			if err := e.export(episodeStart); err != nil {
+				log.Fatalf("cannot export results: %v", err)
+			}
+
+		case <-e.stop:
 			ticker.Stop()
+			e.done <- struct{}{}
 			return
 		}
 	}
@@ -124,12 +146,6 @@ func (e *ProbeExecutor) collect(checkResult check.Result) {
 
 // scrape checks probe results
 func (e *ProbeExecutor) scrape() error {
-	var (
-		now        = time.Now()
-		exportTime = now.Round(exportPeriod)
-		scrapeTime = now.Round(scrapePeriod)
-	)
-
 	for id, probeResult := range e.results {
 		series, ok := e.series[id]
 		if !ok {
@@ -141,17 +157,6 @@ func (e *ProbeExecutor) scrape() error {
 			return fmt.Errorf("cannot add series for probe %q: %v", id, err)
 		}
 	}
-
-	if exportTime != scrapeTime {
-		return nil
-	}
-
-	episodeStart := exportTime.Add(-exportPeriod)
-	err := e.export(episodeStart)
-	if err != nil {
-		return fmt.Errorf("cannot export episodes: %v", err)
-	}
-
 	return nil
 }
 
@@ -180,6 +185,13 @@ func (e *ProbeExecutor) export(start time.Time) error {
 	e.send <- episodes
 
 	return nil
+}
+
+func (e *ProbeExecutor) Stop() {
+	close(e.stop)
+
+	<-e.done
+	<-e.done
 }
 
 func calcSeries(byId map[string]*check.StatusSeries, ids []string) (*check.StatusSeries, error) {

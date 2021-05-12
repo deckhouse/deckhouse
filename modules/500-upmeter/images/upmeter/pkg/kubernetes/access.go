@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"k8s.io/client-go/kubernetes"
@@ -16,12 +15,20 @@ type Access struct {
 	saToken string
 }
 
-func (a *Access) Init() error {
+type Config struct {
+	Context     string
+	Config      string
+	Server      string
+	ClientQps   float32
+	ClientBurst int
+}
+
+func (a *Access) Init(config *Config) error {
 	// Kubernetes client
 	a.client = kube.NewKubernetesClient()
-	a.client.WithContextName(shapp.KubeContext)
-	a.client.WithConfigPath(shapp.KubeConfig)
-	a.client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	a.client.WithContextName(config.Context)
+	a.client.WithConfigPath(config.Config)
+	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
 	a.client.WithMetricStorage(metric_storage.NewMetricStorage())
 	err := a.client.Init()
 	if err != nil {

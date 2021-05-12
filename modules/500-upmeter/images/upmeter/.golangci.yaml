@@ -32,3 +32,4 @@ linters:
     - misspell
     - sqlclosecheck
     - unparam
+

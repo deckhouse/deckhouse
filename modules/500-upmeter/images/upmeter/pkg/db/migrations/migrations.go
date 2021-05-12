@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -13,7 +14,7 @@ import (
 	dbcontext "d8.io/upmeter/pkg/db/context"
 )
 
-func GetMigratedDatabase(dbPath, migrationsPath string) (*dbcontext.DbContext, error) {
+func GetMigratedDatabase(ctx context.Context, dbPath, migrationsPath string) (*dbcontext.DbContext, error) {
 	// Setup db context with connection pool.
 	dbctx, err := db.Connect(dbPath, dbcontext.DefaultConnectionOptions())
 	if err != nil {
@@ -21,7 +22,7 @@ func GetMigratedDatabase(dbPath, migrationsPath string) (*dbcontext.DbContext, e
 	}
 
 	// Apply migrations
-	err = MigrateDatabase(dbctx, migrationsPath)
+	err = MigrateDatabase(ctx, dbctx, migrationsPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot migrate database: %v", err)
 	}
@@ -29,12 +30,26 @@ func GetMigratedDatabase(dbPath, migrationsPath string) (*dbcontext.DbContext, e
 	return dbctx, nil
 }
 
-func MigrateDatabase(dbctx *dbcontext.DbContext, migrationsPath string) error {
+func MigrateDatabase(ctx context.Context, dbctx *dbcontext.DbContext, migrationsPath string) error {
 	m, err := newMigrate(dbctx, migrationsPath)
 	if err != nil {
 		return fmt.Errorf("cannot instantiate migration: %v", err)
 	}
-	return forbidNoChange(m.Up())
+
+	migrationCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		<-migrationCtx.Done()
+		m.GracefulStop <- true
+	}()
+
+	err = forbidNoChange(m.Up())
+	if err == nil {
+		err = ctx.Err()
+	}
+
+	return err
 }
 
 func forbidNoChange(err error) error {
@@ -88,7 +103,7 @@ func getTestDatabase(dbPath, migrationPath string) (*dbcontext.DbContext, error)
 		return nil, err
 	}
 
-	err = MigrateDatabase(dbctx, migrationPath)
+	err = MigrateDatabase(context.TODO(), dbctx, migrationPath)
 	if err != nil {
 		return nil, err
 	}

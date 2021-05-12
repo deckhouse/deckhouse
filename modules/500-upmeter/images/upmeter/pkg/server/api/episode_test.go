@@ -177,14 +177,14 @@ func Test_chooseByLatestSubSlot(t *testing.T) {
 		saved5m  aarg
 	}
 	tests := []struct {
-		name string
-		args args
-		want []*check.Episode
+		name        string
+		args        args
+		wantByIndex []int
 	}{
 		{
-			name: "complete mismatch gives none",
-			args: args{},
-			want: []*check.Episode{},
+			name:        "complete mismatch gives none",
+			args:        args{},
+			wantByIndex: []int{},
 		},
 		{
 			name: "only probeRef match gives none",
@@ -192,51 +192,47 @@ func Test_chooseByLatestSubSlot(t *testing.T) {
 				saved30s: aarg{ref: ref},
 				saved5m:  aarg{ref: ref},
 			},
-			want: []*check.Episode{},
+			wantByIndex: []int{},
 		},
 		{
-			name: "only slot match gives none",
+			name: "only 5m slot match gives none",
 			args: args{
 				saved30s: aarg{slots: slotsUnix(570)},
 				saved5m:  aarg{slots: slotsUnix(300)},
 			},
-			want: []*check.Episode{},
+			wantByIndex: []int{},
 		},
 		{
-			name: "ref and slot match gives one out of ones",
+			name: "ref and 5m slot match gives one out of ones",
 			args: args{
 				saved30s: aarg{ref: ref, slots: slotsUnix(570)},
 				saved5m:  aarg{ref: ref, slots: slotsUnix(300)},
 			},
-			want: []*check.Episode{episode(ref, 300)},
+			wantByIndex: []int{0},
 		},
 		{
-			name: "ref and slot match gives one out of three",
+			name: "ref and 5m slot match gives one out of three",
 			args: args{
 				saved30s: aarg{ref: ref, slots: slotsUnix(270, 570, 870)},
 				saved5m:  aarg{ref: ref, slots: slotsUnix(600)},
 			},
-			want: []*check.Episode{episode(ref, 600)},
+			wantByIndex: []int{0},
 		},
 		{
-			name: "ref and slot match gives three out of three",
+			name: "ref and 5m slot match gives three out of three",
 			args: args{
 				saved30s: aarg{ref: ref, slots: slotsUnix(570, 870, 1170)},
 				saved5m:  aarg{ref: ref, slots: slotsUnix(0, 300, 600, 900, 1200)},
 			},
-			want: []*check.Episode{
-				episode(ref, 300),
-				episode(ref, 600),
-				episode(ref, 900),
-			},
+			wantByIndex: []int{1, 2, 3},
 		},
 		{
-			name: "ref and slot match gives one out of three, when two subslots are not the latest ones",
+			name: "ref and 5m slot match gives one out of three, when two subslots are not the latest ones",
 			args: args{
 				saved30s: aarg{ref: ref, slots: slotsUnix(240, 570, 810)},
 				saved5m:  aarg{ref: ref, slots: slotsUnix(300, 600, 900)},
 			},
-			want: []*check.Episode{episode(ref, 300)},
+			wantByIndex: []int{0},
 		},
 	}
 
@@ -247,7 +243,12 @@ func Test_chooseByLatestSubSlot(t *testing.T) {
 
 			got := chooseByLatestSubSlot(e30s, e5m)
 
-			g.Expect(got).To(Equal(tt.want))
+			want := make([]*check.Episode, 0)
+			for _, i := range tt.wantByIndex {
+				want = append(want, e5m[i])
+			}
+
+			g.Expect(got).To(Equal(want))
 		})
 	}
 }

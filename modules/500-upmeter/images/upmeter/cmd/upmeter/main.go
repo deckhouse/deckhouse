@@ -3,84 +3,149 @@ package main
 import (
 	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"d8.io/upmeter/pkg/agent"
-	"d8.io/upmeter/pkg/app"
+	"d8.io/upmeter/pkg/agent/sender"
+	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/util"
 	"d8.io/upmeter/pkg/server"
 )
 
 func main() {
-	app.InitAppEnv()
+	var (
+		loggerConfig = &loggerConfig{}
 
-	kpApp := kingpin.New("upmeter", "upmeter")
+		agentKubeConfig = &kubernetes.Config{}
+		agentConfig     = &agent.Config{ClientConfig: &sender.ClientConfig{}}
+
+		serverConfig = &server.Config{}
+	)
+
+	app := kingpin.New("upmeter", "upmeter")
+	logger := log.StandardLogger()
 
 	// Server
 
-	serverCommand := kpApp.Command("start", "Start upmeter informer")
-	originsCount := serverCommand.Flag("origins", "The expected number of origins, used for exporting episodes as metrics when they are fulfilled by this number of agents.").
-		Required().
-		Int()
-
+	serverCommand := app.Command("start", "Start upmeter server")
+	parseServerArgs(serverCommand, serverConfig)
+	parseLoggerArgs(serverCommand, loggerConfig)
 	serverCommand.Action(func(c *kingpin.ParseContext) error {
-		sh_app.SetupLogging()
-		log.Info("Starting upmeter server")
+		setupLogger(logger, loggerConfig)
 
-		srv := server.New(*originsCount)
-		ctx, cancel := context.WithCancel(context.Background())
+		logger.Info("Starting upmeter server")
 
-		err := srv.Start(ctx)
-		if err != nil {
-			cancel()
-			log.Fatalf("cannot start server: %v", err)
-		}
+		srv := server.New(serverConfig, logger)
+		startCtx, cancelStart := context.WithCancel(context.Background())
 
-		// Block action by waiting signals from OS.
-		utils_signal.WaitForProcessInterruption(func() {
-			// FIXME the shutdown is still not graceful
-			cancel()
-			os.Exit(1)
+		go func() {
+			defer cancelStart()
+
+			err := srv.Start(startCtx)
+			if err != nil {
+				logger.Fatalf("cannot start server: %v", err)
+			}
+		}()
+
+		// Blocks waiting signals from OS.
+		shutdown(func() {
+			cancelStart()
+
+			err := srv.Stop()
+			if err != nil {
+				logger.Fatalf("error stop server gracefully: %v", err)
+			}
+
+			os.Exit(0)
 		})
 
 		return nil
 	})
-
-	sh_app.DefineKubeClientFlags(serverCommand)
-	sh_app.DefineLoggingFlags(serverCommand)
 
 	// Agent
 
-	agentCommand := kpApp.Command("agent", "Start upmeter agent")
-
+	agentCommand := app.Command("agent", "Start upmeter agent")
+	parseKubeArgs(agentCommand, agentKubeConfig)
+	parseAgentArgs(agentCommand, agentConfig)
+	parseLoggerArgs(agentCommand, loggerConfig)
 	agentCommand.Action(func(c *kingpin.ParseContext) error {
-		sh_app.SetupLogging()
-		log.Infof("Starting upmeter agent. ID=%s", util.AgentUniqueId())
+		setupLogger(logger, loggerConfig)
+		logger.Infof("Starting upmeter agent. ID=%s", util.AgentUniqueId())
 
-		ctx, cancel := context.WithCancel(context.Background())
+		a := agent.New(agentConfig, agentKubeConfig, logger)
 
-		a := agent.New()
-		err := a.Start(ctx)
-		if err != nil {
-			cancel()
-			log.Fatalf("cannot start agent: %v", err)
-		}
+		startCtx, cancelStart := context.WithCancel(context.Background())
 
-		// Block 'main' by waiting signals from OS.
-		utils_signal.WaitForProcessInterruption(func() {
-			// FIXME the shutdown is still not graceful
-			cancel()
-			os.Exit(1)
+		go func() {
+			defer cancelStart()
+
+			err := a.Start(startCtx)
+			if err != nil {
+				cancelStart()
+				logger.Fatalf("cannot start agent: %v", err)
+			}
+		}()
+
+		// Blocks waiting signals from OS.
+		shutdown(func() {
+			cancelStart()
+
+			err := a.Stop()
+			if err != nil {
+				logger.Fatalf("error stopp agent gracefully: %v", err)
+			}
+
+			os.Exit(0)
 		})
+
 		return nil
 	})
 
-	sh_app.DefineKubeClientFlags(agentCommand)
-	sh_app.DefineLoggingFlags(agentCommand)
+	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
+	// switch kingpin.Parse() {
+	// case serverCommand.FullCommand():
+	//
+	// 	parseKubeArgs(serverCommand, kubeConf)
+	// 	parseServerArgs(serverCommand, serverConf)
+	// 	parseLoggerArgs(serverCommand, loggerConf)
+	//
+	// case agentCommand.FullCommand():
+	// 	parseAgentArgs(agentCommand, agentConf)
+	// default:
+	// 	kingpin.Usage()
+	// }
+}
+
+// shutdown waits for SIGINT or SIGTERM and runs a callback function.
+//
+// First signal start a callback function, which should call os.Exit(0).
+// Next signal will force exit with os.Exit(128 + signalValue). If no cb is given, the exist is also forced.
+func shutdown(cb func()) {
+	exitGracefully := cb != nil
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+
+	for {
+		sig := <-ch
+
+		if exitGracefully {
+			exitGracefully = false
+			log.Infof("Shutdown called with %q", sig.String())
+			go cb()
+			continue
+		}
+
+		log.Infof("Forced shutdown with %q", sig.String())
+		signum := 0
+		if v, ok := sig.(syscall.Signal); ok {
+			signum = int(v)
+		}
+		os.Exit(128 + signum)
+	}
 }
