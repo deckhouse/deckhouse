@@ -10,7 +10,7 @@ entries:
         ru: Общие сведения
       url: /overview.html
     - title:
-        en: The auth subsystem
+        en: auth subsystem
         ru: Подсистема auth
       folders:
         - title:
@@ -65,7 +65,7 @@ entries:
     #        url: /features/auth-faq.html
     - title:
         ru: Подсистема candi
-        en: The candi subsystem
+        en: candi subsystem
       folders:
         - title:
             ru: Описание
@@ -273,7 +273,7 @@ entries:
                   url: /modules/042-kube-dns/configuration.html
     - title:
         ru: Подсистема core
-        en: The core subsystem
+        en: core subsystem
       folders:
         - title:
             ru: Описание
@@ -325,7 +325,7 @@ entries:
           url: /features/core-faq.html
     - title:
         ru: Подсистема marm
-        en: Th marm subsystem
+        en: marm subsystem
       folders:
         - title:
             ru: Описание
