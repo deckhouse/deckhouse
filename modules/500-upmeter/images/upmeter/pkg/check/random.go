@@ -20,7 +20,23 @@ func RandomEpisode() Episode {
 	slotSize := 30 * time.Second
 	ts := rand.Int63nRange(0, time.Now().Unix())
 	slot := time.Unix(ts, 0).Truncate(slotSize)
-	return NewEpisode(RandRef(), slot, slotSize, Stats{})
+	return NewEpisode(RandRef(), slot, slotSize, RandomStats())
+}
+
+func RandomStats() Stats {
+	var (
+		expected = 150
+		up       = rand.Intn(expected)
+		down     = rand.Intn(expected - up)
+		unknown  = rand.Intn(expected - up - down)
+	)
+
+	return Stats{
+		Expected: expected,
+		Up:       up,
+		Down:     down,
+		Unknown:  unknown,
+	}
 }
 
 func RandRef() ProbeRef {
@@ -29,19 +45,26 @@ func RandRef() ProbeRef {
 
 func RandomEpisodesWithRef(n int, ref ProbeRef) []Episode {
 	eps := RandomEpisodes(n)
-	for _, e := range eps {
-		e := e
-		e.ProbeRef = ref
-	}
+	SetRef(eps, ref)
 	return eps
 }
 
 func RandomEpisodesWithSlot(n int, slot time.Time) []Episode {
 	eps := RandomEpisodes(n)
+	SetSlot(eps, slot)
+	return eps
+}
+
+func SetSlot(eps []Episode, slot time.Time) {
 	for i := range eps {
 		eps[i].TimeSlot = slot
 	}
-	return eps
+}
+
+func SetRef(eps []Episode, ref ProbeRef) {
+	for i := range eps {
+		eps[i].ProbeRef = ref
+	}
 }
 
 func ListReferences(eps []Episode) []*Episode {

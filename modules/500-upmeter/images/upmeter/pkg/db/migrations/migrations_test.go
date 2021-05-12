@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"testing"
 
 	dbcontext "d8.io/upmeter/pkg/db/context"
@@ -22,12 +23,12 @@ func Test_repeated_server_migrations(t *testing.T) {
 		t.Fatalf("cannot connect to database: %v", err)
 	}
 
-	err = MigrateDatabase(dbctx, "./server")
+	err = MigrateDatabase(context.TODO(), dbctx, "./server")
 	if err != nil {
 		t.Fatalf("error running migrations from ground up: %v", err)
 	}
 
-	err = MigrateDatabase(dbctx, "./server")
+	err = MigrateDatabase(context.TODO(), dbctx, "./server")
 	if err != nil {
 		t.Fatalf("error running migrations from ground up: %v", err)
 	}
@@ -41,12 +42,12 @@ func Test_repeated_agent_migrations(t *testing.T) {
 		t.Fatalf("cannot connect to database: %v", err)
 	}
 
-	err = MigrateDatabase(dbctx, "./agent")
+	err = MigrateDatabase(context.TODO(), dbctx, "./agent")
 	if err != nil {
 		t.Fatalf("error running migrations from ground up: %v", err)
 	}
 
-	err = MigrateDatabase(dbctx, "./agent")
+	err = MigrateDatabase(context.TODO(), dbctx, "./agent")
 	if err != nil {
 		t.Fatalf("error running migrations from ground up: %v", err)
 	}
@@ -81,7 +82,7 @@ func Test_migrations_for_existing_schema(t *testing.T) {
 			t.Fatalf("error dropping migrations table (step %d/%d): %v", i, max, err)
 		}
 
-		err = MigrateDatabase(dbctx, "./server")
+		err = MigrateDatabase(context.TODO(), dbctx, "./server")
 		if err != nil {
 			t.Fatalf("error running migrations for existing outdated schema %d: %v", i, err)
 		}

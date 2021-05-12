@@ -212,8 +212,8 @@ func (d *EpisodeDao30s) Stats() ([]string, error) {
 }
 
 func (d *EpisodeDao30s) SaveBatch(episodes []check.Episode) error {
-	for _, downtime := range episodes {
-		err := d.Insert(downtime)
+	for _, ep := range episodes {
+		err := d.Insert(ep)
 		if err != nil {
 			return err
 		}

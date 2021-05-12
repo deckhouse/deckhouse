@@ -7,7 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"d8.io/upmeter/pkg/app"
 	"d8.io/upmeter/pkg/check"
 	k8s "d8.io/upmeter/pkg/kubernetes"
 )
@@ -57,13 +56,13 @@ func listObjects(client kubernetes.Interface, kind, namespace string, listOpts m
 	return fn(client, namespace, listOpts)
 }
 
-func deleteObjects(client kubernetes.Interface, kind string, names []string) error {
+func deleteObjects(client kubernetes.Interface, kind, namespace string, names []string) error {
 	fn, ok := delFns[strings.ToLower(kind)]
 	if !ok {
 		return fmt.Errorf("Possible bug!!! No delete function for kind='%s'", kind)
 	}
 	for _, name := range names {
-		err := fn(client, name)
+		err := fn(client, namespace, name)
 		if err != nil {
 			return err
 		}
@@ -145,17 +144,17 @@ func dumpNames(list []string) string {
 	return strings.Join(list, ", ")
 }
 
-var delFns = map[string]func(client kubernetes.Interface, name string) error{
-	"namespace": func(client kubernetes.Interface, name string) error {
+var delFns = map[string]func(client kubernetes.Interface, namespace, name string) error{
+	"namespace": func(client kubernetes.Interface, _, name string) error {
 		return client.CoreV1().Namespaces().Delete(name, &metav1.DeleteOptions{})
 	},
-	"configmap": func(client kubernetes.Interface, name string) error {
-		return client.CoreV1().ConfigMaps(app.Namespace).Delete(name, &metav1.DeleteOptions{})
+	"configmap": func(client kubernetes.Interface, namespace, name string) error {
+		return client.CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{})
 	},
-	"pod": func(client kubernetes.Interface, name string) error {
-		return client.CoreV1().Pods(app.Namespace).Delete(name, &metav1.DeleteOptions{})
+	"pod": func(client kubernetes.Interface, namespace, name string) error {
+		return client.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{})
 	},
-	"deployment": func(client kubernetes.Interface, name string) error {
-		return client.AppsV1().Deployments(app.Namespace).Delete(name, &metav1.DeleteOptions{})
+	"deployment": func(client kubernetes.Interface, namespace, name string) error {
+		return client.AppsV1().Deployments(namespace).Delete(name, &metav1.DeleteOptions{})
 	},
 }

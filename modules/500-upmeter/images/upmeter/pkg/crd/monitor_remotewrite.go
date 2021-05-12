@@ -63,7 +63,7 @@ func (m *RemoteWriteMonitor) Start(ctx context.Context) error {
 	}
 
 	m.monitor.Start(ctx)
-	return nil
+	return ctx.Err()
 }
 
 func (m *RemoteWriteMonitor) Stop() {

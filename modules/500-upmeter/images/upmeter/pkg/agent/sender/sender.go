@@ -1,7 +1,6 @@
 package sender
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -18,6 +17,9 @@ type Sender struct {
 	recv    chan []check.Episode
 	storage *ListStorage
 	period  time.Duration
+
+	stop chan struct{}
+	done chan struct{}
 }
 
 func New(client *Client, recv chan []check.Episode, storage *ListStorage, period time.Duration) *Sender {
@@ -26,18 +28,21 @@ func New(client *Client, recv chan []check.Episode, storage *ListStorage, period
 		recv:    recv,
 		storage: storage,
 		period:  period,
+
+		stop: make(chan struct{}),
+		done: make(chan struct{}),
 	}
 	return s
 }
 
-func (s *Sender) Start(ctx context.Context) {
-	go s.receiveLoop(ctx)
-	go s.sendLoop(ctx)
-	go s.cleanupLoop(ctx)
+func (s *Sender) Start() {
+	go s.receiveLoop()
+	go s.sendLoop()
+	go s.cleanupLoop()
 }
 
 // buffer writer
-func (s *Sender) receiveLoop(ctx context.Context) {
+func (s *Sender) receiveLoop() {
 	for {
 		select {
 		case episodes := <-s.recv:
@@ -45,41 +50,47 @@ func (s *Sender) receiveLoop(ctx context.Context) {
 			if err != nil {
 				log.Fatalf("cannot save episodes to storage: %v", err)
 			}
-		case <-ctx.Done():
+		case <-s.stop:
+			s.done <- struct{}{}
 			return
 		}
 	}
 }
 
-func (s *Sender) sendLoop(ctx context.Context) {
-	tick := time.NewTicker(s.period)
+func (s *Sender) sendLoop() {
+	ticker := time.NewTicker(s.period)
 
 	for {
 		select {
-		case <-tick.C:
+		case <-ticker.C:
 			err := s.export()
 			if err != nil {
 				log.Errorf("cannot export episodes: %v", err)
 			}
-		case <-ctx.Done():
+		case <-s.stop:
+			ticker.Stop()
+			s.done <- struct{}{}
 			return
 		}
 	}
 }
 
-func (s *Sender) cleanupLoop(ctx context.Context) {
-	tick := time.NewTicker(s.period)
+func (s *Sender) cleanupLoop() {
+	ticker := time.NewTicker(s.period)
+
 	dayBack := -24 * time.Hour
 
 	for {
 		select {
-		case <-tick.C:
+		case <-ticker.C:
 			deadline := time.Now().Truncate(s.period).Add(dayBack)
 			err := s.storage.Clean(deadline)
 			if err != nil {
 				log.Errorf("cannot clean old episodes: %v", err)
 			}
-		case <-ctx.Done():
+		case <-s.stop:
+			ticker.Stop()
+			s.done <- struct{}{}
 			return
 		}
 	}
@@ -124,4 +135,12 @@ func (s *Sender) send(episodes []check.Episode) error {
 		return fmt.Errorf("failed to send data: %v", err)
 	}
 	return nil
+}
+
+func (s *Sender) Stop() {
+	close(s.stop)
+
+	<-s.done
+	<-s.done
+	<-s.done
 }

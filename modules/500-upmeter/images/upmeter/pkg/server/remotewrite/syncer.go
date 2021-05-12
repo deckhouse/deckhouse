@@ -84,7 +84,7 @@ func (s *syncer) exportLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			err := s.export()
+			err := s.export(ctx)
 			if err != nil && err != ErrSkip {
 				s.logger.Errorln(err)
 			}
@@ -96,24 +96,26 @@ func (s *syncer) exportLoop(ctx context.Context) {
 }
 
 func (s *syncer) cleanupLoop(ctx context.Context) {
-	tick := time.NewTicker(s.period)
+	ticker := time.NewTicker(s.period)
+
 	dayBack := -24 * time.Hour
 
 	for {
 		select {
-		case <-tick.C:
+		case <-ticker.C:
 			deadline := time.Now().Truncate(s.period).Add(dayBack)
 			err := s.storage.Delete(s.syncID, deadline)
 			if err != nil {
 				log.Errorf("cannot clean old episodes: %v", err)
 			}
 		case <-ctx.Done():
+			ticker.Stop()
 			return
 		}
 	}
 }
 
-func (s *syncer) export() error {
+func (s *syncer) export(ctx context.Context) error {
 	// Get
 	timeseries, slot, err := s.getTimeseries()
 	if err == ErrSkip {
@@ -124,12 +126,12 @@ func (s *syncer) export() error {
 	}
 
 	if s.logger.Level == log.DebugLevel {
-		// "\n" will format
+		// The logger prints "\n" symbols and thus makes the output unreadable
 		fmt.Println(stringifyTimeseries(timeseries, string(s.syncID)))
 	}
 
 	// Send to the remote storage
-	err = s.exporter.Export(timeseries)
+	err = s.exporter.Export(ctx, timeseries)
 	if err != nil {
 		return fmt.Errorf("cannot export: %v", err)
 	}

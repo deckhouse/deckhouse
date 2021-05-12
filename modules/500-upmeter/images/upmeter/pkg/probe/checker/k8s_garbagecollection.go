@@ -57,7 +57,7 @@ func (c *garbageCollectorChecker) Check() check.Error {
 		return nil
 	}
 
-	err = deleteObjects(client, c.kind, list)
+	err = deleteObjects(client, c.kind, c.namespace, list)
 	if err != nil {
 		return check.ErrUnknown("cannot clean garbage %s/%s: %v", c.namespace, c.kind, err)
 	}

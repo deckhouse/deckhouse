@@ -51,7 +51,7 @@ func (m *DowntimeMonitor) Start() error {
 	}
 
 	m.Monitor.Start(m.ctx)
-	return nil
+	return m.ctx.Err()
 }
 
 func (m *DowntimeMonitor) Stop() {

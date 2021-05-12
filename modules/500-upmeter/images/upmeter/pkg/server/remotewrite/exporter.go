@@ -5,6 +5,7 @@ package remotewrite
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -26,13 +27,13 @@ type exporter struct {
 }
 
 // Export sends metrics via HTTP
-func (e *exporter) Export(timeseries []*prompb.TimeSeries) error {
+func (e *exporter) Export(ctx context.Context, timeseries []*prompb.TimeSeries) error {
 	message, buildMessageErr := e.buildMessage(timeseries)
 	if buildMessageErr != nil {
 		return buildMessageErr
 	}
 
-	request, buildRequestErr := e.buildRequest(message)
+	request, buildRequestErr := e.buildRequest(ctx, message)
 	if buildRequestErr != nil {
 		return buildRequestErr
 	}
@@ -117,8 +118,9 @@ func (e *exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error)
 
 // buildRequest creates an http POST request with a Snappy-compressed protocol buffer
 // message as the body and with all the headers attached.
-func (e *exporter) buildRequest(message []byte) (*http.Request, error) {
-	req, err := http.NewRequest(
+func (e *exporter) buildRequest(ctx context.Context, message []byte) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
 		http.MethodPost,
 		e.config.Endpoint,
 		bytes.NewBuffer(message),

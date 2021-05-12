@@ -10,72 +10,80 @@ import (
 	"d8.io/upmeter/pkg/agent/executor"
 	"d8.io/upmeter/pkg/agent/manager"
 	"d8.io/upmeter/pkg/agent/sender"
-	"d8.io/upmeter/pkg/app"
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/db/migrations"
 	"d8.io/upmeter/pkg/kubernetes"
 )
 
 type Agent struct {
-	period          time.Duration
-	dbPath          string
-	dbMigrationPath string
+	config     *Config
+	kubeConfig *kubernetes.Config
+
+	logger *log.Logger
+
+	sender    *sender.Sender
+	scheduler *executor.ProbeExecutor
+}
+
+type Config struct {
+	Period time.Duration
+
+	Namespace string
+
+	ClientConfig *sender.ClientConfig
+
+	DatabasePath           string
+	DatabaseMigrationsPath string
 }
 
 // Return agent with magic configuration
-func New() *Agent {
+func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Agent {
 	return &Agent{
-		period: time.Second,
-
-		dbPath:          app.DatabasePath,
-		dbMigrationPath: app.DatabaseMigrationsPath,
+		config:     config,
+		kubeConfig: kubeConfig,
+		logger:     logger,
 	}
 }
 
 func (a *Agent) Start(ctx context.Context) error {
 	// Initialize kube client from kubeconfig and service account token from filesystem.
-	kubeAcceess := &kubernetes.Access{}
-	err := kubeAcceess.Init()
+	kubeAccess := &kubernetes.Access{}
+	err := kubeAccess.Init(a.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("cannot init access to Kubernetes cluster: %v", err)
 	}
 
 	// Probe registry
-	registry := manager.New(kubeAcceess)
+	registry := manager.New(kubeAccess)
 	for _, probe := range registry.Runners() {
-		log.Infof("Register probe %s", probe.ProbeRef().Id())
+		a.logger.Infof("Register probe %s", probe.ProbeRef().Id())
 	}
 	for _, calc := range registry.Calculators() {
-		log.Infof("Register calculated probe %s", calc.ProbeRef().Id())
+		a.logger.Infof("Register calculated probe %s", calc.ProbeRef().Id())
 	}
 
 	// Database connection with pool
-	dbctx, err := migrations.GetMigratedDatabase(a.dbPath, a.dbMigrationPath)
+	dbctx, err := migrations.GetMigratedDatabase(ctx, a.config.DatabasePath, a.config.DatabaseMigrationsPath)
 	if err != nil {
 		return fmt.Errorf("cannot connect to database: %v", err)
 	}
 
+	ch := make(chan []check.Episode)
+
+	client := sender.NewClient(a.config.ClientConfig, a.config.Period) // use period as timeout
 	storage := sender.NewStorage(dbctx)
-	scheduler, sender := initSenderAndScheduler(storage, registry, a.period)
 
-	sender.Start(ctx)
-	scheduler.Start(ctx)
+	a.sender = sender.New(client, ch, storage, a.config.Period)
+	a.scheduler = executor.New(registry, ch)
 
-	// block
-	ch := make(chan struct{})
-	<-ch
+	a.sender.Start()
+	a.scheduler.Start()
 
-	// ProbeResultStorage.Start()
 	return nil
 }
 
-func initSenderAndScheduler(storage *sender.ListStorage, registry *manager.Manager, sendPeriod time.Duration) (*executor.ProbeExecutor, *sender.Sender) {
-	ch := make(chan []check.Episode)
-
-	client := sender.NewClient(sendPeriod)
-	sender := sender.New(client, ch, storage, sendPeriod)
-
-	scheduler := executor.New(registry, ch)
-
-	return scheduler, sender
+func (a *Agent) Stop() error {
+	a.scheduler.Stop()
+	a.sender.Stop()
+	return nil
 }

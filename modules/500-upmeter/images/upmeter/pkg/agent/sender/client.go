@@ -10,8 +10,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"d8.io/upmeter/pkg/app"
 )
 
 type Client struct {
@@ -19,20 +17,30 @@ type Client struct {
 	client *http.Client
 }
 
-// FIXME: pass all app.* globals through agent config; remove "app" package
-func getEndpoint() string {
+func getEndpoint(config *ClientConfig) string {
 	schema := "https"
-	if app.Tls == "false" {
+	if !config.TLS {
 		schema = "http"
 	}
-	ip, port := app.ServiceHost, app.ServicePort
-	return fmt.Sprintf("%s://%s:%s/downtime", schema, ip, port)
+
+	host := config.Host
+	if config.Port != "" {
+		host += ":" + config.Port
+	}
+	return fmt.Sprintf("%s://%s/downtime", schema, host)
 }
 
-func NewClient(timeout time.Duration) *Client {
+type ClientConfig struct {
+	Host   string
+	Port   string
+	CAPath string
+	TLS    bool
+}
+
+func NewClient(config *ClientConfig, timeout time.Duration) *Client {
 	return &Client{
-		url:    getEndpoint(),
-		client: NewHttpClient(timeout),
+		url:    getEndpoint(config),
+		client: NewHttpClient(config, timeout),
 	}
 }
 
@@ -60,8 +68,8 @@ func (c *Client) Send(reqBody []byte) error {
 	return nil
 }
 
-func NewHttpClient(timeout time.Duration) *http.Client {
-	client, err := createSecureHttpClient(timeout)
+func NewHttpClient(config *ClientConfig, timeout time.Duration) *http.Client {
+	client, err := createSecureHttpClient(config.TLS, config.CAPath, timeout)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
 		return &http.Client{Timeout: timeout}
@@ -69,12 +77,12 @@ func NewHttpClient(timeout time.Duration) *http.Client {
 	return client
 }
 
-func createSecureHttpClient(timeout time.Duration) (*http.Client, error) {
-	if app.Tls == "false" {
+func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration) (*http.Client, error) {
+	if !useTLS {
 		return nil, fmt.Errorf("TLS is off by client")
 	}
 
-	tlsTransport, err := createHttpTransport()
+	tlsTransport, err := createHttpTransport(caPath)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +102,8 @@ func createSecureHttpClient(timeout time.Duration) (*http.Client, error) {
 	return client, nil
 }
 
-func createHttpTransport() (*http.Transport, error) {
-	if app.CaPath == "" {
+func createHttpTransport(caPath string) (*http.Transport, error) {
+	if caPath == "" {
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
@@ -105,9 +113,9 @@ func createHttpTransport() (*http.Transport, error) {
 	}
 
 	// Create transport with tls and CA certificate checking
-	caCertBytes, err := ioutil.ReadFile(app.CaPath)
+	caCertBytes, err := ioutil.ReadFile(caPath)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", app.CaPath, err)
+		return nil, fmt.Errorf("cannot read CA certificate from '%s': %v", caPath, err)
 	}
 
 	caCertPool := x509.NewCertPool()

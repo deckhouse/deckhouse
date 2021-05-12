@@ -8,8 +8,8 @@ all: deps fmt build test
 
 deps:
 	go mod tidy
-	if [ ! -f "./bin/golangci-lint" ]; then curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | BINARY=golangci-lint bash -s -- v$(GOLANGCI_LINT_VERSION); fi
-	if [ ! -f "./bin/gofumpt" ]; then curl -sLo ./bin/gofumpt https://github.com/mvdan/gofumpt/releases/download/v0.1.1/gofumpt_v$(GOFUMPT_VERSION)_darwin_amd64; fi
+	test -f ./bin/golangci-lint || curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | BINARY=golangci-lint bash -s -- v$(GOLANGCI_LINT_VERSION)
+	test -f ./bin/gofumpt 	    || curl -sLo ./bin/gofumpt https://github.com/mvdan/gofumpt/releases/download/v0.1.1/gofumpt_v$(GOFUMPT_VERSION)_darwin_amd64
 	chmod +x ./bin/*
 
 lint:
