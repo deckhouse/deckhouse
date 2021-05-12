@@ -15,7 +15,7 @@ function common_hooks::https::ensure_crds::main() {
     if [[ $name == doc-* ]]; then
       continue
     fi
-    
+
     echo "---";
     # Prune custom fields
     cat "$file"
@@ -31,19 +31,15 @@ function common_hooks::https::ensure_crds::main() {
         )
         else . end)')
 
-  cluster_crds="$(kubectl get crds -o json | jq '.items[].metadata.name')"
+  cluster_crds="$(kubectl get crds -o json | jq '.items[]')"
 
   for crd in "${crds_json[@]}"; do
     crd_name="$(jq -er '.metadata.name' <<< "$crd")"
 
-    echo "$crd_name"
-    jq --arg name "$crd_name" 'select(contains($name))' <<< "$cluster_crds"
-
-    if jq -e --arg name "$crd_name" 'select(contains($name))' <<< "$cluster_crds" >/dev/null; then
-      apiVersion="$(jq -er '.apiVersion' <<< "$crd")"
-      kubernetes::merge_patch "" "$apiVersion" "customresourcedefinitions" "$crd_name" <<< "$(jq -er '{"spec": .spec}' <<< "$crd")"
-    else
-      kubernetes::create_json <<< "$crd"
+    if cluster_crd="$(jq -re --arg name "$crd_name" 'select(.metadata.name | contains($name)) | select(.spec.conversion)' <<< "$cluster_crds")"; then
+      crd="$(jq -re --slurpfile cluster_crd <(printf "%s" "$cluster_crd") '.spec.conversion = $cluster_crd[0].spec.conversion' <<<"$crd")"
     fi
+
+    kubernetes::replace_or_create_json <<< "$crd"
   done
 }
