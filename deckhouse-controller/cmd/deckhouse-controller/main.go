@@ -8,6 +8,7 @@ import (
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
+	sh_klog_to_logrus "github.com/flant/shell-operator/pkg/utils/klogtologrus"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -39,6 +40,11 @@ func main() {
 		return nil
 	})
 
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		sh_klog_to_logrus.InitAdapter(sh_app.DebugKubernetesAPI)
+		return nil
+	})
+
 	// start main loop
 	startCmd := kpApp.Command("start", "Start deckhouse.").
 		Default().
@@ -67,8 +73,8 @@ func main() {
 		})
 	// Set default log type as json
 	sh_app.LogType = app.DeckhouseLogTypeDefault
-	sh_app.KubeClientQpsDefault = app.DeckshouseKubeClientQPSDefault
-	sh_app.KubeClientBurstDefault = app.DeckshouseKubeClientBurstDefault
+	sh_app.KubeClientQpsDefault = app.DeckhouseKubeClientQPSDefault
+	sh_app.KubeClientBurstDefault = app.DeckhouseKubeClientBurstDefault
 	app.DefineStartCommandFlags(startCmd)
 	ad_app.DefineStartCommandFlags(kpApp, startCmd)
 

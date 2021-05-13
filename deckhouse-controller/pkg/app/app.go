@@ -6,23 +6,31 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-var AppName = "deckhouse"
-var AppDescription = ""
+var (
+	AppName        = "deckhouse"
+	AppDescription = ""
+)
 
-var PodName = ""
-var ContainerName = "deckhouse"
+var (
+	PodName       = ""
+	ContainerName = "deckhouse"
+)
 
-var FeatureWatchRegistry = "yes"
-var InsecureRegistry = "no"
-var SkipTLSVerifyRegistry = "no"
-var RegistrySecretPath = "/etc/registrysecret"
-var RegistryErrorsMaxTimeBeforeRestart = time.Hour
+var (
+	FeatureWatchRegistry               = "yes"
+	InsecureRegistry                   = "no"
+	SkipTLSVerifyRegistry              = "no"
+	RegistrySecretPath                 = "/etc/registrysecret"
+	RegistryErrorsMaxTimeBeforeRestart = time.Hour
+)
 
-const DeckhouseLogTypeDefault = "json"
-const DeckshouseKubeClientQPSDefault = "20"
-const DeckshouseKubeClientBurstDefault = "40"
+const (
+	DeckhouseLogTypeDefault         = "json"
+	DeckhouseKubeClientQPSDefault   = "20"
+	DeckhouseKubeClientBurstDefault = "40"
 
-const DeckhouseHookMetricsListenPort = "9651"
+	DeckhouseHookMetricsListenPort = "9651"
+)
 
 func DefineStartCommandFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("pod-name", "Pod name to get image digest.").

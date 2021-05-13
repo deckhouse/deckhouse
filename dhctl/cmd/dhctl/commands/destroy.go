@@ -33,37 +33,40 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 `
 )
 
-func getClientOnce(sshClient *ssh.Client, kubeCl *client.KubernetesClient) (*client.KubernetesClient, error) {
+func getClientOnce(sshClient *ssh.Client, kubeCl **client.KubernetesClient) error {
 	var err error
-	if kubeCl == nil {
-		kubeCl, err = operations.ConnectToKubernetesAPI(sshClient)
+	if *kubeCl == nil {
+		var cl *client.KubernetesClient
+		cl, err = operations.ConnectToKubernetesAPI(sshClient)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		if info := deckhouse.GetClusterInfo(kubeCl); info != "" {
+		*kubeCl = cl
+
+		if info := deckhouse.GetClusterInfo(*kubeCl); info != "" {
 			_ = log.Process("common", "Cluster Info", func() error { log.InfoF(info); return nil })
 		}
 	}
-	return kubeCl, err
+	return err
 }
 
-func deleteResources(sshClient *ssh.Client, kubeCl *client.KubernetesClient) error {
+func deleteResources(sshClient *ssh.Client, kubeCl **client.KubernetesClient) error {
 	if app.SkipResources {
 		return nil
 	}
 
-	kubeCl, err := getClientOnce(sshClient, kubeCl)
+	err := getClientOnce(sshClient, kubeCl)
 	if err != nil {
 		return err
 	}
 
 	return log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
-		return deleteEntities(kubeCl)
+		return deleteEntities(*kubeCl)
 	})
 }
 
-func loadMetaConfig(sshClient *ssh.Client, kubeCl *client.KubernetesClient, stateCache *cache.StateCache) (*config.MetaConfig, error) {
+func loadMetaConfig(sshClient *ssh.Client, kubeCl **client.KubernetesClient, stateCache *cache.StateCache) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -77,16 +80,16 @@ func loadMetaConfig(sshClient *ssh.Client, kubeCl *client.KubernetesClient, stat
 		return metaConfig, nil
 	}
 
-	if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
+	if err = getClientOnce(sshClient, kubeCl); err != nil {
 		return nil, err
 	}
 
-	metaConfig, err = config.ParseConfigFromCluster(kubeCl)
+	metaConfig, err = config.ParseConfigFromCluster(*kubeCl)
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
+	metaConfig.UUID, err = converge.GetClusterUUID(*kubeCl)
 	if err != nil {
 		return nil, err
 	}
@@ -114,16 +117,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var kubeCl *client.KubernetesClient
-		kubeCl, err = getClientOnce(sshClient, kubeCl)
-		if err != nil {
+		if err := deleteResources(sshClient, &kubeCl); err != nil {
 			return err
 		}
 
-		if err := deleteResources(sshClient, kubeCl); err != nil {
-			return err
-		}
-
-		metaConfig, err := loadMetaConfig(sshClient, kubeCl, stateCache)
+		metaConfig, err := loadMetaConfig(sshClient, &kubeCl, stateCache)
 		if err != nil {
 			return err
 		}
@@ -138,7 +136,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		} else {
-			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
+			if err = getClientOnce(sshClient, &kubeCl); err != nil {
 				return err
 			}
 			nodesState, err = converge.GetNodesStateFromCluster(kubeCl)
@@ -162,7 +160,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return fmt.Errorf("can't load cluster state from cache")
 			}
 		} else {
-			if kubeCl, err = getClientOnce(sshClient, kubeCl); err != nil {
+			if err = getClientOnce(sshClient, &kubeCl); err != nil {
 				return err
 			}
 			clusterState, err = converge.GetClusterStateFromCluster(kubeCl)
