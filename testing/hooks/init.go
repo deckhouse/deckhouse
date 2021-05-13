@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
@@ -83,6 +84,8 @@ type HookExecutionConfig struct {
 	GoHookError              error
 
 	Session *gexec.Session
+
+	fakeClusterVersion k8s.FakeClusterVersion
 }
 
 func (hec *HookExecutionConfig) RegisterCRD(group, version, kind string, namespaced bool) {
@@ -126,11 +129,16 @@ func (hec *HookExecutionConfig) AddHookEnv(env string) {
 	hec.extraHookEnvs = append(hec.extraHookEnvs, env)
 }
 
-func HookExecutionConfigInit(initValues, initConfigValues string) *HookExecutionConfig {
+func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...k8s.FakeClusterVersion) *HookExecutionConfig {
 	var err error
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hec := new(HookExecutionConfig)
+	fakeClusterVersion := k8s.DefaultFakeClusterVersion
+	if len(k8sVersion) > 0 {
+		fakeClusterVersion = k8sVersion[0]
+	}
+	hec.fakeClusterVersion = fakeClusterVersion
 	_, f, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("can't execute runtime.Caller")
@@ -262,7 +270,7 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 	var contexts context.GeneratedBindingContexts
 	var err error
 	if !hec.IsKubeStateInited {
-		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig)
+		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
 		if err != nil {
 			panic(err)
 		}

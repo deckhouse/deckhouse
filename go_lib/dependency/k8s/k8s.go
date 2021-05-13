@@ -1,10 +1,25 @@
 package k8s
 
 import (
+	"github.com/flant/shell-operator/pkg/kube/fake"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+type FakeClusterVersion = fake.ClusterVersion
+
+const (
+	V116 FakeClusterVersion = fake.ClusterVersionV116
+	V117 FakeClusterVersion = fake.ClusterVersionV117
+	V118 FakeClusterVersion = fake.ClusterVersionV118
+	V119 FakeClusterVersion = fake.ClusterVersionV119
+	V120 FakeClusterVersion = fake.ClusterVersionV120
+	V121 FakeClusterVersion = fake.ClusterVersionV121
+
+	// Default value, used in hook config - 1.19 now
+	DefaultFakeClusterVersion = fake.ClusterVersionV119
 )
 
 type Client interface {
