@@ -31,7 +31,7 @@
     <!--start search-->
     <div class="search">
         <form action='{{ "search.html" | true_relative_url }}' method="get">
-        <input type="text" class="search__input" id="search-box" name="query" placeholder="{{site.data.strings.search_placeholder_text}}">
+        <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
         </form>
     </div>
     <!--end search-->

@@ -382,7 +382,9 @@ entries:
         #          url: /modules/300-prometheus/prometheus_rules_development.html
         #        - title: "Разработка target'ов Prometheus"
         #          url: /modules/300-prometheus/prometheus_targets_development.html
-        - title: Мониторинг control plane
+        - title:
+            ru: Мониторинг control plane
+            en: Control plane monitoring
           folders:
             - title:
                 ru: Описание

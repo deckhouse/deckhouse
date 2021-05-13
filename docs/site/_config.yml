@@ -32,6 +32,8 @@ exclude:
 - Gemfile
 - backend
 - '*.sh'
+- '*.yml'
+- '*.yaml'
 - docker-compose.yml
 - modules_make_data
 - modules_menu_skip
