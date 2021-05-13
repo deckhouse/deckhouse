@@ -1,7 +1,8 @@
 ---
-title: "Getting started"
+title: "Быстрый старт"
 permalink: ru/getting_started.html
 layout: page-nosidebar
+lang: ru
 toc: false
 ---
 

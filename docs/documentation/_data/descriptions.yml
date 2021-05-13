@@ -1,7 +1,0 @@
-features:
-  experimental:
-    ru: Эти возможности доступны только в Enterprise Edition. Их функциональность может существенно измениться. В настоящий момент не рекомендуется для самостоятельного использования.
-    en: This feature is available in Enterprise Edition only. It might significantly change in the future. Currently, it's not intended to be used without special assistance from Flant.
-  ee:
-    ru: Эти возможности доступны только в Enterprise Edition.
-    en: This feature is available in Enterprise Edition only.

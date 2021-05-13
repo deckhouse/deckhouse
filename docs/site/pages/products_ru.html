@@ -144,19 +144,21 @@ anchors_disabled: true
         </tr>
       </tbody>
     </table>
-    <p class="text">
-      <em>* SLA for clusters means we guarantee that you will reach this level of availability and we will react timely to help you to achieve these numbers.</em><br />
-      <em>** SLA for applications means integration enriching our application metrics with your custom metrics and helping to resolve any issues that may appear on the cluster.</em>
-    </p>
-    <p class="text text-big">
-      For training and consulting options, please see <a href="/{{ page.lang }}/services.html#training">success packages</a>.
-    </p>
-    <p class="text text-big">
-      <strong>NB!</strong> EE source code is open, but it’s neither Open Source nor free to use. You can use it by
-      purchasing a subscription plan of your choice. If your subscription finishes, you can still use and modify the
-      source code of the last purchased EE version. However, in this case, you will stop getting further updates, can’t
-      create new clusters, and are not allowed to provide Kubernetes-as-a-Service to third parties.
-    </p>
+    <div style="max-width: 810px; margin-top: 25px;">
+      <p class="text">
+        <em>* SLA for clusters means we guarantee that you will reach this level of availability and we will react timely to help you to achieve these numbers.</em><br />
+        <em>** SLA for applications means integration enriching our application metrics with your custom metrics and helping to resolve any issues that may appear on the cluster.</em>
+      </p>
+      <p class="text text_big">
+        For training and consulting options, please see <a href="/{{ page.lang }}/services.html#training">success packages</a>.
+      </p>
+      <p class="text text_big">
+        <strong>NB!</strong> EE source code is open, but it’s neither Open Source nor free to use. You can use it by
+        purchasing a subscription plan of your choice. If your subscription finishes, you can still use and modify the
+        source code of the last purchased EE version. However, in this case, you will stop getting further updates, can’t
+        create new clusters, and are not allowed to provide Kubernetes-as-a-Service to third parties.
+      </p>
+    </div>
   </div>
 </section>
 
@@ -428,12 +430,12 @@ anchors_disabled: true
         </tr>
       </tbody>
     </table>
-    <p class="text">
+
+    <p class="text" style="max-width: 740px; margin-top: 25px;">
       <em>* You still can install Deckhouse Platform CE on OpenStack and vSphere, however these platforms will function as regular bare-metal servers in this case. There will be no integration with clouds, i.e. VMs are added manually, no autoscaling provided, etc.</em><br />
       <em>** Including Vault integration and encrypted secrets in etcd.</em><br />
       <em>*** Adding new pods/nodes is accelerated thanks to fully prebuilt images.</em><br />
       <em>**** Selectable timeframe for automatic upgrades of the platform.</em>
-    </p>
     </p>
   </div>
 </section>
@@ -534,6 +536,9 @@ anchors_disabled: true
               </h2>
               <p class="text_big">
                 Deckhouse Commander is your best friend when it comes to managing <strong>many</strong> (think of 10+) Kubernetes clusters based on Deckhouse Platform. It provides you a single point of control for these clusters via both API and web UI.
+              </p>
+              <p class="text_big text_alt">
+                Coming soon
               </p>
           </div>
           <div class="intro__logo">

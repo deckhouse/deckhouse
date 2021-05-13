@@ -63,6 +63,7 @@ spec:
                 allowAccessToSystemNamespaces:
                   type: boolean
                   x-description: 'Allow access to System namespaces (kube-*, d8-*, loghouse, default). Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: false.'
+                  x-doc-versionType: ee
                   description: |
                     Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
 
@@ -70,6 +71,7 @@ spec:
                 limitNamespaces:
                   type: array
                   x-description: 'List of namespace regex-patterns to allow for user. Option available only if userAuthz.enableMultiTenancy addon-operator option enabled. Default: empty, no namespaces allowed.'
+                  x-doc-versionType: ee
                   description: |
                     Белый список разрешённых namespace в формате регулярных выражений.
 
