@@ -157,6 +157,8 @@ github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kC
 github.com/flant/shell-operator v1.0.0/go.mod h1:k1dYfFRa/HGq8f6ApXhsWLAVjuWo7cQrNQU+UdjnC10=
 github.com/flant/shell-operator v1.0.1-0.20210414105437-3aac020fdda5 h1:s8fFM7GQwEIN27oS4K6MaeyblA7AnZT3e1cGIGn2fis=
 github.com/flant/shell-operator v1.0.1-0.20210414105437-3aac020fdda5/go.mod h1:pxW7a/OHFe5o1JH+Ae7ifEVjLflKq3GkF/3nW3Uryyo=
+github.com/flant/shell-operator v1.0.2-0.20210511133705-6924599b3c95 h1:E3DMtXwYx2CqXnIOgEYI8mNvjuf8W3vnrBwZYuXdNZ8=
+github.com/flant/shell-operator v1.0.2-0.20210511133705-6924599b3c95/go.mod h1:pxW7a/OHFe5o1JH+Ae7ifEVjLflKq3GkF/3nW3Uryyo=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=

@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 // nolint: govet
@@ -37,10 +38,29 @@ func ExampleMockedHTTPClient() {
 func ExampleK8sClient() {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	dependency.TestDC.SetK8sVersion(k8s.V117)
 	_, _ = dependency.TestDC.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: "default"}})
 
 	_ = dependency.WithExternalDependencies(handlerWithK8S)(nil)
 	// Output: default
+
+	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
+}
+
+// nolint: govet
+func ExampleVersionedK8sClient() {
+	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
+	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+
+	dependency.TestDC.SetK8sVersion(k8s.V116)
+	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil)
+
+	dependency.TestDC.SetK8sVersion(k8s.V120)
+	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil)
+
+	// Output:
+	// 19
+	// 22
 
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
@@ -90,6 +110,14 @@ func handlerWithK8S(_ *go_hook.HookInput, dc dependency.Container) error {
 	k8 := dc.MustGetK8sClient()
 	ns, _ := k8.CoreV1().Namespaces().Get("default", v1.GetOptions{})
 	fmt.Println(ns.Name)
+
+	return nil
+}
+
+func handlerWithVersionedK8S(_ *go_hook.HookInput, dc dependency.Container) error {
+	k8 := dc.MustGetK8sClient()
+	res, _ := k8.Discovery().ServerResources()
+	fmt.Println(len(res))
 
 	return nil
 }
