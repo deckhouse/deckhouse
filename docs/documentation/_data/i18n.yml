@@ -71,5 +71,7 @@ common:
   empty_search_result:
     ru: Документов не найдено
     en: No documents found
-
+  search_placeholder_text:
+    ru: Поиск...
+    en: Search...
 
