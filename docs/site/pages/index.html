@@ -4,9 +4,14 @@ description: Deckhouse
 permalink: en/
 layout: default
 toc: false
+anchors_disabled: true
 ---
+
 <section class="product-intro">
   <div class="product-intro__content container">
+    <div class="product-intro__diagram">
+      <img src="{{ site.baseurl }}/images/diagrams/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
+    </div>
     <div class="product-intro__about">
       <div class="product-intro__logo">
         <img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
@@ -35,11 +40,8 @@ toc: false
         {% unless site.mode == "local" %}
         <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
         {% endunless %}
-        <a href="#" class="button button_default">Read more</a>
+        <a href="/{{ page.lang }}/features.html" class="button button_default">Read more</a>
       </div>
-    </div>
-    <div class="product-intro__diagram">
-      <img src="{{ site.baseurl }}/images/diagrams/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
     </div>
   </div>
 </section>
@@ -48,7 +50,7 @@ toc: false
   <div class="product-intro__content container">
     <div class="product-intro__about">
       <div class="product-intro__logo">
-        <img src="{{ site.baseurl }}/images/logos/deckhouse-commander.svg" alt="Deckhouse Commander" />
+        <img src="{{ site.baseurl }}/images/logos/deckhouse-commander.svg" alt="Deckhouse Commander" style="margin-left: -7px" />
       </div>
       <h1 class="product-intro__title text_lead">
         Centralized<br>
@@ -62,15 +64,15 @@ toc: false
         <li>
           Day 1 success with hybrid infrastructure
         </li>
-        <li>
-          It is a paid product: the source is open but not free
+        <li class="text_alt">
+          Coming soon
         </li>
       </ul>
       <div class="product-intro__actions button-group">
         {% unless site.mode == "local" %}
         <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
         {% endunless %}
-        <a href="#" class="button button_default">Read more</a>
+        <a href="/{{ page.lang }}/products.html#deckhouse-commander" class="button button_default">Read more</a>
       </div>
     </div>
     <div class="product-intro__diagram">
@@ -94,16 +96,22 @@ toc: false
           </div>
           <ul class="features__item-list">
               <li>
-                Упростите работу с инфраструктурой и сосредоточьтесь на разработке
+                Focus on application development. Your infrastructure becomes just a well-known API that is transparent and fully managed everywhere (any clouds, bare metal servers or hybrid).
               </li>
               <li>
-                Быстро создавайте и обновляйте приложения
+                Build and update apps quickly. Benefit from a true CI/CD enabler.
               </li>
               <li>
-                Экспериментируйте с новыми продуктами и тестируйте новые фичи без ограничений
+                Deploy & test new features with no limits: create new environments whenever you want.
               </li>
               <li>
-                Используйте те компоненты Kubernetes, которые вам нужны
+                Enjoy automated canary deployments and service mesh with Istio.
+              </li>
+              <li>
+                Boost your observability with easy to use dashboards.
+              </li>
+              <li>
+                Use custom metrics for out-of-the-box autoscaling.
               </li>
           </ul>
       </div>
@@ -113,18 +121,27 @@ toc: false
       <div class="features__item-content container">
           <div class="features__item-header">
               <h2 class="features__item-title text_h1">
-                IT Operations
+                DevOps / SRE
               </h2>
           </div>
           <ul class="features__item-list">
               <li>
-                Сэкономьте на штатных специалистах Kubernetes: с Deckhouse вам будет достаточно одного опытного DevOps
+                Forget about low-level Kubernetes machinery and focus on real DevOps and SRE, but not infrastructure itself.
               </li>
               <li>
-                Разворачивайте кластеры там, где вам нужно — в облаках и локально
+                Run ready-to-use Kubernetes clusters in 15 minutes.
               </li>
               <li>
-                Экономьте на инфраструктуре, пользуйтесь всеми преимуществами no vendor lock-in
+                Roll out fully identical clusters anywhere: bare-metal servers, private or public clouds.
+              </li>
+              <li>
+                Leverage integrated and ready-to-use HPA for your apps.
+              </li>
+              <li>
+                Never miss important updates from upstream Kubernetes, certificate renewals, etc.
+              </li>
+              <li>
+                Get out-of-the-box security features including single sign-on, support for external authentication providers, and role-based access control.
               </li>
           </ul>
       </div>
@@ -138,16 +155,19 @@ toc: false
           </div>
           <ul class="features__item-list">
             <li>
-              Сократите time-to-market
+              Leverage the latest containerisation technology to build cutting edge services and products.
             </li>
             <li>
-              Используйте передовые технологии контейнеризации, чтобы создавать передовые продукты и сервисы
+              Shorten time-to-market with the properly rolled out &amp; maintained Kubernetes.
             </li>
             <li>
-              Экономьте на разработке и эксплуатации ПО, расширяя технические возможности каждой из команд
+              Boost teams efficiency by 300% equipping them with the best OSS tools for Kubernetes.
             </li>
             <li>
-              Оптимизируйте ИТ-процессы с помощью готового managed-инструмента
+              Save on infrastructure with automatic downscaling. Consume only what is needed at the moment.
+            </li>
+            <li>
+              Get a platform based on upstream Kubernetes and Open Source core avoiding a vendor lock-in.
             </li>
           </ul>
       </div>
@@ -163,20 +183,22 @@ toc: false
           </div>
           <ul class="features__item-list">
             <li>
-              Если у вас несколько кластеров – вам достаточно Deckhouse Platform.
+              If you work with a few Kubernetes, Deckhouse Platform will perfectly fit your needs.
             </li>
             <li>
-              To manage 10+ Kubernetes clusters in the infrastructure of any kind: on-premises, private clouds, public clouds, mixed
+              Deckhouse Commander comes in handy when you need to manage 10+ clusters, no matter where they are deployed: on-premises, private clouds, public clouds, mixed infrastructure.
             </li>
           </ul>
       </div>
   </div>
 </section>
 
+<!--
+
 <section class="work">
   <div class="work__content container">
     <h2 class="text_h1">
-      How does it work?
+      How does Deckhouse work?
     </h2>
 
     <div class="work__item">
@@ -206,5 +228,7 @@ toc: false
     </div>
   </div>
 </section>
+
+-->
 
 {% include clients.html %}

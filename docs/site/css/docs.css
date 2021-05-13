@@ -57,6 +57,7 @@
     line-height: 1.71;
     letter-spacing: -0.3px;
     text-decoration: none;
+    display: none;
 }
 
 .channel-menu:hover > a {
@@ -135,7 +136,13 @@
     display: block;
 }
 
+#search-results li {
+    padding-left: 0 !important;
+}
 
+#search-results li:before {
+    display: none !important;
+}
 
 .search__input {
     border-radius: 10px;
@@ -145,7 +152,7 @@
     background-image: url(../images/icons/search.svg);
     background-position: calc(100% - 10px) center;
     background-repeat: no-repeat;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: normal;
     font-style: normal;
     font-stretch: normal;
@@ -228,6 +235,36 @@
 .sidebar__item_hot:after {
     content: 'NEW!';
     font-size: 12px;
+    color: #fff;
+    background: #0066FF;
+    padding: 1px 4px;
+    border-radius: 4px;
+    margin-left: 10px;
+    display: inline-block;
+    font-weight: 700;
+    position: relative;
+    top: -1px;
+    letter-spacing: 1px;
+}
+
+.sidebar__item_experimental::before {
+    content: 'Expr';
+    font-size: 8px;
+    color: #0066FF;
+    background: #00ff04;
+    padding: 1px 4px;
+    border-radius: 4px;
+    margin-left: 10px;
+    display: inline-block;
+    font-weight: 700;
+    position: relative;
+    top: -1px;
+    letter-spacing: 1px;
+}
+
+.sidebar__item_ee::before {
+    content: 'EE';
+    font-size: 8px;
     color: #fff;
     background: #0066FF;
     padding: 1px 4px;
@@ -604,6 +641,11 @@
     line-height: 24px;
     border-radius: 10px;
     margin-bottom: 15px;
+}
+
+.docs__information.warning {
+    color: #856404;
+    background-color: #fff3cd;
 }
 
 .docs__information.active {

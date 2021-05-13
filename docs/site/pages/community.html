@@ -4,23 +4,24 @@ description: Deckhouse community
 permalink: en/community.html
 layout: default
 toc: false
+anchors_disabled: true
 ---
 
-<section class="intro">
+<section class="intro" id="deckhouse-platform-сe">
     <div class="intro__content container">
-        <h1 class="intro__title text_lead">
+        <h1 class="intro__title text_lead text_alt">
             Community
         </h1>
         <div class="intro__row">
             <div>
-                <p class="text_big">
-                    Deckhouse is an Open Source project, and everyone is warmly welcome to contribute to it on <a href="https://github.com/deckhouse/" target="_blank">GitHub</a>.
+                <p class="text text_big">
+                    Deckhouse is an <strong>Open Source project</strong>, and everyone is warmly welcome to contribute to it on <a href="https://github.com/deckhouse/" target="_blank">GitHub</a>.
                 </p>
             </div>
         </div>
         <div class="intro__row">
             <div>
-                <p class="text_big">
+                <p class="text text_big">
                     To make Deckhouse development vigorous and sustainable, its platform is offered in two editions:
                 </p>
             </div>
@@ -29,8 +30,8 @@ toc: false
                     <h2 class="intro__product-title text_h2">
                         Community Edition (CE)
                     </h2>
-                    <div class="intro__product-info">
-                        An Open Source and free of charge version providing key functionality of Deckhouse. Its code is available under the Apache 2.0 license.
+                    <div class="text intro__product-info">
+                        An Open Source and free of charge version providing key functionality of Deckhouse. Its code is available under the Apache 2.0 license. Please check details below.
                     </div>
                 </div>
 
@@ -38,8 +39,8 @@ toc: false
                     <h2 class="intro__product-title text_h2">
                         Enterprise Edition (EE)
                     </h2>
-                    <div class="intro__product-info">
-                        A commercial version that boasts additional features <em>(please check details <a href="{{ page.lang }}/features.html">here</a>)</em> and various subscription options. Its code is also open, but it’s not free, and the license is not Open Source.
+                    <div class="text intro__product-info">
+                        A <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">commercial version</a> that boasts additional features and various subscription options. Its code is also open, but it’s not free, and the license is <em>not</em> Open Source.
                     </div>
                     <div class="intro__product-extra">
                         The development process of both editions is public.
@@ -50,16 +51,45 @@ toc: false
     </div>
 </section>
 
+<section class="intro">
+    <div class="intro__content container">
+        <h1 class="intro__title text_lead text_alt">
+            Deckhouse Platform CE
+        </h1>
+        <div class="intro__row">
+            <div>
+                <p class="text_big">
+                    The Community Edition (CE) is the perfect choice to try Deckhouse Platform in action and/or to deploy the platform if you don't need professional support for its maintenance at the moment.
+                </p>
+                <p class="text">
+                    To decide whether Deckhouse Platform CE fits your current expectations, please have a look at <a href="/{{ page.lang }}/products.html#ce-vs-ee">this comparison with EE</a>.
+                </p>
+                <p class="text">
+                    Deckhouse Platform CE is freely available via project's <a href="https://github.com/deckhouse/deckhouse" target="_blank">main GitHub repository</a>. The <a href="/{{ page.lang }}/getting_started.html">getting started</a> instructions will guide you through the process of its initial configuration &amp; installation.
+                </p>
+            </div>
+            <div class="intro__logo">
+                <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-ce.svg"
+                alt="Deckhouse Kubernetes Platform CE" />
+            </div>
+        </div>
+    </div>
+</section>
+
 <section class="cards-text">
     <div class="cards-text__content container">
         <div class="cards-text__info">
-            <h2 class="cards-text__title text_lead">
+            <h2 class="cards-text__title text_h1">
                 Technical core
             </h2>
             <p>
-                Deckhouse follows the upstream version of Kubernetes, building all its features and configurations on top of it.
+                Deckhouse Platform follows the <strong>upstream version of Kubernetes</strong>, building all its features and configurations on top of it.
             </p><p>
-                The basic functionality of Deckhouse is implemented via two building blocks that have been available as Open Source projects since April/May 2019.
+                The basic functionality of Deckhouse Platform is implemented via <strong>two building blocks: shell-operator &amp; addon-operator</strong>. Both of them have been available as Open Source projects since April/May 2019.
+            </p><p>
+                Aside from Deckhouse, various vendors and DevOps/Kubernetes enthusiasts have adopted these tools.
+            </p><p>
+                To sum it up, in a nutshell, Deckhouse Platform — as a Kubernetes distribution — is an upstream Kubernetes packed with a bunch of modules based on addon-operator.
             </p>
         </div>
         <div class="cards-text__cards">
@@ -70,7 +100,7 @@ toc: false
                     </a>
                 </h3>
                 <div class="cards-item__text">
-                    To create Kubernetes operators
+                    A tool to create Kubernetes operators (any logic to be executed when some event in K8s is triggered).
                 </div>
             </div>
             <div class="cards-item cards-item_smooth">
@@ -80,7 +110,7 @@ toc: false
                     </a>
                 </h3>
                 <div class="cards-item__text">
-                    To consistently manage modules based on shell-operator
+                    A system to manage Kubernetes modules based on shell-operator in a consistent, automated manner.
                 </div>
             </div>
         </div>
@@ -88,7 +118,6 @@ toc: false
 </section>
 
 <section class="features">
-
     <div class="features__item">
         <div class="features__item-content container">
             <div class="features__item-header">
@@ -109,13 +138,12 @@ toc: false
             </ul>
         </div>
     </div>
-
 </section>
 
 <section class="cards-text">
     <div class="cards-text__content container">
         <div class="cards-text__info">
-            <h2 class="cards-text__title text_lead">
+            <h2 class="cards-text__title text_h1">
                 How to contribute?
             </h2>
             <p>

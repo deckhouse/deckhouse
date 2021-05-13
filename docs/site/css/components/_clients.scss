@@ -6,13 +6,14 @@
     &__content {
         padding-left: $logo-spacing;
         box-sizing: border-box;
+        position: relative;
     }
     &__title {
         margin-top: 0;
         margin-bottom: $spacing-l;
     }
     &__items {
-        margin: 0;
+        margin: 0 -25px;
     }
 
     &__item {
@@ -20,7 +21,7 @@
         width: 450px;
         box-sizing: border-box;
         padding: 30px;
-        margin: 0 50px 0 0;
+        margin: 0 25px;
         &-header {
             margin-bottom: $spacing-l;
             display: flex;
@@ -50,6 +51,47 @@
             &-value {
                 line-height: 1.5;
             }
+        }
+    }
+
+    .slick-arrow {
+        font-size: 0;
+        line-height: 0;
+        position: absolute;
+        top: -70px;
+        display: block;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        cursor: pointer;
+        color: transparent;
+        border: none;
+        outline: none;
+        background: transparent;
+        &:before {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: $color-main;
+            font-size: 40px;
+        }
+        &:hover:before {
+            color: $color-alt;
+        }
+    }
+
+    .slick-prev {
+        right: 100px;
+        &:before {
+            content: '←'
+        }
+    }
+
+    .slick-next {
+        right: 25px;
+        &:before {
+            content: '→'
         }
     }
 }

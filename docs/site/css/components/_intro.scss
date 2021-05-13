@@ -2,8 +2,7 @@
 
 .intro {
     padding: 150px 0;
-    background: $color-main;
-    color: $color-inverse;
+    color: $color-main;
     a {
         color: $color-alt;
         text-decoration: underline;
@@ -16,16 +15,10 @@
         display: flex;
         flex-direction: row;
         justify-content: space-between;
-        align-items: flex-start;
+        align-items: stretch;
         & > * {
             width: 40%;
         }
-    }
-    &__title {
-        margin-top: 0;
-        margin-bottom: $spacing-l*3;
-        padding-bottom: $spacing-s;
-        border-bottom: 2px solid $color-inverse;
     }
     &__subtitle {
         margin-top: 0;
@@ -50,6 +43,15 @@
             margin-top: $spacing-l;
             opacity: 0.6;
             font-size: $font-size-small;
+        }
+    }
+    &__logo {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        img {
+            width: 100%;
         }
     }
 }

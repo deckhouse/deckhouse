@@ -48,6 +48,9 @@
 
             line-height: 1.5;
 
+            &_num {
+                list-style-type: decimal;
+            }
             a {
                 color: $color-alt;
                 &:hover {
