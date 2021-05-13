@@ -67,7 +67,7 @@ title: "Cloud provider — Yandex: Развертывание"
 * `dhcpOptions` — список DHCP опций, которые будут установлены на все подсети. [Возможные проблемы](#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
   * `domainName` — search домен.
   * `domainNameServers` — список адресов рекурсивных DNS.
-* `sshKey` — публичный ключ для доступа на ноды.
+* `sshPublicKey` — публичный ключ для доступа на ноды.
 * `labels` — лейблы, проставляемые на ресурсы, создаваемые в Yandex.Cloud.
 * `zones` — ограничение набора зон, в которых разрешено создавать ноды.
   * Опциональный параметр.
@@ -123,7 +123,7 @@ nodeGroups:
       toy: example
 labels:
   billing: prod
-sshKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: tewt243tewsdf
 dhcpOptions:
@@ -184,7 +184,7 @@ nodeGroups:
     externalSubnetID: tewt243tewsdf
     zones:
     - ru-central1-a
-sshKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: tewt243tewsdf
 dhcpOptions:
@@ -254,7 +254,7 @@ nodeGroups:
     externalSubnetID: tewt243tewsdf
     zones:
     - ru-central1-a
-sshKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: tewt243tewsdf
 dhcpOptions:
