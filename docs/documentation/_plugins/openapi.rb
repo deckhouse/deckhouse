@@ -72,6 +72,15 @@ module Jekyll
             result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default'].to_json}`"))
         end
 
+        if attributes.has_key?('x-doc-versionType')
+          case attributes['x-doc-versionType']
+          when "ee"
+            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['ee']['ru'].capitalize + '**'))
+          when "experimental"
+            result.push(converter.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
+          end
+        end
+
         if attributes['minimum'] || attributes['maximum']
             range = '**' + get_i18n_term("allowed_values").capitalize + ':** `'
             if attributes['minimum']
