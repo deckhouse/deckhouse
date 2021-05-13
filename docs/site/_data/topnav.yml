@@ -7,6 +7,10 @@ topnav:
       en: Features
     url: /features.html
   - title:
+      ru: Быстрый старт
+      en: Getting started
+    url: /getting_started.html
+  - title:
       ru: Документация
       en: Documentation
     url: /documentation/v1/

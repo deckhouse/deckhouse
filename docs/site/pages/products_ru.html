@@ -5,27 +5,35 @@ permalink: ru/products.html
 layout: default
 lang: ru
 toc: false
+anchors_disabled: true
 ---
 
-<section class="intro">
+<section class="intro" id="deckhouse-platform-ee">
   <div class="intro__content container">
-    <h1 class="intro__title text_lead">
-      Deckhouse Platform EE
-    </h1>
-    <div class="intro__row">
-      <div>
-        <p class="text_big">Enterprise Edition provides you an easy-to-use way to benefit from self-hosted Deckhouse
-          Platform. Deploy it on any infrastructure and enjoy all features of the platform! While your engineers are
-          responsible for maintaining it, Flant is always happy to help with first-hand support and consultations.</p>
+      <h1 class="intro__title text_lead text_alt">
+        Deckhouse Platform EE
+      </h1>
+      <div class="intro__row">
+          <div>
+              <h2 class="intro__subtitle text_h1">
+                What is it?
+              </h2>
+              <p class="text text_big">
+                Enterprise Edition provides you an easy-to-use way to benefit from self-hosted Deckhouse Platform. Deploy it on any infrastructure and enjoy <a href="/{{ page.lang }}/features.html">all features</a> of the platform! While your engineers are responsible for maintaining it, Flant is always happy to help with first-hand support and consultations.
+              </p>
+          </div>
+          <div class="intro__logo">
+            <img src="{{ site.baseurl }}/images/logos/deckhouse-platform-ee.svg"
+            alt="Deckhouse Kubernetes Platform EE" />
+          </div>
       </div>
-    </div>
   </div>
 </section>
 
 <section class="block">
   <div class="block__content container">
     <p class="text text_big">
-      Support for EE is available through the following subscription plans
+      Support for EE is available through the following <strong>subscription plans</strong>:
     </p>
     <table class="table">
       <tbody>
@@ -102,7 +110,7 @@ toc: false
         </tr>
         <tr>
           <td>
-            <div>SLA for Cluster</div>
+            <div>SLA for clusters*</div>
           </td>
           <td>
             <div>99,9</div>
@@ -116,7 +124,7 @@ toc: false
         </tr>
         <tr>
           <td>
-            <div>SLA for Application</div>
+            <div>SLA for applications**</div>
           </td>
           <td>
             <div>
@@ -137,181 +145,14 @@ toc: false
       </tbody>
     </table>
     <p class="text">
-      <em>For training and consulting options, please see <a href="#">success packages</a>.</em>
+      <em>* SLA for clusters means we guarantee that you will reach this level of availability and we will react timely to help you to achieve these numbers.</em><br />
+      <em>** SLA for applications means integration enriching our application metrics with your custom metrics and helping to resolve any issues that may appear on the cluster.</em>
     </p>
-  </div>
-</section>
-
-<section class="block">
-  <div class="block__content block__columns block__columns_top container">
-    <div>
-      <h2 class="text_h1">
-        Deckhouse Platform<br>
-        CE vs. EE
-      </h2>
-      <p class="text_big">
-        Compared to Community Edition of Deckhouse Platform, which is available for free, EE provides you many
-        additional features:
-      </p>
-      <table class="table">
-        <tbody>
-          <tr>
-            <td></td>
-            <td>
-              <div>CE</div>
-            </td>
-            <td>
-              <div>EE</div>
-            </td>
-          </tr>
-          <tr>
-            <td class="table__cell_gt">
-              SUPPORTED INFRASTRUCTURE
-            </td>
-            <td></td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>
-              <div>Bare metal</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div>Public cloud providers<br /> (AWS, Azure, GCP&hellip;)</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div>OpenStack</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div>VMware vSphere</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="table__cell_gt">
-              SUPPORTED FEATURES:
-            </td>
-            <td></td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>
-              <div>Istio service mesh</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="table__cell_gt">
-              OTHER:
-            </td>
-            <td></td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>
-              <div>Open Source</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div>Support</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-                <br><small>(community)</small>
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-                <br><small>(Flant)</small>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div>Training &amp; consulting</div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-              </div>
-            </td>
-            <td>
-              <div>
-                <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="text text_big">
-      <strong>EE source code</strong> is open, but it’s neither Open Source nor free to use. You can use it by
+    <p class="text text-big">
+      For training and consulting options, please see <a href="/{{ page.lang }}/services.html#training">success packages</a>.
+    </p>
+    <p class="text text-big">
+      <strong>NB!</strong> EE source code is open, but it’s neither Open Source nor free to use. You can use it by
       purchasing a subscription plan of your choice. If your subscription finishes, you can still use and modify the
       source code of the last purchased EE version. However, in this case, you will stop getting further updates, can’t
       create new clusters, and are not allowed to provide Kubernetes-as-a-Service to third parties.
@@ -319,15 +160,293 @@ toc: false
   </div>
 </section>
 
+<section class="block" id="ce-vs-ee">
+  <div class="block__content container">
+    <h2 class="text text_h1">
+      Deckhouse Platform CE vs. EE
+    </h2>
+    <p class="text text_big">
+      Compared to <a href="/{{ page.lang }}/community.html#deckhouse-platform-ce">Community Edition</a> of Deckhouse Platform, which is available for free,<br>
+      EE provides you many additional features:
+    </p>
+    <table class="table table_big">
+      <tbody>
+        <tr>
+          <td></td>
+          <td>
+            <div>CE</div>
+          </td>
+          <td>
+            <div>EE</div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_gt" colspan="3">
+            Supported infractructure
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Bare metal</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Public cloud providers (AWS, Azure, GCP&hellip;)</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>OpenStack</div>
+          </td>
+          <td>
+            <div>
+              <span class="table__asterisk">
+                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+              </span>
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>VMware vSphere</div>
+          </td>
+          <td>
+            <div>
+              <span class="table__asterisk">
+                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+              </span>
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_gt" colspan="3">
+            Supported features
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Istio service mesh</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Multitenancy <em>(coming soon)</em></div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Enterprise-level security** <em>(coming soon)</em></div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>BGP support</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Instant autoscaling*** <em>(coming soon)</em></div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Local DNS caching</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Upgrades timeframe**** <em>(coming soon)</em></div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Experimental features</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="table__cell_gt" colspan="3">
+            Other
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Open Source</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Support</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+              <br><small>(from community only)</small>
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+              <br><small>(from Flant)</small>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Training &amp; consulting</div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+            </div>
+          </td>
+          <td>
+            <div>
+              <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text">
+      <em>* You still can install Deckhouse Platform CE on OpenStack and vSphere, however these platforms will function as regular bare-metal servers in this case. There will be no integration with clouds, i.e. VMs are added manually, no autoscaling provided, etc.</em><br />
+      <em>** Including Vault integration and encrypted secrets in etcd.</em><br />
+      <em>*** Adding new pods/nodes is accelerated thanks to fully prebuilt images.</em><br />
+      <em>**** Selectable timeframe for automatic upgrades of the platform.</em>
+    </p>
+    </p>
+  </div>
+</section>
+
 <section class="block">
   <div class="block__content block__columns container">
     <div>
-      <h2 class="text_h1">
+      <h2 class="text text_h1">
         Deckhouse Platform EE vs. Managed Deckhouse
       </h2>
-      <p class="text_big">
-        Enterprise Edition powers Managed Deckhouse, which is another way to use all features of Deckhouse Platform.
-        What is the difference?
+      <p class="text text_big">
+        Enterprise Edition powers <a href="/{{ page.lang }}/services.html#managed-deckhouse">Managed Deckhouse</a>, which is another way to use all features of Deckhouse Platform.
+        Here is the difference:
       </p>
     </div>
     <table class="table">
@@ -394,42 +513,49 @@ toc: false
   </div>
 </section>
 
-<section class="cta" style="margin-bottom: 50px;">
+<section class="cta container">
   <div class="cta__content">
-    <div class="cta__text text_h3">
-      Contact us for a quote<br>
-      for your case!
+    <div class="cta__text text_h2">
+      Need a quote for EE in your case?
     </div>
-    <a href="javascript:Smallchat('open')" class="button button_inverse">Contact us!</a>
+    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Contact us!</a>
   </div>
 </section>
 
-<section class="intro">
+<section class="intro" id="deckhouse-commander">
   <div class="intro__content container">
-    <h1 class="intro__title text_lead">
-      Deckhouse Commander
-    </h1>
-    <div class="intro__row">
-      <div>
-        <p class="text_big">Deckhouse Commander is your best friend when it comes to managing many (think of 10+)
-          Kubernetes clusters based on Deckhouse Platform. It provides you a single point of control for these clusters
-          via both API and web UI.</p>
+      <h1 class="intro__title text_lead text_alt">
+        Deckhouse Commander
+      </h1>
+      <div class="intro__row">
+          <div>
+              <h2 class="intro__subtitle text_h1">
+                What is it?
+              </h2>
+              <p class="text_big">
+                Deckhouse Commander is your best friend when it comes to managing <strong>many</strong> (think of 10+) Kubernetes clusters based on Deckhouse Platform. It provides you a single point of control for these clusters via both API and web UI.
+              </p>
+          </div>
+          <div class="intro__logo">
+            <img src="{{ site.baseurl }}/images/logos/deckhouse-commander.svg"
+            alt="Deckhouse Commander" />
+          </div>
       </div>
-    </div>
   </div>
 </section>
 
 <section class="block">
   <div class="block__content container">
     <div>
-      <h2 class="text_h1">
+      <h2 class="text text_h1">
         Pricing
       </h2>
-      <p class="text_big">
-        Deckhouse Commander supports CE & EE editions of Deckhouse Platform.
+      <p class="text text_big">
+        Deckhouse Commander supports both CE & EE editions of Deckhouse Platform.<br>
+        <span color="red">The pricing for Deckhouse Commander is coming soon.</span>
       </p>
     </div>
-    <table class="table">
+    <!--table class="table">
       <tbody>
         <tr>
           <td>
@@ -468,16 +594,15 @@ toc: false
           </td>
         </tr>
       </tbody>
-    </table>
+    </table-->
   </div>
 </section>
 
-<section class="cta">
+<section class="cta container">
   <div class="cta__content">
-    <div class="cta__text text_h3">
-      Contact us for a quote<br>
-      for your case!
+    <div class="cta__text text_h2">
+      Interested in Deckhouse Commander already?
     </div>
-    <a href="javascript:Smallchat('open')" class="button button_inverse">Contact us!</a>
+    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Contact us!</a>
   </div>
 </section>

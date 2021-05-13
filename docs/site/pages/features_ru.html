@@ -5,10 +5,12 @@ permalink: ru/features.html
 layout: default
 lang: ru
 toc: false
+anchors_disabled: true
 ---
+
 <section class="lead">
     <div class="lead__content container">
-        <h1 class="text_h1">Что делает Deckhouse Platform уникальным?</h1>
+        <h1 class="text_h1">What makes Deckhouse Platform special?</h1>
     </div>
 </section>
 
@@ -44,22 +46,22 @@ toc: false
                 <h2 class="features__item-title text_h1">
                     SLA by design
                 </h2>
-                <span class="features__item-label">
+                <!--span class="features__item-label">
                     Only in Enterprise Edition
-                </span>
+                </span-->
             </div>
             <ul class="features__item-list">
                 <li>
-                    Thanks to NoOps approach and everything carefully tested before being released,reliability is our cornerstone.
+                    Thanks to NoOps approach and everything carefully tested before being released, reliability is our cornerstone.
                 </li>
                 <li>
-                    Thus, we can provide SLA even without direct access to your infrastructure — 99,95%
+                    Thus, we can provide SLA even without direct access to your infrastructure — 99,95%*.
                     <ul>
                         <li>
-                            To achieve this, the architecture of your clusters should be approved by our engineers and our guidelines should be followed.
+                            * To achieve this, the architecture of your clusters should be approved by our engineers and our guidelines should be followed.
                         </li>
                         <li>
-                            This applies to the EE edition only.
+                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">EE edition</a> only.
                         </li>
                     </ul>
                 </li>
@@ -79,7 +81,12 @@ toc: false
                     Clusters are infrastructure-agnostic since they can be deployed on a public cloud of your choice (AWS, GCP, Microsoft Azure, OVH Cloud) or even bare-metal servers.
                 </li>
                 <li>
-                    Self-hosted cloud solutions (OpenStack and vSphere) are also supported in the EE edition.
+                    Self-hosted cloud solutions (OpenStack and vSphere) are also supported*.
+                    <ul>
+                        <li>
+                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">EE edition</a> only.
+                        </li>
+                    </ul>
                 </li>
             </ul>
         </div>
@@ -97,13 +104,13 @@ toc: false
                     It’s 100% vanilla Kubernetes since we follow the upstream version of Kubernetes.
                 </li>
                 <li>
-                    Based on <a href="https://github.com/flant/shell-operator" target="_blank">shell-operator</a> & <a href="https://github.com/flant/addon-operator" target="_blank">addon-operator</a> Open Source projects that have been around for 2+ years and adopted by various vendors.
+                    Based on <a href="https://github.com/flant/shell-operator" target="_blank">shell-operator</a> &amp; <a href="https://github.com/flant/addon-operator" target="_blank">addon-operator</a> Open Source projects that have been around for 2+ years and adopted by various vendors.
                 </li>
                 <li>
                     Avoid vendor lock-in as the core of the platform and CE is free and Open Source.
                     <ul>
                         <li>
-                            The EE edition development process is also public (on GitHub) and all source code is open (but <u>not free</u>).
+                            The EE edition development process is also public (on GitHub) and all source code is open (but <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">not free</a>).
                         </li>
                     </ul>
                 </li>
@@ -144,18 +151,25 @@ toc: false
                     Get auto-scaling, observability, security, service mesh right out of the box!
                 </li>
                 <li>
-                    Our basic principles are feature-complete Kubernetes, the integrity of all components, and simplicity not limiting flexibility.
-                </li>
-                <li>
                     Kubernetes has a lot to offer, but this choice followed by further configuration, integration, and maintenance becomes a real challenge. Overcome it with Deckhouse!
                     <ul>
                         <li>
-                            The EE edition development process is also public (on GitHub) and all source code is open (but <u>not free</u>).
+                            Our basic principles are feature-complete Kubernetes, the integrity of all components, and simplicity not limiting flexibility. 
                         </li>
                     </ul>
                 </li>
             </ul>
         </div>
     </div>
+
+    <section class="block">
+        <div class="block__content container">
+          <div>
+            <p class="text text_big">
+                Ready to benefit from these features? Learn more about Deckhouse Platform, which is available as <a href="/{{ page.lang }}/community.html#deckhouse-platform-ce">Community Edition</a> and <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a>.
+            </p>
+          </div>
+        </div>
+    </section>
 
 </section>

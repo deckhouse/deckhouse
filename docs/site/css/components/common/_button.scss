@@ -18,6 +18,9 @@
         color: $color-alt;
         background: $color-inverse;
     }
+    &_big {
+        font-size: $font-size-h2;
+    }
 }
 
 .button-group {

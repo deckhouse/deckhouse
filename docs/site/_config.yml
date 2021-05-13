@@ -77,5 +77,50 @@ defaults:
       type: "pages"
     values:
       lang: ru
+  - scope:
+      path: "*/500-basic-auth"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/030-cloud-provider-openstack"
+      type: "pages"
+    values:
+      versionType: ee
+  - scope:
+      path: "*/030-cloud-provider-vsphere"
+      type: "pages"
+    values:
+      versionType: ee
+  - scope:
+      path: "*/340-extended-monitoring"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/600-secret-copier"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/350-node-local-dns"
+      type: "pages"
+    values:
+      versionType: ee
+  - scope:
+      path: "*/380-metallb"
+      type: "pages"
+    values:
+      versionType: ee
+  - scope:
+      path: "*/450-keepalived"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/450-network-gateway"
+      type: "pages"
+    values:
+      versionType: experimental
 
 timezone: Europe/Moscow

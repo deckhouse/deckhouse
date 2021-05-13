@@ -21,7 +21,7 @@
             }
         }
         &:first-child {
-            background: $color-main;
+            background: #25245A;
             color: $color-inverse;
             & > div {
                 padding-bottom: 15px;
@@ -44,8 +44,10 @@
 
     &__cell {
         &_gt {
-            background: $color-inverse !important;
-            color: $color-main !important;
+            padding: 10px 25px !important;
+            background: $color-main !important;
+            color: $color-inverse !important;
+            font-size: $font-size-small !important;
         }
         &_bt {
             border-top: 2px solid $color-main;
@@ -53,6 +55,21 @@
         &_center {
             text-align: center;
             vertical-align: middle !important;
+        }
+    }
+
+    &_big td:first-child {
+        width: auto;
+    }
+
+    &__asterisk {
+        position: relative;
+        display: inline-block;
+        &:after {
+            content: '*';
+            position: absolute;
+            top: -10px;
+            right: -10px;
         }
     }
 }

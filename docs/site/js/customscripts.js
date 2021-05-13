@@ -8,10 +8,12 @@ $( document ).ready(function() {
 });
 
 document.addEventListener("DOMContentLoaded", function() {
-  /**
-   * AnchorJS
-   */
-  anchors.add('h2,h3,h4,h5');
+    /**
+    * AnchorJS
+    */
+    if (window.anchors_disabled != true) {
+        anchors.add('h2,h3,h4,h5');
+    }
 
 });
 

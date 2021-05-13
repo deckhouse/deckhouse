@@ -3,59 +3,59 @@ columns:
   - items:
       - title: Features
         url: '/features.html'
-      - title: Get Started
-        url: '#'
+      - title: Getting Started
+        url: '/getting_started.html'
       - title: Documentation
         url: '/documentation/v1/'
   - title: Products
     items:
-      - title: Kubernetes Platform CE
-        url: '#'
-      - title: Kubernetes Platform EE
-        url: '#'
-      - title: Commander
-        url: '#'
+      - title: Deckhouse Platform CE
+        url: '/community.html#deckhouse-platform-ce'
+      - title: Deckhouse Platform EE
+        url: '/products.html#deckhouse-platform-ee'
+      #- title: Commander
+      #  url: '#'
   - title: Services
     items:
-      - title: Training & Consulting
-        url: '#'
       - title: Managed Kubernetes
-        external_url: 'https://flant.com/services/managed-kubernetes-as-a-service'
+        url: '/services.html#managed-deckhouse'
+      - title: Training & Consulting
+        url: '/services.html#training'
   - title: About us
     items:
       - title: Company
-        external_url: 'https://flant.com/company/about-us'
+        url: '/about_us.html'
+      - title: Open Source
+        url: '/about_us.html#open-source'
       - title: Clients
-        url: '#'
-      - title: Contact us
-        external_url: 'https://flant.com/company/contact-us'
+        url: '/about_us.html#clients'
   ru:
   - items:
       - title: Возможности
         url: '/features.html'
       - title: Быстрый старт
-        url: '#'
+        url: '/getting_started.html'
       - title: Документация
         url: '/documentation/v1/'
   - title: Продукты
     items:
-      - title: Kubernetes Platform CE
-        url: '#'
-      - title: Kubernetes Platform EE
-        url: '#'
-      - title: Commander
-        url: '#'
+      - title: Deckhouse Platform CE
+        url: '/community.html#deckhouse-platform-ce'
+      - title: Deckhouse Platform EE
+        url: '/products.html#deckhouse-platform-ee'
+      #- title: Commander
+      #  url: '#'
   - title: Сервисы
     items:
-      - title: Обучение и Консалтинг
-        url: '#'
       - title: Managed Kubernetes
-        external_url: 'https://flant.ru/services/managed-kubernetes-as-a-service'
-  - title: About us
+        url: '/services.html#managed-deckhouse'
+      - title: Обучение и консалтинг
+        url: '/services.html#training'
+  - title: О нас
     items:
       - title: Компания
-        external_url: 'https://flant.ru'
+        url: '/about_us.html'
+      - title: Open Source
+        url: '/about_us.html#open-source'
       - title: Клиенты
-        external_url: 'https://flant.ru/clients'
-      - title: Контакты
-        external_url: 'https://flant.ru/company/contact-us'
+        url: '/about_us.html#clients'

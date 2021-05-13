@@ -2,7 +2,6 @@
 layout: sidebar
 ---
 <div class="docs">
-
     {%- if page.comparable %}
     <div class="btn-group compare">
         <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
@@ -61,6 +60,8 @@ layout: sidebar
         {%- endif %}
 
         {%- endunless %}
+
+        {%- include warning-version.html %}
 
     {{content}}
 

@@ -5,38 +5,38 @@ permalink: ru/services.html
 layout: default
 lang: ru
 toc: false
+anchors_disabled: true
 ---
 
-<section class="intro">
+<section class="intro" id="managed-deckhouse">
   <div class="intro__content container">
-    <h1 class="intro__title text_lead">
-      Managed Deckhouse
-    </h1>
-    <h2 class="intro__subtitle text_h1">
-      Managed Kubernetes<br>
-      for your infrastructure:<br>
-      any cloud or on-premises
-    </h2>
-    <div class="intro__row">
-      <div>
-        <p class="text_big">Built on top of Deckhouse Platform EE, Managed Deckhouse is a perfect choice if you:</p>
+      <h1 class="intro__title text_lead text_alt">
+        Managed Deckhouse
+      </h1>
+      <div class="intro__row">
+          <div>
+              <p class="text text_big">
+                Built on top of <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Deckhouse Platform EE</a>, Managed Deckhouse is a perfect choice if you:
+              </p>
+              <ul class="list">
+                <li>
+                  want to get Kubernetes with zero effort;
+                </li>
+                <li>
+                  have no plans for dedicated Kubernetes engineers<br>
+                  and building own K8s expertise;
+                </li>
+                <li>
+                  don’t consider managing Kubernetes platform<br>
+                  the core competence of your business.
+                </li>
+              </ul>
+          </div>
+          <div class="intro__logo">
+            <img src="{{ site.baseurl }}/images/logos/deckhouse-managed.svg"
+            alt="Deckhouse Managed Kubernetes Anywhere" />
+          </div>
       </div>
-      <div>
-        <ul class="list">
-          <li>
-            want to get Kubernetes with zero effort
-          </li>
-          <li>
-            have no plans for dedicated Kubernetes engineers<br>
-            and building own K8s expertise
-          </li>
-          <li>
-            don’t consider managing Kubernetes platform<br>
-            the core competence of your business
-          </li>
-        </ul>
-      </div>
-    </div>
   </div>
 </section>
 
@@ -49,7 +49,7 @@ toc: false
           How does it work?
         </h2>
       </div>
-      <ul class="features__item-list">
+      <ul class="features__item-list features__item-list_num">
         <li>
           You provide us access to your infrastructure. It can be everything* on-premises or in the clouds.
           <ul>
@@ -79,7 +79,7 @@ toc: false
       </div>
       <ul class="features__item-list">
         <li>
-          Kubernetes clusters based on Deckhouse Platform EE (with all of its features) and fully managed by our team.
+          Kubernetes clusters based on Deckhouse Platform EE (with all of <a href="/{{ page.lang }}/products.html#ce-vs-ee">its features</a>) and fully managed by our team.
         </li>
         <li>
           The best possible SLA. Flant’s engineers are responsible for all operations minimizing the probability of
@@ -104,7 +104,7 @@ toc: false
             Managed Deckhouse vs. Deckhouse Platform EE
         </h2>
         <p class="text_big">
-            If Deckhouse Platform EE is the basis of Managed Deckhouse, what is the difference?
+            <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Deckhouse Platform EE</a> is the basis of Managed Deckhouse. The difference is all about maintenance &amp; responsibility.
         </p>
     </div>
     <table class="table">
@@ -178,10 +178,7 @@ toc: false
             Pricing
         </h2>
         <p class="text text_big">
-        To know the price for your case, please use our <a href="#" target="_blank">online calculator</a> or <a href="#" target="_blank">contact us</a> for details.
-        </p>
-        <p class="text text_big">
-        Here are precalculated prices for most common cases:
+        Here are precalculated prices for the most common cases of using Managed Deckhouse:
         </p>
     </div>
     <table class="table">
@@ -334,19 +331,19 @@ toc: false
 </div>
 </section>
 
-<section class="cta">
-<div class="cta__content">
-    <div class="cta__text text_h3">
-        Find optimal solution<br>
-        for your business
+<section class="cta container">
+  <div class="cta__content">
+    <div class="cta__text text_h2">
+      Find optimal solution<br>
+      for your business
     </div>
-    <a href="javascript:Smallchat('open')" class="button button_inverse">Online calculator</a>
-</div>
+    <a href="https://flant.com/services/managed-kubernetes-as-a-service/calculator" target="_blank" class="button button_big button_inverse">Online calculator</a>
+  </div>
 </section>
 
-<section class="intro">
+<section class="intro" id="training">
   <div class="intro__content container">
-    <h1 class="intro__title text_lead">
+    <h1 class="intro__title text_lead text_alt">
       Training & Consulting
     </h1>
     <h2 class="intro__subtitle text_h1">
@@ -431,15 +428,17 @@ toc: false
   </div>
 </section>
 
-<section class="cta">
+<section class="cta container" style="margin-bottom: 75px">
   <div class="cta__content">
-    <div class="cta__text text_h3">
+    <div class="cta__text text_h2">
       Book your sessions to unlock<br>
-      the full potential of Deckhouse!
+      the full potential of Deckhouse
     </div>
-    <a href="javascript:Smallchat('open')" class="button button_inverse">Book sessions</a>
+    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Contact us!</a>
   </div>
 </section>
+
+
 
 <section class="features" style="margin-top: 50px;">
   <h2 class="text_h1 text_alt features__title container">
@@ -461,14 +460,12 @@ toc: false
         </li>
         <li>
           Troubleshooting
+        </li>
+        <li>
           <ul>
             <li>
-              Purchase a Bulk of hours from our DevOps teams and enjoy dedicated consulting sessions tailored for your
-              needs.
-            </li>
-            <li>
-              The minimum purchase is a bulk of 10 hours. Please check details at <a href="https://flant.com"
-                target="_blank">flant.com</a>.
+              Purchase a bulk of hours from our DevOps teams and enjoy dedicated consulting sessions tailored for your needs.<br>
+              The minimum purchase is a bulk of 10 hours. Please check details at <a href="https://flant.com" target="_blank">flant.com</a>.
             </li>
           </ul>
         </li>

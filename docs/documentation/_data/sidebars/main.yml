@@ -63,6 +63,13 @@ entries:
               url: /modules/150-user-authn/faq.html
     #      - title: FAQ
     #        url: /features/auth-faq.html
+        - title: basic-authn
+          versionType: experimental
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/500-basic-auth/
     - title:
         ru: Подсистема candi
         en: candi subsystem
@@ -138,6 +145,7 @@ entries:
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-azure/cr.html
             - title: Openstack
+              versionType: ee
               folders:
                 - title:
                     ru: Описание
@@ -160,6 +168,7 @@ entries:
                 - title: FAQ
                   url: /modules/030-cloud-provider-openstack/faq.html
             - title: VMware vSphere
+              versionType: ee
               folders:
                 - title:
                     ru: Описание
@@ -255,6 +264,12 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/035-cni-flannel/configuration.html
+            - title: cni-simple-bridge
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/035-cni-simple-bridge/
             - title: kube-proxy
               folders:
                 - title:
@@ -271,6 +286,12 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/042-kube-dns/configuration.html
+            - title: terraform-manager
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/040-terraform-manager/
     - title:
         ru: Подсистема core
         en: core subsystem
@@ -390,6 +411,7 @@ entries:
                     en: Configuration
                   url: /modules/400-descheduler/configuration.html
             - title: extended-monitoring
+              versionType: experimental
               folders:
                 - title:
                     ru: Описание
@@ -399,26 +421,6 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/340-extended-monitoring/configuration.html
-            - title: monitoring-applications
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/340-monitoring-applications/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/340-monitoring-applications/configuration.html
-            - title: monitoring-ping
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/340-monitoring-ping/
-                - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/340-monitoring-ping/usage.html
             - title: monitoring-custom
               folders:
                 - title:
@@ -429,6 +431,16 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/340-monitoring-custom/configuration.html
+            - title: monitoring-ping
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/340-monitoring-ping/
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/340-monitoring-ping/usage.html
             - title: monitoring-kubernetes
               folders:
                 - title:
@@ -439,6 +451,12 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/340-monitoring-kubernetes/configuration.html
+            - title: okmeter
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/500-okmeter/
             - title: operator-prometheus
               folders:
                 - title:
@@ -483,6 +501,16 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/303-prometheus-pushgateway/configuration.html
+            - title: upmeter
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/500-upmeter/
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/500-upmeter/configuration.html
             - title: vertical-pod-autoscaler
               folders:
                 - title:
@@ -505,16 +533,6 @@ entries:
                       url: /modules/302-vertical-pod-autoscaler/cr.html
                 - title: FAQ
                   url: /modules/302-vertical-pod-autoscaler/faq.html
-            - title: upmeter
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/500-upmeter/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/500-upmeter/configuration.html
     #      - title: FAQ
     #        url: /features/marm-faq.html
     - title: Must Have Collection
@@ -577,6 +595,13 @@ entries:
                 ru: Настройки
                 en: Configuration
               url: /modules/500-dashboard/configuration.html
+        - title: secret-copier
+          versionType: experimental
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/600-secret-copier/
     - title: Extended Networking Collection
       folders:
         - title: network-policy-engine
@@ -614,6 +639,7 @@ entries:
                 en: Usage
               url: /modules/110-istio/usage.html
         - title: node-local-dns
+          versionType: ee
           folders:
             - title:
                 ru: Описание
@@ -644,6 +670,7 @@ entries:
     - title: Bare Metal Compatibility Collection
       folders:
         - title: metallb
+          versionType: ee
           folders:
             - title:
                 ru: Описание
@@ -654,6 +681,7 @@ entries:
                 en: Configuration
               url: /modules/380-metallb/configuration.html
         - title: keepalived
+          versionType: experimental
           folders:
             - title:
                 ru: Описание
@@ -674,6 +702,7 @@ entries:
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
         - title: network-gateway
+          versionType: experimental
           folders:
             - title:
                 ru: Описание

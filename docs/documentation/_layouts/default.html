@@ -2,15 +2,13 @@
 <html>
 
 <head>
+  {%- if page.anchors_disabled == true %}
+    <script>
+        window.anchors_disabled = true;
+    </script>
+  {%- endif %}
   {% include head.html mode='documentation' %}
   <!--#include virtual="/includes/head-site.html" -->
-
-{%- if page.toc == false %}
-<script>
-    window.anchors_disabled = true;
-</script>
-{%- endif %}
-
 </head>
 
 <body>
