@@ -47,7 +47,7 @@ func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Age
 
 func (a *Agent) Start(ctx context.Context) error {
 	// Initialize kube client from kubeconfig and service account token from filesystem.
-	kubeAccess := &kubernetes.Access{}
+	kubeAccess := &kubernetes.Accessor{}
 	err := kubeAccess.Init(a.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("cannot init access to Kubernetes cluster: %v", err)

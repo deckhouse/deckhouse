@@ -11,6 +11,21 @@ const (
 	Unknown
 )
 
+func (s Status) String() string {
+	switch s {
+	case nodata:
+		return "NoData"
+	case Down:
+		return "Down"
+	case Up:
+		return "Up"
+	case Unknown:
+		return "Unknown"
+	default:
+		return "(unknown)"
+	}
+}
+
 // Result represents check result
 type Result struct {
 	ProbeRef  *ProbeRef

@@ -8,7 +8,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func Load(access *kubernetes.Access) []*check.Runner {
+func Load(access kubernetes.Access) []*check.Runner {
 	runConfigs := make([]runnerConfig, 0)
 
 	runConfigs = append(runConfigs, Synthetic()...)

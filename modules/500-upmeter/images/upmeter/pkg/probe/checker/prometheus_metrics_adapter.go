@@ -12,7 +12,7 @@ import (
 
 // MetricsAdapterApiAvailable is a checker constructor and configurator
 type MetricsAdapterApiAvailable struct {
-	Access   *kubernetes.Access
+	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 }
@@ -28,7 +28,7 @@ func (c MetricsAdapterApiAvailable) Checker() check.Checker {
 
 type metricsAdapterAPIVerifier struct {
 	endpoint     string
-	kubeAccessor *kubernetes.Access
+	kubeAccessor kubernetes.Access
 }
 
 func (v metricsAdapterAPIVerifier) Request() *http.Request {

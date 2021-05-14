@@ -8,7 +8,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func ControlPlane(access *kubernetes.Access) []runnerConfig {
+func ControlPlane(access kubernetes.Access) []runnerConfig {
 	const (
 		groupName = "control-plane"
 		namespace = "d8-upmeter"

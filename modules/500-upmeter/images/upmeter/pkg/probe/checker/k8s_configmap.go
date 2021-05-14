@@ -14,7 +14,7 @@ import (
 
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {
-	Access                   *kubernetes.Access
+	Access                   kubernetes.Access
 	Timeout                  time.Duration
 	Namespace                string
 	GarbageCollectionTimeout time.Duration
@@ -30,7 +30,7 @@ func (c ConfigMapLifecycle) Checker() check.Checker {
 }
 
 type configMapLifecycleChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	namespace string
 	timeout   time.Duration
 
@@ -88,7 +88,7 @@ func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
 }
 
 type configMapCreationChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	namespace string
 	configMap *v1.ConfigMap
 }
@@ -109,7 +109,7 @@ func (c *configMapCreationChecker) Check() check.Error {
 }
 
 type configMapDeletionChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	configMap *v1.ConfigMap
 	namespace string
 }

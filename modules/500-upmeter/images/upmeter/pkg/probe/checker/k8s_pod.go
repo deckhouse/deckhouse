@@ -14,7 +14,7 @@ import (
 
 // PodLifecycle is a checker constructor and configurator
 type PodLifecycle struct {
-	Access            *kubernetes.Access
+	Access            kubernetes.Access
 	Namespace         string
 	CreationTimeout   time.Duration
 	SchedulingTimeout time.Duration
@@ -38,7 +38,7 @@ func (c PodLifecycle) Checker() check.Checker {
 
 // podLifecycleChecker is stateful checker that wraps pod creation with the check of the pod lifecycle
 type podLifecycleChecker struct {
-	access            *kubernetes.Access
+	access            kubernetes.Access
 	namespace         string
 	creationTimeout   time.Duration
 	schedulingTimeout time.Duration
@@ -104,7 +104,7 @@ func (c *podLifecycleChecker) new(pod *v1.Pod) check.Checker {
 }
 
 type podCreationChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	namespace string
 	pod       *v1.Pod
 }
@@ -122,7 +122,7 @@ func (c *podCreationChecker) Check() check.Error {
 }
 
 type podScheduledChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	namespace string
 	listOpts  *metav1.ListOptions
 }
@@ -156,7 +156,7 @@ func (c *podScheduledChecker) Check() check.Error {
 // Checks that at least one Pod is in "Pending" state.
 // FIXME by the task, should check it is not PodUnknown ???
 type pendingPodChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	namespace string
 	listOpts  *metav1.ListOptions
 }
@@ -183,7 +183,7 @@ func (c *pendingPodChecker) Check() check.Error {
 }
 
 type podDeletionChecker struct {
-	access    *kubernetes.Access
+	access    kubernetes.Access
 	namespace string
 	listOpts  *metav1.ListOptions
 }
@@ -265,7 +265,7 @@ func createNodeAffinityObject(nodeName string) *v1.NodeAffinity {
 
 // AtLeastOnePodReady is a checker constructor and configurator
 type AtLeastOnePodReady struct {
-	Access        *kubernetes.Access
+	Access        kubernetes.Access
 	Timeout       time.Duration
 	Namespace     string
 	LabelSelector string
@@ -288,7 +288,7 @@ func (c AtLeastOnePodReady) Checker() check.Checker {
 
 // podReadinessChecker defines the information that lets check at least one ready pod
 type podReadinessChecker struct {
-	access        *kubernetes.Access
+	access        kubernetes.Access
 	namespace     string
 	labelSelector string
 }
@@ -317,11 +317,13 @@ func isPodReady(pod *v1.Pod) bool {
 		return false
 	}
 
-	for _, cnd := range pod.Status.Conditions {
-		if cnd.Status != v1.ConditionTrue {
-			return false
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type != v1.PodReady {
+			// not the condition type we are looking for
+			continue
 		}
+		return cond.Status == v1.ConditionTrue
 	}
 
-	return true
+	return false
 }
