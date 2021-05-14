@@ -11,7 +11,7 @@ require (
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210505133200-f39811813bee // branch: master
-	github.com/flant/shell-operator v1.0.2-0.20210511133705-6924599b3c95 // branch: master
+	github.com/flant/shell-operator v1.0.2-0.20210514090430-aa283d5fb09d // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3
