@@ -16,8 +16,9 @@
   {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common $driverRegistrarImageName }}
   {{- $driverRegistrarImage := printf "%s/common/csi-node-driver-registrar-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $driverRegistrarImageTag }}
 
-  {{- if (include "helm_lib_cluster_has_non_static_nodes" $context) }}
-    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if $driverRegistrarImageTag }}
+    {{- if (include "helm_lib_cluster_has_non_static_nodes" $context) }}
+      {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -105,13 +106,13 @@ spec:
           privileged: true
         image: {{ $nodeImage }}
         args:
-    {{- if $additionalNodeArgs }}
+      {{- if $additionalNodeArgs }}
 {{ $additionalNodeArgs | toYaml | indent 8 }}
-    {{- end }}
-    {{- if $additionalNodeEnvs }}
+      {{- end }}
+      {{- if $additionalNodeEnvs }}
         env:
 {{ $additionalNodeEnvs | toYaml | indent 8 }}
-    {{- end }}
+      {{- end }}
         volumeMounts:
         - name: kubelet-dir
           mountPath: /var/lib/kubelet
@@ -120,9 +121,9 @@ spec:
           mountPath: /csi
         - name: device-dir
           mountPath: /dev
-    {{- if $additionalNodeVolumeMounts }}
+      {{- if $additionalNodeVolumeMounts }}
 {{ $additionalNodeVolumeMounts | toYaml | indent 8 }}
-    {{- end }}
+      {{- end }}
         resources:
           requests:
 {{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -145,8 +146,9 @@ spec:
         hostPath:
           path: /dev
           type: Directory
-    {{- if $additionalNodeVolumes }}
+      {{- if $additionalNodeVolumes }}
 {{ $additionalNodeVolumes | toYaml | indent 6 }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

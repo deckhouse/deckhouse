@@ -34,10 +34,12 @@ const globalValues = `
       common:
         csiExternalProvisioner116: imagehash
         csiExternalAttacher116: imagehash
+        csiExternalResizer116: imagehash
+        csiNodeDriverRegistrar116: imagehash
         csiExternalProvisioner119: imagehash
         csiExternalAttacher119: imagehash
-        csiExternalResizer: imagehash
-        csiNodeDriverRegistrar: imagehash
+        csiExternalResizer119: imagehash
+        csiNodeDriverRegistrar119: imagehash
       cloudProviderYandex:
         cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
