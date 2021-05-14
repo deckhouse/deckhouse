@@ -5,7 +5,7 @@ if [ ! -f "$kubeconfig" ]; then
   exit 0
 fi
 
-virtualization="$(virt-what | head -n 1)"
+virtualization="$(virt-what | awk 'FNR <= 1')"
 if [[ "$virtualization" == "" ]]; then
   virtualization="unknown"
 fi
