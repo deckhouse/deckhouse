@@ -26,7 +26,7 @@ const (
 
 var ErrConvergeInterrupted = errors.New("Interrupted.")
 
-func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string) error {
+func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, intermediateStateSave bool) error {
 	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
 
 	nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
@@ -45,7 +45,9 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		WithAutoApprove(true)
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
-	runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
+	if intermediateStateSave {
+		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
+	}
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
@@ -64,7 +66,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string) (*terraform.PipelineOutputs, error) {
+func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, intermediateStateSave bool) (*terraform.PipelineOutputs, error) {
 	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, masterNodeGroupName, index)
 
 	nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
@@ -83,7 +85,9 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
 	// Node group settings are not required for master node secret.
-	runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, masterNodeGroupName, nil))
+	if intermediateStateSave {
+		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, masterNodeGroupName, nil))
+	}
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
@@ -204,7 +208,7 @@ func createPreviouslyNotExistedNodeGroup(kubeCl *client.KubernetesClient, metaCo
 		}
 
 		for i := 0; i < group.Replicas; i++ {
-			err = BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig)
+			err = BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true)
 			if err != nil {
 				return err
 			}
@@ -338,9 +342,9 @@ func (c *Controller) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error 
 		if _, ok := nodeGroup.State[candidateName]; !ok {
 			var err error
 			if nodeGroup.Name == masterNodeGroupName {
-				_, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig)
+				_, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
 			} else {
-				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig)
+				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true)
 			}
 			if err != nil {
 				return err
