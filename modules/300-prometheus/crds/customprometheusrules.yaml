@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Ресурс хранения `PrometheusRule`.  [Подробнее](https://early.deckhouse.io/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
+            Ресурс хранения `PrometheusRule`.  [Подробнее](https://early.deckhouse.io/en/documentation/v1/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
           required:
             - spec
           properties:

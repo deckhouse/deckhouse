@@ -10,11 +10,11 @@ permalink: /candi/
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * Модули **Deckhouse'а**:
-    * [**control-plane-manager**](/modules/040-control-plane-manager/) - установка и обновление `control-plane` для master-узлов.
-    * [**node-manager**](/modules/040-node-manager/) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
+    * [**control-plane-manager**]({{"/modules/040-control-plane-manager/" | true_relative_url }} ) - установка и обновление `control-plane` для master-узлов.
+    * [**node-manager**]({{"/modules/040-node-manager/" | true_relative_url }} ) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
     * **cloud-provider-**
-        * [**openstack**](/modules/030-cloud-provider-openstack/) - модуль для взаимодействия с облаками на базе `OpenStack`.
-* Installer или [**dhctl**](/candi/dhctl.html) - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
+        * [**openstack**]({{"/modules/030-cloud-provider-openstack/" | true_relative_url }} ) - модуль для взаимодействия с облаками на базе `OpenStack`.
+* Installer или **dhctl** - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
 
 ## Installer
 

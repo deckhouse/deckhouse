@@ -110,7 +110,7 @@ global: |
         ```
   * `https` — способ реализации HTTPS, используемый служебными компонентами.
     * `mode` — режим работы HTTPS:
-      * `Disabled` — в данном режиме все служебные компоненты будут работать только по http (некоторые модули могут не работать, например [user-authn](/modules/150-user-authn));
+      * `Disabled` — в данном режиме все служебные компоненты будут работать только по http (некоторые модули могут не работать, например [user-authn]({{"/modules/150-user-authn/" | true_relative_url }} ));
       * `CertManager` — все служебные компоненты будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
       * `CustomCertificate` — все служебные компоненты будут работать по https используя сертификат из namespace `d8-system`;
       * `OnlyInURI` — все служебные компоненты будут работать по http (подразумевая, что перед ними стоит внешний https-балансер, который терминирует https).
@@ -142,7 +142,7 @@ global: |
 
 Deckhouse устанавливает только включённые [модули](https://github.com/flant/addon-operator/blob/master/MODULES.md). Смотри подробнее про алгоритм определения включённости модуля [тут](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery).
 
-Модули могут быть включены или выключены по умолчанию, исходя из используемого [варианта поставки](/modules/020-deckhouse/configuration.html).
+Модули могут быть включены или выключены по умолчанию, исходя из используемого [варианта поставки]({{"/modules/020-deckhouse/configuration.html" | true_relative_url }} ).
 
 Для включения/отключения модуля, необходимо добавить в configMap `deckhouse` параметр `<moduleName>Enabled` — `"true"` или `"false"`, где `<moduleName>` — название модуля в camelCase.
 

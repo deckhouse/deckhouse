@@ -18,7 +18,7 @@ title: Cloud provider - Vsphere
 * `masterNodeGroup` — описание master NodeGroup.
   * `replicas` — сколько мастер-узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
-  * `instanceClass` — частичное содержимое полей [VsphereInstanceClass](/modules/030-cloud-provider-vsphere/#vsphereinstanceclass-custom-resource). Обязательными параметрами являются `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  Параметры, обозначенные **жирным** шрифтом уникальны для `VsphereClusterConfiguration`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [VsphereInstanceClass]({{"/modules/030-cloud-provider-vsphere/#vsphereinstanceclass-custom-resource" | true_relative_url }} ). Обязательными параметрами являются `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  Параметры, обозначенные **жирным** шрифтом уникальны для `VsphereClusterConfiguration`. Допустимые параметры:
     * `numCPUs`
     * `memory`
     * `template`
@@ -50,7 +50,7 @@ title: Cloud provider - Vsphere
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
-  * `instanceClass` — частичное содержимое полей [VsphereInstanceClass](/modules/030-cloud-provider-vsphere/#vsphereinstanceclass-custom-resource). Обязательными параметрами являются `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  Параметры, обозначенные **жирным** шрифтом уникальны для `VsphereClusterConfiguration`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [VsphereInstanceClass]({{"/modules/030-cloud-provider-vsphere/#vsphereinstanceclass-custom-resource" | true_relative_url }} ). Обязательными параметрами являются `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  Параметры, обозначенные **жирным** шрифтом уникальны для `VsphereClusterConfiguration`. Допустимые параметры:
     * `numCPUs`
     * `memory`
     * `template`

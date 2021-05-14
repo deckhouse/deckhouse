@@ -91,7 +91,7 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
 
-                    **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
                   items:
                     type: object
                     required:

@@ -287,7 +287,7 @@ spec:
 
 ## Настройка kube-apiserver
 
-Для работы модулей dashboard и kubeconfig-generator в кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](/modules/160-control-plane-configurator/).
+Для работы модулей dashboard и kubeconfig-generator в кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](../../modules/160-control-plane-configurator/).
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 

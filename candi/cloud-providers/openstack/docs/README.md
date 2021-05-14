@@ -36,7 +36,7 @@ title: "Cloud provider — Openstack: Развертывание"
 * `provider` — передаются [параметры подключения]((/candi/cloud-providers/openstack/docs#credentials-%D0%B4%D0%BB%D1%8F-%D0%B7%D0%B0%D0%BF%D0%BE%D0%BB%D0%BD%D0%B5%D0%BD%D0%B8%D1%8F-provider)) к api openstack, они совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#параметры).
 * `masterNodeGroup` — спецификация для описания NG мастера.
   * `replicas` — сколько мастер-узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass]({{"/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass" | true_relative_url }} ). Обязательными параметрами являются `flavorName`, `imageName`. Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`
@@ -56,7 +56,7 @@ title: "Cloud provider — Openstack: Развертывание"
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`, `mainNetwork`. Параметры, обозначенные **жирным** шрифтом уникальны для `OpenStackClusterConfiguration`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass]({{"/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass" | true_relative_url }} ). Обязательными параметрами являются `flavorName`, `imageName`, `mainNetwork`. Параметры, обозначенные **жирным** шрифтом уникальны для `OpenStackClusterConfiguration`. Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`

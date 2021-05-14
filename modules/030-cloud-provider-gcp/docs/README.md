@@ -2,7 +2,7 @@
 title: "Сloud provider — GCP"
 ---
 
-The `cloud-provider-gcp` module is responsible for interacting with the [Google](https://cloud.google.com/) cloud resources. It allows the [node manager](/modules/040-node-manager) module of the candi subsystem to use GCP resources for provisioning nodes for the specified [node group](/modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-gcp` module is responsible for interacting with the [Google](https://cloud.google.com/) cloud resources. It allows the [node manager](../../modules/040-node-manager/) module of the candi subsystem to use GCP resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
 
 The `cloud-provider-gcp` module:
 - Manages GCP resources using the `cloud-controller-manager` (CCM) module:
@@ -10,5 +10,5 @@ The `cloud-provider-gcp` module:
     * The CCM module creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type;
     * The CCM module updates the metadata of the cluster nodes according to the configuration parameters defined in candi and deletes nodes that are no longer in GCP;
 - Provisions disks in GCP using the `CSI storage` component;
-- Enables the necessary CNI plugin (using the [simple bridge](/modules/035-cni-simple-bridge/));
-- Registers with the [node-manager](/modules/040-node-manager/) module so that [GCPInstanceClasses](cr.html#gcpinstanceclass) can be used when creating the [NodeGroup](/modules/040-node-manager/cr.html#nodegroup).
+- Enables the necessary CNI plugin (using the [simple bridge](../../modules/035-cni-simple-bridge/));
+- Registers with the [node-manager](../../modules/040-node-manager/) module so that [GCPInstanceClasses](cr.html#gcpinstanceclass) can be used when creating the [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).

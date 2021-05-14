@@ -171,99 +171,99 @@ You can use the following arguments for defining authorization rules:
 
 ## Federation and multicluster
 
-Поддерживается две схемы межкластерного взаимодействия:
+The module suppoert two deployment models:
 
-* федерация
-* мультикластер
+* federation
+* multicluster
 
-Принципиальные отличия:
-* Федерация объединяет суверенные кластеры:
-  * у каждого кластера собственное пространство имён (для Namespace, Service и пр.),
-  * у каждого кластера собственная сетевая инфраструктура и произвольные адресные диапазоны (podSubnetCIDR и serviceSubnetCIDR),
-  * доступ к отдельным сервисам между кластерами явно обозначен.
-* Мультикластер объединяет созависимые кластеры:
-  * сетевая связность между кластерами плоская — поды разных кластеров имеют взаимный прямой доступ,
-  * пространство имён у кластеров общее — каждый сервис доступен для соседних кластеров так, словно он работает на локальном кластере (если это не запрещают правила авторизации).
+Here are some of their principal differences:
+* Federation combines several independent clusters:
+  * each cluster has its own naming space (for Namespace, Service, etc.),
+  * each cluster has its own network infrastructure and independent address ranges (podSubnetCIDR & serviceSubnetCIDR),
+  * services are exposed explicitly.
+* Multicluster combines several dependent clusters:
+  * all clusters use the shared "flat" network — IP addresses for all pods and services in all clusters are directly routable,
+  * all clusters share the single namespace — for any cluster, any service looks like if it is running locally (unless prohibited by the authorization rules).
 
-### Федерация
-#### Общие принципы
+### Federation
+#### Before you begin
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQj76KcY7cqhX_cHscCXdPqzrZk_nip-5vvEeRpB_1A9AXjc64uMq6uEhILn5iw8aUbLQERx1jV1yfp/pub?w=1087&h=626)
 <!--- Исходник: https://docs.google.com/drawings/d/1VQ4yZl_39j2WSi7Iif5jn-ItWkjD3_W8uqNPULqEz4A/edit --->
 
-* Федерация требует установления взаимного доверия между кластерами. Соответственно, для установления федерации, нужно в кластере A сделать кластер Б доверенным, и в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
-* Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Чтобы опубликовать сервис bar из кластера Б в кластере А, необходимо в кластере А создать ресурс ServiceEntry, который определяет публичный адрес ingress-gateway кластера Б.
+* Federation requires establishing mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. Technically, this is achieved by exchanging root certificates.
+* You also need to share information about public services to use federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
-#### Включение федерации
+#### Enabling federation
 
-При включении федерации (параметр модуля `istio.federation.enabled = true`) происходит следующее:
-* В кластер добавляется сервис ingressgateway, чья задача проксировать mTLS-трафик извне кластера на прикладные сервисы.
-* В кластер добавляется сервис, который экспортит метаданные кластера наружу:
-  * корневой сертификат Istio (доступен без аутентификации),
-  * список публичных сервисов в кластере (доступен только для аутентифицированных запросов из соседних кластеров),
-  * список публичных адресов сервиса ingressgateway (доступен только для аутентифицированных запросов из соседних кластеров).
+Enabling federation (via the `istio.federation.enabled = true` module parameter) results in the following activities:
+* The ingressgateway service is added to the cluster. Its task is to proxy mTLS traffic coming from outside of the cluster to application services.
+* A service gets added to the cluster for exporting the cluster metadata to the outside:
+  * the Istio root certificate (no authentication required),
+  * the list of public services in the cluster (available only for authenticated requests from neighboring clusters),
+  * the list of public addresses of the ingressgateway service. (available only for authenticated requests from neighboring clusters).
 
-#### Управление федерацией
+#### Managing federation
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vT9c5TGwE4MQHxO548h8nrZ8SicSXWNX9KlFl5RmD2BoDce1pnxWj9ZSxZUydOa-9Z7kJMt8WLsdjgZ/pub?w=1393&h=937)
 <!--- Исходник: https://docs.google.com/drawings/d/1qNyGLyPUFR2E6qLkDLnqN42sWZzPZ5u782NJJxe-7r8/edit --->
 
-Для автоматизации процесса федерации, в рамках deckhouse реализован специальный контроллер. Алгоритм установления доверия с следующий:
-* Доверяемый кластер (cluster-b):
-  * Местный контроллер собирает мета-информацию о кластере и (1) публикует её через стандартный Ingress:
-    * (1a) публичная часть корневого сертификата,
-    * (1b) список публичных сервисов в кластере (публичный сервис обозначается специальным лейблом `federation.istio.deckhouse.io/public-service=`),
-    * (1c) публичные адреса ingress-gateway.
-* Доверяющий кластер (cluster-a):
-  * Контроллер доверяющего кластера необходимо проинструктировать о доверяемом кластере с помощью специального ресурса IstioFederation (2), который описывает:
-    * (2a) доменный префикс удалённого кластера,
-    * (2b) URL, где доступна вся метаинформация об удалённом кластере (описание метаданных выше).
-  * Контроллер забирает (3) метаданные по URL и настраивает локальный Istio:
-    * (3a) добавляет удалённый публичный корневой сертификат в доверенные,
-    * (3b) для каждого публичного сервиса из удалённого кластера он создаёт соответствующий ресурс ServiceEntry, который содержит исчерпывающую информацию о координатах сервиса:
-      * hostname сервиса, который состоит из комбинации имени и namespace сервиса в удалённом кластере (3с), а также из доменного суффикса кластера (3d),
-      * (3e) публичный IP удалённого ingress-gateway.
+The dedicated deckhouse controller automates the federation management. An instance of this controller runs in each member cluster. The trusts algorithm works as follows:
+* The cluster to be trusted (cluster-b):
+  * The local controller collects meta information about the cluster and (1) shares it via the standard Ingress:
+    * (1a) the public part of the root certificate,
+    * (1b) the list of public services in the cluster (public service is identified via a special  `federation.istio.deckhouse.io/public-service=` label),
+    * (1c) public ingress-gateway addresses.
+* The cluster that trusts (cluster-a):
+  * A special IstioFederation (2) resource passes details of the b-cluster to the a-cluster's controller. This resource describes:
+    * (2a) the domain prefix of the remote cluster,
+    * (2b) the URL where all the meta information about the remote cluster is available (the description of the metadata above).
+  * The controller fetches (3) metadata available at the URL and configures the local Istio:
+    * (3a) it sets the remote public root certificate as trusted,
+    * (3b) for each public service in a remote cluster, it creates a corresponding ServiceEntry resource that contains detailed information about the service coordinates:
+      * its hostname - a combination of the name/namespace of the service in the remote cluster (3c) and the cluster's domain suffix (3d),
+      * (3e) the public IP address of the remote ingress-gateway.
 
-Для установления взаимного доверия, данный алгоритм необходимо реализовать в обе стороны. Соответственно, для построения полной федерации, необходимо:
-* В каждом кластере создать набор ресурсов IstioFederation, которые описывают все остальные кластеры.
-* Каждый ресурс, который считается публичным, необходимо пометить лейблом `federation.istio.deckhouse.io/public-service=`.
+This algorithm must be implemented in both directions to build mutual trust between clusters. Therefore, to implement a fully-fledged federation, you need to:
+* Create a set of IstioFederation resources in each cluster that describe all the other clusters.
+* Each public resource must be marked by a `federation.istio.deckhouse.io/public-service=` label.
 
-### Мультикластер
-#### Общие принципы
+### Multicluster
+#### Before you begin
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQj76KcY7cqhX_cHscCXdPqzrZk_nip-5vvEeRpB_1A9AXjc64uMq6uEhILn5iw8aUbLQERx1jV1yfp/pub?w=1087&h=626)
 <!--- Исходник: https://docs.google.com/drawings/d/1VQ4yZl_39j2WSi7Iif5jn-ItWkjD3_W8uqNPULqEz4A/edit --->
 
-* Мультикластер требует установления взаимного доверия между кластерами. Соответственно, для построения мультикластера, нужно в кластере A сделать кластер Б доверенным, и в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
-* Для сбора информации о соседних сервисах, Istio подключается напрямую к apiserver соседнего кластера. Данный модуль берёт на себя организацию соответствующего канала связи.
+* Multicluster requires establishing mutual trust between clusters. Thereby, to implement the multicluster model, you have to make sure that both clusters (say, A and B) trust each other. Technically, this is achieved by exchanging root certificates.
+* To collect information about neighboring services, Istio connects directly to the apiserver of the neighboring cluster. This module implements the corresponding communication channel.
 
-#### Включение мультикластера
+#### Enabling multicluster
 
-При включении мультикластера (параметр модуля `istio.multicluster.enabled = true`) происходит следующее:
-* В кластер добавляется прокси для публикации доступа к apiserver посредством стандартного Ingress:
-  * Доступ через данный публичный адрес ограничен корневыми сертификатами Istio доверенных кластеров. Клиентский сертфикат должен содержать Subject: CN=deckhouse.
-  * Непосредственно прокси имеет доступ на чтение к ограниченному набору ресурсов.
-* В кластер добавляется сервис, который экспортит метаданные кластера наружу:
-  * Корневой сертификат Istio (доступен без аутентификации),
-  * Публичный адрес, через который доступен apiserver (доступен только для аутентифицированных запросов из соседних кластеров).
+Enabling the multicluster mode (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
+* A proxy is added to the cluster to expose access to the apiserver using the standard Ingress:
+  * The Istio's root certificates of trusted clusters authorize access to this public address. The client's certificate must contain the Subject: CN=deckhouse line.
+  * The proxy itself can only access a limited set of resources.
+* The module add a service to the cluster that exports the cluster metadata:
+  * The Istio root certificate (no authentication required),
+  * The public address to connect to the apiserver (available only for authenticated requests from neighboring clusters).
 
-#### Управление мультикластером
+#### Managing multicluster
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTLsBzlI4m9g0BZL13XWHlhUtgSJp7TEEvUuvzYNd_7H-HGz1hSw3CbfC5OR5EyAKppD-g1wMWoeglT/pub?w=1393&h=937)
 <!--- Исходник: https://docs.google.com/drawings/d/1aF9BXxQFQpuCj_j3wmMdsVz8vuDOkvQQQ_8UsOmRaGo/edit --->
 
-Для автоматизации процесса сбора мультикластера, в рамках deckhouse реализован специальный контроллер. Алгоритм установления доверия с следующий:
-* Доверяемый кластер (cluster-b):
-  * Местный контроллер собирает мета-информацию о кластере и (1) публикует её через стандартный Ingress:
-    * (1a) публичная часть корневого сертификата,
-    * (1b) публичный адрес, через который доступен apiserver (доступ ограничен правами на чтение ограниченного набора ресурсов и открыт только для клиентов с сертификатом, который подписан корневым сертификатом Istio и с CN=deckhouse),
-* Доверяющий кластер (cluster-a):
-  * Контроллер доверяющего кластера необходимо проинструктировать о доверяемом кластере с помощью специального ресурса IstioMulticluster (2), который описывает:
-    * (2a) URL, где доступна вся метаинформация об удалённом кластере (описание метаданных выше).
-  * Контроллер забирает (3) метаданные по URL и настраивает локальный Istio:
-    * (3a) добавляет удалённый публичный корневой сертификат в доверенные,
-    * (3b) создаёт kubeconfig для подключения к удалённому кластеру через публичный aдрес.
-* После чего, доверяющий istiod знает, как достучаться до api соседнего кластера (4). Но доступ он получит только после того, как симметричный ресурс IstioMulticluster будет создан на стороне доверяемого кластера (5).
-* При взаимном доверии, сервисы общаются друг с другом напрямую (6).
-Для установления взаимного доверия, данный алгоритм необходимо реализовать в обе стороны. Соответственно, для сборки мультикластера, необходимо:
-* В каждом кластере создать набор ресурсов IstioMulticluster, которые описывают все остальные кластеры.
+The dedicated deskhouse controller automates the process of implementing a multicluster. The trust algorithm works as follows::
+* The cluster to be trusted (cluster-b):
+  * The local controller collects meta information about the cluster and (1) shares it via the standard Ingress:
+    * (1a) the public part of the root certificate,
+    * (1b) the public address of the apiserver (with a permission to read a limited set of resources; it is only available to clients with a certificate signed by the Istio root certificate (it must also contain the CN=deckhouse line)),
+* The cluster that trusts (cluster-a):
+  * A special IstioMulticluster (2) resource passes details of the cluster-b to the cluster-a's controller. This resource describes:
+    * (2a) the URL where all the meta information about the remote cluster is available (the description of the metadata above).
+  * The controller fetches (3) metadata available at the URL and configures the local Istio:
+    * (3a) it adds the remote public root certificate to the lisy of trusted certificates,
+    * (3b) it creates a kubeconfig to connect to the remote cluster using the public address.
+* Now, the isitod that trusts knows how to connect to the API of the neighboring cluster (4). But it will get access only after the similar IstioMulticluster resource is created on the side of the cluster to be trusted (5).
+* After mutual trust is established, services can connect to each other directly (6).
+The algorithm must be implemented on both sides to establish mutual trust.  Thus, to create a multicluster, you need to:
+* Create a set of IstioMulticluster resources in each cluster that describe all other clusters.

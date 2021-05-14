@@ -50,7 +50,7 @@ The `additionalSecurityGroups` field contains an array of strings with security 
 
 ### Enabling additional security groups on ephemeral nodes
 
-You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](/modules/030-cloud-provider-openstack/configuration.html) module.
+You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](../../modules/030-cloud-provider-openstack/configuration.html) module.
 
 ## How do I create a hybrid cluster?
 
@@ -59,13 +59,13 @@ A hybrid cluster combines bare-metal and openstack nodes. To create such a clust
 1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`;
 2. Enable and [configure](configuration.html#параметры) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
-4. Create one or more [NodeManager](/modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
+4. Create one or more [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
 
 **Caution!** Cloud-controller-manager synchronizes OpenStack and Kubernetes states by deleting in Kubernetes nodes that are not in OpenStack. In a hybrid cluster, such behavior does not always make sense. That is why cloud-controller-manager automatically skips Kubernetes nodes that do not have the `--cloud-provider=external` parameter (Deckhouse inserts `static://` into nodes in `.spec.providerID`, and cloud-controller-manager ignores them).
 
 ### Configuration parameters
 
-> **Note (!)** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `OpenStackInstanceClass` parameters are changed. You can learn more in the [node-manager](/modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration). module's documentation.
+> **Note (!)** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `OpenStackInstanceClass` parameters are changed. You can learn more in the [node-manager](../../modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration). module's documentation.
 To authenticate using the `user-authn` module, you need to create a new `Generic` application in the project's Crowd.
 
 * `connection` — this section contains parameters required to connect to the cloud provider's API;

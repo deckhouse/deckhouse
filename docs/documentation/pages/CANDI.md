@@ -26,7 +26,7 @@ permalink: en/features/candi.html
 - на виртуальных машинах или железе (включая on-premises)
 - в гибридной инфраструктуре.
 
-Для этого, подсистема CandI автоматически настраивает и управляет как [узлами кластера](/modules/040-node-manager/), так и его [control-plane](/modules/040-control-plane-manager/), постоянно поддерживая их актуальную конфигурацию (используя инструменты Terraform).
+Для этого, подсистема CandI автоматически настраивает и управляет как [узлами кластера]({{"/modules/040-node-manager/" | true_relative_url }} ), так и его [control-plane]({{"/modules/040-control-plane-manager/" | true_relative_url }} ), постоянно поддерживая их актуальную конфигурацию (используя инструменты Terraform).
 
 Подсистема candi позволяет легко выполнять такие нетривиальные операции с control-plane и узлами кластера, как:
 - миграция между single-master и multi-master схемами
