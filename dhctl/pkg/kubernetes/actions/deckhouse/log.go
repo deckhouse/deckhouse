@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,23 +15,59 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var (
 	ErrListPods      = errors.New("No Deckhouse pod found.")
 	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed = errors.New("Request failed. Probably pod doesn't exist anymore.")
+	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
 )
 
 type logLine struct {
-	Module    string `json:"module,omitempty"`
-	Level     string `json:"level,omitempty"`
-	Output    string `json:"output,omitempty"`
-	Message   string `json:"msg,omitempty"`
-	Component string `json:"operator.component,omitempty"`
+	Module    string    `json:"module,omitempty"`
+	Level     string    `json:"level,omitempty"`
+	Output    string    `json:"output,omitempty"`
+	Message   string    `json:"msg,omitempty"`
+	Component string    `json:"operator.component,omitempty"`
+	TaskID    string    `json:"task.id,omitempty"`
+	Source    string    `json:"source,omitempty"`
+	Time      time.Time `json:"time,omitempty"`
 }
 
-func printLogsByLine(content []byte) {
+func (l *logLine) String() string {
+	return fmt.Sprintf("\t%s/%s: %s\n", l.Module, l.Component, l.Message)
+}
+func (l *logLine) StringWithLogLevel() string {
+	return fmt.Sprintf("\t%s/%s: [%s] %s\n", l.Module, l.Component, l.Level, l.Message)
+}
+
+func isErrorLine(line *logLine) bool {
+	if line.Level == "error" {
+		badSubStrings := []string{
+			"Client.Timeout exceeded while awaiting headers",
+		}
+		for _, p := range badSubStrings {
+			if strings.Contains(line.Message, p) {
+				return false
+			}
+		}
+		return true
+	}
+
+	if line.Output == "stderr" {
+		// skip tiller output
+		if line.Component == "tiller" {
+			return false
+		}
+
+		return false
+	}
+
+	return false
+}
+
+func parseLogByLine(content []byte, action func(line *logLine) bool) {
 	reader := bufio.NewReader(bytes.NewReader(content))
 	for {
 		l, _, err := reader.ReadLine()
@@ -42,21 +79,95 @@ func printLogsByLine(content []byte) {
 			continue
 		}
 
-		if line.Level == "error" || (line.Output == "stderr" && line.Component != "tiller") {
-			log.ErrorF("\t%s\n", line.Message)
-			continue
+		cont := action(&line)
+		if !cont {
+			break
+		}
+	}
+}
+
+func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) {
+	if taskID == "" {
+		return
+	}
+
+	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(100)}
+	if !d.lastErrorTime.IsZero() {
+		t := metav1.NewTime(d.lastErrorTime)
+		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &t}
+	}
+
+	var result []byte
+
+	var lastErr error
+	err := retry.StartSilentLoop("getting logs for error", 2, 1, func() error {
+		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
+		result, lastErr = request.DoRaw()
+		if lastErr != nil {
+			return ErrRequestFailed
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.DebugLn(lastErr)
+		return
+	}
+
+	parseLogByLine(result, func(line *logLine) bool {
+		if line.TaskID == "" || line.TaskID != taskID {
+			return true
+		}
+
+		if line.Source == "klog" {
+			return true
+		}
+
+		if line.Time.IsZero() {
+			return true
+		}
+
+		if line.Time.After(errorTaskTime) {
+			return false
+		}
+
+		if !d.lastErrorTime.IsZero() && line.Time.Equal(d.lastErrorTime) {
+			return true
+		}
+
+		if line.Level == "error" || line.Output == "stderr" {
+			log.ErrorF(line.String())
+		}
+		return true
+	})
+
+	d.lastErrorTime = errorTaskTime
+}
+
+func (d *LogPrinter) printLogsByLine(content []byte) {
+	parseLogByLine(content, func(line *logLine) bool {
+		if isErrorLine(line) {
+			d.printErrorsForTask(line.TaskID, line.Time)
+			return true
 		}
 
 		// TODO use module.state label
 		if line.Message == "Module run success" || line.Message == "ModuleRun success, module is ready" {
 			log.InfoF("\tModule %q run successfully\n", line.Module)
-			continue
+			return true
 		}
 
-		if line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
+		if !d.stopOutputNoMoreConvergeTasks && line.Message == "Queue 'main' contains 0 converge tasks after handle 'ModuleHookRun'" {
 			log.InfoLn("No more converge tasks found in Deckhouse queue.")
+			d.stopOutputNoMoreConvergeTasks = true
+			return true
 		}
-	}
+
+		// let it be in debug
+		log.DebugF(line.StringWithLogLevel())
+		return true
+	})
 }
 
 type LogPrinter struct {
@@ -64,6 +175,10 @@ type LogPrinter struct {
 
 	deckhousePod       *corev1.Pod
 	waitPodBecomeReady bool
+
+	lastErrorTime time.Time
+
+	stopOutputNoMoreConvergeTasks bool
 }
 
 func NewLogPrinter(kubeCl *client.KubernetesClient) *LogPrinter {
@@ -141,7 +256,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 				return false, ErrRequestFailed
 			}
 
-			printLogsByLine(result)
+			d.printLogsByLine(result)
 			ready, err := d.checkDeckhousePodReady()
 			if err != nil {
 				return false, err
