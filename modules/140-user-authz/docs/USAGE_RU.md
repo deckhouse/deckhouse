@@ -57,8 +57,8 @@ spec:
 	spec:
 	 subjects:
 	 - kind: ServiceAccount
-		 name: gitlab-runner-deploy
-		 namespace: d8-service-accounts
+	   name: gitlab-runner-deploy
+	   namespace: d8-service-accounts
 	 accessLevel: SuperAdmin
 	 allowAccessToSystemNamespaces: true   # Опция доступна только при enableMultiTenancy (доступно только в версии Enterprise Edition)
 	EOF
