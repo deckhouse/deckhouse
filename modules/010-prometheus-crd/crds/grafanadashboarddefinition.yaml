@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Ресурс хранения и управления Dashboard в Grafana. [Подробнее](https://early.deckhouse.io/modules/300-prometheus/grafana_dashboard_development.html).
+            Ресурс хранения и управления Dashboard в Grafana. [Подробнее](https://early.deckhouse.io/en/documentation/v1/modules/300-prometheus/grafana_dashboard_development.html).
           required:
             - spec
           properties:

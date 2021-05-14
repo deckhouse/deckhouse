@@ -28,7 +28,7 @@ title: "Cloud provider — Azure: Развертывание"
         * Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
             * `az vm list-skus -l westeurope -o table`
         * Значение по умолчанию `[1,2,3]`
-    * `instanceClass` — частичное содержимое полей [AzureInstanceClass](/modules/030-cloud-provider-azure/docs#azureinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `AzureClusterConfiguration`. Допустимые параметры:
+    * `instanceClass` — частичное содержимое полей [AzureInstanceClass]({{"/modules/030-cloud-provider-azure/docs#azureinstanceclass-custom-resource" | true_relative_url }} ).  Параметры, обозначенные **жирным** шрифтом уникальны для `AzureClusterConfiguration`. Допустимые параметры:
         * `machineSize`
         * `diskSizeGb`
         * `urn`
@@ -43,7 +43,7 @@ title: "Cloud provider — Azure: Развертывание"
         * Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
             * `az vm list-skus -l westeurope -o table`
         * Значение по умолчанию `[1,2,3]`
-    * `instanceClass` — частичное содержимое полей [AzureInstanceClass](/modules/030-cloud-provider-azure/docs#azureinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `AzureClusterConfiguration`. Допустимые параметры:
+    * `instanceClass` — частичное содержимое полей [AzureInstanceClass]({{"/modules/030-cloud-provider-azure/docs#azureinstanceclass-custom-resource" | true_relative_url }} ).  Параметры, обозначенные **жирным** шрифтом уникальны для `AzureClusterConfiguration`. Допустимые параметры:
         * `machineSize`
         * `diskSizeGb`
         * `urn`

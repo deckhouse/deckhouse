@@ -32,7 +32,7 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 ## Архитектура Vertical Pod Autoscaler
 
 VPA состоит из 3х компонентов:
-- `Recommender` — он мониторит настоящее (делая запросы в [Metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), который реализован в модуле [`prometheus-metrics-adapter`](/modules/301-prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в Trickster перед Prometheus) и предоставляет рекомендации по CPU и memory для контейнеров.
+- `Recommender` — он мониторит настоящее (делая запросы в [Metrics API](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/instrumentation/resource-metrics-api.md), который реализован в модуле [`prometheus-metrics-adapter`](../../modules/301-prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в Trickster перед Prometheus) и предоставляет рекомендации по CPU и memory для контейнеров.
 - `Updater` — Проверяет, что у подов с VPA выставлены корректные ресурсы и если нет, — убивает эти поды, чтобы контроллер пересоздал поды с новыми resource requests.
 - `Admission Plugin` — Он задает resource requests при создании новых подов (контроллером или из-за активности Updater'а).
 

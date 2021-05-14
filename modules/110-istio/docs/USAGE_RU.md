@@ -177,7 +177,7 @@ spec:
 ## Ingress
 
 Для работы с Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](/modules/402-ingress-nginx). Данный контроллер сможет обслуживать толко Istio-окружение!
+* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/). Данный контроллер сможет обслуживать толко Istio-окружение!
 * Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — таким образом ingress-контроллер будет отправлять запросы на единственный ClusterIP, работу по балансировке будет делать envoy.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc.cluster.local` — Istio не парсит host из Ingress, с данной аннотацией envoy сможет идентифицировать прикладной сервис. Другой подход — создавать `VirtualService` с публичным FQDN.

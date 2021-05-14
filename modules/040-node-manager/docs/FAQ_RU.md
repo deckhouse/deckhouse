@@ -138,7 +138,7 @@ Status:
 | disruptions                   | -                    | -             | -               |
 | cloudInstances.classReference | -                    | +             | -               |
 
-Подробно о всех параметрах можно прочитать в описании custom resource [NodeGroup](/modules/040-node-manager/cr.html#nodegroup)
+Подробно о всех параметрах можно прочитать в описании custom resource [NodeGroup]({{ "/modules/040-node-manager/cr.html#nodegroup" | true_relative_url }})
 
 В случае изменения параметра `instancePrefix` в конфигурации deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит.
 

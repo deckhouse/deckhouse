@@ -4,16 +4,16 @@ title: "Сloud provider — GCP: настройки"
 
 Модуль настраивается автоматически исходя из выбранной схемы размещения (custom resource `GCPClusterConfiguration`). В большинстве случаев нет необходимости ручной конфигурации модуля.
 
-Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](/modules/040-node-manager/cr.html#nodegroup) модуля node-manager, в котором также указывается название используемого для этой группы узлов instance-класса (параметр `cloudInstances.classReference` NodeGroup).  Instance-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля node-manager, в котором также указывается название используемого для этой группы узлов instance-класса (параметр `cloudInstances.classReference` NodeGroup).  Instance-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
 ## Параметры
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `GCPInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/faq.html#как-перекатить-эфемерные-машины-в-облаке-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `GCPInstanceClass`. См. подробнее в документации модуля [node-manager](../../modules/040-node-manager/faq.html#как-перекатить-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
 * `networkName` — имя VPC network в GCP, где будут заказываться instances.
 * `subnetworkName` — имя subnet в VPC network `networkName`, где будут заказываться instances.
 * `region` — имя GCP региона, в котором будут заказываться instances.
-* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по умолчанию для поля zones в [NodeGroup](/modules/040-node-manager/cr.html#nodegroup) объекте.
+* `zones` — Список зон из `region`, где будут заказываться instances. Является значением по умолчанию для поля zones в [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup) объекте.
     * Формат — массив строк.
 * `extraInstanceTags` — Список дополнительных GCP tags, которые будут установлены на заказанные instances. Позволяют прикрепить к создаваемым instances различные firewall правила в GCP.
     * Формат — массив строк.

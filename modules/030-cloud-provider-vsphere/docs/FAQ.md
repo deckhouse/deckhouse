@@ -13,7 +13,7 @@ A hybrid cluster combines bare-metal and vSphere nodes. To create such a cluster
 
 ### Configuration parameters
 
-**Note** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Re-deployment is only performed when `NodeGroup` and `VsphereInstanceClass` are changed. You can learn more in the [node-manager module's documentation](/modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
+**Note** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Re-deployment is only performed when `NodeGroup` and `VsphereInstanceClass` are changed. You can learn more in the [node-manager module's documentation](../../modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
 
 * `host` — the domain of the vCenter server;
 * `username` — the login ID;

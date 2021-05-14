@@ -4,7 +4,7 @@ title: "Сloud provider — Yandex.Cloud: configuration"
 
 ## Parameters
 
-> **Note** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `YandexInstanceClass` are changed. You can learn more in the [node-manager module's documentation](/modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
+> **Note** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `YandexInstanceClass` are changed. You can learn more in the [node-manager module's documentation](../../modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
 
 * `additionalExternalNetworkIDs` — a list of Network IDs that will be considered `ExternalIP` when listing Node addresses;
   * Format — an array of strings;

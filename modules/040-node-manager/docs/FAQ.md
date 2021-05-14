@@ -138,7 +138,7 @@ Then put the node under the control of `node-manager`.
 | disruptions                   | -                    | -             | -               |
 | cloudInstances.classReference | -                    | +             | -               |
 
-Refer to the description of the [NodeGroup](/modules/040-node-manager/cr.html#nodegroup) custom resource for more information about the parameters.
+Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource for more information about the parameters.
 
 Changing the `instancePrefix` parameter in the deckhouse configuration won't result in a `RollingUpdate`. Deckhouse will create new `MachineDeployment`s and delete the old ones.
 

@@ -20,7 +20,7 @@ title: "Cloud provider — GCP: Развертывание"
 * `masterNodeGroup` — спецификация для описания NodeGroup мастера.
     * `replicas` — сколько мастер-узлов создать.
     * `zones` — список зон, в которых допустимо создавать мастер-узлы.
-    * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
+    * `instanceClass` — частичное содержимое полей [GCPInstanceClass]({{"/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource" | true_relative_url }} ).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
         * `machineType`
         * `image`
         * `diskSizeGb`
@@ -33,7 +33,7 @@ title: "Cloud provider — GCP: Развертывание"
     * `name` — имя NodeGroup, будет использоваться для генерации имен нод.
     * `replicas` — количество нод.
     * `zones` — список зон, в которых допустимо создавать статичные-узлы.
-    * `instanceClass` — частичное содержимое полей [GCPInstanceClass](/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
+    * `instanceClass` — частичное содержимое полей [GCPInstanceClass]({{"/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource" | true_relative_url }} ).  Параметры, обозначенные **жирным** шрифтом уникальны для `GCPClusterConfiguration`. Допустимые параметры:
         * `machineType`
         * `image`
         * `diskSizeGb`

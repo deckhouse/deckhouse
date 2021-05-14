@@ -17,7 +17,7 @@ title: "Cloud provider — Yandex: Развертывание"
 * `masterNodeGroup` — спецификация для описания NodeGroup мастера.
   * `replicas` — сколько мастер-узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
-  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`.  Параметры, обозначенные **жирным** шрифтом уникальны для `YandexClusterConfiguration`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [YandexInstanceClass]({{"/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource" | true_relative_url }} ). Обязательными параметрами являются `cores`, `memory`, `imageID`.  Параметры, обозначенные **жирным** шрифтом уникальны для `YandexClusterConfiguration`. Допустимые параметры:
     * `cores`
     * `memory`
     * `imageID`
@@ -30,7 +30,7 @@ title: "Cloud provider — Yandex: Развертывание"
   * `name` — имя NodeGroup, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
-  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource). Обязательными параметрами являются `cores`, `memory`, `imageID`.  Параметры, обозначенные **жирным** шрифтом уникальны для `YandexClusterConfiguration`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [YandexInstanceClass]({{"/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource" | true_relative_url }} ). Обязательными параметрами являются `cores`, `memory`, `imageID`.  Параметры, обозначенные **жирным** шрифтом уникальны для `YandexClusterConfiguration`. Допустимые параметры:
     * `cores`
     * `memory`
     * `imageID`
@@ -306,7 +306,7 @@ reserved: true
 
 ## Проблемы dhcpOptions и пути их решения
 
-Использование в настройках DHCP серверов DNS, отличающихся от предоставляемых yandex облаком, является временным решением, пока Yandex.Cloud не введёт Managed DNS услугу. Чтобы обойти ограничения, описанные ниже, рекомендуется использовать `stubZones` из модуля [`kube-dns`](/modules/042-kube-dns/)
+Использование в настройках DHCP серверов DNS, отличающихся от предоставляемых yandex облаком, является временным решением, пока Yandex.Cloud не введёт Managed DNS услугу. Чтобы обойти ограничения, описанные ниже, рекомендуется использовать `stubZones` из модуля [`kube-dns`]({{"/modules/042-kube-dns/" | true_relative_url }} )
 
 ### Изменение параметров
 

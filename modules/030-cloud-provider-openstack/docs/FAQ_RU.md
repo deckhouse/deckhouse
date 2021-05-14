@@ -54,7 +54,7 @@ security groups указываются в `OpenStackClusterConfiguration`:
 ### Установка дополнительных security groups на эфемерных нодах
 
 Необходимо прописать параметр `additionalSecurityGroups` для всех OpenStackInstanceClass в кластере, которым нужны дополнительные
-security groups. Смотри [параметры модуля cloud-provider-openstack](/modules/030-cloud-provider-openstack/configuration.html).
+security groups. Смотри [параметры модуля cloud-provider-openstack](../../modules/030-cloud-provider-openstack/configuration.html).
 
 ## Как поднять гибридный кластер?
 
@@ -64,13 +64,13 @@ Hybrid кластер представляет собой объединённы
 1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`;
 2. Включите и [настройте](configuration.html#параметры) модуль.
 3. Создайте один или несколько custom resource [OpenStackInstanceClass](cr.html#openstackinstanceclass).
-4. Создайте один или несколько custom resource [NodeManager](/modules/040-node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
+4. Создайте один или несколько custom resource [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
 
 **Важно!** Cloud-controller-manager синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому если узел Kubernetes запущен не с параметром `--cloud-provider=external`, то он автоматически игнорируется (Deckhouse прописывает `static://` в ноды в в `.spec.providerID`, а cloud-controller-manager такие узлы игнорирует).
 
 ### Параметры конфигурации
 
-> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`. См. подробнее в документации модуля [node-manager](/modules/040-node-manager/faq.html#как-перекатить-эфемерные-машины-в-облаке-с-новой-конфигурацией).
+> **Внимание!** При изменении конфигурационных параметров приведенных в этой секции (параметров, указываемых в ConfigMap deckhouse) **перекат существующих Machines НЕ производится** (новые Machines будут создаваться с новыми параметрами). Перекат происходит только при изменении параметров `NodeGroup` и `OpenStackInstanceClass`. См. подробнее в документации модуля [node-manager](../../modules/040-node-manager/faq.html#как-перекатить-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 Для настройки аутентификации с помощью модуля `user-authn` необходимо в Crowd'е проекта создать новое `Generic` приложение.
 
 * `connection` - Параметры подключения к api cloud provider'a

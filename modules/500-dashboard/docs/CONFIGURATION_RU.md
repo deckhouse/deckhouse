@@ -7,7 +7,7 @@ title: "Модуль dashboard: настройки"
 ## Параметры
 * `ingressClass` — класс ingress контроллера, который используется для dashboard.
     * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
-* `accessLevel` — уровень доступа в dashboard при отсутствии внешней аутентификации `externalAuthentication`. Возможные значения описаны в [user-authz](/modules/140-user-authz/).
+* `accessLevel` — уровень доступа в dashboard при отсутствии внешней аутентификации `externalAuthentication`. Возможные значения описаны в [user-authz](../../modules/140-user-authz/).
     * По умолчанию: `User`.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
