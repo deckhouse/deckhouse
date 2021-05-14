@@ -3,7 +3,6 @@ package hooks
 import (
 	"fmt"
 
-	"github.com/chr4/pwgen"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -11,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
+	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
 type DexClient struct {

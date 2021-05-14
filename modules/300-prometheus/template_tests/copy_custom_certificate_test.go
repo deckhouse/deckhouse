@@ -39,9 +39,15 @@ discovery:
     master: 1
 `
 const customCertificatePresent = `
+auth: {}
+vpa: {}
+grafana: {}
 https:
   mode: CustomCertificate
 internal:
+  vpa: {}
+  prometheusMain: {}
+  grafana: {}
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY

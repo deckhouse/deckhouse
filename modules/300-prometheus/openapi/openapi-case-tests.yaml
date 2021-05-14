@@ -1,0 +1,21 @@
+positive:
+  values:
+    - internal:
+        prometheusLongterm:
+          retentionGigabytes: 25
+    - internal:
+        prometheusAPIClientTLS:
+          certificate: somecertstring
+          key: somekeystring
+          certificate_updated: false
+    - internal:
+        prometheusAPIClientTLS:
+          certificate: somecertstring
+          key: somekeystring
+          certificate_updated: true
+negative:
+  values:
+    - internal:
+      vpa:
+        maxCPU: "123Hz"
+        maxMemory: "3445J"
