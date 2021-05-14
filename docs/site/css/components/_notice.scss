@@ -1,0 +1,54 @@
+@import "components/common/_variables.scss";
+
+.notice {
+    background: $color-main;
+    color: $color-inverse;
+    line-height: 1.5;
+    padding: 15px;
+    position: relative;
+    &__content {
+        &_collapsed {
+            text-align: center;
+        }
+    }
+    &__collapse, &__expand {
+        display: block;
+        width: 10px;
+        height: 10px;
+        background: url(../images/icons/dropdown_white.svg);
+        background-repeat: no-repeat;
+        background-size: contain;
+        position: absolute;
+        left: 50%;
+        bottom: 3px;
+        margin-left: -5px;
+    }
+    &__collapse {
+        transform: rotate(180deg);
+    }
+    &[data-state=collapsed] {
+        .notice__collapse, .notice__content_expanded {
+            display: none;
+        }
+    }
+    &[data-state=expanded] {
+        .notice__expand, .notice__content_collapsed {
+            display: none;
+        }
+    }
+    &__columns {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+        div {
+            width: 47.5%;
+        }
+    }
+    a {
+        color: $color-inverse;
+        &:hover {
+            text-decoration: none;
+        }
+    }
+}

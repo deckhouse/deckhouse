@@ -1,9 +1,15 @@
 @import "components/common/_variables.scss";
 
-.header {
+.header-container {
     position: sticky;
     top: 0px;
     z-index: 100;
+}
+
+.header {
+    // position: sticky;
+    // top: 0px;
+    // z-index: 100;
     background: $color-inverse;
     box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.15);
     &__logo {

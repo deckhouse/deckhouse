@@ -63,3 +63,26 @@ $(function() {
         }
     });
 });
+
+$(document).ready(function() {
+    var $notice = $('#notice');
+    var $notice_collapse = $('#notice-collapse');
+    var $notice_expand = $('#notice-expand');
+    var notice_state = localStorage.getItem('notice-state') || 'expanded';
+
+    function switchNotice(state) {
+        $notice.attr('data-state', state);
+        localStorage.setItem('notice-state', state);
+    }
+
+    switchNotice(notice_state);
+
+    $notice_collapse.on('click', (e) => {
+        e.preventDefault();
+        switchNotice('collapsed');
+    })
+    $notice_expand.on('click', (e) => {
+        e.preventDefault();
+        switchNotice('expanded')
+    })
+});
