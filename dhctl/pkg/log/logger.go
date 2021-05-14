@@ -97,7 +97,9 @@ func NewPrettyLogger() *PrettyLogger {
 	logboek.SetLevel(logboek.Info)
 	logboek.SetWidth(logboek.DefaultWidth)
 	// Adds fixed width ↵ , but breaks copy-pasta and tabs
-	// logboek.EnableFitMode()
+	if !app.IsDebug {
+		logboek.EnableFitMode()
+	}
 
 	return &PrettyLogger{
 		processTitles: map[string]styleEntry{
@@ -155,12 +157,12 @@ func (d *PrettyLogger) LogFail(l string) {
 }
 
 func (d *PrettyLogger) LogWarnLn(a ...interface{}) {
-	a = append([]interface{}{"❗❗ "}, a...)
+	a = append([]interface{}{"‼️  "}, a...)
 	d.LogInfoLn(color.New(color.Bold, color.FgHiWhite).Sprint(a...))
 }
 
 func (d *PrettyLogger) LogWarnF(format string, a ...interface{}) {
-	line := color.New(color.Bold, color.FgHiWhite).Sprintf("❗❗ "+format, a...)
+	line := color.New(color.Bold, color.FgHiWhite).Sprintf("‼️  "+format, a...)
 	d.LogInfoF(line)
 }
 

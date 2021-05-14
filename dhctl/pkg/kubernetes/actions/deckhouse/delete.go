@@ -167,8 +167,12 @@ func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 			return nil
 		}
 
+		errStr := "Deckhouse Deployment and its dependents are not removed from the cluster yet"
+		if err != nil {
+			errStr = fmt.Sprintf("Error during waiting, err: %v", err)
+		}
 		//goland:noinspection GoErrorStringFormat
-		return fmt.Errorf("Deckhouse Deployment and its dependents are not removed from the cluster yet, err: %v", err)
+		return fmt.Errorf(errStr)
 	})
 }
 

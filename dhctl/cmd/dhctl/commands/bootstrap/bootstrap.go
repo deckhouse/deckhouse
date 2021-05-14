@@ -41,10 +41,7 @@ const cacheMessage = `Create cache %s:
 const versionMap = "/deckhouse/candi/version_map.yml"
 
 func printBanner() {
-	_ = log.Process("bootstrap", "Banner", func() error {
-		log.InfoLn(banner)
-		return nil
-	})
+	log.InfoLn(banner)
 }
 
 func generateClusterUUID() (string, error) {
