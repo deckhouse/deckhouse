@@ -124,6 +124,31 @@ Stage Doc Deploy :
     url: https://deckhouse.stage.flant.com
   when: manual
 
+EARLY Main Deploy:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_DIR: "docs/site"
+    WERF_RELEASE: "deckhouse-site"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+  environment:
+    name: web-early
+    url: https://early.deckhouse.io
+  when: manual
+
+EARLY Doc Deploy :
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_DIR: "docs/documentation"
+    WERF_RELEASE: "deckhouse-doc"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+  environment:
+    name: web-early
+    url: https://early.deckhouse.io
+  when: manual
+
 Web cleanup:
   stage: cleanup_registry
   variables:
