@@ -1,0 +1,228 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      vpa:
+        type: object
+        default: {}
+        x-examples:
+          - longtermMaxCPU: "220"
+            longtermMaxMemory: "1650Mi"
+            maxCPU: "6600m"
+            maxMemory: "4950Mi"
+          - {}
+        properties:
+          maxCPU:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+m?$"
+              - type: number
+            x-examples: ["100m"]
+          maxMemory:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+              - type: number
+            x-examples: ["500Mi"]
+          longtermMaxCPU:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+m?$"
+              - type: number
+            x-examples: ["220", 2.24, 0.1, "100m"]
+          longtermMaxMemory:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
+              - type: number
+            x-examples: ["1500Gi"]
+      prometheusMain:
+        type: object
+        default: {}
+        x-examples:
+          - effectiveStorageClass: "ceph-ssd"
+          - effectiveStorageClass: false
+        properties:
+          effectiveStorageClass:
+            oneOf:
+              - type: string
+              - type: boolean
+          retentionGigabytes:
+            type: integer
+          diskSizeGigabytes:
+            type: integer
+          diskUsage:
+            type: string
+      prometheusLongterm:
+        type: object
+        default: {}
+        x-examples:
+          - effectiveStorageClass: "ceph-ssd"
+            retentionGigabytes: 30
+        properties:
+          effectiveStorageClass:
+            oneOf:
+              - type: string
+              - type: boolean
+          retentionGigabytes:
+            type: integer
+          diskSizeGigabytes:
+            type: integer
+          diskUsage:
+            type: string
+      grafana:
+        type: object
+        default: {}
+        properties:
+          additionalDatasources:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                access:
+                  type: string
+                url:
+                  type: string
+                name:
+                  type: string
+                uuid:
+                  type: string
+                orgId:
+                  type: integer
+                editable:
+                  type: boolean
+                version:
+                  type: integer
+                isDefault:
+                  type: boolean
+        x-examples:
+          - additionalDatasources:
+              - type: graphite
+                access: proxy
+                url: /graphite-1
+                name: testtesttest
+                uuid: testtesttest
+                orgId: 1
+                editable: false
+                version: 1
+                isDefault: false
+      remoteWrite:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            url:
+              type: string
+            spec:
+              type: object
+              properties:
+                basicAuth:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    password:
+                      type: string
+                      format: password
+            writeRelabelConfigs:
+              type: object
+              default: {}
+              properties:
+                action:
+                  type: string
+                  default: "replace"
+                separator:
+                  type: string
+                  default: ";"
+                targetLabel:
+                  type: string
+                regex:
+                  type: string
+                  default: ".*"
+                modulus:
+                  type: integer
+                replacement:
+                  type: string
+                  default: "$1"
+                sourceLabels:
+                  type: array
+                  items:
+                    type: string
+        default: []
+        x-examples:
+          -
+            - name: test-remote-write
+              spec:
+                basicAuth:
+                  password: password
+                  username: username
+              url: https://test-victoriametrics.domain.com/api/v1/write
+              writeRelabelConfigs:
+                action: keep
+                regex: "prometheus_build_.*"
+                sourceLabels: [ "__name__" ]
+      alertmanagers:
+        type: object
+        default: {}
+        additionalProperties:
+          type: array
+        x-examples:
+          - main:
+              - name: mysvc1
+                namespace: myns1
+                pathPrefix: /myprefix/
+                port: 81
+              - name: mysvc2
+                namespace: myns1
+                pathPrefix: /myprefix/
+                port: test
+      customCertificateData:
+        type: object
+        default: {}
+        x-examples:
+          - tls.crt: plainstring
+            tls.key: plainstring
+        properties:
+          tls.key:
+            type: string
+          tls.crt:
+            type: string
+      deployDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      prometheusAPIClientTLS:
+        type: object
+        default: {}
+        x-examples:
+          - certificate: somestring
+            key: somestring
+            certificate_updated: false
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string
+          certificate_updated:
+            type: boolean
+      prometheusScraperTLS:
+        type: object
+        default: {}
+        x-examples:
+          - certificate: somestring
+            key: somestring
+            certificate_updated: false
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string
+          certificate_updated:
+            type: boolean

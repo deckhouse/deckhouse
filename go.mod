@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/blang/semver v3.5.0+incompatible
-	github.com/chr4/pwgen v1.1.0
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210505133200-f39811813bee // branch: master
