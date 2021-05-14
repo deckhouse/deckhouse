@@ -13,7 +13,7 @@ import (
 
 // objectIsNotListedChecker ensures object is not in the list anymore
 type objectIsNotListedChecker struct {
-	access    *k8s.Access
+	access    k8s.Access
 	namespace string
 	kind      string
 	listOpts  *metav1.ListOptions

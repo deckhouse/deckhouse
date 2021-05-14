@@ -9,7 +9,7 @@ import (
 
 // ControlPlaneAvailable is a checker constructor and configurator
 type ControlPlaneAvailable struct {
-	Access  *kubernetes.Access
+	Access  kubernetes.Access
 	Timeout time.Duration
 }
 
@@ -21,7 +21,7 @@ func (c ControlPlaneAvailable) Checker() check.Checker {
 // controlPlaneChecker checks the availability of API server. It reports Unknown status if cannot access the
 // API server. It is widely used as first step in other checkers.
 type controlPlaneChecker struct {
-	access *kubernetes.Access
+	access kubernetes.Access
 }
 
 func (c *controlPlaneChecker) Check() check.Error {

@@ -14,7 +14,7 @@ import (
 
 // NamespaceLifecycle is a checker constructor and configurator
 type NamespaceLifecycle struct {
-	Access                   *k8s.Access
+	Access                   k8s.Access
 	CreationTimeout          time.Duration
 	DeletionTimeout          time.Duration
 	GarbageCollectionTimeout time.Duration
@@ -30,7 +30,7 @@ func (c NamespaceLifecycle) Checker() check.Checker {
 }
 
 type namespaceLifeCycleChecker struct {
-	access          *k8s.Access
+	access          k8s.Access
 	creationTimeout time.Duration
 	deletionTimeout time.Duration
 
@@ -82,7 +82,7 @@ func (c *namespaceLifeCycleChecker) new(namespace *v1.Namespace) check.Checker {
 
 // namespaceCreationChecker creates namespace
 type namespaceCreationChecker struct {
-	access    *k8s.Access
+	access    k8s.Access
 	namespace *v1.Namespace
 }
 
@@ -101,7 +101,7 @@ func (c *namespaceCreationChecker) Check() check.Error {
 
 // namespaceDeletionChecker deletes namespace
 type namespaceDeletionChecker struct {
-	access    *k8s.Access
+	access    k8s.Access
 	namespace *v1.Namespace
 }
 

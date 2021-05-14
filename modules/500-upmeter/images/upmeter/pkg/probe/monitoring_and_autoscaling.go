@@ -7,7 +7,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func MonitoringAndAutoscaling(access *kubernetes.Access) []runnerConfig {
+func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 	const (
 		groupName = "monitoring-and-autoscaling"
 	)
@@ -114,7 +114,7 @@ func MonitoringAndAutoscaling(access *kubernetes.Access) []runnerConfig {
 			probe:  "metrics-sources",
 			check:  "node-exporter",
 			period: 10 * time.Second,
-			config: checker.AllDaemonSetPodsReady{
+			config: checker.DaemonSetPodsReady{
 				Access:    access,
 				Timeout:   5 * time.Second,
 				Namespace: "d8-monitoring",

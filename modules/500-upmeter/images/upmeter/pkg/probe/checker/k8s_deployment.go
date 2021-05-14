@@ -15,7 +15,7 @@ import (
 
 // DeploymentLifecycle is a checker constructor and configurator
 type DeploymentLifecycle struct {
-	Access                    *k8s.Access
+	Access                    k8s.Access
 	Namespace                 string
 	DeploymentCreationTimeout time.Duration
 	DeploymentDeletionTimeout time.Duration
@@ -37,7 +37,7 @@ func (c DeploymentLifecycle) Checker() check.Checker {
 }
 
 type deploymentLifecycleChecker struct {
-	access                    *k8s.Access
+	access                    k8s.Access
 	namespace                 string
 	deploymentCreationTimeout time.Duration
 	deploymentDeletionTimeout time.Duration
@@ -121,7 +121,7 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 }
 
 type deploymentCreationChecker struct {
-	access     *k8s.Access
+	access     k8s.Access
 	namespace  string
 	deployment *appsv1.Deployment
 }
@@ -142,7 +142,7 @@ func (c *deploymentCreationChecker) Check() check.Error {
 }
 
 type deploymentDeletionChecker struct {
-	access     *k8s.Access
+	access     k8s.Access
 	namespace  string
 	deployment *appsv1.Deployment
 }

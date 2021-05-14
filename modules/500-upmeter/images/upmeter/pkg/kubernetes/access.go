@@ -10,7 +10,13 @@ import (
 )
 
 // Access provides Kubernetes access
-type Access struct {
+type Access interface {
+	Kubernetes() kubernetes.Interface
+	ServiceAccountToken() string
+}
+
+// Accessor provides Kubernetes access in pod
+type Accessor struct {
 	client  kube.KubernetesClient
 	saToken string
 }
@@ -23,7 +29,7 @@ type Config struct {
 	ClientBurst int
 }
 
-func (a *Access) Init(config *Config) error {
+func (a *Accessor) Init(config *Config) error {
 	// Kubernetes client
 	a.client = kube.NewKubernetesClient()
 	a.client.WithContextName(config.Context)
@@ -45,10 +51,10 @@ func (a *Access) Init(config *Config) error {
 	return nil
 }
 
-func (a *Access) Kubernetes() kubernetes.Interface {
+func (a *Accessor) Kubernetes() kubernetes.Interface {
 	return a.client
 }
 
-func (a *Access) ServiceAccountToken() string {
+func (a *Accessor) ServiceAccountToken() string {
 	return a.saToken
 }

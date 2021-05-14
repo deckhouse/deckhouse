@@ -14,7 +14,7 @@ import (
 
 // PrometheusApiAvailable is a checker constructor and configurator
 type PrometheusApiAvailable struct {
-	Access   *kubernetes.Access
+	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 }
@@ -30,7 +30,7 @@ func (c PrometheusApiAvailable) Checker() check.Checker {
 
 type prometheusAPIVerifier struct {
 	endpoint     string
-	kubeAccessor *kubernetes.Access
+	kubeAccessor kubernetes.Access
 }
 
 func (v prometheusAPIVerifier) Request() *http.Request {
@@ -73,7 +73,7 @@ func (v prometheusAPIVerifier) Verify(body []byte) check.Error {
 
 // MetricPresentInPrometheus is a checker constructor and configurator
 type MetricPresentInPrometheus struct {
-	Access   *kubernetes.Access
+	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 	Metric   string
@@ -91,7 +91,7 @@ func (c MetricPresentInPrometheus) Checker() check.Checker {
 }
 
 type metricPresenceVerifier struct {
-	access   *kubernetes.Access
+	access   kubernetes.Access
 	endpoint string
 }
 

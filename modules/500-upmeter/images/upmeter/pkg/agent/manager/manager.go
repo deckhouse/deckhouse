@@ -12,7 +12,7 @@ type Manager struct {
 	calculators []*calculated.Probe
 }
 
-func New(access *kubernetes.Access) *Manager {
+func New(access kubernetes.Access) *Manager {
 	m := &Manager{}
 	m.runners = filterRunners(probe.Load(access))
 	m.calculators = filterCalculators(calculated.Load())

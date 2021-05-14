@@ -12,7 +12,7 @@ import (
 
 // garbageCollectorChecker ensures objects can be listed and their deletion is complete
 type garbageCollectorChecker struct {
-	access    *k8s.Access
+	access    k8s.Access
 	namespace string
 	kind      string
 	listOpts  *metav1.ListOptions
@@ -22,7 +22,7 @@ type garbageCollectorChecker struct {
 	firstRun bool
 }
 
-func newGarbageCollectorCheckerByLabels(access *k8s.Access, kind, namespace string, labels map[string]string, timeout time.Duration) check.Checker {
+func newGarbageCollectorCheckerByLabels(access k8s.Access, kind, namespace string, labels map[string]string, timeout time.Duration) check.Checker {
 	return &garbageCollectorChecker{
 		access:    access,
 		namespace: namespace,
