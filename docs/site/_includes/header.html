@@ -1,5 +1,4 @@
 {% assign topnav = site.data[page.topnav].topnav %}
-
 <header class="header">
   <div class="header__content container">
     <div class="header__logo">
@@ -33,7 +32,9 @@
               <li data-proofer-ignore class="submenu-item">
                   <a data-proofer-ignore href="/en
                   {%- if page.mode == 'ssi' and site.mode != 'local' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
-                  {%- else -%}{{ page_url_without_lang }}{%- endif %}"
+                  {%- else -%}
+                        {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                  {%- endif %}"
                      class="submenu-item-link">
                       English
                   </a>
@@ -41,7 +42,9 @@
               <li data-proofer-ignore class="submenu-item">
                   <a data-proofer-ignore href="/ru
                   {%- if page.mode == 'ssi' and site.mode != 'local' %}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
-                  {%- else -%}{{ page_url_without_lang }}{%- endif %}"
+                  {%- else -%}
+                        {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                  {%- endif %}"
                      class="submenu-item-link">
                       Русский
                   </a>

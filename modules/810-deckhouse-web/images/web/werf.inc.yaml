@@ -58,7 +58,7 @@ ansible:
       shell: |
         export MODULES_DIR=modules_en
         bash ./modules_generate_configuration.sh
-        export MODULES_DIR=modules_ru
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash ./modules_generate_configuration.sh
       args:
         executable: /bin/bash
@@ -85,8 +85,12 @@ ansible:
         dest: /tmp/_config_additional.yml
     - copy:
         content: |
-{{ .Files.Get "modules/810-deckhouse-web/images/web/topnav.yml" | indent 10 }}
+{{ .Files.Get "modules/810-deckhouse-web/images/web/site/_data/topnav.yml" | indent 10 }}
         dest: /srv/jekyll-data/site/_data/topnav.yml
+    - copy:
+        content: |
+{{ .Files.Get "modules/810-deckhouse-web/images/web/site/_includes/footer.html" | indent 10 }}
+        dest: /srv/jekyll-data/site/_includes/footer.html
     - name: "Generate documentation static"
       shell: |
         mkdir -m 777 -p /app/_site/
@@ -94,6 +98,7 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+        warn: false
     - name: "Generate main static"
       shell: |
         JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
@@ -130,11 +135,12 @@ git:
     - documentation
     - site
   excludePaths:
-  - '**/werf*.yaml'
-  - '**/docker-compose.yml'
-  - '**/.werf'
-  - '**/.helm'
-  - site/pages/INDEX*.md
+    - '**/werf*.yaml'
+    - '**/docker-compose.yml'
+    - '**/.werf'
+    - '**/.helm'
+    - site/pages/*.html
+    - site/_includes/footer.html
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
