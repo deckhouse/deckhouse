@@ -6,7 +6,7 @@ configVersion: 1
 ---
 artifact: static-pages
 from: jekyll/jekyll:3.8
-fromCacheVersion: 20210402
+fromCacheVersion: 202105151
 ansible:
   install:
     - shell: |

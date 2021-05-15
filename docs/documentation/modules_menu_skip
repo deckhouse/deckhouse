@@ -3,6 +3,7 @@
 010-prometheus-crd
 010-vertical-pod-autoscaler-crd
 010-user-authn-crd
+200-operator-prometheus
 340-prometheus-madison-integration
 340-monitoring-applications
 400-nginx-ingress
