@@ -86,3 +86,12 @@ $(document).ready(function() {
         switchNotice('expanded')
     })
 });
+
+/* Set share link */
+
+$( document ).ready(function() {
+    if ($.cookie("demotoken") ) {
+	$('.notice__share_message a').prop('href','https://early.deckhouse.io/demotoken/auth?demotoken=' + $.cookie("demotoken"));
+        $('.notice__share_message.disabled').removeClass("disabled");
+    }
+});

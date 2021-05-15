@@ -857,3 +857,8 @@
 .docs  .btn-group.compare.active {
     display: inline-block;
 }
+
+/* ------------------ */
+.notice__content .notice__share_message.disabled {
+    display: none;
+}
