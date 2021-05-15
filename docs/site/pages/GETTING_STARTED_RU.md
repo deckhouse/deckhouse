@@ -97,7 +97,7 @@ deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
   # for more information, see the description of the next step
   imagesRepo: registry.flant.com/sys/antiopa
-  # the update channel used
+  # the release channel used
   releaseChannel: EarlyAccess
   configOverrides:
     global:
@@ -205,7 +205,7 @@ deckhouse:
 # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
 # for more information, see the description of the next step
   imagesRepo: registry.flant.com/sys/antiopa
-# the update channel used
+# the release channel used
 releaseChannel: EarlyAccess
 configOverrides:
   global:

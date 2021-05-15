@@ -185,11 +185,11 @@ For the `vsphere-csi-driver` to work, support for the `disk.EnableUUID` paramete
 
 For this, right-click on each VM in the vSphere interface, select `Edit Settings...` in the menu and switch to the `VM Options` tab:
 
-![](img/edit_settings.png)
+![](../../images/030-cloud-provider-vsphere/edit_settings.png)
 
 Open the `Advanced` section:
 
-![](img/advanced.png)
+![](../../images/030-cloud-provider-vsphere/advanced.png)
 
 And click on `EDIT CONFIGURATION...` in the `Configuration Parameters` field. In the list of parameters, find the `disk.EnableUUID` parameter. If this parameter is missing, you have to enable it. To do this, you'll need to:
 
@@ -197,11 +197,11 @@ And click on `EDIT CONFIGURATION...` in the `Configuration Parameters` field. In
 * Go to the `EDIT CONFIGURATION...` section (as described above);
 * In the upper right corner, click the `ADD CONFIGURATION PARAMS` button;
 
-![](img/configuration_params.png)
+![](../../images/030-cloud-provider-vsphere/configuration_params.png)
 
 * Enter the name of the `disk.EnableUUID` parameter with the value `TRUE`;
 
-![](img/add_new_configuration_params.png)
+![](../../images/030-cloud-provider-vsphere/add_new_configuration_params.png)
 
 * Click the `OK` button;
 * Turn on the VM.
