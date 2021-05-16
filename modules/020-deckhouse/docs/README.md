@@ -10,7 +10,7 @@ In **Deckhose**, this module sets up:
 
 - Also, this module starts the service for validating CRs that are managed by deckhouse modules.
 
-Features specified in the [configuration](configuration.html) define the set of enabled modules. Usually, the Default set is used (it is suitable for most cases). You can explicitly enable any additional required modules in the configuration.
+The bundle parameter specified in the [configuration](configuration.html) defines the set of enabled modules. Usually, the Default set is used (it is suitable for most cases). You can explicitly enable any additional required modules in the configuration.
 
 If you set the releaseChannel parameter in the [configuration](configuration.html), Deckhouse will switch to the selected release channel if the current and target release channels have identical Deckhouse versions.
 
