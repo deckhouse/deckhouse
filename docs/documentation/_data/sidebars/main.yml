@@ -1,83 +1,62 @@
 # Next lines are for local build only
 entries:
   folders:
+    - title: Deckhouse
+      folders:
+        - title:
+            en: How to configure?
+            ru: Как настроить?
+          url: /
+        - title:
+            en: Global configuration
+            ru: Глобальная конфигурация
+          url: /deckhouse-configure-global.html
+        - title:
+            en: Release channels
+            ru: Каналы обновлений
+          url: /deckhouse-release-channels.html
+        - title: FAQ
+          url: /deckhouse-faq.html
+        - title:
+            en: Modules
+            ru: Модули
+          folders:
+            - title: deckhouse
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/020-deckhouse/
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/020-deckhouse/usage.html
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/020-deckhouse/configuration.html
+            - title: deckhouse-web
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/810-deckhouse-web/
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/810-deckhouse-web/usage.html
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/810-deckhouse-web/configuration.html
     - title:
-        en: Home
-        ru: Главная
-      url: /
-    - title:
-        en: Overview
-        ru: Общие сведения
-      url: /overview.html
-    - title:
-        en: auth subsystem
-        ru: Подсистема auth
+        en: Kubernetes Cluster
+        ru: Кластер Kubernetes
       folders:
         - title:
             ru: Описание
             en: Description
-          url: /features/auth.html
-        - title: user-authz
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/140-user-authz/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/140-user-authz/usage.html
-            - title:
-                ru: Справка
-                en: Reference
-              folders:
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/140-user-authz/configuration.html
-                - title: Custom Resources
-                  url: /modules/140-user-authz/cr.html
-            - title: FAQ
-              url: /modules/140-user-authz/faq.html
-        - title: user-authn
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/150-user-authn/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/150-user-authn/usage.html
-            - title:
-                ru: Справка
-                en: Reference
-              folders:
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/150-user-authn/configuration.html
-                - title: Custom Resources
-                  url: /modules/150-user-authn/cr.html
-            - title: FAQ
-              url: /modules/150-user-authn/faq.html
-    #      - title: FAQ
-    #        url: /features/auth-faq.html
-        - title: basic-authn
-          versionType: experimental
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/500-basic-auth/
-    - title:
-        ru: Подсистема candi
-        en: candi subsystem
-      folders:
-        - title:
-            ru: Описание
-            en: Description
-          url: /features/candi.html
+          url: /kubernetes.html
         - title: Cloud providers
           folders:
             - title: Amazon Web Services
@@ -286,6 +265,21 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/042-kube-dns/configuration.html
+            - title: node-local-dns
+              versionType: ee
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/350-node-local-dns/
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/350-node-local-dns/usage.html
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/350-node-local-dns/configuration.html
             - title: terraform-manager
               folders:
                 - title:
@@ -293,68 +287,90 @@ entries:
                     en: Description
                   url: /modules/040-terraform-manager/
     - title:
-        ru: Подсистема core
-        en: core subsystem
+        en: Accessing cluster
+        ru: Доступ к кластеру
       folders:
-        - title:
-            ru: Описание
-            en: Description
-          url: /features/core.html
-        - title:
-            ru: Модули подсистемы
-            en: Modules
+        - title: dashboard
           folders:
-            - title: priority-class
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/010-priority-class/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/010-priority-class/configuration.html
-            - title: deckhouse
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/020-deckhouse/
-                - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/020-deckhouse/usage.html
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/020-deckhouse/configuration.html
-            - title: deckhouse-web
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/810-deckhouse-web/
-                - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/810-deckhouse-web/usage.html
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/810-deckhouse-web/configuration.html
-        - title: FAQ
-          url: /features/core-faq.html
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/500-dashboard/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/500-dashboard/usage.html
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/500-dashboard/configuration.html
+        - title: openvpn
+          versionType: experimental
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/500-openvpn/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/500-openvpn/usage.html
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/500-openvpn/configuration.html
     - title:
-        ru: Подсистема marm
-        en: marm subsystem
+        en: Network Load Balancing
+        ru: Балансировка трафика
       folders:
-        - title:
-            ru: Описание
-            en: Description
-          url: /features/marm.html
-        - title:
-            en: Prometheus based monitoring
-            ru: Prometheus-мониторинг
+        - title: ingress-nginx
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/402-ingress-nginx/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/402-ingress-nginx/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/402-ingress-nginx/configuration.html
+                - title: Custom Resources
+                  url: /modules/402-ingress-nginx/cr.html
+            - title: FAQ
+              url: /modules/402-ingress-nginx/faq.html
+        - title: istio
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/110-istio/
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/110-istio/configuration.html
+                - title: Custom Resources
+                  url: /modules/110-istio/cr.html
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/110-istio/usage.html
+    - title:
+        en: Monitoring
+        ru: Мониторинг
+      folders:
+        - title: Prometheus & Grafana
+          url: /modules/300-prometheus/
           folders:
             - title:
                 ru: Описание
@@ -376,61 +392,20 @@ entries:
                   url: /modules/300-prometheus/cr.html
             - title: FAQ
               url: /modules/300-prometheus/faq.html
-        #        - title: "Разработка графиков Grafana"
-        #          url: /modules/300-prometheus/grafana_dashboard_development.html
-        #        - title: "Разработка правил Prometheus"
-        #          url: /modules/300-prometheus/prometheus_rules_development.html
-        #        - title: "Разработка target'ов Prometheus"
-        #          url: /modules/300-prometheus/prometheus_targets_development.html
-        - title: Мониторинг control plane
+        - title:
+            en: Monitoring your applications
+            ru: Мониторинг вашего приложения
           folders:
             - title:
                 ru: Описание
                 en: Description
-              url: /modules/340-monitoring-kubernetes-control-plane/
+              url: /modules/340-monitoring-custom/
             - title:
                 ru: Настройки
                 en: Configuration
-              url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
-        - title:
-            ru: Модули подсистемы
-            en: Modules
+              url: /modules/340-monitoring-custom/configuration.html
+        - title: Targets
           folders:
-            - title: descheduler
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/400-descheduler/
-                - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/400-descheduler/usage.html
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/400-descheduler/configuration.html
-            - title: extended-monitoring
-              versionType: experimental
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/340-extended-monitoring/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/340-extended-monitoring/configuration.html
-            - title: monitoring-custom
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/340-monitoring-custom/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/340-monitoring-custom/configuration.html
             - title: monitoring-ping
               folders:
                 - title:
@@ -451,32 +426,31 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/340-monitoring-kubernetes/configuration.html
-            - title: okmeter
+            - title: Мониторинг control plane
               folders:
                 - title:
                     ru: Описание
                     en: Description
-                  url: /modules/500-okmeter/
-            - title: prometheus-metrics-adapter
+                  url: /modules/340-monitoring-kubernetes-control-plane/
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/340-monitoring-kubernetes-control-plane/configuration.html
+            - title: extended-monitoring
+              versionType: experimental
               folders:
                 - title:
                     ru: Описание
                     en: Description
-                  url: /modules/301-prometheus-metrics-adapter/
+                  url: /modules/340-extended-monitoring/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/301-prometheus-metrics-adapter/usage.html
-                - title:
-                    ru: Справка
-                    en: Reference
-                  folders:
-                    - title:
-                        ru: Настройки
-                        en: Configuration
-                      url: /modules/301-prometheus-metrics-adapter/configuration.html
-                    - title: Custom resources
-                      url: /modules/301-prometheus-metrics-adapter/cr.html
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/340-extended-monitoring/configuration.html
+        - title:
+            en: Other modules
+            ru: Другие модули
+          folders:
             - title: prometheus-pushgateway
               folders:
                 - title:
@@ -501,42 +475,98 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/500-upmeter/configuration.html
-            - title: vertical-pod-autoscaler
+    - title:
+        en: Autoscaling & Managing resources
+        ru: Масштабирование и управление ресурсами
+      folders:
+        - title: Priority classes
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/010-priority-class/
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/010-priority-class/configuration.html
+        - title:
+            en: Scaling by any metric
+            ru: Масштабирование по метрикам
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/301-prometheus-metrics-adapter/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/301-prometheus-metrics-adapter/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/301-prometheus-metrics-adapter/configuration.html
+                - title: Custom resources
+                  url: /modules/301-prometheus-metrics-adapter/cr.html
+        - title:
+            en: Vertical pod autoscaler
+            ru: Вертикальное масштабирование
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/302-vertical-pod-autoscaler/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/302-vertical-pod-autoscaler/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/302-vertical-pod-autoscaler/configuration.html
+                - title: Custom resources
+                  url: /modules/302-vertical-pod-autoscaler/cr.html
+            - title: FAQ
+              url: /modules/302-vertical-pod-autoscaler/faq.html
+        - title:
+            ru: Другие модули
+            en: Other modules
+          folders:
+            - title: descheduler
               folders:
                 - title:
                     ru: Описание
                     en: Description
-                  url: /modules/302-vertical-pod-autoscaler/
+                  url: /modules/400-descheduler/
                 - title:
                     ru: Примеры
                     en: Usage
-                  url: /modules/302-vertical-pod-autoscaler/usage.html
+                  url: /modules/400-descheduler/usage.html
                 - title:
-                    ru: Справка
-                    en: Reference
-                  folders:
-                    - title:
-                        ru: Настройки
-                        en: Configuration
-                      url: /modules/302-vertical-pod-autoscaler/configuration.html
-                    - title: Custom resources
-                      url: /modules/302-vertical-pod-autoscaler/cr.html
-                - title: FAQ
-                  url: /modules/302-vertical-pod-autoscaler/faq.html
-    #      - title: FAQ
-    #        url: /features/marm-faq.html
-    - title: Must Have Collection
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/400-descheduler/configuration.html
+    - title:
+        en: Security
+        ru: Безопасность
       folders:
-        - title: cert-manager
+        - title: User authentication
           folders:
             - title:
                 ru: Описание
                 en: Description
-              url: /modules/101-cert-manager/
+              url: /modules/150-user-authn/
             - title:
                 ru: Примеры
                 en: Usage
-              url: /modules/101-cert-manager/usage.html
+              url: /modules/150-user-authn/usage.html
             - title:
                 ru: Справка
                 en: Reference
@@ -544,21 +574,21 @@ entries:
                 - title:
                     ru: Настройки
                     en: Configuration
-                  url: /modules/101-cert-manager/configuration.html
+                  url: /modules/150-user-authn/configuration.html
                 - title: Custom Resources
-                  url: /modules/101-cert-manager/cr.html
+                  url: /modules/150-user-authn/cr.html
             - title: FAQ
-              url: /modules/101-cert-manager/faq.html
-        - title: ingress-nginx
+              url: /modules/150-user-authn/faq.html
+        - title: User authorization
           folders:
             - title:
-                ru: Описание
                 en: Description
-              url: /modules/402-ingress-nginx/
+                ru: Описание
+              url: /modules/140-user-authz/
             - title:
                 ru: Примеры
                 en: Usage
-              url: /modules/402-ingress-nginx/usage.html
+              url: /modules/140-user-authz/usage.html
             - title:
                 ru: Справка
                 en: Reference
@@ -566,25 +596,62 @@ entries:
                 - title:
                     ru: Настройки
                     en: Configuration
-                  url: /modules/402-ingress-nginx/configuration.html
+                  url: /modules/140-user-authz/configuration.html
                 - title: Custom Resources
-                  url: /modules/402-ingress-nginx/cr.html
+                  url: /modules/140-user-authz/cr.html
             - title: FAQ
-              url: /modules/402-ingress-nginx/faq.html
-        - title: dashboard
+              url: /modules/140-user-authz/faq.html
+        - title:
+            ru: Другие модули
+            en: Other modules
+          folders:
+          - title: network-policy-engine
+            folders:
+              - title:
+                  ru: Описание
+                  en: Description
+                url: /modules/050-network-policy-engine/
+              - title:
+                  ru: Примеры
+                  en: Usage
+                url: /modules/050-network-policy-engine/usage.html
+              - title:
+                  ru: Настройки
+                  en: Configuration
+                url: /modules/050-network-policy-engine/configuration.html
+          - title: cert-manager
+            folders:
+              - title:
+                  ru: Описание
+                  en: Description
+                url: /modules/101-cert-manager/
+              - title:
+                  ru: Примеры
+                  en: Usage
+                url: /modules/101-cert-manager/usage.html
+              - title:
+                  ru: Справка
+                  en: Reference
+                folders:
+                  - title:
+                      ru: Настройки
+                      en: Configuration
+                    url: /modules/101-cert-manager/configuration.html
+                  - title: Custom Resources
+                    url: /modules/101-cert-manager/cr.html
+              - title: FAQ
+                url: /modules/101-cert-manager/faq.html
+    - title:
+        en: Little things
+        ru: Приятные мелочи
+      folders:
+        - title: basic-auth
+          versionType: experimental
           folders:
             - title:
                 ru: Описание
                 en: Description
-              url: /modules/500-dashboard/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/500-dashboard/usage.html
-            - title:
-                ru: Настройки
-                en: Configuration
-              url: /modules/500-dashboard/configuration.html
+              url: /modules/500-basic-auth/
         - title: secret-copier
           versionType: experimental
           folders:
@@ -592,72 +659,7 @@ entries:
                 ru: Описание
                 en: Description
               url: /modules/600-secret-copier/
-    - title: Extended Networking Collection
-      folders:
-        - title: network-policy-engine
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/050-network-policy-engine/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/050-network-policy-engine/usage.html
-            - title:
-                ru: Настройки
-                en: Configuration
-              url: /modules/050-network-policy-engine/configuration.html
-        - title: istio
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/110-istio/
-            - title:
-                ru: Справка
-                en: Reference
-              folders:
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/110-istio/configuration.html
-                - title: Custom Resources
-                  url: /modules/110-istio/cr.html
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/110-istio/usage.html
-        - title: node-local-dns
-          versionType: ee
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/350-node-local-dns/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/350-node-local-dns/usage.html
-            - title:
-                ru: Настройки
-                en: Configuration
-              url: /modules/350-node-local-dns/configuration.html
-        - title: openvpn
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/500-openvpn/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/500-openvpn/usage.html
-            - title:
-                ru: Настройки
-                en: Configuration
-              url: /modules/500-openvpn/configuration.html
-    - title: Bare Metal Compatibility Collection
+    - title: Bare Metal Support
       folders:
         - title: metallb
           versionType: ee

@@ -29,7 +29,7 @@ The following parameters are supported in addition to the existing upstream ones
      * `tls`
      * `http`
      * `https`
-   * **Caution!** The cloud-controller-manager (CCM) will try to recreate the Target Group in response to changes in this field. If the Target Group has NLB or ALB attached to it, the CCM will fail to delete it and get stuck in this state forever.  You have to manually disconnect NLB or ALB from the Target Group. 
+   * **Caution!** The `cloud-controller-manager` (CCM) will try to recreate the Target Group in response to changes in this field. If the Target Group has NLB or ALB attached to it, the CCM will fail to delete it and get stuck in this state forever.  You have to manually disconnect NLB or ALB from the Target Group.
 
 ## Configuring security policies on nodes
 
@@ -53,8 +53,13 @@ The `additionalSecurityGroups` field contains an array of strings with security 
 
 You have to set the `additionalSecurityGroups` parameter for all [`AWSInstanceClass`](cr.html#awsinstanceclass) that require additional security groups.
 
-## Configuring the load balancer if ingress nodes are not available in all zones
+## Configuring the load balancer if Ingress nodes are not available in all zones
 
 Set the following annotation for the Service object: `service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-foo, subnet-bar`.
 
-You can get current subnets for a particular installation as follows: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
+You can get current subnets for a particular installation as follows:
+
+```bash
+kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json \
+| jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
+```

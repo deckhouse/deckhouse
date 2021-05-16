@@ -1,6 +1,7 @@
 ---
 title: FAQ
-permalink: en/features/core-faq.html
+permalink: en/deckhouse-faq.html
+layout: page-another-lang
 ---
 
 ## Как узнать все параметры Deckhouse?

@@ -2,7 +2,7 @@
 title: "Сloud provider — VMware vSphere"
 ---
 
-Взаимодействие с облачными ресурсами провайдера на базе VMware vSphere осуществляется с помощью модуля `cloud-provider-vsphere`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) подсистемы candi использовать ресурсы vSphere при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).
+Взаимодействие с облачными ресурсами провайдера на базе VMware vSphere осуществляется с помощью модуля `cloud-provider-vsphere`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы vSphere при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).
 
 Функционал модуля `cloud-provider-vsphere`:
 - Управляет ресурсами vSphere с помощью модуля `cloud-controller-vsphere`:

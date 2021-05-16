@@ -2,12 +2,10 @@
 title: "Модуль cni-simple-bridge"
 ---
 
-## Содержимое модуля
-
 Модуль не имеет настроек.
 
 Включается автоматически для следующих cloud-provider'ов:
-- aws
-- azure
-- gcp
-- yandex
+- [AWS](../../modules/030-cloud-provider-aws/)
+- [Azure](../../modules/030-cloud-provider-azure/)
+- [GCP](../../modules/030-cloud-provider-gcp/)
+- [Yandex](../../modules/030-cloud-provider-yandex/)
