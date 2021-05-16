@@ -5,8 +5,8 @@ topnav:
   - title:
       ru: Документация
       en: Documentation
-    url: /overview.html
+    url: /
   - title:
       ru: Каналы обновлений
       en: Release channels
-    url: /release_channels.html
+    url: /deckhouse-release-channels.html

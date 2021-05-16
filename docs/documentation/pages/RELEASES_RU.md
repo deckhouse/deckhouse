@@ -1,6 +1,6 @@
 ---
 title: Каналы обновлений
-permalink: ru/release_channels.html
+permalink: ru/deckhouse-release-channels.html
 layout: page
 toc: false
 lang: ru
@@ -17,6 +17,9 @@ lang: ru
 </p>
 Чтобы покрыть самые частые случаи организации окружений, а также с целью повысить качество самого Deckhouse, мы используем <b>пять каналов обновлений</b>.
 </div>
+
+
+
 
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}
@@ -37,3 +40,6 @@ lang: ru
 </div>
 
 </div>
+{::options parse_block_html="true" /}
+
+Deckhouse может "мягко" переключаться между каналами обновлений с помощью модуля [deckhouse](modules/020-deckhouse/). Достаточно указать желаемый канал обновлений в [конфигурации](modules/020-deckhouse/configuration.html) (параметр `deckhouse.releaseChannel`).

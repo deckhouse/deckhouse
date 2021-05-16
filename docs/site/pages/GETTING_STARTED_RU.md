@@ -19,7 +19,7 @@ The Deckhouse platform runs both on bare metal servers and on the infrastructure
 
 ### Requirements and preparatory steps
 
-Deckhouse is a [modular system](/en/documentation/v1/). The candi (Cluster and Infrastructure) subsystem is responsible for installing Deckhouse (you can find the detailed documentation [here](/en/documentation/v1/features/candi.html#)).
+Deckhouse is a [modular system](/en/documentation/v1/). The candi (Cluster and Infrastructure) subsystem is responsible for installing Deckhouse (you can find the detailed documentation [here](/en/documentation/v1/kubernetes.html#)).
 
 The general approach to installing Deckhouse includes the following steps:
 
@@ -163,7 +163,7 @@ yc iam key create --service-account-name candi --output candi-sa-key.json
           Generate an SSH key on the local machine for accessing the cloud-based virtual machines. In Linux and macOS, you can generate a key using the <code>ssh-keygen</code> command-line tool. The public key must be included in the configuration file (it will be used for accessing nodes in the cloud).
         </li>
         <li>
-          Select the layout – the way how objects are located in the cloud. We will use the <strong>WithoutNAT</strong> layout for the Yandex.Cloud example. In this layout, NAT (of any kind) is not used, and each node is assigned a public IP. Other available layouts are described in the <a href="/en/documentation/v1/features/candi.html">Cloud providers</a> section of the candi subsystem documentation.
+          Select the layout – the way how objects are located in the cloud. We will use the <strong>WithoutNAT</strong> layout for the Yandex.Cloud example. In this layout, NAT (of any kind) is not used, and each node is assigned a public IP. Other available layouts are described in the <a href="/en/documentation/v1/kubernetes.html">Cloud providers</a> section of the candi subsystem documentation.
         </li>
         <li>
           Define the three primary sections with parameters of the prospective cluster in the <code>config.yml</code> file:
@@ -267,7 +267,7 @@ provider:
   </ol>
   <div markdown="1">
 Notes:
--   The complete list of supported cloud providers and their specific settings is available in the [Cloud providers](/en/documentation/v1/features/candi.html) section of the candi subsystem documentation.
+-   The complete list of supported cloud providers and their specific settings is available in the [Cloud providers](/en/documentation/v1/kubernetes.html) section of the candi subsystem documentation.
 -   [Click here](/releases.html) to learn more about the Deckhouse release channels.
   </div>
 </div>

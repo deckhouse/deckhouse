@@ -1,6 +1,6 @@
 ---
 title: FAQ
-permalink: ru/features/core-faq.html
+permalink: ru/deckhouse-faq.html
 lang: ru
 ---
 

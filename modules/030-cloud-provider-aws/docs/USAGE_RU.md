@@ -29,7 +29,7 @@ spec:
      * `tls`
      * `http`
      * `https`
-   * **Внимание!** При изменении поля cloud-controller-manager попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group он не сможет и будет пытаться вечно. Необходимо вручную отсоединить от Target Group NLB или ALB.
+   * **Внимание!** При изменении поля `cloud-controller-manager` попытается пересоздать Target Group. Если к ней уже привязаны NLB или ALB, удалить Target Group он не сможет и будет пытаться вечно. Необходимо вручную отсоединить от Target Group NLB или ALB.
 
 ## Настройка политик безопасности на узлах
 
@@ -39,7 +39,7 @@ spec:
 * Разрешить подключение к портам статической ноды для работы приложения
 * Ограничить доступ к внешним ресурсам или другим вм в облаке по требованию службы безопасности
 
-Для всего этого следует применять дополнительные security groups. Можно использовать только security groups, предварительно созданные в облаке.
+Для всего этого следует применять дополнительные security groups. Можно использовать только предварительно созданные в облаке security groups.
 
 ## Установка дополнительных security groups на статических и мастер-узлах
 
@@ -53,8 +53,13 @@ spec:
 
 Необходимо указать параметр `additionalSecurityGroups` для всех [`AWSInstanceClass`](cr.html#awsinstanceclass) в кластере, которым нужны дополнительные security groups.
 
-## Настройка балансировщика в случае наличия ingress нод не во всех зонах
+## Настройка балансировщика в случае наличия Ingress-нод не во всех зонах
 
 Необходимо указать аннотацию на Service объекте: `service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-foo, subnet-bar`.
 
-Список текущих подсетей, что используются для конкретной инсталляции можно так: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
+Получить список текущих подсетей, используемых для конкретной инсталляции:
+
+```bash
+kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json \
+| jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
+```

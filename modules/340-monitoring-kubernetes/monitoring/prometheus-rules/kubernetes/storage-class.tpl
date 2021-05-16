@@ -11,7 +11,7 @@
   {{- else if ( .Values.global.enabledModules | has "cloud-provider-yandex") }}
         [Yandex storage documentation is here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/030-cloud-provider-yandex/configuration.html#storage).
   {{- else }}
-        [Find storage configuration documentation for your cloud-provider here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/features/candi.html).
+        [Find storage configuration documentation for your cloud-provider here]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/kubernetes.html).
   {{- end }}
 {{- end }}
 {{- end }}

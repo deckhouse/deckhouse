@@ -1,6 +1,7 @@
 ---
 title: FAQ
 permalink: /features/candi-faq.html
+searchable: false
 ---
 
 ## Как управлять шедулингом ресурсов?
