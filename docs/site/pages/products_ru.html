@@ -16,10 +16,10 @@ anchors_disabled: true
       <div class="intro__row">
           <div>
               <h2 class="intro__subtitle text_h1">
-                What is it?
+                Что это?
               </h2>
               <p class="text text_big">
-                Enterprise Edition provides you an easy-to-use way to benefit from self-hosted Deckhouse Platform. Deploy it on any infrastructure and enjoy <a href="/{{ page.lang }}/features.html">all features</a> of the platform! While your engineers are responsible for maintaining it, Flant is always happy to help with first-hand support and consultations.
+                Enterprise Edition — это простой способ установки и использования Deckhouse Platform силами своих специалистов и с поддержкой от вендора. Разверните платформу на любой инфраструктуре и получите <a href="/{{ page.lang }}/features.html">все её преимущества</a>! Ваши инженеры будут ответственны за обслуживание, а «Флант» предоставит необходимую поддержку и консультации.
               </p>
           </div>
           <div class="intro__logo">
@@ -32,8 +32,11 @@ anchors_disabled: true
 
 <section class="block">
   <div class="block__content container">
+    <h2 class="text text_h1">
+      Планы подписки
+    </h2>
     <p class="text text_big">
-      Support for EE is available through the following <strong>subscription plans</strong>:
+      Для приобретения Deckhouse Platform EE с поддержкой необходимо выбрать один из планов:
     </p>
     <table class="table">
       <tbody>
@@ -51,66 +54,66 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Support time</div>
+            <div>Время оказания поддержки</div>
           </td>
           <td>
             <div>
               8 &times; 5<br>
-              <small>(9:00 &mdash; 17:00 CET)</small>
+              <small>(9:00 &mdash; 17:00 MSK)</small>
             </div>
           </td>
           <td>
-            <div>24 &times; 7&nbsp;</div>
+            <div>24 &times; 7</div>
           </td>
           <td>
-            <div>24 &times; 7&nbsp;</div>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div>Reaction time</div>
-          </td>
-          <td>
-            <div>1 hour&nbsp;</div>
-          </td>
-          <td>
-            <div>15 mins</div>
-          </td>
-          <td>
-            <div>5 mins</div>
+            <div>24 &times; 7</div>
           </td>
         </tr>
         <tr>
           <td>
-            <div>Resolution time</div>
+            <div>Время реакции</div>
           </td>
           <td>
-            <div>Next business day</div>
+            <div>1 час</div>
           </td>
           <td>
-            <div>4 hours&nbsp;</div>
+            <div>15 минут</div>
           </td>
           <td>
-            <div>As soon as possible</div>
+            <div>5 минут</div>
           </td>
         </tr>
         <tr>
           <td>
-            <div>Communication channel</div>
+            <div>Время решения</div>
+          </td>
+          <td>
+            <div>Следующий бизнес-день</div>
+          </td>
+          <td>
+            <div>4 часа</div>
+          </td>
+          <td>
+            <div>Минимально возможное</div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Каналы взаимодействия</div>
           </td>
           <td>
             <div>Email, Slack</div>
           </td>
           <td>
-            <div>Email, Slack&nbsp;</div>
+            <div>Email, Slack</div>
           </td>
           <td>
-            <div>Email, Slack, Remote access&nbsp;</div>
+            <div>Email, Slack, удалённый доступ</div>
           </td>
         </tr>
         <tr>
           <td>
-            <div>SLA for clusters*</div>
+            <div>SLA для кластеров*</div>
           </td>
           <td>
             <div>99,9</div>
@@ -124,7 +127,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>SLA for applications**</div>
+            <div>SLA для приложений**</div>
           </td>
           <td>
             <div>
@@ -146,17 +149,17 @@ anchors_disabled: true
     </table>
     <div style="max-width: 810px; margin-top: 25px;">
       <p class="text">
-        <em>* SLA for clusters means we guarantee that you will reach this level of availability and we will react timely to help you to achieve these numbers.</em><br />
-        <em>** SLA for applications means integration enriching our application metrics with your custom metrics and helping to resolve any issues that may appear on the cluster.</em>
+        <em>* SLA для кластеров означает, что мы гарантируем этот уровень доступности для них и будем своевременно реагировать на инциденты для его достижения.</em><br />
+        <em>** SLA для приложений означает, что наши метрики для приложений будут дополнены вашими (кастомными) и мы будем способствовать решению всех инцидентов в кластере, препятствующих достижению нужному уровню SLA.</em>
       </p>
       <p class="text text_big">
-        For training and consulting options, please see <a href="/{{ page.lang }}/services.html#training">success packages</a>.
+        Исходный код EE открыт, но не является Open Source и не бесплатен для использования. Когда подписка заканчивается,
+        вы всё ещё можете использовать и изменить код последней приобретённой версии EE. Однако в таком случае вы лишаетесь
+        последующих обновлений, не можете создавать новые кластеры и не можете оказать услуги Kubernetes-as-a-Service
+        сторонним лицам.
       </p>
       <p class="text text_big">
-        <strong>NB!</strong> EE source code is open, but it’s neither Open Source nor free to use. You can use it by
-        purchasing a subscription plan of your choice. If your subscription finishes, you can still use and modify the
-        source code of the last purchased EE version. However, in this case, you will stop getting further updates, can’t
-        create new clusters, and are not allowed to provide Kubernetes-as-a-Service to third parties.
+        У нас также доступны пакеты по обучению и консультациям по Deckhouse — подробности см. <a href="/{{ page.lang }}/services.html#training">здесь</a>.
       </p>
     </div>
   </div>
@@ -168,8 +171,8 @@ anchors_disabled: true
       Deckhouse Platform CE vs. EE
     </h2>
     <p class="text text_big">
-      Compared to <a href="/{{ page.lang }}/community.html#deckhouse-platform-ce">Community Edition</a> of Deckhouse Platform, which is available for free,<br>
-      EE provides you many additional features:
+      В сравнении с Deckhouse Platform в редакции <a href="/{{ page.lang }}/community.html#deckhouse-platform-ce">Community Edition</a>, которая доступна бесплатно,<br>
+      EE предлагает ряд дополнительных возможностей:
     </p>
     <table class="table table_big">
       <tbody>
@@ -184,7 +187,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td class="table__cell_gt" colspan="3">
-            Supported infractructure
+            Поддерживаемая инфраструктура
           </td>
         </tr>
         <tr>
@@ -204,7 +207,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Public cloud providers (AWS, Azure, GCP&hellip;)</div>
+            <div>Публичные облака (AWS, Azure, GCP&hellip;)</div>
           </td>
           <td>
             <div>
@@ -253,7 +256,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td class="table__cell_gt" colspan="3">
-            Supported features
+            Поддерживаемые возможности
           </td>
         </tr>
         <tr>
@@ -273,7 +276,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Multitenancy <em>(coming soon)</em></div>
+            <div>Multitenancy <em>(скоро появится)</em></div>
           </td>
           <td>
             <div>
@@ -288,7 +291,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Enterprise-level security** <em>(coming soon)</em></div>
+            <div>Безопасность для enterprise** <em>(скоро появится)</em></div>
           </td>
           <td>
             <div>
@@ -303,7 +306,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>BGP support</div>
+            <div>Поддержка BGP</div>
           </td>
           <td>
             <div>
@@ -318,7 +321,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Instant autoscaling*** <em>(coming soon)</em></div>
+            <div>Мгновенное автомасштабирование*** <em>(скоро появится)</em></div>
           </td>
           <td>
             <div>
@@ -333,7 +336,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Local DNS caching</div>
+            <div>Локальное DNS-кэширование</div>
           </td>
           <td>
             <div>
@@ -348,7 +351,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Upgrades timeframe**** <em>(coming soon)</em></div>
+            <div>Время обновлений**** <em>(скоро появится)</em></div>
           </td>
           <td>
             <div>
@@ -363,7 +366,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Experimental features</div>
+            <div>Экспериментальные фичи</div>
           </td>
           <td>
             <div>
@@ -378,7 +381,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td class="table__cell_gt" colspan="3">
-            Other
+            Другое
           </td>
         </tr>
         <tr>
@@ -398,24 +401,24 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Support</div>
+            <div>Поддержка</div>
           </td>
           <td>
             <div>
               <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-              <br><small>(from community only)</small>
+              <br><small>(только от сообщества)</small>
             </div>
           </td>
           <td>
             <div>
               <img src="{{ site.baseurl }}/images/icons/supported.svg" />
-              <br><small>(from Flant)</small>
+              <br><small>(от «Фланта»)</small>
             </div>
           </td>
         </tr>
         <tr>
           <td>
-            <div>Training &amp; consulting</div>
+            <div>Обучение и консультации</div>
           </td>
           <td>
             <div>
@@ -432,10 +435,10 @@ anchors_disabled: true
     </table>
 
     <p class="text" style="max-width: 740px; margin-top: 25px;">
-      <em>* You still can install Deckhouse Platform CE on OpenStack and vSphere, however these platforms will function as regular bare-metal servers in this case. There will be no integration with clouds, i.e. VMs are added manually, no autoscaling provided, etc.</em><br />
-      <em>** Including Vault integration and encrypted secrets in etcd.</em><br />
-      <em>*** Adding new pods/nodes is accelerated thanks to fully prebuilt images.</em><br />
-      <em>**** Selectable timeframe for automatic upgrades of the platform.</em>
+      <em>* Установить Deckhouse Platform CE можно и на OpenStack и vSphere, но тогда эти платформы будут работать как обычные bare metal-серверы. Не будет интеграции с облаками, т.е. виртуальные машины придется создавать вручную, не будет автомасштабирования и т.д.</em><br />
+      <em>** Включая интеграцию с Vault и зашифрованные секреты в etcd.</em><br />
+      <em>*** Добавление новых pod'ов/узлов ускоряется благодаря предварительно собранным образам.</em><br />
+      <em>**** Настраиваемое окно времени для автоматических обновлений платформы.</em>
     </p>
   </div>
 </section>
@@ -447,8 +450,7 @@ anchors_disabled: true
         Deckhouse Platform EE vs. Managed Deckhouse
       </h2>
       <p class="text text_big">
-        Enterprise Edition powers <a href="/{{ page.lang }}/services.html#managed-deckhouse">Managed Deckhouse</a>, which is another way to use all features of Deckhouse Platform.
-        Here is the difference:
+        Enterprise Edition служит основой для <a href="/{{ page.lang }}/services.html#managed-deckhouse">Managed Deckhouse</a>. Если managed-услуга предлагает те же возможности Deckhouse Platform, то в чем разница?
       </p>
     </div>
     <table class="table">
@@ -464,7 +466,7 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>All EE features</div>
+            <div>Все возможности EE</div>
           </td>
           <td>
             <div>
@@ -479,35 +481,35 @@ anchors_disabled: true
         </tr>
         <tr>
           <td>
-            <div>Admin access<br>to your clusters</div>
+            <div>Доступ <br>к кластерам</div>
           </td>
           <td>
-            <div>Flant engineers</div>
+            <div>Инженеры «Фланта»</div>
           </td>
           <td>
-            <div>Your engineers</div>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div>L1 support</div>
-          </td>
-          <td>
-            <div>Flant engineers</div>
-          </td>
-          <td>
-            <div>Your engineers</div>
+            <div>Ваши инженеры</div>
           </td>
         </tr>
         <tr>
           <td>
-            <div>Configuration in line with guidelines</div>
+            <div>Поддержка L1</div>
           </td>
           <td>
-            <div>Flant engineers</div>
+            <div>Инженеры «Фланта»</div>
           </td>
           <td>
-            <div>Your engineers</div>
+            <div>Ваши инженеры</div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div>Конфигурация по рекомендациям</div>
+          </td>
+          <td>
+            <div>Инженеры «Фланта»</div>
+          </td>
+          <td>
+            <div>Ваши инженеры</div>
           </td>
         </tr>
       </tbody>
@@ -518,9 +520,9 @@ anchors_disabled: true
 <section class="cta container">
   <div class="cta__content">
     <div class="cta__text text_h2">
-      Need a quote for EE in your case?
+      Какова стоимость EE для вашего случая?
     </div>
-    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Contact us!</a>
+    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Напишите нам!</a>
   </div>
 </section>
 
@@ -532,13 +534,13 @@ anchors_disabled: true
       <div class="intro__row">
           <div>
               <h2 class="intro__subtitle text_h1">
-                What is it?
+                Что это?
               </h2>
               <p class="text_big">
-                Deckhouse Commander is your best friend when it comes to managing <strong>many</strong> (think of 10+) Kubernetes clusters based on Deckhouse Platform. It provides you a single point of control for these clusters via both API and web UI.
+                Deckhouse Commander — лучший помощник, когда нужно управлять <strong>множеством</strong> (10 и больше) Kubernetes-кластеров, основанных на Deckhouse Platform. Он предлагает единую точку контроля над этими кластерами через, для чего доступны API и веб-интерфейс.
               </p>
               <p class="text_big text_alt">
-                Coming soon
+                Релиз уже скоро!
               </p>
           </div>
           <div class="intro__logo">
@@ -556,8 +558,8 @@ anchors_disabled: true
         Pricing
       </h2>
       <p class="text text_big">
-        Deckhouse Commander supports both CE & EE editions of Deckhouse Platform.<br>
-        <span color="red">The pricing for Deckhouse Commander is coming soon.</span>
+        Deckhouse Commander поддерживает обе редакции Deckhouse Platform: и CE, и EE.<br>
+        Цены на Deckhouse Commander будут вскоре опубликованы.
       </p>
     </div>
     <!--table class="table">
@@ -606,8 +608,8 @@ anchors_disabled: true
 <section class="cta container">
   <div class="cta__content">
     <div class="cta__text text_h2">
-      Interested in Deckhouse Commander already?
+      Уже заинтересовались Deckhouse Commander?
     </div>
-    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Contact us!</a>
+    <a href="javascript:Smallchat('open')" class="button button_big button_inverse">Свяжитесь с нами!</a>
   </div>
 </section>
