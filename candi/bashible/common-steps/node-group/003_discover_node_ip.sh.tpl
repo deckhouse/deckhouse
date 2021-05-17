@@ -42,7 +42,7 @@ function is_ip_in_cidr() {
 
 if bb-is-ubuntu-version? 20.04 || bb-is-ubuntu-version? 18.04; then
   ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | .addr_info[] | .local')
-elif bb-is-ubuntu-version? 16.04 ; then
+else
   ip_in_system=$(ip -f inet -br addr | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' -o)
 fi
 
