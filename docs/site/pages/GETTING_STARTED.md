@@ -91,7 +91,7 @@ kind: InitConfiguration
 deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
   # for more information, see the description of the next step
-  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
   # a special string with your token to access Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel used
@@ -198,7 +198,7 @@ kind: InitConfiguration
 deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
   # for more information, see the description of the next step
-  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
   # a special string with your token to access Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel used
