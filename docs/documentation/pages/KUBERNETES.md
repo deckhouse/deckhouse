@@ -1,28 +1,26 @@
 ---
 title: Kubernetes Cluster
 permalink: en/kubernetes.html
-layout: page-another-lang
 ---
 
-Deckhouse отвечает за то, чтобы кластер **одинаково** работал на **любой поддерживаемой инфраструктуре**:
-- в облаках (смотри информацию по соответствующему Cloud provider)
-- на виртуальных машинах или железе (включая on-premises)
-- в гибридной инфраструктуре.
+Deckhouse makes it possible to run the Kubernetes cluster on **any supported infrastructure** and in the **same manner**:
+- on clouds (for more info, see the section for the specific cloud provider);
+- on virtual or bare-metal machines (including on-premises);
+- on a hybrid infrastructure.
 
-Для этого, Deckhouse автоматически настраивает и управляет как [узлами кластера]({{"/modules/040-node-manager/" | true_relative_url }} ), так и его [control-plane]({{"/modules/040-control-plane-manager/" | true_relative_url }} ), постоянно поддерживая их актуальную конфигурацию (используя инструменты Terraform).
+Deckhouse automatically configures and manages both the [cluster nodes]({{"/modules/040-node-manager/" | true_relative_url }} ) and the  [control-plane]({{"/modules/040-control-plane-manager/" | true_relative_url }} ), keeping their configuration up-to-date (using Terraform tools).
 
-Deckhouse позволяет легко выполнять такие нетривиальные операции с control-plane и узлами кластера, как:
-- миграция между single-master и multi-master схемами
-- маштабирование master-узлов
-- обновление версий компонентов.
+Deckhouse facilitates non-trivial operations with control-plane and cluster nodes, such as:
+- migrating between single-master and multi-master schemes;
+- scaling master nodes;
+- updating versions of the components.
 
-Операции выполняются по умным и безопасным алгоритмам, с возможностью пользователю контролировать/управлять происходящими процессами.
+All these tasks are based on smart and safe algorithms (the user can monitor/manage the ongoing processes).
 
-Также, Deckhouse берет на себя заботу о состоянии сертификатов используемых при работе с control-plane, — автоматически выполняя выпуск, продление сертификатов и настройку конфигурации kubectl.
+Also, Deckhouse takes care of the certificates used when working with the control plane. It automatically issues certificates, renews them and configures the kubectl.
 
-Deckhouse заменяет ресурсы относящиеся к `kube-proxy` от `kubeadm` (соответствующие DaemonSet, ConfigMap, RBAC) собственными версиями.
+Deckhouse replaces `kubeadm`'s `kube-proxy` resources (DaemonSets, ConfigMaps, RBAC) by their tailor-made analogs.
 
-Интеграция между модулями Deckhouse, позволяет сразу получить эффективный мониторинг и обеспечить приемлемый уровень безопасности. Например, можно легко организовать надежный доступ к API-серверу кластера через публичный IP-адрес, в том числе с возможностью работы через внешний провайдер аутентификации.
+A high level of integration between Deckhouse modules ensures effective monitoring and provides an acceptable level of security. For example, you can safely access the cluster's API server from a public IP address and use an external authentication provider.
 
-Docker-образы всех компонент Deckhouse, включая `control-plane`, хранятся в высокодоступном и геораспределенном Docker-registry, доступном с фиксированного набора IP-адресов (для удобства организации доступа из изолированных контуров).
-
+Docker images of all Deckhouse components (including `control plane`) are stored in a highly available and geo-distributed Docker registry. The latter is accessible from a limited set of IP addresses (to ease access from isolated environments).
