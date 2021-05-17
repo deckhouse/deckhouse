@@ -35,6 +35,9 @@ anchors_disabled: true
                 <li>
                     Bug-free Kubernetes as all components are regularly updated (delay from upstream is less than 1 month).
                 </li>
+                <li>
+                    To upgrade Kubernetes to another minor version, you need to change one line in your configuration. Upgrades to new patch versions are made automatically.
+                </li>
             </ul>
         </div>
     </div>
@@ -60,7 +63,7 @@ anchors_disabled: true
                             * To achieve this, the architecture of your clusters should be approved by our engineers and our guidelines should be followed.
                         </li>
                         <li>
-                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">EE edition</a> only.
+                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a> only.
                         </li>
                     </ul>
                 </li>
@@ -83,9 +86,12 @@ anchors_disabled: true
                     Self-hosted cloud solutions (OpenStack and vSphere) are also supported*.
                     <ul>
                         <li>
-                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">EE edition</a> only.
+                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a> only.
                         </li>
                     </ul>
+                </li>
+                <li>
+                    Kubernetes clusters created with Deckhouse are entirely identical no matter which underlying infrastructure is in use. All platform features &amp; modules are available everywhere.
                 </li>
             </ul>
         </div>
@@ -126,7 +132,7 @@ anchors_disabled: true
             </div>
             <ul class="features__item-list">
                 <li>
-                    Deploying Deckhouse is extremely simple: 1 CLI command and 8 minutes are all you need to get production-ready Kubernetes.
+                    Deploying Deckhouse is extremely simple: a couple of CLI commands and 8 minutes are all you need to get production-ready Kubernetes.
                 </li>
                 <li>
                     Ready-to-use configurations for each cloud provider are available — just choose the one that fits best for you.

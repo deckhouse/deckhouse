@@ -177,7 +177,7 @@ spec:
 ## Ingress
 
 To use Ingress, you need to:
-* Configure the ingress-controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/402-ingress-nginx/) module's IngressNginxController CR. Note that this controller can only serve the Istio environment!
+* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/402-ingress-nginx/) module's IngressNginxController CR. Note that this controller can only serve the Istio environment!
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP while envoy load balances them.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc.cluster.local` — using this annotation, envoy can identify the application service (Istio does not parse the Ingress host). The alternative approach is to create `VirtualService` with a public FQDN.

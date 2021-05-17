@@ -19,29 +19,29 @@ anchors_disabled: true
       </div>
       <h1 class="product-intro__title text_lead">
         NoOps<br>
-        Kubernetes<br>
-        Platform
+        Kubernetes-<br>
+        платформа
       </h1>
       <div class="product-intro__description text_base">
-        Deckhouse is an operator which creates homogeneous Kubernetes clusters anywhere and fully manages them.
-        It manages all necessary addons to provide observability, security and service mesh.
+        Deckhouse — это оператор, который создаёт идентичные Kubernetes-кластеры в любой инфраструктуре и полностью управляет ими.
+        Обеспечивает их всеми необходимыми дополнениями для observability, безопасности и service mesh.
       </div>
       <ul class="product-intro__features list">
         <li>
-          Fully identical Kubernetes anywhere
+          Полностью идентичный Kubernetes где угодно
         </li>
         <li>
-          Day 1 success with Kubernetes
+          Успех Day 1 с Kubernetes
         </li>
         <li>
-          Available in Community Edition & Enterprise Edition
+          Редкации Community Edition и Enterprise Edition
         </li>
       </ul>
       <div class="product-intro__actions button-group">
         {% unless site.mode == "local" %}
-        <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
+        <a href="javascript:Smallchat('open')" class="button button_alt">Связаться с нами</a>
         {% endunless %}
-        <a href="/{{ page.lang }}/features.html" class="button button_default">Read more</a>
+        <a href="/{{ page.lang }}/features.html" class="button button_default">Почитать подробнее</a>
       </div>
     </div>
   </div>
@@ -54,26 +54,26 @@ anchors_disabled: true
         <img src="{{ site.baseurl }}/images/logos/deckhouse-commander.svg" alt="Deckhouse Commander" style="margin-left: -7px" />
       </div>
       <h1 class="product-intro__title text_lead">
-        Centralized<br>
-        control for all<br>
-        your clusters
+        Удобный<br>
+        контроль<br>
+        всех кластеров
       </h1>
       <div class="product-intro__description text_base">
-        Deckhouse Commander is an orchestrator which manages many clusters across clouds and on-premises. It gives you a single point of control via API & UI.
+        Deckhouse Commander — оркестратор, управляющий множеством Kubernetes-кластеров в облаках и on-premises. Обеспечивает единую точку контроля через API и веб-интерфейс.
       </div>
       <ul class="product-intro__features list">
         <li>
-          Day 1 success with hybrid infrastructure
+          Успех Day 1 с гибридной инфраструктурой
         </li>
         <li class="text_alt">
-          Coming soon
+          Релиз в скором времени
         </li>
       </ul>
       <div class="product-intro__actions button-group">
         {% unless site.mode == "local" %}
-        <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
+        <a href="javascript:Smallchat('open')" class="button button_alt">Задать вопрос</a>
         {% endunless %}
-        <a href="/{{ page.lang }}/products.html#deckhouse-commander" class="button button_default">Read more</a>
+        <a href="/{{ page.lang }}/products.html#deckhouse-commander" class="button button_default">Узнать детали</a>
       </div>
     </div>
     <div class="product-intro__diagram">
@@ -85,34 +85,34 @@ anchors_disabled: true
 <section class="features">
 
   <h2 class="text_h1 text_alt features__title container">
-    Why do I need Deckhouse Platform?
+    Зачем мне Deckhouse Platform?
   </h2>
 
   <div class="features__item features__item_even">
       <div class="features__item-content container">
           <div class="features__item-header">
               <h2 class="features__item-title text_h1">
-                Developers
+                Разработчикам
               </h2>
           </div>
           <ul class="features__item-list">
               <li>
-                Focus on application development. Your infrastructure becomes just a well-known API that is transparent and fully managed everywhere (any clouds, bare metal servers or hybrid).
+                Сосредоточьтесь на разработке приложений. Инфраструктура превращается в стандартизованный и понятный API, который работает где угодно (облака, bare metal, гибрид) и не нуждается в поддержке.
               </li>
               <li>
-                Build and update apps quickly. Benefit from a true CI/CD enabler.
+                Быстро собирайте и обновляйте приложения. Получите настоящий CI/CD.
               </li>
               <li>
-                Deploy & test new features with no limits: create new environments whenever you want.
+                Деплойте и тестируйте новые возможности в динамических окружениях без ограничений.
               </li>
               <li>
-                Enjoy automated canary deployments and service mesh with Istio.
+                Используйте автоматизированный канареечный выкат и другие фичи service mesh от Istio.
               </li>
               <li>
-                Boost your observability with easy to use dashboards.
+                Получите отличную observability с простыми и понятными графиками.
               </li>
               <li>
-                Use custom metrics for out-of-the-box autoscaling.
+                Используйте кастомные метрики для автомасштабирования «из коробки».
               </li>
           </ul>
       </div>
@@ -127,22 +127,22 @@ anchors_disabled: true
           </div>
           <ul class="features__item-list">
               <li>
-                Forget about low-level Kubernetes machinery and focus on real DevOps and SRE, but not infrastructure itself.
+                Забудьте о сложных внутренностях Kubernetes и сфокусируйтесь на реальных задачах DevOps и SRE, а не инфраструктуре как таковой.
               </li>
               <li>
-                Run ready-to-use Kubernetes clusters in 15 minutes.
+                Запускайте готовые к работе кластеры Kubernetes за 15 минут.
               </li>
               <li>
-                Roll out fully identical clusters anywhere: bare-metal servers, private or public clouds.
+                Создавайте полностью идентичные кластеры на любой инфраструктуре: bare metal-серверы, приватные и публичные облака.
               </li>
               <li>
-                Leverage integrated and ready-to-use HPA for your apps.
+                Воспользуйтесь встроенным и уже готовым к работе HPA для приложений.
               </li>
               <li>
-                Never miss important updates from upstream Kubernetes, certificate renewals, etc.
+                Не бойтесь упустить важные обновления от upstream'а Kubernetes или не обновить вовремя сертификаты.
               </li>
               <li>
-                Get out-of-the-box security features including single sign-on, support for external authentication providers, and role-based access control.
+                Получите безопасность «из коробки», включая сквозную авторизацию (SSO), поддержку внешних провайдеров аутентификации, разграничение доступа по ролям и т.д.
               </li>
           </ul>
       </div>
@@ -151,24 +151,24 @@ anchors_disabled: true
       <div class="features__item-content container">
           <div class="features__item-header">
               <h2 class="features__item-title text_h1">
-                Business leaders
+                Руководителям бизнеса
               </h2>
           </div>
           <ul class="features__item-list">
             <li>
-              Leverage the latest containerisation technology to build cutting edge services and products.
+              Пользуйтесь преимуществами ведущей технологии для контейнеризации, чтобы создавать передовые сервисы и продукты.
             </li>
             <li>
-              Shorten time-to-market with the properly rolled out &amp; maintained Kubernetes.
+              Сократите время выхода на рынок (time-to-market) с грамотно настроенными и обслуживаемыми инсталляциями Kubernetes.
             </li>
             <li>
-              Boost teams efficiency by 300% equipping them with the best OSS tools for Kubernetes.
+              Ускорьте эффективность своих команд на 300%, предоставив им лучшие инструменты для работы с Kubernetes.
             </li>
             <li>
-              Save on infrastructure with automatic downscaling. Consume only what is needed at the moment.
+              Сэкономьте на инфраструктуре благодаря автоматическому обратному масштабированию. Платите только за реально используемые ресурсы.
             </li>
             <li>
-              Get a platform based on upstream Kubernetes and Open Source core avoiding a vendor lock-in.
+              Получите платформу, основанную на upstream-базе Kubernetes и Open Source-ядре, избежав vendor lock-in.
             </li>
           </ul>
       </div>
@@ -178,16 +178,16 @@ anchors_disabled: true
       <div class="features__item-content container">
           <div class="features__item-header">
               <h2 class="features__item-title text_h1 text_alt">
-                When do I need<br>
+                Когда мне нужен<br>
                 Deckhouse Commander?
               </h2>
           </div>
           <ul class="features__item-list">
             <li>
-              If you work with a few Kubernetes, Deckhouse Platform will perfectly fit your needs.
+              Если вы работаете с одним или несколькими кластерами Kubernetes, ваши потребности полностью закроет Deckhouse Platform.
             </li>
             <li>
-              Deckhouse Commander comes in handy when you need to manage 10+ clusters, no matter where they are deployed: on-premises, private clouds, public clouds, mixed infrastructure.
+              Deckhouse Commander нужен в ситуациях, когда вы управляете множеством (10+) кластеров — вне зависимости от того, где они развёрнуты: on-premises, частное облако, публичное облако, смешанная инфраструктура.
             </li>
           </ul>
       </div>
