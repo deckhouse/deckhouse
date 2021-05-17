@@ -8,6 +8,7 @@ function __config__() {
   kubernetes:
   - name: namespaces_global_revision
     group: main
+    queue: /modules/$(module::name::kebab_case)/revision-discovery
     keepFullObjectsInMemory: false
     apiVersion: v1
     kind: Namespace
@@ -20,6 +21,7 @@ function __config__() {
       }
   - name: namespaces_definite_revision
     group: main
+    queue: /modules/$(module::name::kebab_case)/revision-discovery
     keepFullObjectsInMemory: false
     apiVersion: v1
     kind: Namespace
@@ -34,6 +36,7 @@ function __config__() {
       }
   - name: istiooperators
     group: main
+    queue: /modules/$(module::name::kebab_case)/revision-discovery
     keepFullObjectsInMemory: false
     apiVersion: install.istio.io/v1alpha1
     kind: IstioOperator
@@ -76,11 +79,20 @@ function __main__() {
   global_revision="$(_version_to_revision "$global_version")"
 
   revisions_to_install="$(context::jq -rc --arg global_revision "$global_revision" '
-    [.snapshots.namespaces_definite_revision[].filterResult.revision | select(. != "myrev")] + [$global_revision] | unique
+    [.snapshots.namespaces_definite_revision[].filterResult.revision] + [$global_revision] | unique
   ')"
 
+  ### HACK until we decide to force replace default istiod during update or subscribe to all pods
+  if [ -z "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+    pod_revisions="$(
+      kubectl get pods -A -l 'istio.io/rev' -o json | jq -c '[.items[].metadata | select(.namespace != "d8-istio") | .labels."istio.io/rev"] | unique'
+    )"
+    revisions_to_install="$(jq -nc --argjson rti "$revisions_to_install" --argjson pr "$pod_revisions" '$rti + $pr | unique')"
+  fi
+  ### /HACK
+
   operator_revisions_to_install="$(context::jq -rc --argjson revisions_to_install "$revisions_to_install" '
-    [.snapshots.istiooperators[].filterResult | select(.revision != null and .revision != "myrev") | .revision] + $revisions_to_install | unique
+    [.snapshots.istiooperators[].filterResult | select(.revision != null) | .revision] + $revisions_to_install | unique
   ')"
 
   is_error="false"
@@ -95,10 +107,7 @@ function __main__() {
 
   application_namespaces="$(context::jq -r '
     [
-      (.snapshots.namespaces_global_revision + .snapshots.namespaces_definite_revision)[] |
-      select(.filterResult.name | startswith("d8-") | not) |
-      select(.filterResult.name | startswith("kube-") | not) |
-      .filterResult.name
+      (.snapshots.namespaces_global_revision + .snapshots.namespaces_definite_revision)[] | .filterResult.name
     ] | unique
   ')"
 

@@ -86,7 +86,7 @@ spec:
 status:
   metadataCache:
     publicServices:
-    - {"hostame": "some-outdated.host", "port": 111}
+    - {"hostame": "some-outdated.host", "ports": [{"name": "ppp", "port": 111}]}
     public:
       clusterUUID: deadbeef-pf1
 ---
@@ -100,8 +100,8 @@ spec:
 status:
   metadataCache:
     publicServices:
-    - {"hostname": "some-actual.host-1", "port": 111}
-    - {"hostname": "some-actual.host-2", "port": 111}
+    - {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]}
+    - {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}]}
     public:
       clusterUUID: deadbeef-pf2
 `))
@@ -109,8 +109,8 @@ status:
 			ioutil.WriteFile("/tmp/proper-federation-0/private/federation-services", []byte(`
 {
   "publicServices": [
-    {"hostname": "a.b.c", "port": 123},
-    {"hostname": "1.2.3.4", "port": 234}
+    {"hostname": "a.b.c", "ports": [{"name": "ppp", "port": 123}]},
+    {"hostname": "1.2.3.4", "ports": [{"name": "ppp", "port": 234}]}
   ]
 }
 `), 0644)
@@ -118,7 +118,7 @@ status:
 			ioutil.WriteFile("/tmp/proper-federation-1/private/federation-services", []byte(`
 {
   "publicServices": [
-    {"hostname": "some-actual.host", "port": 111}
+    {"hostname": "some-actual.host", "ports": [{"name": "ppp", "port": 111}]}
   ]
 }
 `), 0644)
@@ -126,8 +126,8 @@ status:
 			ioutil.WriteFile("/tmp/proper-federation-2/private/federation-services", []byte(`
 {
   "publicServices": [
-    {"hostname": "some-actual.host-2", "port": 111},
-    {"hostname": "some-actual.host-1", "port": 111}
+    {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}]},
+    {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]}
   ]
 }
 `), 0644)
@@ -151,19 +151,19 @@ status:
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "1.2.3.4", "port": 234},
-              {"hostname": "a.b.c", "port": 123}
+              {"hostname": "1.2.3.4", "ports": [{"name": "ppp", "port": 234}]},
+              {"hostname": "a.b.c", "ports": [{"name": "ppp", "port": 123}]}
             ]
 `))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.metadataCache.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "some-actual.host", "port": 111}
+              {"hostname": "some-actual.host", "ports": [{"name": "ppp", "port": 111}]}
             ]
 `))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.metadataCache.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "some-actual.host-1", "port": 111},
-              {"hostname": "some-actual.host-2", "port": 111}
+              {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]},
+              {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}]}
             ]
 `))
 

@@ -5,6 +5,7 @@
       for: 5m
       labels:
         severity_level: "6"
+        tier: cluster
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"

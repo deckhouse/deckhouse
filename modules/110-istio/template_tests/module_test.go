@@ -174,8 +174,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			deploymentOperatorv181 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x8x1")
 			deploymentOperatorv180alpha1 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x8x0alpha1")
 
-			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "deckhouse-registry")
-			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "deckhouse-registry")
+			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "d8-istio-sidecar-registry")
+			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "d8-istio-sidecar-registry")
 
 			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
 
@@ -240,7 +240,10 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     port: 123
   publicServices:
   - hostname: xxx.yyy
-    port: 456
+    virtualIP: 2.2.2.2
+    ports:
+    - name: aaa
+      port: 456
 `)
 			f.HelmRender()
 		})
@@ -255,10 +258,17 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(dr.Exists()).To(BeTrue())
 
 			Expect(se.Field("spec.hosts.0").String()).To(Equal("xxx.yyy"))
+			Expect(se.Field("spec.ports").String()).To(MatchYAML(`
+            - name: aaa
+              number: 456
+            `))
 			Expect(se.Field("spec.endpoints").String()).To(MatchYAML(`
             - address: 1.1.1.1
               ports:
-                http1: 123
+                aaa: 123
+            `))
+			Expect(se.Field("spec.addresses").String()).To(MatchYAML(`
+            - 2.2.2.2
             `))
 		})
 	})

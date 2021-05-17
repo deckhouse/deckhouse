@@ -55,7 +55,7 @@ spec:
 status:
   metadataCache:
     ingressGateways:
-    - {"address": "aaa", "port": 123}
+    - {"address": "aaa", "port": 222}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -67,7 +67,7 @@ spec:
 status:
   metadataCache:
     publicServices:
-    - {"hostname": "aaa", "port": 123}
+    - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}]}
     public:
       clusterUUID: aaa-bbb-f2
       rootCA: abc-f2
@@ -83,9 +83,9 @@ spec:
 status:
   metadataCache:
     ingressGateways:
-    - {"address": "bbb", "port": 123}
+    - {"address": "bbb", "port": 222}
     publicServices:
-    - {"hostname": "bbb", "port": 123}
+    - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -101,9 +101,10 @@ spec:
 status:
   metadataCache:
     ingressGateways:
-    - {"address": "ccc", "port": 123}
+    - {"address": "ccc", "port": 222}
     publicServices:
-    - {"hostname": "ccc", "port": 123}
+    - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
+    - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]}
     public:
       clusterUUID: aaa-bbb-f4
       rootCA: abc-f4
@@ -138,14 +139,15 @@ status:
             "ingressGateways": [
               {
                 "address": "bbb",
-                "port": 123
+                "port": 222
               }
             ],
             "name": "federation-only-full-0",
             "publicServices": [
               {
                 "hostname": "bbb",
-                "port": 123
+                "virtualIP": "169.254.0.1",
+                "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",
@@ -155,14 +157,20 @@ status:
             "ingressGateways": [
               {
                 "address": "ccc",
-                "port": 123
+                "port": 222
               }
             ],
             "name": "federation-only-full-1",
             "publicServices": [
               {
                 "hostname": "ccc",
-                "port": 123
+                "virtualIP": "169.254.0.2",
+                "ports": [{"name": "ppp", "port": 123}]
+              },
+              {
+                "hostname": "ddd",
+                "virtualIP": "169.254.0.3",
+                "ports": [{"name": "xxx", "port": 555}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",

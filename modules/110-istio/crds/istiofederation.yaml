@@ -82,8 +82,15 @@ spec:
                         properties:
                           hostname:
                             type: string
-                          port:
-                            type: integer
+                          ports:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                port:
+                                  type: integer
                     publicServicesLastFetchTimestamp:
                       format: date-time
                       type: string

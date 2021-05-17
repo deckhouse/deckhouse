@@ -133,7 +133,7 @@ spec:
 		})
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").String()).To(MatchJSON(`["ns1","ns2","ns3","ns4","ns5"]`))
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").String()).To(MatchJSON(`["d8-ns6","d8-ns7","kube-ns8","kube-ns9","ns1","ns2","ns3","ns4","ns5"]`))
 			Expect(f.ValuesGet("istio.internal.revisionsToInstall").String()).To(MatchJSON(`["v1x1x0","v1x5x0","v1x7x4","v1x8x0","v1x9x0"]`))
 			Expect(f.ValuesGet("istio.internal.operatorRevisionsToInstall").String()).To(MatchJSON(`["v1x1x0","v1x5x0","v1x7x4","v1x8x0","v1x8x0alpha2","v1x9x0"]`))
 			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x1x0"))
