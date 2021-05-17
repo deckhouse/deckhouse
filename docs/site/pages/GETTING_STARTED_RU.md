@@ -67,9 +67,7 @@ toc: false
 
 {% offtopic title="config.yml" %}
 ```yaml
-------------------------------------------------------------------
 # секция с общими параметрами кластера (ClusterConfiguration)
-------------------------------------------------------------------
 # используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # тип секции конфигурации
@@ -84,10 +82,8 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.19"
 # домен кластера, используется для локальной маршрутизации
 clusterDomain: "cluster.local"
-
-------------------------------------------------------------------
+---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
-------------------------------------------------------------------
 # используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # тип секции конфигурации
@@ -108,13 +104,14 @@ deckhouse:
       # имя проекта; используется для тех же целей
       project: someproject
       modules:
-       # шаблон, который будет использоваться для составления адресов системных приложений в кластере
-       # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
-       publicDomainTemplate: "%s.somedomain.com"
-
-------------------------------------------------------------------
+        # шаблон, который будет использоваться для составления адресов системных приложений в кластере
+        # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
+        publicDomainTemplate: "%s.somedomain.com"
+    cniFlannelEnabled: true
+    cniFlannel:
+      podNetworkMode: vxlan
+---
 # секция с параметрами bare metal-кластера (StaticClusterConfiguration)
-------------------------------------------------------------------
 # используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # тип секции конфигурации
@@ -171,9 +168,7 @@ yc iam key create --service-account-name candi --output candi-sa-key.json
           Задайте минимальные 3 секции параметров для будущего кластера в файле <code>config.yml</code>:
 {% offtopic title="config.yml" %}
 ```yaml
------------------------------------------------------------------
 # секция с общими параметрами кластера (ClusterConfiguration)
-------------------------------------------------------------------
 # используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # тип секции конфигурации
@@ -194,10 +189,8 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.19"
 # домен кластера (используется для локальной маршрутизации)
 clusterDomain: "cluster.local"
-
------------------------------------------------------------------
+---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
------------------------------------------------------------------
 # используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # тип секции конфигурации
@@ -214,24 +207,21 @@ deckhouse:
   configOverrides:
     global:
       # имя кластера; используется, например, в лейблах алертов Prometheus
-	  clusterName: somecluster
+      clusterName: somecluster
       # имя проекта для кластера; используется для тех же целей
       project: someproject
       modules:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
         # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-
------------------------------------------------------------------
+---
 # секция с параметрами облачного провайдера (YandexClusterConfiguration)
------------------------------------------------------------------
 # используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1alpha1
 # тип секции конфигурации
 kind: YandexClusterConfiguration
 # публичная часть SSH-ключа для доступа к узлам облака
-sshPublicKey: ssh-rsa
-<SSH_PUBLIC_KEY>
+sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
 # layout — архитектура расположения ресурсов в облаке
 layout: WithoutNAT
 # адресное пространство узлов кластера
@@ -250,8 +240,8 @@ masterNodeGroup:
     - Auto
 # идентификатор облака и каталога Yandex.Cloud
 provider:
-  cloudID: ***
-  folderID: ***
+  cloudID: "***"
+  folderID: "***"
   # данные сервисного аккаунта облачного провайдера, имеющего права на создание и управление виртуальными машинами
   # это содержимое файла candi-sa-key.json, который был сгенерирован выше
   serviceAccountJSON: |
