@@ -10,7 +10,7 @@ toc: false
 <div markdown="1">
 Probably, you have already familiarized yourself with the main [Deckhouse features](/en/features.html).
 
-This getting started guide walks you through the step-by-step process of installing the Community Edition of Deckhouse. *(See the [products](/en/products.html) section for more info on licensing options and the differences between the CE and EE versions).*
+This getting started guide walks you through the step-by-step process of installing the Community Edition of Deckhouse. *(See the [products](/en/products.html#ce-vs-ee) section for more info on licensing options and the differences between the CE and EE versions).*
 
 The Deckhouse platform runs both on bare metal servers and on the infrastructure of the supported cloud providers. However, the installation process differs depending on the infrastructure chosen. That is why we provide various installation examples below.
 
@@ -18,12 +18,10 @@ The Deckhouse platform runs both on bare metal servers and on the infrastructure
 
 ### Requirements and preparatory steps
 
-Deckhouse is a [modular system](/en/documentation/v1/). The candi (Cluster and Infrastructure) subsystem is responsible for installing Deckhouse (you can find the detailed documentation [here](/en/documentation/v1/kubernetes.html#)).
-
 The general approach to installing Deckhouse includes the following steps:
 
 1.  Run the Docker container on the local machine that will be used to install Deckhouse.
-2.  Pass a public SSH key and the cluster's config file in the YAML format (e.g., `config.yml`) to this container.
+2.  Pass a private SSH key and the cluster's config file in the YAML format (e.g., `config.yml`) to this container.
 3.  Connect the container to the target machine (for bare metal installations) or the cloud via SSH. After that, you may proceed to installing and configuring the Kubernetes cluster.
 
 ***Note** that the "regular" computing resources of the cloud provider are used if Deckhouse is installed into the public cloud (instead of resources specially adapted to the managed Kubernetes solution of the provider in question).*
@@ -31,13 +29,13 @@ The general approach to installing Deckhouse includes the following steps:
 Requirements/limitations:
 
 -   The Docker runtime must be present on the machine used for the installation.
--   Although Deckhouse supports different Kubernetes versions (1.16+), only the latest ones have been tested for installing from scratch. Currently, version 1.19 is considered the latest; all subsequent installation examples are based on it.
+-   Deckhouse supports different Kubernetes versions: from 1.16 through 1.21. However, please note, only the following versions are tested for K8s installations “from scratch”: 1.16, 1.19, 1.20, and 1.21. All configurations below will use v1.19 as an example.
 -   Minimum hardware recommendations for a future cluster:
     -   at least 4 CPU cores;
     -   at least 8 GB of RAM;
     -   at least 40 GB of disk space for the cluster and etcd data;
--   OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
--   connection to the Internet; access to the operating system's standard repositories to install additional packages.
+    -   OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
+    -   connection to the Internet; access to the operating system's standard repositories to install additional packages.
 
 
 ## Step 1. Configuration
@@ -95,7 +93,9 @@ kind: InitConfiguration
 deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
   # for more information, see the description of the next step
-  imagesRepo: registry.flant.com/sys/antiopa
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  # a special string with your token to access Docker registry
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel used
   releaseChannel: EarlyAccess
   configOverrides:
@@ -105,8 +105,8 @@ deckhouse:
       # the project name (it is used for the same purpose as the cluster name)
       project: someproject
       modules:
-        # public domain name (clusterName is substituted for %s)
-        # used when accessing the cluster from outside
+        # template that will be used for system apps domains within the cluster
+        # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
 
 ------------------------------------------------------------------
@@ -131,7 +131,7 @@ internalNetworkCIDRs:
   </div>
   <ol>
     <li>
-      Create a user named <code>candi</code>. The command response will contain its parameters: 
+      Create a user named <code>candi</code>. The command response will contain its parameters:
 <div markdown="1">
 ```yaml
 yc iam service-account create --name candi
@@ -143,7 +143,7 @@ name: candi
 </div>
     </li>
     <li>
-      Assign the editor role to the newly created user:
+      Assign the <code>editor</code> role to the newly created user:
 <div markdown="1">
 ```yaml
 yc resource-manager folder add-access-binding <cloudname> --role editor --subject serviceAccount:<userId>
@@ -151,7 +151,7 @@ yc resource-manager folder add-access-binding <cloudname> --role editor --subjec
 </div>
     </li>
     <li>
-      Create a JSON file containing the parameters for user authorization in the cloud (These parameters will be used to log in to the cloud):
+      Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 <div markdown="1">
 ```yaml
 yc iam key create --service-account-name candi --output candi-sa-key.json
@@ -162,7 +162,7 @@ yc iam key create --service-account-name candi --output candi-sa-key.json
           Generate an SSH key on the local machine for accessing the cloud-based virtual machines. In Linux and macOS, you can generate a key using the <code>ssh-keygen</code> command-line tool. The public key must be included in the configuration file (it will be used for accessing nodes in the cloud).
         </li>
         <li>
-          Select the layout – the way how objects are located in the cloud. We will use the <strong>WithoutNAT</strong> layout for the Yandex.Cloud example. In this layout, NAT (of any kind) is not used, and each node is assigned a public IP. Other available layouts are described in the <a href="/en/documentation/v1/kubernetes.html">Cloud providers</a> section of the candi subsystem documentation.
+          Select the layout – the way how objects are located in the cloud; each provider has as a few of predefined layouts in Deckhouse. We will use the <strong>WithoutNAT</strong> layout for the Yandex.Cloud example. In this layout, NAT (of any kind) is not used, and each node is assigned a public IP.
         </li>
         <li>
           Define the three primary sections with parameters of the prospective cluster in the <code>config.yml</code> file:
@@ -201,21 +201,23 @@ apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
 # Deckhouse parameters
 deckhouse:
-# address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
-# for more information, see the description of the next step
-  imagesRepo: registry.flant.com/sys/antiopa
-# the release channel used
-releaseChannel: EarlyAccess
-configOverrides:
-  global:
+  # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
+  # for more information, see the description of the next step
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  # a special string with your token to access Docker registry
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+  # the release channel used
+  releaseChannel: EarlyAccess
+  configOverrides:
+    global:
       # the cluster name (it is used, e.g., in Prometheus alerts' labels)
-    clusterName: somecluster
+      clusterName: somecluster
       # the cluster's project name (it is used for the same purpose as the cluster name)
-    project: someproject
-    modules:
-      # public domain name (clusterName is substituted for %s)
-      # used when accessing the cluster from outside
-      publicDomainTemplate: "%s.somedomain.com"
+      project: someproject
+      modules:
+        # template that will be used for system apps domains within the cluster
+        # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
+        publicDomainTemplate: "%s.somedomain.com"
 
 -----------------------------------------------------------------
 # section containing the parameters of the cloud provider (YandexClusterConfiguration)
@@ -226,23 +228,23 @@ apiVersion: deckhouse.io/v1alpha1
 kind: YandexClusterConfiguration
 # public SSH key for accessing cloud nodes
 sshPublicKey: ssh-rsa
-<ssh public key>
+<SSH_PUBLIC_KEY>
 # layout — the way resources are located in the cloud
 layout: WithoutNAT
 # address space of the cluster's nodes
 nodeNetworkCIDR: 10.100.0.0/21
 # parameters of the master node group
 masterNodeGroup:
-# number of replicas
-replicas: 1
-# the amount of CPU, RAM, HDD resources, the VM image, and the policy of assigning external IP addresses
-instanceClass:
-  cores: 4
-  memory: 8192
-  imageID: fd8vqk0bcfhn31stn2ts
-  diskSizeGB: 40
-  externalIPAddresses:
-  - Auto
+  # number of replicas
+  replicas: 1
+  # the amount of CPU, RAM, HDD resources, the VM image, and the policy of assigning external IP addresses
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: fd8vqk0bcfhn31stn2ts
+    diskSizeGB: 40
+    externalIPAddresses:
+    - Auto
 # Yandex.Cloud's cloud and folder IDs
 provider:
   cloudID: ***
@@ -266,8 +268,8 @@ provider:
   </ol>
   <div markdown="1">
 Notes:
--   The complete list of supported cloud providers and their specific settings is available in the [Cloud providers](/en/documentation/v1/kubernetes.html) section of the candi subsystem documentation.
--   [Click here](/releases.html) to learn more about the Deckhouse release channels.
+-   The complete list of supported cloud providers and their specific settings is available in the [Cloud providers](/en/documentation/v1/kubernetes.html) section of the documentation.
+-   To learn more about the Deckhouse release channels, please see the [relevant documentation](/en/documentation/v1/deckhouse-release-channels.html) .
   </div>
 </div>
 
@@ -275,12 +277,33 @@ Notes:
 
 ## Step 2. Installation
 
-To proceed with the installation, you will need a Docker image of the Deckhouse installer. We will use the ready-made official image.
+To proceed with the installation, you will need a Docker image of the Deckhouse installer. We will use the ready-made official image. The instructions on how you can build your own image from the sources, will be available in the [project's repository](https://github.com/deckhouse/deckhouse).
 
-The command below pulls the Docker image of the Deckhouse installer and passes the public SSH key/config file to it (we have created them on the previous step). Note that the command below uses the default paths to files.
+The command below pulls the Docker image of the Deckhouse installer and passes the public SSH key/config file to it (we have created them on the previous step). Note that this command uses the default paths to files. The interactive terminal of this image's system will be launched then:
 
 ```yaml
-docker run -v ./config.yml -v ./ssh/<public_ssh_keyname>.pub registry.deckhouse.io/installer:v1.0.0
+docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ registry.deckhouse.io/installer:v1.0.0 bash
+```
+
+Now, to initiate the process of installation, you need to execute:
+
+```yaml
+dhctl bootstrap \
+  --ssh-user=<username> \
+  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --config=/config.yml
+```
+
+`username` variable here refers to:
+* the user that generated the SSH key for bare-metal installations;
+* the default user for the relevant VM image for cloud deployments (e.g., `ubuntu`, `user`, `azureuser`).
+
+Notes:
+-   It’s not recommended to leave the container during the installation process (e.g., if you need to change the configuration). In this case, when you launch the installer for the second time, you’ll have to manually remove resources created in the provider. Instead, you can use an external text editor (e.g., vim) to change your configuration. After you save the file, the modified configuration will become automatically available in the container.
+-   If any problems occur, you can stop the process of installation using the following command (the configuration file should be the same you’ve used to initiate the installation):
+
+```yaml
+dhctl bootstrap-phase abort --config=config.yml
 ```
 
 After the installation is complete, you will be returned to the command line. Congratulations: your cluster is ready! Now you can manage modules, deploy applications, etc.
@@ -289,50 +312,51 @@ After the installation is complete, you will be returned to the command line. Co
 
 You can verify the status of the Kubernetes cluster right after (or even during) the Deckhouse installation. By default, the `.kube/config` file used to communicate with Kubernetes is generated on the cluster's host. Thus, you can connect to the host via SSH and use regular k8s tools (such as `kubectl`) to interact with Kubernetes.
 
-For example, you can use the following classic command to view the cluster status:
+For example, you can use the following command to view the cluster status:
 
 ```yaml
-kubectl -n d8-system get pods
+kubectl -n d8-system get deployments/deckhouse
 ```
 
-In the command's output, all `d8-system***` pods must be listed as Ready. Such status indicates that modules are installed successfully, and the cluster is ready for use.
+In the command's output, the `d8-system***` deployment should be `Ready 1/1`. Such status indicates that modules are installed successfully, and the cluster is ready for use.
 
-For more convenient control over the cluster, a [module](/en/documentation/v1/modules/500-dashboard/) with the official Kubernetes dashboard is provided. It gets enabled by default after installation is complete and is available at `https://<publicDomainTemplate>` (the *User* access level is required). (The user-authz module documentation provides a detailed overview of access levels.)
+For more convenient control over the cluster, a [module](/en/documentation/v1/modules/500-dashboard/) with the official Kubernetes dashboard is provided. It gets enabled by default after installation is complete and is available at `https://dashboard<your-publicDomainTemplate-value>` with the *User* access level. (The [user-authz module](/en/documentation/v1/modules/140-user-authz/) documentation provides a detailed overview of access levels.)
 
 Logs are stored in JSON format, so you might want to use the `jq` utility to browse them:
 
 ```yaml
-kubectl -n namespace system logs podname -f --tail=10 | jq -rc .msg
+kubectl logs -n d8-system deployments/deckhouse -f --tail=10 | jq -rc .msg
 ```
-Note that there is also a [marm](/en/documentation/v1/features/marm.html) subsystem for full-fledged and detailed monitoring of the cluster.
+Note that there is also a pack of [special modules](/en/documentation/v1/modules/300-prometheus/) to implement full-fledged and detailed monitoring of the cluster.
 
 ## Next steps
 
 ### Using modules
 
-The Deckhouse module system allows you to add modules to the cluster and delete them on the fly. All you need to do is edit the cluster config --- Deckhouse will apply all the necessary changes automatically.
+The Deckhouse module system allows you to add modules to the cluster and delete them on the fly. All you need to do is edit the cluster config — Deckhouse will apply all the necessary changes automatically.
 
-Let's, for example, add the [extended-monitoring](/en/documentation/v1/modules/340-extended-monitoring/) module of the marm subsystem:
+Let's, for example, add the [user-authn](/en/documentation/v1/modules/150-user-authn/) module:
 
 1.  Open the Deckhouse configuration:
     ```yaml
     kubectl -n d8-system edit cm/deckhouse
     ```
-2.  Find the data section and add the parameter extended-monitoringEnabled to it:
+2.  Find the `data` section and add enable the module there:
     ```yaml
     data:
       global:
-        extended-monitoringEnabled: "True"
+        userAuthnEnabled: "true"
     ```
 3.  Save the configuration file. At this point, Deckhouse notices the changes and installs the module automatically.
 
 To edit the module settings, repeat step 1 (make changes to the configuration and save them). The changes will be applied automatically.
 
-To disable the module, set the parameter to `False`.
+To disable the module, set the parameter to `false`.
 
-### What do I do next?
+### What can I do next?
 
-Now that everything is up and running as intended, you can refer to [detailed information](/en/documentation/v1/) about the system in general and Deckhouse components in particular.
-Please, reach us via our [online community](/en/community.html) if you have any questions.
+Now that everything is up and running as intended, you can refer to [the documentation](/en/documentation/v1/) about the system in general and Deckhouse components in particular.
+
+Please, reach us via our [online community](/en/community.html#online-community) if you have any questions.
 
 </div>

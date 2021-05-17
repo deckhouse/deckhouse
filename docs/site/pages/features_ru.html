@@ -1,6 +1,6 @@
 ---
 title: Возможности
-description: Что делает Deckhouse Platform уникальным
+description: Что особенного в Deckhouse Platform
 permalink: ru/features.html
 layout: default
 lang: ru
@@ -10,7 +10,7 @@ anchors_disabled: true
 
 <section class="lead">
     <div class="lead__content container">
-        <h1 class="text_h1">What makes Deckhouse Platform special?</h1>
+        <h1 class="text_h1">Основные особенности Deckhouse Platform</h1>
     </div>
 </section>
 
@@ -25,16 +25,19 @@ anchors_disabled: true
             </div>
             <ul class="features__item-list">
                 <li>
-                    System software on the nodes (kernel, CRI, kubelet, etc.) is automatically managed.
+                    Системное программное обеспечение на узлах (ядро, CRI, kubelet и т.д.) автоматически управляется.
                 </li>
                 <li>
-                    Kubernetes core software (control plane, etcd, certificates, etc.) is automatically managed.
+                    Базовый софт Kubernetes (control plane, etcd, сертификаты и т.д.) автоматически управляется.
                 </li>
                 <li>
-                    Kubernetes platform components are automatically managed.
+                    Компоненты Kubernetes-платформы автоматически управляются.
                 </li>
                 <li>
-                    Bug-free Kubernetes as all components are regularly updated (delay from upstream is less than 1 month).
+                    Kubernetes без багов, поскольку все компоненты регулярно обновляются (задержка от upstream'а — не более 1 месяца).
+                </li>
+                <li>
+                    Для перехода на очередной minor-релиз Kubernetes достаточно изменить строку в конфиге. Обновления на patch-версии происходят автоматически.
                 </li>
             </ul>
         </div>
@@ -44,7 +47,7 @@ anchors_disabled: true
         <div class="features__item-content container">
             <div class="features__item-header">
                 <h2 class="features__item-title text_h1">
-                    SLA by design
+                    SLA от природы
                 </h2>
                 <!--span class="features__item-label">
                     Only in Enterprise Edition
@@ -52,65 +55,16 @@ anchors_disabled: true
             </div>
             <ul class="features__item-list">
                 <li>
-                    Thanks to NoOps approach and everything carefully tested before being released, reliability is our cornerstone.
+                    Надёжность ставится во главу угла. И это возможно благодаря самоуправляемому подходу (NoOps) и тестированию всех компонентов до релиза.
                 </li>
                 <li>
-                    Thus, we can provide SLA even without direct access to your infrastructure — 99,95%*.
+                    Мы можем предоставить гарантии доступности (SLA) в 99,95% даже в тех случаях, когда у нас нет прямого доступа к инфраструктуре*.
                     <ul>
                         <li>
-                            * To achieve this, the architecture of your clusters should be approved by our engineers and our guidelines should be followed.
+                            * Для этого необходимо, чтобы архитектура кластеров была одобрена нашими инженерами и соответствовала нашим рекомендациям.
                         </li>
                         <li>
-                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">EE edition</a> only.
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="features__item">
-        <div class="features__item-content container">
-            <div class="features__item-header">
-                <h2 class="features__item-title text_h1">
-                    Runs anywhere
-                </h2>
-            </div>
-            <ul class="features__item-list">
-                <li>
-                    Clusters are infrastructure-agnostic since they can be deployed on a public cloud of your choice (AWS, GCP, Microsoft Azure, OVH Cloud) or even bare-metal servers.
-                </li>
-                <li>
-                    Self-hosted cloud solutions (OpenStack and vSphere) are also supported*.
-                    <ul>
-                        <li>
-                            * This applies to the <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">EE edition</a> only.
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="features__item features__item_even">
-        <div class="features__item-content container">
-            <div class="features__item-header">
-                <h2 class="features__item-title text_h1">
-                    Industry trusted solution
-                </h2>
-            </div>
-            <ul class="features__item-list">
-                <li>
-                    It’s 100% vanilla Kubernetes since we follow the upstream version of Kubernetes.
-                </li>
-                <li>
-                    Based on <a href="https://github.com/flant/shell-operator" target="_blank">shell-operator</a> &amp; <a href="https://github.com/flant/addon-operator" target="_blank">addon-operator</a> Open Source projects that have been around for 2+ years and adopted by various vendors.
-                </li>
-                <li>
-                    Avoid vendor lock-in as the core of the platform and CE is free and Open Source.
-                    <ul>
-                        <li>
-                            The EE edition development process is also public (on GitHub) and all source code is open (but <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">not free</a>).
+                            * Гарантии распространяются только на <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a>.
                         </li>
                     </ul>
                 </li>
@@ -122,18 +76,23 @@ anchors_disabled: true
         <div class="features__item-content container">
             <div class="features__item-header">
                 <h2 class="features__item-title text_h1">
-                    Kubernetes, the easy way
+                    Одинаково работает везде
                 </h2>
             </div>
             <ul class="features__item-list">
                 <li>
-                    Deploying Deckhouse is extremely simple: 1 CLI command and 8 minutes are all you need to get production-ready Kubernetes.
+                    Кластеры поддерживают любой тип инфраструктуры и могут разворачиваться у любого облачного провайдера (AWS, GCP, Microsoft Azure, OVH Cloud, Яндекс.Облако) и даже на обычных железных серверах (bare metal).
                 </li>
                 <li>
-                    Ready-to-use configurations for each cloud provider are available — just choose the one that fits best for you.
+                    Частные облачные платформы (OpenStack и vSphere) тоже поддерживаются*.
+                    <ul>
+                        <li>
+                            * Доступно только в <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a>.
+                        </li>
+                    </ul>
                 </li>
                 <li>
-                    Even deploying on bare metal is not a big deal anymore.
+                    Kubernetes-кластеры, созданные с Deckhouse, полностью идентичны в любой инфраструктуре. В них доступны все возможности и модули платформы.
                 </li>
             </ul>
         </div>
@@ -143,18 +102,65 @@ anchors_disabled: true
         <div class="features__item-content container">
             <div class="features__item-header">
                 <h2 class="features__item-title text_h1">
-                    Feature-complete platform
+                    Решение, которому доверяют
                 </h2>
             </div>
             <ul class="features__item-list">
                 <li>
-                    Get auto-scaling, observability, security, service mesh right out of the box!
+                    На 100 % «ванильный» Kubernetes, т.к. кодовая база использует upstream-репозиторий Kubernetes.
                 </li>
                 <li>
-                    Kubernetes has a lot to offer, but this choice followed by further configuration, integration, and maintenance becomes a real challenge. Overcome it with Deckhouse!
+                    В основе дистрибутива — наши Open Source-проекты <a href="https://github.com/flant/shell-operator" target="_blank">shell-operator</a> и <a href="https://github.com/flant/addon-operator" target="_blank">addon-operator</a>, которые применяются широким сообществом со всего мира уже более двух лет.
+                </li>
+                <li>
+                    Ядро платформы и редакция CE бесплатны и Open Source, что нивелирует зависимость от поставщика (vendor lock-in).
                     <ul>
                         <li>
-                            Our basic principles are feature-complete Kubernetes, the integrity of all components, and simplicity not limiting flexibility. 
+                            Процесс разработки редакции EE тоже является публичным (на GitHub). Её исходный код тоже открыт (однако <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">не бесплатен</a>).
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="features__item">
+        <div class="features__item-content container">
+            <div class="features__item-header">
+                <h2 class="features__item-title text_h1">
+                    Простота установки
+                </h2>
+            </div>
+            <ul class="features__item-list">
+                <li>
+                    Развёртывание Deckhouse максимально упрощено: пара консольных команд и 8 минут — и у вас Kubernetes, готовый к production.
+                </li>
+                <li>
+                    Для каждого облачного провайдера предусмотрены готовые конфигурации — достаточно выбрать оптимальный для вас вариант.
+                </li>
+                <li>
+                    Инсталляция Kubernetes на bare metal — это всего лишь ещё одна опция, такая же простая в реализации.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="features__item features__item_even">
+        <div class="features__item-content container">
+            <div class="features__item-header">
+                <h2 class="features__item-title text_h1">
+                    Полноценная платформа
+                </h2>
+            </div>
+            <ul class="features__item-list">
+                <li>
+                    Получите автомасштабирование, наблюдаемость, безопасность и service mesh прямо «из коробки»!
+                </li>
+                <li>
+                    У Kubernetes множество возможностей, однако их выбор и использование затруднены необходимостью всё настраивать, интегрировать и поддерживать. Deckhouse делает это за вас!
+                    <ul>
+                        <li>
+                            Наши основные принципы — предоставлять полноценный Kubernetes, в котором интегрированы все компоненты так, что с ними легко работать, но это сделано не в ущерб гибкости. 
                         </li>
                     </ul>
                 </li>
@@ -166,7 +172,7 @@ anchors_disabled: true
         <div class="block__content container">
           <div>
             <p class="text text_big">
-                Ready to benefit from these features? Learn more about Deckhouse Platform, which is available as <a href="/{{ page.lang }}/community.html#deckhouse-platform-ce">Community Edition</a> and <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a>.
+                Готовы посмотреть на эти фичи в действии? Выберите подходящую вам редакцию Deckhouse Platform: <a href="/{{ page.lang }}/community.html#deckhouse-platform-ce">Community Edition</a> или <a href="/{{ page.lang }}/products.html#deckhouse-platform-ee">Enterprise Edition</a>.
             </p>
           </div>
         </div>
