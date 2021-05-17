@@ -2,38 +2,6 @@
 title: "Сloud provider — GCP: примеры конфигурации"
 ---
 
-## Пример конфигурации модуля
-
-```yaml
-cloudProviderGcpEnabled: "true"
-cloudProviderGcp: |
-  networkName: default
-  subnetworkName: kube
-  region: europe-north1
-  zones:
-  - europe-north1-a
-  - europe-north1-b
-  - europe-north1-c
-  extraInstanceTags:
-  - kube
-  disableExternalIP: false
-  sshKey: "ssh-rsa testetestest"
-  serviceAccountJSON: |
-    {
-      "type": "service_account",
-      "project_id": "test",
-      "private_key_id": "easfsadfdsafdsafdsaf",
-      "private_key": "-----BEGIN PRIVATE KEY-----\ntesttesttesttest\n-----END PRIVATE KEY-----\n",
-      "client_email": "test@test-sandbox.iam.gserviceaccount.com",
-      "client_id": "1421324321314131243214",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test%test-sandbox.iam.gserviceaccount.com"
-    }
-```
-
-
 ## Пример CR `GCPInstanceClass`
 
 ```yaml
@@ -44,3 +12,25 @@ metadata:
 spec:
   machineType: n1-standard-1
 ```
+
+## Настройка политик безопасности на узлах
+
+Вариантов, зачем может понадобиться ограничить или наоборот расширить входящий или исходящий трафик на виртуальных машинах кластера в GCP, может быть множество, например:
+
+* Разрешить подключение к нодам кластера с виртуальных машин из другой подсети
+* Разрешить подключение к портам статической ноды для работы приложения
+* Ограничить доступ к внешним ресурсам или другим вм в облаке по требованию службы безопасности
+
+Для всего этого следует применять дополнительные network tags.
+
+## Установка дополнительных network tags на статических и мастер-узлах
+
+Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные network tags указываются в `GCPClusterConfiguration`:
+- для мастер-узлов, в секции `masterNodeGroup` в поле `additionalNetworkTags`
+- для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalNetworkTags`.
+
+Поле `additionalNetworkTags` — содержит массив строк с именами network tags.
+
+## Установка дополнительных network tags на эфемерных нодах
+
+Необходимо указать параметр `additionalNetworkTags` для всех [`GCPInstanceClass`](cr.html#gcpinstanceclass) в кластере, которым нужны дополнительные network tags.
