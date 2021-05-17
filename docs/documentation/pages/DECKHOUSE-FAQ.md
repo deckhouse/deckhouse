@@ -1,50 +1,49 @@
 ---
 title: FAQ
 permalink: en/deckhouse-faq.html
-layout: page-another-lang
 ---
 
-## Как узнать все параметры Deckhouse?
+## How do I find out all Deckhouse parameters?
 
-Все ключевые настройки Deckhouse, включая параметры модулей, хранятся в ConfigMap `deckhouse` namespace `d8-system`. Посмотреть содержимое:
+All the essential Deskhouse settings (including module parameters) are stored in the `deckhouse` ConfigMap in the `d8-system` namespace. You can view its contents using the command below:
 ```
 kubectl -n d8-system get cm deckhouse -o yaml
 ```
 
-## Как найти документацию по установленной у меня версии?
+## How do I find the documentation for the version installed?
 
-Документация запущенной в кластере версии Deckhouse доступна по адресу `deckhouse.<cluster_domain>`, где `<cluster_domain>` - DNS имя в соответствии с шаблоном из параметра `global.modules.publicDomainTemplate` конфигурации.
+The documentation for the Deckhouse version running in the cluster is available at `deckhouse.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the `global.modules.publicDomainTemplate` parameter.
 
-## Как установить желаемый канал обновлений?
-Чтобы перейти на другой канал обновлений автоматически, минимизировав переключение версий в кластере, нужно у модуля изменить (установить) параметр `releaseChannel`. В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическая-стабилизация-релизного-канала).
+## How do I set the desired release channel?
+Change (set) the module's `releaseChannel` parameter to automatically switch to another release channel (and minimize version drift in the cluster). It will activate the mechanism of [automatic stabilization of the release channel](#how-does-the-mechanism-of-automatic-stabilization-of-the-release-channel-work).
 
-Пример конфигурации модуля:
+Here is an example of the module configuration:
 ```yaml
 deckhouse: |
   releaseChannel: RockSolid
 ```
 
-## Как работает автоматическая стабилизация релизного канала?
-При указании в конфигурации параметра `releaseChannel`, Deckhouse сам переключит свой image на соответствующий тег Docker-образа. Дополнительных действий со стороны пользователя не требуется.
+## How does the mechanism of automatic stabilization of the release channel work?
+Deckhouse will switch to the image with the corresponding Docker image tag in response to setting the `releaseChannel` parameter. No other action is required on the part of the user.
 
-**Внимание:** переключение не происходит мгновенно и зависит от обновлений Deckhouse.
+**Note:** Switching is not instantaneous and relies on the Deckhouse update process.
 
-Каждые 10 минут запускается скрипт стабилизации канала обновлений, который реализует следующую логику:
-* Если указанный канал обновлений соответствует тегу Docker-образа Deckhouse — ничего не произойдет;
-* При смене канала обновлений на более стабильный (например с `Alpha` на `EarlyAccess`) будет произведен плавный переход:
+The release channel stabilization script runs every 10 minutes. It implements the following algorithm:
+* If the specified release channel matches the Deckhouse Docker image's tag — do nothing;
+* When switching to a more stable release channel (e.g., `Alpha` -> `EarlyAccess`), the gradual transition takes place:
 
-  - Сначала проверяется равенство [digest](https://success.mirantis.com/article/images-tagging-vs-digests) для тегов Docker-образов, соответствующих текущему каналу обновлений и ближайшему к нему более стабильному (в примере — это каналы `Alpha` и `Beta`).
+  - First, the script compares the [digests](https://success.mirantis.com/article/images-tagging-vs-digests) of Docker image tags that correspond to the current release channel and the next more stable channel (`Alpha` and `Beta` in our example).
 
-  - Если digest'ы равны, будет проверен следующий по очереди тег (в примере, это тэг соответствующий каналу обновлений `EarlyAccess`).
+  - If the digests are equal, the script checks the next tag (in our example, this tag corresponds to the `EarlyAccess` release channel).
 
-  - В результате, Deckhouse будет переключен на более стабильный канал обновлений c digest'ом, равным текущему.
+  - As a result, Deckhouse will switch to a more stable release channel with a digest equal to the current one.
 
-* Если указан менее стабильный канал обновлений, чем тот, который соответствует текущему тегу Docker-образа Deckhouse — будет выполнена сверка digest'ов, соответствующих образам Docker для текущего канала обновлений и следующего, менее стабильного. Например, если необходимо перейти на канал `Alpha` с текущего канала `EarlyAccess`, — сравнивается `EarlyAccess` и `Beta`:
+* Suppose a less stable release channel is specified than the channel that corresponds to the current tag of the Deckhouse Docker image. In that case, the script compares digests corresponding to the Docker images for the current release channel and the next, less stable one. For example, if you need to switch to the `Alpha` channel from the `EarlyAccess` channel, the script will compare the  `EarlyAccess` and `Beta` channels:
 
-  - Если digest не равны, Deckhouse будет переключен на следующий канал обновлений (в нашем случае на `Beta`). Это необходимо, чтобы не пропустить важные миграции, которые  выполняются при обновлении Deckhouse.
+  - If digests are not equal, Deckhouse switch to the next release channel (`Beta` in our case). Such an approach ensures that some crucial migrations are performed during Deckhouse upgrades.
 
-  - Если digest равны, будет проверен следующий по убыванию стабильности канал обновлений (в нашем случае `Alpha`).
+  - If the digests are equal, the script checks the next less stable release channel (`Alpha` in our case).
 
-  - Когда проверка дойдет до желаемого канала обновлений (в примере — `Alpha`), переключение Deckhouse произойдет независимо от равенства digest.
+  - When the script reaches the desired release channel (`Alpha` in our example), Deckhouse will switch to it regardless of the results of the digest comparison.
 
-В итоге, постоянный запуск скрипта стабилизации рано или поздно приведет Deckhouse к состоянию, при котором тег его Docker-образа будет соответствовать заданному каналу обновлений.
+Since the stabilization script runs continuously, Deckhouse will eventually end up in a state where the tag of its Docker image corresponds to the release channel set.
