@@ -8,6 +8,8 @@ toc: false
 
 {::options parse_block_html="false" /}
 
+<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+
 <div markdown="1">
 Скорее всего вы уже ознакомились с основными [возможностями Deckhouse](/ru/features.html).
 
