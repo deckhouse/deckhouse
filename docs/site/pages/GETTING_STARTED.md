@@ -95,11 +95,11 @@ kind: InitConfiguration
 deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
   # for more information, see the description of the next step
-  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
   # a special string with your token to access Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel used
-  releaseChannel: EarlyAccess
+  releaseChannel: Beta
   configOverrides:
     global:
       # the cluster name (it is used, e.g., in Prometheus alerts' labels)
@@ -205,11 +205,11 @@ kind: InitConfiguration
 deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
   # for more information, see the description of the next step
-  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
   # a special string with your token to access Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel used
-  releaseChannel: EarlyAccess
+  releaseChannel: Beta
   configOverrides:
     global:
       # the cluster name (it is used, e.g., in Prometheus alerts' labels)
@@ -305,7 +305,7 @@ Notes:
 -   If any problems occur, you can stop the process of installation using the following command (the configuration file should be the same you’ve used to initiate the installation):
 
 ```yaml
-dhctl bootstrap-phase abort --config=config.yml
+dhctl bootstrap-phase abort --config=/config.yml
 ```
 
 After the installation is complete, you will be returned to the command line. Congratulations: your cluster is ready! Now you can manage modules, deploy applications, etc.
@@ -320,7 +320,7 @@ For example, you can use the following command to view the cluster status:
 kubectl -n d8-system get deployments/deckhouse
 ```
 
-In the command's output, the `d8-system***` deployment should be `Ready 1/1`. Such status indicates that modules are installed successfully, and the cluster is ready for use.
+In the command's output, the `deckhouse` deployment should be `READY 1/1`. Such status indicates that modules are installed successfully, and the cluster is ready for use.
 
 For more convenient control over the cluster, a [module](/en/documentation/v1/modules/500-dashboard/) with the official Kubernetes dashboard is provided. It gets enabled by default after installation is complete and is available at `https://dashboard<your-publicDomainTemplate-value>` with the *User* access level. (The [user-authz module](/en/documentation/v1/modules/140-user-authz/) documentation provides a detailed overview of access levels.)
 

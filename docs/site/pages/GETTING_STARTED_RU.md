@@ -96,11 +96,11 @@ kind: InitConfiguration
 deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
-  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
   # строка с ключом для доступа к Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
-  releaseChannel: EarlyAccess
+  releaseChannel: Beta
   configOverrides:
     global:
       # имя кластера; используется, например, в лейблах алертов Prometheus
@@ -206,11 +206,11 @@ kind: InitConfiguration
 deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
-  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
   # строка с ключом для доступа к Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
-  releaseChannel: EarlyAccess
+  releaseChannel: Beta
   configOverrides:
     global:
       # имя кластера; используется, например, в лейблах алертов Prometheus
@@ -306,7 +306,7 @@ dhctl bootstrap \
 -   В случае возникновения проблем для остановки процесса установки следует воспользоваться следующей командой (файл конфигурации должен совпадать с тем, с которым производилось разворачивание кластера):
 
 ```yaml
-dhctl bootstrap-phase abort --config=config.yml
+dhctl bootstrap-phase abort --config=/config.yml
 ```
 
 По окончании установки произойдет возврат к командной строке. Кластер готов к работе: управлению дополнительными модулями, разворачиванию ваших приложений и т.п.
@@ -321,7 +321,7 @@ dhctl bootstrap-phase abort --config=config.yml
 kubectl -n d8-system get deployments/deckhouse
 ```
 
-В ответе deployment с именем `d8-system***` должен иметь статус `Ready 1/1` — это будет свидетельствовать о том, что установка модулей завершена, кластер готов для дальнейшего использования.
+В ответе deployment с именем `deckhouse` должен иметь статус `READY 1/1` — это будет свидетельствовать о том, что установка модулей завершена, кластер готов для дальнейшего использования.
 
 Для более удобного контроля за кластером доступен модуль с официальной веб-панелью для Kubernetes — [dashboard](/en/documentation/v1/modules/500-dashboard/). Он активируется по умолчанию после установки и доступен по адресу `https://dashboard<значение параметра publicDomainTemplate>` с уровнем доступа `User`. (Подробнее про уровни доступа см. в документации по [модулю user-authz](/ru/documentation/v1/modules/140-user-authz/).)
 
