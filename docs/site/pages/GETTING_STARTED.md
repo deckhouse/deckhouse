@@ -7,6 +7,8 @@ toc: false
 
 {::options parse_block_html="false" /}
 
+<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+
 <div markdown="1">
 Probably, you have already familiarized yourself with the main [Deckhouse features](/en/features.html).
 
