@@ -92,7 +92,7 @@ kind: InitConfiguration
 deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
-  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
   # строка с ключом для доступа к Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
@@ -199,7 +199,7 @@ kind: InitConfiguration
 deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
-  imagesRepo: registry.deckhouse.io/deckhouse/fe/install:beta
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
   # строка с ключом для доступа к Docker registry
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
