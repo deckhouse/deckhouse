@@ -284,7 +284,7 @@ To proceed with the installation, you will need a Docker image of the Deckhouse 
 The command below pulls the Docker image of the Deckhouse installer and passes the public SSH key/config file to it (we have created them on the previous step). Note that this command uses the default paths to files. The interactive terminal of this image's system will be launched then:
 
 ```yaml
-docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ registry.deckhouse.io/installer:v1.0.0 bash
+docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ registry.deckhouse.io/deckhouse/fe/install:beta bash
 ```
 
 Now, to initiate the process of installation, you need to execute:
