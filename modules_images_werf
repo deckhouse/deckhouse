@@ -10,7 +10,9 @@ function bp() {
   fi
 
   werf build-and-publish --config modules_images_werf.yaml --publish-report-path images_tags_werf.json
-  werf publish --config modules_images_werf.yaml --images-repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/
+  if [[ -n ${CI_COMMIT_TAG} ]]; then
+    werf publish --config modules_images_werf.yaml --images-repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/
+  fi
 
   jq '
     def to_camel_case:
