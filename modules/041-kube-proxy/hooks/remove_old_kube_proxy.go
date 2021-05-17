@@ -57,7 +57,7 @@ func removeOldKubeProxyResourcesHandler(input *go_hook.HookInput) error {
 	}
 
 	for _, obj := range objects {
-		err := input.ObjectPatcher.DeleteObject(obj.apiVersion, obj.kind, obj.namespace, obj.kind, "")
+		err := input.ObjectPatcher.DeleteObject(obj.apiVersion, obj.kind, obj.namespace, obj.name, "")
 		if err != nil {
 			return err
 		}
