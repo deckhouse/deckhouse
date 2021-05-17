@@ -285,7 +285,7 @@ provider:
 В результате запуска следующей команды произойдет скачивание Docker-образа установщика Deckhouse, в который будут передана приватная часть SSH-ключа и файл конфигурации, подготовленные на прошлом шаге (пути расположения файлов даны по умолчанию). Будет запущен интерактивный терминал в системе образа:
 
 ```yaml
-docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ registry.deckhouse.io/installer:v1.0.0 bash
+docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ registry.deckhouse.io/deckhouse/fe/install:beta bash
 ```
 
 Далее для запуска установки необходимо выполнить команду:
