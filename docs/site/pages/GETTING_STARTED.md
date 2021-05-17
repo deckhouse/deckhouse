@@ -66,9 +66,7 @@ Create the cluster configuration file (<code>config.yml</code>) and insert the f
 
 {% offtopic title="config.yml" %}
 ```yaml
-------------------------------------------------------------------
 # general cluster parameters (ClusterConfiguration)
-------------------------------------------------------------------
 # version of the Deckhouse API
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
@@ -83,10 +81,8 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.19"
 # cluster domain (used for local routing)
 clusterDomain: "cluster.local"
-
-------------------------------------------------------------------
+---
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
-------------------------------------------------------------------
 # version of the Deckhouse API
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
@@ -110,10 +106,11 @@ deckhouse:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-
-------------------------------------------------------------------
+    cniFlannelEnabled: true
+    cniFlannel:
+      podNetworkMode: vxlan
+---
 # section with the parameters of the bare metal cluster (StaticClusterConfiguration)
-------------------------------------------------------------------
 # version of the Deckhouse API
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
@@ -170,9 +167,7 @@ yc iam key create --service-account-name candi --output candi-sa-key.json
           Define the three primary sections with parameters of the prospective cluster in the <code>config.yml</code> file:
 {% offtopic title="config.yml" %}
 ```yaml
------------------------------------------------------------------
 # general cluster parameters (ClusterConfiguration)
-------------------------------------------------------------------
 # version of the Deckhouse API
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
@@ -193,10 +188,8 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.19"
 # cluster domain (used for local routing)
 clusterDomain: "cluster.local"
-
------------------------------------------------------------------
+---
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
------------------------------------------------------------------
 # version of the Deckhouse API
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
@@ -220,17 +213,14 @@ deckhouse:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-
------------------------------------------------------------------
+---
 # section containing the parameters of the cloud provider (YandexClusterConfiguration)
------------------------------------------------------------------
 # version of the Deckhouse API
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
 kind: YandexClusterConfiguration
 # public SSH key for accessing cloud nodes
-sshPublicKey: ssh-rsa
-<SSH_PUBLIC_KEY>
+sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
 # layout — the way resources are located in the cloud
 layout: WithoutNAT
 # address space of the cluster's nodes
@@ -249,8 +239,8 @@ masterNodeGroup:
     - Auto
 # Yandex.Cloud's cloud and folder IDs
 provider:
-  cloudID: ***
-  folderID: ***
+  cloudID: "***"
+  folderID: "***"
   # parameters of the cloud provider service account that can create and manage virtual machines
   # the same as the contents of the candi-sa-key.json file generated earlier
   serviceAccountJSON: |
