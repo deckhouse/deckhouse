@@ -9,7 +9,8 @@ search: prometheus remote write, как подключится к Prometheus, п
 
 ```yaml
 prometheus: |
-  password: xxxxxx
+  auth:
+    password: xxxxxx
   retentionDays: 7
   storageClass: rbd
   nodeSelector:
