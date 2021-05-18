@@ -89,7 +89,7 @@ spec:
                   description: |
                     Определяет `nodeSelector` для подов с dex-authenticator.
 
-                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/en/documentation/v1/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
                     Чтобы отключить автоматику нужно указать значение `false`.
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
@@ -102,7 +102,7 @@ spec:
 
                       The `dex-authenticator` pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
 
-                      Use [automatic](/overview.html#выделение-узлов-под-определенный-вид-нагрузки) if not specified. Set `false` to turn off automatic.
+                      Use [automatic](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
 
                       **Pattern**: Standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) object. Pods inherit this object AS IS.
                     properties:

@@ -55,7 +55,7 @@ The kubeconfig authentication mechanism uses an OIDC token. An OIDC session can 
 Additionally, you can configure multiple `kube-apiserver` addresses and set a CA for each of them. It might come in handy if, for example, access takes place directly and over VPN.
 
 ## Exposing the Kubernetes API using Ingress
-As you know, `kube-apiserver` with no additional settings provided is only reachable from within the internal cluster network by default. This module solves the problem of effortless and secure access to the API from outside the cluster. In doing so, it exposes *apiserver* on the service domain  (for more information, [see](/overview.html#deckhouse-configuration) the service domain template in global).
+As you know, `kube-apiserver` with no additional settings provided is only reachable from within the internal cluster network by default. This module solves the problem of effortless and secure access to the API from outside the cluster. In doing so, it exposes *apiserver* on the service domain  (for more information, [see](../../#deckhouse-configuration) the service domain template in global).
 
 The following parameters can be specified when configuring:
 - a list of network addresses for which the connection is allowed;

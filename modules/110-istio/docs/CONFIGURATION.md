@@ -59,10 +59,10 @@ data:
 * `multicluster` — multicluster parameters:
   * `enabled` — designate this cluster as a multicluster member (see [Enabling multicluster](/modules/110-istio/#enabling-multicluster)).
 * `nodeSelector` —  the same as the pods' `spec.nodeSelector` parameter in Kubernetes.
-    * If the parameter is omitted, it will be set [automatically](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+    * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling).
     * You can set it to `false` to avoid adding any nodeSelector.
 * `tolerations` — the same as the pods' `spec.tolerations` parameter in Kubernetes;
-    * If the parameter is omitted, it will be set [automatically](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+    * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling).
     * You can set it to `false` to avoid adding any tolerations.
 
 Several [Custom Resources](cr.html) are available that simplify the usage of the istio module with applications.
