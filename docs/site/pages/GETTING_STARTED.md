@@ -47,16 +47,20 @@ Select the infrastructure type to install Deckhouse in:
 
 <div class="tabs">
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure active"
-  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_bm')">
+  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_bm');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
     Bare Metal
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
-    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_yc')">
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_yc');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
     Yandex.Cloud
+  </a>
+  <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_existing');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'deckhouse_install');">
+    Existing kubernetes cluster
   </a>
 </div>
 
-<div id="infratructure_bm" class="tabs__content tabs__content_infrastructure active">
+<div id="infrastructure_bm" class="tabs__content tabs__content_infrastructure active">
 <ul>
 <li>
 Set up SSH access between the machine used for the installation and the cluster's prospective master node.
@@ -124,7 +128,7 @@ internalNetworkCIDRs:
 </ul>
 </div>
 
-<div id="infratructure_yc" class="tabs__content tabs__content_infrastructure">
+<div id="infrastructure_yc" class="tabs__content tabs__content_infrastructure">
   <div markdown="1">
   You have to create a service account with the editor role with the cloud provider so that Deckhouse can manage cloud resources. The detailed instructions for creating a service account with Yandex.Cloud are available in the provider's [documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
   </div>
@@ -265,6 +269,50 @@ Notes:
   </div>
 </div>
 
+<div id="infrastructure_existing" class="tabs__content tabs__content_infrastructure">
+<ul>
+<li>
+Set up SSH access between the machine used for the installation and the existing cluster master node.
+</li>
+<li>
+Create configuration file (<code>config.yml</code>) for Deckhouse:
+
+{% offtopic title="config.yml" %}
+```yaml
+# section for bootstrapping the Deckhouse cluster (InitConfiguration)
+# version of the Deckhouse API
+apiVersion: deckhouse.io/v1alpha1
+# type of the configuration section
+kind: InitConfiguration
+# Deckhouse parameters
+deckhouse:
+  # address of the registry where the installer image is located; in this case, the default value for the official Deckhouse CE build is set
+  # for more information, see the description of the next step
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  # a special string with your token to access Docker registry
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+  # the release channel used
+  releaseChannel: Beta
+  configOverrides:
+    deckhouse:
+      bundle: Minimal
+    global:
+      # the cluster name (it is used, e.g., in Prometheus alerts' labels)
+      clusterName: main
+      # the cluster's project name (it is used for the same purpose as the cluster name)
+      project: someproject
+      modules:
+        # template that will be used for system apps domains within the cluster
+        # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
+        publicDomainTemplate: "%s.somedomain.com"
+```
+{% endofftopic %}
+</li>
+</ul>
+</div>
+
+<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active">
+
 <div markdown="1">
 
 ## Step 2. Installation
@@ -304,7 +352,43 @@ After the installation is complete, you will be returned to the command line. Co
 ## Step 3. Checking the status
 
 You can verify the status of the Kubernetes cluster right after (or even during) the Deckhouse installation. By default, the `.kube/config` file used to communicate with Kubernetes is generated on the cluster's host. Thus, you can connect to the host via SSH and use regular k8s tools (such as `kubectl`) to interact with Kubernetes.
+</div>
+</div>
 
+<div id="deckhouse_install" class="tabs__content tabs__content_installation">
+<div markdown="1">
+
+## Step 2. Installation
+
+To proceed with the installation, you will need a Docker image of the Deckhouse installer. We will use the ready-made official image. The instructions on how you can build your own image from the sources, will be available in the [project's repository](https://github.com/deckhouse/deckhouse).
+
+The command below pulls the Docker image of the Deckhouse installer and passes the public SSH key/config file to it (we have created them on the previous step). Note that this command uses the default paths to files. The interactive terminal of this image's system will be launched then:
+
+```yaml
+docker login -u demotoken -p <ACCESS_TOKEN> registry.deckhouse.io
+docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ -v $(pwd)/kubeconfig:/kubeconfig registry.deckhouse.io/deckhouse/fe/install:beta bash
+```
+
+Notes:
+-   Kubeconfig with access to Kubernetes API must be used in kubeconfig mount.
+
+Now, to initiate the process of installation, you need to execute:
+
+```yaml
+dhctl bootstrap-phase install-deckhouse \
+  --kubeconfig=/kubeconfig \
+  --config=/config.yml
+```
+
+After the installation is complete, you will be returned to the command line. Congratulations: Deckhouse is installed! Now you can manage modules, deploy applications, etc.
+
+## Step 3. Checking the status
+
+You can verify the status of the Kubernetes cluster right after (or even during) the Deckhouse installation.
+</div>
+</div>
+
+<div markdown="1">
 For example, you can use the following command to view the cluster status:
 
 ```yaml
