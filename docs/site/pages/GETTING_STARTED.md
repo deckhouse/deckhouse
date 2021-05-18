@@ -56,7 +56,7 @@ Select the infrastructure type to install Deckhouse in:
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
     onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_existing');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'deckhouse_install');">
-    Existing kubernetes cluster
+    Existing Kubernetes cluster
   </a>
 </div>
 
