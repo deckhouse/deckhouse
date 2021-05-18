@@ -153,7 +153,6 @@
         CRI:
           - "Containerd"
   artifacts: *artifacts
-  needs: *needs
 
 .Cloud layouts Tests vSphere template for docker:
   stage: cloud_testing_docker
@@ -234,4 +233,3 @@
         CRI:
           - "Containerd"
   artifacts: *vsphere_artifacts
-  needs: *vsphere_needs
