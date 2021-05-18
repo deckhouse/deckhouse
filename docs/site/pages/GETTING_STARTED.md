@@ -311,9 +311,7 @@ deckhouse:
 </ul>
 </div>
 
-<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active">
-
-<div markdown="1">
+<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active" markdown="1">
 
 ## Step 2. Installation
 
@@ -353,11 +351,8 @@ After the installation is complete, you will be returned to the command line. Co
 
 You can verify the status of the Kubernetes cluster right after (or even during) the Deckhouse installation. By default, the `.kube/config` file used to communicate with Kubernetes is generated on the cluster's host. Thus, you can connect to the host via SSH and use regular k8s tools (such as `kubectl`) to interact with Kubernetes.
 </div>
-</div>
 
-<div id="deckhouse_install" class="tabs__content tabs__content_installation">
-<div markdown="1">
-
+<div id="deckhouse_install" class="tabs__content tabs__content_installation" markdown="1">
 ## Step 2. Installation
 
 To proceed with the installation, you will need a Docker image of the Deckhouse installer. We will use the ready-made official image. The instructions on how you can build your own image from the sources, will be available in the [project's repository](https://github.com/deckhouse/deckhouse).
@@ -385,7 +380,6 @@ After the installation is complete, you will be returned to the command line. Co
 ## Step 3. Checking the status
 
 You can verify the status of the Kubernetes cluster right after (or even during) the Deckhouse installation.
-</div>
 </div>
 
 <div markdown="1">

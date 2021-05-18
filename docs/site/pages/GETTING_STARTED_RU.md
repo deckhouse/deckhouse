@@ -48,20 +48,20 @@ toc: false
 
 <div class="tabs">
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure active"
-  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_bm');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
+  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_bm');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
     Bare Metal
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
-    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_yc');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_yc');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
     Yandex.Cloud
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
-    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_existing');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'deckhouse_install');">
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_existing');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'deckhouse_install');">
     Существующий кластер Kubernetes
   </a>
 </div>
 
-<div id="infratructure_bm" class="tabs__content tabs__content_infrastructure active">
+<div id="infrastructure_bm" class="tabs__content tabs__content_infrastructure active">
 <ul>
 <li>
 Организуйте SSH-доступ между машиной, с которой будет производиться установка, и будущим master-узлом кластера.
@@ -129,7 +129,7 @@ internalNetworkCIDRs:
 </ul>
 </div>
 
-<div id="infratructure_yc" class="tabs__content tabs__content_infrastructure">
+<div id="infrastructure_yc" class="tabs__content tabs__content_infrastructure">
   <div markdown="1">
   Чтобы Deckhouse смог управлять ресурсами в облаке, необходимо создать сервисный аккаунт в облачном провайдере и выдать ему edit права. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облаке доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Здесь мы представим краткую последовательность необходимых действий:
   </div>
@@ -270,7 +270,7 @@ provider:
   </div>
 </div>
 
-<div id="infratructure_existing" class="tabs__content tabs__content_infrastructure">
+<div id="infrastructure_existing" class="tabs__content tabs__content_infrastructure">
 <ul>
 <li>
 Организуйте SSH-доступ между машиной, с которой будет производиться установка, и существующим master-узлом кластера.
@@ -312,8 +312,7 @@ deckhouse:
 </ul>
 </div>
 
-<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active">
-<div markdown="1">
+<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active" markdown="1">
 
 ## Шаг 2. Установка
 
@@ -353,10 +352,8 @@ dhctl bootstrap-phase abort --config=/config.yml
 
 Просмотр состояния Kubernetes-кластера возможен сразу после (или даже во время) установки Deckhouse. По умолчанию `.kube/config`, используемый для доступа к Kubernetes, генерируется на хосте с кластером. Если подключиться к этому хосту по SSH, для взаимодействия с Kubernetes можно воспользоваться стандартными инструментами, такими как `kubectl`.
 </div>
-</div>
 
-<div id="deckhouse_install" class="tabs__content tabs__content_installation">
-<div markdown="1">
+<div id="deckhouse_install" class="tabs__content tabs__content_installation" markdown="1">
 
 ## Шаг 2. Установка
 
@@ -382,12 +379,9 @@ dhctl bootstrap-phase install-deckhouse \
 
 По окончании установки произойдет возврат к командной строке. Deckhouse готов к работе: управлению дополнительными модулями, разворачиванию ваших приложений и т.п.
 
-<div markdown="1">
-
 ## Шаг 3. Проверка статуса
 
 Просмотр состояния Kubernetes-кластера возможен сразу после (или даже во время) установки Deckhouse.
-</div>
 </div>
 
 <div markdown="1">
