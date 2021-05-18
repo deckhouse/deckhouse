@@ -55,8 +55,10 @@ properties:
             type: integer
           diskSizeGigabytes:
             type: integer
+          diskFilesystemSize:
+            type: number
           diskUsage:
-            type: string
+            type: number
       prometheusLongterm:
         type: object
         default: {}
@@ -72,8 +74,10 @@ properties:
             type: integer
           diskSizeGigabytes:
             type: integer
+          diskFilesystemSize:
+            type: number
           diskUsage:
-            type: string
+            type: number
       grafana:
         type: object
         default: {}
