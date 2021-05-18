@@ -40,7 +40,7 @@ data:
 * `idTokenTTL` — the TTL of the id token (use s for seconds, m for minutes, h for hours);
   * By default, it is set to 10 minutes;
   * An example: `1h`
-* `highAvailability` — manually manage the high availability mode. By default, the HA mode gets enabled/disabled automatically. Read [more]({{ "/overview.html#parameters" | true_relative_url }}) about the HA mode for modules;
+* `highAvailability` — manually manage the high availability mode. By default, the HA mode gets enabled/disabled automatically. Read [more](../../deckhouse-configure-global.html#parameters) about the HA mode for modules;
 * `nodeSelector` — the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
     * If the parameter isn't set, then the `{"node-role.deckhouse.io/vsphere-csi-driver":""}` or `{"node-role.deckhouse.io/system":""}` value is used provided that such nodes exist in the cluster. Otherwise, the parameter stays empty;
     * You can set it to `false` to avoid adding any nodeSelector;

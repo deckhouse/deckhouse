@@ -29,13 +29,13 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
       Like `spec.tolerations` for Kubernetes pod.
 
-      Use [automatic](/overview.html#выделение-узлов-под-определенный-вид-нагрузки) if not specified. Set `false` to turn off automatic.
+      Use [automatic](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
     items:
       type: object
       properties:
