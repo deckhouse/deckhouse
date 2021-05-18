@@ -120,25 +120,19 @@
 
 .Web links test:
   stage: testing
-  variables:
-    REPORT_FILE: link_test_report.txt
   before_script:
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
-  - exit 0
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - ./modules_images_werf test_web_links
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
-  - werf run --config werf-web.yaml dev/web-public --docker-options="--rm --entrypoint cat" -- /usr/share/nginx/html/link_test_report.txt | tee ${REPORT_FILE}
-  - echo -e "\n#################################################\nPublic site link checking report...\n"
-  - |
-    cat ${REPORT_FILE} | grep -Eq 'finished successfully.$'
-    if [ $? -ne 0 ]; then
-      exit 1
-    fi
+  - cd docs/
+  - export BASEDIR=$(pwd)
+  - export _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
+  - bash ./check_links.sh
   after_script:
-    - rm -f ${REPORT_FILE}
+  - |
+      if [ "$_TMPDIR" != "" ] ; then
+        rm -rf $_TMPDIR
+      fi
   except:
     - schedules
     - alpha

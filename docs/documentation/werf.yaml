@@ -75,18 +75,6 @@ ansible:
         warn: false
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
-    - name: "Link checking"
-      shell: |
-        exit 0 || (bundle exec htmlproofer \
-          --allow-hash-href \
-          --empty-alt-ignore \
-          --check_html \
-          --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-          ./_site/ &> /app/_site/link_test_report.txt ) || true
-        cat /app/_site/link_test_report.txt
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
 git:
 - add: /docs
   to: /srv/jekyll-data
@@ -103,6 +91,7 @@ git:
   - '**/docker-compose.yml'
   - '**/.werf'
   - '**/.helm'
+  - documentation/pages/internal
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
@@ -112,7 +101,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['**/docs/','**/openapi/','**/crds/']
+  includePaths: ['*/docs/','*/openapi/','*/crds/']
 # CRDs
 - add: /modules/010-user-authn-crd/crds
   to: /src/modules/150-user-authn/crds

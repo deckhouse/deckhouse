@@ -2,6 +2,7 @@
 title: search
 layout: none
 searchable: false
+sitemap_include: false
 ---
 [
 {%- assign searchedpages = site.pages | where: "searchable", true %}
