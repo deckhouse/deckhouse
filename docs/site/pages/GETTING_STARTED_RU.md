@@ -48,12 +48,16 @@ toc: false
 
 <div class="tabs">
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure active"
-  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_bm')">
+  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_bm');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
     Bare Metal
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
-    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_yc')">
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_yc');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
     Yandex.Cloud
+  </a>
+  <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infratructure_existing');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'deckhouse_install');">
+    Существующий кластер Kubernetes
   </a>
 </div>
 
@@ -266,6 +270,49 @@ provider:
   </div>
 </div>
 
+<div id="infratructure_existing" class="tabs__content tabs__content_infrastructure">
+<ul>
+<li>
+Организуйте SSH-доступ между машиной, с которой будет производиться установка, и существующим master-узлом кластера.
+</li>
+<li>
+Определите параметры для Deckhouse, создав новый конфигурационный файл <code>config.yml</code>:
+
+{% offtopic title="config.yml" %}
+```yaml
+# секция первичной инициализации Deckhouse (InitConfiguration)
+# используемая версия API Deckhouse
+apiVersion: deckhouse.io/v1alpha1
+# тип секции конфигурации
+kind: InitConfiguration
+# конфигурация Deckhouse
+deckhouse:
+  # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
+  # подробнее см. в описании следующего шага
+  imagesRepo: registry.deckhouse.io/deckhouse/fe
+  # строка с ключом для доступа к Docker registry
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+  # используемый канал обновлений
+  releaseChannel: Beta
+  configOverrides:
+    deckhouse:
+      bundle: Minimal
+    global:
+      # имя кластера; используется, например, в лейблах алертов Prometheus
+      clusterName: main
+      # имя проекта; используется для тех же целей
+      project: someproject
+      modules:
+        # шаблон, который будет использоваться для составления адресов системных приложений в кластере
+        # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
+        publicDomainTemplate: "%s.somedomain.com"
+```
+{% endofftopic %}
+</li>
+</ul>
+</div>
+
+<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active">
 <div markdown="1">
 
 ## Шаг 2. Установка
@@ -305,7 +352,45 @@ dhctl bootstrap-phase abort --config=/config.yml
 ## Шаг 3. Проверка статуса
 
 Просмотр состояния Kubernetes-кластера возможен сразу после (или даже во время) установки Deckhouse. По умолчанию `.kube/config`, используемый для доступа к Kubernetes, генерируется на хосте с кластером. Если подключиться к этому хосту по SSH, для взаимодействия с Kubernetes можно воспользоваться стандартными инструментами, такими как `kubectl`.
+</div>
+</div>
 
+<div id="deckhouse_install" class="tabs__content tabs__content_installation">
+<div markdown="1">
+
+## Шаг 2. Установка
+
+Для непосредственной установки потребуется Docker-образ установщика Deckhouse. Мы воспользуемся уже готовым официальным образом от проекта. Информацию по самостоятельной сборке образа из исходников можно будет найти в [репозитории проекта](https://github.com/deckhouse/deckhouse).
+
+В результате запуска следующей команды произойдет скачивание Docker-образа установщика Deckhouse, в который будут передана приватная часть SSH-ключа и файл конфигурации, подготовленные на прошлом шаге (пути расположения файлов даны по умолчанию). Будет запущен интерактивный терминал в системе образа:
+
+```yaml
+docker login -u demotoken -p <ACCESS_TOKEN> registry.deckhouse.io
+docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ -v $(pwd)/kubeconfig:/kubeconfig registry.deckhouse.io/deckhouse/fe/install:beta bash
+```
+
+Примечания:
+-   В kubeconfig необходимо смонтировать kubeconfig с доступом к Kubernetes API.
+
+Далее для запуска установки необходимо выполнить команду:
+
+```yaml
+dhctl bootstrap-phase install-deckhouse \
+  --kubeconfig=/kubeconfig \
+  --config=/config.yml
+```
+
+По окончании установки произойдет возврат к командной строке. Deckhouse готов к работе: управлению дополнительными модулями, разворачиванию ваших приложений и т.п.
+
+<div markdown="1">
+
+## Шаг 3. Проверка статуса
+
+Просмотр состояния Kubernetes-кластера возможен сразу после (или даже во время) установки Deckhouse.
+</div>
+</div>
+
+<div markdown="1">
 Например, посмотреть на состояние кластера командой:
 
 ```yaml
