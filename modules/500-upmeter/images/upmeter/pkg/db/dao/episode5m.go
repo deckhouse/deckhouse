@@ -9,6 +9,7 @@ import (
 
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 const (
@@ -188,7 +189,7 @@ func (d *EpisodeDao5m) ListEpisodesByRange(from, to int64, ref check.ProbeRef) (
 // ListEpisodeSumsForRanges returns sums of seconds for each group_name+probe_name to reduce
 // calculations over full table.
 // FIXME rewrite this quick hack code.
-func (d *EpisodeDao5m) ListEpisodeSumsForRanges(stepRanges check.StepRanges, ref check.ProbeRef) ([]check.Episode, error) {
+func (d *EpisodeDao5m) ListEpisodeSumsForRanges(rng ranges.StepRange, ref check.ProbeRef) ([]check.Episode, error) {
 	res := make([]check.Episode, 0)
 
 	queryParts := map[string]string{
@@ -197,7 +198,7 @@ func (d *EpisodeDao5m) ListEpisodeSumsForRanges(stepRanges check.StepRanges, ref
 		"where":  "WHERE timeslot >= ? AND timeslot < ?",
 	}
 
-	for _, stepRange := range stepRanges.Ranges {
+	for _, stepRange := range rng.Subranges {
 		// Build query
 
 		selectPart := queryParts["select"]

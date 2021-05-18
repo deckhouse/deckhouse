@@ -5,7 +5,6 @@ import (
 	"time"
 
 	utime "d8.io/upmeter/pkg/time"
-	"d8.io/upmeter/pkg/util"
 )
 
 // Episode with time counters and start aligned to 30s or 5m
@@ -148,34 +147,6 @@ type DowntimeIncident struct {
 	Description  string
 	Affected     []string // a list of affected groups
 	DowntimeName string   // a checkName of a Downtime custom resource
-}
-
-// MuteDuration returns the count of seconds between 'from' and 'to'
-// that are affected by this incident for particular 'group'.
-func (d DowntimeIncident) MuteDuration(rng Range, group string) time.Duration {
-	// Not in range
-	if d.Start >= rng.To || d.End < rng.From {
-		return 0
-	}
-
-	isAffected := false
-	for _, affectedGroup := range d.Affected {
-		if group == affectedGroup {
-			isAffected = true
-			break
-		}
-	}
-	if !isAffected {
-		return 0
-	}
-
-	// Calculate mute duration for range [from; to]
-	var (
-		start = util.Max(d.Start, rng.From)
-		end   = util.Min(d.End, rng.To)
-	)
-
-	return time.Duration(end-start) * time.Second
 }
 
 type Stats struct {

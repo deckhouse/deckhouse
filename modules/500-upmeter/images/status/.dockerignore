@@ -1,1 +1,3 @@
 Dockerfile
+node_modules
+dist

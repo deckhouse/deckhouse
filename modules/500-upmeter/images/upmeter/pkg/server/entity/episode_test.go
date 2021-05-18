@@ -10,6 +10,7 @@ import (
 	"d8.io/upmeter/pkg/check"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 func Test_Save30sEpisode_Saves(t *testing.T) {
@@ -141,7 +142,7 @@ func Test_Update5mEpisode_Saves(t *testing.T) {
 
 	from := initial30s.TimeSlot.Truncate(5 * time.Minute)
 	to := from.Add(5 * time.Minute)
-	timerange := CalculateAdjustedStepRanges(from.Unix(), to.Unix(), 300)
+	timerange := ranges.NewStepRange(from.Unix(), to.Unix(), 300)
 	entities, err := dao.ListEpisodeSumsForRanges(timerange, initial30s.ProbeRef)
 	if err != nil {
 		t.Errorf("cannot get 5m episodes: %v", err)

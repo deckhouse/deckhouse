@@ -6,8 +6,11 @@ import (
 
 	"github.com/flant/shell-operator/pkg/kube_events_manager"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"d8.io/upmeter/pkg/check"
+	v1 "d8.io/upmeter/pkg/crd/v1"
 )
 
 type DowntimeMonitor struct {
@@ -58,46 +61,23 @@ func (m *DowntimeMonitor) Stop() {
 	m.Monitor.Stop()
 }
 
-func (m *DowntimeMonitor) GetDowntimeIncidents() []check.DowntimeIncident {
+func (m *DowntimeMonitor) GetDowntimeIncidents() ([]check.DowntimeIncident, error) {
 	res := make([]check.DowntimeIncident, 0)
 	for _, obj := range m.Monitor.GetExistedObjects() {
-		res = append(res, ConvertToDowntimeIncidents(obj.Object)...)
+		incs, err := convDowntimeIncident(obj.Object)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, incs...)
 	}
-	return res
+	return res, nil
 }
 
-func (m *DowntimeMonitor) FilterDowntimeIncidents(from, to int64, group string, muteDowntimeTypes []string) []check.DowntimeIncident {
-	res := make([]check.DowntimeIncident, 0)
-	for _, obj := range m.Monitor.GetExistedObjects() {
-		incidents := ConvertToDowntimeIncidents(obj.Object)
-		for _, incident := range incidents {
-			// filter out by time
-			if incident.End <= from || incident.Start >= to {
-				continue
-			}
-			// filter by group name
-			hasGroup := false
-			for _, groupName := range incident.Affected {
-				if group == groupName {
-					hasGroup = true
-				}
-			}
-			if !hasGroup {
-				continue
-			}
-			// filter non-interesting types
-			isMuted := false
-			for _, mutedType := range muteDowntimeTypes {
-				if mutedType == incident.Type {
-					isMuted = true
-				}
-			}
-			if !isMuted {
-				continue
-			}
-
-			res = append(res, incident)
-		}
+func convDowntimeIncident(obj *unstructured.Unstructured) ([]check.DowntimeIncident, error) {
+	var incidentObj v1.Downtime
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &incidentObj)
+	if err != nil {
+		return nil, err
 	}
-	return res
+	return incidentObj.GetDowntimeIncidents(), nil
 }
