@@ -1,28 +1,45 @@
-package entity
+package ranges
 
 import (
-	"d8.io/upmeter/pkg/check"
+	"time"
+
 	"d8.io/upmeter/pkg/util"
 )
 
-// CalculateAdjustedStepRanges adjust from, to and step and calculates
+type StepRange struct {
+	From      int64
+	To        int64
+	Step      int64
+	Subranges []Range
+}
+
+type Range struct {
+	From int64
+	To   int64
+}
+
+func (r Range) Diff() time.Duration {
+	return time.Duration(r.To-r.From) * time.Second
+}
+
+// NewStepRange adjust from, to and step and calculates
 // intermediate step ranges.
-func CalculateAdjustedStepRanges(from, to, step int64) check.StepRanges {
+func NewStepRange(from, to, step int64) StepRange {
 	count := (to - from) / step
 	step = alignStep(step)
 	to = alignEdge(to, step)
 	from = to - step*count
 
-	res := check.StepRanges{
-		From:   from,
-		To:     to,
-		Step:   step,
-		Ranges: make([]check.Range, 0),
+	res := StepRange{
+		From:      from,
+		To:        to,
+		Step:      step,
+		Subranges: make([]Range, 0),
 	}
 
 	// return one point
 	if res.From == res.To || res.To == 0 {
-		res.Ranges = append(res.Ranges, check.Range{From: res.From, To: res.From + res.Step})
+		res.Subranges = append(res.Subranges, Range{From: res.From, To: res.From + res.Step})
 		return res
 	}
 
@@ -31,10 +48,10 @@ func CalculateAdjustedStepRanges(from, to, step int64) check.StepRanges {
 	for {
 		stepEnd := stepStart + res.Step
 		if stepEnd >= res.To {
-			res.Ranges = append(res.Ranges, check.Range{From: stepStart, To: res.To})
+			res.Subranges = append(res.Subranges, Range{From: stepStart, To: res.To})
 			break
 		}
-		res.Ranges = append(res.Ranges, check.Range{From: stepStart, To: stepEnd})
+		res.Subranges = append(res.Subranges, Range{From: stepStart, To: stepEnd})
 		// go to next step
 		stepStart = stepEnd
 	}

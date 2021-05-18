@@ -1,10 +1,10 @@
-package entity
+package ranges
 
 import (
+	"math/rand"
 	"reflect"
 	"testing"
-
-	"d8.io/upmeter/pkg/check"
+	"time"
 )
 
 func Test_CalculateAdjustedStepRanges(t *testing.T) {
@@ -15,30 +15,30 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []check.Range
+		want []Range
 	}{
 		{
 			name: "Single range",
 			args: args{from: 0, to: 300, step: 300},
-			want: []check.Range{{From: 0, To: 300}},
+			want: []Range{{From: 0, To: 300}},
 		}, {
 			name: "Adjusts",
 			args: args{from: 21, to: 663, step: 321},
-			want: []check.Range{
+			want: []Range{
 				{From: 300, To: 600},
 				{From: 600, To: 900},
 			},
 		}, {
 			name: "Bigger step (1h)",
 			args: args{from: 21, to: 10000, step: 3600},
-			want: []check.Range{
+			want: []Range{
 				{From: 3600, To: 7200},
 				{From: 7200, To: 10800},
 			},
 		}, {
 			name: "Step ranges used in status_test.go",
 			args: args{from: 0, to: 900, step: 300},
-			want: []check.Range{
+			want: []Range{
 				{From: 0, To: 300},
 				{From: 300, To: 600},
 				{From: 600, To: 900},
@@ -46,21 +46,21 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 		}, {
 			name: "Step ranges used in status_test.go",
 			args: args{from: 0, to: 1200, step: 600},
-			want: []check.Range{
+			want: []Range{
 				{From: 0, To: 600},
 				{From: 600, To: 1200},
 			},
 		}, {
 			name: "Big step 3000",
 			args: args{from: 3500, to: 10000, step: 3000},
-			want: []check.Range{
+			want: []Range{
 				{From: 6000, To: 9000},
 				{From: 9000, To: 12000},
 			},
 		}, {
 			name: "Big step 7200",
 			args: args{from: 10000, to: 70000, step: 7200},
-			want: []check.Range{
+			want: []Range{
 				{From: 14400, To: 21600},
 				{From: 21600, To: 28800},
 				{From: 28800, To: 36000},
@@ -73,7 +73,7 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 		}, {
 			name: "Real timestamps",
 			args: args{from: 1603180029, to: 1603784829, step: 86400},
-			want: []check.Range{
+			want: []Range{
 				{From: 1603238400, To: 1603324800},
 				{From: 1603324800, To: 1603411200},
 				{From: 1603411200, To: 1603497600},
@@ -87,7 +87,7 @@ func Test_CalculateAdjustedStepRanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CalculateAdjustedStepRanges(tt.args.from, tt.args.to, tt.args.step).Ranges
+			got := NewStepRange(tt.args.from, tt.args.to, tt.args.step).Subranges
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CalculateAdjustedStepRanges() = %v, want %v", got, tt.want)
@@ -197,5 +197,20 @@ func TestAlignEdge(t *testing.T) {
 				t.Errorf("alignEdge() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_readjusting(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		from := rand.Int63n(time.Now().Unix())
+		to := from + rand.Int63n(30000)
+		step := 1 + rand.Int63n(30000)
+
+		rng1 := NewStepRange(from, to, step)
+		rng2 := NewStepRange(rng1.From, rng1.To, rng1.Step)
+
+		if !reflect.DeepEqual(rng1, rng2) {
+			t.Errorf("step ranges must be equal: initial=%v, secondary=%v", rng1, rng2)
+		}
 	}
 }

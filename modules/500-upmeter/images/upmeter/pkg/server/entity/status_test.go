@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 //nolint:unparam
@@ -24,7 +25,7 @@ var (
 
 	probeRef  = ref(group, probe)
 	probe2Ref = ref(group, probe+"2")
-	totalRef  = ref(group, totalProbeName)
+	totalRef  = ref(group, TotalProbeName)
 )
 
 func Test_CalculateStatuses_success_only(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	}
 
 	t.Run("simple case with minimal step", func(t *testing.T) {
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 300).Ranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 900, 300).Subranges, probeRef)
 
 		// Len should be 4: 3 episodes + one total episode for a period.
 		assertTree(g, s, probeRef, 3+1, "simple case with minimal step")
@@ -50,7 +51,7 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("mmm", func(t *testing.T) {
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 300).Ranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 1200, 300).Subranges, probeRef)
 
 		assertTree(g, s, probeRef, 4+1, "testGroup/testProbe len 4")
 		assertTimers(g, s[group][probe][0], counters{up: 300})
@@ -61,28 +62,28 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("simple case, total seconds for group", func(t *testing.T) {
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 300).Ranges, totalRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 900, 300).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 3+1, "testGroup/__total__ len 4")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][2], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][3], counters{up: 3 * 300})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][2], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][3], counters{up: 3 * 300})
 	})
 
 	t.Run("simple case, total seconds for group", func(t *testing.T) {
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 300).Ranges, totalRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 1200, 300).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 4+1, "testGroup/__total__ len 4 2")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][2], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][3], counters{up: 300})
-		assertTimers(g, s[group][totalProbeName][4], counters{up: 4 * 300})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][2], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][3], counters{up: 300})
+		assertTimers(g, s[group][TotalProbeName][4], counters{up: 4 * 300})
 	})
 
 	t.Run("2x step", func(t *testing.T) {
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, probeRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 1200, 600).Subranges, probeRef)
 
 		assertTree(g, s, probeRef, 2+1, "testGroup/testProbe len 2")
 		assertTimers(g, s[group][probe][0], counters{up: 600})
@@ -91,11 +92,11 @@ func Test_CalculateStatuses_success_only(t *testing.T) {
 	})
 
 	t.Run("3x step with grouping", func(t *testing.T) {
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 900, 900).Ranges, totalRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 900, 900).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 1+1, "testGroup/__total__ len 1")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 900})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 900})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 900})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 900})
 	})
 }
 
@@ -117,9 +118,9 @@ func Test_CalculateStatuses_with_incidents(t *testing.T) {
 	}
 
 	// 2x step with muting
-	stepRanges := CalculateAdjustedStepRanges(0, 1200, 600)
-	s := CalculateStatuses(episodes, incidents, stepRanges.Ranges, totalRef)
-	statusInfos := s[group][totalProbeName]
+	stepRanges := ranges.NewStepRange(0, 1200, 600)
+	s := calculateStatuses(episodes, incidents, stepRanges.Subranges, totalRef)
+	statusInfos := s[group][TotalProbeName]
 
 	g.Expect(statusInfos).To(HaveLen(3))
 
@@ -134,7 +135,7 @@ func Test_CalculateStatuses_with_incidents(t *testing.T) {
 	assertTimers(g, statusInfos[2], counters{up: 600 + 300, down: 100, muted: 200})
 }
 
-// Test UpdateMute with Nodata in episodes
+// Test updateMute with Nodata in episodes
 func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 	g := NewWithT(t)
 
@@ -145,13 +146,13 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 
 	t.Run("should add all statuses when no incidents", func(t *testing.T) {
 		// 2x step with nodata
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, totalRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 1200, 600).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 2+1, "testGroup/__total__ len 2")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 100, unknown: 200, nodata: 300})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 100, down: 100, unknown: 100, nodata: 300})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 100, unknown: 200, nodata: 300})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 100, down: 100, unknown: 100, nodata: 300})
 		// Total for the period
-		assertTimers(g, s[group][totalProbeName][2], counters{up: 200, down: 100, unknown: 200 + 100, nodata: 300 + 300})
+		assertTimers(g, s[group][TotalProbeName][2], counters{up: 200, down: 100, unknown: 200 + 100, nodata: 300 + 300})
 	})
 
 	t.Run("incidents should not decrease Up seconds", func(t *testing.T) {
@@ -161,13 +162,13 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 			newDowntimeIncident(800, 950, group),
 		}
 
-		s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, totalRef)
+		s := calculateStatuses(episodes, incidents, ranges.NewStepRange(0, 1200, 600).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 2+1, "testGroup/__total__ len 2 2")
 
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 100, unknown: 50, muted: 150, nodata: 300})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 100, down: 50, muted: 150, nodata: 300})
-		assertTimers(g, s[group][totalProbeName][2], counters{up: 100 + 100, down: 50, unknown: 50, muted: 150 + 150, nodata: 300 + 300})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 100, unknown: 50, muted: 150, nodata: 300})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 100, down: 50, muted: 150, nodata: 300})
+		assertTimers(g, s[group][TotalProbeName][2], counters{up: 100 + 100, down: 50, unknown: 50, muted: 150 + 150, nodata: 300 + 300})
 	})
 
 	t.Run("incidents should decrease NoData if mute is more than KnownSeconds and should not decrease Up seconds", func(t *testing.T) {
@@ -178,21 +179,21 @@ func Test_CalculateStatuses_with_incidents_and_nodata(t *testing.T) {
 			newDowntimeIncident(700, 1400, group),
 		}
 
-		s := CalculateStatuses(episodes, incidents, CalculateAdjustedStepRanges(0, 1200, 600).Ranges, totalRef)
+		s := calculateStatuses(episodes, incidents, ranges.NewStepRange(0, 1200, 600).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 2+1, "testGroup/__total__ len 2 3")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 100, muted: 400, nodata: 100})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 100, muted: 400, nodata: 100})
-		assertTimers(g, s[group][totalProbeName][2], counters{up: 100 + 100, muted: 400 + 400, nodata: 100 + 100})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 100, muted: 400, nodata: 100})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 100, muted: 400, nodata: 100})
+		assertTimers(g, s[group][TotalProbeName][2], counters{up: 100 + 100, muted: 400 + 400, nodata: 100 + 100})
 	})
 }
 
-// Test CalculateTotalForStepRange
+// Test calculateTotalForStepRange
 func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 	g := NewWithT(t)
 
 	var episodes []check.Episode
-	var s map[string]map[string][]StatusInfo
+	var s map[string]map[string][]EpisodeSummary
 
 	t.Run("Only success and unknown should not emit down seconds", func(t *testing.T) {
 		time1 := counters{up: 50, unknown: 250}
@@ -204,11 +205,11 @@ func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 			newEpisode(probe2Ref, 300, time2),
 		}
 
-		s = CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 600, 600).Ranges, totalRef)
+		s = calculateStatuses(episodes, nil, ranges.NewStepRange(0, 600, 600).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 1+1, "testGroup/__total__ len 1")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 100, unknown: 500})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 100, unknown: 500})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 100, unknown: 500})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 100, unknown: 500})
 	})
 
 	t.Run("Only success and nodata should not emit down seconds", func(t *testing.T) {
@@ -221,67 +222,67 @@ func Test_CalculateStatuses_total_with_multiple_probes(t *testing.T) {
 			newEpisode(probe2Ref, 300, time2),
 		}
 
-		s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 600, 600).Ranges, totalRef)
+		s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 600, 600).Subranges, totalRef)
 
 		assertTree(g, s, totalRef, 1+1, "testGroup/__total__ len 1 2")
-		assertTimers(g, s[group][totalProbeName][0], counters{up: 100, unknown: 100, nodata: 400})
-		assertTimers(g, s[group][totalProbeName][1], counters{up: 100, unknown: 100, nodata: 400})
+		assertTimers(g, s[group][TotalProbeName][0], counters{up: 100, unknown: 100, nodata: 400})
+		assertTimers(g, s[group][TotalProbeName][1], counters{up: 100, unknown: 100, nodata: 400})
 	})
 }
 
 func Test_TransformToSortedTimestampedArrays(t *testing.T) {
 	g := NewWithT(t)
 
-	statuses := map[string]map[string]map[int64]*StatusInfo{
+	statuses := map[string]map[string]map[int64]*EpisodeSummary{
 		group: {
-			totalProbeName: {
-				0:   &StatusInfo{TimeSlot: 0},
-				300: &StatusInfo{TimeSlot: 300},
-				600: &StatusInfo{TimeSlot: 600},
+			TotalProbeName: {
+				0:   &EpisodeSummary{TimeSlot: 0},
+				300: &EpisodeSummary{TimeSlot: 300},
+				600: &EpisodeSummary{TimeSlot: 600},
 			},
 			"probe_1": {
-				0:   &StatusInfo{TimeSlot: 0},
-				300: &StatusInfo{TimeSlot: 300},
-				600: &StatusInfo{TimeSlot: 600},
+				0:   &EpisodeSummary{TimeSlot: 0},
+				300: &EpisodeSummary{TimeSlot: 300},
+				600: &EpisodeSummary{TimeSlot: 600},
 			},
 			"probe_2": {
-				0:   &StatusInfo{TimeSlot: 0},
-				300: &StatusInfo{TimeSlot: 300},
-				600: &StatusInfo{TimeSlot: 600},
+				0:   &EpisodeSummary{TimeSlot: 0},
+				300: &EpisodeSummary{TimeSlot: 300},
+				600: &EpisodeSummary{TimeSlot: 600},
 			},
 		},
 		"testGroup_2": {
-			totalProbeName: {
-				0:   &StatusInfo{TimeSlot: 0},
-				600: &StatusInfo{TimeSlot: 600},
-				300: &StatusInfo{TimeSlot: 300},
+			TotalProbeName: {
+				0:   &EpisodeSummary{TimeSlot: 0},
+				600: &EpisodeSummary{TimeSlot: 600},
+				300: &EpisodeSummary{TimeSlot: 300},
 			},
 			"probe_1": {
-				600: &StatusInfo{TimeSlot: 600},
-				300: &StatusInfo{TimeSlot: 300},
-				0:   &StatusInfo{TimeSlot: 0},
+				600: &EpisodeSummary{TimeSlot: 600},
+				300: &EpisodeSummary{TimeSlot: 300},
+				0:   &EpisodeSummary{TimeSlot: 0},
 			},
 			"probe_2": {
-				300: &StatusInfo{TimeSlot: 300},
-				600: &StatusInfo{TimeSlot: 600},
-				0:   &StatusInfo{TimeSlot: 0},
+				300: &EpisodeSummary{TimeSlot: 300},
+				600: &EpisodeSummary{TimeSlot: 600},
+				0:   &EpisodeSummary{TimeSlot: 0},
 			},
 		},
 	}
 
-	sorted := TransformTimestampedMapsToSortedArrays(statuses, ref(group, ""))
+	sorted := transformTimestampedMapsToSortedArrays(statuses, ref(group, ""))
 	// Structure should be without __total__ probe
 	g.Expect(sorted).Should(HaveLen(2))
 	g.Expect(sorted).Should(HaveKey(group))
 	g.Expect(sorted).Should(HaveKey("testGroup_2"))
 
 	testGroup := sorted[group]
-	g.Expect(testGroup).ShouldNot(HaveKey(totalProbeName))
+	g.Expect(testGroup).ShouldNot(HaveKey(TotalProbeName))
 	g.Expect(testGroup).Should(HaveKey("probe_1"))
 	g.Expect(testGroup).Should(HaveKey("probe_2"))
 
 	testGroup2 := sorted["testGroup_2"]
-	g.Expect(testGroup2).ShouldNot(HaveKey(totalProbeName))
+	g.Expect(testGroup2).ShouldNot(HaveKey(TotalProbeName))
 	g.Expect(testGroup2).Should(HaveKey("probe_1"))
 	g.Expect(testGroup2).Should(HaveKey("probe_2"))
 
@@ -291,7 +292,7 @@ func Test_TransformToSortedTimestampedArrays(t *testing.T) {
 	g.Expect(sort.IsSorted(ByTimeSlot(testGroup2["probe_1"]))).Should(BeTrue())
 	g.Expect(sort.IsSorted(ByTimeSlot(testGroup2["probe_2"]))).Should(BeTrue())
 
-	sorted = TransformTimestampedMapsToSortedArrays(statuses, totalRef)
+	sorted = transformTimestampedMapsToSortedArrays(statuses, totalRef)
 	// Structure should be with __total__ probe only
 	g.Expect(sorted).Should(HaveLen(2))
 	g.Expect(sorted).Should(HaveKey(group))
@@ -299,29 +300,29 @@ func Test_TransformToSortedTimestampedArrays(t *testing.T) {
 
 	testGroup = sorted[group]
 	g.Expect(testGroup).Should(HaveLen(1))
-	g.Expect(testGroup).Should(HaveKey(totalProbeName))
+	g.Expect(testGroup).Should(HaveKey(TotalProbeName))
 
 	testGroup2 = sorted["testGroup_2"]
 	g.Expect(testGroup2).Should(HaveLen(1))
-	g.Expect(testGroup2).Should(HaveKey(totalProbeName))
+	g.Expect(testGroup2).Should(HaveKey(TotalProbeName))
 
 	// Check sorting
-	g.Expect(sort.IsSorted(ByTimeSlot(testGroup[totalProbeName]))).Should(BeTrue())
-	g.Expect(sort.IsSorted(ByTimeSlot(testGroup2[totalProbeName]))).Should(BeTrue())
+	g.Expect(sort.IsSorted(ByTimeSlot(testGroup[TotalProbeName]))).Should(BeTrue())
+	g.Expect(sort.IsSorted(ByTimeSlot(testGroup2[TotalProbeName]))).Should(BeTrue())
 }
 
 func Test_CalculateTotalForStepRange(t *testing.T) {
 	g := NewWithT(t)
 
-	stepRange := check.Range{From: 0, To: 300}
+	stepRange := ranges.Range{From: 0, To: 300}
 
-	infos := []*StatusInfo{
+	infos := []*EpisodeSummary{
 		{Up: 300 * time.Second},
 		{Down: 300 * time.Second},
 		{Unknown: 300 * time.Second},
 	}
 
-	statuses := map[string]map[string]map[int64]*StatusInfo{
+	statuses := map[string]map[string]map[int64]*EpisodeSummary{
 		group: {
 			"testProbe1": {0: infos[0]},
 			"testProbe2": {0: infos[1]},
@@ -329,10 +330,10 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 		},
 	}
 
-	CalculateTotalForStepRange(statuses, stepRange)
+	calculateTotalForStepRange(statuses, stepRange)
 
-	g.Expect(statuses[group]).Should(HaveKey(totalProbeName))
-	totalInfo := statuses[group][totalProbeName][0]
+	g.Expect(statuses[group]).Should(HaveKey(TotalProbeName))
+	totalInfo := statuses[group][TotalProbeName][0]
 
 	assertTimers(g, *totalInfo, counters{down: 300})
 
@@ -341,9 +342,9 @@ func Test_CalculateTotalForStepRange(t *testing.T) {
 	setInfoTime(infos[1], counters{up: 50, down: 150, nodata: 100})
 	setInfoTime(infos[2], counters{up: 10, unknown: 100, nodata: 190})
 
-	CalculateTotalForStepRange(statuses, stepRange)
-	g.Expect(statuses[group]).Should(HaveKey(totalProbeName))
-	totalInfo = statuses[group][totalProbeName][0]
+	calculateTotalForStepRange(statuses, stepRange)
+	g.Expect(statuses[group]).Should(HaveKey(TotalProbeName))
+	totalInfo = statuses[group][TotalProbeName][0]
 
 	assertTimers(g, *totalInfo, counters{up: 10, down: 200, unknown: 20, nodata: 70})
 }
@@ -358,11 +359,11 @@ func Test_CalculateStatuses_multi_episodes(t *testing.T) {
 		newEpisode(probeRef, 0, counters{up: 50, down: 25, unknown: 225}),
 	}
 
-	s := CalculateStatuses(episodes, nil, CalculateAdjustedStepRanges(0, 300, 300).Ranges, totalRef)
+	s := calculateStatuses(episodes, nil, ranges.NewStepRange(0, 300, 300).Subranges, totalRef)
 
 	assertTree(g, s, totalRef, 1+1, "testGroup/__total__ len 1")
-	assertTimers(g, s[group][totalProbeName][0], counters{up: 300})
-	assertTimers(g, s[group][totalProbeName][1], counters{up: 300})
+	assertTimers(g, s[group][TotalProbeName][0], counters{up: 300})
+	assertTimers(g, s[group][TotalProbeName][1], counters{up: 300})
 }
 
 // Helpers
@@ -409,7 +410,7 @@ func newDowntimeIncident(start, end int64, affected ...string) check.DowntimeInc
 	}
 }
 
-func assertTimers(g *WithT, got StatusInfo, expected counters) {
+func assertTimers(g *WithT, got EpisodeSummary, expected counters) {
 	gotT := timers{
 		up:      got.Up,
 		down:    got.Down,
@@ -422,7 +423,7 @@ func assertTimers(g *WithT, got StatusInfo, expected counters) {
 	g.Expect(gotT).Should(Equal(expectT), "unexpected got counters, info: %+v", got)
 }
 
-func assertTree(g *WithT, s map[string]map[string][]StatusInfo, ref check.ProbeRef, len int, msg string) {
+func assertTree(g *WithT, s map[string]map[string][]EpisodeSummary, ref check.ProbeRef, len int, msg string) {
 	group := ref.Group
 	probe := ref.Probe
 
@@ -432,7 +433,7 @@ func assertTree(g *WithT, s map[string]map[string][]StatusInfo, ref check.ProbeR
 	g.Expect(s[group][probe]).Should(HaveLen(len), msg)
 }
 
-func setInfoTime(info *StatusInfo, c counters) {
+func setInfoTime(info *EpisodeSummary, c counters) {
 	t := ctimers(c)
 	info.Up = t.up
 	info.Down = t.down

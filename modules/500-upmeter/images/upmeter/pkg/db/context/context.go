@@ -34,7 +34,7 @@ func (c *DbContext) Connect(path string) error {
 
 // ConnectWithPool creates a pool of DB connections.
 func (c *DbContext) ConnectWithPool(path string, opts map[string]string) error {
-	size := util.GetenvInt64("UPMETER_DB_POOL_SIZE")
+	size := util.GetenvInt64("UPMETER_DB_POOL_SIZE") // FIXME bring out to the app arguments
 	if size == 0 {
 		size = defaultPoolSize
 	}

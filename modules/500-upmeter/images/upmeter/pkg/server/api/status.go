@@ -4,26 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/crd"
 	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/server/entity"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 type StatusResponse struct {
-	Step      int64                                     `json:"step"`
-	From      int64                                     `json:"from"`
-	To        int64                                     `json:"to"`
-	Statuses  map[string]map[string][]entity.StatusInfo `json:"statuses"`
-	Episodes  []check.Episode                           `json:"episodes"`
-	Incidents []check.DowntimeIncident                  `json:"incidents"`
+	Step      int64                                         `json:"step"`
+	From      int64                                         `json:"from"`
+	To        int64                                         `json:"to"`
+	Statuses  map[string]map[string][]entity.EpisodeSummary `json:"statuses"`
+	Episodes  []check.Episode                               `json:"episodes"`
+	Incidents []check.DowntimeIncident                      `json:"incidents"`
 }
 
 type StatusRangeHandler struct {
@@ -40,14 +37,23 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input, err := parseStatusInput(r)
+	filter, err := parseFilter(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, input)
+	// force default filtering
+	if len(filter.muteDowntimeTypes) == 0 {
+		filter.muteDowntimeTypes = []string{
+			"Maintenance",
+			"InfrastructureMaintenance",
+			"InfrastructureAccident",
+		}
+	}
+
+	resp, err := getStatus(h.DbCtx, h.DowntimeMonitor, filter)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
@@ -67,16 +73,16 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(respJSON)
 }
 
-type statusInput struct {
-	timerange timerange
-	probe     check.ProbeRef
-	muteTypes []string
+type statusFilter struct {
+	stepRange         ranges.StepRange
+	probe             check.ProbeRef
+	muteDowntimeTypes []string
 }
 
-func parseStatusInput(r *http.Request) (*statusInput, error) {
+func parseFilter(r *http.Request) (*statusFilter, error) {
 	query := r.URL.Query()
 
-	timerange, err := DecodeFromToStep(query.Get("from"), query.Get("to"), query.Get("step"))
+	rng, err := parseStepRange(query.Get("from"), query.Get("to"), query.Get("step"))
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse time range: %v", err)
 	}
@@ -87,139 +93,42 @@ func parseStatusInput(r *http.Request) (*statusInput, error) {
 		return nil, fmt.Errorf("'group' is required")
 	}
 
-	muteDowntimeTypes := decodeMuteDowntimeTypes(query.Get("muteDowntimeTypes"))
+	muteDowntimeTypes := parseDowntimeTypes(query.Get("muteDowntimeTypes"))
 
-	parsed := &statusInput{
-		timerange: timerange,
-		probe:     check.ProbeRef{Group: groupName, Probe: probeName},
-		muteTypes: muteDowntimeTypes,
+	parsed := &statusFilter{
+		stepRange:         rng,
+		probe:             check.ProbeRef{Group: groupName, Probe: probeName},
+		muteDowntimeTypes: muteDowntimeTypes,
 	}
 
 	return parsed, nil
 }
 
-func getStatus(dbctx *dbcontext.DbContext, monitor *crd.DowntimeMonitor, input *statusInput) (*StatusResponse, error) {
+func getStatus(dbctx *dbcontext.DbContext, monitor *crd.DowntimeMonitor, filter *statusFilter) (*StatusResponse, error) {
 	// Adjust range to step slots.
-	stepRanges := entity.CalculateAdjustedStepRanges(input.timerange.from, input.timerange.to, input.timerange.step)
-
+	rng := ranges.NewStepRange(filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step)
 	log.Infof("[from to step] input [%d %d %d] adjusted to [%d, %d, %d]",
-		input.timerange.from, input.timerange.to, input.timerange.step,
-		stepRanges.From, stepRanges.To, stepRanges.Step)
+		filter.stepRange.From, filter.stepRange.To, filter.stepRange.Step,
+		rng.From, rng.To, rng.Step)
 
-	daoCtx := dbctx.Start()
-	defer daoCtx.Stop()
-
-	dao5m := dao.NewEpisodeDao5m(daoCtx)
-	episodes, err := dao5m.ListEpisodeSumsForRanges(stepRanges, input.probe)
+	incidents, err := fetchIncidents(monitor, filter.muteDowntimeTypes, filter.probe.Group, rng)
 	if err != nil {
 		return nil, err
 	}
 
-	muteDowntimeTypes := input.muteTypes
-	if len(muteDowntimeTypes) == 0 {
-		muteDowntimeTypes = []string{
-			"Maintenance",
-			"InfrastructureMaintenance",
-			"InfrastructureAccident",
-		}
+	statuses, err := entity.FetchStatuses(dbctx, filter.probe, rng, incidents)
+	if err != nil {
+		return nil, err
 	}
 
-	incidents := monitor.FilterDowntimeIncidents(stepRanges.From, stepRanges.To, input.probe.Group, muteDowntimeTypes)
-
-	statuses := entity.CalculateStatuses(episodes, incidents, stepRanges.Ranges, input.probe)
-
-	body := &StatusResponse{
+	resp := &StatusResponse{
 		Statuses: statuses,
-		Step:     stepRanges.Step,
-		From:     stepRanges.From,
-		To:       stepRanges.To,
+		Step:     rng.Step,
+		From:     rng.From,
+		To:       rng.To,
 		// Episodes:  episodes, // To much data, only for debug.
 		Incidents: incidents,
 	}
 
-	return body, nil
-}
-
-type timerange struct {
-	from, to, step int64
-}
-
-// DecodeFromToStep decodes 3 arguments
-func DecodeFromToStep(fromArg, toArg, stepArg string) (timerange, error) {
-	var (
-		hasFrom = fromArg != ""
-		hasTo   = toArg != ""
-		hasStep = stepArg != ""
-		err     error
-	)
-	r := timerange{step: 30}
-
-	if hasFrom {
-		r.from, err = parseTimestamp(fromArg)
-		if err != nil {
-			return r, fmt.Errorf("from=%q is not timestamp: %v", fromArg, err)
-		}
-	}
-
-	if hasTo {
-		r.to, err = parseTimestamp(toArg)
-		if err != nil {
-			return r, fmt.Errorf("to=%q is not timestamp: %v", toArg, err)
-		}
-	}
-
-	if hasStep {
-		r.step, err = parseDuration(stepArg)
-		if err != nil {
-			return r, fmt.Errorf("step=%q is not duration: %v", stepArg, err)
-		}
-	}
-
-	// "from-to" variant
-	if hasFrom && hasTo {
-		return r, nil
-	}
-
-	// "Last" variant
-	// TODO is it expected?
-	// TODO do not adjust at this time, it should be done by CalculateStepRange
-	if hasFrom && !hasTo {
-		now := time.Now().Unix()
-		r.from = now - r.from
-		r.to = now
-		return r, nil
-	}
-
-	// something wrong
-	return r, fmt.Errorf("bad arguments")
-}
-
-func parseTimestamp(s string) (int64, error) {
-	return strconv.ParseInt(s, 10, 64)
-}
-
-func parseDuration(s string) (int64, error) {
-	dur, err := time.ParseDuration(s)
-	if err != nil {
-		return parseTimestamp(s)
-	}
-	return int64(dur.Seconds()), nil
-}
-
-func decodeMuteDowntimeTypes(in string) []string {
-	res := []string{}
-	muteTypes := strings.Split(in, "!")
-	for _, muteType := range muteTypes {
-		switch muteType {
-		case "Mnt":
-			res = append(res, "Maintenance")
-		case "Acd":
-			res = append(res, "Accident")
-		case "InfMnt":
-			res = append(res, "InfrastructureMaintenance")
-		case "InfAcd":
-			res = append(res, "InfrastructureAccident")
-		}
-	}
-	return res
+	return resp, nil
 }
