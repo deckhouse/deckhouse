@@ -21,7 +21,6 @@ type testStorageFixture struct {
 }
 
 func setupTestStorage(p *testStorageParams) *testStorageFixture {
-
 	ctx := &testTemplateContext{
 		returnedVal: map[string]interface{}{
 			"kubernetesVersion": p.k8sVer,
@@ -49,7 +48,6 @@ var _ = Describe("Module :: node-manager :: bashible-apiserver :: ng bundles sto
 			Expect(name).To(BeEquivalentTo("ubuntu-lts.1-19"))
 		})
 	})
-
 })
 
 type testTemplateContext struct {

@@ -20,6 +20,4 @@ package v1alpha1
 
 type BashibleExpansion interface{}
 
-type KubernetesBundleExpansion interface{}
-
 type NodeGroupBundleExpansion interface{}

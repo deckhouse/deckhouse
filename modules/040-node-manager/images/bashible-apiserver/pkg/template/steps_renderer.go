@@ -6,7 +6,7 @@ import (
 
 const versionMap = "versionMap"
 
-func NewStepsRenderer(bashibleContext Context, rootDir string, target string, nameMapper NameMapper) *StepsRenderer {
+func NewStepsRenderer(bashibleContext Context, rootDir, target string, nameMapper NameMapper) *StepsRenderer {
 	return &StepsRenderer{
 		bashibleContext: bashibleContext,
 		rootDir:         rootDir,

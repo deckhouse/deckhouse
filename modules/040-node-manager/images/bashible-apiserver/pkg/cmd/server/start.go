@@ -6,16 +6,15 @@ import (
 	"net"
 
 	"github.com/spf13/cobra"
-
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
-	"bashible-apiserver/pkg/apiserver"
-	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
+	"d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	"d8.io/bashible/pkg/apiserver"
+	bashibleopenapi "d8.io/bashible/pkg/generated/openapi"
 )
 
 // BashibleServerOptions contains state for master/api server

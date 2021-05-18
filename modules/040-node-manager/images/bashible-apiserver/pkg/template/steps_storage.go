@@ -38,7 +38,6 @@ func (s *StepsStorage) Render(templateContext map[string]interface{}) (map[strin
 	}
 
 	templates, err := s.readBundleTemplates(bundle)
-
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,6 @@ func (s *StepsStorage) readBundleTemplates(bundle string) (map[string][]byte, er
 	}
 
 	return templates, nil
-
 }
 
 // Expected fs hierarchy so far
@@ -119,7 +117,6 @@ func readTemplates(rootDir string, templates map[string][]byte) error {
 
 		content, err := ioutil.ReadFile(path)
 		if err != nil {
-
 			return err
 		}
 

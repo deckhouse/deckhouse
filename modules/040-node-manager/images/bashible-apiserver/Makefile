@@ -2,7 +2,7 @@ GO_VERSION=1.16.3
 GOLANGCI_LINT_VERSION=1.39.0
 GOFUMPT_VERSION=0.1.1
 
-.PHONY : deps fmt lint build build-docker test all
+.PHONY : deps fmt lint build test all
 
 all: deps fmt build test
 
@@ -25,13 +25,5 @@ test:
 	go test -race ./...
 
 build:
-	go build -ldflags="-s -w" -o upmeter ./cmd/upmeter/ && rm upmeter
-
-build-docker:
-	docker build \
-		--build-arg BASE_ALPINE=alpine:3.12 \
-		--build-arg BASE_GOLANG_ALPINE=golang:$(GO_VERSION)-alpine3.12 \
-		--build-arg BASE_GOLANG_BUSTER=golang:$(GO_VERSION)-buster \
-		-t upmeter \
-		.
+	go build -ldflags="-s -w" -o bashible . && rm bashible
 

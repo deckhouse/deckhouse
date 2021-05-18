@@ -22,9 +22,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type ReferenceType string
 
 const (
-	BashibleReferenceType         = ReferenceType("Bashible")
-	NodeGroupBundleReferenceType  = ReferenceType("NodeGroupBundle")
-	KubernetesBundleReferenceType = ReferenceType("KubernetesBundle")
+	BashibleReferenceType        = ReferenceType("Bashible")
+	NodeGroupBundleReferenceType = ReferenceType("NodeGroupBundle")
 )
 
 // +genclient
@@ -74,28 +73,4 @@ type NodeGroupBundleList struct {
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	Items []NodeGroupBundle `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// KubernetesBundle represents the set of generic bashible steps
-type KubernetesBundle struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	// Data contains bashible scripts by name, for now it is only one script
-	Data map[string]string `json:"data,omitempty" protobuf:"bytes,2,rep,name=data"`
-}
-
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// KubernetesBundleList is a list of KubernetesBundle objects.
-type KubernetesBundleList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Items []KubernetesBundle `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

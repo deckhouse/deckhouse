@@ -14,10 +14,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/apis/bashible/install"
-	bashibleregistry "bashible-apiserver/pkg/registry"
-	"bashible-apiserver/pkg/template"
+	"d8.io/bashible/pkg/apis/bashible"
+	"d8.io/bashible/pkg/apis/bashible/install"
+	bashibleregistry "d8.io/bashible/pkg/registry"
+	"d8.io/bashible/pkg/template"
 )
 
 var (
@@ -47,8 +47,7 @@ func init() {
 }
 
 // ExtraConfig holds custom apiserver config
-type ExtraConfig struct {
-	// Place you custom config here.
+type ExtraConfig struct { // Place you custom config here.
 }
 
 // Config defines the config for the apiserver

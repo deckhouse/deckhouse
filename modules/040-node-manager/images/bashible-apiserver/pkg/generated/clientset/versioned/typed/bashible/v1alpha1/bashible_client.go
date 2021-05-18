@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
-	"bashible-apiserver/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	"d8.io/bashible/pkg/generated/clientset/versioned/scheme"
 
 	rest "k8s.io/client-go/rest"
 )
@@ -28,7 +28,6 @@ import (
 type BashibleV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BashiblesGetter
-	KubernetesBundlesGetter
 	NodeGroupBundlesGetter
 }
 
@@ -39,10 +38,6 @@ type BashibleV1alpha1Client struct {
 
 func (c *BashibleV1alpha1Client) Bashibles() BashibleInterface {
 	return newBashibles(c)
-}
-
-func (c *BashibleV1alpha1Client) KubernetesBundles() KubernetesBundleInterface {
-	return newKubernetesBundles(c)
 }
 
 func (c *BashibleV1alpha1Client) NodeGroupBundles() NodeGroupBundleInterface {

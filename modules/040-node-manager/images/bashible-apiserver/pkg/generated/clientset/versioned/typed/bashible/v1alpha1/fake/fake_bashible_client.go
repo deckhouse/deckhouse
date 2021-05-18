@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
+	v1alpha1 "d8.io/bashible/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
 
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
@@ -31,10 +31,6 @@ type FakeBashibleV1alpha1 struct {
 
 func (c *FakeBashibleV1alpha1) Bashibles() v1alpha1.BashibleInterface {
 	return &FakeBashibles{c}
-}
-
-func (c *FakeBashibleV1alpha1) KubernetesBundles() v1alpha1.KubernetesBundleInterface {
-	return &FakeKubernetesBundles{c}
 }
 
 func (c *FakeBashibleV1alpha1) NodeGroupBundles() v1alpha1.NodeGroupBundleInterface {

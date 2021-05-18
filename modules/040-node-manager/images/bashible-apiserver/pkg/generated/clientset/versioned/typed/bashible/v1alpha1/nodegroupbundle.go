@@ -19,10 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
-	scheme "bashible-apiserver/pkg/generated/clientset/versioned/scheme"
 	"context"
 	"time"
+
+	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
+	scheme "d8.io/bashible/pkg/generated/clientset/versioned/scheme"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"

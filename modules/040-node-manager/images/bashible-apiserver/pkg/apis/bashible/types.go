@@ -24,9 +24,8 @@ import (
 type ReferenceType string
 
 const (
-	BashibleReferenceType         = ReferenceType("Bashible")
-	NodeGroupBundleReferenceType  = ReferenceType("NodeGroupBundle")
-	KubernetesBundleReferenceType = ReferenceType("KubernetesBundle")
+	BashibleReferenceType        = ReferenceType("Bashible")
+	NodeGroupBundleReferenceType = ReferenceType("NodeGroupBundle")
 )
 
 // +genclient
@@ -75,28 +74,4 @@ type NodeGroupBundleList struct {
 	metav1.ListMeta
 
 	Items []NodeGroupBundle
-}
-
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// KubernetesBundle represents the set of generic bashible steps
-type KubernetesBundle struct {
-	metav1.TypeMeta
-	metav1.ObjectMeta
-
-	// Data contains bashible scripts by name
-	Data map[string]string
-}
-
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// KubernetesBundleList is a list of KubernetesBundle objects.
-type KubernetesBundleList struct {
-	metav1.TypeMeta
-	metav1.ListMeta
-
-	Items []KubernetesBundle
 }

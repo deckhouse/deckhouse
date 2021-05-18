@@ -4,12 +4,11 @@ import (
 	"flag"
 	"os"
 
-	"k8s.io/klog/v2"
-
-	"bashible-apiserver/pkg/cmd/server"
-
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/logs"
+	"k8s.io/klog/v2"
+
+	"d8.io/bashible/pkg/cmd/server"
 )
 
 func main() {

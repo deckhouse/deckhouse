@@ -22,10 +22,6 @@ package v1alpha1
 // BashibleLister.
 type BashibleListerExpansion interface{}
 
-// KubernetesBundleListerExpansion allows custom methods to be added to
-// KubernetesBundleLister.
-type KubernetesBundleListerExpansion interface{}
-
 // NodeGroupBundleListerExpansion allows custom methods to be added to
 // NodeGroupBundleLister.
 type NodeGroupBundleListerExpansion interface{}

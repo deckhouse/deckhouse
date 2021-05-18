@@ -36,8 +36,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&BashibleList{},
 		&NodeGroupBundle{},
 		&NodeGroupBundleList{},
-		&KubernetesBundle{},
-		&KubernetesBundleList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
