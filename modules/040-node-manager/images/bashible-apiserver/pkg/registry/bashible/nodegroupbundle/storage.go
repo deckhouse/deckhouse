@@ -2,14 +2,14 @@ package nodegroupbundle
 
 import (
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/template"
+	"d8.io/bashible/pkg/apis/bashible"
+	"d8.io/bashible/pkg/template"
 )
 
 // NewStorage returns a RESTStorage object that will work against API services.
@@ -25,8 +25,8 @@ func NewStorage(rootDir string, bashibleContext template.Context) (*StorageWithK
 }
 
 type StorageWithK8sBundles struct {
-	ngRenderer  *template.StepsRenderer
-	k8sRenderer *template.StepsRenderer
+	ngRenderer      *template.StepsRenderer
+	k8sRenderer     *template.StepsRenderer
 	bashibleContext template.Context
 }
 

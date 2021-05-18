@@ -35,8 +35,6 @@ GET /api/v1/namespaces/d8-cloud-instance-manager/secrets/bashible-bundle-ubuntu-
 
 ```shell
 kubectl get -o json  bashibles         ubuntu-lts.master    # <os>.<nodegroup>
-## kubernetesbundles has been DEPRECATED 
-kubectl get -o json  kubernetesbundles ubuntu-lts.1-19      # <os>.<version>
 kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 ```
 
@@ -44,8 +42,6 @@ kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 
 ```
 GET /api/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
-## kubernetesbundles has been DEPRECATED 
-GET /api/bashible.deckhouse.io/v1alpha1/kubernetesbundles/ubuntu-lts.1-19
 GET /api/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
 ```
 

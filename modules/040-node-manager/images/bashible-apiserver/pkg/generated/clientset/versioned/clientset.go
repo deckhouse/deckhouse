@@ -19,8 +19,9 @@ limitations under the License.
 package versioned
 
 import (
-	bashiblev1alpha1 "bashible-apiserver/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
 	"fmt"
+
+	bashiblev1alpha1 "d8.io/bashible/pkg/generated/clientset/versioned/typed/bashible/v1alpha1"
 
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"

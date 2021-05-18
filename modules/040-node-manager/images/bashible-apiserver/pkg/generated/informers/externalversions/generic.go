@@ -19,8 +19,9 @@ limitations under the License.
 package externalversions
 
 import (
-	v1alpha1 "bashible-apiserver/pkg/apis/bashible/v1alpha1"
 	"fmt"
+
+	v1alpha1 "d8.io/bashible/pkg/apis/bashible/v1alpha1"
 
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -55,8 +56,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=bashible.deckhouse.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("bashibles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Bashible().V1alpha1().Bashibles().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("kubernetesbundles"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Bashible().V1alpha1().KubernetesBundles().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("nodegroupbundles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Bashible().V1alpha1().NodeGroupBundles().Informer()}, nil
 

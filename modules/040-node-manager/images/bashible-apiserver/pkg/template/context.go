@@ -96,7 +96,6 @@ func (c *BashibleContext) update(configMapData map[string]string) {
 	yaml.Unmarshal([]byte(value), &c.data)
 
 	c.updateHandler.OnUpdate()
-
 }
 
 // Get retrieves a copy of context for the given configMapKey.
@@ -143,6 +142,7 @@ func (x *configMapEventHandler) OnAdd(obj interface{}) {
 	cm := obj.(*corev1.ConfigMap)
 	x.out <- cm.Data
 }
+
 func (x *configMapEventHandler) OnUpdate(oldObj, newObj interface{}) {
 	cm := newObj.(*corev1.ConfigMap)
 	x.out <- cm.Data

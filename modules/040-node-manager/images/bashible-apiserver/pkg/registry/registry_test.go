@@ -17,7 +17,6 @@ func TestRegistry(t *testing.T) {
 	RunSpecs(t, "Registry Suite")
 }
 
-
 type testRestRegistryParams struct {
 	hitCache bool
 }
@@ -71,7 +70,6 @@ var _ = Describe("Module :: node-manager :: bashible-apiserver :: rest registry"
 			obj, _ := fixtures.restRegistry.Get(context.TODO(), fixtures.resourceName, &v1.GetOptions{})
 
 			Expect(obj).To(BeEquivalentTo(fixtures.renderVal))
-
 		})
 
 		Context("cache missing", func() {
@@ -97,7 +95,6 @@ var _ = Describe("Module :: node-manager :: bashible-apiserver :: rest registry"
 				Expect(cachedObj).To(BeEquivalentTo(fixtures.renderVal))
 			})
 		})
-
 	})
 })
 
@@ -113,6 +110,7 @@ func (r *testTemplateRender) Render(_ string) (runtime.Object, error) {
 func (r *testTemplateRender) New() runtime.Object {
 	return nil
 }
+
 func (r *testTemplateRender) NewList() runtime.Object {
 	return nil
 }
@@ -125,6 +123,7 @@ type fakeObjKind struct{}
 func (f *fakeObj) GetObjectKind() schema.ObjectKind {
 	return &fakeObjKind{}
 }
+
 func (f *fakeObj) DeepCopyObject() runtime.Object {
 	return f
 }

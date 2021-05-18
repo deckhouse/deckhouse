@@ -114,7 +114,6 @@ rules:
       - bashible.deckhouse.io
     resources:
       - bashibles
-      - kubernetesbundles
       - nodegroupbundles
     verbs:
       - get

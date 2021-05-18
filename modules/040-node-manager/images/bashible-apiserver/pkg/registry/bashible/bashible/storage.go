@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/template"
+	"d8.io/bashible/pkg/apis/bashible"
+	"d8.io/bashible/pkg/template"
 )
 
 const templateName = "bashible.sh.tpl"
@@ -41,7 +41,6 @@ type Storage struct {
 
 // Render renders single script content by name
 func (s Storage) Render(name string) (runtime.Object, error) {
-
 	data, err := s.getContext(name)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context: %v", err)

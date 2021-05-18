@@ -5,7 +5,6 @@ import (
 )
 
 func TestGetNodegroupContextKey(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		arg     string
@@ -30,7 +29,6 @@ func TestGetNodegroupContextKey(t *testing.T) {
 }
 
 func TestGetVersionContextKey(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		arg     string

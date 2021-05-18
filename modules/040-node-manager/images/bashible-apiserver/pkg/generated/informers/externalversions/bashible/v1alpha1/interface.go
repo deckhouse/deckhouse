@@ -19,15 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	internalinterfaces "bashible-apiserver/pkg/generated/informers/externalversions/internalinterfaces"
+	internalinterfaces "d8.io/bashible/pkg/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// Bashibles returns a BashibleInformer.
 	Bashibles() BashibleInformer
-	// KubernetesBundles returns a KubernetesBundleInformer.
-	KubernetesBundles() KubernetesBundleInformer
 	// NodeGroupBundles returns a NodeGroupBundleInformer.
 	NodeGroupBundles() NodeGroupBundleInformer
 }
@@ -46,11 +44,6 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Bashibles returns a BashibleInformer.
 func (v *version) Bashibles() BashibleInformer {
 	return &bashibleInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// KubernetesBundles returns a KubernetesBundleInformer.
-func (v *version) KubernetesBundles() KubernetesBundleInformer {
-	return &kubernetesBundleInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // NodeGroupBundles returns a NodeGroupBundleInformer.

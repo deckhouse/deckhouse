@@ -19,12 +19,13 @@ limitations under the License.
 package externalversions
 
 import (
-	versioned "bashible-apiserver/pkg/generated/clientset/versioned"
-	bashible "bashible-apiserver/pkg/generated/informers/externalversions/bashible"
-	internalinterfaces "bashible-apiserver/pkg/generated/informers/externalversions/internalinterfaces"
 	reflect "reflect"
 	sync "sync"
 	time "time"
+
+	versioned "d8.io/bashible/pkg/generated/clientset/versioned"
+	bashible "d8.io/bashible/pkg/generated/informers/externalversions/bashible"
+	internalinterfaces "d8.io/bashible/pkg/generated/informers/externalversions/internalinterfaces"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
