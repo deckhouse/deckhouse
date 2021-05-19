@@ -57,9 +57,9 @@ done
   {{- end }}
 {{- end }}
 
-{{- if eq .runType "ClusterBootstrap" }}
+{{- if or (eq .runType "ClusterBootstrap") (eq .nodeGroup.nodeType "Static") }}
 if [ -z "$(cat /var/lib/bashible/discovered-node-ip)" ] ; then
-  bb-log-error "Failed to discover node_ip but it's required for cluster bootstrap"
+  bb-log-error "Failed to discover node_ip but it's required for cluster bootstrap or static cluster nodes"
   exit 1
 fi
 {{- end }}

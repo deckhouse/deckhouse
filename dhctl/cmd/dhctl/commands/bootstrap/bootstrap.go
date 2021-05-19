@@ -70,6 +70,11 @@ func loadConfigFromFile(path string) (*config.MetaConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if metaConfig.ClusterConfig == nil {
+		return nil, fmt.Errorf("ClusterConfiguration must be provided")
+	}
+
 	err = metaConfig.LoadVersionMap(versionMap)
 	if err != nil {
 		return nil, err
