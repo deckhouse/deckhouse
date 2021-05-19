@@ -256,8 +256,8 @@ status:
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * *"))
 			f.ValuesSet("prometheus.internal.prometheusMain.effectiveStorageClass", "ceph-ssd")
 			f.ValuesSet("prometheus.internal.prometheusLongterm.effectiveStorageClass", "ceph-ssd")
-			f.ValuesSet("prometheus.internal.prometheusMain.diskUsage", "91")
-			f.ValuesSet("prometheus.internal.prometheusLongterm.diskUsage", "91")
+			f.ValuesSet("prometheus.internal.prometheusMain.diskUsage", 91)
+			f.ValuesSet("prometheus.internal.prometheusLongterm.diskUsage", 91)
 			f.RunHook()
 		})
 
