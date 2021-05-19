@@ -14,7 +14,7 @@ function __main__() {
   then
     if ! values::has --config istio.auth.externalAuthentication ; then
       values::set istio.auth.externalAuthentication '{}'
-      values::set istio.auth.externalAuthentication.authURL "https://kiali-dex-authenticator.d8-istio.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
+      values::set istio.auth.externalAuthentication.authURL "https://istio-dex-authenticator.d8-istio.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
       values::set istio.auth.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
       values::set istio.auth.externalAuthentication.useBearerTokens "true"
       values::set istio.internal.deployDexAuthenticator "true"
