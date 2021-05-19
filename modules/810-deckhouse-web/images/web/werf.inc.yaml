@@ -114,18 +114,6 @@ ansible:
         cp -Rf /app/_site/site/ru /app/_site/documentation/
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
-    - name: "Link checking"
-      shell: |
-        exit 0 || (bundle exec htmlproofer \
-          --allow-hash-href \
-          --empty-alt-ignore \
-          --check_html \
-          --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-          ./_site/ &> /app/_site/link_test_report.txt ) || true
-        cat /app/_site/link_test_report.txt
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
 git:
 - add: /docs
   to: /srv/jekyll-data
