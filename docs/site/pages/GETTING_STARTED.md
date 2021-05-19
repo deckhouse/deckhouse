@@ -113,6 +113,8 @@ deckhouse:
     cniFlannelEnabled: true
     cniFlannel:
       podNetworkMode: vxlan
+    prometheusMadisonIntegrationEnabled: false
+    nginxIngressEnabled: false
 ---
 # section with the parameters of the bare metal cluster (StaticClusterConfiguration)
 # version of the Deckhouse API
@@ -217,6 +219,8 @@ deckhouse:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
+    prometheusMadisonIntegrationEnabled: false
+    nginxIngressEnabled: false
 ---
 # section containing the parameters of the cloud provider (YandexClusterConfiguration)
 # version of the Deckhouse API
