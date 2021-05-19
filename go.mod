@@ -10,7 +10,7 @@ require (
 	github.com/blang/semver v3.5.0+incompatible
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210505133200-f39811813bee // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210517111909-e99be7c818bd // branch: master
 	github.com/flant/shell-operator v1.0.2-0.20210514090430-aa283d5fb09d // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
