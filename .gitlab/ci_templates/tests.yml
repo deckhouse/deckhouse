@@ -124,7 +124,7 @@
   - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
   - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - export BASEDIR=$(pwd)
+  - export BASEDIR=$(pwd)/docs
   - export _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
   - bash testing/check_links.sh
   after_script:
