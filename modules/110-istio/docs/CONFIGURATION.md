@@ -44,7 +44,7 @@ data:
         * It is set to `[]` by default. That is, there are no exceptions.
         * You can redefine this parameter locally using the `traffic.sidecar.istio.io/excludeOutboundPorts` annotation.
 * `federation` — parameters for federating with other clusters:
-  * `enabled` — designate this cluster as a federation member (see [Enabling federation](/modules/110-istio/#enabling-federation)).
+  * `enabled` — designate this cluster as a federation member (see [Enabling federation](./#enabling-federation)).
   * `ingressGateway` — ingressgateway settings:
     * `inlet` — the method for exposing ingressgateway:
       * `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
@@ -57,7 +57,7 @@ data:
     * `serviceAnnotations` — additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex.Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
       * Format — a regular dictionary.
 * `multicluster` — multicluster parameters:
-  * `enabled` — designate this cluster as a multicluster member (see [Enabling multicluster](/modules/110-istio/#enabling-multicluster)).
+  * `enabled` — designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-multicluster)).
 * `nodeSelector` —  the same as the pods' `spec.nodeSelector` parameter in Kubernetes.
     * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling).
     * You can set it to `false` to avoid adding any nodeSelector.

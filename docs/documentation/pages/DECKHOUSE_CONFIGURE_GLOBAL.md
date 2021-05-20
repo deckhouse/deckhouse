@@ -34,7 +34,7 @@ global: |
         ```
   * `https` — the HTTPS implementation used by the service components.
     * `mode` — the HTTPS usage mode:
-      * `Disabled` — in this mode, all service components use HTTP only (some modules may not work, e.g., [user-authn](/modules/150-user-authn));
+      * `Disabled` — in this mode, all service components use HTTP only (some modules may not work, e.g., [user-authn](modules/150-user-authn/));
       * `CertManager` — all service components use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter;
       * `CustomCertificate` — all service components use HTTPS using the certificate from the `d8-system` namespace;
       * `OnlyInURI` — all service components use HTTP (in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS).
