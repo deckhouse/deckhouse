@@ -346,6 +346,7 @@ entries:
             - title: FAQ
               url: /modules/402-ingress-nginx/faq.html
         - title: istio
+          versionType: ee
           folders:
             - title:
                 ru: Описание
@@ -475,6 +476,10 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/500-upmeter/configuration.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/500-upmeter/usage.html
     - title:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами
