@@ -235,16 +235,16 @@ spec:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-post-requests
-	namespace: foo
+    name: deny-post-requests
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	action: DENY
-	rules:
-	- to:
-	  - operation:
-		  methods: ["POST"]
+    selector:
+      app: myapp
+    action: DENY
+    rules:
+    - to:
+      - operation:
+          methods: ["POST"]
   ```
 
 * Здесь для приложения создана полтитика ALLOW. При ней будут разрешены только запросы из NS `bar`. Остальные — запрещены.
@@ -253,16 +253,16 @@ spec:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	action: ALLOW # default, можно не указывать
-	rules:
-	- from:
-	  - source:
-		  namespaces: ["bar"]
+    selector:
+      app: myapp
+    action: ALLOW # default, можно не указывать
+    rules:
+    - from:
+      - source:
+          namespaces: ["bar"]
   ```
 
 * Здесь для приложения создана полтитика ALLOW. При этом она не имеет ни одного правила и поэтому ни один запрос под неё не попадёт, но она таки есть. Поэтому, согласно алгоритму, раз что-то разрешено, то всё остальное — запрещено. В данном случае всё остальное — это вообще все запросы.
@@ -271,13 +271,13 @@ spec:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	action: ALLOW # default, можно не указывать
-	rules: []
+    selector:
+      app: myapp
+    action: ALLOW # default, можно не указывать
+    rules: []
   ```
 
 * Здесь для приложения создана политика ALLOW (это default) и одно пустое правило. Под это правило попадает любой запрос и автоматически этот запрос получает добро.
@@ -286,13 +286,13 @@ spec:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: allow-all
-	namespace: foo
+    name: allow-all
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	rules:
-	- {}
+    selector:
+      app: myapp
+    rules:
+    - {}
   ```
 
 ### Запретить вообще всё в рамках NS foo
@@ -305,12 +305,12 @@ spec:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec:
-	action: DENY
-	rules:
-	- {}
+    action: DENY
+    rules:
+    - {}
   ```
 
 * Неявно. Здесь мы создаём политику ALLOW (по умолчанию), но не создаём ни одного фильтра так, что ни один запрос под неё не попадёт и будет автоматически запрещён.
@@ -319,8 +319,8 @@ spec:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec: {}
   ```
 
