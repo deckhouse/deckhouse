@@ -48,11 +48,11 @@ toc: false
 
 <div class="tabs">
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure active"
-  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_bm');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
+  onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_bm');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap_bare_metal');">
     Bare Metal
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
-    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_yc');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap');">
+    onclick="openTab(event, 'tabs__btn_infrastructure', 'tabs__content_infrastructure', 'infrastructure_yc');openTab(event, 'tabs__btn_infrastructure', 'tabs__content_installation', 'cluster_bootstrap_cloud');">
     Yandex.Cloud
   </a>
   <a href="javascript:void(0)" class="tabs__btn tabs__btn_infrastructure"
@@ -316,7 +316,49 @@ deckhouse:
 </ul>
 </div>
 
-<div id="cluster_bootstrap" class="tabs__content tabs__content_installation active" markdown="1">
+<div id="cluster_bootstrap_bare_metal" class="tabs__content tabs__content_installation active" markdown="1">
+
+## Шаг 2. Установка
+
+Для непосредственной установки потребуется Docker-образ установщика Deckhouse. Мы воспользуемся уже готовым официальным образом от проекта. Информацию по самостоятельной сборке образа из исходников можно будет найти в [репозитории проекта](https://github.com/deckhouse/deckhouse).
+
+В результате запуска следующей команды произойдет скачивание Docker-образа установщика Deckhouse, в который будут передана приватная часть SSH-ключа и файл конфигурации, подготовленные на прошлом шаге (пути расположения файлов даны по умолчанию). Будет запущен интерактивный терминал в системе образа:
+
+```yaml
+docker login -u demotoken -p <ACCESS_TOKEN> registry.deckhouse.io
+docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/ registry.deckhouse.io/deckhouse/fe/install:beta bash
+```
+
+Далее для запуска установки необходимо выполнить команду:
+
+```yaml
+dhctl bootstrap \
+  --ssh-user=<username> \
+  --ssh-host=<master_ip> \
+  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --config=/config.yml
+```
+
+Здесь переменная `username` — это:
+-   имя пользователя, от которого генерировался SSH-ключ для установки в случае bare metal;
+-   пользователь по умолчанию для соответствующего образа виртуальной машины для облачных инсталляций (например: `ubuntu`, `user`, `azureuser`).
+
+Примечания:
+-   В процессе установки не рекомендуется выходить из контейнера (например, чтобы поменять конфигурацию). Иначе при повторном запуске потребуется предварительно вручную удалить ресурсы, созданные в провайдере. В случае необходимости изменить конфигурацию следует использовать внешний текстовый редактор (например, vim): после сохранения файла обновлённая конфигурация автоматически подгрузится в контейнер.
+-   В случае возникновения проблем для остановки процесса установки следует воспользоваться следующей командой (файл конфигурации должен совпадать с тем, с которым производилось разворачивание кластера):
+
+```yaml
+dhctl bootstrap-phase abort --config=/config.yml
+```
+
+По окончании установки произойдет возврат к командной строке. Кластер готов к работе: управлению дополнительными модулями, разворачиванию ваших приложений и т.п.
+
+## Шаг 3. Проверка статуса
+
+Просмотр состояния Kubernetes-кластера возможен сразу после (или даже во время) установки Deckhouse. По умолчанию `.kube/config`, используемый для доступа к Kubernetes, генерируется на хосте с кластером. Если подключиться к этому хосту по SSH, для взаимодействия с Kubernetes можно воспользоваться стандартными инструментами, такими как `kubectl`.
+</div>
+
+<div id="cluster_bootstrap_cloud" class="tabs__content tabs__content_installation" markdown="1">
 
 ## Шаг 2. Установка
 
@@ -420,10 +462,9 @@ kubectl logs -n d8-system deployments/deckhouse -f --tail=10 | jq -rc .msg
     ```
 2.  Находим секцию `data` и включаем в ней модуль:
     ```yaml
-    data:
-      global:
-        userAuthnEnabled: "true"
-    ```
+data:
+  userAuthnEnabled: "true"
+```
 3.  Сохраняем конфигурацию. В этот момент Deckhouse понимает, что произошли изменения, и модуль устанавливается автоматически.
 
 Для изменения настроек модуля необходимо повторить пункт 1, т.е. внести изменения в конфигурацию и сохранить их. Изменения автоматически применятся.
