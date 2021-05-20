@@ -5,7 +5,7 @@ layout: page-nosidebar
 toc: false
 ---
 
-While Deckhouse Platform has a vast history of being used internally in Flant and is [ready for production](en/about_us.html), it is still experiencing the final touches of becoming available as an end-user product.
+While Deckhouse Platform has a vast history of being used internally in Flant and is [ready for production](/en/about_us.html), it is still experiencing the final touches of becoming available as an end-user product.
 
 That's why you might experience some issues for now, including the following:
 

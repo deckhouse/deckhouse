@@ -5,7 +5,7 @@ permalink: en/
 
 The configuration data of *Deckhouse* and its modules are stored in one place - in the `deckhouse` ConfigMap resource in the `d8-system` namespace. Some modules (in addition to the CM configuration) are also configured using dedicated custom resources in the cluster. Information about the module's parameters and the custom resources used by the module is available in the description of the module or subsystem features.
 
-The `deckhouse` config (the `deckhouse` ConfigMap resource) has a [global section](#global-configuration) and a module section.
+The `deckhouse` config (the `deckhouse` ConfigMap resource) has a [global section](deckhouse-configure-global.html) and a module section.
 
 Use the following command to edit the `deckhouse` ConfigMap:
 ```

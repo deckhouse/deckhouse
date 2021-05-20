@@ -1,0 +1,70 @@
+---
+title: "The prometheus-metrics-adapter module: Custom resources"
+search: autoscaler, HorizontalPodAutoscaler 
+---
+
+{% capture cr_spec %}
+* `.metadata.name` — the name of the metric (used in HPA).
+* `.spec.query` — a custom PromQL query that returns a unique value for your label set (you can use `sum() by()`, `max() by()`, etc., operators for grouping). The following keys **must be used** in the request:
+    * `<<.LabelMatchers>>` — will be replaced with a set of `{namespace="mynamespace",ingress="myingress"}` labels. You can add your own comma-separated labels list (as in the example [below](usage.html#example-of-using-rabbitmq-queue-size-based-custom-metrics)).
+    * `<<.GroupBy>>` — will be replaced with `namespace,ingress` labels for grouping (`max() by(...)`, `sum() by (...)`, etc.).
+{% endcapture %}
+
+Setting up a vanilla prometheus-metrics-adapter is a time-consuming process. Happily, we have somewhat simplified it by defining a set of **CRDs** with different Scopes.
+
+You can globally define a metric using the Cluster resource, while the Namespaced resource allows you to redefine it locally. All CRs have the same format.
+
+## Namespaced Custom resources
+### `ServiceMetric`
+{{ cr_spec }}
+
+### `IngressMetric`
+{{ cr_spec }}
+
+### `PodMetric`
+{{ cr_spec }}
+
+### `DeploymentMetric`
+{{ cr_spec }}
+
+### `StatefulSetMetric`
+{{ cr_spec }}
+
+### `NamespaceMetric`
+{{ cr_spec }}
+
+### `DaemonsetMetric` (not available to users)
+{{ cr_spec }}
+
+## Cluster Custom resources
+
+### `ClusterServiceMetric` (not available to users)
+{{ cr_spec }}
+
+### `ClusterIngressMetric` (not available to users)
+{{ cr_spec }}
+
+### `ClusterPodMetric` (not available to users)
+{{ cr_spec }}
+
+### `ClusterDeploymentMetric` (not available to users)
+{{ cr_spec }}
+#### Пример
+
+### `ClusterStatefulSetMetric` (not available to users)
+{{ cr_spec }}
+#### Пример
+
+### `ClusterDaemonsetMetric` (not available to users)
+{{ cr_spec }}
+
+## PrometheusRule
+
+* `.metadata.namespace` —  is set to `d8-monitoring` in all cases;
+* `.metadata.labels.prometheus —  is set to  `main` in all cases;
+* `.metadata.labels.component —  is set to  `rules` in all cases;
+* `.spec.groups:
+    * `name` — the name according to the recommended template (e.g., `prometheus-metrics-adapter.mymetric`);
+    * `rules`:
+      * `record` — the name of the metric;
+      * `expr` — a request, the results of which will be passed to the final metric.
