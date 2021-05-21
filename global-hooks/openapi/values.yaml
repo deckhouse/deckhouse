@@ -27,7 +27,6 @@ properties:
     type: array
     x-examples:
     - ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
-    - []
   discovery:
     additionalProperties: true
     type: object
