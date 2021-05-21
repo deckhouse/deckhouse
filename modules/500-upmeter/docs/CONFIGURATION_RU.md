@@ -8,10 +8,12 @@ title: "Модуль upmeter: настройки"
 * `disabledProbes` – массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в web-интерфейсе.
   * Пример:
 
-		disabledProbes:
-		- "synthetic/api" # отключить отдельную пробу
-		- "synthetic/"    # отключить группу проб
-		- control-plane   # или без /
+    ```yaml
+    disabledProbes:
+    - "synthetic/api" # отключить отдельную пробу
+    - "synthetic/"    # отключить группу проб
+    - control-plane   # или без /
+    ```
 * `statusPageAuthDisabled` – выключение авторизации для status-домена.
   * Значение по умолчанию `false`
 * `storageClass` — имя storageClass'а, который использовать.

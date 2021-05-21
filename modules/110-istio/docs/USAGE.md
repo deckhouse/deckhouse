@@ -235,16 +235,16 @@ Examples:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-post-requests
-	namespace: foo
+    name: deny-post-requests
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	action: DENY
-	rules:
-	- to:
-	  - operation:
-		  methods: ["POST"]
+    selector:
+      app: myapp
+    action: DENY
+    rules:
+    - to:
+      - operation:
+          methods: ["POST"]
   ```
 
 * Below, the ALLOW policy is defined for the application. It only allows requests from the `bar` namespace (other requests are denied).
@@ -253,16 +253,16 @@ Examples:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	action: ALLOW # the default value, can be skipped
-	rules:
-	- from:
-	  - source:
-		  namespaces: ["bar"]
+    selector:
+      app: myapp
+    action: ALLOW # the default value, can be skipped
+    rules:
+    - from:
+      - source:
+          namespaces: ["bar"]
   ```
 
 * Below, the ALLOW policy is defined for the application. Note that it does not have any rules, so not a single request matches it (still, the policy exists). Thus, our decision-making algorithm suggests that if something is allowed, then everything else is denied. In this case, "everything else" includes all the requests.
@@ -271,13 +271,13 @@ Examples:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	action: ALLOW # the default value, can be skipped
-	rules: []
+    selector:
+      app: myapp
+    action: ALLOW # the default value, can be skipped
+    rules: []
   ```
 
 * Below, the (default) ALLOW policy is defined for the application. Note that it has an empty rule. Any request matches this rule, so it is naturally approved.
@@ -286,13 +286,13 @@ Examples:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: allow-all
-	namespace: foo
+    name: allow-all
+    namespace: foo
   spec:
-	selctor:
-	  app: myapp
-	rules:
-	- {}
+    selector:
+      app: myapp
+    rules:
+    - {}
   ```
 
 ### Deny all for the foo NS
@@ -305,12 +305,12 @@ There are two ways you can do that:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec:
-	action: DENY
-	rules:
-	- {}
+    action: DENY
+    rules:
+    - {}
   ```
 
 * Implicitly. Here, the (default) ALLOW policy is created that does not have any rules. Thus, no requests will match it, and the policy will deny all of them.
@@ -319,8 +319,8 @@ There are two ways you can do that:
   apiVersion: security.istio.io/v1beta1
   kind: AuthorizationPolicy
   metadata:
-	name: deny-all
-	namespace: foo
+    name: deny-all
+    namespace: foo
   spec: {}
   ```
 

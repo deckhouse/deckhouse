@@ -40,10 +40,10 @@ search: prometheus
 
           ```yaml
           grafana:
-		    customPlugins:
-			- agenty-flowcharting-panel
-			- vertamedia-clickhouse-datasource
-		  ```
+            customPlugins:
+            - agenty-flowcharting-panel
+            - vertamedia-clickhouse-datasource
+          ```
 
 * `ingressClass` — класс ingress контроллера, который используется для grafana/prometheus.
     * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
