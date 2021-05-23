@@ -576,7 +576,12 @@ ansible:
 
 ---
 image: dev/install
-fromImage: dev
+from: {{ env "BASE_ALPINE" }}
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+  - candi
 import:
 - artifact: dhctl
   add: /dhctl/hack/dhctl
@@ -596,14 +601,20 @@ docker:
     TF_CLI_CONFIG_FILE: /etc/terraformrc
 ansible:
   beforeInstall:
-
-  - name: "Add dhctl completion"
-    shell: |
-        echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-
   - name: "Install dependencies"
     apk:
-      name: [openssh-client, gettext]
+      name:
+      - openssh-client
+      - gettext
+      - bash
+      - bash-completion
+      - coreutils
+      - util-linux
+      - sed
+      - gawk
+      - grep
+      - ca-certificates
+      - vim
 
   - name: "Install terraform"
     unarchive:
@@ -612,17 +623,9 @@ ansible:
       dest: /bin
       mode: +x
 
-  - name: "Configure terraform cli"
-    copy:
-      dest: "/etc/terraformrc"
-      content: |
-        provider_installation {
-          filesystem_mirror {
-            path    = "/usr/local/share/terraform/plugins"
-            include = ["*/*/*"]
-          }
-        }
+  - raw: rm -rf /var/cache/apk/*
 
+  install:
   - name: "Create a directory for terraform provider aws"
     file:
       path: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AWS_NAMESPACE" }}/{{ env "TF_AWS_TYPE" }}/{{ env "TF_AWS_VERSION" }}/linux_amd64
@@ -667,4 +670,45 @@ ansible:
       dest: /usr/local/share/terraform/plugins/registry.terraform.io/{{ env "TF_AZURE_NAMESPACE" }}/{{ env "TF_AZURE_TYPE" }}/{{ env "TF_AZURE_VERSION" }}/linux_amd64
       mode: +x
 
-  - raw: rm -rf /var/cache/apk/*
+  setup:
+  - name: "Shell comfort: inputrc"
+    copy:
+      content: |
+{{ .Files.Get "deckhouse-controller/files/inputrc" | indent 8 }}
+      dest: /etc/inputrc
+
+  - name: "Shell comfort: bashrc"
+    copy:
+      content: |
+        PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+
+        source /etc/profile.d/bash_completion.sh
+
+      dest: /etc/bashrc
+
+  - name: "Shell comfort: add bashrc for root"
+    shell: ln -s /etc/bashrc /root/.bashrc
+
+  - name: "Shell comfort: add bashrc for nobody"
+    shell: ln -s /etc/bashrc /.bashrc
+
+  - name: "Shell comfort: vimrc.local"
+    copy:
+      content: |
+{{ .Files.Get "deckhouse-controller/files/vimrc.local" | indent 8 }}
+      dest: /etc/vim/vimrc.local
+
+  - name: "Add dhctl completion"
+    shell: |
+      echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
+
+  - name: "Configure terraform cli"
+    copy:
+      dest: "/etc/terraformrc"
+      content: |
+        provider_installation {
+          filesystem_mirror {
+            path    = "/usr/local/share/terraform/plugins"
+            include = ["*/*/*"]
+          }
+        }
