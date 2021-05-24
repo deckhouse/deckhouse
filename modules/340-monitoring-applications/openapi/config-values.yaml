@@ -1,0 +1,12 @@
+type: object
+properties:
+  enabledApplications:
+    type: array
+    default: []
+    items:
+      type: string
+    description: |
+      A list of applications to explicitly include in monitoring regardless of the results of the auto-discovery.
+    x-examples:
+    - ["redis", "nats"]
+    - []

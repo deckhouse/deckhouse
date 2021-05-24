@@ -1,0 +1,17 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: []
+    x-required-for-helm:
+    - enabledApplicationsSummary
+    properties:
+      enabledApplicationsSummary:
+        type: array
+        items:
+          type: string
+        x-examples:
+        - ["redis", "nats"]
+        - []

@@ -1,0 +1,12 @@
+positive:
+  configValues:
+    - enabledApplications: [one, two]
+  values:
+    - internal:
+        enabledApplicationsSummary: [one, two]
+negative:
+  configValues:
+    - enabledApplications: [1, false, 3]
+  values:
+  - internal:
+      enabledApplicationsSummary: [1, 2, true]
