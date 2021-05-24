@@ -16,7 +16,7 @@ The descheduler discovers pods based on policies and evicts the non-relevant one
 
 ### The process
 
-This module adds a [descheduler](https://github.com/kubernetes-incubator/descheduler) cronjob to the cluster. It runs every 15 minutes, finds the non-optimal pods using the [config-map](templates/config-map.yaml), and evicts them.
+This module adds a [descheduler](https://github.com/kubernetes-incubator/descheduler) Deployment to the cluster. It runs every 15 minutes, finds the non-optimal pods using the [config-map](templates/config-map.yaml), and evicts them.
 
 The descheduler has 8 strategies built-in:
 * RemoveDuplicates (**disabled by default**)
@@ -38,7 +38,7 @@ Suppose there are three nodes (say, the first node bears the greater load than t
 
 The descheduler finds underutilized or overutilized nodes using cpu/memory/pods (in %) thresholds and evict pods from overutilized nodes hoping that these pods will be rescheduled on underutilized nodes. Note that this strategy takes into account pod requests instead of actual resources consumed.
 The thresholds for identifying underutilized or overutilized nodes are currently preset and cannot be changed:
-* Criteria to identify underutilized nodes: 
+* Criteria to identify underutilized nodes:
   * cpu — 40%
   * memory — 50%
   * pods — 40%
@@ -55,7 +55,7 @@ This strategy ensures that pods violating inter-pod anti-affinity are removed fr
 
 #### RemovePodsViolatingNodeAffinity
 
-This strategy removes a pod from a node if the latter no longer satisfies a pod's affinity rule (`requiredDuringSchedulingIgnoredDuringExecution`). The descheduler notices that and evicts the pod if another node is available that satisfies the affinity rule. 
+This strategy removes a pod from a node if the latter no longer satisfies a pod's affinity rule (`requiredDuringSchedulingIgnoredDuringExecution`). The descheduler notices that and evicts the pod if another node is available that satisfies the affinity rule.
 
 #### RemovePodsViolatingNodeTaints
 This strategy evicts pods violating NoSchedule taints on nodes. Suppose a pod set to tolerate some taint is running on a node with this taint. If the node’s taint is updated or removed, the pod will be evicted.
@@ -64,7 +64,7 @@ This strategy evicts pods violating NoSchedule taints on nodes. Suppose a pod se
 This strategy ensures that pods violating the [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) will be evicted from nodes.
 
 #### RemovePodsHavingTooManyRestarts
-This strategy ensures that pods having over a hundred container restarts (including init-containers) are removed from nodes. 
+This strategy ensures that pods having over a hundred container restarts (including init-containers) are removed from nodes.
 
 #### PodLifeTime
 This strategy evicts pods that are Pending for more than 24 hours.
@@ -76,7 +76,7 @@ This strategy evicts pods that are Pending for more than 24 hours.
 * The descheduler does not evict pods that are associated with a DaemonSet or aren't covered by a controller.
 * It never evicts pods with local storage enabled.
 * The Best effort pods are evicted before Burstable and Guaranteed ones.
-* The descheduler uses the Evict API and therefore takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/). The pod will not be evicted if descheduling violates the PDB. 
+* The descheduler uses the Evict API and therefore takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/). The pod will not be evicted if descheduling violates the PDB.
 
 ### An example of the configuration
 

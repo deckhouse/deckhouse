@@ -10,4 +10,3 @@ RUN make
 FROM $BASE_ALPINE
 COPY --from=0  /go/src/github.com/kubernetes-incubator/descheduler/_output/bin/descheduler /bin/descheduler
 CMD ["/bin/descheduler", "--help"]
-
