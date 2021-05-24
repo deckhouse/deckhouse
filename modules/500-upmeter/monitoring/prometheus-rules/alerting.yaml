@@ -1,0 +1,168 @@
+- name: d8.upmeter.availability
+  rules:
+    - alert: D8UpmeterServerPodIsNotReady
+      expr: |
+        min by (pod) (
+          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
+        ) != 1
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_pending_until_firing_for: "5m"
+        plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
+        plk_labels_as_annotations: "pod"
+        summary: Upmeter server is not Ready
+
+    - alert: D8UpmeterAgentPodIsNotReady
+      expr: |
+        min by (pod) (
+          kube_controller_pod{namespace="d8-upmeter", controller_type="DaemonSet", controller_name="upmeter-agent"}
+          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
+        ) != 1
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_pending_until_firing_for: "5m"
+        plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
+        plk_labels_as_annotations: "pod"
+        summary: Upmeter agent is not Ready
+
+    - alert: D8UpmeterServerReplicasUnavailable
+      expr: |
+        absent(
+          max by (namespace) (
+            kube_controller_replicas{controller_name="upmeter",controller_type="StatefulSet"}
+          )
+          <=
+          count by (namespace) (
+            kube_controller_pod{controller_name="upmeter",controller_type="StatefulSet"}
+            * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
+          )
+        ) == 1
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_pending_until_firing_for: "5m"
+        plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
+        plk_labels_as_annotations: "phase"
+        summary: One or more Upmeter server pods is NOT Running
+        description: |-
+          Check StatefulSet status:
+          1. `kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status`
+          Check the status of its pod:
+          1. `kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'`
+
+    - alert: D8UpmeterAgentReplicasUnavailable
+      expr: |
+        absent(
+          max by (namespace) (
+            kube_controller_replicas{controller_name="upmeter-agent",controller_type="DaemonSet"}
+          )
+          <=
+          count by (namespace) (
+            kube_controller_pod{controller_name="upmeter-agent",controller_type="DaemonSet"}
+            * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
+          )
+        ) == 1
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_pending_until_firing_for: "5m"
+        plk_grouped_by__d8_upmeter_unavailable: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
+        plk_labels_as_annotations: "phase"
+        summary: One or more Upmeter agent pods is NOT Running
+        description: |-
+          Check DaemonSet status:
+          1. `kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status`
+          Check the status of its pod:
+          1. `kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'`
+
+    - alert: D8UpmeterUnavailable
+      expr: |
+        count(ALERTS{alertname=~"D8UpmeterServerPodIsNotReady|D8UpmeterAgentPodIsNotReady|D8UpmeterServerReplicasUnavailable", alertstate="firing"}) > 0
+        OR
+        count(ALERTS{alertname=~"KubernetesStatefulSetReplicasUnavailable", namespace="d8-upmeter", statefulset="upmeter", alertstate="firing"}) > 0
+        OR
+        count(ALERTS{alertname=~"KubernetesDaemonSetReplicasUnavailable", namespace="d8-upmeter", daemonset="upmeter-agent", alertstate="firing"}) > 0
+      labels:
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_alert_type: "group"
+        plk_group_for__upmeter_replicas_unavailable: "KubernetesDaemonSetReplicasUnavailable,namespace=d8-upmeter,prometheus=deckhouse,daemonset=upmeter-agent"
+        plk_group_for__upmeter_stuck: "KubernetesStatefulSetReplicasUnavailable,namespace=d8-upmeter,prometheus=deckhouse,statefulset=upmeter"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse"
+        summary: Upmeter is unavailable
+        description: |
+          Upmeter is unavailable. Please check the linked alerts to find the real problem.
+
+- name: d8.upmeter.malfunctioning
+  rules:
+    - alert: D8UpmeterServerPodIsRestartingTooOften
+      expr: |
+        max by (pod) (
+          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-upmeter"}[1h])
+          and
+          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-upmeter"}
+        ) > 5
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse"
+        plk_labels_as_annotations: "pod"
+        summary: Upmeter server is restarting too often.
+        description: |
+          Restarts for the last hour: {{ $value }}.
+
+          Upmeter server should not restart too often. It should always be running and collecting episodes.
+          Check its logs to find the problem:
+          1. `kubectl -n d8-upmeter logs -f upmeter-0 upmeter`
+
+    - alert: D8UpmeterMalfunctioning
+      expr: |
+        count(ALERTS{alertname=~"D8UpmeterServerPodIsRestartingTooOften", alertstate="firing"}) > 0
+        OR
+        count(ALERTS{alertname=~"IngressResponses5xx", namespace="d8-upmeter", service="upmeter", alertstate="firing"}) > 0
+      labels:
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_alert_type: "group"
+        plk_group_for__upmeter_responses_5xx: "IngressResponses5xx,namespace=d8-monitoring,prometheus=deckhouse,service=upmeter"
+        summary: Upmeter is malfunctioning
+        description: |
+          Upmeter is malfunctioning. Please check the linked alerts to find the real problem.
