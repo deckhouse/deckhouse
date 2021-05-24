@@ -377,3 +377,25 @@ provider:
 ## Как проверить поддерживает ли провайдер SecurityGroups
 
 Достаточно выполнить команду `openstack security group list`. Если в ответ вы не получите ошибок, то это значит, что [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) поддерживаются.
+
+## Корректная работа ONLINE ресайза дисков
+
+OpenStack API успешно рапортует о ресайзе, но Cinder никак не оповещает Nova о том, что диск поресайзился, поэтому диск внутри гостевой ОС остаётся старого размера.
+
+Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
+
+```ini
+[nova]
+interface = admin
+insecure = {{ keystone_service_internaluri_insecure | bool }}
+auth_type = {{ cinder_keystone_auth_plugin }}
+auth_url = {{ keystone_service_internaluri }}/v3
+password = {{ nova_service_password }}
+project_domain_id = default
+project_name = service
+region_name = {{ nova_service_region }}
+user_domain_id = default
+username = {{ nova_service_user_name }}
+```
+
+https://bugs.launchpad.net/openstack-ansible/+bug/1902914
