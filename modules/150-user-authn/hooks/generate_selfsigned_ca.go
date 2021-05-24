@@ -12,8 +12,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
-type Cert struct{}
-
 func applyCertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
