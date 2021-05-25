@@ -56,6 +56,11 @@ apiVersions:
                 type: object
                 additionalProperties:
                   type: string
+              networkType:
+                type: string
+                enum:
+                  - STANDARD
+                  - SOFTWARE_ACCELERATED
       nodeGroups:
         type: array
         items:
@@ -121,6 +126,11 @@ apiVersions:
                   type: object
                   additionalProperties:
                     type: string
+                networkType:
+                  type: string
+                  enum:
+                    - STANDARD
+                    - SOFTWARE_ACCELERATED
       existingNetworkID:
         type: string
       nodeNetworkCIDR:

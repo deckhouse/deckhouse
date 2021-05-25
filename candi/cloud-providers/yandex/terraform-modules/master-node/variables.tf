@@ -31,6 +31,6 @@ locals {
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
   external_ip_addresses = lookup(local.master_instance_class, "externalIPAddresses", [])
   external_subnet_id = lookup(local.master_instance_class, "externalSubnetID", null)
-
+  network_type = contains(keys(local.master_instance_class), "networkType") ? lower(local.master_instance_class.networkType) : null
   additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.master_instance_class, "additionalLabels", {}))
 }
