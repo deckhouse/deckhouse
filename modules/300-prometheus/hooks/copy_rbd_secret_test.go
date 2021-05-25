@@ -65,7 +65,7 @@ type: Opaque
 
 		It("Secret 'non-existing-secret' must be copied to d8-monitoring", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			copiedSecret := f.ObjectStore.KubernetesResource("Secret", "d8-monitoring", "non-existing-secret")
+			copiedSecret := f.KubernetesResource("Secret", "d8-monitoring", "non-existing-secret")
 			Expect(copiedSecret.Exists()).To(BeTrue())
 			data, err := base64.StdEncoding.DecodeString(copiedSecret.Field("data.foo").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -74,7 +74,7 @@ type: Opaque
 
 		It("Existing secret in d8-monitoring secret must not be overwritten", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			copiedSecret := f.ObjectStore.KubernetesResource("Secret", "d8-monitoring", "existing-secret")
+			copiedSecret := f.KubernetesResource("Secret", "d8-monitoring", "existing-secret")
 			Expect(copiedSecret.Exists()).To(BeTrue())
 			data, err := base64.StdEncoding.DecodeString(copiedSecret.Field("data.foo").String())
 			Expect(err).ShouldNot(HaveOccurred())

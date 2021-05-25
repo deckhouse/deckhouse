@@ -130,7 +130,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 			/*subresource*/ "/status",
 		)
 		if err != nil {
-			return fmt.Errorf("cannot patch status for user %s", dexUser.Name)
+			return fmt.Errorf("cannot patch status for user %s: %s", dexUser.Name, err.Error())
 		}
 	}
 

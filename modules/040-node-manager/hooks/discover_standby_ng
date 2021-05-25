@@ -67,7 +67,7 @@ function _set_ng_standby_status() {
   else
     status_patch="$(jq -n '{"standby": null}')"
   fi
-  kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${status_patch}"
+  kubernetes::status::merge_patch "" "deckhouse.io/v1alpha2" "NodeGroup" "${1}" "${status_patch}"
 }
 
 function __main__() {

@@ -1,6 +1,7 @@
 package converge
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,7 +34,7 @@ func GetNodesStateFromCluster(kubeCl *client.KubernetesClient) (map[string]NodeG
 	extractedState := make(map[string]NodeGroupTerraformState)
 
 	err := retry.StartLoop("Get Nodes Terraform state from Kubernetes cluster", 5, 5, func() error {
-		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(metav1.ListOptions{LabelSelector: "node.deckhouse.io/terraform-state"})
+		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "node.deckhouse.io/terraform-state"})
 		if err != nil {
 			return err
 		}
@@ -71,7 +72,7 @@ func GetNodesStateFromCluster(kubeCl *client.KubernetesClient) (map[string]NodeG
 func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error) {
 	var state []byte
 	err := retry.StartLoop("Get Cluster Terraform state from Kubernetes cluster", 5, 5, func() error {
-		clusterStateSecret, err := kubeCl.CoreV1().Secrets("d8-system").Get("d8-cluster-terraform-state", metav1.GetOptions{})
+		clusterStateSecret, err := kubeCl.CoreV1().Secrets("d8-system").Get(context.TODO(), "d8-cluster-terraform-state", metav1.GetOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				// Return empty state, if there is no state in cluster. Need to skip cluster state apply in converge.
@@ -94,11 +95,11 @@ func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGro
 			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, nil, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			return err
 		},
 	}
@@ -116,11 +117,11 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, tfState, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			return err
 		},
 	}
@@ -144,11 +145,11 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getTerraformStateManifest,
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -156,7 +157,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getDevicePathManifest,
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -165,9 +166,11 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 					return err
 				}
 				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
+					context.TODO(),
 					"d8-masters-kubernetes-data-device-path",
 					types.MergePatchType,
 					data,
+					metav1.PatchOptions{},
 				)
 				return err
 			},
@@ -203,7 +206,7 @@ func SaveNodeIntermediateTerraformState(kubeCl *client.KubernetesClient, nodeNam
 			return manifests.SecretWithNodeTerraformState(nodeName, nodeGroup, outputs.TerraformState, settings)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		PatchData: func() interface{} {
@@ -212,7 +215,7 @@ func SaveNodeIntermediateTerraformState(kubeCl *client.KubernetesClient, nodeNam
 		PatchFunc: func(patchData []byte) error {
 			secretName := manifests.SecretNameForNodeTerraformState(nodeName)
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(secretName, types.MergePatchType, patchData)
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
 		},
 	}
@@ -228,11 +231,11 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 		Name:     `Secret "d8-cluster-terraform-state"`,
 		Manifest: func() interface{} { return manifests.SecretWithTerraformState(outputs.TerraformState) },
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(manifest.(*apiv1.Secret))
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			return err
 		},
 	}
@@ -253,9 +256,11 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 
 	return retry.StartLoop("Update cloud discovery data", 45, 10, func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
+			context.TODO(),
 			"d8-provider-cluster-configuration",
 			types.MergePatchType,
 			patch,
+			metav1.PatchOptions{},
 		)
 		return err
 	})
@@ -274,7 +279,7 @@ func SaveClusterIntermediateTerraformState(kubeCl *client.KubernetesClient, outp
 		},
 		PatchFunc: func(patch []byte) error {
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(manifests.TerraformClusterStateName, types.MergePatchType, patch)
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), manifests.TerraformClusterStateName, types.MergePatchType, patch, metav1.PatchOptions{})
 			return err
 		},
 	}
@@ -284,14 +289,14 @@ func SaveClusterIntermediateTerraformState(kubeCl *client.KubernetesClient, outp
 
 func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) error {
 	return retry.StartLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10, func() error {
-		return kubeCl.CoreV1().Secrets("d8-system").Delete(secretName, &metav1.DeleteOptions{})
+		return kubeCl.CoreV1().Secrets("d8-system").Delete(context.TODO(), secretName, metav1.DeleteOptions{})
 	})
 }
 
 func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
 	var clusterUUID string
 	err := retry.StartLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5, func() error {
-		uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get("d8-cluster-uuid", metav1.GetOptions{})
+		uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "d8-cluster-uuid", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

@@ -79,12 +79,12 @@ metadata:
 		It("node-1: set providerID; node-2: skip; node-3: set providerID; node-4: skip; node-5: set providerID", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.KubernetesResource("Node", "", "node-1").Field("spec.providerID").String()).To(Equal(`static://`))
-			Expect(f.KubernetesResource("Node", "", "node-2").Field("spec.providerID").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Node", "", "node-3").Field("spec.providerID").String()).To(Equal(`static://`))
-			Expect(f.KubernetesResource("Node", "", "node-4").Field("spec.providerID").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Node", "", "node-5").Field("spec.providerID").String()).To(Equal(`super-provider`))
-			Expect(f.KubernetesResource("Node", "", "node-6").Field("spec.providerID").String()).To(Equal(`static://`))
+			Expect(f.KubernetesGlobalResource("Node", "node-1").Field("spec.providerID").String()).To(Equal(`static://`))
+			Expect(f.KubernetesGlobalResource("Node", "node-2").Field("spec.providerID").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "node-3").Field("spec.providerID").String()).To(Equal(`static://`))
+			Expect(f.KubernetesGlobalResource("Node", "node-4").Field("spec.providerID").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "node-5").Field("spec.providerID").String()).To(Equal(`super-provider`))
+			Expect(f.KubernetesGlobalResource("Node", "node-6").Field("spec.providerID").String()).To(Equal(`static://`))
 		})
 	})
 })

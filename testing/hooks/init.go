@@ -2,9 +2,9 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -19,19 +19,22 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/flant/shell-operator/pkg/hook/types"
+	"github.com/flant/shell-operator/pkg/kube"
+	"github.com/flant/shell-operator/pkg/kube/fake"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
-	"github.com/flant/shell-operator/test/hook/context"
+	hookcontext "github.com/flant/shell-operator/test/hook/context"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	yamlv3 "gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
@@ -46,11 +49,49 @@ var (
 )
 
 func (hec *HookExecutionConfig) KubernetesGlobalResource(kind, name string) object_store.KubeObject {
-	return hec.ObjectStore.KubernetesGlobalResource(kind, name)
+	res := hec.kubernetesResource(kind, "", name)
+	// we should be sure, that we dont have .metadata.namespace in global resources
+	// thats why we delete it if exists
+	metadata, ok := res["metadata"].(map[string]interface{})
+	if !ok {
+		return res
+	}
+	delete(metadata, "namespace")
+	res["metadata"] = metadata
+	return res
 }
 
 func (hec *HookExecutionConfig) KubernetesResource(kind, namespace, name string) object_store.KubeObject {
-	return hec.ObjectStore.KubernetesResource(kind, namespace, name)
+	return hec.kubernetesResource(kind, namespace, name)
+}
+
+func (hec *HookExecutionConfig) kubernetesResource(kind, namespace, name string) object_store.KubeObject {
+	resource := fake.Pluralize(kind)
+	possibleGVR := make([]schema.GroupVersionResource, 0)
+
+	for _, group := range hec.fakeCluster.Discovery.Resources {
+		gvr := schema.GroupVersionResource{
+			Resource: resource,
+		}
+		for _, res := range group.APIResources {
+			if res.Kind == kind {
+				gvr.Version = res.Version
+				gvr.Group = res.Group
+				possibleGVR = append(possibleGVR, gvr)
+				break
+			}
+		}
+	}
+
+	// avoid situation of different groups: v1/v1beta1/etc
+	for _, gvr := range possibleGVR {
+		b, err := hec.fakeCluster.KubeClient.Dynamic().Resource(gvr).Namespace(namespace).Get(context.TODO(), name, v1.GetOptions{})
+		if err == nil {
+			return b.UnstructuredContent()
+		}
+	}
+
+	return object_store.KubeObject{}
 }
 
 type ShellOperatorHookConfig struct {
@@ -75,10 +116,8 @@ type HookExecutionConfig struct {
 	hookConfig               string // <hook> --config output
 	KubeExtraCRDs            []CustomCRD
 	IsKubeStateInited        bool
-	KubeState                string // yaml string
-	ObjectStore              object_store.ObjectStore
 	BindingContexts          BindingContextsSlice
-	BindingContextController *context.BindingContextController
+	BindingContextController *hookcontext.BindingContextController
 	extraHookEnvs            []string
 	ValuesValidator          *validation.ValuesValidator
 	GoHookError              error
@@ -86,6 +125,11 @@ type HookExecutionConfig struct {
 	Session *gexec.Session
 
 	fakeClusterVersion k8s.FakeClusterVersion
+	fakeCluster        *fake.FakeCluster
+}
+
+func (hec *HookExecutionConfig) KubeClient() kube.KubernetesClient {
+	return hec.fakeCluster.KubeClient
 }
 
 func (hec *HookExecutionConfig) RegisterCRD(group, version, kind string, namespaced bool) {
@@ -139,6 +183,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 		fakeClusterVersion = k8sVersion[0]
 	}
 	hec.fakeClusterVersion = fakeClusterVersion
+
 	_, f, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("can't execute runtime.Caller")
@@ -266,14 +311,17 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	return hec
 }
 
-func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, desiredQuantity int) context.GeneratedBindingContexts {
-	var contexts context.GeneratedBindingContexts
+func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeState string, desiredQuantity int) hookcontext.GeneratedBindingContexts {
+	var contexts hookcontext.GeneratedBindingContexts
 	var err error
 	if !hec.IsKubeStateInited {
-		hec.BindingContextController, err = context.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
+		hec.BindingContextController, err = hookcontext.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
 		if err != nil {
 			panic(err)
 		}
+		hec.fakeCluster = hec.BindingContextController.FakeCluster()
+		hec.fakeCluster.KubeClient.WithServer("fake-test")
+		dependency.TestDC.K8sClient = hec.fakeCluster.KubeClient
 
 		if hec.GoHook != nil {
 			// create GlobalHook or Module and convert its config
@@ -312,21 +360,21 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 			panic(err)
 		}
 	}
-	hec.KubeState = newKubeState
+
 	return contexts
 }
 
-func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.GeneratedBindingContexts {
 	return hec.KubeStateSetAndWaitForBindingContexts(newKubeState, 0)
 }
 
 // GenerateOnStartupContext returns binding context for OnStartup.
-func (hec *HookExecutionConfig) GenerateOnStartupContext() context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateOnStartupContext() hookcontext.GeneratedBindingContexts {
 	return SimpleBindingGeneratedBindingContext(OnStartup)
 }
 
 // GenerateScheduleContext returns binding context for Schedule with needed snapshots.
-func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) hookcontext.GeneratedBindingContexts {
 	if hec.BindingContextController == nil {
 		return SimpleBindingGeneratedBindingContext(Schedule)
 	}
@@ -337,7 +385,7 @@ func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) context.
 	return contexts
 }
 
-func (hec *HookExecutionConfig) generateAllSnapshotsContext(binding BindingType) context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) generateAllSnapshotsContext(binding BindingType) hookcontext.GeneratedBindingContexts {
 	if hec.BindingContextController == nil {
 		return SimpleBindingGeneratedBindingContext(binding)
 	}
@@ -350,53 +398,28 @@ func (hec *HookExecutionConfig) generateAllSnapshotsContext(binding BindingType)
 }
 
 // GenerateBeforeHelmContext returns binding context for beforeHelm binding with all available snapshots.
-func (hec *HookExecutionConfig) GenerateBeforeHelmContext() context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateBeforeHelmContext() hookcontext.GeneratedBindingContexts {
 	return hec.generateAllSnapshotsContext(BeforeHelm)
 }
 
 // GenerateAfterHelmContext returns binding context for afterHelm binding with all available snapshots.
-func (hec *HookExecutionConfig) GenerateAfterHelmContext() context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateAfterHelmContext() hookcontext.GeneratedBindingContexts {
 	return hec.generateAllSnapshotsContext(AfterHelm)
 }
 
 // GenerateAfterDeleteHelmContext returns binding context for afterDeleteHelm binding with all available snapshots.
-func (hec *HookExecutionConfig) GenerateAfterDeleteHelmContext() context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateAfterDeleteHelmContext() hookcontext.GeneratedBindingContexts {
 	return hec.generateAllSnapshotsContext(AfterDeleteHelm)
 }
 
 // GenerateBeforeAllContext returns binding context for beforeAll binding with all available snapshots.
-func (hec *HookExecutionConfig) GenerateBeforeAllContext() context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateBeforeAllContext() hookcontext.GeneratedBindingContexts {
 	return hec.generateAllSnapshotsContext(BeforeAll)
 }
 
 // GenerateAfterAllContext returns binding context for afterAll binding with all available snapshots.
-func (hec *HookExecutionConfig) GenerateAfterAllContext() context.GeneratedBindingContexts {
+func (hec *HookExecutionConfig) GenerateAfterAllContext() hookcontext.GeneratedBindingContexts {
 	return hec.generateAllSnapshotsContext(AfterAll)
-}
-
-func (hec *HookExecutionConfig) KubeStateToKubeObjects() error {
-	var err error
-	hec.ObjectStore = make(object_store.ObjectStore)
-	dec := yamlv3.NewDecoder(strings.NewReader(hec.KubeState))
-	for {
-		var t interface{}
-		err = dec.Decode(&t)
-
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-
-		if t == nil {
-			continue
-		}
-
-		var unstructuredObj unstructured.Unstructured
-		unstructuredObj.SetUnstructuredContent(t.(map[string]interface{}))
-		hec.ObjectStore.PutObject(unstructuredObj.Object, object_store.NewMetaIndex(unstructuredObj.GetKind(), unstructuredObj.GetNamespace(), unstructuredObj.GetName()))
-	}
-	return nil
 }
 
 func (hec *HookExecutionConfig) RunHook() {
@@ -420,9 +443,6 @@ func (hec *HookExecutionConfig) RunHook() {
 
 		hookEnvs []string
 	)
-
-	err = hec.KubeStateToKubeObjects()
-	Expect(err).ShouldNot(HaveOccurred())
 
 	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes", "PATH="+os.Getenv("PATH"))
 	hookEnvs = append(hookEnvs, hec.extraHookEnvs...)
@@ -535,12 +555,21 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
-		kubePatch := NewKubernetesPatch(hec.ObjectStore)
+		kubePatch := NewKubernetesPatch(hec.getFakeClient())
 		Expect(err).ShouldNot(HaveOccurred())
 
 		err := kubePatch.Apply(kubernetesPatchBytes)
 		Expect(err).ToNot(HaveOccurred())
 	}
+}
+
+func (hec *HookExecutionConfig) getFakeClient() kube.KubernetesClient {
+	f := hec.fakeCluster
+	if f == nil {
+		f = fake.NewFakeCluster(hec.fakeClusterVersion)
+	}
+
+	return f.KubeClient
 }
 
 // hookColoredOutput colored stdout and stderr streams for shell hooks
@@ -578,9 +607,6 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		err error
 	)
 
-	err = hec.KubeStateToKubeObjects()
-	Expect(err).ShouldNot(HaveOccurred())
-
 	Expect(hec.values.JSONRepr).ToNot(BeEmpty())
 
 	Expect(hec.configValues.JSONRepr).ToNot(BeEmpty())
@@ -617,7 +643,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		ConfigValues:  patchableConfigValues,
 		Metrics:       &metricsOperation,
 		LogEntry:      logger.WithField("output", "gohook"),
-		ObjectPatcher: NewKubernetesPatch(hec.ObjectStore),
+		ObjectPatcher: NewKubernetesPatch(hec.getFakeClient()),
 	}
 
 	hec.GoHookError = hec.GoHook.Hook.Run(hookInput)

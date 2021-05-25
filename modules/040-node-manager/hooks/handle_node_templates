@@ -111,7 +111,7 @@ function __main__() {
     fi
 
     if context::jq -e '[.snapshots.nodes[] | select(.filterResult.name == "'"${node_name}"'")] | first | .object | . as $original | '"$patch"' | . != $original' > /dev/null ; then
-      kubernetes::patch_jq "" "node/${node_name}" "$patch"
+      kubernetes::patch_jq "" "Node/${node_name}" "$patch"
     fi
   done
 }

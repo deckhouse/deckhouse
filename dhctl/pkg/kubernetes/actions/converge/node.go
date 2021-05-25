@@ -43,7 +43,7 @@ func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (stri
 		err := retry.StartSilentLoop(name, 45, 5, func() error {
 			secret, err := kubeCl.CoreV1().
 				Secrets("d8-cloud-instance-manager").
-				Get("manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
+				Get(context.TODO(), "manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -69,7 +69,7 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 	return retry.StartLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15, func() error {
 		res, err := kubeCl.Dynamic().
 			Resource(resourceSchema).
-			Create(&doc, metav1.CreateOptions{})
+			Create(context.TODO(), &doc, metav1.CreateOptions{})
 		if err == nil {
 			log.InfoF("NodeGroup %q created\n", res.GetName())
 			return nil
@@ -83,7 +83,7 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 			}
 			_, err = kubeCl.Dynamic().
 				Resource(resourceSchema).
-				Patch(doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+				Patch(context.TODO(), doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 			if err != nil {
 				return err
 			}
@@ -95,7 +95,7 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 
 func WaitForSingleNodeBecomeReady(kubeCl *client.KubernetesClient, nodeName string) error {
 	return retry.StartLoop(fmt.Sprintf("Waiting for  Node %s to become Ready", nodeName), 100, 20, func() error {
-		node, err := kubeCl.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+		node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func WaitForSingleNodeBecomeReady(kubeCl *client.KubernetesClient, nodeName stri
 
 func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName string, desiredReadyNodes int) error {
 	return retry.StartLoop(fmt.Sprintf("Waiting for NodeGroup %s to become Ready", nodeGroupName), 100, 20, func() error {
-		nodes, err := kubeCl.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
+		nodes, err := kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func WaitForNodesListBecomeReady(kubeCl *client.KubernetesClient, nodes []string
 		var nodesList apiv1.NodeList
 
 		for _, nodeName := range nodes {
-			node, err := kubeCl.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+			node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -196,7 +196,7 @@ func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[stri
 	nodeTemplates := make(map[string]map[string]interface{})
 
 	err := retry.StartLoop("Get NodeGroups node template settings", 10, 5, func() error {
-		nodeGroups, err := kubeCl.Dynamic().Resource(nodeGroupResource).List(metav1.ListOptions{})
+		nodeGroups, err := kubeCl.Dynamic().Resource(nodeGroupResource).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -217,7 +217,7 @@ func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[stri
 
 func DeleteNode(kubeCl *client.KubernetesClient, nodeName string) error {
 	return retry.StartLoop(fmt.Sprintf("Delete Node %s", nodeName), 45, 10, func() error {
-		err := kubeCl.CoreV1().Nodes().Delete(nodeName, &metav1.DeleteOptions{})
+		err := kubeCl.CoreV1().Nodes().Delete(context.TODO(), nodeName, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			// Node has already been deleted
 			return nil
@@ -228,7 +228,7 @@ func DeleteNode(kubeCl *client.KubernetesClient, nodeName string) error {
 
 func DeleteNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) error {
 	return retry.StartLoop(fmt.Sprintf("Delete NodeGroup %s", nodeGroupName), 45, 10, func() error {
-		err := kubeCl.Dynamic().Resource(nodeGroupResource).Delete(nodeGroupName, &metav1.DeleteOptions{})
+		err := kubeCl.Dynamic().Resource(nodeGroupResource).Delete(context.TODO(), nodeGroupName, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			// NodeGroup has already been deleted
 			return nil
@@ -241,7 +241,7 @@ func requestNodeExists(kubeCl *client.KubernetesClient, nodeName string) (bool, 
 	_, err := kubeCl.
 		CoreV1().
 		Nodes().
-		Get(nodeName, metav1.GetOptions{})
+		Get(context.TODO(), nodeName, metav1.GetOptions{})
 
 	if err == nil {
 		return true, nil

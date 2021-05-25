@@ -28,10 +28,14 @@ metadata:
   name: test
 spec:
   groups:
-  - some_yaml_1:
-      a: a
-  - some_yaml_2:
-      b: b
+  - name: gr1
+    rules:
+    - alert: Rule1
+      expr: testit
+  - name: gr2
+    rules:
+    - alert: Rule2
+      expr: testit
 `))
 				f.RunHook()
 			})
@@ -42,10 +46,14 @@ spec:
 				prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test")
 				Expect(prometheusRule.Exists()).To(BeTrue())
 				Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
-- some_yaml_1:
-    a: a
-- some_yaml_2:
-    b: b
+- name: gr1
+  rules:
+  - alert: Rule1
+    expr: testit
+- name: gr2
+  rules:
+  - alert: Rule2
+    expr: testit
 `))
 			})
 
@@ -72,7 +80,10 @@ metadata:
   name: test
 spec:
   groups:
-  - update: {}
+  - name: update
+    rules:
+    - alert: updateRule1
+      expr: testit
 `))
 					f.RunHook()
 				})
@@ -82,7 +93,12 @@ spec:
 
 					prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test")
 					Expect(prometheusRule.Exists()).To(BeTrue())
-					Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`["update": {}]`))
+					Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
+- name: update
+  rules:
+    - alert: updateRule1
+      expr: testit
+`))
 				})
 			})
 		})
@@ -98,7 +114,10 @@ metadata:
   name: one
 spec:
   groups:
-  - rule: 1
+  - name: gr1
+    rules:
+    - alert: Rule1
+      expr: testit
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: CustomPrometheusRules
@@ -106,7 +125,10 @@ metadata:
   name: two
 spec:
   groups:
-  - rule: 2
+  - name: gr1
+    rules:
+    - alert: Rule1
+      expr: testit
 `))
 			f.RunHook()
 		})
@@ -116,11 +138,21 @@ spec:
 
 			prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-one")
 			Expect(prometheusRule.Exists()).To(BeTrue())
-			Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`["rule": 1]`))
+			Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
+- name: gr1
+  rules:
+  - alert: Rule1
+    expr: testit
+`))
 
 			prometheusRuleNext := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-two")
 			Expect(prometheusRuleNext.Exists()).To(BeTrue())
-			Expect(prometheusRuleNext.Field("spec.groups").String()).To(MatchYAML(`["rule": 2]`))
+			Expect(prometheusRuleNext.Field("spec.groups").String()).To(MatchYAML(`
+- name: gr1
+  rules:
+  - alert: Rule1
+    expr: testit
+`))
 		})
 	})
 

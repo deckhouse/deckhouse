@@ -171,7 +171,7 @@ function common_hooks::storage_class_change::main() {
 
   if [ "$current_storage_class" != "$effective_storage_class" ]; then
     for pvc_name in $(context::jq -rc '.snapshots.pvc[].filterResult.pvcName'); do
-      kubernetes::delete_if_exists::non_blocking "$namespace" "persistentvolumeclaim/$pvc_name"
+      kubernetes::delete_if_exists::non_blocking "$namespace" "PersistentVolumeClaim/$pvc_name"
       echo "!!! NOTICE: storage class changed, deleting persistentvolumeclaim/$pvc_name !!!"
     done
     kubernetes::delete_if_exists "$namespace" "$object_kind/$object_name"

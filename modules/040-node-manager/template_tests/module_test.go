@@ -38,6 +38,7 @@ discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.19.8
 clusterConfiguration:
+  clusterType: Hybrid
   packagesProxy:
     url: "http://aaa.bbb:80"
     username: "test"

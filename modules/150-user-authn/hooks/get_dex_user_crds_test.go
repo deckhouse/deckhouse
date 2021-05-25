@@ -58,7 +58,7 @@ spec:
 }]`))
 
 				Expect(
-					f.KubernetesResource("User", "", "admin").Field("status.expireAt").Time(),
+					f.KubernetesGlobalResource("User", "admin").Field("status.expireAt").Time(),
 				).Should(
 					// TODO: если подсунуть fakeClock, то тест будет актуальней
 					BeTemporally("~", time.Now().Add(30*time.Minute), 5*time.Minute),
@@ -90,7 +90,7 @@ status:
 					Expect(f).To(ExecuteSuccessfully())
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(
-						f.KubernetesResource("User", "", "admin").Field("status.expireAt").Time(),
+						f.KubernetesGlobalResource("User", "admin").Field("status.expireAt").Time(),
 					).Should(
 						BeTemporally("==", t),
 					)
@@ -99,7 +99,8 @@ status:
 
 			Context("With deleting User object", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(""))
+					f.KubeStateSet("")
+					f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 					f.RunHook()
 				})
 				It("Should delete entry from internal values", func() {
@@ -111,7 +112,7 @@ status:
 			})
 			Context("With updating User object", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(`
+					f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
 kind: User
 metadata:
@@ -122,7 +123,8 @@ spec:
   - Admins
   - Everyone
   password: password
-`))
+`)
+					f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 					f.RunHook()
 				})
 				It("Should update entry in internal values", func() {

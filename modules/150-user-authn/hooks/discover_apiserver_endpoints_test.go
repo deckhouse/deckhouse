@@ -17,6 +17,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kubernetes
+  namespace: default
 spec:
   ports:
   - targetPort: 6443
@@ -25,6 +26,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: kubernetes
+  namespace: default
 subsets:
 - addresses:
   - ip: 192.168.1.1
@@ -47,6 +49,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kubernetes
+  namespace: default
 spec:
   ports:
   - targetPort: 443
@@ -55,6 +58,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: kubernetes
+  namespace: default
 subsets:
 - addresses:
   - ip: 192.168.1.1

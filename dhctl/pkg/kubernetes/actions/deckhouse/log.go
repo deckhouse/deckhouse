@@ -102,7 +102,7 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 	var lastErr error
 	err := retry.StartSilentLoop("getting logs for error", 2, 1, func() error {
 		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
-		result, lastErr = request.DoRaw()
+		result, lastErr = request.DoRaw(context.TODO())
 		if lastErr != nil {
 			return ErrRequestFailed
 		}
@@ -191,7 +191,7 @@ func (d *LogPrinter) WaitPodBecomeReady() *LogPrinter {
 }
 
 func (d *LogPrinter) GetPod() error {
-	pods, err := d.kubeCl.CoreV1().Pods("d8-system").List(metav1.ListOptions{LabelSelector: "app=deckhouse"})
+	pods, err := d.kubeCl.CoreV1().Pods("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
 		return ErrListPods
 	}
@@ -219,7 +219,7 @@ func (d *LogPrinter) checkDeckhousePodReady() (bool, error) {
 		return false, nil
 	}
 
-	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(d.deckhousePod.Name, metav1.GetOptions{})
+	runningPod, err := d.kubeCl.CoreV1().Pods("d8-system").Get(context.TODO(), d.deckhousePod.Name, metav1.GetOptions{})
 	if err != nil {
 		return false, ErrRequestFailed
 	}
@@ -250,7 +250,7 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			return false, ErrTimedOut
 		default:
 			request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
-			result, err := request.DoRaw()
+			result, err := request.DoRaw(context.TODO())
 			if err != nil {
 				log.DebugLn(err)
 				return false, ErrRequestFailed

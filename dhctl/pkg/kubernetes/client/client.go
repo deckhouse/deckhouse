@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
+	"github.com/flant/shell-operator/pkg/kube/fake"
 
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -28,7 +29,7 @@ func NewKubernetesClient() *KubernetesClient {
 }
 
 func NewFakeKubernetesClient() *KubernetesClient {
-	return &KubernetesClient{KubernetesClient: sh_kube.NewFakeKubernetesClient()}
+	return &KubernetesClient{KubernetesClient: fake.NewFakeCluster("").KubeClient}
 }
 
 func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {

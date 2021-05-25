@@ -85,8 +85,8 @@ status:
 		})
 
 		It("VolumeAttachment csi-1 should not be changed, VolumeAttachment csi-2 should be changed", func() {
-			volumeAttachmentCsi1 := f.KubernetesResource("VolumeAttachment", "", "csi-1")
-			volumeAttachmentCsi2 := f.KubernetesResource("VolumeAttachment", "", "csi-2")
+			volumeAttachmentCsi1 := f.KubernetesGlobalResource("VolumeAttachment", "csi-1")
+			volumeAttachmentCsi2 := f.KubernetesGlobalResource("VolumeAttachment", "csi-2")
 			Expect(volumeAttachmentCsi1.ToYaml()).To(MatchYAML(properVolumeAttachment))
 			Expect(volumeAttachmentCsi2.Field("metadata.finalizers").String()).Should(BeEmpty())
 		})

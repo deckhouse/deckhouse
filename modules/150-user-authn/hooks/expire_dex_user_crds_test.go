@@ -60,21 +60,21 @@ spec:
 		When("User expired (.status.expireAt < time.Now())", func() {
 			It("Should delete user CR", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesResource("User", "", "admin").Exists()).Should(BeFalse())
+				Expect(f.KubernetesGlobalResource("User", "admin").Exists()).Should(BeFalse())
 			})
 		})
 
 		When("User not expired (.status.expireAt > time.Now())", func() {
 			It("Should keep user CR", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesResource("User", "", "future").Exists()).Should(BeTrue())
+				Expect(f.KubernetesGlobalResource("User", "future").Exists()).Should(BeTrue())
 			})
 		})
 
 		When("User without ttl", func() {
 			It("Should keep user CR", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesResource("User", "", "without-ttl").Exists()).Should(BeTrue())
+				Expect(f.KubernetesGlobalResource("User", "without-ttl").Exists()).Should(BeTrue())
 			})
 		})
 	})

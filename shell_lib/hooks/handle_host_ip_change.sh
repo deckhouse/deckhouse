@@ -47,9 +47,9 @@ function common_hooks::handle_host_ip_change::main() {
 
     if [[ "$initial_host_ip" == "null" ]]; then
       fltr=$(jq -rc '.filterResult | ".metadata.annotations.\"node.deckhouse.io/initial-host-ip\" = \"\(.hostIP)\""' <<< "$pod")
-      kubernetes::patch_jq "$namespace" "pod/$(jq -rc '.filterResult.name' <<< "$pod")" "$fltr"
+      kubernetes::patch_jq "$namespace" "Pod/$(jq -rc '.filterResult.name' <<< "$pod")" "$fltr"
     elif [[ "$initial_host_ip" != $(jq -rc '.filterResult.hostIP' <<< "$pod") ]]; then
-      kubernetes::delete_if_exists "$namespace" "pod/$(jq -rc '.filterResult.name' <<< "$pod")"
+      kubernetes::delete_if_exists "$namespace" "Pod/$(jq -rc '.filterResult.name' <<< "$pod")"
     fi
   done
 }

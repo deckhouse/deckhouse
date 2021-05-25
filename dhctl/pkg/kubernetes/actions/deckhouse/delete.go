@@ -1,6 +1,7 @@
 package deckhouse
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -24,7 +25,7 @@ const (
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Delete Deckhouse", 45, 5, func() error {
 		foregroundPolicy := metav1.DeletePropagationForeground
-		err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Delete(deckhouseDeploymentName, &metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
+		err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Delete(context.TODO(), deckhouseDeploymentName, metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
@@ -34,13 +35,13 @@ func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 
 func DeleteStorageClasses(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Delete StorageClasses", 45, 5, func() error {
-		return kubeCl.StorageV1().StorageClasses().DeleteCollection(&metav1.DeleteOptions{}, metav1.ListOptions{})
+		return kubeCl.StorageV1().StorageClasses().DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{})
 	})
 }
 
 func DeletePods(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Delete Pods", 45, 5, func() error {
-		pods, err := kubeCl.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{})
+		pods, err := kubeCl.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -63,7 +64,7 @@ func DeletePods(kubeCl *client.KubernetesClient) error {
 				continue
 			}
 
-			err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{})
+			err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
 			if err != nil {
 				log.ErrorLn(err.Error())
 			} else {
@@ -77,7 +78,7 @@ func DeletePods(kubeCl *client.KubernetesClient) error {
 
 func DeleteServices(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Delete Services", 45, 5, func() error {
-		allServices, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
+		allServices, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -87,7 +88,7 @@ func DeleteServices(kubeCl *client.KubernetesClient) error {
 				continue
 			}
 
-			err := kubeCl.CoreV1().Services(service.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
+			err := kubeCl.CoreV1().Services(service.Namespace).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return err
 			}
@@ -99,13 +100,13 @@ func DeleteServices(kubeCl *client.KubernetesClient) error {
 
 func DeletePVC(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Delete PersistentVolumeClaims", 45, 5, func() error {
-		volumeClaims, err := kubeCl.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(metav1.ListOptions{})
+		volumeClaims, err := kubeCl.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
 
 		for _, claim := range volumeClaims.Items {
-			err := kubeCl.CoreV1().PersistentVolumeClaims(claim.Namespace).Delete(claim.Name, &metav1.DeleteOptions{})
+			err := kubeCl.CoreV1().PersistentVolumeClaims(claim.Namespace).Delete(context.TODO(), claim.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return err
 			}
@@ -120,7 +121,7 @@ func DeleteMachineDeployments(kubeCl *client.KubernetesClient) error {
 	machinesSchema := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machines"}
 
 	return retry.StartLoop("Delete MachineDeployments", 45, 5, func() error {
-		allMachines, err := kubeCl.Dynamic().Resource(machinesSchema).Namespace(metav1.NamespaceAll).List(metav1.ListOptions{})
+		allMachines, err := kubeCl.Dynamic().Resource(machinesSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machines: %v", err)
 		}
@@ -135,13 +136,13 @@ func DeleteMachineDeployments(kubeCl *client.KubernetesClient) error {
 				return err
 			}
 
-			_, err = kubeCl.Dynamic().Resource(machinesSchema).Namespace(machine.GetNamespace()).Patch(machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+			_, err = kubeCl.Dynamic().Resource(machinesSchema).Namespace(machine.GetNamespace()).Patch(context.TODO(), machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 			if err != nil {
 				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
 			}
 		}
 
-		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(metav1.ListOptions{})
+		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machinedeployments: %v", err)
 		}
@@ -149,7 +150,7 @@ func DeleteMachineDeployments(kubeCl *client.KubernetesClient) error {
 		for _, machineDeployment := range allMachineDeployments.Items {
 			namespace := machineDeployment.GetNamespace()
 			name := machineDeployment.GetName()
-			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
+			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
 			}
@@ -161,7 +162,7 @@ func DeleteMachineDeployments(kubeCl *client.KubernetesClient) error {
 
 func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Wait for Deckhouse Deployment deletion", 30, 5, func() error {
-		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(deckhouseDeploymentName, metav1.GetOptions{})
+		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(context.TODO(), deckhouseDeploymentName, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			log.InfoLn("Deckhouse Deployment and its dependents are removed")
 			return nil
@@ -179,7 +180,7 @@ func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 func WaitForMachinesDeletion(kubeCl *client.KubernetesClient) error {
 	resourceSchema := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machines"}
 	return retry.StartLoop("Wait for Machines deletion", 45, 15, func() error {
-		resources, err := kubeCl.Dynamic().Resource(resourceSchema).List(metav1.ListOptions{})
+		resources, err := kubeCl.Dynamic().Resource(resourceSchema).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -199,7 +200,7 @@ func WaitForMachinesDeletion(kubeCl *client.KubernetesClient) error {
 
 func WaitForServicesDeletion(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Wait for Services deletion", 45, 15, func() error {
-		resources, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(metav1.ListOptions{})
+		resources, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -226,7 +227,7 @@ func WaitForServicesDeletion(kubeCl *client.KubernetesClient) error {
 
 func WaitForPVDeletion(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Wait for PersistentVolumes deletion", 45, 15, func() error {
-		resources, err := kubeCl.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+		resources, err := kubeCl.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -260,7 +261,7 @@ func WaitForPVDeletion(kubeCl *client.KubernetesClient) error {
 
 func WaitForPVCDeletion(kubeCl *client.KubernetesClient) error {
 	return retry.StartLoop("Wait for PersistentVolumeClaims deletion", 45, 15, func() error {
-		resources, err := kubeCl.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(metav1.ListOptions{})
+		resources, err := kubeCl.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}

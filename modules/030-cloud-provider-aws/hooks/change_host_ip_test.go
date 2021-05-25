@@ -49,7 +49,7 @@ metadata:
     node.deckhouse.io/initial-host-ip: "1.2.3.4"
 status:
   hostIP: 4.5.6.7
-`, 1))
+`, 2))
 				f.RunHook()
 			})
 

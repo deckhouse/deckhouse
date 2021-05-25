@@ -16,7 +16,7 @@ function __on_group::pvc_deleted() {
 }
 
 function __main__() {
-  common_hooks::storage_class_change::main "d8-monitoring" "prometheus" "longterm" "prometheusLongterm" "longtermStorageClass"
+  common_hooks::storage_class_change::main "d8-monitoring" "Prometheus" "longterm" "prometheusLongterm" "longtermStorageClass"
 }
 
 hook::run $@
