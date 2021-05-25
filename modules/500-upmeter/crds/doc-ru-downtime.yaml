@@ -7,13 +7,6 @@ metadata:
     module: upmeter
     app: upmeter
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: downtimes
-    singular: downtime
-    kind: Downtime
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
       served: true
@@ -21,7 +14,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: Downtime incident records
+          description: Описание интервалов недоступности системы. Используется для корректировки уровня SLA.
           required:
             - spec
           properties:
@@ -29,23 +22,23 @@ spec:
               type: array
               items:
                 type: object
-                description: Spec of downtime incident.
+                description: Интервал недоступности системы.
                 properties:
                   startDate:
                     type: string
-                    description: Start of downtime (Unix time or RFC3339 date 2020-09-07T17:24:55Z).
+                    description: Время начала (в формате Unix time или RFC3339, например 2020-09-07T17:24:55Z)
                   endDate:
                     type: string
-                    description: End of downtime (Unix time or RFC3339 date 2020-09-07T17:24:55Z).
+                    description: Время окончания (в формате Unix time или RFC3339, например 2020-09-07T17:24:55Z)
                   type:
                     type: string
-                    description: Type of downtime incident.
+                    description: Тип.
                     enum: ["Accident", "Maintenance", "InfrastructureMaintenance", "InfrastructureAccident"]
                   description:
                     type: string
-                    description: Human readable incident information.
+                    description: Подробное описание.
                   affected:
                     type: array
-                    description: A list of affected groups.
+                    description: Список групп проб модуля, которые были недоступны.
                     items:
                       type: string
