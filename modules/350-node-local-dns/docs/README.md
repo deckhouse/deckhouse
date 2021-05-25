@@ -37,7 +37,7 @@ On each node:
 
 And here is the rule itself that allows for an easy fallback:
 ```bash
--A PREROUTING -d <IP-адрес kube-dns> -m socket --nowildcard -j NOTRACK
+-A PREROUTING -d <kube-dns IP address> -m socket --nowildcard -j NOTRACK
 ```
 
 ### Aspects of CoreDNS configuration

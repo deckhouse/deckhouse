@@ -1,8 +1,8 @@
 ---
-title: "Модуль upmeter: пример конфигурации remote_write"
+title: "The upmeter module: usage"
 ---
 
-## Пример конфигурации remote_write
+## An example of the `UpmeterRemoteWrite` configuration
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
