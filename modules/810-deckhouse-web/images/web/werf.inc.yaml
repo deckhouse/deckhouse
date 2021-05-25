@@ -127,6 +127,7 @@ git:
     - '**/docker-compose.yml'
     - '**/.werf'
     - '**/.helm'
+    - documentation/pages/internal
     - site/pages/*.html
     - site/_includes/footer.html
   stageDependencies:
@@ -139,6 +140,7 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths: ['**/docs/','**/openapi/','**/crds/']
+  excludePaths: ['*/docs/internal/']
 # CRDs
 - add: /modules/010-user-authn-crd/crds
   to: /src/modules/150-user-authn/crds

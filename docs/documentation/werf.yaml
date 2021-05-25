@@ -102,6 +102,7 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/']
+  excludePaths: ['*/docs/internal/']
 # CRDs
 - add: /modules/010-user-authn-crd/crds
   to: /src/modules/150-user-authn/crds
