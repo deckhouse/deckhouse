@@ -41,6 +41,8 @@ resource "yandex_compute_instance" "master" {
   hostname     = join("-", [local.prefix, "master", var.nodeIndex])
   zone         = local.internal_subnet.zone
 
+  allow_stopping_for_update = true
+
   platform_id  = "standard-v2"
   resources {
     cores  = local.cores
@@ -77,6 +79,8 @@ resource "yandex_compute_instance" "master" {
     nat       = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address && (local.external_ip_address != "Auto") ? local.external_ip_address : null
   }
+
+  network_acceleration_type = local.network_type
 
   lifecycle {
     ignore_changes = [
