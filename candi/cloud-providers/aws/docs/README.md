@@ -344,7 +344,6 @@ aws iam create-policy --policy-name D8MyPolicy --policy-document file://policy.j
         "CreateDate": "2020-08-27T02:52:06+00:00",
         "UpdateDate": "2020-08-27T02:52:06+00:00"
     }
-CREATE-ACCESS-KEY()                                        CREATE-ACCESS-KEY()
 }
 ```
 
@@ -365,7 +364,7 @@ aws iam create-user --user-name deckhouse
 
 Разрешаем доступ к API и сохраняем пару `AccessKeyId` + `SecretAccessKey`:
 ```
-aws iam create-access-key --user-name d
+aws iam create-access-key --user-name deckhouse
 
 {
     "AccessKey": {
