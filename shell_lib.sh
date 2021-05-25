@@ -1,8 +1,13 @@
 #!/bin/bash
 
 set -Eeuo pipefail
-shopt -s inherit_errexit
 shopt -s failglob
+
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Darwin*)    shopt -s inherit_errexit 2>/dev/null || true;; #ignore on MacOS
+    *)          shopt -s inherit_errexit;;
+esac
 
 backtrace() {
   local ret=$?

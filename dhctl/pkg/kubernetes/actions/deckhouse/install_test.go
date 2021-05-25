@@ -1,6 +1,7 @@
 package deckhouse
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestDeckhouseInstall(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				s, err := fakeClient.CoreV1().Secrets("d8-system").Get("deckhouse-registry", metav1.GetOptions{})
+				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "deckhouse-registry", metav1.GetOptions{})
 				if err != nil {
 					return err
 				}

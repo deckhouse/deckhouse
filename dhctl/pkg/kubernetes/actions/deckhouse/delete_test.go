@@ -1,6 +1,7 @@
 package deckhouse
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -101,7 +102,7 @@ func TestDeletePods(t *testing.T) {
 	t.Run("With different pods", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
-		_, err := fakeClient.CoreV1().Pods("default").Create(&v1.Pod{
+		_, err := fakeClient.CoreV1().Pods("default").Create(context.TODO(), &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withPv",
 				Namespace: "default",
@@ -116,10 +117,10 @@ func TestDeletePods(t *testing.T) {
 					},
 				}},
 			},
-		})
+		}, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		_, err = fakeClient.CoreV1().Pods("default").Create(&v1.Pod{
+		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withDifferentPv",
 				Namespace: "default",
@@ -132,10 +133,10 @@ func TestDeletePods(t *testing.T) {
 					},
 				}},
 			},
-		})
+		}, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		_, err = fakeClient.CoreV1().Pods("default").Create(&v1.Pod{
+		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withTwoPv",
 				Namespace: "default",
@@ -158,22 +159,22 @@ func TestDeletePods(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		_, err = fakeClient.CoreV1().Pods("test-ns").Create(&v1.Pod{
+		_, err = fakeClient.CoreV1().Pods("test-ns").Create(context.TODO(), &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withoutPv",
 				Namespace: "test-ns",
 			},
 			Spec: v1.PodSpec{},
-		})
+		}, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		err = DeletePods(fakeClient)
 		require.NoError(t, err)
 
-		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{})
+		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 		require.NoError(t, err)
 
 		require.Len(t, pods.Items, 2)

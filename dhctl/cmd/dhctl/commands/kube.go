@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -40,7 +41,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
-		list, err := kubeCl.CoreV1().Namespaces().List(v1.ListOptions{})
+		list, err := kubeCl.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{})
 		if err != nil {
 			log.InfoF("list namespaces: %v", err)
 			if kubeCl.KubeProxy != nil {

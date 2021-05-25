@@ -70,6 +70,7 @@ metadata:
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f.RegisterCRD("monitoring.coreos.com", "v1", "Prometheus", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {

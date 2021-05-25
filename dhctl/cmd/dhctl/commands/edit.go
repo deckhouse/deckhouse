@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -37,7 +38,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 			return err
 		}
 
-		config, err := kubeCl.CoreV1().Secrets("kube-system").Get(secret, metav1.GetOptions{})
+		config, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), secret, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -67,7 +68,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 					fmt.Sprintf("Update %s secret", name), 5, 5, func() error {
 						_, err = kubeCl.CoreV1().
 							Secrets("kube-system").
-							Patch(secret, types.MergePatchType, content)
+							Patch(context.TODO(), secret, types.MergePatchType, content, metav1.PatchOptions{})
 						return err
 					})
 			})

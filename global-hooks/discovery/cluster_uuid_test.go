@@ -48,19 +48,6 @@ data:
 			Expect(len(newUUID)).To(Equal(36))
 			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-uuid").Field("data.cluster-uuid").String()).To(Equal(newUUID))
 		})
-
-		Context("CM d8-cluster-uuid created", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateCM))
-				f.RunHook()
-			})
-
-			It("filterResult and global.discovery.clusterUUID must be '2528b7ff-a5eb-48d1-b0b0-4c87628284de'", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").String()).To(Equal("2528b7ff-a5eb-48d1-b0b0-4c87628284de"))
-				Expect(f.ValuesGet("global.discovery.clusterUUID").String()).To(Equal("2528b7ff-a5eb-48d1-b0b0-4c87628284de"))
-			})
-		})
 	})
 
 	Context("CM d8-cluster-uuid exists", func() {

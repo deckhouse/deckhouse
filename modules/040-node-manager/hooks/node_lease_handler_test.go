@@ -14,7 +14,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: node_lease_handler ::", fu
 		stateNodes = `
 ---
 apiVersion: v1
-kind: Nodes
+kind: Node
 metadata:
   name: node0
 status:
@@ -64,13 +64,13 @@ metadata:
 				Expect(f).To(ExecuteSuccessfully())
 
 				currentTime := time.Now().UTC()
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.lastHeartbeatTime").Time()).Should(BeTemporally("~", currentTime, time.Minute))
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.lastTransitionTime").Time()).Should(BeTemporally("~", currentTime, time.Minute))
+				Expect(f.KubernetesGlobalResource("Node", "node0").Field("status.conditions.1.lastHeartbeatTime").Time()).Should(BeTemporally("~", currentTime, time.Minute))
+				Expect(f.KubernetesGlobalResource("Node", "node0").Field("status.conditions.1.lastTransitionTime").Time()).Should(BeTemporally("~", currentTime, time.Minute))
 
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.message").String()).To(Equal("Status NotReady was set by node_lease_handler hook of node-manager Deckhouse module during bashible reboot step (candi/bashible/common-steps/all/099_reboot.sh)"))
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.reason").String()).To(Equal("KubeletReady"))
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.status").String()).To(Equal("False"))
-				Expect(f.KubernetesGlobalResource("Nodes", "node0").Field("status.conditions.1.type").String()).To(Equal("Ready"))
+				Expect(f.KubernetesGlobalResource("Node", "node0").Field("status.conditions.1.message").String()).To(Equal("Status NotReady was set by node_lease_handler hook of node-manager Deckhouse module during bashible reboot step (candi/bashible/common-steps/all/099_reboot.sh)"))
+				Expect(f.KubernetesGlobalResource("Node", "node0").Field("status.conditions.1.reason").String()).To(Equal("KubeletReady"))
+				Expect(f.KubernetesGlobalResource("Node", "node0").Field("status.conditions.1.status").String()).To(Equal("False"))
+				Expect(f.KubernetesGlobalResource("Node", "node0").Field("status.conditions.1.type").String()).To(Equal("Ready"))
 			})
 		})
 

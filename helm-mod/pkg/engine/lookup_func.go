@@ -17,6 +17,7 @@ limitations under the License.
 package engine
 
 import (
+	"context"
 	"log"
 	"strings"
 
@@ -51,7 +52,7 @@ func NewLookupFunction(config *rest.Config) lookupFunc {
 		}
 		if name != "" {
 			// this will return a single object
-			obj, err := client.Get(name, metav1.GetOptions{})
+			obj, err := client.Get(context.TODO(), name, metav1.GetOptions{})
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					// Just return an empty interface when the object was not found.
@@ -63,7 +64,7 @@ func NewLookupFunction(config *rest.Config) lookupFunc {
 			return obj.UnstructuredContent(), nil
 		}
 		//this will return a list
-		obj, err := client.List(metav1.ListOptions{})
+		obj, err := client.List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				// Just return an empty interface when the object was not found.

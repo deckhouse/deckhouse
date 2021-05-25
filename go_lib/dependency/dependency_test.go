@@ -39,7 +39,10 @@ func ExampleK8sClient() {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dependency.TestDC.SetK8sVersion(k8s.V117)
-	_, _ = dependency.TestDC.K8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: "default"}})
+	_, _ = dependency.TestDC.K8sClient.CoreV1().Namespaces().Create(context.TODO(),
+		&corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: "default"}},
+		v1.CreateOptions{},
+	)
 
 	_ = dependency.WithExternalDependencies(handlerWithK8S)(nil)
 	// Output: default
@@ -108,7 +111,7 @@ func someHandlerWithHTTP(_ *go_hook.HookInput, dc dependency.Container) error {
 
 func handlerWithK8S(_ *go_hook.HookInput, dc dependency.Container) error {
 	k8 := dc.MustGetK8sClient()
-	ns, _ := k8.CoreV1().Namespaces().Get("default", v1.GetOptions{})
+	ns, _ := k8.CoreV1().Namespaces().Get(context.TODO(), "default", v1.GetOptions{})
 	fmt.Println(ns.Name)
 
 	return nil

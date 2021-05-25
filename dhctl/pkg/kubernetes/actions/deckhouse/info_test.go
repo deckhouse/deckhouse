@@ -1,9 +1,11 @@
 package deckhouse
 
 import (
+	"context"
 	"testing"
 
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -62,11 +64,11 @@ testModule:
 				return manifests.DeckhouseConfigMap(data)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := fakeClient.CoreV1().ConfigMaps("d8-system").Create(manifest.(*apiv1.ConfigMap))
+				_, err := fakeClient.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), v1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := fakeClient.CoreV1().ConfigMaps("d8-system").Update(manifest.(*apiv1.ConfigMap))
+				_, err := fakeClient.CoreV1().ConfigMaps("d8-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), v1.UpdateOptions{})
 				return err
 			},
 		}

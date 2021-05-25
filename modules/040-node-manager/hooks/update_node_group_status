@@ -115,7 +115,7 @@ function _set_ng_condition_summary() {
     "statusMessage": $status_message
   }
 }')"
-    kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${1}" "${patch}"
+    kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "NodeGroup" "${1}" "${patch}"
 }
 
 function __main__() {
@@ -163,7 +163,7 @@ function __main__() {
         .upToDate = $uptodate_nodes_count
     ')"
 
-    kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "nodegroups" "${ng_name}" "${status_patch}"
+    kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "NodeGroup" "${ng_name}" "${status_patch}"
 
     _set_ng_condition_summary "${ng_name}" "${ng_error}" "${latest_machine_failure}"
   done

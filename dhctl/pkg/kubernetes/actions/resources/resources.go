@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -103,7 +104,7 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 				CreateFunc: func(manifest interface{}) error {
 					_, err := kubeCl.Dynamic().Resource(gvr).
 						Namespace(namespace).
-						Create(docCopy, metav1.CreateOptions{})
+						Create(context.TODO(), docCopy, metav1.CreateOptions{})
 					return err
 				},
 				UpdateFunc: func(manifest interface{}) error {
@@ -114,7 +115,7 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 					// using patch here because of https://github.com/kubernetes/kubernetes/issues/70674
 					_, err = kubeCl.Dynamic().Resource(gvr).
 						Namespace(namespace).
-						Patch(docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+						Patch(context.TODO(), docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 					return err
 				},
 			}

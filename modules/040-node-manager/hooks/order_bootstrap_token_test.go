@@ -1,12 +1,15 @@
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -117,7 +120,8 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -129,7 +133,8 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 	Context("Cluster has two NodeGroups with nodeType=Static and nodeType=Cloud", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGStatic + stateNGCloud))
+			f.KubeStateSet(stateNGStatic + stateNGCloud)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -178,7 +183,8 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 	Context("Cluster has expired token and two NodeGroups with nodeType=Static and nodeType=Cloud", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateTokenExpired() + stateNGCloud + stateNGStatic))
+			f.KubeStateSet(stateTokenExpired() + stateNGCloud + stateNGStatic)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -232,7 +238,9 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 	Context("Cluster has expired and almost expired tokens, also two nodes with nodeType = Cloud and Static", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateTokenExpired() + stateTokenAlmostExpired() + stateNGCloud + stateNGStatic))
+			f.KubeStateSet(stateTokenExpired() + stateTokenAlmostExpired() + stateNGCloud + stateNGStatic)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
 			f.RunHook()
 		})
 
@@ -315,7 +323,18 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-junk").Exists()).To(BeTrue())
 
 			// There are two NodeGroups and only three tokens left. Nothing was added.
-			Expect(len(f.ObjectStore)).To(Equal(2 + 3))
+			nlist, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Group:    "deckhouse.io",
+				Version:  "v1alpha2",
+				Resource: "nodegroups",
+			}).List(context.Background(), v1.ListOptions{})
+			Expect(len(nlist.Items)).To(Equal(2))
+			slist, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Version:  "v1",
+				Group:    "",
+				Resource: "secrets",
+			}).List(context.Background(), v1.ListOptions{})
+			Expect(len(slist.Items)).To(Equal(3))
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 
@@ -352,7 +371,18 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-junk").Exists()).To(BeTrue())
 
 			// There are two NodeGroups and only three tokens left. Nothing was added.
-			Expect(len(f.ObjectStore)).To(Equal(2 + 3))
+			nlist, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Group:    "deckhouse.io",
+				Version:  "v1alpha2",
+				Resource: "nodegroups",
+			}).List(context.Background(), v1.ListOptions{})
+			Expect(len(nlist.Items)).To(Equal(2))
+			slist, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
+				Version:  "v1",
+				Group:    "",
+				Resource: "secrets",
+			}).List(context.Background(), v1.ListOptions{})
+			Expect(len(slist.Items)).To(Equal(3))
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
 

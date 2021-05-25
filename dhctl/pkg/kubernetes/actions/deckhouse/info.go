@@ -1,6 +1,7 @@
 package deckhouse
 
 import (
+	"context"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 func GetClusterInfo(kubeCl *client.KubernetesClient) string {
 	var globalData string
 	err := retry.StartSilentLoop("Get info from Deckhouse ConfigMap", 5, 2, func() error {
-		deckhouseConfigMap, err := kubeCl.CoreV1().ConfigMaps("d8-system").Get("deckhouse", metav1.GetOptions{})
+		deckhouseConfigMap, err := kubeCl.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

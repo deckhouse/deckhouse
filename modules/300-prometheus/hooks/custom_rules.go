@@ -13,7 +13,7 @@ import (
 
 type CustomRule struct {
 	Name   string
-	Groups []map[string]interface{}
+	Groups []interface{}
 }
 
 func filterCustomRule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -29,7 +29,7 @@ func filterCustomRule(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}
 
 	for _, gr := range groupsRaw {
-		group := gr.(map[string]interface{})
+		group := gr.(interface{})
 		cr.Groups = append(cr.Groups, group)
 	}
 
@@ -79,12 +79,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, customRulesHandler)
 
 func customRulesHandler(input *go_hook.HookInput) error {
-	rulesSnap, ok := input.Snapshots["rules"]
-	if !ok {
-		return nil
-	}
-
 	tmpMap := make(map[string]bool)
+
+	rulesSnap := input.Snapshots["rules"]
 
 	for _, ruleF := range rulesSnap {
 		rule := ruleF.(*CustomRule)
@@ -94,13 +91,10 @@ func customRulesHandler(input *go_hook.HookInput) error {
 			return err
 		}
 
-		tmpMap[rule.Name] = true
+		tmpMap[internalRule.GetName()] = true
 	}
 
-	internalRulesSnap, ok := input.Snapshots["internal_rules"]
-	if !ok {
-		return nil
-	}
+	internalRulesSnap := input.Snapshots["internal_rules"]
 
 	// delete absent prometheus rules
 	for _, sn := range internalRulesSnap {
@@ -116,7 +110,7 @@ func customRulesHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func createPrometheusRule(name string, groups []map[string]interface{}) unstructured.Unstructured {
+func createPrometheusRule(name string, groups []interface{}) unstructured.Unstructured {
 	// apiVersion: monitoring.coreos.com/v1
 	// kind: PrometheusRule
 	// metadata:
@@ -140,7 +134,7 @@ func createPrometheusRule(name string, groups []map[string]interface{}) unstruct
 		"metadata": map[string]interface{}{
 			"name":      customName,
 			"namespace": "d8-monitoring",
-			"labels": map[string]string{
+			"labels": map[string]interface{}{
 				"module":     "prometheus",
 				"heritage":   "deckhouse",
 				"app":        "prometheus",

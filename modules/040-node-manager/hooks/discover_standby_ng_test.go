@@ -202,6 +202,7 @@ status: {}
 	}
 }`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {

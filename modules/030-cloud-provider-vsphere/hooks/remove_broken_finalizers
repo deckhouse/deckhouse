@@ -30,7 +30,7 @@ EOF
 
 function __main__() {
   for volumeattachment in $(context::jq -r '.snapshots.finalizers[].filterResult | select(.message=="rpc error: code = Unknown desc = No VM found").name'); do
-    kubernetes::patch_jq "" "volumeattachments/$volumeattachment" "del(.metadata.finalizers)"
+    kubernetes::patch_jq "" "VolumeAttachment/$volumeattachment" "del(.metadata.finalizers)"
   done
 }
 
