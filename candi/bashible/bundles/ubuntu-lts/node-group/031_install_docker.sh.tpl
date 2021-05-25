@@ -14,14 +14,16 @@ post-install() {
     bb-flag-unset there-was-docker-installed
   fi
 
-  if bb-is-ubuntu-version? 18.04; then
-    systemctl unmask docker.service  # Fix bug in ubuntu 18.04: https://bugs.launchpad.net/ubuntu/+source/docker.io/+bug/1844894
-  fi
-
-  systemctl enable docker.service
+  if bb-flag? new-docker-installed; then
+    if bb-is-ubuntu-version? 18.04; then
+      systemctl unmask docker.service  # Fix bug in ubuntu 18.04: https://bugs.launchpad.net/ubuntu/+source/docker.io/+bug/1844894
+    fi
+    systemctl enable docker.service
 {{ if ne .runType "ImageBuilding" -}}
-  systemctl restart docker.service
+    systemctl restart docker.service
 {{- end }}
+    bb-flag-unset new-docker-installed
+ fi
 }
 
 # TODO: remove ASAP, provide proper migration from "docker.io" to "docker-ce"
@@ -106,6 +108,7 @@ if [[ "$should_install_docker" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
 
   bb-apt-install $desired_version_docker $desired_version_docker_cli
+  bb-flag-set new-docker-installed
 fi
 
 {{- end }}
