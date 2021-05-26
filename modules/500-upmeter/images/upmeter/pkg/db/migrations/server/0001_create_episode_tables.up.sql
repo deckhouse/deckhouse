@@ -7,6 +7,9 @@ NOTE: This migration stores the state of the database schema in 2021.01 release 
 with golang-migrations
 
 */
+
+BEGIN IMMEDIATE;
+
 CREATE TABLE IF NOT EXISTS downtime30s
 (
     timeslot        INTEGER NOT NULL,
@@ -32,3 +35,5 @@ CREATE TABLE IF NOT EXISTS downtime5m
 
 CREATE UNIQUE INDEX IF NOT EXISTS downtime30s_time_group_probe ON downtime30s (timeslot, group_name, probe_name);
 CREATE UNIQUE INDEX IF NOT EXISTS downtime5m_time_group_probe  ON downtime5m  (timeslot, group_name, probe_name);
+
+COMMIT ;

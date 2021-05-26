@@ -7,6 +7,9 @@ from the server.
 
 */
 
+
+BEGIN IMMEDIATE;
+
 CREATE TABLE IF NOT EXISTS "episodes_30s"
 (
     timeslot        INTEGER NOT NULL,
@@ -21,3 +24,5 @@ CREATE TABLE IF NOT EXISTS "episodes_30s"
 );
 
 CREATE UNIQUE INDEX episodes30s_time_group_probe on "episodes_30s" (timeslot, group_name, probe_name);
+
+COMMIT;
