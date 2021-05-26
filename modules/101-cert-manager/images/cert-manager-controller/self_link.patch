@@ -1,0 +1,33 @@
+:100644 100644 b52b99d59 c125bc994 M	pkg/controller/certificates/sync.go
+
+diff --git a/pkg/controller/certificates/sync.go b/pkg/controller/certificates/sync.go
+index b52b99d59..c125bc994 100644
+--- a/pkg/controller/certificates/sync.go
++++ b/pkg/controller/certificates/sync.go
+@@ -376,7 +376,9 @@ func (c *controller) updateSecret(ctx context.Context, crt *v1alpha1.Certificate
+ 		secret = secret.DeepCopy()
+ 	}
+ 	// if the resource does not already exist, we will create a new one
++	isNew := false
+ 	if secret == nil {
++		isNew = true
+ 		secret = &corev1.Secret{
+ 			ObjectMeta: metav1.ObjectMeta{
+ 				Name:      crt.Spec.SecretName,
+@@ -464,13 +466,14 @@ func (c *controller) updateSecret(ctx context.Context, crt *v1alpha1.Certificate
+ 	secret.Data[corev1.TLSPrivateKeyKey] = key
+ 	secret.Data[v1alpha1.TLSCAKey] = ca
+ 
+-	// if it is a new resource
+-	if secret.SelfLink == "" {
++	if isNew {
+ 		if c.addOwnerReferences {
+ 			secret.SetOwnerReferences(append(secret.GetOwnerReferences(), ownerRef(crt)))
+ 		}
+ 		secret, err = c.kClient.CoreV1().Secrets(namespace).Create(secret)
+ 	} else {
++		// remove secret self-link since it is deprecated in 1.16+, and unused since 1.20+
++		secret.ObjectMeta.SetSelfLink("")
+ 		secret, err = c.kClient.CoreV1().Secrets(namespace).Update(secret)
+ 	}
+ 	if err != nil {
