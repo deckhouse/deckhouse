@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	. "github.com/benjamintf1/unmarshalledmatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -39,11 +40,18 @@ metadata:
   name: new
   labels:
     prometheus.deckhouse.io/target: test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: new-nats
+  labels:
+    prometheus.deckhouse.io/target: nats
 `
 )
 
 var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", func() {
-	f := HookExecutionConfigInit(`{"monitoringApplications":{"discovery":{"enabledApplications": []},"internal":{"enabledApplicationsSummary": []}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"monitoringApplications":{"internal":{"enabledApplicationsSummary": []}}}`, `{}`)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -53,20 +61,7 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`[]`))
-		})
-	})
-
-	Context("Services are in cluster", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(servicesWithOldLabels + servicesWithNewLabels))
-			f.RunHook()
-		})
-
-		It("enabledApplications must contain applications 'php-fpm', 'test', 'winword'", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
-			Expect(f.ValuesGet("monitoringApplications.discovery.enabledApplications").String()).To(MatchJSON(`["php-fpm", "test", "winword"]`))
+			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(MatchJSON(`[]`))
 		})
 	})
 
@@ -78,21 +73,37 @@ var _ = Describe("Modules :: monitoring-applications :: hooks :: discovery ::", 
 
 		It("monitoringApplications.internal.enabledApplicationsSummary must be []", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(
+				MatchJSON(`[]`))
+		})
+	})
+
+	Context("Services are in cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(servicesWithOldLabels + servicesWithNewLabels))
+			f.RunHook()
+		})
+
+		It("enabledApplications must contain applications", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// null in enabledApplications appears only because fake kubernetes client do not support proper label selection
+			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(
+				MatchUnorderedJSON(`["php-fpm", "winword", "test", "nats"]`))
 		})
 	})
 
 	Context("BeforeHelm — discovered and configured", func() {
 		BeforeEach(func() {
 			f.ValuesSet("monitoringApplications.enabledApplications", []string{"nats", "redis"})
-			f.ValuesSet("monitoringApplications.discovery.enabledApplications", []string{"winword", "nats"})
+			f.KubeStateSet(servicesWithNewLabels)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
 		It("monitoringApplications.internal.enabledApplicationsSummary must be unique sum of two lists", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(MatchJSON(`["nats","redis","winword"]`))
+			Expect(f.ValuesGet("monitoringApplications.internal.enabledApplicationsSummary").String()).To(
+				MatchUnorderedJSON(`["test","nats","redis"]`))
 		})
 	})
 

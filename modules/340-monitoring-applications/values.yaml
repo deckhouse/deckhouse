@@ -1,6 +1,0 @@
-monitoringApplications:
-  discovery:
-    enabledApplications: []
-  internal:
-    enabledApplicationsSummary: []
-  enabledApplications: []
