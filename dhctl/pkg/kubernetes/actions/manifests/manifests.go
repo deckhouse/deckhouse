@@ -232,7 +232,12 @@ func DeckhouseRegistrySecret(dockerCfg string) *apiv1.Secret {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: deckhouseRegistrySecretName,
 			Labels: map[string]string{
-				"heritage": "deckhouse",
+				"heritage":                     "deckhouse",
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "deckhouse",
+				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
 		Data: map[string][]byte{

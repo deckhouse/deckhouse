@@ -26,6 +26,13 @@ type targets struct {
 	External []externalTarget `json:"external_targets"`
 }
 
+func newTargets() *targets {
+	return &targets{
+		Cluster:  make([]nodeTarget, 0),
+		External: make([]externalTarget, 0),
+	}
+}
+
 func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := &v1.Node{}
 	err := sdk.FromUnstructured(obj, node)
@@ -62,22 +69,19 @@ func discoverNodes(input *go_hook.HookInput) error {
 		internalTargetsPath = "monitoringPing.internal.targets"
 	)
 
-	combinedTargets := targets{}
+	combinedTargets := newTargets()
 
 	for _, address := range input.Snapshots["addresses"] {
 		convertedAddress := address.(nodeTarget)
 		combinedTargets.Cluster = append(combinedTargets.Cluster, convertedAddress)
 	}
 
-	externalTargetsFromConfig := input.Values.Get(externalTargetsPath).Array()
-	combinedTargets.External = make([]externalTarget, len(externalTargetsFromConfig))
-
-	for index, target := range externalTargetsFromConfig {
+	for _, target := range input.Values.Get(externalTargetsPath).Array() {
 		var parsedExternalTarget externalTarget
 		if err := json.Unmarshal([]byte(target.Raw), &parsedExternalTarget); err != nil {
 			return err
 		}
-		combinedTargets.External[index] = parsedExternalTarget
+		combinedTargets.External = append(combinedTargets.External, parsedExternalTarget)
 	}
 
 	input.Values.Set(internalTargetsPath, combinedTargets)

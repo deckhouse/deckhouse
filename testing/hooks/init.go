@@ -663,6 +663,11 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		Expect(err).ShouldNot(HaveOccurred())
 		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
 	}
+
+	By("Validating resulting values")
+	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
+	By("Validating resulting config values")
+	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 }
 
 var _ = BeforeSuite(func() {

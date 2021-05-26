@@ -6,7 +6,7 @@ positive:
         host: test.com
   values:
     - internal:
-        targets: []
+        targets: {}
 negative:
   configValues:
     - externalTargets:
