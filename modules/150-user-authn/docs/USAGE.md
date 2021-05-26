@@ -286,7 +286,7 @@ spec:
 
 ## Configuring kube-apiserver
 
-You need to configure the kube-apiserver so that dashboard and kubeconfig-generator modules can work in the cluster. A dedicated  [control-plane-configurator](../../modules/160-control-plane-configurator/) module can help you with this.
+You need to configure the kube-apiserver so that dashboard and kubeconfig-generator modules can work in the cluster. A dedicated  [control-plane-manager](../../modules/040-control-plane-manager/) module can help you with this.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 

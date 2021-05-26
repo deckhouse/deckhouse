@@ -60,8 +60,8 @@ data:
     * `clusterIssuerName` — what ClusterIssuer to use for dex and kubeconfig-generator (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own);
   * `customCertificate`
     * `secretName` — the name of the secret in the `d8-system`, namespace that will be used for dex & kubeconfig-generator (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)) format;
-* `controlPlaneConfigurator` — parameters of the [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator/) module;
-  * `enabled` — defines if the control-plane-configurator module should be used to configure OIDC for the kube-apiserver;
+* `controlPlaneConfigurator` — parameters of the [control-plane-manager](../../modules/040-control-plane-manager/) module;
+  * `enabled` — defines if the control-plane-manager module should be used to configure OIDC for the kube-apiserver;
     * It is set to `true` by default;
   * `dexCAMode` — how to determine the CA that will be used when configuring kube-apiserver;
     * Possible values:
@@ -79,4 +79,4 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 
 **Caution!** Note that when this module is enabled, authentication in all web interfaces will be switched from HTTP Basic Auth to dex (the latter, in turn, will use the external providers that you have defined). To configure kubectl, go to `https://kubeconfig.<modules.publicDomainTemplate>/`, log in to your external provider's account and copy the shell commands to your console.
 
-**Caution!** Note that the API server requires [additional configuration](usage.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-configurator](../../modules/160-control-plane-configurator/) module (enabled by default) automates this process.
+**Caution!** Note that the API server requires [additional configuration](usage.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](../../modules/040-control-plane-manager/) module (enabled by default) automates this process.

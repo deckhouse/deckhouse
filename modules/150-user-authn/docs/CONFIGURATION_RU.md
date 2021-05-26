@@ -60,8 +60,8 @@ data:
     * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
   * `customCertificate`
     * `secretName` — указываем имя secret'а в namespace `d8-system`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-configurator]({{ site.baseurl }}/modules/160-control-plane-configurator/).
-  * `enabled` — использовать ли control-plane-configurator для настройки OIDC в kube-apiserver.
+* `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-manager](../../modules/040-control-plane-manager/).
+  * `enabled` — использовать ли control-plane-manager для настройки OIDC в kube-apiserver.
     * По умолчанию `true`.
   * `dexCAMode` — как вычислить CA, который будет использован при настройке kube-apiserver.
     * Значения:
@@ -80,5 +80,4 @@ data:
 **Важно!** При включении данного модуля аутентификация во всех веб-интерфейсах перестанет использовать HTTP Basic Auth и переключится на dex (который, в свою очередь, будет использовать настроенные вами внешние провайдеры).
 Для настройки kubectl необходимо перейти по адресу: `https://kubeconfig.<modules.publicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell команды к себе в консоль.
 
-**Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](usage.html#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-configurator](../../modules/160-control-plane-configurator/), который включён по умолчанию.
-
+**Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](usage.html#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-manager](../../modules/040-control-plane-manager/), который включён по умолчанию.

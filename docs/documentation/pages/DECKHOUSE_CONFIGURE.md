@@ -41,7 +41,7 @@ data:
 
 Deckhouse only installs the [modules](https://github.com/flant/addon-operator/blob/master/MODULES.md) that are enabled. [Read more](https://github.com/flant/addon-operator/blob/master/LIFECYCLE.md#modules-discovery) about the algorithm for determining if the module is enabled.
 
-Modules can be enabled or disabled by default, depending on the [bundle used](/modules/020-deckhouse/configuration.html).
+Modules can be enabled or disabled by default, depending on the [bundle used](./modules/020-deckhouse/configuration.html).
 
 To enable/disable the module, add the `<moduleName>Enabled` parameter to the `deckhouse` ConfigMap and set it to `"true"` or `"false"` (here, `<moduleName>` is the name of the module in camelCase).
 

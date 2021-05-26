@@ -178,5 +178,3 @@ spec:
     sourceRanges:
     - 192.168.0.0/24
 ```
-
-<!--## Deploy IngressNginxController custom resource to get all necessary components for ingress nginx controller to work.  -->

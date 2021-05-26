@@ -68,8 +68,6 @@ spec:
 ```
 **Важно!** Системные и добавленные через [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) dashboard нельзя изменить через интерфейс Grafana.
 
-[Читайте подробнее](../../modules/300-prometheus/grafana_dashboard_development.html) в документации по разработке графиков Grafana.
-
 ## Как добавить алерты и/или recording правила для вашего проекта?
 
 Для добавления алертов существует специальный ресурс — `CustomPrometheusRules`.
@@ -122,8 +120,6 @@ spec:
 
 ## Как обеспечить безопасный доступ к метрикам?
 Для обеспечения безопасности настоятельно рекомендуем использовать **kube-rbac-proxy**.
-
-Подробнее процесс настройки описан [здесь](../../modules/300-prometheus/prometheus_targets_development.html).
 
 ## Как добавить дополнительный alertmanager?
 
