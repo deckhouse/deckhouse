@@ -1,3 +1,4 @@
+BEGIN IMMEDIATE;
 
 -- Episodes 30s
 
@@ -44,3 +45,6 @@ ALTER TABLE  export_episodes  RENAME COLUMN  nano_up            TO success  ;
 ALTER TABLE  export_episodes  RENAME COLUMN  nano_down          TO fail  ;
 ALTER TABLE  export_episodes  RENAME COLUMN  nano_unknown       TO unknown  ;
 ALTER TABLE  export_episodes  RENAME COLUMN  nano_unmeasured    TO nodata  ;
+
+
+COMMIT;

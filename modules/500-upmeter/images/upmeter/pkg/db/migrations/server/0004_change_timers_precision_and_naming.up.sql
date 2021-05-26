@@ -8,6 +8,40 @@ The precision of nanoseconds is chosen to conveniently convert the data to time.
 */
 
 
+BEGIN IMMEDIATE;
+
+-- Cleanup
+
+DELETE FROM
+    downtime30s
+WHERE
+        timeslot < (
+        SELECT
+            min(timeslot)-300 -- offset by 300s guarantees to take only for fulfilled 5m episodes
+        FROM
+            (
+                SELECT
+                    max(timeslot) as timeslot
+                FROM
+                    downtime5m
+                GROUP BY
+                    group_name,
+                    probe_name
+            )
+    );
+
+
+COMMIT;
+
+
+-- Vacuum is not allowed within a transaction
+VACUUM;
+
+
+
+
+BEGIN IMMEDIATE ;
+
 -- Episodes 30s
 
 ALTER TABLE  downtime30s  RENAME TO  episodes_30s;
@@ -55,3 +89,6 @@ SET
     nano_down       = 1e9 * nano_down,
     nano_unknown    = 1e9 * nano_unknown,
     nano_unmeasured = 1e9 * nano_unmeasured;
+
+
+COMMIT;

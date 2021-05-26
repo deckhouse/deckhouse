@@ -6,6 +6,8 @@ fulfillment state of an episode in "origins" and "origins_count".
 
 */
 
+BEGIN IMMEDIATE;
+
 CREATE TABLE IF NOT EXISTS export_episodes
 (
     sync_id       TEXT    NOT NULL,
@@ -21,3 +23,6 @@ CREATE TABLE IF NOT EXISTS export_episodes
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS sync_id_sorted ON export_episodes (sync_id, timeslot, group_name, probe_name);
+
+
+COMMIT;

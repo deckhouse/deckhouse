@@ -63,7 +63,8 @@ func newMigrate(dbctx *dbcontext.DbContext, migrationsPath string) (*migrate.Mig
 	ctx := dbctx.Start()
 	defer ctx.Stop()
 
-	driver, err := sqlite3.WithInstance(ctx.Handler(), &sqlite3.Config{})
+	// no tx to be able to do vacuum
+	driver, err := sqlite3.WithInstance(ctx.Handler(), &sqlite3.Config{NoTxWrap: true})
 	if err != nil {
 		return nil, fmt.Errorf("cannot init driver: %v", err)
 	}
