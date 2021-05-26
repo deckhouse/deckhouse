@@ -1,0 +1,18 @@
+positive:
+  configValues:
+    - externalTargets:
+      - host: test.com
+      - name: test
+        host: test.com
+  values:
+    - internal:
+        targets: []
+negative:
+  configValues:
+    - externalTargets:
+      - abc: def
+    - externalTargets:
+        name: test
+  values:
+    - internal:
+        nonTarget: []

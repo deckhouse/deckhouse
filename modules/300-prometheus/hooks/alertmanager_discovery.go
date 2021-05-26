@@ -32,10 +32,12 @@ func applyAlertmanagerServiceFilter(obj *unstructured.Unstructured) (go_hook.Fil
 	as.Prometheus = service.ObjectMeta.Labels["prometheus.deckhouse.io/alertmanager"]
 	as.Service.Namespace = service.ObjectMeta.Namespace
 	as.Service.Name = service.ObjectMeta.Name
+
 	for _, port := range service.Spec.Ports {
 		as.Service.Port = port.Port
 		break
 	}
+
 	as.Service.PathPrefix = "/"
 	if prefix, ok := service.ObjectMeta.Annotations["prometheus.deckhouse.io/alertmanager-path-prefix"]; ok {
 		as.Service.PathPrefix = prefix

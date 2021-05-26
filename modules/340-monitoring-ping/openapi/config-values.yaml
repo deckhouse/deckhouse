@@ -1,0 +1,20 @@
+type: object
+properties:
+  externalTargets:
+    type: array
+    description: |
+      To monitor additional IP addresses, insert their names/hosts into the module config in the deckhouse ConfigMap.
+    items:
+      type: object
+      required: [host]
+      properties:
+        host:
+          type: string
+        name:
+          type: string
+    x-examples:
+    - - name: google-primary
+        host: 8.8.8.8
+      - name: yaru
+        host: ya.ru
+      - host: youtube.com
