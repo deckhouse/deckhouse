@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	. "github.com/benjamintf1/unmarshalledmatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -65,7 +66,7 @@ status:
 		})
 		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
 {
           "cluster_targets": [
             {
@@ -87,7 +88,7 @@ status:
 		})
 		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
  {
           "cluster_targets": [
             {
@@ -109,7 +110,7 @@ status:
 	Context("Two nodes with external targets", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(node1 + node2))
-			f.ConfigValuesSetFromYaml("monitoringPing.externalTargets", []byte(`[
+			f.ValuesSetFromYaml("monitoringPing.externalTargets", []byte(`[
 { "host": "1.2.3.4" },
 { "host": "5.6.7.8" }
 ]`))
@@ -117,7 +118,7 @@ status:
 		})
 		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
  {
           "cluster_targets": [
             {

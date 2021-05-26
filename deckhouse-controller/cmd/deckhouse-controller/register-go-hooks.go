@@ -11,6 +11,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-applications/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-ping/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-prometheus-madison-integration/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
 )
