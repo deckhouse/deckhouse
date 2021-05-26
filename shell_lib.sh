@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -Eeuo pipefail
+shopt -s inherit_errexit
 shopt -s failglob
 
 unameOut="$(uname -s)"

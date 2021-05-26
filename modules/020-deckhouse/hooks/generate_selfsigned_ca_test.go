@@ -68,34 +68,34 @@ var _ = Describe("Deckhouse hooks :: generate_selfsigned_ca ::", func() {
 			_, err = cert.Verify(opts)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
+	})
 
-		Context("Secret Created", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated))
-				f.RunHook()
-			})
-
-			It("Cert data must be stored in values", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.crt").String()).To(Equal("a"))
-				Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.key").String()).To(Equal("b"))
-				Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.ca").String()).To(Equal("c"))
-			})
+	Context("Secret Created", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateSecretCreated))
+			f.RunHook()
 		})
 
-		Context("Before Helm", func() {
-			BeforeEach(func() {
-				f.KubeStateSet(stateSecretCreated)
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.RunHook()
-			})
+		It("Cert data must be stored in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.key").String()).To(Equal("b\n"))
+			Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.ca").String()).To(Equal("c\n"))
+		})
+	})
 
-			It("Cert data must be stored in values", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.crt").String()).To(Equal("a"))
-				Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.key").String()).To(Equal("b"))
-				Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.ca").String()).To(Equal("c"))
-			})
+	Context("Before Helm", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(stateSecretCreated)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Cert data must be stored in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.crt").String()).To(Equal("a\n"))
+			Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.key").String()).To(Equal("b\n"))
+			Expect(f.ValuesGet("deckhouse.internal.webhookHandlerCert.ca").String()).To(Equal("c\n"))
 		})
 	})
 })
