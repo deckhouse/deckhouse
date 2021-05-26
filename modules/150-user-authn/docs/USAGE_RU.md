@@ -25,7 +25,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
 metadata:
   name: my-cool-app # поды аутентификатора будут иметь префикс my-cool-app
-  namespace: my-cool-namespace # неймспейс, в котором будет развернут dex-authenticator
+  namespace: my-cool-namespace # namespace, в котором будет развернут dex-authenticator
 spec:
   applicationDomain: "my-app.kube.my-domain.com" # домен, на котором висит ваше приложение
   sendAuthorizationHeader: false # отправлять ли `Authorization: Bearer` header приложению, полезно в связке с auth_request в nginx

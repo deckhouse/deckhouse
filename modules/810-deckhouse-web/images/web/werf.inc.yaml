@@ -190,9 +190,17 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /modules/010-prometheus-crd/crds/grafanadashboarddefinition.yaml
-  to: /src/modules/300-prometheus/crds/grafanadashboarddefinition.yaml
+- add: /modules/010-prometheus-crd/crds/
+  to: /src/modules/300-prometheus/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /modules/010-vertical-pod-autoscaler-crd/crds
+  to: /src/modules/302-vertical-pod-autoscaler/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  excludePaths:
+  - verticalpodautoscalercheckpoint.yaml

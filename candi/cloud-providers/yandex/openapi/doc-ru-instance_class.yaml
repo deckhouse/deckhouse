@@ -30,44 +30,47 @@ spec:
               properties:
                 cores:
                   description: |
-                    Amount of CPU cores to provision on a Yandex Compute Instance.
+                    Количество ядер у создаваемых инстансов.
                   example: 4
                   type: integer
                 coreFraction:
-                  description: Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  description: |
+                    Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
                   example: 20
                   x-doc-default: 100
                   enum: [ 0,5,20,50,100 ]
                   type: integer
                 gpus:
                   description: |
-                    Number of GPUs on a Yandex Compute Instance.
+                    Количество графических адаптеров у создаваемых инстансов.
                   example: 4
                   x-doc-default: 0
                   type: integer
                 memory:
-                  description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  description: |
+                    Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
                   example: 8192
                   type: integer
                 imageID:
                   description: |
-                    Image ID to use while provisioning Yandex Compute Instances.
+                    Идентификатор образа, который будет установлен в заказанные instance'ы.
 
-                    `masterInstanceClass` image from `providerClusterConfiguration` will be used by default.
+                    По умолчанию: образ из `masterInstanceClass` из `providerClusterConfiguration`.
                   example: fd8nb7ecsbvj76dfaa8b
                   type: string
                 platformID:
                   description: |
-                    Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
+                    ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
                   x-doc-default: standard-v2
                   type: string
                 preemptible:
-                  description: Should a provisioned Yandex Compute Instance be preemtible.
+                  description: |
+                    Заказывать ли preemptible instance.
                   type: boolean
                   x-doc-default: false
                 diskType:
                   description: |
-                    Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+                    Тип диска у инстансов. [Типы дисков](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
                   example: "network-hdd"
                   x-doc-default: "network-ssd"
                   type: string
@@ -75,23 +78,27 @@ spec:
                   - "network-ssd"
                   - "network-hdd"
                 diskSizeGB:
-                  description: Yandex Compute Instance disk size in gigabytes.
+                  description: |
+                    Размер диска (в гигабайтах) у инстансов.
                   example: 20
                   x-doc-default: 50
                   type: integer
                 assignPublicIPAddress:
-                  description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  description: |
+                    Присваивать ли публичные IP-адреса инстансам.
                   example: false
                   x-doc-default: false
                   type: boolean
                 mainSubnet:
                   description: |
-                    Subnet ID that VirtualMachines' primary NIC will connect to.
-                  x-doc-default: subnet from `zoneToSubnetIdMap` Deckhouse config.
+                    Позволяет переопределить имя основного subnet, к которому будет подключен инстанс.
+
+                    По умолчанию: subnet для зоны из конфига deckhouse `zoneToSubnetIdMap`.
                   example: e9bnc7g9mu9mper9clk4
                   type: string
                 additionalSubnets:
-                  description: Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  description: |
+                    Список subnet, которые будут подключены к инстансу.
                   example:
                     - b0csh41c1or82vuch89v
                     - e2lgddi5svochh5fbq96
@@ -101,9 +108,9 @@ spec:
                 additionalLabels:
                   type: object
                   description: |
-                    Additional labels.
+                    Дополнительные label'ы, которые будут присвоены созданным инстансам.
 
-                    Example:
+                    Пример:
                     ```yaml
                     project: cms-production
                     severity: critical
@@ -118,7 +125,7 @@ spec:
                   - SOFTWARE_ACCELERATED
                   default: STANDARD
                   description: |
-                    Network type: STANDARD or SOFTWARE_ACCELERATED
+                    Тип сети: STANDARD или SOFTWARE_ACCELERATED
   scope: Cluster
   names:
     plural: yandexinstanceclasses

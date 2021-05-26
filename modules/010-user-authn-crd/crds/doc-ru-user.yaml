@@ -37,30 +37,37 @@ spec:
                     E-mail пользователя.
 
                     **Важно!** При использовании совместно с модулем [user-authz](https://early.deckhouse.io/en/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://early.deckhouse.io/en/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+                  x-description: 'Static user email.'
                   example: 'user@domain.com'
                 password:
                   type: string
                   description: |
-                    Hashed user password.
+                    Хэшированный пароль пользователя.
                     * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`
                     * Или с помощью [онлайн-сервиса](https://bcrypt-generator.com/).
+                  x-description: 'Hashed user password.'
                   example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
                 userID:
                   type: string
-                  description: 'Unique issuer user ID. It equals to .metadata.name by default.'
+                  description: |
+                    Уникальное имя (ID) пользователя.
+                  x-description: 'Unique issuer user ID. It equals to .metadata.name by default.'
                   example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
                 groups:
                   type: array
-                  description: 'Static user groups.'
+                  description: |
+                    Список групп, в которых у пользователя есть членство.
+                  x-description: 'Static user groups.'
                   items:
                     type: string
                 ttl:
                   type: string
                   pattern: '^\d+(?:m|h)$'
                   description: |
-                    Static user TTL.
+                    Время жизни учетной записи пользователя
                     * Задается в виде строки с указанием time unit: 30m | 24h
-                    * Указать поле TTL можно только 1 раз, при повторном изменении - дата expireAt не обновляется
+                    * Указать поле ttl можно только 1 раз, при повторном изменении - дата expireAt не обновляется
+                  x-description: 'Static user TTL.'
                   example: '24h'
             status:
               type: object

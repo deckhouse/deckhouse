@@ -50,6 +50,7 @@ for page in ${pages}; do
     fi
     if [[ -f "${absolute_path}_RU.md" ]] && page::has_frontmatter "${absolute_path}_RU.md"; then
         cp -f "${absolute_path}_RU.md" "${MODULES_DST_RU}/${page_dst}.md"
+        sed -i "1alang: ru" "${MODULES_DST_RU}/${page_dst}.md"
     else
         cp -f "${absolute_path}.md" "${MODULES_DST_RU}/${page_dst}.md"
         sed -i "1alayout: page-another-lang" "${MODULES_DST_RU}/${page_dst}.md"

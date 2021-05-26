@@ -29,14 +29,14 @@ spec:
               properties:
                 flavorName:
                   description: |
-                    Flavor of OpenStack servers.
+                    Тип заказываемых server'ов.
 
-                    Get a list of all available flavors: `openstack flavor list`.
+                    Получить список всех доступных flavor: `openstack flavor list`.
                   example: m1.medium
                   type: string
                 imageName:
                   description: |
-                    Image to use while provisioning OpenStack servers.
+                    Имя образа виртуальной машины, который будет использоваться для инстанса.
 
                     Получить список всех доступных образов: `openstack image list`.
 
@@ -67,7 +67,7 @@ spec:
                   type: integer
                 mainNetwork:
                   description: |
-                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+                    Путь до сети, которая будет подключена к виртуальной машине, как основная (шлюз по умолчанию).
 
                     По умолчанию: значение из `OpenStackCloudDiscoveryData`.
 
@@ -76,7 +76,7 @@ spec:
                   type: string
                 additionalNetworks:
                   description: |
-                    Paths to networks that VirtualMachines' secondary NICs will connect to.
+                    Список сетей, которые будут подключены к инстансу.
 
                     По умолчанию: значение из `OpenStackCloudDiscoveryData`.
                   example:
@@ -87,8 +87,7 @@ spec:
                     type: string
                 additionalSecurityGroups:
                   description: |
-                    Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration
-
+                    Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud провайдера.
                     Используется для задания правил firewall по отношению к заказываемым инстансам.
 
                     `SecurityGroups` могут не поддерживаться облачным провайдером.
