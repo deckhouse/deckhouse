@@ -1,0 +1,7 @@
+positive:
+  configValues:
+  - instances: [ first, second ]
+negative:
+  configValues:
+  - {}
+  - instances: [false, true]
