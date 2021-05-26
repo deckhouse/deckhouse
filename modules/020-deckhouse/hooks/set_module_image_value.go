@@ -75,8 +75,9 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	}
 
 	*input.Metrics = append(*input.Metrics, operation.MetricOperation{
-		Name: "d8_deckhouse_is_not_on_release_channel",
-		Set:  pointer.Float64Ptr(metricResult),
+		Name:   "d8_deckhouse_is_not_on_release_channel",
+		Action: "set",
+		Value:  pointer.Float64Ptr(metricResult),
 	})
 	return nil
 }

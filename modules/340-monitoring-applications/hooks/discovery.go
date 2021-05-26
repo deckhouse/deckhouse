@@ -78,8 +78,9 @@ func discoverApps(input *go_hook.HookInput) error {
 	}
 
 	*input.Metrics = append(*input.Metrics, operation.MetricOperation{
-		Name: "d8_monitoring_applications_old_prometheus_target_total",
-		Set:  pointer.Float64Ptr(float64(len(enabledApplications))),
+		Name:   "d8_monitoring_applications_old_prometheus_target_total",
+		Action: "set",
+		Value:  pointer.Float64Ptr(float64(len(enabledApplications))),
 	})
 
 	for _, app := range input.Snapshots["service"] {

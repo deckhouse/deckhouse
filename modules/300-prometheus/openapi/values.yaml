@@ -123,11 +123,11 @@ properties:
           properties:
             name:
               type: string
-            url:
-              type: string
             spec:
               type: object
               properties:
+                url:
+                  type: string
                 basicAuth:
                   type: object
                   properties:
@@ -136,30 +136,31 @@ properties:
                     password:
                       type: string
                       format: password
-            writeRelabelConfigs:
-              type: object
-              default: {}
-              properties:
-                action:
-                  type: string
-                  default: "replace"
-                separator:
-                  type: string
-                  default: ";"
-                targetLabel:
-                  type: string
-                regex:
-                  type: string
-                  default: ".*"
-                modulus:
-                  type: integer
-                replacement:
-                  type: string
-                  default: "$1"
-                sourceLabels:
+                writeRelabelConfigs:
                   type: array
                   items:
-                    type: string
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                        default: "replace"
+                      separator:
+                        type: string
+                        default: ";"
+                      targetLabel:
+                        type: string
+                      regex:
+                        type: string
+                        default: ".*"
+                      modulus:
+                        type: integer
+                      replacement:
+                        type: string
+                        default: "$1"
+                      sourceLabels:
+                        type: array
+                        items:
+                          type: string
         default: []
         x-examples:
           -
@@ -168,11 +169,11 @@ properties:
                 basicAuth:
                   password: password
                   username: username
-              url: https://test-victoriametrics.domain.com/api/v1/write
-              writeRelabelConfigs:
-                action: keep
-                regex: "prometheus_build_.*"
-                sourceLabels: [ "__name__" ]
+                url: https://test-victoriametrics.domain.com/api/v1/write
+                writeRelabelConfigs:
+                - action: keep
+                  regex: "prometheus_build_.*"
+                  sourceLabels: [ "__name__" ]
       alertmanagers:
         type: object
         default: {}

@@ -38,7 +38,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: generate_password ", func() 
 	Context("with external auth", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
-			f.ValuesSet("prometheus.auth.externalAuthentication", "ok")
+			f.ValuesSetFromYaml("prometheus.auth.externalAuthentication", []byte(`{"authURL": "test"}`))
 			f.RunHook()
 		})
 
