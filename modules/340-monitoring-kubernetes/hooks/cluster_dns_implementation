@@ -19,8 +19,12 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       labelSelector:
-        matchLabels:
-          k8s-app: kube-dns
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+          - coredns
       jqFilter: '.metadata.name'
       executeHookOnEvent: ["Added", "Modified"]
 EOF
@@ -32,8 +36,8 @@ function __main__() {
     return 0
   fi
 
-  if ! context::has snapshots.kube_dns_deployment.0; then
-    >&2 echo "ERROR: can't determine cluster DNS implementation"
+  if ! context::jq -rce '.snapshots.kube_dns_deployment | length == 1'; then
+    >&2 echo "ERROR: can't determine cluster DNS implementation."
     return 1
   fi
 
