@@ -1,7 +1,0 @@
-global:
-  enabledModules: ["prometheus", "priority-class"]
-  modulesImages:
-    registry: registry.flant.com
-    registryDockercfg: cfg
-  discovery:
-    prometheusScrapeInterval: 30s
