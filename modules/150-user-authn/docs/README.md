@@ -24,7 +24,7 @@ You can use several external authentication providers simultaneously.
 
 ## Integration features
 ### Integration with Kubernetes and Deckhouse
-The module generates [control-plane-configurator](../160-control-plane-configurator/) or [control-plane-manager](../040-control-plane-manager/) settings (based on the Kubernetes and Deckhouse versions).
+The module generates [control-plane-manager](../../modules/040-control-plane-manager/) settings (based on the Kubernetes and Deckhouse versions).
 
 Thus, one of these modules configures the `kube-apiserver` so that it becomes the dex OIDC client. Several other Deckhouse modules will also be configured to integrate with dex, including:
 - [prometheus](../300-prometheus/)
@@ -55,7 +55,7 @@ The kubeconfig authentication mechanism uses an OIDC token. An OIDC session can 
 Additionally, you can configure multiple `kube-apiserver` addresses and set a CA for each of them. It might come in handy if, for example, access takes place directly and over VPN.
 
 ## Exposing the Kubernetes API using Ingress
-As you know, `kube-apiserver` with no additional settings provided is only reachable from within the internal cluster network by default. This module solves the problem of effortless and secure access to the API from outside the cluster. In doing so, it exposes *apiserver* on the service domain  (for more information, [see](../../#deckhouse-configuration) the service domain template in global).
+As you know, `kube-apiserver` with no additional settings provided is only reachable from within the internal cluster network by default. This module solves the problem of effortless and secure access to the API from outside the cluster. In doing so, it exposes *apiserver* on the service domain  (for more information, [see](../../deckhouse-configure-global.html) the service domain template in global).
 
 The following parameters can be specified when configuring:
 - a list of network addresses for which the connection is allowed;
@@ -72,4 +72,3 @@ The module makes use of a modified version of dex that contains the following up
 
 ## High availability mode
 The module also supports the `highAvailability` mode. When this mode is enabled, all components responding to the `auth requests` are deployed with the redundancy required to operate continuously without failure. Thus, the user authentication sessions are kept alive even if any of the authenticator instances fail.
-

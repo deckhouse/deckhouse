@@ -287,7 +287,7 @@ spec:
 
 ## Настройка kube-apiserver
 
-Для работы модулей dashboard и kubeconfig-generator в кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-configurator](../../modules/160-control-plane-configurator/).
+Для работы модулей dashboard и kubeconfig-generator в кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-manager](../../modules/040-control-plane-manager/).
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
@@ -300,13 +300,3 @@ spec:
 
 * --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
 {% endofftopic %}
-
-
-<!--## Connect an authentication provider using config values-->
-<!--## Deploy DexAuthenticator CRD leads to the creation of oauth2 proxy Deployment with various parameters, Ingress, Service and Oauth2 client for accessing dex-->
-<!--## Specifying Atlassian Crowd provider with enableBasicAuth option set to true leads to the creation of Deployment with crowd-basic-auth-proxy-->
-<!--## Enabling of publishAPI option leads to the creation of Ingress object for apiserver connection with desired ingress-shim annotation-->
-<!--## Switching on Control Plane Configurator for the module should add special Configmap to the cluster and generate necessary values-->
-<!--## Specifying KubeconfigGenerator in module settings adds parameters to KubeconfigGenerator Configmap-->
-<!--## Deploy of DexClient CRD must register oauth2 client entry to dex.-->
-

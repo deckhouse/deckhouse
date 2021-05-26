@@ -24,7 +24,7 @@ search: kube config generator
 
 ## Возможности интеграции
 ### Интеграция с Kubernetes и Deckhouse
-Модуль генерирует настройки для модулей [control-plane-configurator](../160-control-plane-configurator/) или [control-plane-manager]({{ "/modules/040-control-plane-manager/" | true_relative_url }}), в зависимости от версии Kubernetes и Deckhouse.
+Модуль генерирует настройки для модуля [control-plane-manager](../../modules/040-control-plane-manager/), в зависимости от версии Kubernetes и Deckhouse.
 
 Соответственно, один из этих модулей производит настройку `kube-apiserver` таким образом, что он становится OIDC-клиентом dex. В ряде других модулей Deckhouse также будет автоматически включена интеграция с dex, в том числе в модулях:
 - [prometheus](../../modules/300-prometheus/)
@@ -72,4 +72,3 @@ search: kube config generator
 
 ## Отказоустойчивый режим
 Модуль также поддерживает режим `highAvailability`. При его включении, аутентификаторы — элементы, которые отвечают на `auth request`-запросы, будут развернуты с учетом избыточности, необходимой для обеспечения бесперебойной работы. В случае сбоя любого из экземпляров аутентификаторов пользовательские сессии аутентификации не обрываются.
-
