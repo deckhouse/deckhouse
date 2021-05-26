@@ -29,7 +29,7 @@ spec:
               properties:
                 machineType:
                   description: |
-                    Machine type of GCP instance.
+                    Тип заказываемых инстансов.
 
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
 
@@ -38,9 +38,7 @@ spec:
                   type: string
                 image:
                   description: |
-                    Image to use while provisioning GCP servers.
-
-                    Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
+                    Образ, который будет использоваться в заказанных инстансах. Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
 
                     **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
 
@@ -48,11 +46,13 @@ spec:
                   example: "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"
                   type: string
                 preemptible:
-                  description: Should instances be preemtible.
+                  description: |
+                    Заказывать ли preemptible-инстансы.
                   type: boolean
                   x-doc-default: false
                 diskType:
-                  description: Instance disk type.
+                  description: |
+                    Тип созданного диска.
                   example: "pd-ssd"
                   x-doc-default: "pd-standard"
                   type: string
@@ -60,12 +60,13 @@ spec:
                   - "pd-standard"
                   - "pd-ssd"
                 diskSizeGb:
-                  description: Instance root disk size in gigabytes.
+                  description: |
+                    Размер root-диска. Значение указывается в `ГиБ`.
                   example: 20
                   x-doc-default: 50
                   type: integer
                 disableExternalIP:
-                  description: Defines whether to disable external ip for instance or not. True means that istance is created without external ip
+                  description: Запретить ли назначение внешнего IP для инстанса. True — инстанс будет создан  без внешнего IP.
                   type: boolean
                 additionalNetworkTags:
                   description: |
@@ -78,9 +79,9 @@ spec:
                 additionalLabels:
                   type: object
                   description: |
-                    Additional labels.
+                    Список дополнительных label'ов.
 
-                    [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                    Подробно про labels можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
 
                     Пример:
                     ```yaml

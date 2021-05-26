@@ -22,7 +22,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            При появлении объекта `DexAuthenticator` в неймспейсе будут созданы:
+            При появлении объекта `DexAuthenticator` в namespace будут созданы:
             * Deployment с oauth2-proxy и redis
             * Service, ведущий на Deployment с oauth2-proxy
             * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса
@@ -49,7 +49,7 @@ spec:
                 applicationIngressCertificateSecretName:
                   type: string
                   description: |
-                    Имя secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress-объекте приложения. Secret должен обязательно находится в том же неймспейсе, что и DexAuthenticator.
+                    Имя secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress-объекте приложения. Secret должен обязательно находится в том же namespace, что и DexAuthenticator.
                   example: 'ingress-tls'
                 applicationIngressClassName:
                   type: string
@@ -61,7 +61,7 @@ spec:
                   description: |
                     Отвечает за то, как долго пользовательская сессия будет считаться активной, если пользователь бездействует (указывается с суффиксом s, m или h).
 
-                    **По умолчанию:** — `168h` (7 дней).
+                    **По умолчанию:** `168h` (7 дней).
                   example: '24h'
                 allowedGroups:
                   type: array

@@ -37,11 +37,13 @@ spec:
                     type: string
                 redirectURIs:
                   type: array
-                  description: 'Array or urls that dex can redirect to after successful authentication.'
+                  description: |
+                    Список адресов, на которые допустимо редиректить dex'у после успешного прохождения аутентификации.
                   items:
                     type: string
                 trustedPeers:
                   type: array
-                  description: 'OAuth2 client IDs that allowed cross authentication with the current client. [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)'
+                  description: |
+                    ID клиентов, которым позволена cross аутентификация. [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth).
                   items:
                     type: string

@@ -29,7 +29,7 @@ spec:
               properties:
                 instanceType:
                   description: |
-                    Instance type of AWS instance.
+                    Тип заказываемых инстансов.
 
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
                   example: t3.large
@@ -47,24 +47,29 @@ spec:
                   example: ami-040a1551f9c9d11ad
                   type: string
                 spot:
-                  description: Whether to create Spot Instances with minimum hourly price with which Instances will run.
+                  description: |
+                    Создавать ли spot-инстансы (spot instance). Spot-инстансы будут запускаться с минимально возможной для успешного запуска ценой за час.
                   type: boolean
                 diskType:
-                  description: Instance EBS disk type.
+                  description: |
+                    Тип созданного диска.
                   example: "gp2"
                   type: string
                   x-doc-default: "gp2"
                 iops:
-                  description: IOPS rate for io1 diskType
+                  description: |
+                    Количество `IOPS`. Применяется только для `diskType` **io1**.
                   example: "500"
                   type: string
                 diskSizeGb:
-                  description: Instance root disk size in gigabytes.
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
                   example: 20
                   type: integer
                   x-doc-default: 20
                 additionalTags:
-                  description: Extra AWS tags for instances in addition to `AWSClusterConfiguration.tags`.
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам.
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
                   additionalProperties:

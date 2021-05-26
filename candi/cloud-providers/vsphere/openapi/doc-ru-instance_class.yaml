@@ -30,30 +30,33 @@ spec:
                 - mainNetwork
               properties:
                 numCPUs:
-                  description: Count of vCPUs to allocate to vSphere VirtualMachines.
+                  description: |
+                    Количество виртуальных процессорных ядер, выделяемых VirtualMachine.
                   example: 2
                   type: integer
                 memory:
-                  description: Memory in MiB to allocate to vSphere VirtualMachines.
+                  description: |
+                    Количество памяти (в мегабайтах), выделенных VirtualMachine.
                   example: 8192
                   type: integer
                 rootDiskSize:
                   description: |
-                    Root disk size in GiB to use in vSphere VirtualMachines.
-
-                    Если в template диск меньше, — автоматически произойдёт его расширение.
+                    Размер (в гигабайтах) корневого диска в VirtualMachine. Если в template диск меньше, — автоматически произойдёт его расширение.
                   example: 20
                   type: integer
                 template:
-                  description: Path to the template to be cloned. Relative to the datacenter.
+                  description: |
+                    Путь до VirtualMachine Template, который будет склонирован для создания новой VirtualMachine.
                   example: dev/golden_image
                   type: string
                 mainNetwork:
-                  description: Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
                   example: k8s-msk-178
                   type: string
                 additionalNetworks:
-                  description: Paths to networks that VirtualMachines' secondary NICs will connect to. Relative to the datacenter.
+                  description: |
+                    Список путей до сетей, которые будут подключены к виртуальной машине.
                   example:
                   - DEVOPS_32
                   - DEVOPS_50
@@ -61,26 +64,31 @@ spec:
                   items:
                     type: string
                 datastore:
-                  description: Path to a datastore in which VirtualMachines will be cloned. Relative to the datacenter.
+                  description: |
+                    Путь до Datastore, на котором будут созданы склонированные виртуальные машины.
                   example: lun-1201
                   type: string
                 disableTimesync:
                   description: >
-                    Disable time synchronization in Guest VM.
+                    Отключить синхронизацию времени в гостевой ВМ.
 
-                    **Note:** this won't disable any NTP daemons running on the guest OS, it only disables time synchronization from ESXi.
+                    **Внимание!**  Не отключает работу NTP-служб в гостевой ОС, — отключает только синхронизацию времени с ESXi.
                   type: boolean
                 resourcePool:
-                  description: Path to a Resource Pool in which VirtualMachines will be cloned. Relative to the zone (vSphere Cluster).
+                  description: |
+                    Путь до Resource Pool, в котором будут созданные склонированные виртуальные машины.
+
+                    Опциональный параметр.
                   example: rp-2012
                   type: string
                 runtimeOptions:
                   description: |
-                    Additional VM's parameters.
+                    Дополнительные (опциональные) параметры виртуальных машин.
                   type: object
                   properties:
                     nestedHardwareVirtualization:
-                      description: Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
+                      description: |
+                        Включить [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах.
                       type: boolean
                     cpuShares:
                       description: |
@@ -89,10 +97,12 @@ spec:
                         По умолчанию: `1000` на каждый vCPU.
                       type: integer
                     cpuLimit:
-                      description: CPU limit in MHz.
+                      description: |
+                        Верхний лимит (в MHz) потребляемой частоты процессоров для создаваемых виртуальных машин.
                       type: integer
                     cpuReservation:
-                      description: CPU reservation in MHz.
+                      description: |
+                        Величина зарезервированной для виртуальной машины частоты CPU (в MHz).
                       type: integer
                     memoryShares:
                       description: |
@@ -103,10 +113,12 @@ spec:
                       maximum: 100
                       minimum: 0
                     memoryLimit:
-                      description: Memory limit in MB.
+                      description: |
+                        Верхний лимит (в мегабайтах) потребляемой памяти для создаваемых виртуальных машин.
                       type: integer
                     memoryReservation:
-                      description: VM memory reservation in percent (relative to `.spec.memory`).
+                      description: |
+                        Процент зарезервированной для виртуальной машины памяти в кластере. В процентах относительно `.spec.memory`.
                       type: integer
                       x-doc-default: 80
                       minimum: 0
