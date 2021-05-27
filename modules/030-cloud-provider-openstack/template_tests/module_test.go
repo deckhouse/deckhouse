@@ -227,7 +227,9 @@ create-monitor = "true"
 monitor-delay = "2s"
 monitor-timeout = "1s"
 subnet-id = "my-subnet-id"
-floating-network-id = "my-floating-network-id"`
+floating-network-id = "my-floating-network-id"
+[BlockStorage]
+rescan-on-resize = true`
 			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(ccmConfig)).To(Equal(ccmExpectedConfig))
