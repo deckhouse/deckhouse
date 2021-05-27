@@ -185,27 +185,27 @@ spec:
                 cri:
                   type: object
                   description: |
-                    Container runtime parameters.
+                    Параметры container runtime.
                   properties:
                     type: &criType
                       type: string
                       description: |
-                        Container runtime type.
+                        Тип сontainer runtime.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` секрета `d8-cluster-configuration` в namespace `kube-system`), которая создается при инсталляции.
 
-                        **Optional parameter.**
+                        **Необязательный параметр.**
                       enum:
                         - "Docker"
                         - "Containerd"
                         - "NotManaged"
                     containerd: &criContainerd
                       type: object
-                      description: Containerd runtime parameters.
+                      description: Параметры работы Containerd.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
-                          description: Set the max concurrent downloads for each pull.
+                          description: Максимальное количество параллельных потоков загрузки для каждой операции pull.
                           x-doc-default: 3
                 cloudInstances: &cloudInstances
                   description: |
@@ -220,11 +220,11 @@ spec:
                   properties:
                     zones:
                       description: |
-                        List of availability zones to create instances in.
+                        Переопределение перечня зон, в которых создаются инстансы.
 
                         Значение по умолчанию зависит от выбранного облачного провайдера и обычно соответствует всем зонам используемого региона.
 
-                        Example:
+                        Пример:
                         ```yaml
                         - Helsinki
                         - Espoo
@@ -235,36 +235,31 @@ spec:
                         type: string
                     minPerZone:
                       description: |
-                        Minimal amount of instances for the group in each zone.
-
-                        Проставляется в объект MachineDeployment и в качестве нижней границы в cluster-autoscaler.
+                        Минимальное количество инстансов в зоне. Проставляется в объект MachineDeployment и в качестве нижней границы в cluster-autoscaler.
                       type: integer
                       minimum: 0
                     maxPerZone:
                       description: |
-                        Maximum amount of instances for the group in each zone.
-
-                        Проставляется как верхняя граница в cluster-autoscaler.
+                        Максимальное количество инстансов в зоне. Проставляется как верхняя граница в cluster-autoscaler.
                       type: integer
                       minimum: 0
                     maxUnavailablePerZone:
                       description: |
-                        Maximum amount of unavailable instances (during rollout) in the group in each zone.
+                        Сколько инстансов может быть недоступно при RollingUpdate'е.
                       type: integer
                       x-doc-default: 0
                       minimum: 0
                     maxSurgePerZone:
                       description: |
-                        Maximum amount of instances to rollout simultaneously in the group in each zone.
+                        Сколько инстансов создавать одновременно при scale-up.
                       type: integer
                       x-doc-default: 1
                       minimum: 0
                     standby:
                       description: |
-                        Amount of overprovisioned Nodes for this NodeGroup.
+                        Количество подогретых инстансов для этой `NodeGroup`.
 
-                        The value can be an absolute number (for example, 2) or a percentage of desired Nodes (for example, 10%).
-                        The absolute number is calculated from percentage of maximum Nodes amount by rounding down.
+                        Значение может быть абсолютным (например, `2`) или процентом желаемых узлов (например, `10%`). Абсолютное значение рассчитывается из процента от максимального количества узлов путем округления в меньшую сторону, но минимум — `1`.
                       pattern: '^[0-9]+%?$'
                       x-kubernetes-int-or-string: true
                     standbyHolder:
@@ -274,21 +269,21 @@ spec:
                       properties:
                         notHeldResources:
                           description: |
-                            Describes the amount of resources, that will not be held by standby holder.
+                            Ресурсы, которые не будут заняты.
                           type: object
                           properties:
                             cpu:
                               description: |
-                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+                                Количество CPU.
 
-                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
+                                Значение может быть абсолютным (например, `1`) или в _millicore_-формате (например, `1500m`).
                               pattern: '^[0-9]+m?$'
                               x-kubernetes-int-or-string: true
                             memory:
                               description: |
-                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+                                Количество памяти.
 
-                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
+                                Значение может быть абсолютным в байтах (например, `128974848`) или в kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
                               pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                               x-kubernetes-int-or-string: true
                     classReference:
@@ -313,9 +308,9 @@ spec:
                           type: string
                 nodeTemplate: &nodeTemplate
                   description: |
-                    Specification of some of the fields that will be maintained in all nodes of the group.
+                    Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
 
-                    Example:
+                    Пример:
                     ```yaml
                     labels:
                       environment: production
@@ -337,7 +332,7 @@ spec:
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
-                        Example:
+                        Пример:
                         ```yaml
                         labels:
                           environment: production
@@ -351,7 +346,7 @@ spec:
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
 
-                        Example:
+                        Пример:
                         ```yaml
                         annotations:
                           ai.fleet.com/discombobulate: "true"
@@ -363,7 +358,7 @@ spec:
 
                         **Внимание!** Доступны только поля `effect`, `key`, `value`.
 
-                        Example:
+                        Пример:
                         ```yaml
                         taints:
                         - effect: NoExecute
@@ -394,9 +389,9 @@ spec:
                         type: string
                 chaos: &chaos
                   description: |
-                    Chaos monkey settings.
+                    Настройки chaos monkey.
 
-                    Example:
+                    Пример:
                     ```yaml
                     mode: DrainAndReboot
                     period: 24h
@@ -422,15 +417,18 @@ spec:
                       x-doc-default: '6h'
                 operatingSystem: &operatingSystem
                   type: object
-                  description: Operating System settings for nodes.
+                  description: |
+                    Параметры операционной системы.
                   properties:
                     manageKernel:
                       type: boolean
-                      description: Enable kernel maintenance from bashible.
+                      description: |
+                        Автоматическое управление ядром операционной системы.
                       x-doc-default: true
                 disruptions: &disruptions
                   type: object
-                  description: Disruptions settings for nodes.
+                  description: |
+                    Параметры обновлений приводящих к возможному простою.
                   required:
                     - approvalMode
                   properties:
@@ -454,29 +452,35 @@ spec:
                           description: |
                             Выгон (draining) подов с ноды, перед выдачей разрешения на disruption.
                 docker:
-                  description: Docker settings for nodes.
+                  description: |
+                    Параметры настройки Docker.
                   type: object
                   properties:
                     maxConcurrentDownloads:
                       type: integer
-                      description: Set the max concurrent downloads for each pull.
+                      description: |
+                        Максимальное количество потоков одновременного скачивания docker образов.
                       x-doc-default: 3
                     manage:
                       type: boolean
+                      description: |
+                        Автоматическое управление версией и параметрами Docker.
                       x-doc-default: true
-                      description: Enable docker maintenance from bashible.
                 kubelet: &kubelet
                   type: object
-                  description: Kubelet settings for nodes.
+                  description: |
+                    Параметры настройки kubelet.
                   properties:
                     maxPods:
                       type: integer
-                      description: Set the max count of pods per node.
+                      description: |
+                        Максимальное количество подов на нодах данной `NodeGroup`.
                       x-doc-default: 110
                     rootDir:
                       type: string
+                      description: |
+                        Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
                       x-doc-default: '/var/lib/kubelet'
-                      description: Directory path for managing kubelet files (volume mounts,etc).
     - name: v1alpha2
       served: true
       storage: false
@@ -501,22 +505,25 @@ spec:
                 cri:
                   type: object
                   description: |
-                    Container runtime parameters.
+                    Параметры container runtime.
                   properties:
                     type: *criType
                     containerd: *criContainerd
                     docker:
                       type: object
-                      description: Docker settings for nodes.
+                      description: |
+                        Параметры настройки Docker.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
-                          description: Set the max concurrent downloads for each pull.
+                          description: |
+                            Максимальное количество потоков одновременного скачивания docker образов.
                           x-doc-default: 3
                         manage:
                           type: boolean
+                          description: |
+                            Автоматическое управление версией и параметрами Docker.
                           x-doc-default: true
-                          description: Enable docker maintenance from bashible.
                   oneOf:
                     - properties:
                         type:

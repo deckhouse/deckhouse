@@ -39,7 +39,7 @@ spec:
                 inlet:
                   type: string
                   description: |
-                    The way traffic goes to cluster from the outer network.
+                    Способ поступления трафика из внешнего мира.
                     * `LoadBalancer` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`.
                     * `LoadBalancerWithProxyProtocol` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`. Ingress controller использует proxy-protocol для получения настоящего IP-адреса клиента.
                     * `HostPort` — устанавливается Ingress controller, который доступен на портах нод через `hostPort`.
@@ -50,31 +50,37 @@ spec:
                 controllerVersion:
                   type: string
                   description: |
-                    One of the supported NGINX Ingress Controller versions.
+                    Версия Ingress NGINX-контроллера.
 
                     **По умолчанию:** версия из настроек модуля.
                   enum: ['0.25', '0.26', '0.33']
                 enableIstioSidecar:
                   type: boolean
                   description: |
-                    Whether to dedicate the controller for Istio environment.
-
-                    С данным флагом контроллер сможет обслуживать только сервисы, которые подконтрольны Istio.
+                    Добавить к подам контроллера аннотации для автоматического инжекта istio-сайдкаров. С данным флагом контроллер сможет обслуживать только сервисы, которые подконтрольны Istio.
                 nodeSelector:
                   type: object
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
-                    - If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
-                    - You can set it to `false` to avoid adding any nodeSelector.
+                    Как в `spec.nodeSelector` у подов.
+
+                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+
+                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
-                    - If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
-                    - You can set it to `false` to avoid adding any tolerations.
+                    Как в `spec.tolerations` у подов.
+
+                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    Можно указать `false`, чтобы не добавлять никакие toleration’ы.
+
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:
                     type: object
                     properties:
@@ -95,14 +101,14 @@ spec:
                 loadBalancer:
                   type: object
                   description: |
-                    LoadBalancer inlet settings.
+                    Секция настроек для inlet'а `LoadBalancer`.
                   properties:
                     sourceRanges:
                       type: array
                       description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
+                        Список CIDR, которым разрешен доступ на балансировщик.
 
-                        The cloud provider may not support this option or ignore it.                       .
+                        Облачный провайдер может не поддерживать данную опцию и игнорировать её.
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -110,7 +116,7 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Annotations that will be passed to service with type load balancer to configure it.
+                        Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
 
                         **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках.
                         Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
@@ -119,13 +125,13 @@ spec:
                     behindL7Proxy:
                       type: boolean
                       description: |
-                        Accepts all the incoming X-Forwarded-* headers and passes them to upstreams.
+                        Включает обработку и передачу `X-Forwarded-*` заголовков.
 
                         **Внимание!** При использовании этой опции вы должны быть уверены, что запросы к Ingress направляются только от доверенных источников.
                     realIPHeader:
                       type: string
                       description: |
-                        Sets the header field for identifying the originating IP address of a client.
+                        Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         Работает только при включении `behindL7Proxy`.
                       example: 'CF-Connecting-IP'
@@ -133,21 +139,21 @@ spec:
                 loadBalancerWithProxyProtocol:
                   type: object
                   description: |
-                    `LoadBalancerWithProxyProtocol` inlet settings.
+                    Секция настроек для inlet `LoadBalancerWithProxyProtocol`.
                   properties:
                     sourceRanges:
                       type: array
                       description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
+                        Список CIDR, которым разрешен доступ на балансировщик.
 
-                        The cloud provider may not support this option or ignore it.                       .
+                        Облачный провайдер может не поддерживать данную опцию и игнорировать её.
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
                       type: object
                       description: |
-                        Annotations that will be passed to service with type load balancer to configure it.
+                        Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
 
                         **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer применяются только при создании сервиса, то для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
                       additionalProperties:
@@ -156,7 +162,7 @@ spec:
                 hostPort:
                   type: object
                   description: |
-                    `HostPort` inlet settings.
+                    Секция настроек для inlet `HostPort`.
                   anyOf:
                   - {required: ["httpPort"]}
                   - {required: ["httpsPort"]}
@@ -164,7 +170,7 @@ spec:
                     httpPort:
                       type: integer
                       description: |
-                        Port for insecure HTTP connections.
+                        Порт для небезопасного подключения по HTTP.
 
                         Если параметр не указан – возможность подключения по HTTP отсутствует.
 
@@ -173,7 +179,7 @@ spec:
                     httpsPort:
                       type: integer
                       description: |
-                        Port for secure HTTPS connections.
+                        Порт для безопасного подключения по HTTPS.
 
                         Если параметр не указан – возможность подключения по HTTPS отсутствует.
 
@@ -182,13 +188,13 @@ spec:
                     behindL7Proxy:
                       type: boolean
                       description: |
-                        Accepts all the incoming X-Forwarded-* headers and passes them to upstreams.
+                        Включает обработку и передачу `X-Forwarded-*` заголовков.
 
                         **Внимание!** При использовании этой опции необходимо быть увереным, что запросы к Ingress направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
                     realIPHeader:
                       type: string
                       description: |
-                        Sets the header field for identifying the originating IP address of a client.
+                        Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         Работает **только** при включении `behindL7Proxy`.
                       default: 'X-Forwarded-For'
@@ -196,7 +202,7 @@ spec:
                 hostPortWithProxyProtocol:
                   type: object
                   description: |
-                    `HostPortWithProxyProtocol` inlet settings.
+                    Секция настроек для inlet `HostPortWithProxyProtocol`.
                   anyOf:
                   - {required: ['httpPort']}
                   - {required: ['httpsPort']}
@@ -204,7 +210,7 @@ spec:
                     httpPort:
                       type: integer
                       description: |
-                        Port for insecure HTTP connections.
+                        Порт для небезопасного подключения по HTTP.
 
                         Если параметр не указан – возможность подключения по HTTP отсутствует.
 
@@ -213,7 +219,7 @@ spec:
                     httpsPort:
                       type: integer
                       description: |
-                        Port for secure HTTPS connections.
+                        Порт для безопасного подключения по HTTPS.
 
                         Если параметр не указан – возможность подключения по HTTPS отсутствует.
 
@@ -222,7 +228,7 @@ spec:
                 acceptRequestsFrom:
                   type: array
                   description: |
-                    IP or CIDR that is allowed to access the Ingress controller.
+                    Список CIDR, которым разрешено подключаться к контроллеру.
                     Независимо от inlet всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не "адрес клиента", который может передаваться в некоторых inlet через заголовки или с использованием `proxy protocol`.
 
                     Параметр реализован при помощи [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html) и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
@@ -234,40 +240,43 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Enable hsts. ([Details...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
+                    Bool, включен ли `hsts` ([подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
                   default: false
                 hstsOptions:
                   type: object
-                  description: 'Options for HTTP Strict Transport Security.'
+                  description: |
+                    Параметры HTTP Strict Transport Security.
                   properties:
                     maxAge:
                       type: string
-                      description: 'The time, in seconds, that the browser should remember that a site is only to be accessed using HTTPS.'
+                      description: |
+                        Время в секундах, которое браузер должен помнить, что сайт доступен только с помощью HTTPS.
                       pattern: '^([0-9])*([1-9])$'
                       example: 31536000
                       default: 31536000
                     preload:
                       type: boolean
-                      description: 'Add your site to preload list to enforce to use SSL/TLS connections on your site.'
+                      description: |
+                        Добавлять ли сайт в список предзагрузки. Эти списки используются современными браузерами и разрешают подключение к сайту только по HTTPS.
                       default: false
                     includeSubDomains:
                       type: boolean
-                      description: 'If this optional parameter is specified, this rule applies to all of subdomains as well.'
+                      description: |
+                        Применять ли настройки `hsts` ко всем поддоменам сайта.
                       default: false
                 geoIP2:
                   type: object
-                  description: 'Options for GeoIP2 (works only for version `0.33` or above).'
+                  description: |
+                    Опции для включения GeoIP2 (работают только для версии контроллера `"0.33"` и выше).
                   properties:
                     maxmindLicenseKey:
                       type: string
                       description: |
-                        License key for MaxMind services.
-
-                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Details...](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/)
+                        Лицензионный ключ для скачивания базы данных GeoIP2. Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
                     maxmindEditionIDs:
                       type: array
                       description: |
-                        MaxMind GeoIP2 database editions IDs.
+                        Список ревизий баз данных, которые будут скачаны при старте.
 
                         Чем отличаются, например, `GeoIP2-City` от `GeoLite2-City` можно ознакомиться [в этой статье](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2/).
                       default: ["GeoLite2-City", "GeoLite2-ASN"]
@@ -287,15 +296,13 @@ spec:
                 legacySSL:
                   type: boolean
                   description: |
-                    Enable old TLS protocol versions and legacy cipher suites.
-
-                    Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/master/modules/402-ingress-nginx/templates/controller/configmap.yaml).
 
                     **По умолчанию:** включён только TLSv1.2 и самые новые cipher suites.
                 disableHTTP2:
                   type: boolean
                   description: |
-                    Switch off HTTP2 support.
+                    Выключить ли HTTP/2.
                   default: false
                 config:
                   type: object
@@ -309,7 +316,7 @@ spec:
                 additionalHeaders:
                   type: object
                   description: |
-                    Additional headers to add to all request. (map: key (string)).
+                    Дополнительные header'ы, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
@@ -339,16 +346,16 @@ spec:
                         cpu:
                           type: object
                           description: |
-                            Настройки для CPU.
+                            Настройки для cpu.
                           properties:
                             max:
                               description: |
-                                Maximum allowed CPU requests.
+                                Максимальное значение, которое может выставить VPA для запроса cpu.
                               default: '50m'
                               type: string
                             min:
                               description: |
-                                Minimum allowed CPU requests.
+                                Минимальное значение, которое может выставить VPA для запроса cpu.
                               default: '10m'
                               type: string
                         memory:
@@ -358,28 +365,28 @@ spec:
                           properties:
                             max:
                               description: |
-                                Maximum allowed memory requests.
+                                Максимальное значение, которое может выставить VPA для запроса memory.
                               default: '200Mi'
                               type: string
                             min:
                               description: |
-                                Minimum allowed memory requests.
+                                Минимальное значение, которое может выставить VPA для запроса memory.
                               default: '50Mi'
                               type: string
                     static:
                       type: object
                       description: |
-                        Static mode settings.
+                        Настройки статического режима управления.
                       properties:
                         cpu:
                           type: string
                           description: |
-                            CPU requests.
+                            Значение для запроса cpu.
                           default: '50m'
                         memory:
                           type: string
                           description: |
-                            Memory requests.
+                            Значение для запроса memory.
                           default: '200Mi'
                 customErrors:
                   type: object
@@ -390,17 +397,17 @@ spec:
                     serviceName:
                       type: string
                       description: |
-                        Name of kubernetes service that leads to custom errors backend.
+                        Имя сервиса, который будет использоваться, как custom default backend.
                       example: 'custom-errors-backend-service'
                     namespace:
                       type: string
                       description: |
-                        Namespace of custom errors backend.
+                        Имя namespace, в котором будет находиться сервис, используемый, как custom default backend.
                       example: 'default'
                     codes:
                       type: array
                       description: |
-                        Error codes which should be redirected to custom errors backend.
+                        Список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
                       items:
                         type: string
                         name: 'Error code.'

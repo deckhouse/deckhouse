@@ -61,23 +61,23 @@ spec:
                     Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
                 allowAccessToSystemNamespaces:
                   type: boolean
-                  description: |
-                    Allow access to System namespaces (kube-*, d8-*, loghouse, default).
-
-                    Option available **only** if `enableMultiTenancy` option is enabled.
                   x-doc-versionType: ee
                   x-doc-default: false
+                  description: |
+                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+
+                    **Доступно только** с включённым параметром `enableMultiTenancy`.
                 limitNamespaces:
                   type: array
+                  x-doc-versionType: ee
                   description: |
-                    List of namespace regex-patterns to allow for user.
+                    Белый список разрешённых namespace в формате регулярных выражений.
 
                     Политика:
                     * Если список указан, то разрешаем доступ только по нему.
                     * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
-                    Option available only if `enableMultiTenancy` option is enabled.
-                  x-doc-versionType: ee
+                    **Доступно только** с включённым параметром `enableMultiTenancy`.
                   items:
                     type: string
                     minLength: 1
@@ -89,7 +89,7 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
 
-                    **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/ru/documentation/v1/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
                   items:
                     type: object
                     required:
@@ -99,25 +99,25 @@ spec:
                       kind:
                         type: string
                         enum: [User,Group,ServiceAccount]
-                        description: 'Type of user identification resource.'
+                        description: 'Тип ресурса.'
                         example: 'Group'
                       name:
                         type: string
                         minLength: 1
-                        description: 'Resource name.'
+                        description: 'Имя ресурса.'
                         example: 'some-group-name'
                       namespace:
                         type: string
                         minLength: 1
-                        description: 'ServiceAccount namespace.'
+                        description: 'Namespace для ServiceAccount.'
                 additionalRoles:
                   type: array
                   description: |
-                    Additional roles to bind for subjects.
+                    Дополнительные роли, которые необходимо выдать для заданных `subjects`.
 
                     Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
 
-                    Example:
+                    Пример:
                     ```yaml
                     additionalRoles:
                     - apiGroup: rbac.authorization.k8s.io
@@ -136,16 +136,16 @@ spec:
                     properties:
                       apiGroup:
                         type: string
-                        description: 'apiGroup for users.'
+                        description: "apiGroup`а для пользователей."
                         example: 'rbac.authorization.k8s.io'
                         minLength: 1
                       kind:
                         type: string
-                        description: 'Kind of the role.'
+                        description: 'Kind роли.'
                         enum: [ClusterRole, Role]
                         example: 'ClusterRole'
                       name:
                         type: string
-                        description: 'Name of the role.'
+                        description: 'Название роли.'
                         minLength: 1
                         example: 'cluster-admin'

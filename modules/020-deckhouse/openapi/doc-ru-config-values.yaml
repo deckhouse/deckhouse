@@ -5,9 +5,9 @@ properties:
   bundle:
     description: |
       Вариант поставки Deckhouse. Определяет включенные по умолчанию модули.
-        * `Default` — рекомендованный набор модулей для работы кластера: мониторинга, контроля авторизации, организации работы сети и других потребностей ([актуальный список](https://github.com/deckhouse/deckhouse/blob/master/modules/values-default.yaml)).
-        * `Minimal` — минимально возможная поставка, которая включает единственный модуль (этот).
-        * `Managed` - поставка для managed-кластеров от облачных провайдеров, например Google Kubernetes Engine (GKE).
+      - `Default` — рекомендованный набор модулей для работы кластера: мониторинга, контроля авторизации, организации работы сети и других потребностей ([актуальный список](https://github.com/deckhouse/deckhouse/blob/master/modules/values-default.yaml)).
+      - `Minimal` — минимально возможная поставка, которая включает единственный модуль (этот).
+      - `Managed` - поставка для managed-кластеров от облачных провайдеров, например Google Kubernetes Engine (GKE).
   releaseChannel:
     description: |
       Канал обновлений Deckhouse.

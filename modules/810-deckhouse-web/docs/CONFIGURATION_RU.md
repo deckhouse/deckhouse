@@ -34,19 +34,3 @@ title: "Модуль deckhouse-web: настройки"
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
     * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
-
-### Пример
-
-```yaml
-deckhouseWeb: |
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  - key: dedicated
-    operator: Equal
-    value: example
-  externalAuthentication:
-    authURL: "https://<applicationDomain>/auth"
-    authSignInURL: "https://<applicationDomain>/sign-in"
-    authResponseHeaders: "Authorization"
-```
