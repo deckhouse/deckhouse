@@ -59,8 +59,10 @@ spec:
         - /bin/simple-bridge
         env:
         {{- if hasKey .Values.global "clusterConfiguration" }}
+          {{- if .Values.global.clusterConfiguration.cloud }}
         - name: ROUTE_POD_NETWORK_TO_GW
           value: "{{ if eq .Values.global.clusterConfiguration.cloud.provider "Yandex" }}true{{ else }}false{{ end }}"
+          {{- end }}
         {{- end }}
         - name: POD_SUBNET
           value: {{ .Values.global.discovery.podSubnet | quote }}

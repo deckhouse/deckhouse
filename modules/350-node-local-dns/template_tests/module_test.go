@@ -15,7 +15,7 @@ func Test(t *testing.T) {
 }
 
 var _ = Describe("Module :: node-local-dns :: helm temtplate", func() {
-	hec := SetupHelmConfig("{}")
+	hec := SetupHelmConfig(`{"nodeLocalDns":{}}`)
 
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
