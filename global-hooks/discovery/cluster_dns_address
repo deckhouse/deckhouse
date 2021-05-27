@@ -15,8 +15,12 @@ function __config__() {
         nameSelector:
           matchNames: [kube-system]
       labelSelector:
-        matchLabels:
-          k8s-app: kube-dns
+        matchExpressions:
+        - key: k8s-app
+          operator: In
+          values:
+          - kube-dns
+          - coredns
       jqFilter: '.spec.clusterIP'
 EOF
 }

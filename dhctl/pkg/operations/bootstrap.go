@@ -210,9 +210,11 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 			return fmt.Errorf("deckhouse install: %v", err)
 		}
 
-		err = converge.CreateNodeGroup(kubeCl, "master", nodeGroupConfig)
-		if err != nil {
-			return err
+		if len(config.ClusterConfig) > 0 {
+			err = converge.CreateNodeGroup(kubeCl, "master", nodeGroupConfig)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil

@@ -159,6 +159,7 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
       * The default port is `10370`;
     * `authenticationMethod` — the authentication method;
       * Possible values:
+        * `None` — do not authenticate;
         * `Certificate` — specify a custom certificate. (See the `certificateSecret` parameter below);
         * `HostPathCertificate` — use the certificate and key that are already present on the node's filesystem;
         * _D8PKI_ — use the `kube-system/d8-pki`'s certificates (it is generated when bootstrapping the cluster using `dhctl`). This option is not intended for manual use (auto-configuring only);

@@ -226,6 +226,9 @@ func (m *MetaConfig) MarshalConfig() []byte {
 }
 
 func (m *MetaConfig) ClusterConfigYAML() ([]byte, error) {
+	if m.ClusterConfig == nil {
+		return []byte{}, nil
+	}
 	return yaml.Marshal(m.ClusterConfig)
 }
 
