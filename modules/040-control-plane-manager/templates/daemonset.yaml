@@ -3,9 +3,9 @@
 
 {{- $images := dict }}
 {{- range $component := list (list "kubeApiserver" "kube-apiserver") (list "kubeControllerManager" "kube-controller-manager") (list "kubeScheduler" "kube-scheduler") }}
-  {{- $_ := set $images (index $component 1) (printf "%s/control-plane-manager/%s-%s:%s" $.Values.global.modulesImages.registry (index $component 1) $kubeImageRepoSuffix (index $.Values.global.modulesImages.tags.controlPlaneManager (printf "%s%s" (index $component 0) $kubeImageTagSuffix)) ) }}
+  {{- $_ := set $images (index $component 1) (printf "%s:%s" $.Values.global.modulesImages.registry (index $.Values.global.modulesImages.tags.controlPlaneManager (printf "%s%s" (index $component 0) $kubeImageTagSuffix)) ) }}
 {{- end }}
-{{- $_ := set $images "etcd" (printf "%s/control-plane-manager/etcd:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
+{{- $_ := set $images "etcd" (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
@@ -135,7 +135,7 @@ spec:
       containers:
       - name: control-plane-manager
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | indent 8 }}
-        image: {{ .Values.global.modulesImages.registry }}/control-plane-manager/control-plane-manager:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.controlPlaneManager.controlPlaneManager }}
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd

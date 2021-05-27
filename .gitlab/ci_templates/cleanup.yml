@@ -1,9 +1,11 @@
 .Cleanup registry template:
   stage: cleanup_registry
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   script:
   - werf cleanup --without-kube --git-history-based-cleanup-v1.2=true
@@ -16,8 +18,6 @@
 
 .Cleanup modules registry template:
   stage: cleanup_registry
-  before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-modules-images
   script:
   - ./modules_images_werf cleanup --git-history-based-cleanup-v1.2=true
   only:

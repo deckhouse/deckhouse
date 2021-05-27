@@ -47,7 +47,7 @@ spec:
       - name: deckhouse-registry
       containers:
         - name: webhook
-          image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/ingress-conversion-webhook:{{ .Values.global.modulesImages.tags.nginxIngress.ingressConversionWebhook }}
+          image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nginxIngress.ingressConversionWebhook }}
           args:
           - -tls-cert-file=/etc/webhook/certs/tls.crt
           - -tls-key-file=/etc/webhook/certs/tls.key

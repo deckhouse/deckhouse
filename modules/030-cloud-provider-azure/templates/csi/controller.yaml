@@ -29,7 +29,7 @@
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s/cloud-provider-azure/azuredisk-csi:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi)}}
+{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderAzure.azurediskCsi)}}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

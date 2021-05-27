@@ -53,7 +53,7 @@ spec:
       containers:
       - name: nginx
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus-madison-integration/madison-proxy:{{ $.Values.global.modulesImages.tags.prometheusMadisonIntegration.madisonProxy }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheusMadisonIntegration.madisonProxy }}
         env:
         - name: MADISON_BACKEND
           value: {{ . }}

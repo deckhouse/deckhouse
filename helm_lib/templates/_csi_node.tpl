@@ -14,7 +14,7 @@
 
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImageTag := index $context.Values.global.modulesImages.tags.common $driverRegistrarImageName }}
-  {{- $driverRegistrarImage := printf "%s/common/csi-node-driver-registrar-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $driverRegistrarImageTag }}
+  {{- $driverRegistrarImage := printf "%s:%s" $context.Values.global.modulesImages.registry $driverRegistrarImageTag }}
 
   {{- if $driverRegistrarImageTag }}
     {{- if (include "helm_lib_cluster_has_non_static_nodes" $context) }}

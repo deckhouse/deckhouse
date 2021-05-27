@@ -212,6 +212,7 @@ git:
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml
   - global-hooks/**/*.go
+  - modules/images_tags.json
 import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
@@ -256,6 +257,9 @@ docker:
 image: tests
 fromImage: base-for-go
 fromCacheVersion: "20210413"
+mount:
+- fromPath: modules/images_tags.json
+  to: /deckhouse/modules/images_tags.json
 git:
 - add: /
   to: /deckhouse
@@ -263,7 +267,7 @@ git:
     install:
       - go.mod
       - go.sum
-  excludePaths: ['docs']
+  excludePaths: ['docs', 'modules/images_tags.json']
 import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller

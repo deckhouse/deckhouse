@@ -46,7 +46,7 @@ spec:
       containers:
       - name: grafana
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheus.grafana }}
         env:
         {{- if .Values.global.modules.publicDomainTemplate }}
         - name: GF_SERVER_ROOT_URL
@@ -109,7 +109,7 @@ spec:
           initialDelaySeconds: 10
       - name: dashboard-provisioner
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/prometheus/grafana-dashboard-provisioner:{{ $.Values.global.modulesImages.tags.prometheus.grafanaDashboardProvisioner }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.prometheus.grafanaDashboardProvisioner }}
         env:
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
@@ -123,7 +123,7 @@ spec:
           mountPath: /tmp
       - name: kube-rbac-proxy
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

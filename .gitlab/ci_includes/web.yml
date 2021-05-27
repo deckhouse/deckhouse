@@ -2,7 +2,6 @@ Main web build:
   stage: build
   variables:
     WERF_DIR: "docs/site"
-    WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
     WERF_LOG_VERBOSE: "on"
     WERF_LOOSE_GITERMINISM: "true"
   script:
@@ -24,7 +23,6 @@ Doc web build:
   stage: build
   variables:
     WERF_DIR: "docs/documentation"
-    WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
     WERF_LOG_VERBOSE: "on"
   script:
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
@@ -42,8 +40,6 @@ Doc web build:
   interruptible: true
 
 Web links test:
-  before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   extends: .Web links test
   tags:
   - werf-distributed
@@ -52,7 +48,6 @@ Web links test:
   stage: deploy_website
   before_script:
   - export WERF_NAMESPACE=${WERF_NAMESPACE:-deckhouse-${CI_ENVIRONMENT_SLUG}}
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
   script:
   - type multiwerf && source $(multiwerf use 1.2 alpha --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
@@ -153,7 +148,6 @@ Web cleanup:
   stage: cleanup_registry
   variables:
     WERF_DIR: "docs/site"
-    WERF_STAGES_STORAGE: "${WERF_STAGES_REPO_BASE}/stages-web"
   script:
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)

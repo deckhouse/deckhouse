@@ -41,10 +41,10 @@ spec:
         - --kubelet-service=kube-system/kubelet
         - --logtostderr=true
         - --config-reloader-cpu=0
-        - --config-reloader-image={{ $.Values.global.modulesImages.registry }}/operator-prometheus/configmap-reloader:{{ $.Values.global.modulesImages.tags.operatorPrometheus.configmapReloader }}
-        - --prometheus-config-reloader={{ $.Values.global.modulesImages.registry }}/operator-prometheus/prometheus-config-reloader:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusConfigReloader }}
+        - --config-reloader-image={{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.operatorPrometheus.configmapReloader }}
+        - --prometheus-config-reloader={{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusConfigReloader }}
         - --manage-crds=false
-        image: {{ $.Values.global.modulesImages.registry }}/operator-prometheus/prometheus-operator:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusOperator }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.operatorPrometheus.prometheusOperator }}
         name: prometheus-operator
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         ports:
