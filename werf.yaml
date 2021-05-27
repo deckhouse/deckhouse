@@ -420,6 +420,7 @@ ansible:
 ---
 artifact: jq
 from: {{ env "BASE_ALPINE" }}
+fromCacheVersion: "20210527"
 git:
 - url: https://github.com/stedolan/jq
   add: /
@@ -454,6 +455,7 @@ ansible:
 ---
 artifact: libjq
 from: {{ env "BASE_ALPINE" }}
+fromCacheVersion: "20210527"
 git:
 - url: https://github.com/flant/libjq-go
   tag: v1.6.1
@@ -517,6 +519,7 @@ ansible:
 ---
 artifact: terraform-provider-vsphere
 fromImage: base-for-go
+fromCacheVersion: "20210527"
 git:
   - url: https://github.com/flant/terraform-provider-vsphere
     add: /
@@ -549,6 +552,7 @@ ansible:
 ---
 artifact: terraform-provider-gcp
 fromImage: base-for-go
+fromCacheVersion: "20210527"
 git:
   - url: https://github.com/flant/terraform-provider-google
     add: /
