@@ -1,12 +1,13 @@
 .Matrix Tests template:
   stage: testing
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   script:
   - pwd
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
       -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/matrix/
@@ -25,14 +26,15 @@
 .Hooks Configuration Tests template:
   stage: testing
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
   - pwd
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - werf run tests
       --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
       -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
@@ -51,28 +53,18 @@
 .Tests template:
   stage: testing
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
   - pwd
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
-  - chmod -R 0777 testing
-  - |
-    >testing/dummy_dirs
-    for dir in $(find -L global-hooks modules/*/hooks -type d); do
-      echo "$dir" >> testing/dummy_dirs
-      cat > "$dir/dummy" <<"EOF"
-        #!/bin/bash
-    EOF
-    done
-  - >
-    werf run tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse" --
-    go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
-  after_script:
-  - docker run --rm -v $(pwd)/testing:/testing -w /deckhouse ${BASE_ALPINE} chmod -R 0777 /testing
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - werf run tests
+     --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+     -- go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
   except:
   - schedules
   - alpha
@@ -121,9 +113,10 @@
 .Web links test:
   stage: testing
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-web
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   script:
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - export BASEDIR=$(pwd)/docs
   - export _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
   - bash testing/check_links.sh
@@ -133,27 +126,28 @@
         rm -rf $_TMPDIR
       fi
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   allow_failure: true
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
   interruptible: true
 
 .Dhctl Tests template:
   stage: testing
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   script:
   - pwd
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - werf run dhctl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/dhctl/hack/" -- bash test.sh --gitlab
   except:
   - schedules
@@ -169,48 +163,50 @@
 .GolangCI Lint template:
   stage: testing
   before_script:
-    - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   script:
-    - pwd
-    - eval "${STAGES_STORAGE_LOGIN_CMD}"
-    - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-    - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
-    - werf run tests
-      --docker-options="-v $(pwd):/deckhouse -w /deckhouse -e "TERM=xterm-256color""
-      -- golangci-lint run
+  - pwd
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - werf run tests
+    --docker-options="-v $(pwd):/deckhouse -w /deckhouse -e "TERM=xterm-256color""
+    -- golangci-lint run
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
 
 .OpenAPI Test Cases template:
   stage: testing
   before_script:
-    - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
-    - rm -rf shell-operator || true
-    - git submodule update --init --recursive
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
+  - rm -rf shell-operator || true
+  - git submodule update --init --recursive
   script:
-    - pwd
-    - eval "${STAGES_STORAGE_LOGIN_CMD}"
-    - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-    - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
-    - werf run tests
-      --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
-      -- ginkgo -vet=off ./testing/openapi_cases/
+  - pwd
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - werf run tests
+    --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
+    -- ginkgo -vet=off ./testing/openapi_cases/
   except:
-    - schedules
-    - alpha
-    - beta
-    - early-access
-    - stable
-    - rock-solid
+  - schedules
+  - alpha
+  - beta
+  - early-access
+  - stable
+  - rock-solid
   needs:
-    - "Build"
-    - "Build Modules Images"
+  - "Build"
+  - "Build Modules Images"
   interruptible: true

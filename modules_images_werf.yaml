@@ -38,7 +38,7 @@ cleanup:
 {{- if  eq .ImageInstructionType "Dockerfile" }}
 image: {{ .ModuleName }}/{{ .ImageName }}
 context: ./modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
-dockerfile: ./modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/Dockerfile
+dockerfile: Dockerfile
 args:
   BASE_ALPINE: {{ env "BASE_ALPINE" }}
   BASE_DEBIAN: {{ env "BASE_DEBIAN" }}

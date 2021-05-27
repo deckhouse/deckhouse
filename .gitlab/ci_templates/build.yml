@@ -1,11 +1,9 @@
 .Build Modules Images template:
   stage: build_modules_images
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-modules-images
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
   - echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
   - ./modules_images_werf bp
   except:
@@ -27,24 +25,24 @@
 .Build template:
   stage: build
   before_script:
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
-  - export DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
-  - export DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG}
-  - export DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe:${CI_COMMIT_TAG}
-  - export DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/install:${CI_COMMIT_TAG}
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose --as-file)
-  - werf build-and-publish
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - werf build --disable-auto-host-cleanup=true
+  - docker pull $(werf stage image dev);
+  - docker pull $(werf stage image dev/install);
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
-      werf publish --images-repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/
-      echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null;
-      docker pull $(werf stage image dev);
-      docker pull $(werf stage image dev/install);
+      echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
+      werf build --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true
+      DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
+      DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
+      DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe:${CI_COMMIT_TAG};
+      DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/install:${CI_COMMIT_TAG};
       docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
       docker image tag $(werf stage image dev) $DECKHOUSE_DESTINATION_IMAGE;
       docker image tag $(werf stage image dev/install) $DESTINATION_INSTALL_IMAGE;
@@ -57,6 +55,16 @@
       docker image rmi $DESTINATION_INSTALL_IMAGE;
       docker image rmi $DECKHOUSE_DESTINATION_IMAGE;
       docker image rmi $DECKHOUSE_DESTINATION_INSTALL_IMAGE;
+    fi
+  - if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+      DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_BRANCH};
+      DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_BRANCH};
+      docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
+      docker image tag $(werf stage image dev/install) $DESTINATION_INSTALL_IMAGE;
+      docker image push $DESTINATION_IMAGE;
+      docker image push $DESTINATION_INSTALL_IMAGE;
+      docker image rmi $DESTINATION_IMAGE;
+      docker image rmi $DESTINATION_INSTALL_IMAGE;
     fi
   except:
     variables:

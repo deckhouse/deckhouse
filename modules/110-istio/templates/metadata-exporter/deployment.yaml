@@ -43,7 +43,7 @@ spec:
       containers:
       - name: metadata-exporter
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/istio/metadata-exporter:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataExporter }}
         imagePullPolicy: IfNotPresent
         env:
         - name: CLUSTER_UUID
@@ -91,7 +91,7 @@ spec:
   {{- if .Values.istio.federation.enabled }}
       - name: metadata-discovery
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}/istio/metadata-discovery:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}
         imagePullPolicy: IfNotPresent
         env:
         - name: DEBUG_UNIX_SOCKET

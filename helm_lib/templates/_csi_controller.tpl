@@ -16,15 +16,15 @@
 
   {{- $provisionerImageName := join "" (list "csiExternalProvisioner" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $provisionerImageTag := index $context.Values.global.modulesImages.tags.common $provisionerImageName }}
-  {{- $provisionerImage := printf "%s/common/csi-external-provisioner-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $provisionerImageTag }}
+  {{- $provisionerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $provisionerImageTag }}
 
   {{- $attacherImageName := join "" (list "csiExternalAttacher" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $attacherImageTag := index $context.Values.global.modulesImages.tags.common $attacherImageName }}
-  {{- $attacherImage := printf "%s/common/csi-external-attacher-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $attacherImageTag }}
+  {{- $attacherImage := printf "%s:%s" $context.Values.global.modulesImages.registry $attacherImageTag }}
 
   {{- $resizerImageName := join "" (list "csiExternalResizer" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $resizerImageTag := index $context.Values.global.modulesImages.tags.common $resizerImageName }}
-  {{- $resizerImage := printf "%s/common/csi-external-resizer-%v-%v:%s" $context.Values.global.modulesImages.registry $kubernetesSemVer.Major $kubernetesSemVer.Minor $resizerImageTag }}
+  {{- $resizerImage := printf "%s:%s" $context.Values.global.modulesImages.registry $resizerImageTag }}
 
   {{- if $provisionerImageTag }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}

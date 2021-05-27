@@ -1,18 +1,19 @@
 .Cloud layouts Tests template for docker:
   stage: cloud_testing_docker
   before_script: &before_script
-  - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   script: &script
   - pwd
-  - eval "${STAGES_STORAGE_LOGIN_CMD}"
-  - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - mkdir -p layouts-tests-tmp
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - chmod -R 777 .
   - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - |
-    werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
+    werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
       -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
       -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
@@ -157,18 +158,19 @@
 .Cloud layouts Tests vSphere template for docker:
   stage: cloud_testing_docker
   before_script: &vsphere_before_script
-    - export WERF_STAGES_STORAGE=${WERF_STAGES_REPO_BASE}/stages-deckhouse
+  - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+    fi
   script: &vsphere_script
     - pwd
-    - eval "${STAGES_STORAGE_LOGIN_CMD}"
-    - type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL} --as-file)
-    - type werf && source $(werf ci-env gitlab --config werf-web.yaml --verbose --as-file)
+    - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+    - type werf && source $(werf ci-env gitlab --verbose --as-file)
     - mkdir -p layouts-tests-tmp
     - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
     - chmod -R 777 .
     - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
     - |
-      werf run dev/install --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
+      werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
         -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
         -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
         -v $(pwd):/deckhouse -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 997:997 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \

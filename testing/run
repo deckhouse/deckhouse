@@ -12,6 +12,7 @@ export BASE_DEBIAN=${BASE_DEBIAN:-"debian:buster"}
 export BASE_NGINX_ALPINE=${BASE_NGINX_ALPINE:-"nginx:1.15-alpine"}
 export BASE_PYTHON_ALPINE=${BASE_PYTHON_ALPINE:-"python:3.7.9-alpine3.12"}
 export BASE_UBUNTU=${BASE_UBUNTU:-"ubuntu:18.04"}
+export WERF_REPO=${WERF_REPO:-"registry.flant.com/sys/antiopa"}
 
 if [[ "$1" == "--debug" ]]; then
   DEBUG=yes
@@ -110,11 +111,11 @@ fi
 if [[ -z "$(docker ps --filter "name=$CONTAINER_NAME" -q)" ]]; then
   PATH="$HOME/bin/:$PATH"
   # shellcheck disable=SC2046
-  type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL:-ea} --as-file)
+  type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
 
-  werf build tests --stages-storage=registry-stages.flant.com:5000/stages-deckhouse
+  werf build tests
   # shellcheck disable=SC2016
-  werf run tests --stages-storage=registry-stages.flant.com:5000/stages-deckhouse \
+  werf run tests \
     --docker-options="-v $(pwd):/deckhouse --name $CONTAINER_NAME --rm -d -w /deckhouse -p 127.0.0.1:4284:4284" \
     -- \
     dumb-init -- bash -c 'touch /last-used; while [[ -z "$(find /last-used -mmin +60)" ]]; do sleep 60; done'

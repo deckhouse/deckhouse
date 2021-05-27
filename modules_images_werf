@@ -8,10 +8,10 @@ function bp() {
   if [[  "$DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES" == "true" ]]; then
     pull
   fi
-
-  werf build-and-publish --config modules_images_werf.yaml --publish-report-path images_tags_werf.json
+  # TODO когда будет принято в мастер убрать --disable-auto-host-cleanup=true чтобы работала автоочистка на раннерах
+  werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --disable-auto-host-cleanup=true
   if [[ -n ${CI_COMMIT_TAG} ]]; then
-    werf publish --config modules_images_werf.yaml --images-repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/
+    werf build --config modules_images_werf.yaml --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true
   fi
 
   jq '
@@ -68,7 +68,7 @@ fi
 SUBCOMMAND=$1
 shift
 
-type multiwerf && source $(multiwerf use 1.1 ${WERF_CHANNEL:-ea} --as-file)
+type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
 type werf && source $(werf ci-env gitlab --verbose --as-file)
 
 case "$SUBCOMMAND" in

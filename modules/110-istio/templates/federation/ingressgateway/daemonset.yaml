@@ -126,7 +126,7 @@ spec:
           value: network-{{ $.Values.global.clusterName }}
         - name: ISTIO_META_CLUSTER_ID
           value: {{ $.Values.global.clusterName }}
-        image: {{ $.Values.global.modulesImages.registry }}/istio/proxyv2-{{ $revision }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 15021

@@ -21,7 +21,7 @@
       key: serviceAccountJSON
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s/cloud-provider-yandex/yandex-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderYandex.yandexCsiPlugin)}}
+{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderYandex.yandexCsiPlugin)}}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

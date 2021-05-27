@@ -24,7 +24,7 @@
   subPath: credentials.json
 {{- end }}
 
-{{- $csiControllerImage := (printf "%s/cloud-provider-gcp/pd-csi-plugin:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderGcp.pdCsiPlugin)}}
+{{- $csiControllerImage := (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.cloudProviderGcp.pdCsiPlugin)}}
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

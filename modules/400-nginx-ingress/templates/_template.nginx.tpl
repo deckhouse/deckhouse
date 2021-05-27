@@ -66,7 +66,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/controller:{{ .Values.global.modulesImages.tags.nginxIngress.controller }}
+      - image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nginxIngress.controller }}
         name: nginx
         env:
         - name: POD_NAME
@@ -129,10 +129,10 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /etc/nginx/ssl/
           name: secret-nginx-auth-tls
-      - image: {{ .Values.global.modulesImages.registry }}/nginx-ingress/statsd-exporter:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
+      - image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nginxIngress.statsdExporter }}
         name: statsd-exporter
       - name: kube-rbac-proxy
-        image: {{ .Values.global.modulesImages.registry }}/common/kube-rbac-proxy:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.kubeRbacProxy }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9103"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
