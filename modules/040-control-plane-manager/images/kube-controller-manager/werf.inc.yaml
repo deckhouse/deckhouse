@@ -21,7 +21,7 @@ shell:
   - apt-get update
   - apt install ca-certificates apt-transport-https gnupg gnupg2 gnupg1 curl -y
   - curl -sL 'https://download.ceph.com/keys/release.asc' | apt-key add -
-  - echo deb https://download.ceph.com/debian-nautilus/ bionic main | tee /etc/apt/sources.list.d/ceph.list
+  - echo deb https://download.ceph.com/debian-pacific/ bionic main | tee /etc/apt/sources.list.d/ceph.list
   - apt-get update
   - apt-get install -y ceph-common
   - touch /etc/ceph/ceph.conf /etc/ceph/ceph.keyring
