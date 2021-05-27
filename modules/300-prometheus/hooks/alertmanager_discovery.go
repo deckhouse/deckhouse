@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"github.com/davecgh/go-spew/spew"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -14,10 +15,10 @@ type AlertmanagerService struct {
 }
 
 type AlertmanagerServiceInfo struct {
-	Name       string `json:"name"`
-	Namespace  string `json:"namespace"`
-	PathPrefix string `json:"pathPrefix"`
-	Port       int32  `json:"port"`
+	Name       string      `json:"name"`
+	Namespace  string      `json:"namespace"`
+	PathPrefix string      `json:"pathPrefix"`
+	Port       interface{} `json:"port"`
 }
 
 func applyAlertmanagerServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -33,9 +34,13 @@ func applyAlertmanagerServiceFilter(obj *unstructured.Unstructured) (go_hook.Fil
 	as.Service.Namespace = service.ObjectMeta.Namespace
 	as.Service.Name = service.ObjectMeta.Name
 
-	for _, port := range service.Spec.Ports {
-		as.Service.Port = port.Port
-		break
+	switch {
+	case len(service.Spec.Ports[0].Name) != 0:
+		as.Service.Port = service.Spec.Ports[0].Name
+	case service.Spec.Ports[0].Port != 0:
+		as.Service.Port = service.Spec.Ports[0].Port
+	default:
+		return nil, spew.Errorf("Can't find Name or Port in the first port of a Service %#+v", as.Service)
 	}
 
 	as.Service.PathPrefix = "/"

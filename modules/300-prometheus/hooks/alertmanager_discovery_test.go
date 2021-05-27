@@ -51,7 +51,8 @@ metadata:
     prometheus.deckhouse.io/alertmanager-path-prefix: /myprefix/
 spec:
   ports:
-  - port: 81
+  - name: test
+    port: 81
 `
 		stateSpecialServicesBeta = `
 ---
@@ -100,9 +101,9 @@ spec:
 			f.RunHook()
 		})
 
-		It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}]}'`, func() {
+		It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}]}'`, func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}]}`))
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}]}`))
 		})
 
 		Context("Two more special services added", func() {
@@ -111,9 +112,9 @@ spec:
 				f.RunHook()
 			})
 
-			It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":"test"}]}'`, func() {
+			It(`prometheus.internal.alertmanagers must be '{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":"test"}]}'`, func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":81}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":83}]}`))
+				Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(MatchJSON(`{"alphaprom":[{"name":"mysvc1","namespace":"myns1","pathPrefix":"/myprefix/","port":"test"}],"betaprom":[{"name":"mysvc2","namespace":"myns2","pathPrefix":"/","port":82},{"name":"mysvc3","namespace":"myns3","pathPrefix":"/","port":83}]}`))
 			})
 		})
 

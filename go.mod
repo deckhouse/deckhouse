@@ -8,6 +8,7 @@ require (
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cloudflare/cfssl v1.5.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.9.0
 	github.com/flant/addon-operator v1.0.0-rc.1.0.20210524152913-e858a0b7786c // branch: master
 	github.com/flant/shell-operator v1.0.2-0.20210524145531-147332b951de // branch: master
