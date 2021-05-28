@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Ресурс хранения и управления Dashboard в Grafana.
+            The resource for storing and managing Grafana Dashboards
           required:
             - spec
           properties:
@@ -35,14 +35,14 @@ spec:
                 folder:
                   type: string
                   description: |
-                    В какую папку попадёт данный dashboard. Если такой папки нет, она будет создана.
+                    What folder to use for a dashboard. If the folder does not exist, it will be created.
                   example: 'My Folder'
                 definition:
                   type: string
                   description: |
-                    JSON-манифест dashboard.
+                    The dashboard's JSON manifest.
 
-                    **Важно!** Следите, чтобы помимо `uid` в манифесте не было "местного" `id` по адресу `.id`.
+                    **Caution!** Make sure that there is no "local" `id` (at the `.id` address) in the manifest in addition to the `uid`.
       additionalPrinterColumns:
         - jsonPath: .spec.folder
           name: Folder

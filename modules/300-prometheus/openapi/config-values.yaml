@@ -3,80 +3,94 @@ properties:
   retentionDays:
     type: integer
     default: 15
-    description: сколько дней хранить данные
+    description: How long to keep the data.
   storageClass:
     type: string
     x-examples: ["ceph-ssd", "false"]
     description: |
-      Имя storageClass'а, который использовать
-      - Если не указано — используется StorageClass существующей PVC Prometheus, а если PVC пока нет — используется или global.storageClass, или global.discovery.defaultStorageClass, а если и их нет — данные сохраняются в emptyDir.
-      - storageClass: false — принудительное использование emptyDir. Удалить старый pvc и рестартануть pod придется руками
-      - ОСТОРОЖНО! При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
+      The name of the StorageClass to use.
+
+      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+
+      `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the pod manually.
+
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume reprovisioning and data loss.
   longtermStorageClass:
     type: string
     x-examples: ["ceph-ssd", "false"]
     description: |
-      Имя storageClass'а, который использовать для Longterm Prometheus
-      - Если не указано — используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет — используется или global.storageClass, или global.discovery.defaultStorageClass, а если и их нет — данные сохраняются в emptyDir
-      - ОСТОРОЖНО! При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены
+      The name of the storageClass to use for Longterm Prometheus.
+
+      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
+
+      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Longterm Prometheus volume reprovisioning and data loss.
   longtermRetentionDays:
     type: integer
     default: 1095
     description: |
-      Сколько дней хранить данные в longterm Prometheus
-      Если указать 0, то longterm Prometheus не будет запущен в кластере
+      How long to keep the data in longterm Prometheus.
+
+      Setting this parameter to `0` will result in Longterm Prometheus not running in the cluster.
   auth:
     type: object
     default: {}
-    description: опции, связанные с аутентификацией или авторизацией в приложении
+    description: Options related to authentication or authorization in the application.
     properties:
       externalAuthentication:
         type: object
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request (если включен модуль user-authn, параметры externalAuthentication настраиваются автоматически)
+          A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
             x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
-            description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200
+            description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
           authSignInURL:
             type: string
             x-examples: ["https://myhost.ru/dex/sign_in"]
-            description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200)
+            description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
       password:
         type: string
         format: password
         description: |
-          Пароль для http-авторизации для пользователя admin (генерируется автоматически, но можно менять)
-          - Используется если не включен параметр externalAuthentication
+          The password for http authorization of the `admin` user (it is generated automatically, but you can change it).
+
+          This parameter is used if the `externalAuthentication` is not enabled.
       allowedUserGroups:
         type: array
         items:
           type: string
         description: |
-          Массив групп, пользователям которых позволен доступ в grafana и prometheus
-          - Используется если включен модуль user-authn или параметр externalAuthentication
-          - Внимание! При использовании совместно с модулем user-authn необходимо так же добавить разрешенные группы в соответствующее поле в настройках DexProvider
+          An array of user groups that can access Grafana & Prometheus.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
           type: string
         x-examples:
           - [ "1.1.1.1/32" ]
-        description: Массив CIDR, которым разрешено проходить авторизацию в grafana и prometheus
+        description: An array if CIDRs that are allowed to authenticate in Grafana & Prometheus.
       satisfyAny:
         type: boolean
         default: false
-        description: Разрешает пройти только одну из аутентификаций. В комбинации с опцией whitelistSourceRanges позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля
+        description: |
+          Enables single authentication.
+
+          If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).
   grafana:
     type: object
     default: {}
-    desription: Настройки для инсталляции Grafana
+    desription: Grafana installation-related settings.
     properties:
       useDarkTheme:
         type: boolean
         default: false
-        description: Использование по умолчанию пользовательской темной темы.
+        description: The dark theme is enabled by default.
       customPlugins:
         type: array
         items:
@@ -84,14 +98,22 @@ properties:
         x-examples:
           - ["agenty-flowcharting-panel", "vertamedia-clickhouse-datasource"]
         description: |
-          Список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana.
-          Необходимо указать в качестве значения список имен плагинов из официального репозитория
+          A list of custom Grafana [plugins](https://grafana.com/grafana/plugins). Contains plugin names from the official repository.
+          Here is how you can add custom plugins (in this case, clickhouse-datasource and flowcharting-panel plugins are used):
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - agenty-flowcharting-panel
+            - vertamedia-clickhouse-datasource
+          ```
   ingressClass:
     type: string
     x-examples: ["public", "production"]
     description: |
-      Класс ingress контроллера, который используется для grafana/prometheus
-      - Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`
+      The class of the Ingress controller used for Grafana/Prometheus.
+
+      An optional parameter. By default, the `modules.ingressClass` global value is used.
   https:
     type: object
     x-examples:
@@ -102,18 +124,19 @@ properties:
         certManager:
           clusterIssuerName: letsencrypt
     description: |
-      Выбираем, какой типа сертификата использовать для grafana/prometheus
-      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`
+      What certificate type to use with Grafana/Prometheus.
+
+      This parameter completely overrides the `global.modules.https` settings.
     properties:
       mode:
         type: string
         default: "Disabled"
         description: |
-          Режим работы HTTPS
-          - Disabled — в данном режиме grafana/prometheus будут работать только по http
-          - CertManager — grafana/prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре certManager.clusterIssuerName
-          - CustomCertificate — grafana/prometheus будут работать по https используя сертификат из namespace d8-system
-          - OnlyInURI — grafana/prometheus будет работать по http (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в user-authn будут генерироваться с https схемой
+          The HTTPS usage mode:
+          - `Disabled` — in this mode, Grafana/Prometheus work over HTTP only;
+           `CertManager` — Grafana/Prometheus will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — Grafana/Prometheus will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — Grafana/Prometheus will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
         enum:
           - "Disabled"
           - "CertManager"
@@ -125,14 +148,20 @@ properties:
           clusterIssuerName:
             type: string
             default: "letsencrypt"
-            description: Указываем, какой ClusterIssuer использовать для grafana/prometheus (в данный момент доступны letsencrypt, letsencrypt-staging, selfsigned, но вы можете определить свои)
+            description: |
+              What ClusterIssuer to use for Grafana/Prometheus.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
       customCertificate:
         type: object
         default: {}
         properties:
           secretName:
             type: string
-            description: Указываем имя secret'а в namespace d8-system, который будет использоваться для grafana/prometheus (данный секрет должен быть в формате kubernetes.io/tls)
+            description: |
+              The name of the secret in the `d8-system` namespace to use with Grafana/Prometheus.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
             default: "false"
   vpa:
     type: object
@@ -148,8 +177,9 @@ properties:
           - type: number
         x-examples: ["3", 3, "0.1", 0.1, "1500m"]
         description: |
-          Максимальная граница CPU requests, выставляемая VPA контроллером для pod'ов основного Prometheus
-          - Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук detect_vpa_max модуля
+          The maximum CPU requests set by the VPA controller for the main Prometheus pods.
+
+          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       maxMemory:
         oneOf:
           - type: string
@@ -157,8 +187,9 @@ properties:
           - type: number
         x-examples: ["3Mi", 4096]
         description: |
-          Максимальная граница Memory requests, выставляемая VPA контроллером для pod'ов основного Prometheus
-          - Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук detect_vpa_max модуля
+          The maximum Memory requests set by the VPA controller for the main Prometheus pods.
+
+          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxCPU:
         oneOf:
           - type: string
@@ -166,8 +197,9 @@ properties:
           - type: number
         x-examples: ["1400m", 1, 0.1]
         description: |
-          Максимальная граница CPU requests, выставляемая VPA контроллером для pod'ов longterm Prometheus
-          - Значение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук detect_vpa_max модуля
+          The maximum CPU requests set by the VPA controller for the Longterm Prometheus pods.
+
+          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxMemory:
         oneOf:
           - type: string
@@ -175,10 +207,13 @@ properties:
           - type: number
         x-examples: ["4Mi", 4096]
         description: |
-          Максимальная граница Memory requests, выставляемая VPA контроллером для pod'ов longterm Prometheus
-          - начение по умолчанию подбирается автоматически, исходя из максимального количества подов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук detect_vpa_max модуля
+          The maximum Memory requests set by the VPA controller for the longterm Prometheus pods.
+
+          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       updateMode:
         type: string
+        description: |
+          The pod update mode.
         default: "Initial"
         x-examples: ["Initial", "Auto", "Off"]
         enum:
@@ -189,15 +224,22 @@ properties:
     type: boolean
     default: false
     x-examples: [true, false]
-    description: ручное управление режимом отказоустойчивости
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   scrapeInterval:
     type: string
     default: "30s"
-    description: С помощью данного параметра можно указать, как часто prometheus будет собирать метрики с таргетов. Evaluation Interval всегда равен scrapeInterval
+    description: |
+      Sets the interval for scraping metrics from targets.
+
+      Evaluation Interval is always equal to scrapeInterval.
   longtermScrapeInterval:
     type: string
     default: "5m"
-    description: С помощью данного параметра можно указать, как часто longterm prometheus будет собирать себе "снимок" данных из основного prometheus
+    description: |
+      Sets the interval for making "data snapshots" of the main Prometheus by the longterm Prometheus.
   nodeSelector:
     type: object
     additionalProperties:
@@ -206,9 +248,11 @@ properties:
     x-examples:
       - disktype: ssd
     description: |
-      Как в Kubernetes в spec.nodeSelector у pod'ов
-      - Если ничего не указано — будет использоваться автоматика
-      - Можно указать false, чтобы не добавлять никакой nodeSelector
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+
+      You can set it to `false` to avoid adding any nodeSelector.
   tolerations:
     type: array
     items:
@@ -235,14 +279,16 @@ properties:
           operator: "Exists"
           effect: "NoSchedule"
     description: |
-      Как в Kubernetes в spec.tolerations у pod'ов
-      - Если ничего не указано — будет использоваться автоматика
-      - Можно указать false, чтобы не добавлять никакие toleration'ы
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+
+      You can set it to `false` to avoid adding any tolerations.
   mainMaxDiskSizeGigabytes:
     type: integer
     default: 300
-    description: Максимальный размер в гигабайтах, до которого автоматически может ресайзиться диск Prometheus main
+    description: The maximum size (in GiB) that the main Prometheus' volume can automatically resize to.
   longtermMaxDiskSizeGigabytes:
     type: integer
     default: 300
-    description: Максимальный размер в гигабайтах, до которого автоматически может ресайзиться диск Prometheus longterm
+    description: the maximum size (in GiB) to which the Longterm Prometheus' disk can be automatically resized.

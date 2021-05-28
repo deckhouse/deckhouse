@@ -62,6 +62,7 @@ module Jekyll
 
     def format_attribute(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
+        exampleObject = nil
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
         result.push(converter.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))) if attributes['description']
@@ -128,10 +129,19 @@ module Jekyll
         end
 
         if attributes.has_key?('example')
-            example =  '**' + get_i18n_term('example').capitalize + ':** ' + if attributes['example'].is_a?(Hash) && attributes['example'].has_key?('oneOf')
-                            attributes['example']['oneOf'].map { |e| "`#{e.to_json}`" }.join(' or ')
+            exampleObject = attributes['example']
+        elsif attributes.has_key?('x-examples')
+            exampleObject = attributes['x-examples']
+        end
+        if exampleObject != nil
+
+            example =  '**' + get_i18n_term('example').capitalize + ':** ' +
+                        if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
+                            exampleObject['oneOf'].map { |e| "`#{e.to_json}`" }.join(' ' + get_i18n_term('or') + ' ')
+                        elsif exampleObject.is_a?(Array)
+                            '`' + exampleObject.map { |e| "`#{e.to_json}`" }.join('`, `') + '`'
                         else
-                            "`#{attributes['example'].to_json}`"
+                            "`#{exampleObject.to_json}`"
                         end
             result.push(converter.convert(example.to_s))
         end
