@@ -97,7 +97,7 @@ deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
   imagesRepo: registry.deckhouse.io/deckhouse/fe
-  # строка с ключом для доступа к Docker registry
+  # строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего демонстрационного токена)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
   releaseChannel: Beta
@@ -206,7 +206,7 @@ deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
   imagesRepo: registry.deckhouse.io/deckhouse/fe
-  # строка с ключом для доступа к Docker registry
+  # строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего демонстрационного токена)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
   releaseChannel: Beta
@@ -294,7 +294,7 @@ deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для официальной CE-сборки Deckhouse
   # подробнее см. в описании следующего шага
   imagesRepo: registry.deckhouse.io/deckhouse/fe
-  # строка с ключом для доступа к Docker registry
+  # строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего демонстрационного токена)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
   releaseChannel: Beta

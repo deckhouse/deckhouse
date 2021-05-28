@@ -240,7 +240,7 @@ spec:
                       type: array
                       default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
-                        List of [additional scopes]((https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md)) to request in token response.
+                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md) to request in token response.
                       items:
                         type: string
                     promptType:
@@ -276,7 +276,7 @@ spec:
                       default: false
                       description: |
                         When connecting to the server, connect using the ldap:// protocol then issue
-                        a [StartTLS]((https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls)) command. If unspecified, connections will use the ldaps:// protocol
+                        a [StartTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) command. If unspecified, connections will use the ldaps:// protocol
                     usernamePrompt:
                       type: string
                       default: 'LDAP username'

@@ -1,0 +1,39 @@
+type: object
+required: [instances]
+properties:
+  instances:
+    type: array
+    items:
+      type: string
+    description: |
+      Содержит список PushGateway-ев для каждого из которых будет создан отдельный PushGateway.
+    x-examples:
+    - [first, second]
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Структура, аналогичная  `spec.tolerations` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string

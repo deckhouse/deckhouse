@@ -3,17 +3,17 @@ properties:
   externalTargets:
     type: array
     description: |
-      To monitor additional IP addresses, insert their names/hosts into the module config in the deckhouse ConfigMap.
+      Список дополнительных хостов для мониторинга.
     items:
       type: object
       required: [host]
       properties:
         host:
           type: string
-          description: IP address or host name to monitor.
+          description: IP-адрес или host для мониторинга.
         name:
           type: string
-          description: Monitoring record name.
+          description: Название записи мониотринга.
     x-examples:
     - - name: google-primary
         host: 8.8.8.8

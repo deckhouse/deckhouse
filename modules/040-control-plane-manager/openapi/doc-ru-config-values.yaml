@@ -7,22 +7,23 @@ properties:
         description: |
           Cлушать ли на `0.0.0.0`.
 
-          По умолчанию apiserver слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
+          По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
       certSANs:
         description: |
-          Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат apiserver'а.
-            * Кроме переданного списка, всегда используется и следующий список:
-              * kubernetes
-              * kubernetes.default
-              * kubernetes.default.svc
-              * kubernetes.default.svc.cluster.local
-              * 192.168.0.1
-              * 127.0.0.1
-              * **current_hostname**
-              * **hostIP**
+          Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат API-сервера.
+
+          Кроме переданного списка, всегда используется и следующий список:
+          * `kubernetes`
+          * `kubernetes.default`
+          * `kubernetes.default.svc`
+          * `kubernetes.default.svc.cluster.local`
+          * `192.168.0.1`
+          * `127.0.0.1`
+          * *текущий_hostname*
+          * *hostIP*
       authn:
         description: |
-          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://early.deckhouse.io/en/documentation/v1/modules/modules/150-user-authn/)
+          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://early.deckhouse.io/ru/documentation/v1/modules/modules/150-user-authn/)
         properties:
           oidcIssuerURL:
             description: |
@@ -32,7 +33,7 @@ properties:
               CA OIDC-провайдера.
       authz:
         description: |
-          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://early.deckhouse.io/en/documentation/v1/modules/modules/140-user-authz/)
+          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://early.deckhouse.io/ru/documentation/v1/modules/modules/140-user-authz/)
         properties:
           webhookURL:
             description: |

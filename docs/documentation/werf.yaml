@@ -110,12 +110,15 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/openapi/node_group.yaml
-  to: /src/modules/040-node-manager/crds/node_group.yaml
+- add: /candi/openapi/
+  to: /src/modules/040-node-manager/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+  includePaths:
+    - node_group.yaml
+    - doc-ru-node_group.yaml
 - add: /candi/cloud-providers/aws/openapi/
   to: /src/modules/030-cloud-provider-aws/crds/
   owner: jekyll

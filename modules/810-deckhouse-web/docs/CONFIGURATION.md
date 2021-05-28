@@ -34,19 +34,3 @@ title: "The deckhouse-web module: configuration"
 * `tolerations` — the same as in the pods' `spec.tolerations` parameter in Kubernetes;
     * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling);
     * You can set it to `false` to avoid adding any tolerations;
-
-### An example
-
-```yaml
-deckhouseWeb: |
-  nodeSelector:
-    node-role/example: ""
-  tolerations:
-  — key: dedicated
-    operator: Equal
-    value: example
-  externalAuthentication:
-    authURL: "https://<applicationDomain>/auth"
-    authSignInURL: "https://<applicationDomain>/sign-in"
-    authResponseHeaders: "Authorization"
-```

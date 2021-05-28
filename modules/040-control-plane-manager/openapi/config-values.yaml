@@ -10,22 +10,23 @@ properties:
         type: boolean
         default: false
         description: |
-          Bind to `0.0.0.0`.
+          Cлушать ли на `0.0.0.0`.
 
-          По умолчанию apiserver слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
+          По умолчанию API server слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
       certSANs:
         type: array
         description: |
-          Array of [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), with which the apiserver certificate will be generated.
-            * In addition to the passed list, the following list is always used:
-              * kubernetes
-              * kubernetes.default
-              * kubernetes.default.svc
-              * kubernetes.default.svc.cluster.local
-              * 192.168.0.1
-              * 127.0.0.1
-              * **current_hostname**
-              * **hostIP**
+          Array of [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), with which the API server certificate will be generated.
+
+          In addition to the passed list, the following list is always used:
+          * `kubernetes`
+          * `kubernetes.default`
+          * `kubernetes.default.svc`
+          * `kubernetes.default.svc.cluster.local`
+          * `192.168.0.1`
+          * `127.0.0.1`
+          * *current_hostname*
+          * *hostIP*
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-]+$'
@@ -70,9 +71,9 @@ properties:
           sourceRanges:
             type: array
             description: |
-              Список CIDR, которым разрешен доступ к API.
+              A list of CIDRs that are allowed to connect to the API.
 
-              Облачный провайдер может не поддерживать данную опцию и игнорировать её.
+              The cloud provider may not support this option or ignore it.
             items:
               type: string
               pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\/[0-9]+$'
