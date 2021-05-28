@@ -71,7 +71,7 @@ This strategy evicts pods that are Pending for more than 24 hours.
 
 ### Known nuances
 
-* The descheduler does not evict critical pods (pods that have the `scheduler.alpha.kubernetes.io/critical-pod` annotation or for which `priorityClassName = system-cluster-critical/system-node-critical` is set).
+* The descheduler does not evict critical pods (with priorityClassName set to `system-cluster-critical` or `system-node-critical`).
 * It takes into account the priorityClass when evicting pods from a high-loaded node.
 * The descheduler does not evict pods that are associated with a DaemonSet or aren't covered by a controller.
 * It never evicts pods with local storage enabled.
