@@ -58,6 +58,10 @@ if bb-flag? kubelet-need-restart; then
   {{ else }}
   if ! bb-flag? reboot; then
     systemctl restart "kubelet.service"
+    # Issue with oscillating cloud LoadBalancer targets is tracked here.
+    # https://github.com/kubernetes/kubernetes/issues/102367
+    # Remove the sleep once a solution is devised.
+    sleep 60
   fi
   {{- end }}
 {{- end }}
