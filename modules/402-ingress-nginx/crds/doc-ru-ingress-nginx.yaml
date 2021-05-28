@@ -251,9 +251,8 @@ spec:
                       type: string
                       description: |
                         Время в секундах, которое браузер должен помнить, что сайт доступен только с помощью HTTPS.
-                      pattern: '^([0-9])*([1-9])$'
-                      example: 31536000
-                      default: 31536000
+                      pattern: '^[1-9][0-9]*$'
+                      example: "31536000"
                     preload:
                       type: boolean
                       description: |

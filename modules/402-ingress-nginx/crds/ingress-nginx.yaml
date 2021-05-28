@@ -243,9 +243,8 @@ spec:
                     maxAge:
                       type: string
                       description: 'The time, in seconds, that the browser should remember that a site is only to be accessed using HTTPS.'
-                      pattern: '^([0-9])*([1-9])$'
-                      example: 31536000
-                      default: 31536000
+                      pattern: '^[1-9][0-9]*$'
+                      example: "31536000"
                     preload:
                       type: boolean
                       description: 'Add your site to preload list to enforce to use SSL/TLS connections on your site.'
