@@ -12,34 +12,34 @@ permalink: /candi/dhctl.html
 |_____/ \____)____)_| \_)_| |_|\___/ \____(___/ \____)   \______)_||_|_| |_|\____(_____)
 ========================================================================================
 ```
-__(здесь будет логотип)__
+__(there will be a logo)__
 
-Приложение для развертывания Kubernetes-кластеров и управления их инфраструктурой.
+An application for creating Kubernetes clusters and configuring their infrastructure.
 
-Основные функции:
-* Подготовка инфраструктуры на базе облачного провайдера (AWS, YandexCloud, OpenStack)
-* Установка Kubernetes и необходимых для его работы компонентов (в облаке или на bare metal)
-* Установка **Deckhouse** - оператора, который управляет Kubernetes-кластером и устанавливает дополнительные модули
-* Создание дополнительных master-узлов или статических узлов, внесение изменений в их конфигурацию и удаление
-* Отслеживание изменений в инфраструктуре облачных провайдеров, внесение в нее изменений
+Basic features:
+* Terraform base infrastructure and initial master node in various clouds, e.g., AWS, YandexCloud, OpenStack.
+* Install Kubernetes and other packages required for its work (ether in a cloud or bare metal).
+* Install **Deckhouse** - Kubernetes cluster operator, which deploys cluster add-ons and manages their configurations.
+* Create additional `master` nodes or `static` nodes, configure and delete them.
+* Follow cloud infrastructure changes and converge a cluster to the desired state. 
 
-## Создание кластера Kubernetes
+## Create Kubernetes cluster
 
-### Подготовительный этап
-Первый этап при создании кластера - подготовка серверов. 
-Поддерживаются операционные системы `ubuntu-16.04`, `ubuntu-18.04`, `ubuntu-20.04`, `centos-7`.
+### Preparations
+The first step is setting up a host.
+Only `ubuntu-16.04`, `ubuntu-18.04`, `ubuntu-20.04`, `centos-7` OS are supported.
 
 
-* **Bare Metal** - необходимо предоставить SSH-доступ и возможность выполнять действия с правами администратора (sudo, есть возможность ввести пароль)
-* **Cloud Provider** - необходимо убедится, что candi поддерживает работу с вашим провайдером и предоставить дополнительную секцию с настройками для него
-    * Если провайдер не поддерживается, вы можете подготовить сервера самостоятельно и воспользоваться вариантом установки для Bare Metal
+* **Bare Metal** - provide SSH access to the host and sudo access.
+* **Cloud Provider** - ensure that Deckhouse supports your cloud.
+  If it is not, you can still create VMs by hand and follow Bare Metal installation instructions.
 
-### Конфигурация
-Конфигурация описывается в виде одного YAML-файла с несколькими секциями. Обязательно указать две секции:
-* `ClusterConfiguration` - основные параметры Kubernetes-кластеров: сети для подов и сервисов, версия Kubernetes, домен кластера.
-* `InitConfiguration` - параметры, необходимые для первоначальной настройки, которые могут быть изменены в будущем (например конфигурация Deckhouse)
+### Configuration
+A configuration file is a YAML file with several sections.
+* `ClusterConfiguration` - very basic Kubernetes cluster settings, e.g., networks, CRI, cloud provider, Kubernetes version.
+* `InitConfiguration` - initial settings for Deckhouse installation that can be changed in the future.
 
-Пример настроек:
+Configuration example:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
@@ -67,13 +67,14 @@ deckhouse:
     nginxIngressEnabled: false
     prometheusMadisonIntegrationEnabled: false
 ```
-Этих параметров достаточно для установки Kubernetes-кластера на Bare Metal. 
-Единственным условием будет указание дополнительного параметра `--ssh-host` при запуске команды для создания кластера.
 
-Для облачного провайдера необходимо в том же YAML-файле указать еще одну секцию:
-* **${PROVIDER_NAME}ClusterConfiguration** - специфические настройки для работы с провайдером: доступы для работы с API облака, сеть адресов для узлов, параметры и количество создаваемых виртуальных серверов и т.п. 
 
-Пример для облака на базе OpenStack:
+#### Cloud cluster
+
+To bootstrap a cluster in the cloud, you need to add one more section to the same config file:
+* **${PROVIDER_NAME}ClusterConfiguration** - cloud provider-specific settings: API access, nodes network, settings and capacity.
+
+Example for OpenStack based installation:
 ```yaml
 ...
 ---
@@ -104,40 +105,44 @@ provider:
   password: xxx
   region: HetznerFinland
 ```
-### Bootstrap кластера
-Для установки кластера необходимо воспользоваться подготовленным docker-образом.
-Для примера воспользуемся образом из registry компании Flant.
 
-1. Скачиваем свежий образ с необходимого канала обновления (в примере используется канал обновлений Alpha)
+### Bootstrap Kubernetes cluster
+To bootstrap a cluster, it is required to pull a docker image with all the needed software.
+For example, use a docker image from the Flant docker registry:
+
+1. Pull a fresh Docker image for desired release channel (we picked the Alpha channel for an example)
     ```bash
     docker pull registry.flant.com/sys/antiopa/install:alpha
     ```
-    > Для того чтобы скачать образ с registry.flant.com необходимо создать и использовать токен вашего пользователя
+    > To pull an image from the registry.flant.com, you need to register a personal user token.
     https://docs.gitlab.com/ce/user/profile/personal_access_tokens.html#creating-a-personal-access-token
-2.  Запускаем контейнер в режиме интерактивного терминала и монтируем к нему:
-   * `config.yaml` - YAML-файл, содержащий конфигурацию разворачиваемого кластера
-   ```bash
-   docker run -it \
-     -v $(pwd)/config.yaml:/config.yaml \
-     -v $HOME/.ssh/:/tmp/.ssh/ \
-     registry.flant.com/sys/antiopa/install:alpha \
-     bash
-   ```
-   > Для пользователей MacOS нет необходимости монтировать папку .ssh в /tmp, для удобного использования можно смонтировать её в директорию основного пользователя `/root`
-3. Запускаем установку кластера:
+2.  Run docker container and connect the terminal session to it:
+   
+  * `config.yaml` - configuration file for the cluster bootstrap as described above.
+     ```bash
+     docker run -it \
+       -v $(pwd)/config.yaml:/config.yaml \
+       -v $HOME/.ssh/:/tmp/.ssh/ \
+       registry.flant.com/sys/antiopa/install:alpha \
+       bash
+     ```
+     > MacOS users do not need to mount the .ssh folder to the `/tmp`.
+     > Because of Docker for MAc specific features it is more convenient to mount it to the `/root`.
+3. Execute cluster bootstrap:
    ```bash
    dhctl bootstrap \
      --ssh-user=ubuntu \
      --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
      --config=/config.yaml 
    ```
-### Динамическое создание ресурсов
-Во время создания кластера будет установлен оператор Deckhouse, который готов к работе сразу после окончания процесса. 
-Оператор расширяет API Kubernetes при помощи [механизма CRD](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+### Create additional resources
+During a bootstrap process, ready to work deckhouse controller will be installed in the cluster.
+It is a cluster operator which extends the cluster's Kubernetes API with [Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
 
-Используя флаг `--resources` для команды `bootstrap` можно указать путь до файла с манифестами дополнительных ресурсов, которые необходимо установить после создания кластера.
+It is possible to deploy Kubernetes resources after successful cluster creation by providing a path to the file 
+with manifests specifying the `--resources` flag for `bootstrap` command.
 
-Пример файла:
+Example:
 ```yaml
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -173,57 +178,57 @@ spec:
     httpPort: 80
     httpsPort: 443
 ```
-В данном примере создается дополнительная динамически расширяемая группа узлов и ingress-controller.
+In this example, additional dynamically scaling node group and ingress controller will be added.
 
-**Главная особенность** заключается в том, что ресурс `kind: IngressNginxController` не будет существовать в 
-кластере, пока не появится хотя бы один узел помимо первого master-узла, что приведет к ошибке при попытке его создания.
+**The most significant feature** is that `kind: IngressNginxController` doesn't exist in the cluster after the installation process ends.
+We have to wait for a cluster to become bootstrapped (create one non-master node).
 
-Deckhouse-candi в этом случае создаст ресурсы `OpenStackInstanceClass` и `NodeGroup`, дождется возможности создавать 
-ресурсы с типом `IngressNginxController` и только после этого создаст их.
+In this case, Deckhouse-candi creates `OpenStackInstanceClass` and `NodeGroup` resources, then waits for the possibility to create `IngressNginxController`, and then deploy it.
 
-> Процесс создания ресурсов можно запустить отдельно, воспользовавшись командой `bootstrap-phase create-resources`. 
+> NOTE: You can run separate resources creating process by executing `bootstrap-phase create-resources`. 
 
-## Converge инфраструктуры
-Существует острая необходимость реагировать на появление изменений в инфраструктуре кластера при использовании облачных провайдеров.
+## Converge infrastructure
+It is essential to be able to react to the changes in the cluster infrastructure.
 
-При внесении ручных изменений велика вероятность, что кластер перестанет соответствовать изначально развернутой конфигурации, 
-что может привести к появлению сотен различных конфигураций и затруднить управление кластерами.
+With manual changes to the objects in cloud, it is possible to end with a cluster which is far from the desired configuration.
+You cannot observe these changes, react to them. Every Kubernetes cluster become "unique".
 
-1. Для приведения объектов в облаке к начальному состоянию существует команда `converge`. 
-    Во время выполнения команды dhctl:
-    * Подключается к кластеру Kubernetes
-    * Собирает информацию о текущем состоянии (state) для узлов (node) и базовой инфраструктуры
-    * Запускает terraform для базовой инфраструктуры, используя конфигурацию кластера и файлы Terraform state из secret'а в кластере Kubernetes
-    * Сохраняет новое состояние в кластер Kubernetes
-    * Обрабатывает master-узлы и статические узлы
-        * Если master-узлов или статических узлов в облаке меньше, чем указано в состоянии кластера, dhctl сначала создает недостающие узлы
-        * Для каждого узла вызывается повторное создание при помощи terraform и состояния узла из кластера Kubernetes
-        * Если master-узлов или статических узлов в облаке больше, чем нужно, узлы будут удалены 
-    > При расхождении состояния и при удалении объектов из облака dhctl запросит подтверждение.
+1. To converge objects in a cloud to its desired state, dhctl has the `converge` command. 
+    During this command execution, dhctl will:
+    * Connect to the Kubernetes cluster
+    * Download terraform state for the base infrastructure
+    * Sequentially call terraform apply for the downloaded state
+    * Upload new states to the cluster
+    * For master nodes and static nodes
+        * If nodes quantity in the configuration is higher than we actually have, dhctl will create new nodes
+        * If nodes quantity in the configuration is lower than we actually have, dhctl will delete excessive nodes
+        * Sequentially call terraform apply for other nodes
+    > if object is marked to be changed or deleted, dhctl will ask a user for confirmation.
 
-    Пример запуска:
+    Example:
     ```bash
     dhctl converge \
-      --ssh-host 8.8.8.8 \
+      --ssh-host=8.8.8.8 \
       --ssh-user=ubuntu \
       --ssh-agent-private-keys=/tmp/.ssh/id_rsa
     ```
 
-2. Для проверки наличия изменений в облаке и в состоянии terraform существуют команды:
-    * `dhctl terraform converge-exporter` - запускает экспортер для Prometheus, который  периодически проверяет схождение состояния в облаке и состояния terraform'а в секретах.
-        > Эта команда используется в модуле `040-terraform-manager`
-    * `dhctl terraform check` - запускает проверку один раз и выдает отчет в формате YAML или JSON.
+2. There are two commands to check the current state of objects in a cloud:
+    * `dhctl terraform converge-exporter` - runs Prometheus exporter, which periodically checks the difference between
+      objects and cloud and terraform state from secrets.
+        > This command is used in the module `040-terraform-manager`
+    * `dhctl terraform check` - executes the check once and returns report in ether YAML or JSON format. 
 
 
-## Удаление кластера Kubernetes
-Для удаления кластера, развернутого в облаке, используется команда `destroy`.
-Во время выполнения команды dhctl:
-* Подключается к кластеру Kubernetes
-* Удаляет ресурсы, которые отвечают за создание объектов в облаке: service'ы с типом LoadBalancer,  PV, PVC и Machines (dhctl дожидается, пока ресурсы удалятся из кластера).
-* Собирает информацию о текущем состоянии (state) для узлов (node) и базовой инфраструктуры
-* По очереди вызывает удаление всех компонентов
+## Destroy Kubernetes cluster
+To destroy a Kubernetes cluster from a cloud, execute `destroy` command.
+During execution, dhctl will:
+* Connect to the cluster
+* Delete Kubernetes resources bound to the cloud objects, e.g., services with type LoadBalancer, PV, PVC и Machines (dhctl will wait until resources become deleted).
+* Download terraform state for base infrastructure and nodes from the cluster
+* Sequentially call terraform destroy for downloaded states
 
-Пример запуска:
+Execution example:
 ```bash
 dhctl destroy \
   --ssh-host 8.8.8.8 \

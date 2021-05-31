@@ -1,28 +1,25 @@
 ---
-title: Подсистема CandI (Cluster and Infrastructure)
+title: CandI subsystem (Cluster and Infrastructure)
 permalink: /candi/
 ---
 
-Система для развертывания и управления Kubernetes кластерами.
-
-У системы есть несколько компонентов:
-* [**bashible**](./bashible) - фреймворк, который позволяет устанавливать и обновлять необходимые компоненты на узлах кластера `Kubernetes`.
+CandI subsystem consists of the following components:
+* [**bashible**](./bashible) - framework for dynamic configuration and updates.
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
-* Модули **Deckhouse'а**:
-    * [**control-plane-manager**]({{"/modules/040-control-plane-manager/" | true_relative_url }} ) - установка и обновление `control-plane` для master-узлов.
-    * [**node-manager**]({{"/modules/040-node-manager/" | true_relative_url }} ) - создание и автоматическое или управляемое обновление узлов в облаке и/или на голом железе.
-    * **cloud-provider-**
-        * [**openstack**]({{"/modules/030-cloud-provider-openstack/" | true_relative_url }} ) - модуль для взаимодействия с облаками на базе `OpenStack`.
-* Installer или **dhctl** - система для развертывания первого узла кластера, установки `Deckhouse` и создания первичной инфраструктуры.
+* **Deckhouse** modules:
+    * [**control-plane-manager**]({{"/modules/040-control-plane-manager/" | true_relative_url }} ) - `control-plane` maintaining.
+    * [**node-manager**]({{"/modules/040-node-manager/" | true_relative_url }} ) - swiss knife to create and update cloud and bare metal nodes.
+    * **cloud-provider-** - modules to integrate different cloud with Deckhouse.
+* Installer or **dhctl** - tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
 
 ## Installer
 
-### Конфигурация
+### Configuration
 
-Конфигурация это один файл `.yaml`, в котором содержатся несколько документов в YAML-формате, разделенных `---`.
+Configuration is a single YAML file, which contains several YAML documents separated by the `---`.
 
-Пример:
+Example:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
@@ -46,48 +43,47 @@ deckhouse:
       project: my-project
 ```
 
-Для валидации и проставления значений по умолчанию используются спецификации OpenAPI.
+For validation and values defaulting, each configuration object has its OpenAPI specification.
 
 | Kind                           | Description        |  OpenAPI path       | 
 | ------------------------------ | ------------------ | ------------------ |
-| ClusterConfiguration           | Основная часть конфигурации кластера Kubernetes | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/cluster_configuration.yaml) |
-| InitConfiguration              | Часть конфигурации кластера, которая нужна только при создании | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
-| StaticClusterConfiguration     | Конфигурация статического кластера Kubernetes | [candi/openapi/static_cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/static_cluster_configuration.yaml)|
-| OpenStackClusterConfiguration  | Конфигурации кластера Kubernetes в OpenStack | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
-| AWSClusterConfiguration        | Конфигурации кластера Kubernetes в AWS | [candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/aws/openapi/cluster_configuration.yaml) |
-| GCPClusterConfiguration        | Конфигурации кластера Kubernetes в GCP | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
-| VsphereClusterConfiguration    | Конфигурации кластера Kubernetes в VSphere | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
-| YandexClusterConfiguration     | Конфигурации кластера Kubernetes в Yandex | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Данные для компиляции Bashible Bundle (используется только для dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
-| KubeadmConfigTemplateData      | Данные для компиляции Kubeadm config (используется только для dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
+| ClusterConfiguration           | Basic Kubernetes cluster configuration | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/cluster_configuration.yaml) |
+| InitConfiguration              | Required only for Deckhouse installation | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/init_configuration.yaml)|
+| StaticClusterConfiguration     | Bare Metal specific configuration | [candi/openapi/static_cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/openapi/static_cluster_configuration.yaml)|
+| OpenStackClusterConfiguration  | OpenStack specific configuration | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
+| AWSClusterConfiguration        | AWS specific configuration | [candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/aws/openapi/cluster_configuration.yaml) |
+| GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
+| vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
+| YandexClusterConfiguration     | Yandex.Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
+| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/bashible/openapi.yaml) |
+| KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/master/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
-Процесс развертывания кластера при помощи `dhctl` делится на несколько этапов:
+Bootstrap process with `dhctl` consists of several stages:
 
 #### Terraform
-Существуют три варианта запуска:
-* `base-infrastructure` - создает в облаке компоненты инфраструктуры: сети, роутеры, ssh-ключи, политики безопасности и так далее.
-    * Через механизм [ouput](https://www.terraform.io/docs/configuration/outputs.html) на данном этапе в installer передаются данные:
-        * `cloud_discovery_data` - информация, необходима для корректной работы cloud-provider'а в дальнейшем, будет сохранена в secret `d8-provider-cluster-configuration` в namespace `kube-system`.
+There are three variants of terraforming:
+* `base-infrastructure` - creates basic cluster components: networks, routers, ssh key pairs, etc.
+    * dhctl discovers through terraform [ouput](https://www.terraform.io/docs/configuration/outputs.html):
+        * `cloud_discovery_data` - the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
 
-* `master-node` - создает master-узлы для кластера.
-    * Через механизм [ouput](https://www.terraform.io/docs/configuration/outputs.html) на данном этапе в installer передаются данные:
-        * `master_ip_address_for_ssh` - адрес из "внешней" сети, по нему мы будем производить подключение к первому узлу.
-        * `node_internal_ip_address` - адрес из "внутренней" сети, будет использован для настройки control-plane компонентов.
-        * `kubernetes_data_device_path` - имя девайса, предназначенного для хранения данных Kubernetes.
+* `master-node` - creates a master node.
+    * dhctl discovers through terraform [ouput](https://www.terraform.io/docs/configuration/outputs.html):
+        * `master_ip_address_for_ssh` - external master ip address to connect to the node.
+        * `node_internal_ip_address` - internal address to bind control plane components.
+        * `kubernetes_data_device_path` - device name for storing Kubernetes data (etcd and manifests).
 
-* `static-node` - создает статический узел для кластера.
+* `static-node` - creates a static node.
 
-> State terraform'а будет сохранен в secret в namespace'е d8-system после каждой фазы
+> State terraform will be saved in the secret in d8-system namespace after each terraform pipeline execution
 
-**Внимание!!** для bare metal кластеров terraform не выполняется, вместо этого обязательным становится параметр командной строки `--ssh-host`, чтобы dhctl знал, куда ему нужно подключиться.
+**Attention!!** dhctl do not user terraform for bare metal clusters, it is required to pass `--ssh-host` to connect instead.
 
 
 #### Static-cluster
-При первоначальной настройке статического кластера terraform не используется. Данные, которые при использовании облачных 
-провайдеров мы получаем из terraform, для статических кластеров необходимо указывать в специальной конфигурации - StaticCusterConfiguration.
+There is a special option for bare metal clusters, which is located in the separate configuration - StaticCusterConfiguration.
 
-Пример:
+Example:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticClusterConfiguration
@@ -95,58 +91,59 @@ internalNetworkCIDRs:
 - 192.168.0.0/24
 ```
 
-В качестве `internalNetworkCIDRs` необходимо указать список сетей, адреса из которых будут использоваться  как внутренние адреса нод (InternalIP).
+`internalNetworkCIDRs` - addresses from these networks will be considered as "internal"
 
-#### Подготовительный этап
-Во время подготовительного этапа происходит:
-* **Подключение к созданному (или указанному) узлу по SSH**: Если к указанному узлу подключится не получится, то процесс установки прервётся с ошибкой.
-* **Обнаружение bashible bundle**: на узле выполняется скрипт `/candi/bashible/detect_bundle.sh`. Результат выполнения - имя bundle, отправленное в stdout.
-* **Подготовка и запуск скриптов bootstrap.sh и bootstrap-network.sh**: скрипты необходимы для установки зависимости и первичной настройки сети для правильной работы Kubernetes
+#### Preparations
+* **SSH connection check**: dhctl will quite the bootstrap process if does not manage connect to the host
+* **Detect bashible bundle**: execute `/candi/bashible/detect_bundle.sh` to get a bashible bundle name from the host.
+* **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network
 
-**Внимание!!** Первое подключение по ssh происходит только для проверки соединения. Далее скрипты загружаются на сервер по протоколу scp и запускаются через ssh на удаленном сервере.
+**Attention!!** dhctl will check the ssh connection first
 
 #### Bashible Bundle
-Bundle представляет собой tar-архив со всеми необходимыми файлами с такой же структурой папок, которая должна быть на удаленном сервере. 
+Bundle is a tar archive with required steps, bashbooster framework, and bashible entrypoint.
 
-В bundle входят:
-1. Подготовленные step'ы из всех директорий (подробнее можно узнать о расположении степов из [описания bashible](/candi/bashible/)).
-2. Подготовленный файл конфигурации для kubeadm (подробнее можно узнать о конфигурации из [описания control-plane-kubeadm](/candi//control-plane-kubeadm/)).
-3. Объединенный в один файл bashbooster.
+Bundle includes:
+1. Rendered steps (you can read more about steps from the [bashible documentation](/candi/bashible/)).
+2. Rendered kubeadm configuration file (you can read more about kubeadm from the [control-plane-kubeadm documentation](/candi//control-plane-kubeadm/)).
+3. Archive all files.
 
-Далее архив загружается по scp на сервер и распаковывается, после чего выполняется `/var/lib/bashible/bashible.sh --local`.
+After this, archive will be uploaded to the remote host by scp, unarchived and executed with the following command `/var/lib/bashible/bashible.sh --local`.
 
-#### Установка Deckhouse
-Для доступа к API только что созданного кластера Kubernetes dhctl делает две вещи:
-* Запускает на сервере Kubernetes команду `kubectl proxy --port=0` для поднятия прокси на свободном порту.
-* Открывает ssh-туннель со свободного локального порта на порта прокси на удаленном сервере.
+#### Install Deckhouse
+dhctl does two things to connect to Kubernetes API:
+* Executes `kubectl proxy --port=0` on the remote host.
+* Opens SSH tunnel to the kubectl proxy process.
 
-После получения доступа к API `dhctl` создает (или обновляет):
+After successfully connection to the Kubernetes API, `dhctl` creates or updates:
 * Cluster Role `cluster-administrator`
-* Service Account для `deckhouse`
-* Cluster Role Binding роли `cluster-administrator` для sa `deckhouse`
-* Secret для доступа к docker registry для deckhouse `deckhouse-registry`
-* ConfigMap для `deckhouse`
-* Deployment для `deckhouse`
-* Secret'ы с данными создания кластера (если такие данные есть):
+* Service Account for `deckhouse`
+* Cluster Role Binding for `cluster-administrator` the `deckhouse` service account
+* Secret with a docker registry credentials `deckhouse-registry`
+* ConfigMap for `deckhouse`
+* Deployment for `deckhouse`
+* Secrets with configuration data
     * `d8-cluster-configuration`
     * `d8-provider-cluster-configuration`
-* Secret'ы, содержащие состояние terraform
+* Secrets with terraform state
     * `d8-cluster-terraform-state`
     * `d8-node-terraform-state-.*`
-
- После установки `dhctl` ожидает, когда pod `deckhouse` станет `Ready`. Readiness-проба устроена так, что контейнер переходит в состояние Ready только после того, как в очереди `deckhouse` не останется ни одного задания, связанного с установкой или обновлением модуля.
+  
+After installation ends, `dhctl` will wait for the `deckhouse` pod to become `Ready`. 
+Readiness probe is working the way that deckhouse become ready only if there is no task to install or update a module.
  
- Состояние `Ready` - сигнал для `dhctl`, что можно создать в кластере объект `NodeGroup` для master-узлов.
+The `Ready` state - a signal for `dhctl` to create the `NodeGroup` object for master nodes.
  
-#### Создание дополнительных master-узлов и stateful-узлов
-При создании дополнительных узлов dhctl взаимодействует с API Kubernetes. 
-* Создает необходимые NodeGroup объекты
-* Дожидается появления Secret'ов, содержащих cloud-config для создания узлов в этой группе
-* Запускает соответствующий terraform (master-node  или static-node)
-* При успешном выполнении сохраняет state в кластер Kubernetes
+#### Create additional master or static nodes
+On additional cluster nodes boostrap, dhctl make calls to the Kubernetes API. 
+* Creates desired NodeGroup objects
+* Waits for Secrets with the cloud config for the particular node group
+* Execute corresponding terraform pipeline (for master node or static node)
+* Save state back to the Kubernetes cluster if successful
 
-> Deckhouse-candi ожидает перехода узлов в каждой NodeGroup в состояние Ready, иначе процесс их создания будет завершен с ошибкой
+> dhctl waits for nodes in each NodeGroup to become Ready. Otherwise, creation process may ends with an error.
 
-#### Создание дополнительных ресурсов
-При указании пути до файла с манифестами (флаг `--resources`), dhctl отсортирует их по `apiGroup/kind`, дождется регистрации этих типов в API Kubernetes и создаст их.
-> Процесс описан подробнее в документации к dhctl.
+#### Create additional resources
+User can provide a YAML file with additional resources by specifying a `--resource` flag for bootstrap process. 
+`dhctl` will sort them by their `apiGroup/kind`, wait for their registration in Kubernetes API, and deploy them.
+> This process is described in detail in the dhctl documentation.

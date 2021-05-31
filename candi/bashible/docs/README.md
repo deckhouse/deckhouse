@@ -1,70 +1,72 @@
 ---
-title: Фреймворк - Bashible
+title: System Configuration Framework - Bashible
 ---
 
-Фреймворк для настройки и управления узлами в кластере Kubernetes.
+### Description
+Bashible consists of small bash scripts, that are called `steps`.
+* Each step describes some task, e.g., docker installation, kubelet installation.
 
-###  Описание
-Bashible состоит из набора выполняемых скриптов или `step`'ов. 
-* Каждый step описывает какое-то действие, например установка docker или настройка kubelet.
+* Steps are executed in the alphabetic order. Because of it, they are named with a number prefix, e.g., `010_step_...`.
 
-* Step'ы выполняются в алфавитном порядке, поэтому имя каждого степа начинается с числа:
-    * Пример: `051_install_kubernetes_api_proxy_configurator.sh.tpl`
+* Each step is a `.tpl` file in Go template format. It is required for:
+    * Dynamically configuration and updates base on the Kubernetes API
+    * Use the same code for different purposes: installation, daily routine, vm image creation
 
-* Каждый step это `.tpl` файл в формате Go-шаблонов. Это необходимо чтобы:
-    * Работать с динамической конфигурацией узлов в кластере: если настройки изменились мы можем легко создать новые step'ы из шаблонов.
-    * Полностью не переписывать код для этапов: установка кластера, повторный запуск в кластере, подготовка образа виртуальной машины.
+* Step files, and the bashible entrypoint are located in the `/var/lib/bashible` directory.
 
-* Файлы step'ов и входная точка для запуска bashible лежат в директории `/var/lib/bashible`.
+* Bashible is periodically executing on a Node by systemd unit timer.  
 
-* На каждом узле происходят периодические запуски bashible при помощи системных unit'ов.
+* To make steps cleaner and shorter, bashible framework utilizes an SCM (software configuration management), which is written in the clean bash - [Bash Booster](./candi/bashible/bashbooster).
 
-* Для написания step'ов используется доработанная нами SCM (software configuration management) система, созданная при помощи чистого bash - [Bash Booster](./candi/bashible/bashbooster).
-
-* Наличие тех или иных step'ов зависит от имени bashible bundle и cloud-provider.
-   * bashible bundle - основывается на операционной системе сервера, сейчас доступны:
-       * ubuntu-20.04
-       * ubuntu-18.04
+* The decision to include a step in the bundle is based on a bashible bundle name and a cloud provider name.
+   * bashible bundle - bundle which is based on the operating system:
+       * ubuntu-lts
        * centos-7
-   * cloud-provider - имя облачного провайдера, сейчас доступны:
+   * cloud-provider - supported cloud providers:
+       * aws
+       * azure
+       * gcp  
        * openstack
+       * vsphere
+       * yandex
        
-* `runType` - тип запуска скрипта, передается при компиляции Go-шаблонов, доступны три варианты:
-   * ClusterBootstrap - подготовка первого узла кластера
-   * Normal - последующие запуски bashible на первом и других узлах
-   * ImageBuilding - подготовка образа виртуальной машины    
+* `runType` - step execution type, which is used during Go templates compilation:
+   * ClusterBootstrap - bootstrap first master node
+   * Normal - daily bashible execution by schedule
+   * ImageBuilding - setup a VM image
        
-### Расположение step'ов
+### Steps location
 * `bashible/`
-    * `bashbooster/` – директория, содержащая фреймворк Bash Booster
-    * `bundles/` – список директорий в этой директории это и есть список поддерживаемых bundle'ов
-        * `имя_бандла/`
-           * `all/` - доступен при любых runType
-           * `cluster-bootstrap/` - только при runType: ClusterBootstrap
-           * `node-group/` - только НЕ при runType: ImageBuilding
-    * `common-steps/` - общие step'ы для всех bashible bundl'ов
-        * `all/` - доступен при любых runType
-        * `cluster-bootstrap/` - только при runType: ClusterBootstrap
-        * `node-group/` - только НЕ при runType: ImageBuilding
-    * `bashible.sh.tpl` - входная точка для запуска step'ов
-    * `detect_bundle.sh` - скрипт, который определяет bashible bundle, используется при создании первого узла
-* `cloud-providers/` - список cloud-provider'ов
-  * `имя_cloud_provider/`
+    * `bashbooster/` – bashbooster framework directory (it makes writing bashible steps easier)
+    * `bundles/` – the list of directories, their names are equal to the names of supported bundles
+        * `*bundle_name*/`
+           * `all/` - for all run types
+           * `cluster-bootstrap/` - only for the `ClusterBootstrap` run type
+           * `node-group/` - for all run types except the `ImageBuilding`
+    * `common-steps/` - common steps for all bundles
+        * `all/` - for all run types
+        * `cluster-bootstrap/` - only for the `ClusterBootstrap` run type
+        * `node-group/` - for all run types except the `ImageBuilding`
+    * `bashible.sh.tpl` - bashible steps entrypoint
+    * `detect_bundle.sh` - a script to detect bashible bundle, only for the `ClusterBootstrap`
+* `cloud-providers/` - cloud-providers list
+  * `*cloud_provider_name*/`
       * `bashible/`
-          * `bundles/` – при "компиляции" этих степов дополнительно передается .cloudProviderClusterConfiguration.
-              * `имя_бандла/`
-                  * `all/` - доступен при любых runType
-                  * `node-group/` - только НЕ при runType: ImageBuilding
-                  * `bootstrap-networks.sh.tpl` – минимальный скрипт, задача которого сделать возможной работу bashible: обеспечить доступ к API-серверу. nodeGroup доступна, выполняется только при runType in Normal или ClusterBootstrap.
-          * `common_steps/` – общие step'ы для всех bundle'ов
-              * `bootstrap-networks.sh.tpl` – если этот файл есть, то в бандлах НЕ может быть такого файла.
+          * `bundles/` – additional steps that will included to bundle for cloud installations
+              * `*bundle_name*/`
+                  * `all/` - for all run types
+                  * `node-group/` - for all run types except the `ImageBuilding`
+                  * `bootstrap-networks.sh.tpl` – a minimal script to do initials network bootstrap to be able to connect to the Kubernetes API (only for run type `Normal` or `ClusterBootstrap`)
+          * `common_steps/` – common steps for all bundles
+              * `bootstrap-networks.sh.tpl` – if file exists, it will be used instead of a file from a bundle
 
-### Как скомпилировать bashible?
-Скомпилировать bundle можно воспользовавшись утилитой dhctl.
+### How to render bashible bundle?
+Bundle compilation is possible with using `dhctl` tool.
 ```bash
 dhctl render bashible-bundle --config=/config.yaml
 ```
-Пример `config.yaml`:
+
+Example for `config.yaml`:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: BashibleTemplateData
