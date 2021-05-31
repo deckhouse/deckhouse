@@ -2,7 +2,7 @@ ARG BASE_ALPINE
 ARG BASE_GOLANG_ALPINE
 FROM $BASE_GOLANG_ALPINE
 
-RUN apk add --no-cache --update alpine-sdk bash patch git
+RUN apk add bash git make
 
 ENV GO111MODULE=on
 
@@ -12,7 +12,7 @@ ADD already_logged.patch /
 
 RUN git clone https://github.com/mintel/dex-k8s-authenticator.git . && \
   git checkout 378a39dd93bed9f56a5a1b1a799a208c61ead83f && \
-  git apply /already_logged.patch && \
+  git apply --whitespace=fix /already_logged.patch && \
   go mod download && \
   make build
 
