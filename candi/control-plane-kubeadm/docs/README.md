@@ -2,21 +2,21 @@
 title: Control Plane Kubeadm
 ---
 
-Go-шаблоны для подготовки конфигурации kubeadm. 
+Go templates to render a Kubernetes bootstrap configuration. 
+These templates are used during first master node creation and in the [control-plane-manager]({{"/modules/040-control-plane-manager/" | true_relative_url }} ).
 
-* `config.yaml.tpl` - основная конфигурация
-* `patches/` -  патчи, применяемые к компонентам control-plane при подготовке кластера Kubernetes
+* `config.yaml.tpl` - main config
+* `patches/` - control plane components patches
+ 
 
-Используются при создании первого узла в кластере и в модуле [control-plane-manager]({{"/modules/040-control-plane-manager/" | true_relative_url }} ).
+### How to render control-plane-kubeadm?
+Kubeadm config file compilation is possible with using `dhctl` tool.
 
-### Как скомпилировать control-plane-kubeadm?
-
-Скомпилировать control-plane-kubeadm можно воспользовавшись утилитой dhctl.
 ```bash
 dhctl render kubeadm-config --config=/config.yaml
 ```
 
-Пример `config.yaml`:
+Example `config.yaml`:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: KubeadmConfigTemplateData
