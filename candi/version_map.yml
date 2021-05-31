@@ -94,11 +94,11 @@ k8s:
     cni_version: 0.8.7
     bashible: *bashible
   '1.18':
-    patch: 17
+    patch: 19
     cni_version: 0.8.7
     bashible: *bashible
   '1.19':
-    patch: 10
+    patch: 11
     cni_version: 0.8.7
     bashible: &bashible_k8s_ge_1_19
       <<: *bashible
@@ -141,7 +141,7 @@ k8s:
       resizer: v1.0.0
       registrar: v2.0.1
   '1.20':
-    patch: 6
+    patch: 7
     cni_version: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -158,7 +158,7 @@ k8s:
       resizer: v1.1.0
       registrar: v2.1.0
   '1.21':
-    patch: 0
+    patch: 1
     cni_version: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
