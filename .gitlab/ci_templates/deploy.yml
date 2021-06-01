@@ -6,34 +6,34 @@
     DECKHOUSE_DESTINATION_IMAGE: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe:${CI_JOB_NAME}
     DECKHOUSE_DESTINATION_INSTALL_IMAGE: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/install:${CI_JOB_NAME}
   before_script:
-    - if [[ -n ${CI_COMMIT_TAG} ]]; then
-        SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
-        SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
-      else
-        SOURCE_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_NAME};
-        SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_REF_NAME};
-        CI_COMMIT_TAG=""
-      fi
+  - if [[ -n ${CI_COMMIT_TAG} ]]; then
+      SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
+      SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
+    else
+      SOURCE_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_REF_NAME};
+      SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_REF_NAME};
+      CI_COMMIT_TAG=""
+    fi
   script:
-    - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
-    - echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
-    - docker image pull $SOURCE_IMAGE
-    - docker image tag $SOURCE_IMAGE $DESTINATION_IMAGE
-    - docker image push $DESTINATION_IMAGE
-    - docker image tag $SOURCE_IMAGE $DECKHOUSE_DESTINATION_IMAGE
-    - docker image push $DECKHOUSE_DESTINATION_IMAGE
-    - docker image pull $SOURCE_INSTALL_IMAGE
-    - docker image tag $SOURCE_INSTALL_IMAGE $DESTINATION_INSTALL_IMAGE
-    - docker image push $DESTINATION_INSTALL_IMAGE
-    - docker image tag $SOURCE_INSTALL_IMAGE $DECKHOUSE_DESTINATION_INSTALL_IMAGE
-    - docker image push $DECKHOUSE_DESTINATION_INSTALL_IMAGE
-    - docker image rmi $SOURCE_IMAGE
-    - docker image rmi $SOURCE_INSTALL_IMAGE
+  - echo $CI_REGISTRY_PASSWORD | docker login --username="$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY > /dev/null
+  - echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
+  - docker image pull $SOURCE_IMAGE
+  - docker image tag $SOURCE_IMAGE $DESTINATION_IMAGE
+  - docker image push $DESTINATION_IMAGE
+  - docker image tag $SOURCE_IMAGE $DECKHOUSE_DESTINATION_IMAGE
+  - docker image push $DECKHOUSE_DESTINATION_IMAGE
+  - docker image pull $SOURCE_INSTALL_IMAGE
+  - docker image tag $SOURCE_INSTALL_IMAGE $DESTINATION_INSTALL_IMAGE
+  - docker image push $DESTINATION_INSTALL_IMAGE
+  - docker image tag $SOURCE_INSTALL_IMAGE $DECKHOUSE_DESTINATION_INSTALL_IMAGE
+  - docker image push $DECKHOUSE_DESTINATION_INSTALL_IMAGE
+  - docker image rmi $SOURCE_IMAGE
+  - docker image rmi $SOURCE_INSTALL_IMAGE
   after_script:
-    - docker image rmi $DESTINATION_IMAGE
-    - docker image rmi $DESTINATION_INSTALL_IMAGE
-    - docker image rmi $DECKHOUSE_DESTINATION_IMAGE
-    - docker image rmi $DECKHOUSE_DESTINATION_INSTALL_IMAGE
+  - docker image rmi $DESTINATION_IMAGE
+  - docker image rmi $DESTINATION_INSTALL_IMAGE
+  - docker image rmi $DECKHOUSE_DESTINATION_IMAGE
+  - docker image rmi $DECKHOUSE_DESTINATION_INSTALL_IMAGE
   dependencies:
     - "Build Modules Images"
   when: manual

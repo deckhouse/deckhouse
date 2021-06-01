@@ -5,6 +5,7 @@
       export CI_COMMIT_TAG="";
     fi
   script: &script
+  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
   - pwd
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
@@ -162,41 +163,42 @@
       export CI_COMMIT_TAG="";
     fi
   script: &vsphere_script
-    - pwd
-    - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
-    - type werf && source $(werf ci-env gitlab --verbose --as-file)
-    - mkdir -p layouts-tests-tmp
-    - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-    - chmod -R 777 .
-    - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-    - |
-      werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
-        -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-        -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
-        -v $(pwd):/deckhouse -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 997:997 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
-        -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
+  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
+  - pwd
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - mkdir -p layouts-tests-tmp
+  - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - chmod -R 777 .
+  - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - |
+    werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
+      -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+      -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
+      -v $(pwd):/deckhouse -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 997:997 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
+      -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &vsphere_after_script
-    - |
-      if [[ ("$CI_COMMIT_REF_NAME" == "master") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
-        curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
-          -H 'Content-Type: application/json' \
-          -d "{
-          \"labels\": {
-            \"severity_level\": 7,
-            \"trigger\": \"CloudLayoutTestFailed\",
-            \"provider\": \"$PROVIDER\",
-            \"layout\": \"$LAYOUT\",
-            \"kubernetes_version\": \"$KUBERNETES_VERSION\"
-          },
-          \"annotations\": {
-            \"summary\": \"Scheduled Cloud Layout test failed\",
-            \"description\": \"Check GitLab Job log for more information\",
-            \"plk_protocol_version\": \"1\",
-            \"plk_link_url/job\": \"$CI_JOB_URL\",
-            \"plk_link_title_en/job\": \"GitLab Job\"
-          }
-        }"
-      fi
+  - |
+    if [[ ("$CI_COMMIT_REF_NAME" == "master") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
+      curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+        -H 'Content-Type: application/json' \
+        -d "{
+        \"labels\": {
+          \"severity_level\": 7,
+          \"trigger\": \"CloudLayoutTestFailed\",
+          \"provider\": \"$PROVIDER\",
+          \"layout\": \"$LAYOUT\",
+          \"kubernetes_version\": \"$KUBERNETES_VERSION\"
+        },
+        \"annotations\": {
+          \"summary\": \"Scheduled Cloud Layout test failed\",
+          \"description\": \"Check GitLab Job log for more information\",
+          \"plk_protocol_version\": \"1\",
+          \"plk_link_url/job\": \"$CI_JOB_URL\",
+          \"plk_link_title_en/job\": \"GitLab Job\"
+        }
+      }"
+    fi
   parallel:
     matrix:
       - PROVIDER: vSphere
