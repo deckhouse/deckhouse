@@ -166,3 +166,50 @@
         summary: Upmeter is malfunctioning
         description: |
           Upmeter is malfunctioning. Please check the linked alerts to find the real problem.
+
+- name: d8.upmeter.smoke-mini
+  rules:
+    - alert: D8SmokeMiniNotBoundPersistentVolumeClaims
+      for: 1h
+      expr: |
+        max by (persistentvolumeclaim, phase) (
+          kube_persistentvolumeclaim_status_phase{
+            namespace="d8-upmeter",
+            persistentvolumeclaim=~"disk-smoke-mini-[a-z]-0",
+            phase!="Bound"
+          } == 1
+        )
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: smoke-mini
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse"
+        summary: Smoke-mini has unbound or lost persistent volume claims.
+        description: |
+          {{ $labels.persistentvolumeclaim }} persistent volume claim status is {{ $labels.phase }}.
+
+          There is a problem with pv provisioning. Check the status of the pvc o find the problem:
+          1. `kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}`
+
+          If you have no disk provisioning system in the cluster,
+          you can disable ordering volumes for the some-mini through the module settings.
+
+    - alert: D8SmokeMiniUnavailable
+      expr: |
+        count(ALERTS{alertname=~"D8SmokeMiniNotBoundPersistentVolumeClaims", alertstate="firing"}) > 0
+      labels:
+        tier: cluster
+        d8_module: upmeter
+        d8_component: smoke-mini
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_alert_type: "group"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterUnavailable,tier=cluster,prometheus=deckhouse"
+        summary: Smoke-mini is unavailable
+        description: |
+          Smoke-mini is unavailable. Please check the linked alerts to find the real problem.
