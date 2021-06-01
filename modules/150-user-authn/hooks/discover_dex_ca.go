@@ -28,8 +28,8 @@ func applyDexCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
 	}
 
-	cert, ok := secret.Data["ca.crt"]
-	if !ok {
+	cert := secret.Data["ca.crt"]
+	if len(cert) == 0 {
 		cert = secret.Data["tls.crt"]
 	}
 
@@ -58,12 +58,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func discoverDexCA(input *go_hook.HookInput) error {
 	const (
-		dexCAPath     = "userAuthn.internal.discoveredDexCA"
-		dexCAModePath = "userAuthn.controlPlaneConfigurator.dexCAMode"
-		customCAPath  = "userAuthn.controlPlaneConfigurator.dexCustomCA"
+		dexCAPath = "userAuthn.internal.discoveredDexCA"
+
+		dexCAModePath           = "userAuthn.controlPlaneConfigurator.dexCAMode"
+		customCAPath            = "userAuthn.controlPlaneConfigurator.dexCustomCA"
+		configuratorEnabledPath = "userAuthn.controlPlaneConfigurator.enabled"
 	)
 
-	configuratorEnabled := input.Values.Get("userAuthn.controlPlaneConfigurator.enabled").Bool()
+	configuratorEnabled := input.Values.Get(configuratorEnabledPath).Bool()
 	if !configuratorEnabled {
 		if input.ConfigValues.Exists(dexCAPath) {
 			input.Values.Remove(dexCAPath)

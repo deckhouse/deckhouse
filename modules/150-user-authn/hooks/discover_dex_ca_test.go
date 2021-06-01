@@ -30,11 +30,32 @@ metadata:
   namespace: d8-user-authn
 data:
   tls.crt: dGVzdA==
-`, 1))
+`, 2))
 				f.RunHook()
 			})
 
 			It("Should add ca for OIDC provider", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
+			})
+		})
+
+		Context("Adding secret with empty ca.crt", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ingress-tls
+  namespace: d8-user-authn
+data:
+  ca.crt: ""
+  tls.crt: dGVzdA==
+`, 2))
+				f.RunHook()
+			})
+
+			It("Should add tls.crt for OIDC provider", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("userAuthn.internal.discoveredDexCA").String()).To(Equal("test"))
 			})
