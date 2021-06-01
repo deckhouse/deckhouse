@@ -8,7 +8,7 @@
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   script:
-  - werf cleanup --without-kube --git-history-based-cleanup-v1.2=true
+  - werf cleanup --without-kube
   only:
     refs:
     - schedules
@@ -19,7 +19,7 @@
 .Cleanup modules registry template:
   stage: cleanup_registry
   script:
-  - ./modules_images_werf cleanup --git-history-based-cleanup-v1.2=true
+  - ./modules_images_werf cleanup
   only:
     refs:
     - schedules

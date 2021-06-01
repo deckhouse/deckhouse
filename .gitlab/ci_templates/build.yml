@@ -4,7 +4,8 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
+  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
+  - echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null
   - ./modules_images_werf bp
   except:
     variables:
@@ -38,7 +39,7 @@
   - docker pull $(werf stage image dev/install);
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
       echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
-      werf build --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true
+      werf build --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true;
       DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
       DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
       DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe:${CI_COMMIT_TAG};
