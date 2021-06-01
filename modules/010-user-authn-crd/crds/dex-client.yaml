@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Позволяет приложениям, поддерживающим DC-аутентификацию взаимодействовать с dex.
+            Allows applications that support DC authentication to interact with dex.
           required:
             - spec
           properties:
@@ -31,8 +31,8 @@ spec:
                 allowedGroups:
                   type: array
                   description: |
-                    Список групп, участникам которых разрешено подключаться к этому клиенту;
-                    **По умолчанию:** разрешено всем группам.
+                    A list of groups whose members are allowed to connect to the client;
+                    **By default**, all groups can connect.
                   items:
                     type: string
                 redirectURIs:

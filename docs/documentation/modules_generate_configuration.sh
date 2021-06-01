@@ -13,6 +13,9 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
      echo -e "\ni18n:\n  ru:" >>_data/schemas/${module_name}/config-values.yaml
      cat $module_path/openapi/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/${module_name}/config-values.yaml
   fi
+  if [ ! -f ${module_path}/docs/CONFIGURATION.md ]; then
+      continue
+  fi
   grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md
   if [ $? -eq 0 ]; then
     # Apply schema
