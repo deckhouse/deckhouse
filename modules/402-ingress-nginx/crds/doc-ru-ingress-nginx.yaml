@@ -46,6 +46,11 @@ spec:
                     * `HostPortWithProxyProtocol` — устанавливается Ingress controller, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента.
 
                       **Внимание!** При использовании этого inlet вы должны быть уверены, что запросы к Ingress направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
+                    * `HostWithFailover` — устанавливаются два Ingress controller'а - основной и резервный. Основной контроллер запускается в hostNetwork. Если поды основного контроллера не доступны, трафик уходит в резервный контроллер.
+
+                      **Внимание!** На одном хосте может быть только один controller с данным типом inlet'а.
+
+                      **Внимание!** Необходимо, чтобы на ноде были свободные порты: 80, 81, 443, 444, 10354, 10355.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol"]
                 controllerVersion:
                   type: string
@@ -100,6 +105,7 @@ spec:
                         type: string
                 loadBalancer:
                   type: object
+                  x-doc-required: false
                   description: |
                     Секция настроек для inlet'а `LoadBalancer`.
                   properties:
@@ -138,6 +144,7 @@ spec:
                       default: 'X-Forwarded-For'
                 loadBalancerWithProxyProtocol:
                   type: object
+                  x-doc-required: false
                   description: |
                     Секция настроек для inlet `LoadBalancerWithProxyProtocol`.
                   properties:
@@ -229,6 +236,7 @@ spec:
                   type: array
                   description: |
                     Список CIDR, которым разрешено подключаться к контроллеру.
+
                     Независимо от inlet всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не "адрес клиента", который может передаваться в некоторых inlet через заголовки или с использованием `proxy protocol`.
 
                     Параметр реализован при помощи [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html) и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
@@ -253,6 +261,7 @@ spec:
                         Время в секундах, которое браузер должен помнить, что сайт доступен только с помощью HTTPS.
                       pattern: '^[1-9][0-9]*$'
                       example: "31536000"
+                      x-doc-default: "31536000"
                     preload:
                       type: boolean
                       description: |
@@ -323,7 +332,7 @@ spec:
                   required: ['mode']
                   type: object
                   description: |
-                    Настройки максимальных значений cpu и memory, которые может запросить под при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).
+                    Настройки максимальных значений CPU и memory, которые может запросить под при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).
                   properties:
                     mode:
                       type: string
@@ -345,7 +354,7 @@ spec:
                         cpu:
                           type: object
                           description: |
-                            Настройки для cpu.
+                            Настройки для CPU.
                           properties:
                             max:
                               description: |
@@ -380,7 +389,7 @@ spec:
                         cpu:
                           type: string
                           description: |
-                            Значение для запроса cpu.
+                            Значение для запроса CPU.
                           default: '50m'
                         memory:
                           type: string
@@ -391,6 +400,9 @@ spec:
                   type: object
                   description: |
                     Секция с настройкой кастомизации HTTP-ошибок (если секция определена, то все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех Ingress NGINX контроллеров**).
+                    * `serviceName` — имя сервиса, который будет использоваться, как custom default backend.
+                    * `namespace` — имя namespace, в котором будет находиться сервис, используемый, как custom default backend.
+                    * `codes` — список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:

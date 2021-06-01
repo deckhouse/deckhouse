@@ -68,9 +68,25 @@ module Jekyll
         result.push(converter.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))) if attributes['description']
 
         if attributes.has_key?('x-doc-default')
-            result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['x-doc-default'].to_json}`"))
+            if attributes['x-doc-default'].is_a?(Array)
+                result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['x-doc-default'].to_json}`"))
+            else
+                if attributes['type'] == 'string'
+                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `\"#{attributes['x-doc-default']}\"`"))
+                else
+                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['x-doc-default']}`"))
+                end
+            end
         elsif attributes.has_key?('default')
-            result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default'].to_json}`"))
+            if attributes['default'].is_a?(Array)
+                result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default'].to_json}`"))
+            else
+                if attributes['type'] == 'string'
+                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `\"#{attributes['default']}\"`"))
+                else
+                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default']}`"))
+                end
+            end
         end
 
         if attributes.has_key?('x-doc-versionType')
@@ -128,28 +144,39 @@ module Jekyll
             result.push(converter.convert(description.to_s))
         end
 
-        if attributes.has_key?('example')
+        if attributes.has_key?('x-doc-example')
+            exampleObject = attributes['example']
+        elsif attributes.has_key?('example')
             exampleObject = attributes['example']
         elsif attributes.has_key?('x-examples')
             exampleObject = attributes['x-examples']
         end
         if exampleObject != nil
-
             example =  '**' + get_i18n_term('example').capitalize + ':** ' +
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
                             exampleObject['oneOf'].map { |e| "`#{e.to_json}`" }.join(' ' + get_i18n_term('or') + ' ')
-                        elsif exampleObject.is_a?(Array)
+                        elsif exampleObject.is_a?(Array) || exampleObject.is_a?(Hash)
                             '`' + exampleObject.map { |e| "`#{e.to_json}`" }.join('`, `') + '`'
                         else
-                            "`#{exampleObject.to_json}`"
+                            if attributes['type'] == 'string'
+                                "`\"#{exampleObject}\"`"
+                            else
+                                "`#{exampleObject}`"
+                            end
                         end
             result.push(converter.convert(example.to_s))
         end
 
         if parent.has_key?('required') && parent['required'].include?(name)
             result.push(converter.convert('**' + get_i18n_term('required_value_sentence')  + '**'))
+        elsif attributes.has_key?('x-doc-required')
+            if attributes['x-doc-required']
+                result.push(converter.convert('**' + get_i18n_term('required_value_sentence')  + '**'))
+            else
+                result.push(converter.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
+            end
         else
-            #
+            # Not sure if there will always be an optional value here...
             # result.push(converter.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
         end
         result
