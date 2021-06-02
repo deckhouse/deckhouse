@@ -366,6 +366,10 @@ entries:
                   url: /modules/110-istio/configuration.html
                 - title: Custom Resources
                   url: /modules/110-istio/cr.html
+                - title:
+                    en: "Custom Resources (by istio.io)"
+                    ru: "Custom Resources (от istio.io)"
+                  url: /modules/110-istio/istio-cr.html
             - title:
                 ru: Примеры
                 en: Usage

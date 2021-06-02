@@ -219,7 +219,7 @@ module Jekyll
             end
             result.push('</ul>')
         elsif attributes.has_key?('items')
-            if attributes['items'].has_key?("properties")
+            if get_hash_value(attributes,'items','properties')
                 # object items
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
@@ -239,6 +239,9 @@ module Jekyll
     end
 
     def format_crd(input)
+
+        return nil if !input
+
         if ( @context.registers[:page]["lang"] == 'en' )
             fallbackLanguageName = 'ru'
         else
@@ -252,12 +255,11 @@ module Jekyll
            input['i18n']['en'] = { "spec" => input["spec"] }
         end
         result.push('<div markdown="0">')
-        if ( input.has_key?("spec") and input["spec"].has_key?("validation") and
-           input["spec"]["validation"].has_key?("openAPIV3Schema")  ) or (input.has_key?("spec") and input["spec"].has_key?("versions"))
+        if ( get_hash_value(input,'spec','validation','openAPIV3Schema')  ) or (get_hash_value(input,'spec','versions'))
            then
             converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
-            if input["spec"].has_key?("validation") and input["spec"]["validation"].has_key?("openAPIV3Schema") then
+            if get_hash_value(input,'spec','validation','openAPIV3Schema') then
                 # v1beta1 CRD
 
                 result.push(converter.convert("## " + input["spec"]["names"]["kind"]))
@@ -266,7 +268,7 @@ module Jekyll
                    result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
                 end
 
-                if input["spec"]["validation"]["openAPIV3Schema"].has_key?("description")
+                if get_hash_value(input,'spec','validation','openAPIV3Schema','description')
                    if get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description") then
                        result.push(converter.convert(get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description")))
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
@@ -334,8 +336,7 @@ module Jekyll
                         activeStatus = ""
                     end
 
-                    if item.has_key?('schema') and item['schema'].has_key?('openAPIV3Schema') and
-                       item['schema']['openAPIV3Schema'].has_key?("description") then
+                    if get_hash_value(item,'schema','openAPIV3Schema','description') then
                        if  input['i18n'][@context.registers[:page]["lang"]] and
                            get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
                            input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
@@ -349,7 +350,7 @@ module Jekyll
                        end
                     end
 
-                    if item['schema']['openAPIV3Schema'].has_key?('properties')
+                    if get_hash_value(item,'schema','openAPIV3Schema','properties')
                         header = '<ul>'
                         item['schema']['openAPIV3Schema']['properties'].each do |key, value|
                         _primaryLanguage = nil
@@ -383,7 +384,7 @@ module Jekyll
                         end
                     end
 
-                    if input["spec"]["versions"].length > 1 then
+                    if get_hash_value(input,'spec','versions').length > 1 then
                         result.push("</div>")
                     end
 

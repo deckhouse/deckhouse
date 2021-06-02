@@ -87,11 +87,11 @@ git:
     - site/Gemfile.lock
     - documentation
   excludePaths:
-  - '**/werf*.yaml'
-  - '**/docker-compose.yml'
-  - '**/.werf'
-  - '**/.helm'
-  - documentation/pages/internal
+    - '**/werf*.yaml'
+    - '**/docker-compose.yml'
+    - '**/.werf'
+    - '**/.helm'
+    - documentation/pages/internal
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
@@ -102,10 +102,10 @@ git:
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/','*/crds/']
-  excludePaths: ['*/docs/internal/']
+  excludePaths: ['*/docs/internal/','110-istio/crds']
 # CRDs
-- add: /modules/010-user-authn-crd/crds
-  to: /src/modules/150-user-authn/crds
+- add: /modules/010-user-authn-crd/crds/
+  to: /src/modules/150-user-authn/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
@@ -116,9 +116,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths:
-    - node_group.yaml
-    - doc-ru-node_group.yaml
+  includePaths: ['*node_group.yaml']
 - add: /candi/cloud-providers/aws/openapi/
   to: /src/modules/030-cloud-provider-aws/crds/
   owner: jekyll
@@ -155,14 +153,21 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /modules/110-istio/crds/
+  to: /src/modules/110-istio/crds/
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*istiofederation.yaml','*istiomulticluster.yaml']
 - add: /modules/010-prometheus-crd/crds/
   to: /src/modules/300-prometheus/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /modules/010-vertical-pod-autoscaler-crd/crds
-  to: /src/modules/302-vertical-pod-autoscaler/crds
+- add: /modules/010-vertical-pod-autoscaler-crd/crds/
+  to: /src/modules/302-vertical-pod-autoscaler/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:

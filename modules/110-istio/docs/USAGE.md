@@ -2,6 +2,29 @@
 title: "The istio module: usage"
 ---
 
+## Resource examples
+
+### IstioFederation
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: example-cluster
+spec:
+  metadataEndpoint: https://istio.k8s.example.com/metadata/
+  trustDomain: example.local
+```
+
+### IstioMulticluster
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: example-cluster
+spec:
+  metadataEndpoint: https://istio.k8s.example.com/metadata/
+```
+
 ## Enabling load balancing for the `ratings.prod.svc.cluster.local` service
 
 Here is how you can enable smart load balancing for the `myservice` service that was previously load balanced via iptables:

@@ -2,6 +2,31 @@
 title: "Модуль istio: примеры конфигурации"
 ---
 
+## Примеры ресурсов
+
+### IstioFederation
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: example-cluster
+spec:
+  metadataEndpoint: https://istio.k8s.example.com/metadata/
+  trustDomain: example.local
+```
+
+### IstioMulticluster
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: example-cluster
+spec:
+  metadataEndpoint: https://istio.k8s.example.com/metadata/
+```
+
 ## Включить балансировку для сервиса `ratings.prod.svc.cluster.local`
 
 Был обыкновенный сервис `myservice`, который балансился через iptables, а мы включили умную балансировку.
