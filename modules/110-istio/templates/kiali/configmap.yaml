@@ -25,6 +25,8 @@ data:
           insecure_skip_verify: true
           type: bearer
           use_kiali_token: true
+      grafana:
+        url: http://{{ include "helm_lib_module_public_domain" (list . "prometheus") }}
       custom_dashboards:
         enabled: true
     identity: {}

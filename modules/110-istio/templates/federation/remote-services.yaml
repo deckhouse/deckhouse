@@ -13,17 +13,20 @@ spec:
   - {{ $publicService.hostname | quote }}
   location: MESH_INTERNAL
   ports:
-  - name: http1
-    number: {{ $publicService.port }}
-    protocol: http
-  resolution: DNS
+      {{- range $port := $publicService.ports }}
+  - name: {{ $port.name }}
+    number: {{ $port.port }}
+      {{- end }}
   addresses:
-  - 169.254.40.20
+  - {{ $publicService.virtualIP }}
+  resolution: STATIC
   endpoints:
       {{- range $ingressGateway := $federation.ingressGateways }}
   - address: {{ $ingressGateway.address | quote }}
     ports:
-      http1: {{ $ingressGateway.port }}
+        {{- range $port := $publicService.ports }}
+      {{ $port.name }}: {{ $ingressGateway.port }}
+        {{- end }}
       {{- end }}
 ---
 apiVersion: networking.istio.io/v1beta1

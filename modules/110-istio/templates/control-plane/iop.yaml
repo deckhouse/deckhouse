@@ -6,6 +6,8 @@ kind: VerticalPodAutoscaler
 metadata:
   name: istiod-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
+  finalizers:
+  - istio-finalizer.install.istio.io
 {{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
@@ -36,6 +38,8 @@ spec:
         env:
           - name: PILOT_SKIP_VALIDATE_TRUST_DOMAIN
             value: "true"
+          - name: ISTIO_MULTIROOT_MESH
+            value: "true"
 
     ingressGateways:
     - name: istio-ingressgateway
@@ -61,6 +65,8 @@ spec:
     defaultConfig:
       proxyMetadata:
         ISTIO_META_DNS_CAPTURE: "true"
+        PROXY_CONFIG_XDS_AGENT: "true"
+
   {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
     {{- range $federation := $.Values.istio.internal.federations }}
@@ -85,7 +91,7 @@ spec:
       logAsJson: false
       imagePullPolicy: IfNotPresent
       imagePullSecrets:
-      - deckhouse-registry
+      - d8-istio-sidecar-registry
 
       proxy:
         image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
@@ -94,7 +100,7 @@ spec:
         logLevel: warning
         componentLogLevel: "misc:error"
   {{- $include_ip_ranges := list }}
-  {{- $include_ip_ranges = append $include_ip_ranges "169.254.40.20/32" }}
+  {{- $include_ip_ranges = append $include_ip_ranges "169.254.0.0/16" }}
   {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.podSubnet }}
   {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.serviceSubnet }}
   {{- $include_ip_ranges = concat ($.Values.istio.sidecar.includeOutboundIPRanges | default list) $include_ip_ranges }}

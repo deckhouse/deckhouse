@@ -106,7 +106,7 @@
           "refId": "A"
         },
         {
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[1m]))/ (round(sum(rate(istio_requests_total[1m])), 0.001)/1000))/ (sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[1m])) >bool 10)",
+          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace!=\"d8-istio\",container=\"istio-proxy\"}[1m]))/ (round(sum(rate(istio_requests_total[1m])), 0.001)/1000))/ (sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[1m])) >bool 10)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -198,7 +198,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[1m]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace!=\"d8-istio\",container=\"istio-proxy\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -303,7 +303,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(container_memory_working_set_bytes{namespace!=\"istio-system\",container=\"istio-proxy\"}) / count(container_memory_working_set_bytes{namespace!=\"istio-system\",container=\"istio-proxy\"})",
+          "expr": "sum(container_memory_working_set_bytes{namespace!=\"d8-istio\",container=\"istio-proxy\"}) / count(container_memory_working_set_bytes{namespace!=\"d8-istio\",container=\"istio-proxy\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "per istio proxy",
@@ -395,7 +395,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(istio_response_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[1m])) + sum(rate(istio_request_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[1m]))",
+          "expr": "sum(rate(istio_response_bytes_sum{source_workload_namespace!=\"d8-istio\", reporter=\"source\"}[1m])) + sum(rate(istio_request_bytes_sum{source_workload_namespace!=\"d8-istio\", reporter=\"source\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",

@@ -38,8 +38,43 @@ function __config__() {
 EOF
 }
 
+function _ip_address_iterator() {
+  octet_3="$(cat $octet_3_store)"
+  octet_4="$(cat $octet_4_store)"
+  octet_4=$((octet_4 + 1))
+  if [[ $octet_4 == "256" ]]; then
+    octet_3=$((octet_3 + 1))
+    octet_4=0
+  fi
+  if [[ $octet_3 == "256" ]]; then
+    echo 1>&2 "ERROR: IP pool for ServiceEntries is over. Too many remote public services."
+    return 1
+  fi
+  echo $octet_3 > $octet_3_store
+  echo $octet_4 > $octet_4_store
+
+  echo "169.254.${octet_3}.${octet_4}"
+}
+
 function __main__() {
-  federations="$(context::jq -c '[.snapshots.federations[].filterResult | select(.ingressGateways and .publicServices and .public) | del(.public)]')"
+  export octet_3_store="$(mktemp)"
+  export octet_4_store="$(mktemp)"
+  echo 0 > $octet_3_store
+  echo 0 > $octet_4_store
+
+  # The `| .publicServices = [.publicServices[] | select(.ports)]` section is Migration until new crd status spec will be filled
+  federations="$(context::jq -c '[
+    .snapshots.federations[].filterResult | select(.ingressGateways and .publicServices and .public) | del(.public)
+    | .publicServices = [.publicServices[] | select(.ports)]
+  ] | sort')"
+
+  for idx_f in $(jq -r '. | keys[]' <<< "$federations"); do
+    for idx_s in $(jq -r --argjson idx_f $idx_f '.[$idx_f].publicServices | keys[]' <<< "$federations"); do
+      ip="$(_ip_address_iterator)"
+      federations="$(jq -c --argjson idx_f $idx_f --argjson idx_s $idx_s --arg ip $ip '.[$idx_f].publicServices[$idx_s].virtualIP = $ip' <<< "$federations")"
+    done
+  done
+
   multiclusters="$(context::jq -c '[.snapshots.multiclusters[].filterResult | select(.apiHost and .public)]')"
   remotePublicMetadata="$(context::jq -c '
     [.snapshots.federations[].filterResult | select(.public) | .public] +
@@ -47,7 +82,8 @@ function __main__() {
     map({(.clusterUUID): (. | del(.clusterUUID))}) | add
   ')"
 
-  # The fastest solution to generate api JWT tokens for multicluster
+  # The fastest solution to generate api JWT tokens for multicluster remote api.
+  # Without deckhouse restart, the token will expire in one year.
   # TODO: reorganize this
   for i in $(jq -r 'keys[]' <<< "$multiclusters"); do
     multiclusterName="$(jq -r --argjson i "$i" -c '.[$i].name'               <<< "$multiclusters")"
@@ -72,6 +108,8 @@ function __main__() {
   values::set istio.internal.federations "$federations"
   values::set istio.internal.multiclusters "$multiclusters"
   values::set istio.internal.remotePublicMetadata "$remotePublicMetadata"
+
+  rm $octet_3_store $octet_4_store
 }
 
 hook::run "$@"

@@ -47,8 +47,6 @@ spec:
         - "/opt/kiali/kiali"
         - "-config"
         - "/kiali-configuration/config.yaml"
-        - "-v"
-        - "3"
         ports:
         - name: api-port
           containerPort: 20001

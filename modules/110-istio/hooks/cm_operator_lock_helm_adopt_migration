@@ -1,0 +1,35 @@
+#!/bin/bash
+# Migration 2021-05-20: delete after first deploy
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+  configVersion: v1
+  kubernetes:
+  - name: cms
+    group: main
+    queue: /modules/$(module::name::kebab_case)/migration
+    keepFullObjectsInMemory: false
+    apiVersion: v1
+    kind: ConfigMap
+    namespace:
+      nameSelector:
+        matchNames: ["d8-istio"]
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "needAdopt": ((.metadata.name | test("^istio-operator-lock-")) and (.metadata.labels."app.kubernetes.io/managed-by" != "Helm"))
+      }
+EOF
+}
+
+function __main__() {
+  for name in $(context::jq -r '.snapshots.cms[].filterResult | select(.needAdopt) | .name'); do
+    kubectl -n d8-istio label    configmap $name app.kubernetes.io/managed-by=Helm        --overwrite
+    kubectl -n d8-istio annotate configmap $name meta.helm.sh/release-name=istio          --overwrite
+    kubectl -n d8-istio annotate configmap $name meta.helm.sh/release-namespace=d8-system --overwrite
+  done
+}
+
+hook::run "$@"

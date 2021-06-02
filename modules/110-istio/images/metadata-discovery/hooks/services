@@ -19,7 +19,7 @@ function __config__() {
       jqFilter: |
         {
           "hostname": (.metadata.name + "." + .metadata.namespace + ".svc.$CLUSTER_DOMAIN"),
-          "port": (.spec.ports[0] | .port)
+          "ports": [.spec.ports[] | {"name": .name, "port": .port}]
         }
 EOF
 }
@@ -28,7 +28,7 @@ function __main__() {
   context::jq '
     {
       "publicServices": [
-        .snapshots.public_services[] | {"hostname": .filterResult.hostname, "port": .filterResult.port}
+        .snapshots.public_services[].filterResult
       ]
     }' > /metadata/services.json
 }
