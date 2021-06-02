@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: istiofederations.deckhouse.io
+  name: istiomulticlusters.deckhouse.io
   labels:
     heritage: deckhouse
     module: istio
@@ -9,9 +9,9 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: istiofederations
-    singular: istiofederation
-    kind: IstioFederation
+    plural: istiomulticlusters
+    singular: istiomulticluster
+    kind: IstioMulticluster
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -30,17 +30,8 @@ spec:
             spec:
               type: object
               required:
-              - trustDomain
               - metadataEndpoint
               properties:
-                trustDomain:
-                  type: string
-                  description: |
-                    The `TrustDomain` of the remote cluster.
-
-                    A mandatory parameter, however, it isn't used currently since Istio cannot match TrustDomain with the root CA.
-                  pattern: '^[0-9a-zA-Z._-]+$'
-                  example: 'cluster.local'
                 metadataEndpoint:
                   type: string
                   description: |
@@ -65,27 +56,8 @@ spec:
                     publicLastFetchTimestamp:
                       type: string
                       format: date-time
-                    ingressGateways:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          address:
-                            type: string
-                          port:
-                            type: integer
-                    ingressGatewaysLastFetchTimestamp:
-                      format: date-time
+                    apiHost:
                       type: string
-                    publicServices:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          hostname:
-                            type: string
-                          port:
-                            type: integer
-                    publicServicesLastFetchTimestamp:
-                      format: date-time
+                    apiHostLastFetchTimestamp:
                       type: string
+                      format: date-time
