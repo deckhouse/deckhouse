@@ -1,0 +1,7 @@
+positive:
+  values:
+  - internal:
+      CACert: a
+      CAKey: b
+      serverCert: c
+      serverKey: d

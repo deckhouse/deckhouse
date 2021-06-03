@@ -7,11 +7,6 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const (
-	initValuesString       = `{"global": {}}`
-	initConfigValuesString = `{}`
-)
-
 var _ = Describe("Module hooks :: vertical-pod-autoscaler :: set_maxallowed", func() {
 	const TwoVpasWithoutRecommendations = `
 ---

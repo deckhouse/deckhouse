@@ -25,7 +25,7 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 	// There is no Session for go hooks, so this matcher is just ignored
 	if hec.GoHook != nil {
 		if hec.GoHookError != nil {
-			return false, hec.GoHookError
+			return false, nil
 		}
 
 		return true, nil
