@@ -100,7 +100,7 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 	var result []byte
 
 	var lastErr error
-	err := retry.StartSilentLoop("getting logs for error", 2, 1, func() error {
+	err := retry.NewSilentLoop("getting logs for error", 2, 1*time.Second).Run(func() error {
 		request := d.kubeCl.CoreV1().Pods("d8-system").GetLogs(d.deckhousePod.Name, &logOptions)
 		result, lastErr = request.DoRaw(context.TODO())
 		if lastErr != nil {

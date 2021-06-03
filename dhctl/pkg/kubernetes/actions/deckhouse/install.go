@@ -356,7 +356,7 @@ func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
 }
 
 func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
-	return retry.StartLoop("Waiting for Kubernetes API to become Ready", 45, 5, func() error {
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).Run(func() error {
 		_, err := kubeCl.Discovery().ServerVersion()
 		if err == nil {
 			return nil

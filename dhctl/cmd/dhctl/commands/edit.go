@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -64,13 +65,13 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string, 
 					log.InfoLn("Configurations are equal. Nothing to update.")
 					return nil
 				}
-				return retry.StartLoop(
-					fmt.Sprintf("Update %s secret", name), 5, 5, func() error {
-						_, err = kubeCl.CoreV1().
-							Secrets("kube-system").
-							Patch(context.TODO(), secret, types.MergePatchType, content, metav1.PatchOptions{})
-						return err
-					})
+				return retry.NewLoop(
+					fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).Run(func() error {
+					_, err = kubeCl.CoreV1().
+						Secrets("kube-system").
+						Patch(context.TODO(), secret, types.MergePatchType, content, metav1.PatchOptions{})
+					return err
+				})
 			})
 	})
 

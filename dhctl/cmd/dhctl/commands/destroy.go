@@ -33,40 +33,74 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 `
 )
 
-func getClientOnce(sshClient *ssh.Client, kubeCl **client.KubernetesClient) error {
-	var err error
-	if *kubeCl == nil {
-		var cl *client.KubernetesClient
-		cl, err = operations.ConnectToKubernetesAPI(sshClient)
-		if err != nil {
-			return err
-		}
-
-		*kubeCl = cl
-
-		if info := deckhouse.GetClusterInfo(*kubeCl); info != "" {
-			_ = log.Process("common", "Cluster Info", func() error { log.InfoF(info); return nil })
-		}
-	}
-	return err
+type k8sClientGetter struct {
+	convergeLock *client.LeaseLock
+	sshClient    *ssh.Client
+	kubeCl       *client.KubernetesClient
 }
 
-func deleteResources(sshClient *ssh.Client, kubeCl **client.KubernetesClient) error {
+func newK8sClientGetter(sshClient *ssh.Client) *k8sClientGetter {
+	return &k8sClientGetter{
+		sshClient: sshClient,
+	}
+}
+
+func (g *k8sClientGetter) convergeUnlock(onlyNil bool) {
+	if onlyNil {
+		g.convergeLock = nil
+		return
+	}
+
+	if g.convergeLock != nil {
+		g.convergeLock.Unlock()
+		g.convergeLock = nil
+	}
+}
+
+func (g *k8sClientGetter) get() (*client.KubernetesClient, error) {
+	if g.kubeCl != nil {
+		return g.kubeCl, nil
+	}
+
+	kubeCl, err := operations.ConnectToKubernetesAPI(g.sshClient)
+	if err != nil {
+		return nil, err
+	}
+
+	destroyerIdentity := config.GetLocalConvergeLockIdentity("local-destroyer")
+	leaseConfig := config.GetConvergeLockLeaseConfig(destroyerIdentity)
+	convergeLock := client.NewLeaseLock(kubeCl, leaseConfig)
+	err = convergeLock.Lock()
+	if err != nil {
+		return nil, err
+	}
+
+	if info := deckhouse.GetClusterInfo(kubeCl); info != "" {
+		_ = log.Process("common", "Cluster Info", func() error { log.InfoF(info); return nil })
+	}
+
+	g.kubeCl = kubeCl
+	g.convergeLock = convergeLock
+
+	return kubeCl, err
+}
+
+func deleteResources(k8sCliGetter *k8sClientGetter) error {
 	if app.SkipResources {
 		return nil
 	}
 
-	err := getClientOnce(sshClient, kubeCl)
+	kubeCl, err := k8sCliGetter.get()
 	if err != nil {
 		return err
 	}
 
 	return log.Process("common", "Delete resources from the Kubernetes cluster", func() error {
-		return deleteEntities(*kubeCl)
+		return deleteEntities(kubeCl)
 	})
 }
 
-func loadMetaConfig(sshClient *ssh.Client, kubeCl **client.KubernetesClient, stateCache *cache.StateCache) (*config.MetaConfig, error) {
+func loadMetaConfig(k8sCliGetter *k8sClientGetter, stateCache *cache.StateCache) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -80,16 +114,17 @@ func loadMetaConfig(sshClient *ssh.Client, kubeCl **client.KubernetesClient, sta
 		return metaConfig, nil
 	}
 
-	if err = getClientOnce(sshClient, kubeCl); err != nil {
-		return nil, err
-	}
-
-	metaConfig, err = config.ParseConfigFromCluster(*kubeCl)
+	kubeCl, err := k8sCliGetter.get()
 	if err != nil {
 		return nil, err
 	}
 
-	metaConfig.UUID, err = converge.GetClusterUUID(*kubeCl)
+	metaConfig, err = config.ParseConfigFromCluster(kubeCl)
+	if err != nil {
+		return nil, err
+	}
+
+	metaConfig.UUID, err = converge.GetClusterUUID(kubeCl)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +144,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineSkipResourcesFlags(cmd)
 
 	runFunc := func(sshClient *ssh.Client) error {
+		k8sCliGetter := newK8sClientGetter(sshClient)
+		defer k8sCliGetter.convergeUnlock(false)
+
 		var err error
 
 		stateCache, err := cache.NewTempStateCache(sshClient.Check().String())
@@ -117,11 +155,12 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		var kubeCl *client.KubernetesClient
-		if err := deleteResources(sshClient, &kubeCl); err != nil {
+
+		if err := deleteResources(k8sCliGetter); err != nil {
 			return err
 		}
 
-		metaConfig, err := loadMetaConfig(sshClient, &kubeCl, stateCache)
+		metaConfig, err := loadMetaConfig(k8sCliGetter, stateCache)
 		if err != nil {
 			return err
 		}
@@ -136,7 +175,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return err
 			}
 		} else {
-			if err = getClientOnce(sshClient, &kubeCl); err != nil {
+			if kubeCl, err = k8sCliGetter.get(); err != nil {
 				return err
 			}
 			nodesState, err = converge.GetNodesStateFromCluster(kubeCl)
@@ -160,7 +199,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				return fmt.Errorf("can't load cluster state from cache")
 			}
 		} else {
-			if err = getClientOnce(sshClient, &kubeCl); err != nil {
+			if kubeCl, err = k8sCliGetter.get(); err != nil {
 				return err
 			}
 			clusterState, err = converge.GetClusterStateFromCluster(kubeCl)
@@ -170,6 +209,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			stateCache.Save("cluster-state", clusterState)
 		}
 
+		// why only nil lock without request unlock
+		// user may not delete resources and converge still working in cluster
+		// all node groups removing may still in long time run and
+		// we get race (destroyer destroy node group, auto applayer create nodes)
+		k8sCliGetter.convergeUnlock(true)
 		// Stop proxy because we have already gotten all info from kubernetes-api
 		if kubeCl != nil {
 			kubeCl.KubeProxy.Stop()

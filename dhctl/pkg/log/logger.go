@@ -17,6 +17,7 @@ import (
 )
 
 var defaultLogger Logger
+var emptyLogger Logger = &SilentLogger{}
 
 func init() {
 	defaultLogger = &DummyLogger{}
@@ -75,9 +76,11 @@ var (
 	_ Logger    = &PrettyLogger{}
 	_ Logger    = &SimpleLogger{}
 	_ Logger    = &DummyLogger{}
+	_ Logger    = &SilentLogger{}
 	_ io.Writer = &PrettyLogger{}
 	_ io.Writer = &SimpleLogger{}
 	_ io.Writer = &DummyLogger{}
+	_ io.Writer = &SilentLogger{}
 )
 
 type styleEntry struct {
@@ -383,4 +386,56 @@ func JSON(content []byte) {
 
 func Write(buf []byte) (int, error) {
 	return defaultLogger.Write(buf)
+}
+
+func GetDefaultLogger() Logger {
+	return defaultLogger
+}
+
+func GetSilentLogger() Logger {
+	return emptyLogger
+}
+
+type SilentLogger struct{}
+
+func (d *SilentLogger) LogProcess(_ string, t string, run func() error) error {
+	err := run()
+	return err
+}
+
+func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
+}
+
+func (d *SilentLogger) LogInfoLn(a ...interface{}) {
+}
+
+func (d *SilentLogger) LogErrorF(format string, a ...interface{}) {
+}
+
+func (d *SilentLogger) LogErrorLn(a ...interface{}) {
+}
+
+func (d *SilentLogger) LogDebugF(format string, a ...interface{}) {
+}
+
+func (d *SilentLogger) LogDebugLn(a ...interface{}) {
+}
+
+func (d *SilentLogger) LogSuccess(l string) {
+}
+
+func (d *SilentLogger) LogFail(l string) {
+}
+
+func (d *SilentLogger) LogWarnLn(a ...interface{}) {
+}
+
+func (d *SilentLogger) LogWarnF(format string, a ...interface{}) {
+}
+
+func (d *SilentLogger) LogJSON(content []byte) {
+}
+
+func (d *SilentLogger) Write(content []byte) (int, error) {
+	return len(content), nil
 }

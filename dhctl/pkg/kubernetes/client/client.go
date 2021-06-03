@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"time"
 
 	sh_kube "github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/kube/fake"
@@ -74,7 +75,7 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 		}
 	}
 
-	err = retry.StartLoop("Starting kube proxy", k.SSHClient.Settings.CountHosts(), 1, func() error {
+	err = retry.NewLoop("Starting kube proxy", k.SSHClient.Settings.CountHosts(), 1*time.Second).Run(func() error {
 		log.InfoF("Using host %s\n", k.SSHClient.Settings.Host())
 
 		k.KubeProxy = k.SSHClient.KubeProxy()

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -46,7 +47,7 @@ func ParseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	var metaConfig *MetaConfig
 	var err error
 	err = log.Process("common", "Get Cluster configuration", func() error {
-		return retry.StartLoop("Get Cluster configuration from Kubernetes cluster", 10, 5, func() error {
+		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).Run(func() error {
 			metaConfig, err = parseConfigFromCluster(kubeCl)
 			return err
 		})
@@ -61,7 +62,7 @@ func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) 
 	var metaConfig *MetaConfig
 	var err error
 
-	err = retry.StartSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5, func() error {
+	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).Run(func() error {
 		metaConfig, err = parseConfigFromCluster(kubeCl)
 		return err
 	})

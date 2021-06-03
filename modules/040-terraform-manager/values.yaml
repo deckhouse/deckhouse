@@ -1,1 +1,3 @@
-terraformManager: {}
+terraformManager:
+  autoConvergerEnabled: true
+  autoConvergerPeriod: "1h"

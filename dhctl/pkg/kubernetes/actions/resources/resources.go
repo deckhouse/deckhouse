@@ -22,7 +22,7 @@ func CreateResources(kubeCl *client.KubernetesClient, resources *config.Resource
 	for gvk := range resources.Items {
 		var resourcesList *metav1.APIResourceList
 		var err error
-		err = retry.StartSilentLoop("Get resources list", 25, 5, func() error {
+		err = retry.NewSilentLoop("Get resources list", 25, 5*time.Second).Run(func() error {
 			resourcesList, err = kubeCl.Discovery().ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 			if err != nil {
 				return fmt.Errorf("can't get preferred resources: %w", err)
@@ -79,7 +79,7 @@ func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, 
 }
 
 func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Resources, gvk schema.GroupVersionKind) error {
-	return retry.StartLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5, func() error {
+	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 25, 5*time.Second).Run(func() error {
 		gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
 		if err != nil {
 			return fmt.Errorf("can't get resource by kind and apiVersion: %w", err)

@@ -1,6 +1,7 @@
 package retry
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,87 +10,108 @@ import (
 )
 
 const attemptMessage = `Attempt #%d of %d |
-	%s failed, next attempt will be in %ds"
+	%s failed, next attempt will be in %v"
 `
 
 var InTestEnvironment = false
 
-func setupTests(attemptsQuantity, waitSeconds *int) {
+func setupTests(attemptsQuantity *int, wait *time.Duration) {
 	if InTestEnvironment {
 		*attemptsQuantity = 1
-		*waitSeconds = 0
+		*wait = 0 * time.Second
 	}
 }
 
-// TODO Proposal of new design for retry loop.
-//
-// New options for loop:
-// - interruption
-// - verbosity
-// - run in a go routine to use in async mode?
-//
-// Example:
-// err := NewLoop(name, attempts, waitSec).Verbose().Interruptable().Start(func() {
-//    doSomeJob()
-// }).Wait()
+type BreakPredicate func(err error) bool
 
-// StartLoop retries a task function until it succeeded. Number of attempts
-// and delay between runs are adjustable.
-//
-// Features:
+func IsErr(err error) BreakPredicate {
+	return func(target error) bool {
+		return errors.Is(err, target)
+	}
+}
+
+// Loop retries a task function until it succeeded with number of attempts and delay between runs are adjustable.
+type Loop struct {
+	name             string
+	attemptsQuantity int
+	waitTime         time.Duration
+	breakPredicate   BreakPredicate
+	logger           log.Logger
+	interruptable    bool
+}
+
+// NewLoop create Loop with features:
 // - it is "verbose" loop — it prints messages through logboek.
 // - this loop is interruptable by the signal watcher in tomb package.
-//
-// TODO: non-interruptable behavior should be an option.
-func StartLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
-	setupTests(&attemptsQuantity, &waitSeconds)
-	return log.Process("default", name, func() error {
-		for i := 1; i <= attemptsQuantity; i++ {
+func NewLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
+	return &Loop{
+		name:             name,
+		attemptsQuantity: attemptsQuantity,
+		waitTime:         wait,
+		logger:           log.GetDefaultLogger(),
+		interruptable:    true,
+	}
+}
+
+// NewSilentLoop create Loop with features:
+// - it is "silent" loop — no messages are printed through logboek.
+// - this loop is not interruptable by the signal watcher in tomb package.
+func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
+	return &Loop{
+		name:             name,
+		attemptsQuantity: attemptsQuantity,
+		waitTime:         wait,
+		logger:           log.GetSilentLogger(),
+		// - this loop is not interruptable by the signal watcher in tomb package.
+		interruptable: false,
+	}
+}
+
+func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
+	l.breakPredicate = pred
+	return l
+}
+
+func (l *Loop) WithInterruptable(flag bool) *Loop {
+	l.interruptable = flag
+	return l
+}
+
+// Run retries a task function until it succeeded or break task retries if break predicate returns true
+func (l *Loop) Run(task func() error) error {
+	setupTests(&l.attemptsQuantity, &l.waitTime)
+
+	loopBody := func() error {
+		var err error
+		for i := 1; i <= l.attemptsQuantity; i++ {
 			// Check if process is interrupted.
-			if tomb.IsInterrupted() {
+			if l.interruptable && tomb.IsInterrupted() {
 				return fmt.Errorf("loop was canceled: graceful shutdown")
 			}
 
 			// Run task and return if everything is ok.
-			err := task()
+			err = task()
 			if err == nil {
-				log.Success("Succeeded!\n")
+				l.logger.LogSuccess("Succeeded!\n")
 				return nil
 			}
 
-			log.Fail(fmt.Sprintf(attemptMessage, i, attemptsQuantity, name, waitSeconds))
-			log.InfoF("\tError: %v\n\n", err)
+			if l.breakPredicate != nil && l.breakPredicate(err) {
+				l.logger.LogInfoLn("Client break loop with %v", err)
+				return err
+			}
 
-			// Do not wait after the last iteration.
-			if i < attemptsQuantity {
-				time.Sleep(time.Duration(waitSeconds) * time.Second)
+			l.logger.LogFail(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			l.logger.LogInfoF("\tError: %v\n\n", err)
+
+			// Do not waitTime after the last iteration.
+			if i < l.attemptsQuantity {
+				time.Sleep(l.waitTime)
 			}
 		}
-		return fmt.Errorf("loop %q timed out", name)
-	})
-}
 
-// StartSilentLoop retries a task function until it succeeded. Number of attempts
-// and delay between runs are adjustable.
-//
-// Features:
-// - it is "silent" loop — no messages are printed through logboek.
-// - this loop is not interruptable by the signal watcher in tomb package.
-//
-// TODO: interruptable behavior should be an option.
-func StartSilentLoop(name string, attemptsQuantity, waitSeconds int, task func() error) error {
-	setupTests(&attemptsQuantity, &waitSeconds)
-	var err error
-	for i := 1; i <= attemptsQuantity; i++ {
-		// Run task and return if everything is ok.
-		err = task()
-		if err == nil {
-			return nil
-		}
-		// Do not wait after the last iteration.
-		if i < attemptsQuantity {
-			time.Sleep(time.Duration(waitSeconds) * time.Second)
-		}
+		return fmt.Errorf("timeout while %q: last error: %v", l.name, err)
 	}
-	return fmt.Errorf("timeout while %q: last error: %v", name, err)
+
+	return l.logger.LogProcess("default", l.name, loopBody)
 }
