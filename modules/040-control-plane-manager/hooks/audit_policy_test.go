@@ -25,7 +25,7 @@ metadata:
   name: audit-policy
   namespace: kube-system
 data:
-  audit-policy.yaml: c3RhdGVB
+  audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEK
 `
 		stateB = `
 apiVersion: v1
@@ -34,7 +34,16 @@ metadata:
   name: audit-policy
   namespace: kube-system
 data:
-  audit-policy.yaml: c3RhdGVC
+  audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogICAgLSAiUmVxdWVzdFJlY2VpdmVkIgo=
+`
+		invalidPolicy = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: audit-policy
+  namespace: kube-system
+data:
+  audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKICBzb21rZXk6IGludmFsaWRvbmUK
 `
 	)
 
@@ -53,6 +62,19 @@ data:
 		It("controlPlaneManager.internal.auditPolicy must be empty", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("controlPlaneManager.internal.auditPolicy").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Invalid policy set", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(invalidPolicy))
+			f.RunHook()
+		})
+
+		It("Must fail on yaml validation", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+			Expect(f.GoHookError).Should(MatchError("invalid policy.yaml format"))
 		})
 	})
 
@@ -90,7 +112,7 @@ data:
 
 		It("controlPlaneManager.internal.auditPolicy must be stateA", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String()).To(Equal("c3RhdGVB"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String()).To(Equal("YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEK"))
 		})
 
 		Context("Cluster changed to stateB", func() {
@@ -102,9 +124,8 @@ data:
 
 			It("controlPlaneManager.internal.auditPolicy must be stateB", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String()).To(Equal("c3RhdGVC"))
+				Expect(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String()).To(Equal("YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogICAgLSAiUmVxdWVzdFJlY2VpdmVkIgo="))
 			})
 		})
 	})
-
 })

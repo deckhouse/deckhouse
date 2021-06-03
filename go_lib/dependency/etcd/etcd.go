@@ -5,13 +5,16 @@ package etcd
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"io/ioutil"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
 )
 
 type Client interface {
+	clientv3.Cluster
 	clientv3.KV
 	clientv3.Watcher
 }
@@ -24,11 +27,21 @@ func New(endpoints []string, options ...Option) (Client, error) {
 	}
 
 	cfg := clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 10 * time.Second,
+		Endpoints:            endpoints,
+		DialTimeout:          10 * time.Second,
+		AutoSyncInterval:     30 * time.Second,
+		DialOptions:          []grpc.DialOption{grpc.WithBlock()},
+		DialKeepAliveTime:    60 * time.Second,
+		DialKeepAliveTimeout: 5 * time.Second,
 	}
 	if opts.tls != nil {
 		cfg.TLS = opts.tls
+	}
+	if opts.insecureSkipVerify {
+		if cfg.TLS == nil {
+			cfg.TLS = &tls.Config{}
+		}
+		cfg.TLS.InsecureSkipVerify = true
 	}
 
 	cli, err := clientv3.New(cfg)
@@ -37,13 +50,14 @@ func New(endpoints []string, options ...Option) (Client, error) {
 }
 
 type etcdOptions struct {
-	tls *tls.Config
+	tls                *tls.Config
+	insecureSkipVerify bool
 }
 
 type Option func(options *etcdOptions)
 
 // WithClientCert add client certificate authentication
-func WithClientCert(clientCert, caCert *x509.Certificate) Option {
+func WithClientCert(clientCert *tls.Certificate, caCert *x509.Certificate) Option {
 	return func(options *etcdOptions) {
 		pool := x509.NewCertPool()
 		pool.AddCert(caCert)
@@ -51,7 +65,7 @@ func WithClientCert(clientCert, caCert *x509.Certificate) Option {
 			options.tls = &tls.Config{}
 		}
 
-		options.tls.Certificates = []tls.Certificate{{Leaf: clientCert}}
+		options.tls.Certificates = []tls.Certificate{*clientCert}
 		options.tls.RootCAs = pool
 	}
 }
@@ -77,5 +91,44 @@ func WithClientCertFile(caFilePath, certFilePath, keyFilePath string) Option {
 
 		options.tls.Certificates = []tls.Certificate{cert}
 		options.tls.RootCAs = pool
+	}
+}
+
+func WithBase64Certs(ca, cert, key string) Option {
+	return func(options *etcdOptions) {
+		caData, err := base64.StdEncoding.DecodeString(ca)
+		if err != nil {
+			return
+		}
+		certData, err := base64.StdEncoding.DecodeString(cert)
+		if err != nil {
+			return
+		}
+		keyData, err := base64.StdEncoding.DecodeString(key)
+		if err != nil {
+			return
+		}
+
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(caData)
+
+		cert, err := tls.X509KeyPair(certData, keyData)
+		if err != nil {
+			return
+		}
+
+		if options.tls == nil {
+			options.tls = &tls.Config{}
+		}
+
+		options.tls.Certificates = []tls.Certificate{cert}
+		options.tls.RootCAs = pool
+	}
+}
+
+// WithInsecureSkipVerify skip tls check
+func WithInsecureSkipVerify() Option {
+	return func(options *etcdOptions) {
+		options.insecureSkipVerify = true
 	}
 }

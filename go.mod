@@ -4,13 +4,14 @@ go 1.15
 
 require (
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210524152913-e858a0b7786c // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210526084343-dcf1732d2d7c // branch: master
 	github.com/flant/shell-operator v1.0.2-0.20210524145531-147332b951de // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
@@ -28,6 +29,7 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/otiai10/copy v1.0.2
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/procfs v0.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spaolacci/murmur3 v1.1.0
@@ -42,6 +44,7 @@ require (
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.4.1 // indirect
 	golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963 // indirect
+	google.golang.org/grpc v1.32.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
@@ -49,6 +52,7 @@ require (
 	k8s.io/api v0.19.11
 	k8s.io/apiextensions-apiserver v0.19.11
 	k8s.io/apimachinery v0.20.5
+	k8s.io/apiserver v0.19.11
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.9.2
 	k8s.io/client-go v0.19.11
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73

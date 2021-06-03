@@ -27,6 +27,8 @@ properties:
           * `127.0.0.1`
           * *current_hostname*
           * *hostIP*
+        x-examples:
+          - [ "my-site.com", "192.168.67.76" ]
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-]+$'
@@ -40,6 +42,8 @@ properties:
             type: string
             description: |
               OIDC provider URL.
+            x-examples:
+              - "https://my-super-site.tech/"
           oidcCA:
             type: string
             description: |
@@ -54,6 +58,8 @@ properties:
             type: string
             description: |
               Authorization webhook URL.
+            x-examples:
+              - "https://127.0.0.1:40443/"
           webhookCA:
             type: string
             description: |
@@ -91,9 +97,11 @@ properties:
         type: array
         description: |
           `etcd` external members array (they will not be deleted).
+        x-examples:
+          - ["main-master-1", "my-external-member"]
         items:
           type: string
-          pattern: '^[0-9a-zA-Z\.-:\/]+$'
+          pattern: '^[0-9a-zA-Z\.-:\-\/]+$'
   nodeMonitorGracePeriodSeconds:
     type: integer
     default: 40

@@ -1,26 +1,24 @@
 package modules
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 )
 
-const commonTestGoContent = `package hooks
-
-import (
-	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
-
+const (
+	ginkgoImport        = `. "github.com/onsi/ginkgo"`
+	gomegaImport        = `. "github.com/onsi/gomega"`
+	commonTestGoContent = `
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
 `
+)
 
 func commonTestGoForHooks(name, path string) errors.LintRuleError {
 	if !isExistsOnFilesystem(path, hooksDir) {
@@ -51,13 +49,33 @@ func commonTestGoForHooks(name, path string) errors.LintRuleError {
 		)
 	}
 
-	if string(contentBytes) != commonTestGoContent {
+	var errs []string
+	if !strings.Contains(string(contentBytes), commonTestGoContent) {
+		errs = append(errs,
+			fmt.Sprintf("Module content of %q file does not contain:\n\t%s", commonTestPath, commonTestGoContent),
+		)
+	}
+
+	if !strings.Contains(string(contentBytes), gomegaImport) {
+		errs = append(errs,
+			fmt.Sprintf("Module content of %q file does not contain:\n\t%s", commonTestPath, gomegaImport),
+		)
+	}
+
+	if !strings.Contains(string(contentBytes), ginkgoImport) {
+		errs = append(errs,
+			fmt.Sprintf("Module content of %q file does not contain:\n\t%s", commonTestPath, ginkgoImport),
+		)
+	}
+
+	if len(errs) > 0 {
+		errstr := strings.Join(errs, "\n")
+
 		return errors.NewLintRuleError(
 			"MODULE001",
 			moduleLabel(name),
 			nil,
-			"Module content of %q file is different from default\nContent should be equal to:\n%s",
-			commonTestPath, commonTestGoContent,
+			errstr,
 		)
 	}
 

@@ -134,7 +134,8 @@ var _ = Describe("Modules :: controler-plane-manager :: hooks :: get_pki_checksu
 		})
 
 		It("Hook must fail", func() {
-			Expect(f).To(Not(ExecuteSuccessfully()))
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(BeEquivalentTo("global.clusterConfiguration.kubernetesVersion required"))
 		})
 	})
 
