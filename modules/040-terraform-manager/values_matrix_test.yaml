@@ -34,4 +34,9 @@ global:
           - "test-1"
           - "test-2/master"
 
-terraformManager: {}
+terraformManager:
+  autoConvergerPeriod:
+    __ConstantChoices__:
+      - "3s"
+      - "6m30s"
+      - "1h6m30s"

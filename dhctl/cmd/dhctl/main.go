@@ -50,6 +50,7 @@ func main() {
 	}
 
 	commands.DefineConvergeCommand(kpApp)
+	commands.DefineAutoConvergeCommand(kpApp)
 
 	commands.DefineDestroyCommand(kpApp)
 

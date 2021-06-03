@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	apiv1 "k8s.io/api/core/v1"
@@ -33,7 +34,7 @@ type NodeGroupTerraformState struct {
 func GetNodesStateFromCluster(kubeCl *client.KubernetesClient) (map[string]NodeGroupTerraformState, error) {
 	extractedState := make(map[string]NodeGroupTerraformState)
 
-	err := retry.StartLoop("Get Nodes Terraform state from Kubernetes cluster", 5, 5, func() error {
+	err := retry.NewLoop("Get Nodes Terraform state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
 		nodeStateSecrets, err := kubeCl.CoreV1().Secrets("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "node.deckhouse.io/terraform-state"})
 		if err != nil {
 			return err
@@ -71,7 +72,7 @@ func GetNodesStateFromCluster(kubeCl *client.KubernetesClient) (map[string]NodeG
 
 func GetClusterStateFromCluster(kubeCl *client.KubernetesClient) ([]byte, error) {
 	var state []byte
-	err := retry.StartLoop("Get Cluster Terraform state from Kubernetes cluster", 5, 5, func() error {
+	err := retry.NewLoop("Get Cluster Terraform state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
 		clusterStateSecret, err := kubeCl.CoreV1().Secrets("d8-system").Get(context.TODO(), "d8-cluster-terraform-state", metav1.GetOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
@@ -103,7 +104,7 @@ func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGro
 			return err
 		},
 	}
-	return retry.StartLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10, task.CreateOrUpdate)
+	return retry.NewLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10*time.Second).Run(task.CreateOrUpdate)
 }
 
 func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte) error {
@@ -125,7 +126,7 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 			return err
 		},
 	}
-	return retry.StartLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10, task.CreateOrUpdate)
+	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).Run(task.CreateOrUpdate)
 }
 
 func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
@@ -177,7 +178,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 		},
 	}
 
-	return retry.StartLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10, func() error {
+	return retry.NewLoop(fmt.Sprintf("Save Terraform state for master Node %s", nodeName), 45, 10*time.Second).Run(func() error {
 		var allErrs *multierror.Error
 		for _, task := range tasks {
 			if err := task.CreateOrUpdate(); err != nil {
@@ -219,7 +220,8 @@ func SaveNodeIntermediateTerraformState(kubeCl *client.KubernetesClient, nodeNam
 			return err
 		},
 	}
-	return retry.StartSilentLoop(fmt.Sprintf("Save intermediate Terraform state for Node %q", nodeName), 45, 10, task.PatchOrCreate)
+	taskName := fmt.Sprintf("Save intermediate Terraform state for Node %q", nodeName)
+	return retry.NewSilentLoop(taskName, 45, 10*time.Second).Run(task.PatchOrCreate)
 }
 
 func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terraform.PipelineOutputs) error {
@@ -240,7 +242,7 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 		},
 	}
 
-	err := retry.StartLoop("Save Cluster Terraform state", 45, 10, task.CreateOrUpdate)
+	err := retry.NewLoop("Save Cluster Terraform state", 45, 10*time.Second).Run(task.CreateOrUpdate)
 	if err != nil {
 		return err
 	}
@@ -254,7 +256,7 @@ func SaveClusterTerraformState(kubeCl *client.KubernetesClient, outputs *terrafo
 		return err
 	}
 
-	return retry.StartLoop("Update cloud discovery data", 45, 10, func() error {
+	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).Run(func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
 			context.TODO(),
 			"d8-provider-cluster-configuration",
@@ -284,18 +286,18 @@ func SaveClusterIntermediateTerraformState(kubeCl *client.KubernetesClient, outp
 		},
 	}
 
-	return retry.StartSilentLoop("Save Cluster intermediate Terraform state", 45, 10, task.Patch)
+	return retry.NewSilentLoop("Save Cluster intermediate Terraform state", 45, 10*time.Second).Run(task.Patch)
 }
 
 func DeleteTerraformState(kubeCl *client.KubernetesClient, secretName string) error {
-	return retry.StartLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10, func() error {
+	return retry.NewLoop(fmt.Sprintf("Delete Terraform state %s", secretName), 45, 10*time.Second).Run(func() error {
 		return kubeCl.CoreV1().Secrets("d8-system").Delete(context.TODO(), secretName, metav1.DeleteOptions{})
 	})
 }
 
 func GetClusterUUID(kubeCl *client.KubernetesClient) (string, error) {
 	var clusterUUID string
-	err := retry.StartLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5, func() error {
+	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5*time.Second).Run(func() error {
 		uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "d8-cluster-uuid", metav1.GetOptions{})
 		if err != nil {
 			return err

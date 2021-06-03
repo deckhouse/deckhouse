@@ -21,7 +21,7 @@ if [[ "x$id" == "x" ]]; then
 
   echo -e "\n#3 Install dev dependencies\n==="
 
-  docker exec "$id" apk add go
+  docker exec "$id" apk add go curl
   # install linter
   docker exec -i "$id" sh -c 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)"/bin v1.32.2'
   docker exec "$id" sh -c 'ln -fs /root/go/bin/golangci-lint /usr/local/bin/golangci-lint'

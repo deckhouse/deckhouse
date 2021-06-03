@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/go-multierror"
 
@@ -24,97 +22,110 @@ const (
 	noNodesConfirmationMessage = `Cluster has no nodes created by Terraform. Do you want to continue and create nodes?`
 )
 
+type Phase string
+
+const (
+	PhaseBaseInfra = Phase("base-infrastructure")
+	PhaseAllNodes  = Phase("all-nodes")
+)
+
 var ErrConvergeInterrupted = errors.New("Interrupted.")
 
-func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, intermediateStateSave bool) error {
-	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
+type Runner struct {
+	kubeCl         *client.KubernetesClient
+	changeSettings *terraform.ChangeActionSettings
+	leaseConfig    client.LeaseLockConfig
 
-	nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
-	if err != nil {
-		return err
-	} else if nodeExists {
-		return fmt.Errorf("node with name %s exists in cluster", nodeName)
-	}
-
-	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
-	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
-
-	runner := terraform.NewRunnerFromConfig(cfg, step).
-		WithVariables(nodeConfig).
-		WithName(nodeName).
-		WithAutoApprove(true)
-	tomb.RegisterOnShutdown(nodeName, runner.Stop)
-
-	if intermediateStateSave {
-		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
-	}
-
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
-	if err != nil {
-		return err
-	}
-
-	if tomb.IsInterrupted() {
-		return ErrConvergeInterrupted
-	}
-
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	excludedNodes map[string]bool
+	skipPhases    map[Phase]bool
 }
 
-func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, intermediateStateSave bool) (*terraform.PipelineOutputs, error) {
-	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, masterNodeGroupName, index)
+func NewRunner(kubeCl *client.KubernetesClient, leaseConfig client.LeaseLockConfig) *Runner {
+	return &Runner{
+		kubeCl:         kubeCl,
+		changeSettings: &terraform.ChangeActionSettings{},
+		leaseConfig:    leaseConfig,
 
-	nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
-	if existsErr != nil {
-		return nil, existsErr
-	} else if nodeExists {
-		return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
+		excludedNodes: make(map[string]bool),
+		skipPhases:    make(map[Phase]bool),
 	}
-
-	nodeConfig := cfg.NodeGroupConfig(masterNodeGroupName, index, cloudConfig)
-
-	runner := terraform.NewRunnerFromConfig(cfg, "master-node").
-		WithVariables(nodeConfig).
-		WithName(nodeName).
-		WithAutoApprove(true)
-	tomb.RegisterOnShutdown(nodeName, runner.Stop)
-
-	// Node group settings are not required for master node secret.
-	if intermediateStateSave {
-		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, masterNodeGroupName, nil))
-	}
-
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
-	if err != nil {
-		return nil, err
-	}
-
-	if tomb.IsInterrupted() {
-		return nil, ErrConvergeInterrupted
-	}
-
-	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
-	if err != nil {
-		return outputs, err
-	}
-
-	return outputs, err
 }
 
-func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) error {
-	if err := updateClusterState(kubeCl, metaConfig); err != nil {
+func (r *Runner) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *Runner {
+	r.changeSettings = changeSettings
+	return r
+}
+
+func (r *Runner) WithExcludedNodes(nodes []string) *Runner {
+	newMap := make(map[string]bool)
+	for _, n := range nodes {
+		if n == "" {
+			continue
+		}
+		newMap[n] = true
+	}
+
+	r.excludedNodes = newMap
+	return r
+}
+
+func (r *Runner) WithSkipPhases(phases []Phase) *Runner {
+	newMap := make(map[Phase]bool)
+	for _, n := range phases {
+		if n == "" {
+			continue
+		}
+		newMap[n] = true
+	}
+
+	r.skipPhases = newMap
+	return r
+}
+
+func (r *Runner) isSkip(phase Phase) bool {
+	_, ok := r.skipPhases[phase]
+	return ok
+}
+
+func (r *Runner) RunConverge() error {
+	leaseLock := client.NewLeaseLock(r.kubeCl, r.leaseConfig)
+	err := leaseLock.Lock()
+	if err != nil {
 		return err
+	}
+
+	// TODO remove after tomb shutdown fix
+	unlockConverge := func() {
+		if leaseLock != nil {
+			leaseLock.Unlock()
+			leaseLock = nil
+		}
+	}
+	defer unlockConverge()
+	tomb.RegisterOnShutdown("unlock converge", unlockConverge)
+
+	metaConfig, err := GetMetaConfig(r.kubeCl)
+	if err != nil {
+		return err
+	}
+
+	if !r.isSkip(PhaseBaseInfra) {
+		if err := r.updateClusterState(metaConfig); err != nil {
+			return err
+		}
+	} else {
+		log.InfoLn("Skip converge base infrastructure")
+	}
+
+	if r.isSkip(PhaseAllNodes) {
+		log.InfoLn("Skip converge nodes")
+		return nil
 	}
 
 	var nodesState map[string]NodeGroupTerraformState
-	var err error
+
 	err = log.Process("converge", "Gather Nodes Terraform state", func() error {
-		nodesState, err = GetNodesStateFromCluster(kubeCl)
+		nodesState, err = GetNodesStateFromCluster(r.kubeCl)
 		if err != nil {
 			return fmt.Errorf("terraform nodes state in Kubernetes cluster not found: %w", err)
 		}
@@ -133,7 +144,8 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 
 	// dhctl has nodes to create, and there are no nodes in the cluster.
 	if len(nodesState) == 0 && desiredQuantity > 0 {
-		if !input.NewConfirmation().WithMessage(noNodesConfirmationMessage).Ask() {
+		confirmation := input.NewConfirmation().WithYesByDefault().WithMessage(noNodesConfirmationMessage)
+		if !r.changeSettings.AutoApprove && !confirmation.Ask() {
 			log.InfoLn("Aborted")
 			return nil
 		}
@@ -146,13 +158,16 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
 			continue
 		}
-		if err := createPreviouslyNotExistedNodeGroup(kubeCl, metaConfig, group); err != nil {
+		if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
 			return err
 		}
 	}
 
 	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
-		controller := NewConvergeController(kubeCl, metaConfig)
+		controller := NewConvergeController(r.kubeCl, metaConfig)
+		controller.WithChangeSettings(r.changeSettings)
+		controller.WithExcludedNodes(r.excludedNodes)
+
 		if err := controller.Run(nodeGroupName, nodesState[nodeGroupName]); err != nil {
 			return err
 		}
@@ -160,9 +175,9 @@ func RunConverge(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig)
 	return nil
 }
 
-func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) error {
+func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 	return log.Process("converge", "Update Cluster Terraform state", func() error {
-		clusterState, err := GetClusterStateFromCluster(kubeCl)
+		clusterState, err := GetClusterStateFromCluster(r.kubeCl)
 		if err != nil {
 			return fmt.Errorf("terraform cluster state in Kubernetes cluster not found: %w", err)
 		}
@@ -173,10 +188,12 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
 			WithVariables(metaConfig.MarshalConfig()).
-			WithState(clusterState)
+			WithState(clusterState).
+			WithAutoDismissDestructiveChanges(r.changeSettings.AutoDismissDestructive).
+			WithAutoApprove(r.changeSettings.AutoApprove)
 		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
-		baseRunner.WithIntermediateStateSaver(NewClusterStateSaver(kubeCl))
+		baseRunner.WithIntermediateStateSaver(NewClusterStateSaver(r.kubeCl))
 
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
@@ -187,7 +204,7 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 			return ErrConvergeInterrupted
 		}
 
-		if err := SaveClusterTerraformState(kubeCl, outputs); err != nil {
+		if err := SaveClusterTerraformState(r.kubeCl, outputs); err != nil {
 			return err
 		}
 
@@ -195,26 +212,26 @@ func updateClusterState(kubeCl *client.KubernetesClient, metaConfig *config.Meta
 	})
 }
 
-func createPreviouslyNotExistedNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, group config.TerraNodeGroupSpec) error {
+func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroupSpec, metaConfig *config.MetaConfig) error {
 	return log.Process("converge", fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
-		err := CreateNodeGroup(kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
+		err := CreateNodeGroup(r.kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
 		if err != nil {
 			return err
 		}
 
-		nodeCloudConfig, err := GetCloudConfig(kubeCl, group.Name)
+		nodeCloudConfig, err := GetCloudConfig(r.kubeCl, group.Name)
 		if err != nil {
 			return err
 		}
 
 		for i := 0; i < group.Replicas; i++ {
-			err = BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true)
+			err = BootstrapAdditionalNode(r.kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true)
 			if err != nil {
 				return err
 			}
 		}
 
-		if err := WaitForNodesBecomeReady(kubeCl, group.Name, group.Replicas); err != nil {
+		if err := WaitForNodesBecomeReady(r.kubeCl, group.Name, group.Replicas); err != nil {
 			return err
 		}
 		return nil
@@ -222,8 +239,11 @@ func createPreviouslyNotExistedNodeGroup(kubeCl *client.KubernetesClient, metaCo
 }
 
 type Controller struct {
-	client *client.KubernetesClient
-	config *config.MetaConfig
+	client         *client.KubernetesClient
+	config         *config.MetaConfig
+	changeSettings *terraform.ChangeActionSettings
+
+	excludedNodes map[string]bool
 }
 
 type NodeGroupGroupOptions struct {
@@ -235,7 +255,22 @@ type NodeGroupGroupOptions struct {
 }
 
 func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) *Controller {
-	return &Controller{client: kubeCl, config: metaConfig}
+	return &Controller{
+		client:         kubeCl,
+		config:         metaConfig,
+		changeSettings: &terraform.ChangeActionSettings{},
+		excludedNodes:  make(map[string]bool),
+	}
+}
+
+func (c *Controller) WithChangeSettings(changeSettings *terraform.ChangeActionSettings) *Controller {
+	c.changeSettings = changeSettings
+	return c
+}
+
+func (c *Controller) WithExcludedNodes(nodesMap map[string]bool) *Controller {
+	c.excludedNodes = nodesMap
+	return c
 }
 
 func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraformState) error {
@@ -311,7 +346,9 @@ func (c *Controller) Run(nodeGroupName string, nodeGroupState NodeGroupTerraform
 		terraNodesExistInConfig[terranodeGroup.Name] = struct{}{}
 	}
 
-	if len(deleteNodesNames) > 0 {
+	needDeleteNodes := len(deleteNodesNames) > 0 && !c.changeSettings.AutoDismissDestructive
+	log.DebugLn("Need to delete nodes", needDeleteNodes)
+	if needDeleteNodes {
 		err := log.Process("converge", fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", nodeGroupName, replicas), func() error {
 			if err := c.deleteRedundantNodes(&nodeGroup, nodeGroupState.Settings, deleteNodesNames); err != nil {
 				return err
@@ -359,6 +396,11 @@ func (c *Controller) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error 
 }
 
 func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName string) error {
+	if _, ok := c.excludedNodes[nodeName]; ok {
+		log.InfoF("Skip update excluded node %v\n", nodeName)
+		return nil
+	}
+
 	state := nodeGroup.State[nodeName]
 	index, ok := getIndexFromNodeName(nodeName)
 	if !ok {
@@ -370,7 +412,10 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithSkipChangesOnDeny(true).
 		WithState(state).
-		WithName(nodeName)
+		WithName(nodeName).
+		WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive).
+		WithAutoApprove(c.changeSettings.AutoApprove)
+
 	tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
 
 	pipelineForMaster := nodeGroup.Step == "master-node"
@@ -413,6 +458,10 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 }
 
 func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, settings []byte, deleteNodesNames map[string][]byte) error {
+	if c.changeSettings.AutoDismissDestructive {
+		return nil
+	}
+
 	cfg := c.config
 	if settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
@@ -429,6 +478,11 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 
 	var allErrs *multierror.Error
 	for name, state := range deleteNodesNames {
+		if _, ok := c.excludedNodes[name]; ok {
+			log.InfoF("Skip delete excluded node %v\n", name)
+			continue
+		}
+
 		index, ok := getIndexFromNodeName(name)
 		if !ok {
 			log.ErrorF("can't extract index from terraform state secret, skip %s\n", name)
@@ -440,7 +494,8 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 			WithState(state).
 			WithName(name).
 			WithAllowedCachedState(true).
-			WithSkipChangesOnDeny(true)
+			WithSkipChangesOnDeny(true).
+			WithAutoDismissDestructiveChanges(c.changeSettings.AutoDismissDestructive)
 
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
@@ -469,55 +524,16 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 	return allErrs.ErrorOrNil()
 }
 
-func getIndexFromNodeName(name string) (int64, bool) {
-	index, err := strconv.ParseInt(name[strings.LastIndex(name, "-")+1:], 10, 64)
+func GetMetaConfig(kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {
+	metaConfig, err := config.ParseConfigFromCluster(kubeCl)
 	if err != nil {
-		log.ErrorLn(err)
-		return 0, false
-	}
-	return index, true
-}
-
-func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName string) int {
-	replicas := 0
-	if nodeGroupName != masterNodeGroupName {
-		for _, group := range metaConfig.GetTerraNodeGroups() {
-			if group.Name == nodeGroupName {
-				replicas = group.Replicas
-				break
-			}
-		}
-	} else {
-		replicas = metaConfig.MasterNodeGroupSpec.Replicas
-	}
-	return replicas
-}
-
-func getStepByNodeGroupName(nodeGroupName string) string {
-	step := "static-node"
-	if nodeGroupName == masterNodeGroupName {
-		step = "master-node"
-	}
-	return step
-}
-
-func sortNodeGroupsStateKeys(state map[string]NodeGroupTerraformState, sortedNodeGroupsFromConfig []string) []string {
-	nodeGroupsFromConfigSet := make(map[string]struct{}, len(sortedNodeGroupsFromConfig))
-	for _, key := range sortedNodeGroupsFromConfig {
-		nodeGroupsFromConfigSet[key] = struct{}{}
+		return nil, err
 	}
 
-	sortedKeys := append([]string{masterNodeGroupName}, sortedNodeGroupsFromConfig...)
-
-	for key := range state {
-		if key == masterNodeGroupName {
-			continue
-		}
-
-		if _, ok := nodeGroupsFromConfigSet[key]; !ok {
-			sortedKeys = append(sortedKeys, key)
-		}
+	metaConfig.UUID, err = GetClusterUUID(kubeCl)
+	if err != nil {
+		return nil, err
 	}
 
-	return sortedKeys
+	return metaConfig, nil
 }

@@ -44,6 +44,12 @@ var (
 	ErrTerraformApplyAborted = errors.New("Terraform apply aborted.")
 )
 
+type ChangeActionSettings struct {
+	AutoDismissDestructive bool
+	AutoApprove            bool
+	SkipChangesOnDeny      bool
+}
+
 type Runner struct {
 	name       string
 	prefix     string
@@ -54,9 +60,9 @@ type Runner struct {
 	planPath      string
 	variablesPath string
 
-	autoApprove        bool
+	changeSettings ChangeActionSettings
+
 	allowedCachedState bool
-	skipChangesOnDeny  bool
 	changesInPlan      int
 
 	stateCache cache.Cache
@@ -70,12 +76,13 @@ type Runner struct {
 
 func NewRunner(provider, prefix, layout, step string) *Runner {
 	return &Runner{
-		prefix:     prefix,
-		step:       step,
-		name:       step,
-		workingDir: buildTerraformPath(provider, layout, step),
-		confirm:    input.NewConfirmation,
-		stateCache: cache.Global(),
+		prefix:         prefix,
+		step:           step,
+		name:           step,
+		workingDir:     buildTerraformPath(provider, layout, step),
+		confirm:        input.NewConfirmation,
+		stateCache:     cache.Global(),
+		changeSettings: ChangeActionSettings{},
 	}
 }
 
@@ -138,7 +145,12 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 }
 
 func (r *Runner) WithAutoApprove(flag bool) *Runner {
-	r.autoApprove = flag
+	r.changeSettings.AutoApprove = flag
+	return r
+}
+
+func (r *Runner) WithAutoDismissDestructiveChanges(flag bool) *Runner {
+	r.changeSettings.AutoDismissDestructive = flag
 	return r
 }
 
@@ -148,7 +160,7 @@ func (r *Runner) WithAllowedCachedState(flag bool) *Runner {
 }
 
 func (r *Runner) WithSkipChangesOnDeny(flag bool) *Runner {
-	r.skipChangesOnDeny = flag
+	r.changeSettings.SkipChangesOnDeny = flag
 	return r
 }
 
@@ -199,12 +211,19 @@ func (r *Runner) Init() error {
 }
 
 func (r *Runner) handleChanges() (bool, error) {
-	if r.autoApprove || r.changesInPlan == PlanHasNoChanges {
+	// first verify destructive change
+	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
+		// skip plan
+		return true, nil
+	}
+
+	//
+	if r.changeSettings.AutoApprove || r.changesInPlan == PlanHasNoChanges {
 		return false, nil
 	}
 
 	if !r.confirm().WithMessage("Do you want to CHANGE objects state in the cloud?").Ask() {
-		if r.skipChangesOnDeny {
+		if r.changeSettings.SkipChangesOnDeny {
 			return true, nil
 		}
 		return false, ErrTerraformApplyAborted
@@ -343,7 +362,12 @@ func (r *Runner) Destroy() error {
 		return fmt.Errorf("no state found, try to run terraform apply first")
 	}
 
-	if !r.autoApprove {
+	if r.changeSettings.AutoDismissDestructive {
+		log.InfoLn("terraform destroy skipped")
+		return nil
+	}
+
+	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}

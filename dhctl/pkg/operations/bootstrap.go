@@ -161,7 +161,7 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
-		return retry.StartSilentLoop("Get bundle", 3, 1, func() error {
+		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
 			// run detect bundle type
 			detectCmd := sshClient.UploadScript("/deckhouse/candi/bashible/detect_bundle.sh")
 			stdout, err := detectCmd.Execute()
@@ -230,7 +230,7 @@ func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, er
 			}
 		}
 
-		err := retry.StartLoop("Get Kubernetes API client", 45, 5, func() error {
+		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).Run(func() error {
 			kubeCl = client.NewKubernetesClient()
 			if sshClient != nil {
 				kubeCl = kubeCl.WithSSHClient(sshClient)

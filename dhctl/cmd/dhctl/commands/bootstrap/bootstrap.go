@@ -12,6 +12,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
@@ -216,6 +217,14 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			// The rest of pipeline is additional master and static nodes creating process
 			return nil
 		}
+
+		bootstrapIdentity := config.GetLocalConvergeLockIdentity("local-bootstraper")
+		leaseLock := client.NewLeaseLock(kubeCl, config.GetConvergeLockLeaseConfig(bootstrapIdentity))
+		err = leaseLock.Lock()
+		if err != nil {
+			return err
+		}
+		defer leaseLock.Unlock()
 
 		if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
 			return err

@@ -26,7 +26,7 @@ func (c *Check) WithDelaySeconds(seconds int) *Check {
 
 func (c *Check) AwaitAvailability() error {
 	time.Sleep(c.delay)
-	return retry.StartLoop("Waiting for SSH connection", 35, 5, func() error {
+	return retry.NewLoop("Waiting for SSH connection", 35, 5*time.Second).Run(func() error {
 		log.InfoF("Try to connect to %v host\n", c.Session.Host())
 		output, err := c.ExpectAvailable()
 		if err == nil {

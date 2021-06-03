@@ -3,6 +3,7 @@ package deckhouse
 import (
 	"context"
 	"fmt"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -14,7 +15,7 @@ import (
 
 func GetClusterInfo(kubeCl *client.KubernetesClient) string {
 	var globalData string
-	err := retry.StartSilentLoop("Get info from Deckhouse ConfigMap", 5, 2, func() error {
+	err := retry.NewSilentLoop("Get info from Deckhouse ConfigMap", 5, 2*time.Second).Run(func() error {
 		deckhouseConfigMap, err := kubeCl.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse", metav1.GetOptions{})
 		if err != nil {
 			return err
