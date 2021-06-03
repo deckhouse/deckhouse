@@ -1,0 +1,30 @@
+type: object
+properties:
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Like `spec.tolerations` for Kubernetes pod.
+
+      Use [automatic](/overview.html#выделение-узлов-под-определенный-вид-нагрузки) if not specified. Set `false` to turn off automatic.
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string

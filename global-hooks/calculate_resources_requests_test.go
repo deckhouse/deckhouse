@@ -3,7 +3,6 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -38,7 +37,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f := HookExecutionConfigInit(`{"global": {"modules": {"resourcesRequests": {"internal": {}}}}}`, `{}`)
 	Context("Cluster without master nodes (managed)", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -67,7 +66,6 @@ status:
 
 		It("Hook should not run, because needed global variables dont exist", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`Error: Value global.modules.resourcesRequests.everyNode.cpu required, but doesn't exist`))
 		})
 	})
 
@@ -83,7 +81,6 @@ status:
 
 		It("Hook should not run, and print error message", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: everyNode CPU \+ masterNode CPU must be less than discovered minimal master node CPU`))
 		})
 
 	})
@@ -100,12 +97,11 @@ status:
 
 		It("Hook should not run, and print error message", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: everyNode memory \+ masterNode memory must be less than discovered minimal master node memory`))
 		})
 
 	})
 
-	Context("Correctly set, global.modules.resourcesRequests.masterNode not set)", func() {
+	Context("Correctly set, global.modules.resourcesRequests.masterNode not set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateMasterNode))
 			f.ValuesSet("global.modules.resourcesRequests.everyNode.cpu", "300m")
@@ -125,7 +121,7 @@ status:
 
 	})
 
-	Context("Correctly set, global.modules.resourcesRequests.masterNode set)", func() {
+	Context("Correctly set, global.modules.resourcesRequests.masterNode set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateMasterNode))
 			f.ValuesSet("global.modules.resourcesRequests.everyNode.cpu", "500m")
@@ -147,7 +143,7 @@ status:
 
 	})
 
-	Context("Correctly set, two master nodes, global.modules.resourcesRequests.masterNode not set)", func() {
+	Context("Correctly set, two master nodes, global.modules.resourcesRequests.masterNode not set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateMasterNode + stateMasterNode2))
 			f.ValuesSet("global.modules.resourcesRequests.everyNode.cpu", "300m")
@@ -167,7 +163,7 @@ status:
 
 	})
 
-	Context("Correctly set, two master nodes, global.modules.resourcesRequests.masterNode set)", func() {
+	Context("Correctly set, two master nodes, global.modules.resourcesRequests.masterNode set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateMasterNode + stateMasterNode2))
 			f.ValuesSet("global.modules.resourcesRequests.everyNode.cpu", "500m")

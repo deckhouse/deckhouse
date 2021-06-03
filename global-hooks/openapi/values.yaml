@@ -45,6 +45,9 @@ properties:
       kubernetesVersion:
         type: string
         x-examples: [1.16.5, 1.19.5]
+      extensionAPIServerAuthenticationRequestheaderClientCA:
+        type: string
+        x-examples: [testCA]
   modulesImages:
     additionalProperties: true
     type: object

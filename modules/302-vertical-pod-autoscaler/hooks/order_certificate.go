@@ -1,0 +1,115 @@
+package hooks
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
+)
+
+type vpaCertSecretData struct {
+	CACert     string `json:"CACert"`
+	CAKey      string `json:"CAKey"`
+	ServerCert string `json:"serverCert"`
+	ServerKey  string `json:"serverKey"`
+}
+
+const (
+	initValuesString       = `{"global": {}, "verticalPodAutoscaler":{"internal":{}}}`
+	initConfigValuesString = `{}`
+)
+
+func applyVpaCertSecretRuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert vpa-tls-certs to secret: %v", err)
+	}
+
+	s := &vpaCertSecretData{}
+	CACert, ok := secret.Data["caCert.pem"]
+	if !ok {
+		return nil, fmt.Errorf("'caCert.pem' field not found")
+	}
+	CAKey, ok := secret.Data["caKey.pem"]
+	if !ok {
+		return nil, fmt.Errorf("'caKey.pem' field not found")
+	}
+	ServerCert, ok := secret.Data["serverCert.pem"]
+	if !ok {
+		return nil, fmt.Errorf("'serverCert.pem' field not found")
+	}
+	ServerKey, ok := secret.Data["serverKey.pem"]
+	if !ok {
+		return nil, fmt.Errorf("'serverKey.pem' field not found")
+	}
+
+	s.CACert = string(CACert)
+	s.CAKey = string(CAKey)
+	s.ServerCert = string(ServerCert)
+	s.ServerKey = string(ServerKey)
+
+	return s, nil
+}
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Schedule: []go_hook.ScheduleConfig{
+		{Name: "vpaCertCron", Crontab: "15 10 * * *"},
+	},
+	Queue: "/modules/vertical-pod-autoscaler",
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:              "VPACertSecret",
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"vpa-tls-certs"}},
+			FilterFunc:        applyVpaCertSecretRuleFilter,
+		},
+	},
+}, vpaCertHandler)
+
+func vpaCertHandler(input *go_hook.HookInput) error {
+	var (
+		vpaCert vpaCertSecretData
+		err     error
+	)
+
+	snapshots := input.Snapshots["VPACertSecret"]
+
+	shouldGenerateNewCert := true
+
+	if len(snapshots) > 0 {
+		vpaCert = *snapshots[0].(*vpaCertSecretData)
+		shouldGenerateNewCert, err = certificate.IsCertificateExpiringSoon(vpaCert.ServerCert, time.Hour*7*24)
+		if err != nil {
+			return err
+		}
+	}
+
+	if shouldGenerateNewCert {
+		selfSignedCA, err := certificate.GenerateCA(input.LogEntry, "vpa_webhook")
+		if err != nil {
+			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
+		}
+		cert, err := certificate.GenerateSelfSignedCert(input.LogEntry, "vpa-webhook", []string{"vpa-webhook.kube-system", "vpa-webhook.kube-system.svc"}, selfSignedCA)
+		if err != nil {
+			return fmt.Errorf("cannot generate selfsigned cert: %v", err)
+		}
+		vpaCert.CACert = selfSignedCA.Cert
+		vpaCert.CAKey = selfSignedCA.Key
+		vpaCert.ServerKey = cert.Key
+		vpaCert.ServerCert = cert.Cert
+	}
+
+	input.Values.Set("verticalPodAutoscaler.internal", vpaCert)
+
+	return nil
+}
