@@ -54,6 +54,21 @@ for item in ${DIFF_DATA}; do
     if ! [[ "$item" == *".md" ]]; then
       continue
     fi
+
+    docs_pattern="docs/(CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
+    if [[ "$item" =~ /docs/[^/]+.md ]] && ! [[ "$item" =~ $docs_pattern ]]; then
+        hasErrors=1
+        echo "$item is not allowed. You can place it in the 'internal' folder for example."
+        cat <<EOF
+    Only the following files (and their Russian versions) are allowed in the module '/docs/' folder:
+        CONFIGURATION.md
+        CR.md
+        FAQ.md
+        README.md
+        USAGE.md
+EOF
+    fi
+
     if [[ "$item" == *"_RU.md" ]]; then
       otherLangFileName=$(sed 's/_RU.md/.md/' <<< $item)
       if ! checks "${item}" "${otherLangFileName}" ; then
