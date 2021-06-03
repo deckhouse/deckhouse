@@ -14,67 +14,23 @@ time="2021-05-20T10:22:50Z" level=fatal msg="cannot start server: database not c
 
 ## What to do
 
-1. Copy migration scripts to a master node
-2. Migrate
-3. Optionally observe the state
+1. Migrate
+2. Optionally observe the state
 
-### 1. Copy migration scripts to a master node
-
-Copy scripts from `./vacuum` dir to a node, and connect via ssh there. The dir
-will be copied to `/home/flant/$USER/vacuum`.
-
-Use `deploy.sh` to do it in a single command:
+### 1. Migrate
 
 ```shell
-$ ./deploy <MASTER_NODE_FROM_SSH_CONFIG>
+kubectl -n d8-system exec -ti deploy/deckhouse -- /modules/500-upmeter/scripts/fix_server_db/migrate.sh
 ```
 
-### 2. Migrate
-
-On the node, navigate to the scripts dir and authenticate as root:
+### 2. Optionally observe the state
 
 ```shell
-you@node ~ $ cd vacuum
-you@node ~/vacuum $ sudo su    # note no dash "-" here
-```
-
-Run the migration.
-
-```shell
-root@node ~/vacuum # ./migrate.sh
-```
-
-### 3. Optionally observe the state
-
-Optionally track state with *o*-scripts which are observer helpers:
-
-```shell
-root@node ~/vacuum # ./o-logs.sh
-root@node ~/vacuum # ./o-status.sh
+while true; do kubectl logs -f -n d8-upmeter upmeter-0 -c upmeter || sleep 2; done
+watch kubectl -n d8-upmeter get po -l app=upmeter -o wide
 ```
 
 `tmux -CC` and iTerm2 are your friends :-)
-
-## Kubectl Context
-
-If there are multiple kubectl contexts, pass the name of the desired context as the first argument to any script you use on node. It will be passed to the `--context` option of `kubectl`.
-
-For example, to use context "dev"
-
-```shell
-# kubectl config get-contexts
-CURRENT   NAME      CLUSTER   AUTHINFO   NAMESPACE
-          prod      prod      prod
-*         dev       dev       dev
-```
-
-```shell
-root@node ~/vacuum # ./migrate.sh dev
-...
-root@node ~/vacuum # ./o-logs.sh dev
-...
-root@node ~/vacuum # ./o-status.sh dev
-```
 
 ## How it helps
 
@@ -91,10 +47,6 @@ SQLite it is called "VACUUM", hence the name of this dir.
 $ tree
 .
 ├── README.md
-├── deploy.sh
-└── vacuum
-    ├── o-logs.sh    # tracking: see pod logs
-    ├── o-status.sh  # tracking: see pod status
-    ├── migrate.sh   # migration: main runner
-    └── __pod.sh     # migration: heavy-lifting in the pod
+├── migrate.sh   # migration: main runner
+└── __pod.sh     # migration: heavy-lifting in the pod
 ```
