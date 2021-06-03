@@ -220,6 +220,8 @@ func lintModuleStructure(lintRuleErrorsList *errors.LintRuleErrorsList, modulePa
 		lintRuleErrorsList.Merge(crdsModuleRule(moduleName, filepath.Join(modulePath, crdsDir)))
 	}
 
+	lintRuleErrorsList.Merge(ossModuleRule(moduleName, modulePath))
+
 	module := utils.Module{Name: name, Path: modulePath, Namespace: namespace}
 	return module, true
 }

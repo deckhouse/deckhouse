@@ -1,0 +1,177 @@
+package modules
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"sigs.k8s.io/yaml"
+
+	linterrors "github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
+)
+
+const ossFilename = "oss.yaml"
+
+func ossModuleRule(name, moduleRoot string) linterrors.LintRuleErrorsList {
+	lintErrors := linterrors.LintRuleErrorsList{}
+
+	if errs := verifyOssFile(name, moduleRoot); len(errs) > 0 {
+		for _, err := range errs {
+			ruleErr := linterrors.NewLintRuleError(
+				"MODULE001",
+				moduleLabel(name),
+				nil,
+				ossFileErrorMessage(err),
+			)
+
+			lintErrors.Add(ruleErr)
+		}
+	}
+
+	return lintErrors
+}
+
+func ossFileErrorMessage(err error) string {
+	if os.IsNotExist(err) {
+		return "Module should have " + ossFilename
+	}
+	return fmt.Sprintf("Invalid %s: %s", ossFilename, err.Error())
+}
+
+func verifyOssFile(name, moduleRoot string) []error {
+	if shouldIgnoreOssInfo(name) {
+		return nil
+	}
+
+	projects, err := readOssFile(moduleRoot)
+	if err == nil && len(projects) == 0 {
+		err = fmt.Errorf("no projects described")
+	}
+	if err != nil {
+		return []error{err}
+	}
+
+	var errs []error
+	for i, p := range projects {
+		err := assertOssProject(i+1, p)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errs
+}
+
+func assertOssProject(i int, p ossProject) error {
+	var complaints []string
+
+	// prefix to make it easier navigate among errors
+	prefix := fmt.Sprintf("#%d", i)
+
+	// Name
+
+	if strings.TrimSpace(p.Name) == "" {
+		complaints = append(complaints, "name must not be empty")
+	} else {
+		prefix = fmt.Sprintf("#%d (name=%s)", i, p.Name)
+	}
+
+	// Description
+
+	if strings.TrimSpace(p.Description) == "" {
+		complaints = append(complaints, "description must not be empty")
+	}
+
+	// Link
+
+	if strings.TrimSpace(p.Link) == "" {
+		complaints = append(complaints, "link must not be empty")
+	} else if _, err := url.ParseRequestURI(p.Link); err != nil {
+		complaints = append(complaints, fmt.Sprintf("link URL is malformed (%q)", p.Link))
+	}
+
+	// Licence
+
+	if strings.TrimSpace(p.Licence) == "" {
+		complaints = append(complaints, "licence must not be empty")
+	}
+
+	// Logo
+
+	if strings.TrimSpace(p.Logo) != "" {
+		if _, err := url.ParseRequestURI(p.Logo); err != nil {
+			complaints = append(complaints, fmt.Sprintf("project logo URL is malformed (%q)", p.Logo))
+		}
+	}
+
+	if len(complaints) > 0 {
+		return fmt.Errorf("%s: %s", prefix, strings.Join(complaints, "; "))
+	}
+
+	return nil
+}
+
+func readOssFile(moduleRoot string) ([]ossProject, error) {
+	b, err := ioutil.ReadFile(filepath.Join(moduleRoot, ossFilename))
+	if err != nil {
+		return nil, err
+	}
+
+	return parseProjectList(b)
+}
+
+func parseProjectList(b []byte) ([]ossProject, error) {
+	var projects []ossProject
+	err := yaml.Unmarshal(b, &projects)
+	if err != nil {
+		return nil, err
+	}
+	return projects, nil
+}
+
+var skipOssChecks = map[string]struct{}{
+	// module name
+	"010-priority-class":                      {},
+	"030-cloud-provider-aws":                  {},
+	"030-cloud-provider-azure":                {},
+	"030-cloud-provider-gcp":                  {},
+	"030-cloud-provider-openstack":            {},
+	"030-cloud-provider-vsphere":              {},
+	"030-cloud-provider-yandex":               {},
+	"035-cni-simple-bridge":                   {},
+	"041-kube-proxy":                          {},
+	"140-user-authz":                          {},
+	"340-extended-monitoring":                 {},
+	"340-monitoring-applications":             {},
+	"340-monitoring-custom":                   {},
+	"340-monitoring-kubernetes-control-plane": {},
+	"340-monitoring-ping":                     {},
+	"340-prometheus-madison-integration":      {},
+	"350-node-local-dns":                      {},
+	"400-nginx-ingress":                       {}, // nginx in 402-ingress-nginx
+	"450-network-gateway":                     {},
+	"500-basic-auth":                          {}, // nginx in 402-ingress-nginx
+	"500-okmeter":                             {},
+	"500-upmeter":                             {},
+	"600-secret-copier":                       {},
+	"810-deckhouse-web":                       {},
+	"998-flant-pricing":                       {},
+	"999-helm":                                {}, // helm in 020-deckhouse
+}
+
+// TODO When lintignore files will be implemented in modules, detect "oss.yaml" line in it
+func shouldIgnoreOssInfo(moduleName string) bool {
+	_, found := skipOssChecks[moduleName]
+	return found
+}
+
+type ossProject struct {
+	Name        string `yaml:"name"`           // example: Dex
+	Description string `yaml:"description"`    // example: A Federated OpenID Connect Provider with pluggable connectors
+	Link        string `yaml:"link"`           // example: https://github.com/dexidp/dex
+	Logo        string `yaml:"logo,omitempty"` // example: https://dexidp.io/img/logos/dex-horizontal-color.png
+	Licence     string `yaml:"licence"`        // example: Apache License 2.0
+}
