@@ -108,7 +108,7 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
 
 **Note that** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
 * Each request is DNAT'ed to envoy that processes it and creates another one. The same thing happens on the receiving side.
-* Each envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory envoy consumes. You can use the [Sidecar](cr.html#sidecar) CustomResource to solve this problem.
+* Each envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
 
 
 ## Architecture of the cluster with Istio enabled

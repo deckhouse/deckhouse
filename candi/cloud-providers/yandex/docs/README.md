@@ -285,7 +285,7 @@ name: deckhouse
 
 $ yc resource-manager folder add-access-binding prod --role editor --subject serviceAccount:ajee8jv6lj8t7eg381id
 
-$ yc iam key create --service-account-name candi --output candi-sa-key.json
+$ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 
 ## Резервирование белого IP-адреса

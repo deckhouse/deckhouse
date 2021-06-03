@@ -19,7 +19,7 @@ data:
     * The regular HTTP probes do not support the `"Mutual"` mode since kubelet knows nothing about mTLS. However, the istio sidecar has a dedicated port for these probes. The sidecar-injector that injects sidecar containers into pods can also route your probes to a dedicated port.
     * Each service will get an individual key signed by the root CA for encryption and authentication. The CA is either generated when the module starts for the first time or is specified explicitly (refer to the `ca` section).
     * It is `"Off"` by default.
-    * You can manage the mTLS mode locally using the [AuthorizationPolicy](cr.html#authorizationpolicy) and [DestinationRule](cr.html#destinationrule) resources.
+    * You can manage the mTLS mode locally using the [AuthorizationPolicy](istio-cr.html#authorizationpolicy) and [DestinationRule](istio-cr.html#destinationrule) resources.
 * `ca` — is an explicitly specified root certificate. It signs individual service certificates if mTLS is enabled (see `tlsMode`):
     * Format — a string in the PEM format.
     * `cert` — the root or intermediate certificate.
@@ -64,5 +64,3 @@ data:
 * `tolerations` — the same as the pods' `spec.tolerations` parameter in Kubernetes;
     * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling).
     * You can set it to `false` to avoid adding any tolerations.
-
-Several [Custom Resources](cr.html) are available that simplify the usage of the istio module with applications.

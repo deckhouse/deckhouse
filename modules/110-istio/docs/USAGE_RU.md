@@ -46,7 +46,7 @@ spec:
 
 ## Добавить к сервису myservice.prod.svc дополнительные, вторичные subset-ы со своими правилами
 
-Эти subset-ы работают при использовании [VirtualService](cr.html#virtualservice):
+Эти subset-ы работают при использовании [VirtualService](istio-cr.html#virtualservice):
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -71,7 +71,7 @@ spec:
 
 ## Circuit Breaker
 
-Для единственного сервиса потребуется единственный CR [DestinationRule](cr.html#destinationrule).
+Для единственного сервиса потребуется единственный CR [DestinationRule](istio-cr.html#destinationrule).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -89,7 +89,7 @@ spec:
 
 ## Retry
 
-Для единственного сервиса потребуется единственный CR [VirtualService](cr.html#virtualservice).
+Для единственного сервиса потребуется единственный CR [VirtualService](istio-cr.html#virtualservice).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -114,8 +114,8 @@ spec:
 Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У подов разных версий разные лейблы (`version: v1` и `version: v2`).
 
 Требуется настроить два CR:
-* [DestinationRule](cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения.
-* [VirtualService](cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
+* [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения.
+* [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3

@@ -44,7 +44,7 @@ spec:
 
 ## Adding additional secondary subsets with their own rules to the myservice.prod.svc service
 
-[VirtualService](cr.html#virtualservice)  must be enabled to use these subsets:
+[VirtualService](istio-cr.html#virtualservice)  must be enabled to use these subsets:
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -69,7 +69,7 @@ spec:
 
 ## Circuit Breaker
 
-The [DestinationRule](cr.html#destinationrule) CR is used to define the circuit breaker service.
+The [DestinationRule](istio-cr.html#destinationrule) CR is used to define the circuit breaker service.
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -87,7 +87,7 @@ spec:
 
 ## Retry
 
-The [VirtualService](cr.html#virtualservice) CR is used to define the service..
+The [VirtualService](istio-cr.html#virtualservice) CR is used to define the service..
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -112,8 +112,8 @@ spec:
 Suppose, we have two Deployments with the different versions of the application in the same namespace. Pods of different application versions have different labels (`version: v1` & `version: v2`) attached.
 
 You need to configure two CRs:
-* [DestinationRule](cr.html#destinationrule) that describes how to identify different versions of the application, and
-* [VirtualService](cr.html#virtualservice) that describes how to balance traffic between different versions of the application.
+* [DestinationRule](istio-cr.html#destinationrule) that describes how to identify different versions of the application, and
+* [VirtualService](istio-cr.html#virtualservice) that describes how to balance traffic between different versions of the application.
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
