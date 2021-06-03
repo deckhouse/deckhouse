@@ -17,7 +17,17 @@ properties:
         type: array
         items:
           type: string
-          pattern:  '^[0-9a-zA-Z\.-:\/]+$'
+          pattern: '^[0-9a-zA-Z\.-:\/]+$'
+      etcdCerts:
+        type: object
+        default: {}
+        properties:
+          ca:
+            type: string
+          crt:
+            type: string
+          key:
+            type: string
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'
@@ -25,8 +35,6 @@ properties:
         type: integer
       auditPolicy:
         type: string
-      testEtcdMemberUpdated:
-        type: boolean
       arguments:
         type: object
         properties:

@@ -1,15 +1,23 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: check_etcd_peer_urls ::", func() {
+	ca, priv := generateTestCert()
+	var (
+		initValuesString = fmt.Sprintf(`{"controlPlaneManager":{"internal": {"etcdCerts": {"ca": "%s","crt": "%s","key": "%s"}}, "apiserver": {"authn": {}, "authz": {}}}}`, ca, ca, priv)
+	)
 	const (
-		initValuesString       = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 		initConfigValuesString = ``
 		etcdPod                = `
 apiVersion: v1
@@ -52,8 +60,21 @@ status:
   phase: Running
 `
 	)
+	var (
+		checkEtcdPeerMembers = []*etcdserverpb.Member{
+			{
+				ID:       123456,
+				PeerURLs: []string{"https://localhost:2380"},
+				Name:     "main-master-0",
+			},
+		}
+	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	testHelperRegisterEtcdMemberUpdate()
+	setEtcdMembers := func() {
+		testHelperSetETCDMembers(checkEtcdPeerMembers)
+	}
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -68,6 +89,7 @@ status:
 
 	Context("Cluster started with etcd Pod and single master", func() {
 		BeforeEach(func() {
+			setEtcdMembers()
 			f.BindingContexts.Set(f.KubeStateSet(etcdPod))
 			f.ValuesSet("global.discovery.clusterMasterCount", 1)
 			f.RunHook()
@@ -75,13 +97,16 @@ status:
 
 		It("Test etcd member should be updated", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.testEtcdMemberUpdated").Exists()).To(BeTrue())
+			resp, _ := dependency.TestDC.EtcdClient.MemberList(context.Background())
+			Expect(resp.Members).To(HaveLen(1))
+			Expect(resp.Members[0].PeerURLs[0]).To(BeEquivalentTo("https://192.168.199.182:2380"))
 		})
 
 	})
 
 	Context("Cluster started with etcd Pod and multiple masters", func() {
 		BeforeEach(func() {
+			setEtcdMembers()
 			f.BindingContexts.Set(f.KubeStateSet(etcdPod))
 			f.ValuesSet("global.discovery.clusterMasterCount", 2)
 			f.RunHook()
@@ -89,13 +114,16 @@ status:
 
 		It("Test etcd member should not be updated", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.testEtcdMemberUpdated").Exists()).To(BeFalse())
+			resp, _ := dependency.TestDC.EtcdClient.MemberList(context.Background())
+			Expect(resp.Members).To(HaveLen(1))
+			Expect(resp.Members[0].PeerURLs[0]).To(BeEquivalentTo("https://localhost:2380"))
 		})
 
 	})
 
 	Context("Cluster started with etcd Pod with proper peer-urls and single master", func() {
 		BeforeEach(func() {
+			setEtcdMembers()
 			f.BindingContexts.Set(f.KubeStateSet(etcdPodLocalhostPeer))
 			f.ValuesSet("global.discovery.clusterMasterCount", 1)
 			f.RunHook()
@@ -103,9 +131,10 @@ status:
 
 		It("Test etcd member should not be updated", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.testEtcdMemberUpdated").Exists()).To(BeFalse())
+			resp, _ := dependency.TestDC.EtcdClient.MemberList(context.Background())
+			Expect(resp.Members).To(HaveLen(1))
+			Expect(resp.Members[0].PeerURLs[0]).To(BeEquivalentTo("https://localhost:2380"))
 		})
 
 	})
-
 })

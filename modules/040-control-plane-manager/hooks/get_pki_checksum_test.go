@@ -3,7 +3,6 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -55,8 +54,8 @@ metadata:
 		})
 
 		It("Hook must fail", func() {
-			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: There is no Secret named "d8-pki" in NS "kube-system"`))
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).Should(BeEquivalentTo(`there is no Secret named "d8-pki" in NS "kube-system"`))
 		})
 
 		Context("Someone added d8-cloud-instance-manager-cloud-provider", func() {
@@ -67,7 +66,7 @@ metadata:
 
 			It("controlPlaneManager.internal.pkiChecksum must be filled with data from secret", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("controlPlaneManager.internal.pkiChecksum").String()).To(Equal("f9b971fe0fe86b72105a2d3bb17d25323f7a1cf97baee8dcf1f58bddd4927412"))
+				Expect(f.ValuesGet("controlPlaneManager.internal.pkiChecksum").String()).To(Equal("825ed27a80e5d85b15b0a7a00d83e9635da552634a5af66b17d82ba4d1e547ef"))
 			})
 		})
 	})
@@ -82,7 +81,7 @@ metadata:
 
 		It("controlPlaneManager.internal.pkiChecksum must be filled with data from secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.internal.pkiChecksum").String()).To(Equal("f9b971fe0fe86b72105a2d3bb17d25323f7a1cf97baee8dcf1f58bddd4927412"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.pkiChecksum").String()).To(Equal("825ed27a80e5d85b15b0a7a00d83e9635da552634a5af66b17d82ba4d1e547ef"))
 		})
 
 		Context("Secret d8-pki was modified", func() {
@@ -93,7 +92,7 @@ metadata:
 
 			It("controlPlaneManager.internal.pkiChecksum must be filled with data from secret", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("controlPlaneManager.internal.pkiChecksum").String()).To(Equal("f4e2e610e599a236af6d76a673249469987e353309c36bf0469abae132ee51e1"))
+				Expect(f.ValuesGet("controlPlaneManager.internal.pkiChecksum").String()).To(Equal("27de60471f8132fbab61bc9020ccdeb9dc88b58b482b4678b208899e22193e2c"))
 			})
 		})
 
@@ -105,7 +104,7 @@ metadata:
 
 			It("controlPlaneManager.internal.pkiChecksum must be filled with data from secret", func() {
 				Expect(f).ToNot(ExecuteSuccessfully())
-				Expect(f.Session.Err).Should(gbytes.Say(`ERROR: There is no Secret named "d8-pki" in NS "kube-system"`))
+				Expect(f.GoHookError.Error()).Should(BeEquivalentTo(`there is no Secret named "d8-pki" in NS "kube-system"`))
 			})
 		})
 	})

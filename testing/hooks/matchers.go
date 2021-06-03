@@ -25,7 +25,7 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 	// There is no Session for go hooks, so this matcher is just ignored
 	if hec.GoHook != nil {
 		if hec.GoHookError != nil {
-			return false, nil
+			return false, nil // dont return hec.GoHookError here, its Matcher error, not execute func error
 		}
 
 		return true, nil
@@ -39,9 +39,19 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 }
 
 func (matcher *successfulExecutionMatcher) FailureMessage(actual interface{}) (message string) {
+	hec := actual.(*HookExecutionConfig)
+	if hec.GoHookError != nil {
+		return fmt.Sprintf("Expected\n\t%v\n to be nil", hec.GoHookError)
+	}
+
 	return fmt.Sprintf("Expected\n\t%v\nto be zero", actual.(*HookExecutionConfig).Session.ExitCode())
 }
 
 func (matcher *successfulExecutionMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	hec := actual.(*HookExecutionConfig)
+	if hec.GoHookError == nil {
+		return fmt.Sprintf("Expected\n\t%v\nnot to be nil", hec.GoHookError)
+	}
+
 	return fmt.Sprintf("Expected\n\t%v\nto not be zero", actual.(*HookExecutionConfig).Session.ExitCode())
 }
