@@ -9,15 +9,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "nodes",
-			ApiVersion: "v1",
-			Kind:       "Node",
+			Name:                   "nodes",
+			ApiVersion:             "v1",
+			Kind:                   "Node",
+			WaitForSynchronization: pointer.BoolPtr(false),
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
@@ -29,9 +31,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updateApprovalFilterNode,
 		},
 		{
-			Name:       "control_plane_manager",
-			ApiVersion: "v1",
-			Kind:       "Pod",
+			Name:                   "control_plane_manager",
+			ApiVersion:             "v1",
+			Kind:                   "Pod",
+			WaitForSynchronization: pointer.BoolPtr(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -139,11 +142,16 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	snap = input.Snapshots["control_plane_manager"]
 	for _, s := range snap {
 		pod := s.(approvedPod)
-		if pod.IsReady && pod.NodeName == "" {
+		if !pod.IsReady {
 			continue
 		}
+
 		node, ok := nodeMap[pod.NodeName]
-		if ok && node.IsApproved {
+		if !ok {
+			input.LogEntry.Warnf("Node %s not found", pod.NodeName)
+			continue
+		}
+		if node.IsApproved {
 			err := input.ObjectPatcher.MergePatchObject(
 				removeApprovedPatch,
 				"v1",

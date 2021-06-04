@@ -108,7 +108,8 @@ metadata:
 
 	Context("Cluster having all cpm Pods being Ready", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(runningReadyPods + properDaemonSet))
+			f.KubeStateSet(runningReadyPods + properDaemonSet)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
 
