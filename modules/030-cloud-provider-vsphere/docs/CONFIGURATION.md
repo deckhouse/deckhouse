@@ -35,6 +35,23 @@ cloudProviderVsphere: |
     default: fast-lun102-7d0bf578
 ```
 
+#### CSI
+
+By default, the storage subsystem uses CNS volumes with the ability of online-resize. FCD volumes are also supported, but only in the legacy or migration modes.
+
+* `compatibilityFlag` — a flag allowing the use of the old CSI version;
+  * Format — a string;
+  * Possible values:
+    * `legacy` — use the old version of the driver. FCD discs only, no online-resizing;
+    * `migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.
+  * An optional parameter;
+
+```yaml
+cloudProviderVsphere: |
+  storageClass:
+    compatibilityFlag: legacy
+```
+
 ### Important information concerning the increase of the PVC size
 
 Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) f volume-resizer, CSI, and vSphere API, you have to do the following after increasing the PVC size:

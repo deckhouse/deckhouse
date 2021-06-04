@@ -68,6 +68,9 @@ spec:
           - --bind-address=0.0.0.0
           - --secure-port=10871
           - --v=4
+          env:
+            - name: SKIP_NODE_DELETION
+              value: "1"
           ports:
           - name: https
             containerPort: 10871

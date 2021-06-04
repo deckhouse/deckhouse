@@ -1,6 +1,11 @@
 ###
 ### controller
 ###
+{{- define "csi_controller_args" }}
+- "--fss-name=csi-controller-internal-feature-states"
+- "--fss-namespace=$(CSI_NAMESPACE)"
+{{- end }}
+
 {{- define "csi_controller_envs" }}
 - name: CSI_ENDPOINT
   value: "unix:///csi/csi.sock"
@@ -8,19 +13,23 @@
   value: "controller"
 - name: X_CSI_SPEC_REQ_VALIDATION
   value: "false"
-- name: X_CSI_VSPHERE_CLOUD_CONFIG
+- name: VSPHERE_CSI_CONFIG
   value: "/etc/cloud/cloud-config"
+- name: CSI_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
-- name: vsphere-config-volume
+- name: vsphere-csi-config-volume
   secret:
-    secretName: cloud-controller-manager
+    secretName: csi-controller
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
 - mountPath: /etc/cloud
-  name: vsphere-config-volume
+  name: vsphere-csi-config-volume
   readOnly: true
 {{- end }}
 
@@ -28,15 +37,23 @@
 
 {{- $csiControllerConfig := dict }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
 
+{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
 {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+{{- end }}
 
 ###
 ### node
 ###
+{{- define "csi_node_args" }}
+- "--fss-name=csi-controller-internal-feature-states"
+- "--fss-namespace=$(CSI_NAMESPACE)"
+{{- end }}
+
 {{- define "csi_node_envs" }}
 - name: CSI_ENDPOINT
   value: "unix:///csi/csi.sock"
@@ -44,11 +61,39 @@
   value: "node"
 - name: X_CSI_SPEC_REQ_VALIDATION
   value: "false"
+- name: VSPHERE_CSI_CONFIG
+  value: "/etc/cloud/cloud-config"
+- name: NODE_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: CSI_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+{{- end }}
+
+{{- define "csi_node_volumes" }}
+- name: vsphere-csi-config-volume
+  secret:
+    secretName: csi-controller
+{{- end }}
+
+{{- define "csi_node_volume_mounts" }}
+- mountPath: /etc/cloud
+  name: vsphere-csi-config-volume
+  readOnly: true
 {{- end }}
 
 {{- $csiNodeConfig := dict }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
-{{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "csi.vsphere.vmware.com" }}
+{{- $_ := set $csiNodeConfig "serviceAccount" "csi" }}
+{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
 
+{{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "legacy" }}
 {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}

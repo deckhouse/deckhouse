@@ -17,9 +17,11 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/utils"
 )
@@ -46,6 +48,7 @@ type ZonedDataStore struct {
 	InventoryPath string   `json:"path"`
 	Name          string   `json:"name"`
 	DatastoreType string   `json:"datastoreType"`
+	DatastoreURL  string   `json:"datastoreURL"`
 }
 
 type Output struct {
@@ -274,6 +277,25 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 		datastoreReferences = append(datastoreReferences, dsc)
 	}
 
+	var datastoreMo []mo.Datastore
+	pc := property.DefaultCollector(client.client.Client)
+	props := []string{"info", "summary"}
+
+	if len(datastores) > 0 {
+		datastoreRefs := make([]types.ManagedObjectReference, 0, len(datastores))
+		for _, ds := range datastores {
+			datastoreRefs = append(datastoreRefs, ds.Reference())
+		}
+		if err := pc.Retrieve(ctx, datastoreRefs, props, &datastoreMo); err != nil {
+			return nil, fmt.Errorf("can't retrieve properties of datastores:\n%s", err)
+		}
+	}
+
+	datastoreMoByRef := make(map[types.ManagedObjectReference]mo.Datastore, len(datastoreMo))
+	for _, o := range datastoreMo {
+		datastoreMoByRef[o.Reference()] = o
+	}
+
 	tagsClient := tags.NewManager(client.restClient)
 
 	zoneTagCategory, err := tagsClient.GetCategory(ctx, zoneTagCategoryName)
@@ -306,11 +328,14 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 		var (
 			datastoreType string
 			inventoryPath string
+			datastoreURL  string
 		)
 		switch obj := dsObject.(type) {
 		case *object.Datastore:
 			datastoreType = datastoreTypeDatastore
 			inventoryPath = obj.InventoryPath
+			ds := datastoreMoByRef[obj.Reference()]
+			datastoreURL = ds.Summary.Url
 		case *object.StoragePod:
 			datastoreType = datastoreTypeDatastoreCluster
 			inventoryPath = obj.InventoryPath
@@ -323,6 +348,7 @@ func getDataStoresInDC(ctx context.Context, client vsphereClient, datacenter *ob
 			InventoryPath: inventoryPath,
 			Name:          slugKubernetesName(strings.Join(strings.Split(inventoryPath, "/")[3:], "-")),
 			DatastoreType: datastoreType,
+			DatastoreURL:  datastoreURL,
 		})
 	}
 

@@ -3,6 +3,7 @@
   {{- $context := index . 0 }}
 
   {{- $config := index . 1 }}
+  {{- $fullname := $config.fullname | default "csi-controller" }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
@@ -32,14 +33,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: csi-controller
+  name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: StatefulSet
-    name: csi-controller
+    name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
     {{- end }}
@@ -47,31 +48,31 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: csi-controller
+  name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller"))  | indent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: csi-controller
+      app: {{ $fullname }}
 ---
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: csi-controller
+  name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | indent 2 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: csi-controller
+      app: {{ $fullname }}
   serviceName: ""
   template:
     metadata:
       labels:
-        app: csi-controller
+        app: {{ $fullname }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry

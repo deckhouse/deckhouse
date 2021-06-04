@@ -68,7 +68,7 @@ diff --git a/pkg/common/connectionmanager/zones.go b/pkg/common/connectionmanage
 @@ -101,8 +101,13 @@
  		return nil, err
  	}
- 
+
 +	var dcConfig []string
 +	if tmpVsi.Cfg != nil {
 +		dcConfig = strings.Split(tmpVsi.Cfg.Datacenters, ",")
@@ -83,7 +83,7 @@ diff --git a/pkg/common/connectionmanager/zones.go b/pkg/common/connectionmanage
 @@ -116,12 +121,23 @@
  		return nil, err
  	}
- 
+
 -	discoveryInfo := &ZoneDiscoveryInfo{
 -		VcServer:   vc,
 -		DataCenter: datacenterObjs[0],
@@ -103,11 +103,11 @@ diff --git a/pkg/common/connectionmanager/zones.go b/pkg/common/connectionmanage
 +			}
 +		}
 +		return nil, ErrUnsupportedConfiguration
- 
+
 -	return discoveryInfo, nil
 +	}
  }
- 
+
  func (cm *ConnectionManager) getDIFromMultiVCorDC(ctx context.Context,
 Index: pkg/common/vclib/datacenter.go
 IDEA additional info:
@@ -122,7 +122,7 @@ diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
  	"path/filepath"
  	"strings"
 +	"time"
- 
+
  	"github.com/vmware/govmomi/find"
  	"github.com/vmware/govmomi/object"
 @@ -495,7 +496,7 @@
@@ -133,11 +133,11 @@ diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
 +			ProvisioningType: string(types.BaseConfigInfoDiskFileBackingInfoProvisioningTypeLazyZeroedThick),
  		},
  	}
- 
+
 @@ -633,6 +634,49 @@
  	return nil, ErrNoDiskIDFound
  }
- 
+
 +func (dc *Datacenter) ExtendFirstClassDisk(ctx context.Context, diskID string, newCapacityInMB int64) error {
 +	newClient, err := vslm.NewClient(ctx, dc.Client())
 +	if err != nil {

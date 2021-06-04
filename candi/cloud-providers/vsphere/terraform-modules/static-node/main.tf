@@ -161,8 +161,6 @@ resource "vsphere_virtual_machine" "node" {
     client_device = true
   }
 
-  vapp {}
-
   lifecycle {
     ignore_changes = [
       extra_config,
