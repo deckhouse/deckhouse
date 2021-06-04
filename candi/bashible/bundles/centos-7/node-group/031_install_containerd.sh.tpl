@@ -53,6 +53,7 @@ if [[ "$version_in_use" == "$desired_version" ]]; then
 fi
 
 if [[ "$should_install_containerd" == true ]]; then
+  container_selinux_package="container-selinux-2.119.2-1.911c772.el7_8"
 
   if bb-yum-package? containerd.io; then
     bb-flag-set there-was-containerd-installed
@@ -60,21 +61,21 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-# RHEL 7 hack — containerd.io package requires container-selinux >= 2.9 but it doesn't exist in rhel repos.
+  # RHEL 7 hack — containerd.io package requires container-selinux >= 2.9 but it doesn't exist in rhel repos.
   . /etc/os-release
   if [[ "${ID}" == "rhel" ]] && ! bb-yum-package? "$container_selinux_package"; then
     yum install -y "http://mirror.centos.org/centos/7/extras/x86_64/Packages/$container_selinux_package.noarch.rpm"
   fi
 
-  bb-yum-install device-mapper-persistent-data lvm $desired_version
+  bb-yum-install $container_selinux_package device-mapper-persistent-data lvm $desired_version
 
   VERSION="v{{ .kubernetesVersion }}.0"
   curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-${VERSION}-linux-amd64.tar.gz --output crictl-${VERSION}-linux-amd64.tar.gz
   tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
   rm -f crictl-$VERSION-linux-amd64.tar.gz
 
-  VERSION_WERF_CONTAINERD="v1.4.3+werf-fix.2"
-  CHECKSUM_WERF_CONTAINERD="5b78321535c6c299d03f8cfb8b28bf88a7fc9c60cd29b79f52810906472ad86f"
+  VERSION_WERF_CONTAINERD="v1.4.6+werf-fix.2"
+  CHECKSUM_WERF_CONTAINERD="acafa9285a7b10b6e64c15fb271df1aba17c18898c4d85371d65c30ca7bb17ce"
   curl -L https://github.com/flant/containerd/releases/download/$VERSION_WERF_CONTAINERD/containerd --output /usr/local/bin/containerd
   echo "$CHECKSUM_WERF_CONTAINERD /usr/local/bin/containerd" | sha256sum -c
   chmod +x /usr/local/bin/containerd
