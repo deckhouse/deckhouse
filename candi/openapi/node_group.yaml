@@ -205,7 +205,9 @@ spec:
                       properties:
                         maxConcurrentDownloads:
                           type: integer
-                          description: Set the max concurrent downloads for each pull.
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                            If used, cri.type must be set to `Containerd`.
                           x-doc-default: 3
                 cloudInstances: &cloudInstances
                   description: |
@@ -454,7 +456,9 @@ spec:
                           description: |
                             Выгон (draining) подов с ноды, перед выдачей разрешения на disruption.
                 docker:
-                  description: Docker settings for nodes.
+                  description: |
+                    Docker settings for nodes.
+                    If used, cri.type must be set to `Docker`.
                   type: object
                   properties:
                     maxConcurrentDownloads:
