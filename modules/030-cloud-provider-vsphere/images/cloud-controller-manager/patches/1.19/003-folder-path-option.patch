@@ -1,49 +1,19 @@
-Index: go.mod
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.mod b/go.mod
---- a/go.mod	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/go.mod	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-@@ -8,7 +8,7 @@
- 	github.com/prometheus/client_golang v1.7.1
- 	github.com/spf13/cobra v1.0.0
- 	github.com/spf13/pflag v1.0.5
--	github.com/vmware/govmomi v0.21.0
-+	github.com/vmware/govmomi v0.21.1-0.20191118233729-446ecc5f2e3f
- 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
- 	google.golang.org/grpc v1.27.0
- 	gopkg.in/gcfg.v1 v1.2.0
-Index: go.sum
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.sum b/go.sum
---- a/go.sum	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/go.sum	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-@@ -547,6 +547,8 @@
- github.com/vmware/govmomi v0.20.3/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
- github.com/vmware/govmomi v0.21.0 h1:jc8uMuxpcV2xMAA/cnEDlnsIjvqcMra5Y8onh/U3VuY=
- github.com/vmware/govmomi v0.21.0/go.mod h1:zbnFoBQ9GIjs2RVETy8CNEpb+L+Lwkjs3XZUL0B3/m0=
-+github.com/vmware/govmomi v0.21.1-0.20191118233729-446ecc5f2e3f h1:Oz9SOSs3UACQUAy75CAkZEb1YRrdBkkhSr25poAzQIg=
-+github.com/vmware/govmomi v0.21.1-0.20191118233729-446ecc5f2e3f/go.mod h1:Y+Wq4lst78L85Ge/F8+ORXIWiKYqaro1vhAulACy9Lc=
- github.com/vmware/vmw-guestinfo v0.0.0-20170707015358-25eff159a728/go.mod h1:x9oS4Wk2s2u4tS29nEaDLdzvuHdB19CvSGJjPgkZJNk=
- github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
- github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+DESCRIPTION: This patch adds vmFolderPath parameter to
+VirtualCenter configuration section. This option acts like a
+filter when CCM searches VM in vSphere.
+~~~
 Index: pkg/common/config/config.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/common/config/config.go b/pkg/common/config/config.go
---- a/pkg/common/config/config.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/pkg/common/config/config.go	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-@@ -150,6 +150,10 @@
- 		cfg.Global.IPFamily = DefaultIPFamily
+--- a/pkg/common/config/config.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/config/config.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -145,6 +145,10 @@
+ 		cfg.Labels.Zone = v
  	}
- 
+
 +	if v := os.Getenv("VSPHERE_VM_FOLDER_PATH"); v != "" {
 +		cfg.Global.VmFolderPath = v
 +	}
@@ -51,10 +21,10 @@ diff --git a/pkg/common/config/config.go b/pkg/common/config/config.go
  	//Build VirtualCenter from ENVs
  	for _, e := range os.Environ() {
  		pair := strings.Split(e, "=")
-@@ -236,6 +240,11 @@
- 				externalNetworkNames = cfg.Global.ExternalNetworkNames
+@@ -238,6 +242,11 @@
+ 				externalNetworkNames = strings.Split(strings.TrimSpace(externalNetworkNamesEnv), ",")
  			}
- 
+
 +			_, vmFolderPath, errVmFolderPath := getEnvKeyValue("VCENTER_"+id+"_VM_FOLDER_PATH", false)
 +			if errVmFolderPath != nil {
 +				vmFolderPath = cfg.Global.VmFolderPath
@@ -63,77 +33,147 @@ diff --git a/pkg/common/config/config.go b/pkg/common/config/config.go
  			// If server is explicitly set, that means the vcenter value above is the TenantRef
  			vcenterIP := vcenter
  			tenantRef := vcenter
-@@ -261,6 +270,7 @@
- 				IPFamily:             ipFamily,
- 				InternalNetworkNames: internalNetworkNames,
- 				ExternalNetworkNames: externalNetworkNames,
-+				VmFolderPath:         vmFolderPath,
- 			}
+@@ -270,6 +279,7 @@
+ 			vcc.IPFamilyPriority = iPFamilyPriority
+ 			vcc.InternalNetworkNames = internalNetworkNames
+ 			vcc.ExternalNetworkNames = externalNetworkNames
++			vcc.VmFolderPath = vmFolderPath
  		}
  	}
-@@ -283,6 +293,7 @@
- 			IPFamily:             cfg.Global.IPFamily,
- 			InternalNetworkNames: cfg.Global.InternalNetworkNames,
- 			ExternalNetworkNames: cfg.Global.ExternalNetworkNames,
-+			VmFolderPath:         cfg.Global.VmFolderPath,
- 		}
- 	}
- 
-@@ -365,6 +376,7 @@
- 			IPFamilyPriority:     ipFamilyPriority,
- 			InternalNetworkNames: cfg.Global.InternalNetworkNames,
- 			ExternalNetworkNames: cfg.Global.ExternalNetworkNames,
-+			VmFolderPath:         cfg.Global.VmFolderPath,
- 		}
- 		cfg.VirtualCenter[cfg.Global.VCenterIP] = vcConfig
- 	}
-@@ -455,6 +467,10 @@
- 		if vcConfig.ExternalNetworkNames == "" {
- 			vcConfig.ExternalNetworkNames = cfg.Global.ExternalNetworkNames
- 		}
-+
-+		if vcConfig.VmFolderPath == "" {
-+			vcConfig.VmFolderPath = cfg.Global.VmFolderPath
-+		}
- 	}
- 
- 	return nil
-Index: pkg/common/config/types.go
+
+Index: pkg/common/config/config_yaml.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
-diff --git a/pkg/common/config/types.go b/pkg/common/config/types.go
---- a/pkg/common/config/types.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/pkg/common/config/types.go	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-@@ -63,6 +63,8 @@
- 		// will be used in respective status.addresses fields. Comma-separated.
- 		InternalNetworkNames string `gcfg:"internal-network-names"`
- 		ExternalNetworkNames string `gcfg:"external-network-names"`
-+		// VmFolderPath (e.g. "production/ubuntu-test-runners") is a path (relative to root datacenter VM folder), in which Kubernetes VMs reside
-+		VmFolderPath string `gcfg:"vm-folder-path"`
+diff --git a/pkg/common/config/config_yaml.go b/pkg/common/config/config_yaml.go
+--- a/pkg/common/config/config_yaml.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/config/config_yaml.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -53,6 +53,7 @@
+ 	cfg.Global.APIBinding = ccy.Global.APIBinding
+ 	cfg.Global.InternalNetworkNames = ccy.Global.InternalNetworkNames
+ 	cfg.Global.ExternalNetworkNames = ccy.Global.ExternalNetworkNames
++	cfg.Global.VmFolderPath = ccy.Global.VmFolderPath
+
+ 	for keyVcConfig, valVcConfig := range ccy.Vcenter {
+ 		cfg.VirtualCenter[keyVcConfig] = &VirtualCenterConfig{
+@@ -72,6 +73,7 @@
+ 			IPFamilyPriority:     valVcConfig.IPFamilyPriority,
+ 			InternalNetworkNames: valVcConfig.InternalNetworkNames,
+ 			ExternalNetworkNames: valVcConfig.ExternalNetworkNames,
++			VmFolderPath:         valVcConfig.VmFolderPath,
+ 		}
  	}
- 
- 	// Virtual Center configurations
-@@ -121,4 +123,6 @@
- 	// will be used in respective status.addresses fields. Comma-separated.
- 	InternalNetworkNames string `gcfg:"internal-network-names"`
- 	ExternalNetworkNames string `gcfg:"external-network-names"`
+
+@@ -128,6 +130,7 @@
+ 			IPFamilyPriority:     ccy.Global.IPFamilyPriority,
+ 			InternalNetworkNames: ccy.Global.InternalNetworkNames,
+ 			ExternalNetworkNames: ccy.Global.ExternalNetworkNames,
++			VmFolderPath:         ccy.Global.VmFolderPath,
+ 		}
+ 	}
+
+@@ -203,6 +206,10 @@
+ 		if len(vcConfig.ExternalNetworkNames) == 0 {
+ 			vcConfig.ExternalNetworkNames = ccy.Global.ExternalNetworkNames
+ 		}
++
++		if vcConfig.VmFolderPath == "" {
++			vcConfig.VmFolderPath = ccy.Global.VmFolderPath
++		}
+ 	}
+
+ 	return nil
+Index: pkg/common/config/config_yaml_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/config/config_yaml_test.go b/pkg/common/config/config_yaml_test.go
+--- a/pkg/common/config/config_yaml_test.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/config/config_yaml_test.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -55,6 +55,7 @@
+       - vic0dc
+     secretName: tenant1-secret
+     secretNamespace: kube-system
++    vmFolderPath: test/folder
+   tenant2:
+     server: 10.0.0.2
+     datacenters:
+@@ -117,6 +118,9 @@
+ 	if !strings.EqualFold(vcConfig1.SecretRef, "kube-system/tenant1-secret") {
+ 		t.Errorf("vcConfig1 SecretRef should be kube-system/tenant1-secret but actual=%s", vcConfig1.SecretRef)
+ 	}
++	if !strings.EqualFold(vcConfig1.VmFolderPath, "test/folder") {
++		t.Errorf("vcConfig1 VmFolderPath should be test/folder but actual=%s", vcConfig1.VmFolderPath)
++	}
+
+ 	vcConfig2 := cfg.VirtualCenter["tenant2"]
+ 	if vcConfig2 == nil {
+Index: pkg/common/config/types_common.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/config/types_common.go b/pkg/common/config/types_common.go
+--- a/pkg/common/config/types_common.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/config/types_common.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -63,6 +63,8 @@
+ 	// will be used in respective status.addresses fields
+ 	InternalNetworkNames []string
+ 	ExternalNetworkNames []string
 +	// VmFolderPath (e.g. "production/ubuntu-test-runners") is a path (relative to root datacenter VM folder), in which Kubernetes VMs reside
-+	VmFolderPath string `gcfg:"vm-folder-path"`
++	VmFolderPath string
  }
+
+ // VirtualCenterConfig struct
+@@ -108,6 +110,8 @@
+ 	// will be used in respective status.addresses fields
+ 	InternalNetworkNames []string
+ 	ExternalNetworkNames []string
++	// VmFolderPath (e.g. "production/ubuntu-test-runners") is a path (relative to root datacenter VM folder), in which Kubernetes VMs reside
++	VmFolderPath string
+ }
+
+ // Labels struct
+Index: pkg/common/config/types_yaml.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/config/types_yaml.go b/pkg/common/config/types_yaml.go
+--- a/pkg/common/config/types_yaml.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/config/types_yaml.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -73,6 +73,8 @@
+ 	// will be used in respective status.addresses fields
+ 	InternalNetworkNames []string `yaml:"internalNetworkNames"`
+ 	ExternalNetworkNames []string `yaml:"externalNetworkNames"`
++	// VmFolderPath (e.g. "production/ubuntu-test-runners") is a path (relative to root datacenter VM folder), in which Kubernetes VMs reside
++	VmFolderPath string `yaml:"vmFolderPath"`
+ }
+
+ // VirtualCenterConfigYAML contains information used to access a remote vCenter
+@@ -119,6 +121,8 @@
+ 	// will be used in respective status.addresses fields
+ 	InternalNetworkNames []string `yaml:"internalNetworkNames"`
+ 	ExternalNetworkNames []string `yaml:"externalNetworkNames"`
++	// VmFolderPath (e.g. "production/ubuntu-test-runners") is a path (relative to root datacenter VM folder), in which Kubernetes VMs reside
++	VmFolderPath string `yaml:"vmFolderPath"`
+ }
+
+ // LabelsYAML tags categories and tags which correspond to "built-in node labels: zones and region"
 Index: pkg/common/connectionmanager/search.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/common/connectionmanager/search.go b/pkg/common/connectionmanager/search.go
---- a/pkg/common/connectionmanager/search.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/pkg/common/connectionmanager/search.go	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-@@ -167,13 +167,25 @@
+--- a/pkg/common/connectionmanager/search.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/connectionmanager/search.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -168,13 +168,25 @@
  				var vm *vclib.VirtualMachine
  				var err error
- 
+
 -				switch searchBy {
 -				case FindVMByUUID:
 -					vm, err = res.datacenter.GetVMByUUID(ctx, myNodeID)
@@ -161,7 +201,7 @@ diff --git a/pkg/common/connectionmanager/search.go b/pkg/common/connectionmanag
 +						vm, err = res.datacenter.GetVMByDNSNameInFolder(ctx, myNodeID, folderPath)
 +					}
  				}
- 
+
  				if err != nil {
 Index: pkg/common/vclib/datacenter.go
 IDEA additional info:
@@ -169,8 +209,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
---- a/pkg/common/vclib/datacenter.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/pkg/common/vclib/datacenter.go	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
+--- a/pkg/common/vclib/datacenter.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/vclib/datacenter.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
 @@ -20,6 +20,7 @@
  	"context"
  	"errors"
@@ -178,7 +218,7 @@ diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
 +	"path"
  	"path/filepath"
  	"strings"
- 
+
 @@ -93,6 +94,55 @@
  	virtualMachine := VirtualMachine{svm.(*object.VirtualMachine), dc}
  	return &virtualMachine, nil
@@ -232,7 +272,7 @@ diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
 +		return nil, ErrNoVMFound
 +	}
 +}
- 
+
  // GetVMByDNSName gets the VM object from the given dns name
  func (dc *Datacenter) GetVMByDNSName(ctx context.Context, dnsName string) (*VirtualMachine, error) {
 @@ -110,6 +160,55 @@
@@ -288,7 +328,7 @@ diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
 +		return nil, ErrNoVMFound
 +	}
 +}
- 
+
  // GetVMByUUID gets the VM object from the given vmUUID
  func (dc *Datacenter) GetVMByUUID(ctx context.Context, vmUUID string) (*VirtualMachine, error) {
 @@ -127,6 +226,58 @@
@@ -347,7 +387,7 @@ diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
 +		return nil, ErrNoVMFound
 +	}
 +}
- 
+
  // GetVMByPath gets the VM object from the given vmPath
  // vmPath should be the full path to VM and not just the name
 Index: pkg/common/vclib/utils.go
@@ -356,30 +396,25 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/common/vclib/utils.go b/pkg/common/vclib/utils.go
---- a/pkg/common/vclib/utils.go	(revision 803294317670aacf5f0ee9eace31eb288284b527)
-+++ b/pkg/common/vclib/utils.go	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-@@ -17,11 +17,15 @@
+--- a/pkg/common/vclib/utils.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/common/vclib/utils.go	(revision 9282f97b80c32eee16be28b732dd32773d26fc21)
+@@ -17,7 +17,10 @@
  package vclib
- 
+
  import (
 +	"context"
  	"fmt"
++	"github.com/vmware/govmomi/property"
++	"github.com/vmware/govmomi/vim25"
  	"path/filepath"
  	"regexp"
  	"strings"
- 
-+	"github.com/vmware/govmomi/property"
-+	"github.com/vmware/govmomi/vim25"
-+
- 	"github.com/vmware/govmomi/find"
- 	"github.com/vmware/govmomi/object"
- 	"github.com/vmware/govmomi/vim25/mo"
-@@ -218,3 +222,21 @@
+@@ -218,3 +221,21 @@
  	}
  	return false
  }
 +
-+// Checks
++// ObjectHasAncestor checks if requiredAncestor present in object
 +func ObjectHasAncestor(ctx context.Context, client *vim25.Client, object object.Reference, requiredAncestor object.Reference) (bool, error) {
 +	ancestors, err := mo.Ancestors(ctx, client.Client, property.DefaultCollector(client).Reference(), object.Reference())
 +	if err != nil {

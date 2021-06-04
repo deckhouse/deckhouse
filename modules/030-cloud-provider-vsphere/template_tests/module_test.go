@@ -33,17 +33,12 @@ const globalValues = `
     registryDockercfg: cfg
     tags:
       common:
-        csiExternalProvisioner116: imagehash
-        csiExternalAttacher116: imagehash
-        csiExternalResizer116: imagehash
-        csiNodeDriverRegistrar116: imagehash
         csiExternalProvisioner119: imagehash
         csiExternalAttacher119: imagehash
         csiExternalResizer119: imagehash
         csiNodeDriverRegistrar119: imagehash
       cloudProviderVsphere:
         vsphereCsi: imagehash
-        cloudControllerManager116: imagehash
         cloudControllerManager119: imagehash
   discovery:
     d8SpecificNodeCountByRole:
@@ -52,18 +47,23 @@ const globalValues = `
     nodeCountByType:
       cloud: 1
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.16.4
+    kubernetesVersion: 1.19.11
 `
 
 const moduleValuesA = `
     internal:
       storageClasses:
       - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
         path: /my/ds/path/mydsname1
         zones: ["zonea", "zoneb"]
       - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
       server: myhost
       username: myuname
       password: myPaSsWd
@@ -87,11 +87,16 @@ const moduleValuesB = `
     internal:
       storageClasses:
       - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
         path: /my/ds/path/mydsname1
         zones: ["zonea", "zoneb"]
       - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
         path: /my/ds/path/mydsname2
         zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
       server: myhost
       username: myuname
       password: myPaSsWd
@@ -105,6 +110,8 @@ const moduleValuesB = `
       zones: ["aaa", "bbb"]
       masterInstanceClass: null
       defaultResourcePoolPath: kubernetes-dev
+      externalNetworkNames: ["aaa", "bbb"]
+      internalNetworkNames: ["ccc", "ddd"]
 `
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
@@ -126,7 +133,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			csiCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-vsphere", "csi-controller")
-			csiDriver := f.KubernetesGlobalResource("CSIDriver", "vsphere.csi.vmware.com")
+			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
 			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "csi-node")
 			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "csi")
 			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
@@ -240,6 +247,35 @@ storageclass.kubernetes.io/is-default-class: "true"
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.vsphere").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			cloudConfig := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			Expect(cloudConfig.Exists()).To(BeTrue())
+			expectedCloudConfigYaml := `
+global:
+  user: "myuname"
+  password: "myPaSsWd"
+  insecureFlag: true
+
+vcenter:
+  main:
+    server: "myhost"
+    datacenters:
+      - "X1"
+    externalNetworkNames:
+      - aaa
+      - bbb
+    internalNetworkNames:
+      - ccc
+      - ddd
+    vmFolderPath: dev/test
+
+labels:
+  region: "myregtagcat"
+  zone: "myzonetagcat"`
+
+			cloudConfigData, err := base64.StdEncoding.DecodeString(cloudConfig.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(cloudConfigData)).To(MatchYAML(expectedCloudConfigYaml))
 		})
 
 		Context("Unsupported Kubernetes version", func() {

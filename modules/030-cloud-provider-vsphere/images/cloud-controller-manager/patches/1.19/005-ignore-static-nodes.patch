@@ -1,3 +1,6 @@
+DESCRIPTION: This patch is for our case when we want to have a
+static Nodes in the cluster, managed by vSphere cloud provider.
+~~~
 Index: pkg/cloudprovider/vsphere/instances.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -9,7 +12,7 @@ diff --git a/pkg/cloudprovider/vsphere/instances.go b/pkg/cloudprovider/vsphere/
 @@ -152,6 +152,10 @@
  func (i *instances) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
  	klog.V(4).Info("instances.InstanceExistsByProviderID() called with ", providerID)
- 
+
 +	if providerID == "static://" {
 +		return true, nil
 +	}

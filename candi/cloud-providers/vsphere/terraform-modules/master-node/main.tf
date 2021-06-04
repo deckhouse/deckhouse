@@ -187,8 +187,6 @@ resource "vsphere_virtual_machine" "master" {
     client_device = true
   }
 
-  vapp {}
-
   depends_on = [vsphere_virtual_disk.kubernetes_data]
 
   lifecycle {

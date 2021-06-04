@@ -3,8 +3,10 @@
   {{- $context := index . 0 }}
 
   {{- $config := index . 1 }}
+  {{- $fullname := $config.fullname | default "csi-node" }}
   {{- $nodeImage := $config.nodeImage | required "$config.nodeImage is required" }}
   {{- $driverFQDN := $config.driverFQDN | required "$config.driverFQDN is required" }}
+  {{- $serviceAccount := $config.serviceAccount | default "" }}
   {{- $additionalNodeEnvs := $config.additionalNodeEnvs }}
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
@@ -23,14 +25,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: csi-node
+  name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: csi-node
+    name: {{ $fullname }}
   updatePolicy:
     updateMode: "Auto"
     {{- end }}
@@ -38,19 +40,19 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: csi-node
+  name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | indent 2 }}
 spec:
 {{ include "helm_lib_pdb_daemonset" $context | indent 2 }}
   selector:
     matchLabels:
-      app: csi-node
+      app: {{ $fullname }}
 ---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: csi-node
+  name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | indent 2 }}
 spec:
@@ -58,11 +60,11 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: csi-node
+      app: {{ $fullname }}
   template:
     metadata:
       labels:
-        app: csi-node
+        app: {{ $fullname }}
     spec:
       affinity:
         nodeAffinity:
@@ -127,8 +129,8 @@ spec:
         resources:
           requests:
 {{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
-      serviceAccount: ""
-      serviceAccountName: ""
+      serviceAccount: {{ $serviceAccount | quote }}
+      serviceAccountName: {{ $serviceAccount | quote }}
       volumes:
       - name: registration-dir
         hostPath:

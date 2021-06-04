@@ -60,3 +60,4 @@ cloudProviderVsphere:
         template: dev/golden_image
       vmFolderPath: dev/test
       zones: ["aaa", "bbb"]
+      compatibilityFlag: ""

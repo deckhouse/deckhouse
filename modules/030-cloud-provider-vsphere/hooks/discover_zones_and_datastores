@@ -30,7 +30,7 @@ function __main__() {
   export VSPHERE_ZONE_TAG_CATEGORY_NAME
 
   if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-    result='{"datacenter":"DCTEST","zones":["ZONE-TEST"],"datastores":[{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_Lun102","name":"test-1-lun102-0403073a","datastoreType":"Datastore"},{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_Lun101","name":"test-1-lun101-b39d82fa","datastoreType":"Datastore"},{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_k8s","name":"test-1-k8s-3cf5ce84","datastoreType":"DatastoreCluster"}]}'
+    result='{"datacenter":"DCTEST","zones":["ZONE-TEST"],"datastores":[{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_Lun102","name":"test-1-lun102-0403073a","datastoreType":"Datastore","datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/"},{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_Lun101","name":"test-1-lun101-b39d82fa","datastoreType":"Datastore","datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/"},{"zones":["ZONE-TEST"],"path":"/DCTEST/datastore/test_1_k8s","name":"test-1-k8s-3cf5ce84","datastoreType":"DatastoreCluster"}]}'
   else
     if values::get --required cloudProviderVsphere.internal.datacenter >/dev/null 2>&1 ||
        values::get --required cloudProviderVsphere.internal.zones >/dev/null 2>&1 ||

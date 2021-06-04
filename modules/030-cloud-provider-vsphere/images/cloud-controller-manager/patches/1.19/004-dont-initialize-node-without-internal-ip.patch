@@ -1,15 +1,18 @@
+DESCRIPTION: This patch adds a check, restricting Node
+registration in the cluster while it has no internal IP.
+~~~
 Index: pkg/cloudprovider/vsphere/nodemanager.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
---- a/pkg/cloudprovider/vsphere/nodemanager.go	(revision 55b58029493df3ae81d9d085e28dcb7a160ef702)
-+++ b/pkg/cloudprovider/vsphere/nodemanager.go	(revision 69cb68d0e885ee9573f68efddaf040caf3534552)
-@@ -291,6 +291,17 @@
- 		klog.Warningf("Unable to find a suitable IP address. ipFamily: %s", ipFamily)
+--- a/pkg/cloudprovider/vsphere/nodemanager.go	(revision 2e4610dbef94d74ca6b27a3cf8a84b069be8e148)
++++ b/pkg/cloudprovider/vsphere/nodemanager.go	(revision 00b8010f9773c666fae000315b436a89b09f54c3)
+@@ -424,6 +424,17 @@
+ 		return fmt.Errorf("unable to find suitable IP address for node %s with IP family %s", nodeID, ipFamily)
  	}
- 
+
 +	var internalAddressExists bool
 +	for _, addr := range addrs {
 +		if addr.Type == v1.NodeInternalIP {
@@ -18,7 +21,7 @@ diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vspher
 +		}
 +	}
 +	if !internalAddressExists {
-+		return fmt.Errorf("not a single internalAddressFound in Node addresses:\n%+v", addrs)
++		return fmt.Errorf("no Internal IP found in the node %s addresses:\n%+v", nodeID, addrs)
 +	}
 +
  	klog.V(2).Infof("Found node %s as vm=%+v in vc=%s and datacenter=%s",

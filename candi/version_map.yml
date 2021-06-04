@@ -131,7 +131,7 @@ k8s:
       openstack: v1.19.2
       yandex: v0.19.3-fix.3
       aws: b390ec15ea471adc8312b4528cf37814852b993e
-      vsphere: 6d76e17cad08d583b8ff6fc5c80f119807ed0f57
+      vsphere: v1.19.1
       azure: v0.6.0
       gcp: ca1e685df450fd5d32b57a659eb363b870b03937
     csi:
@@ -148,7 +148,7 @@ k8s:
       openstack: v1.20.1
       yandex: v0.20.4
       aws: 9e3808d53f0364178f2c40476ea368f3c5140d39
-      vsphere: 6d76e17cad08d583b8ff6fc5c80f119807ed0f57
+      vsphere: v1.20.0
       azure: v0.7.2
       gcp: 880c0a9ded79c51a2be835b0872de3597cff059b
     csi:
@@ -165,7 +165,7 @@ k8s:
       openstack: v1.21.0
       yandex: v0.21.0
       aws: d31100461a83378b658b1ab2c689d79987a0d863
-      vsphere: 6d76e17cad08d583b8ff6fc5c80f119807ed0f57
+      vsphere: v1.20.0
       azure: v1.0.0
       gcp: f385bda395a6a64d9964605ab0a69d071155f2e5
     csi:
