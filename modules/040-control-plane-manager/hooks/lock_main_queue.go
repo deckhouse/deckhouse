@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 /*
@@ -20,12 +21,15 @@ Description:
 	Checks Pod readiness
 */
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue:       "main",
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "cpm_pods",
-			ApiVersion: "v1",
-			Kind:       "Pod",
+			Name:                         "cpm_pods",
+			ApiVersion:                   "v1",
+			Kind:                         "Pod",
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -40,9 +44,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 
 		{
-			Name:       "cpm_ds",
-			ApiVersion: "apps/v1",
-			Kind:       "DaemonSet",
+			Name:                         "cpm_ds",
+			ApiVersion:                   "apps/v1",
+			Kind:                         "DaemonSet",
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -70,10 +76,7 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	label, ok := pod.Labels["pod-template-generation"]
-	if !ok {
-		label = ""
-	}
+	podGeneration := pod.Labels["pod-template-generation"]
 
 	var isReady bool
 	for _, cond := range pod.Status.Conditions {
@@ -84,7 +87,7 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	cpod := controlPlaneManagerPod{
-		Generation: label,
+		Generation: podGeneration,
 		NodeName:   pod.Spec.NodeName,
 		IsReady:    isReady,
 	}
@@ -123,20 +126,21 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 		return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
 	}
 
-	var atLeastOnePodReady bool
+	expectedReadyPodsCount := 0
+	readyCount := 0
 	for _, spod := range snap {
 		pod := spod.(controlPlaneManagerPod)
 		if pod.NodeName == "" || pod.Generation != dsGenerationStr {
 			continue
 		}
+		expectedReadyPodsCount++
 
-		if !pod.IsReady {
-			return fmt.Errorf("lock the main queue: waiting for all control-plane-manager Pods to become Ready")
+		if pod.IsReady {
+			readyCount++
 		}
-		atLeastOnePodReady = true
 	}
 
-	if !atLeastOnePodReady {
+	if readyCount != expectedReadyPodsCount {
 		return fmt.Errorf("lock the main queue: waiting for all control-plane-manager Pods to become Ready")
 	}
 
