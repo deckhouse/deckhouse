@@ -1,4 +1,4 @@
-bb-event-on 'd8-service-canged' '_on_bashible_service_config_changed'
+bb-event-on 'd8-service-changed' '_on_bashible_service_config_changed'
 _on_bashible_service_config_changed() {
 {{ if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
@@ -7,7 +7,7 @@ _on_bashible_service_config_changed() {
   systemctl enable bashible.timer
 }
 
-bb-sync-file /etc/systemd/system/bashible.timer - d8-service-canged << "EOF"
+bb-sync-file /etc/systemd/system/bashible.timer - d8-service-changed << "EOF"
 [Unit]
 Description=bashible timer
 
@@ -19,7 +19,7 @@ OnUnitActiveSec=1min
 WantedBy=multi-user.target
 EOF
 
-bb-sync-file /etc/systemd/system/bashible.service - d8-service-canged << "EOF"
+bb-sync-file /etc/systemd/system/bashible.service - d8-service-changed << "EOF"
 [Unit]
 Description=Bashible service
 

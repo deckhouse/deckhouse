@@ -73,8 +73,8 @@ if [[ "$should_install_containerd" == true ]]; then
   tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
   rm -f crictl-$VERSION-linux-amd64.tar.gz
 
-  VERSION_WERF_CONTAINERD="v1.4.3+werf-fix.2"
-  CHECKSUM_WERF_CONTAINERD="5b78321535c6c299d03f8cfb8b28bf88a7fc9c60cd29b79f52810906472ad86f"
+  VERSION_WERF_CONTAINERD="v1.4.6+werf-fix.2"
+  CHECKSUM_WERF_CONTAINERD="acafa9285a7b10b6e64c15fb271df1aba17c18898c4d85371d65c30ca7bb17ce"
   curl -L https://github.com/flant/containerd/releases/download/$VERSION_WERF_CONTAINERD/containerd --output /usr/local/bin/containerd
   echo "$CHECKSUM_WERF_CONTAINERD /usr/local/bin/containerd" | sha256sum -c
   chmod +x /usr/local/bin/containerd

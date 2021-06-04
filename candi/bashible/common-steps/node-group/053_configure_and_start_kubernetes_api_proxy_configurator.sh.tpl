@@ -1,4 +1,4 @@
-bb-event-on 'd8-service-canged' '_on_kubernetes_api_proxy_service_changed'
+bb-event-on 'd8-service-changed' '_on_kubernetes_api_proxy_service_changed'
 _on_kubernetes_api_proxy_service_changed() {
   {{- if ne .runType "ImageBuilding" }}
   systemctl daemon-reload
@@ -9,7 +9,7 @@ _on_kubernetes_api_proxy_service_changed() {
   systemctl enable kubernetes-api-proxy-configurator.timer
 }
 
-bb-sync-file /etc/systemd/system/kubernetes-api-proxy-configurator.timer - d8-service-canged << "EOF"
+bb-sync-file /etc/systemd/system/kubernetes-api-proxy-configurator.timer - d8-service-changed << "EOF"
 [Unit]
 Description=kubernetes api proxy configurator timer
 
@@ -21,7 +21,7 @@ OnUnitActiveSec=1m
 WantedBy=multi-user.target
 EOF
 
-bb-sync-file /etc/systemd/system/kubernetes-api-proxy-configurator.service - d8-service-canged << "EOF"
+bb-sync-file /etc/systemd/system/kubernetes-api-proxy-configurator.service - d8-service-changed << "EOF"
 [Unit]
 Description=kubernetes api proxy configurator
 

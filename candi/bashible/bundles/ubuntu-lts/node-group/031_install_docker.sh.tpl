@@ -107,8 +107,8 @@ if [[ "$should_install_docker" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  bb-apt-install $desired_version_docker $desired_version_docker_cli
   bb-flag-set new-docker-installed
+  bb-apt-install $desired_version_docker $desired_version_docker_cli
 fi
 
 {{- end }}
