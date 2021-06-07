@@ -70,7 +70,7 @@ ansible:
         chdir: /srv/jekyll-data/documentation/
     - shell: |
         mkdir -m 777 -p /app/_site/
-        JEKYLL_ENV=production jekyll build -d /app/_site/ --trace
+        JEKYLL_ENV=production jekyll build -d /app/_site/
       args:
         warn: false
         executable: /bin/bash

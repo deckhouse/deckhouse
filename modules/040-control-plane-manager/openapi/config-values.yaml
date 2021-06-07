@@ -10,9 +10,9 @@ properties:
         type: boolean
         default: false
         description: |
-          Cлушать ли на `0.0.0.0`.
+          Specifies whether to listen on `0.0.0.0`.
 
-          По умолчанию API server слушает на hostIP, который обычно соответствует Internal адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout'а).
+          By default, the API server listens on the hostIP. The latter usually corresponds to the Internal node address; however, the actual IP depends on the cluster type (Static or Cloud) and the layout selected.
       certSANs:
         type: array
         description: |
@@ -67,13 +67,13 @@ properties:
       loadBalancer:
         type: object
         description: |
-          Если указано, будет создан сервис с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).
+          If set, a service of the `LoadBalancer` type will be created (`d8-control-plane-apiserver` in the `kube-system` ns).
         properties:
           annotations:
             type: object
             description: |
-              Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-              > **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              Annotations to attach to a service to fine-tune the load balancer.
+              > **Caution!** The module does not take into account the specifics of setting annotations in various cloud environments. If the annotations for load balancer provisioning are only applied when creating a service, you will need to delete and add the `apiserver.loadBalancer` parameter to update such parameters.
           sourceRanges:
             type: array
             description: |
@@ -87,7 +87,7 @@ properties:
         type: boolean
         default: false
         description: |
-          Включение [аудита событий](faq.html#как-включить-аудит-событий) с конфигурацией из `Secret` (`audit-policy` в ns `kube-system`).
+          Enable [event auditing](faq.html#how-do-i-enable-event-auditing) using the configuration from the `Secret` (`audit-policy` in the `kube-system` namespace).
   etcd:
     type: object
     description: |

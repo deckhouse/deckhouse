@@ -16,9 +16,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Параметры группы vSphere VirtualMachines, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/)).
+            Parameters of a group of vSphere VirtualMachines used by `machine-controller-manager` (the [node-manager](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/) module).
 
-            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
             - spec
           properties:
@@ -41,7 +41,7 @@ spec:
                   description: |
                     Root disk size in GiB to use in vSphere VirtualMachines.
 
-                    Если в template диск меньше, — автоматически произойдёт его расширение.
+                    The disk will be automatically enlarged if its size in the template is less than specified.
                   example: 20
                   type: integer
                 template:
@@ -84,9 +84,9 @@ spec:
                       type: boolean
                     cpuShares:
                       description: |
-                        Относительная величина CPU Shares для создаваемых виртуальных машин.
+                        The relative amount of CPU Shares for VMs to be created.
 
-                        По умолчанию: `1000` на каждый vCPU.
+                        By default: `1000` per vCPU.
                       type: integer
                     cpuLimit:
                       description: CPU limit in MHz.
@@ -96,9 +96,9 @@ spec:
                       type: integer
                     memoryShares:
                       description: |
-                        Относительная величина Memory Shares для создаваемых виртуальных машин.
+                        The relative amount of Memory Shares for VMs to be created.
 
-                        По умолчанию: `10` shares на мегабайт.
+                        By default: `10` shares per megabyte.
                       type: integer
                       maximum: 100
                       minimum: 0
