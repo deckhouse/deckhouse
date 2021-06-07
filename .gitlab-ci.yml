@@ -166,8 +166,8 @@ No Cyrillic Validation:
   tags:
     - werf-distributed
 
-Doc Translation Validation:
-  extends: .Translation Validation template
+Doc Validation:
+  extends: .Content Validation template
   tags:
     - werf-distributed
 

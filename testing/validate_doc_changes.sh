@@ -10,11 +10,58 @@ function request_gitlab_api() {
 # $2 - filename in other language
 function checks() {
     if ! [[ -f "${2}" ]]; then
-      echo "${1} changed but ${2} is absent"
+      echo "warn: ${1} changed but ${2} is absent"
       return 1
     else
       if [[ -z $(grep "${2}" <<< ${DIFF_DATA}) ]]; then
-        echo "${1} changed but ${2} is not changed"
+        echo "ERROR: ${1} changed but ${2} is not changed"
+        return 1
+      fi
+    fi
+}
+
+function check_doc() {
+    filename=${1}
+    docs_pattern="docs/(CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
+
+    if [[ "$filename" =~ /docs/[^/]+.md ]] && ! [[ "$filename" =~ $docs_pattern ]]; then
+        echo "$filename is not allowed. You can place it in the 'internal' folder for example."
+        cat <<EOF
+    Only the following files (and their Russian versions) are allowed in the module '/docs/' folder:
+        CONFIGURATION.md
+        CR.md
+        FAQ.md
+        README.md
+        USAGE.md
+EOF
+        return 1
+    fi
+
+    if [[ "$filename" == *"_RU.md" ]]; then
+      otherLangFileName=$(sed 's/_RU.md/.md/' <<< $filename)
+      if ! checks "${filename}" "${otherLangFileName}" ; then
+        return 1
+      fi
+    else
+      otherLangFileName=$(sed 's/.md/_RU.md/' <<< $filename)
+      if ! checks "${filename}" "${otherLangFileName}" ; then
+        return 1
+      fi
+    fi
+}
+
+function check_resource() {
+    filename=${1}
+
+    pattern_ru="doc-ru-.+.y[a]?ml$"
+    if [[ "$filename" =~ $pattern_ru ]]; then
+      otherLangFileName=${filename/doc-ru-/}
+      if ! checks "${filename}" "${otherLangFileName}" ; then
+        return 1
+      fi
+    else
+      otherLangFileName=$(sed -E 's#([^/]+\.y[a]?ml)$#doc-ru-\1#' <<< $filename)
+      if ! checks "${filename}" "${otherLangFileName}" ; then
         return 1
       fi
     fi
@@ -23,6 +70,8 @@ function checks() {
 JOB_TOKEN=$1
 SKIP_LABEL_NAME='Skip doc validation'
 hasErrors=0
+pattern_resources="openapi/.+.y[a]?ml$|crds/.+.y[a]?ml$"
+pattern_yaml=".+\.y[a]?ml$"
 
 if [[ -z $CI_OPEN_MERGE_REQUESTS ]]; then
   echo "There are no merge requests found"
@@ -50,37 +99,18 @@ fi
 echo
 
 for item in ${DIFF_DATA}; do
-    # skip other than .md files
-    if ! [[ "$item" == *".md" ]]; then
-      continue
-    fi
-
-    docs_pattern="docs/(CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
-    if [[ "$item" =~ /docs/[^/]+.md ]] && ! [[ "$item" =~ $docs_pattern ]]; then
-        hasErrors=1
-        echo "$item is not allowed. You can place it in the 'internal' folder for example."
-        cat <<EOF
-    Only the following files (and their Russian versions) are allowed in the module '/docs/' folder:
-        CONFIGURATION.md
-        CR.md
-        FAQ.md
-        README.md
-        USAGE.md
-EOF
-    fi
-
-    if [[ "$item" == *"_RU.md" ]]; then
-      otherLangFileName=$(sed 's/_RU.md/.md/' <<< $item)
-      if ! checks "${item}" "${otherLangFileName}" ; then
-        hasErrors=1
-      fi
+    # skip other than .md files and resource files (openapi specs and crds)
+    if [[ "$item" == *".md" ]]; then
+        if ! check_doc "${item}" ; then
+            hasErrors=1
+        fi
+    elif [[ "$item" =~ $pattern_resources ]]; then
+        if ! check_resource "${item}" ; then
+            hasErrors=1
+        fi
     else
-      otherLangFileName=$(sed 's/.md/_RU.md/' <<< $item)
-      if ! checks "${item}" "${otherLangFileName}" ; then
-        hasErrors=1
-      fi
+        continue
     fi
-
 done
 
 if [[ $hasErrors -gt 0 ]] ; then
@@ -88,3 +118,5 @@ if [[ $hasErrors -gt 0 ]] ; then
 fi
 
 exit $hasErrors
+
+}

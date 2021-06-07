@@ -4,7 +4,7 @@ title: "The deckhouse-web module: configuration"
 
 ## Parameters
 
-* `ingressClass` — the class of the igress controller of the documentation web UI;
+* `ingressClass` — the class of the Ingress controller of the documentation web UI;
     * An optional parameter; by default, the `modules.ingressClass` global value is used;
 * `auth` — parameters to authenticate and authorize access to the documentation web interface:
     * `externalAuthentication` — parameters to enable external authentication (the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism is used that is based on the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module);

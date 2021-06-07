@@ -75,14 +75,14 @@ spec:
     * `DeploymentMetric`
     * `StatefulsetMetric`
     * `NamespaceMetric`
-    * `DaemonsetMetric` (не доступен пользователям)
+    * `DaemonsetMetric` (недоступен пользователям)
 * Cluster:
-    * `ClusterServiceMetric` (не доступен пользователям)
-    * `ClusterIngressMetric` (не доступен пользователям)
-    * `ClusterPodMetric` (не доступен пользователям)
-    * `ClusterDeploymentMetric` (не доступен пользователям)
-    * `ClusterStatefulsetMetric` (не доступен пользователям)
-    * `ClusterDaemonsetMetric` (не доступен пользователям)
+    * `ClusterServiceMetric` (недоступен пользователям)
+    * `ClusterIngressMetric` (недоступен пользователям)
+    * `ClusterPodMetric` (недоступен пользователям)
+    * `ClusterDeploymentMetric` (недоступен пользователям)
+    * `ClusterStatefulsetMetric` (недоступен пользователям)
+    * `ClusterDaemonsetMetric` (недоступен пользователям)
 
 С помощью Cluster-scoped ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса можно её локально переопределять. [Формат](cr.html) у всех CR одинаковый.
 

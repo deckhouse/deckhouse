@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: configuraton"
+title: "Сloud provider — GCP: configuration"
 ---
 
 The module is configured automatically based on the chosen placement strategy (the `GCPClusterConfiguration` custom resource). In most cases, you do not have to configure the module manually.
@@ -60,4 +60,3 @@ cloudProviderGcp: |
     - pd-ssd-replicated
     default: pd-ssd-not-replicated
 ```
-

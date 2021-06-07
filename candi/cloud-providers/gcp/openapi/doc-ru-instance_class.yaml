@@ -10,22 +10,14 @@ spec:
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
           description: |
-            Описывает параметры группы GCP Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+            Описывает параметры группы GCP Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - machineType
               properties:
                 machineType:
                   description: |
@@ -34,50 +26,28 @@ spec:
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
 
                     GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
-                  example: n1-standard-4
-                  type: string
                 image:
                   description: |
                     Образ, который будет использоваться в заказанных инстансах. Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
 
                     **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
-
-                    Опциональный параметр.
-                  example: "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"
-                  type: string
                 preemptible:
                   description: |
                     Заказывать ли preemptible-инстансы.
-                  type: boolean
-                  x-doc-default: false
                 diskType:
                   description: |
                     Тип созданного диска.
-                  example: "pd-ssd"
-                  x-doc-default: "pd-standard"
-                  type: string
-                  enum:
-                  - "pd-standard"
-                  - "pd-ssd"
                 diskSizeGb:
                   description: |
                     Размер root-диска. Значение указывается в `ГиБ`.
-                  example: 20
-                  x-doc-default: 50
-                  type: integer
                 disableExternalIP:
                   description: Запретить ли назначение внешнего IP для инстанса. True — инстанс будет создан  без внешнего IP.
-                  type: boolean
                 additionalNetworkTags:
                   description: |
                     Список дополнительных тегов.
 
                     К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
-                  type: array
-                  items:
-                    type: string
                 additionalLabels:
-                  type: object
                   description: |
                     Список дополнительных label'ов.
 
@@ -88,13 +58,3 @@ spec:
                     project: cms-production
                     severity: critical
                     ```
-                  x-kubernetes-preserve-unknown-fields: true
-                  additionalProperties:
-                    type: string
-  scope: Cluster
-  names:
-    plural: gcpinstanceclasses
-    singular: gcpinstanceclass
-    kind: GCPInstanceClass
-    categories:
-      - cloudinstanceclasses

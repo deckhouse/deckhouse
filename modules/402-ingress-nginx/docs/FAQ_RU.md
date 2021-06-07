@@ -46,8 +46,8 @@ spec:
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
-        # Если kube-apiserver не доступен, мы не сможем аутентифицировать и авторизовывать пользователей.
-        # Stale Cache хранит только результаты успешной авторизации и используется только если apiserver не доступен.
+        # Если kube-apiserver недоступен, мы не сможем аутентифицировать и авторизовывать пользователей.
+        # Stale Cache хранит только результаты успешной авторизации и используется только если apiserver недоступен.
         - "--stale-cache-interval=1h30m"
         ports:
         - containerPort: 443

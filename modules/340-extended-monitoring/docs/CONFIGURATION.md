@@ -8,7 +8,7 @@ title: "The extended-monitoring module: configuration"
   * `exporterEnabled` — enables imageAvailabilityExporter;
     * Format — boolean. It is set to `true` by default;
   * `ignoredImages` — a list of images to ignore when checking the presence in the registry, e.g., `alpine:3.12` or `quay.io/test/test:v1.1`;
-    * Fromat — an array of strings;
+    * Format — an array of strings;
     * An optional parameter;
   * `skipRegistryCertVerification` — whether to skip the verification of the container registry certificate;
     * Format — boolean. It is set to `false` by default;.

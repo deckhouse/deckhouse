@@ -54,6 +54,6 @@ basicAuth: |
 ```
 
 ### Использование
-Просто добавляем подобную аннотацию к ингрессу:
+Просто добавляем подобную аннотацию к Ingress-ресурсу:
 
 `nginx.ingress.kubernetes.io/auth-url: "http://basic-auth.kube-basic-auth.svc.cluster.local/"`

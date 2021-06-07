@@ -16,9 +16,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Описывает параметры группы GCP Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+            Parameters of a group of GCP Instances used by `machine-controller-manager` (the [node-manager](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/) module).
 
-            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
             - spec
           properties:
@@ -31,28 +31,27 @@ spec:
                   description: |
                     Machine type of GCP instance.
 
-                    **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
+                    **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
 
-                    GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+                    GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
                   example: n1-standard-4
                   type: string
                 image:
                   description: |
                     Image to use while provisioning GCP servers.
 
-                    Список образов можно найти в [документации](https://cloud.google.com/compute/docs/images#ubuntu).
+                    You can find a list of images in the [documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                    **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
-
-                    Опциональный параметр.
+                    **Caution!** Currently, only Ubuntu 18.04, Ubuntu 20.04, Centos 7 are supported and tested to work.
                   example: "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"
+                  x-doc-required: false
                   type: string
                 preemptible:
-                  description: Should instances be preemtible.
+                  description: Should instances be preemptible.
                   type: boolean
                   x-doc-default: false
                 diskType:
-                  description: Instance disk type.
+                  description: Instance's disk type.
                   example: "pd-ssd"
                   x-doc-default: "pd-standard"
                   type: string
@@ -60,18 +59,18 @@ spec:
                   - "pd-standard"
                   - "pd-ssd"
                 diskSizeGb:
-                  description: Instance root disk size in gigabytes.
+                  description: Instance's root disk size in gigabytes.
                   example: 20
                   x-doc-default: 50
                   type: integer
                 disableExternalIP:
-                  description: Defines whether to disable external ip for instance or not. True means that istance is created without external ip
+                  description: Defines whether to disable external ip for an instance or not. True means that an instance is created without external ip
                   type: boolean
                 additionalNetworkTags:
                   description: |
-                    Список дополнительных тегов.
+                    The list of additional tags.
 
-                    К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                    For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
                   type: array
                   items:
                     type: string
@@ -82,7 +81,7 @@ spec:
 
                     [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
 
-                    Пример:
+                    An example:
                     ```yaml
                     project: cms-production
                     severity: critical

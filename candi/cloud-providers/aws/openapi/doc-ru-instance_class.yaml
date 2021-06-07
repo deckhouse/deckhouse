@@ -1,39 +1,22 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
-metadata:
-  name: awsinstanceclasses.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-aws
 spec:
-  group: deckhouse.io
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
           description: |
-            Параметры instance в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+            Параметры instance в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - instanceType
               properties:
                 instanceType:
                   description: |
                     Тип заказываемых инстансов.
 
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
-                  example: t3.large
-                  type: string
                 ami:
                   description: |
                     Образ (AMI ID), который будет использоваться в заказанных инстансах.
@@ -44,46 +27,22 @@ spec:
                     --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
                     jq '.Images[].ImageId'
                     ```
-                  example: ami-040a1551f9c9d11ad
-                  type: string
                 spot:
                   description: |
                     Создавать ли spot-инстансы (spot instance). Spot-инстансы будут запускаться с минимально возможной для успешного запуска ценой за час.
-                  type: boolean
                 diskType:
                   description: |
                     Тип созданного диска.
-                  example: "gp2"
-                  type: string
-                  x-doc-default: "gp2"
                 iops:
                   description: |
                     Количество `IOPS`. Применяется только для `diskType` **io1**.
-                  example: "500"
-                  type: string
                 diskSizeGb:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
-                  example: 20
-                  type: integer
-                  x-doc-default: 20
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам.
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true
-                  additionalProperties:
-                    type: string
                 additionalSecurityGroups:
                   type: array
                   description: |
                     Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего InstanceClass.
-                  items:
-                    type: string
-  scope: Cluster
-  names:
-    plural: awsinstanceclasses
-    singular: awsinstanceclass
-    kind: AWSInstanceClass
-    categories:
-      - cloudinstanceclasses

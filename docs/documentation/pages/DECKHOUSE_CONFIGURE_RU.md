@@ -64,9 +64,9 @@ data:
 {% offtopic title="Особенности автоматики, зависящие от 'типа' модуля" %}{% raw %}
 * Модули *monitoring* (operator-prometheus, prometheus и vertical-pod-autoscaler):
   * Порядок поиска узлов (для определения nodeSelector):
-    * Наличие ноды с лейблом <code>node-role.deckhouse.io/MODULE_NAME</code>
-    * Наличие ноды с лейблом <code>node-role.deckhouse.io/monitoring</code>
-    * Наличие ноды с лейблом <code>node-role.deckhouse.io/system</code>
+    * Наличие узла с лейблом <code>node-role.deckhouse.io/MODULE_NAME</code>
+    * Наличие узла с лейблом <code>node-role.deckhouse.io/monitoring</code>
+    * Наличие узла с лейблом <code>node-role.deckhouse.io/system</code>
   * Добавляемые toleration'ы (добавляются одновременно все):
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
 
@@ -75,15 +75,15 @@ data:
     * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>
 * Модули *frontend* (исключительно nginx-ingress)
     * Порядок поиска узлов (для определения nodeSelector):
-        * Наличие ноды с лейблом <code>node-role.deckhouse.io/MODULE_NAME</code>
-        * Наличие ноды с лейблом <code>node-role.deckhouse.io/frontend</code>
+        * Наличие узла с лейблом <code>node-role.deckhouse.io/MODULE_NAME</code>
+        * Наличие узла с лейблом <code>node-role.deckhouse.io/frontend</code>
     * Добавляемые toleration'ы (добавляются одновременно все):
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code>
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}</code>
 * Все остальные модули
     * Порядок поиска узлов (для определения nodeSelector):
-        * Наличие ноды с лейблом <code>node-role.deckhouse.io/MODULE_NAME</code> (Например: <code>node-role.deckhouse.io/cert-manager</code>)
-        * Наличие ноды с лейблом <code>node-role.deckhouse.io/system</code>
+        * Наличие узла с лейблом <code>node-role.deckhouse.io/MODULE_NAME</code> (Например: <code>node-role.deckhouse.io/cert-manager</code>)
+        * Наличие узла с лейблом <code>node-role.deckhouse.io/system</code>
     * Добавляемые toleration'ы (добавляются одновременно все):
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}</code> (Например: <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"network-gateway"}</code>)
         * <code>{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}</code>

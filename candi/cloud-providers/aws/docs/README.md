@@ -8,7 +8,7 @@ title: "Cloud provider — AWS: Развертывание"
   * Варианты — `Standard` или `WithoutNAT` (описание ниже).
 * `standard` — настройки для лейаута `Standard`.
   * `associatePublicIPToMasters` — выдать ли мастерам публичные IP. По умолчанию — `false`.
-  * `associatePublicIPToNodes` — выдать ли нодам публичные IP. По умолчанию — `false`.
+  * `associatePublicIPToNodes` — выдать ли узлам публичные IP. По умолчанию — `false`.
 * `provider` — параметры подключения к API AWS.
   * `providerAccessKeyId` — access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
   * `providerSecretAccessKey` — access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
@@ -61,7 +61,7 @@ title: "Cloud provider — AWS: Развертывание"
 * `existingVPCID` — ID существующего VPC, в котором будет развёрнута схема.
   * Обязательный параметр если не указан `vpcNetworkCIDR`.
   * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадёт с ошибкой. На данный момент адоптнуть Internet Gateway нельзя.
-* `nodeNetworkCIDR` — подсеть, в которой будут работать ноды кластера.
+* `nodeNetworkCIDR` — подсеть, в которой будут работать узлы кластера.
   * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC.
   * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
   * Необязательный, но рекомендованный параметр. По умолчанию — соответствует целому диапазону адресов VPC.
@@ -94,7 +94,7 @@ provider:
   region: eu-central-1
 standard:
   associatePublicIPToMasters: true # Выделить ли мастерам белые IP. Если не выделять, то потребуется вручную поднимать бастион.
-  associatePublicIPToNodes: true # Выделить ли нодам белые IP.
+  associatePublicIPToNodes: true # Выделить ли узлам белые IP.
 masterNodeGroup:
   replicas: 1 # Если будет больше одного мастера, то etcd-кластер соберётся автоматически.
   instanceClass:

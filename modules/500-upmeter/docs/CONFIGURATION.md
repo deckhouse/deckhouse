@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: confguration"
+title: "The upmeter module: configuration"
 ---
 
 This module is **enabled** by default.

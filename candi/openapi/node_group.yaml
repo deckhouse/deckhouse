@@ -201,13 +201,15 @@ spec:
                         - "NotManaged"
                     containerd: &criContainerd
                       type: object
-                      description: Containerd runtime parameters.
+                      description: |
+                        Containerd runtime parameters.
+
+                        If used, `cri.type` must be set to `Containerd`.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
                           description: |
                             Set the max concurrent downloads for each pull.
-                            If used, cri.type must be set to `Containerd`.
                           x-doc-default: 3
                 cloudInstances: &cloudInstances
                   description: |
@@ -458,7 +460,8 @@ spec:
                 docker:
                   description: |
                     Docker settings for nodes.
-                    If used, cri.type must be set to `Docker`.
+
+                    If used, `cri.type` must be set to `Docker`.
                   type: object
                   properties:
                     maxConcurrentDownloads:

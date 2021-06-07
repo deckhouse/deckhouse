@@ -201,11 +201,15 @@ spec:
                         - "NotManaged"
                     containerd: &criContainerd
                       type: object
-                      description: Параметры работы Containerd.
+                      description: |
+                        Параметры работы Containerd.
+
+                        При настройке этих параметров, `cri.type` должен быть — `Containerd`.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
-                          description: Максимальное количество параллельных потоков загрузки для каждой операции pull.
+                          description: |
+                            Максимальное количество параллельных потоков загрузки для каждой операции pull.
                           x-doc-default: 3
                 cloudInstances: &cloudInstances
                   description: |
@@ -454,6 +458,8 @@ spec:
                 docker:
                   description: |
                     Параметры настройки Docker.
+
+                    При настройке этих параметров, `cri.type` должен быть — `Docker`.
                   type: object
                   properties:
                     maxConcurrentDownloads:
