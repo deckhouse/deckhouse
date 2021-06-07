@@ -12,6 +12,7 @@ import:
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/build
 from: {{ env "BASE_GOLANG_ALPINE" }}
+fromCacheVersion: "20210607"
 ansible:
   beforeInstall:
   - name: "Install dependencies"
