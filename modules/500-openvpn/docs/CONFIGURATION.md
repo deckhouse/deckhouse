@@ -43,7 +43,7 @@ data:
         * `authURL` — the URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code;
         * `authSignInURL` — the URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code);
     * `password` — the password for http authorization of the `admin` user (it is generated automatically, but you can change it);
-        * This parameter is used if the `externalAuthentication` paramater is not enabled;
+        * This parameter is used if the `externalAuthentication` parameter is not enabled;
     * `allowedUserGroups` — an array of user groups that can access the openvpn admin panel;
         * This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set;
         * **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the user-authn one;

@@ -39,7 +39,7 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 
 ```
-## Пример для AWS (Network Load Balancer), Ingress ноды находятся не во всех зонах
+## Пример для AWS (Network Load Balancer), Ingress-узлы находятся не во всех зонах
 
 В таком случае нужно указать аннотацию, в которой перечислены все идентификаторы подсетей, где необходимо создать Listener'ы. Подсети должны соответствовать зонам, где находятся Ingress ноды.
 Список текущих подсетей, которые используются для конкретной инсталляции можно получить так: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.

@@ -64,11 +64,11 @@ Bootstrap process with `dhctl` consists of several stages:
 #### Terraform
 There are three variants of terraforming:
 * `base-infrastructure` - creates basic cluster components: networks, routers, ssh key pairs, etc.
-    * dhctl discovers through terraform [ouput](https://www.terraform.io/docs/configuration/outputs.html):
+    * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
         * `cloud_discovery_data` - the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
 
 * `master-node` - creates a master node.
-    * dhctl discovers through terraform [ouput](https://www.terraform.io/docs/configuration/outputs.html):
+    * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
         * `master_ip_address_for_ssh` - external master ip address to connect to the node.
         * `node_internal_ip_address` - internal address to bind control plane components.
         * `kubernetes_data_device_path` - device name for storing Kubernetes data (etcd and manifests).

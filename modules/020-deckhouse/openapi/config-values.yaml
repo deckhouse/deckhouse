@@ -10,10 +10,10 @@ properties:
     type: string
     enum: ["Default", "Minimal", "Managed"]
     description: |
-      Вариант поставки Deckhouse. Определяет включенные по умолчанию модули.
-      - `Default` — рекомендованный набор модулей для работы кластера: мониторинга, контроля авторизации, организации работы сети и других потребностей ([актуальный список](https://github.com/deckhouse/deckhouse/blob/master/modules/values-default.yaml)).
-      - `Minimal` — минимально возможная поставка, которая включает единственный модуль (этот).
-      - `Managed` - поставка для managed-кластеров от облачных провайдеров, например Google Kubernetes Engine (GKE).
+      The Deckhouse bundle defines a set of modules enabled by default.
+      - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs (the current list is available [here](https://github.com/deckhouse/deckhouse/blob/master/modules/values-default.yaml)).
+      - `Minimal` — the minimum possible bundle option (includes a single module - this one).
+      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
     default: "Default"
   releaseChannel:
     type: string
@@ -21,7 +21,7 @@ properties:
     description: |
       Deckhouse release channel.
 
-      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного, к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      The order in which the stability of the update channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   nodeSelector:
     type: object
     additionalProperties:

@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Параметры группы OpenStack servers, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+            Параметры группы OpenStack servers, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
@@ -42,11 +42,7 @@ spec:
 
                     **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
 
-                    По умолчанию: значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
-
-                    Опциональный параметр.
-                  example: ubuntu-18-04-cloud-amd64
-                  type: string
+                    **По умолчанию:** значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
                 rootDiskSize:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
@@ -55,48 +51,28 @@ spec:
                     Если параметр присутствует, то инстанс будет использовать заказанный OpenStack'ом Cinder volume (с указанным размером и стандартным для кластера типом) как root-диск.
 
                     > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска.
-                    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://early.deckhouse.io/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack)
+                    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://early.deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack)
                     >
                     > ```shell
                       openstack volume type list
                       openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
                       ```
-
-                    Опциональный параметр.
-                  example: 20
-                  type: integer
                 mainNetwork:
                   description: |
                     Путь до сети, которая будет подключена к виртуальной машине, как основная (шлюз по умолчанию).
 
-                    По умолчанию: значение из `OpenStackCloudDiscoveryData`.
-
-                    Опциональный параметр.
-                  example: k8s-msk-178
-                  type: string
+                    **По умолчанию:** значение из `OpenStackCloudDiscoveryData`.
                 additionalNetworks:
                   description: |
                     Список сетей, которые будут подключены к инстансу.
 
-                    По умолчанию: значение из `OpenStackCloudDiscoveryData`.
-                  example:
-                    - "BGP-network-VLAN-3894"
-                    - "External-VLAN-3699"
-                  type: array
-                  items:
-                    type: string
+                    **По умолчанию:** значение из `OpenStackCloudDiscoveryData`.
                 additionalSecurityGroups:
                   description: |
                     Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud провайдера.
                     Используется для задания правил firewall по отношению к заказываемым инстансам.
 
                     `SecurityGroups` могут не поддерживаться облачным провайдером.
-                  example:
-                  - "security-group-1"
-                  - "security-group-2"
-                  type: array
-                  items:
-                    type: string
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud провайдера.
@@ -106,14 +82,3 @@ spec:
                     project: cms-production
                     severity: critical
                     ```
-                  type: object
-                  additionalProperties:
-                    type: string
-                  x-kubernetes-preserve-unknown-fields: true
-  scope: Cluster
-  names:
-    plural: openstackinstanceclasses
-    singular: openstackinstanceclass
-    kind: OpenStackInstanceClass
-    categories:
-      - cloudinstanceclasses

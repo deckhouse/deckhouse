@@ -45,7 +45,7 @@ cloudProviderYandex: |
 Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) of volume-resizer, CSI, and Yandex.Cloud API, you have to do the following after increasing the PVC size:
 
 1. Run the `kubectl cordon node_where_pod_is_hosted` command;
-2. Delee the Pod;
+2. Delete the Pod;
 3. Make sure that the resize was successful. The PVC object *must not have* the `Resizing` state. **Note (!)** that the `FileSystemResizePending` state is OK;
 4. Run the `kubectl uncordon node_where_pod_is_hosted` command;
 

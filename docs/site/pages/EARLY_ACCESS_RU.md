@@ -2,6 +2,7 @@
 title: "Текущий статус проекта и его сайта"
 permalink: ru/early_access.html
 layout: page-nosidebar
+lang: ru
 toc: false
 ---
 

@@ -60,4 +60,4 @@ global: |
 * `storageClass` —  the storage class to use with all service components (prometheus, grafana, openvpn, ...).
     * By default, it is set to null. In this case, service components use `cluster.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `cluster.defaultStorageClass` isn't defined).
     * Use this parameter only in exceptional circumstances.
-* `highAvailability` — a global switch to enable the HA mode for modules that support it. The prarameter is not defined by default; the decision is made based on the `global.discovery.clusterControlPlaneIsHighlyAvailable` parameter.
+* `highAvailability` — a global switch to enable the HA mode for modules that support it. The parameter is not defined by default; the decision is made based on the `global.discovery.clusterControlPlaneIsHighlyAvailable` parameter.

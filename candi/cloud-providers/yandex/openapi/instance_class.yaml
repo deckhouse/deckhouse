@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Параметры группы Yandex Instance'ов, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+            Параметры группы Yandex Instance'ов, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:

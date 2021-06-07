@@ -64,9 +64,9 @@ spec:
 Дополнительным параметром можно передать, какие виды простоя включить в расчет (Maintenance, InfrastructureMaintenance, InfrastructureAccident) – в этом случае уровень доступности рассчитывается без учета простоев этих типов.
 Состояние доступности по подсистеме/компоненту (для отрисовки “графика доступности”). Передаются step и период (с-по). Для каждого step возвращается состояние:
 - доступен
-- не доступен
+- недоступен
 - если есть, uid Downtime с Accident
-- не доступен, без нарушения SLA
+- недоступен, без нарушения SLA
 - был Maintenance (+ uid Downtime)
 - был InfrastructureMaintenance (+ uid Downtime)
 - был InfrastructureAccident (+ uid Downtime)

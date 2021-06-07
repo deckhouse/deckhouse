@@ -16,9 +16,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Параметры группы OpenStack servers, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/modules/040-node-manager/)).
+            Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/) module).
 
-            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
             - spec
           properties:
@@ -38,47 +38,45 @@ spec:
                   description: |
                     Image to use while provisioning OpenStack servers.
 
-                    Получить список всех доступных образов: `openstack image list`.
+                    Use this command to get a list of available images: `openstack image list`.
 
-                    **Внимание!** Сейчас поддерживается и тестируется только Ubuntu 18.04, Ubuntu 20.04, Centos 7.
+                    **Caution!** Currently, only Ubuntu 18.04, Ubuntu 20.04, Centos 7 are supported and tested to work.
 
-                    По умолчанию: значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
-
-                    Опциональный параметр.
+                    **By default:** either `OpenStackCloudDiscoveryData` value or `instances.imageName` is used.
+                  x-doc-required: false
                   example: ubuntu-18-04-cloud-amd64
                   type: string
                 rootDiskSize:
                   description: |
-                    Размер root-диска. Значение указывается в гигабайтах.
+                    The size of a root disk (in gigabytes).
 
-                    Если параметр не указан, то для инстанса используется локальный диск с размером указанным в flavor.
-                    Если параметр присутствует, то инстанс будет использовать заказанный OpenStack'ом Cinder volume (с указанным размером и стандартным для кластера типом) как root-диск.
+                    If the parameter is not set, a local disk with the size specified in flavor is used for the instance.
+                    If the parameter is set, the instance will use the Cinder volume provisioned by OpenStack as a root disk (of the standard cluster type and the specified size).
 
-                    > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска.
-                    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://early.deckhouse.io/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack)
+                    > If there are several types of disks in *cloud provider*, you can set a default disk type for the image in order to select a specific VM's disk type; to do this, specify the name of a disk type in the image metadata.
+                    > Also, you may need to create a custom OpenStack image; the ["How do I create an image in OpenStack"](https://early.deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-do-i-create-an-image-in-openstack) section describes how to do it
                     >
                     > ```shell
                       openstack volume type list
                       openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
                       ```
 
-                    Опциональный параметр.
                   example: 20
                   type: integer
+                  x-doc-required: false
                 mainNetwork:
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
 
-                    По умолчанию: значение из `OpenStackCloudDiscoveryData`.
-
-                    Опциональный параметр.
+                    **By default:** the value from `OpenStackCloudDiscoveryData` is used.
                   example: k8s-msk-178
                   type: string
+                  x-doc-required: false
                 additionalNetworks:
                   description: |
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
 
-                    По умолчанию: значение из `OpenStackCloudDiscoveryData`.
+                    **By default:** the value from `OpenStackCloudDiscoveryData` is used.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
@@ -89,9 +87,9 @@ spec:
                   description: |
                     Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration
 
-                    Используется для задания правил firewall по отношению к заказываемым инстансам.
+                    They allow you to set firewall rules for provisioned instances.
 
-                    `SecurityGroups` могут не поддерживаться облачным провайдером.
+                    The `SecurityGroups` may not be supported by the cloud provider.
                   example:
                   - "security-group-1"
                   - "security-group-2"
@@ -100,9 +98,9 @@ spec:
                     type: string
                 additionalTags:
                   description: |
-                    Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud провайдера.
+                    The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
 
-                    Пример:
+                    An example:
                     ```yaml
                     project: cms-production
                     severity: critical

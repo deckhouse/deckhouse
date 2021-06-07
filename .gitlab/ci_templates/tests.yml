@@ -97,7 +97,7 @@
   - "Build Modules Images"
   interruptible: true
 
-.Translation Validation template:
+.Content Validation template:
   stage: testing
   script:
   - ./testing/validate_doc_changes.sh ${FOX_ACCESS_TOKEN}

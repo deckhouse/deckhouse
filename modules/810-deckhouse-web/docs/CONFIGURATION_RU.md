@@ -4,7 +4,7 @@ title: "Модуль deckhouse-web: настройки"
 
 ## Параметры
 
-* `ingressClass` — класс ingress-контроллера web-интерфейса документации.
+* `ingressClass` — класс Ingress-контроллера web-интерфейса документации.
     * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
 * `auth` — опции, связанные с аутентификацией и авторизацией доступа к web-интерфейсу документации:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).

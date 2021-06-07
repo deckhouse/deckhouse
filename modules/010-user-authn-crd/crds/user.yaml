@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Содержит информацию о статическом пользователе.
+            Contains information about the static user.
           required:
             - spec
           properties:
@@ -34,16 +34,16 @@ spec:
                 email:
                   type: string
                   description: |
-                    E-mail пользователя.
+                    User E-mail.
 
-                    **Важно!** При использовании совместно с модулем [user-authz](https://early.deckhouse.io/en/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://early.deckhouse.io/en/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+                    **Caution!** Note that if used together with the [user-authz](https://early.deckhouse.io/en/documentation/v1/modules/140-user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://early.deckhouse.io/en/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
                   example: 'user@domain.com'
                 password:
                   type: string
                   description: |
                     Hashed user password.
-                    * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`
-                    * Или с помощью [онлайн-сервиса](https://bcrypt-generator.com/).
+                    * You can use the following command to encrypt the user password: `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`.
+                    * Also, you can use the [online service](https://bcrypt-generator.com/).
                   example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
                 userID:
                   type: string
@@ -59,8 +59,8 @@ spec:
                   pattern: '^\d+(?:m|h)$'
                   description: |
                     Static user TTL.
-                    * Задается в виде строки с указанием time unit: 30m | 24h
-                    * Указать поле TTL можно только 1 раз, при повторном изменении - дата expireAt не обновляется
+                    * It is specified as a string containing the time unit: 30m | 24h.
+                    * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
                   example: '24h'
             status:
               type: object
@@ -68,10 +68,10 @@ spec:
                 expireAt:
                   type: string
                   description: |
-                    Дата окончания учетной записи пользователя
-                    * Появляется только при заполнении поля .spec.ttl
-                    * При достижении этой даты - учетная запись будет удалена
-                    * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя
+                    User account expiration date.
+                    * It is shown only of the `.spec.ttl` field is set.
+                    * The user account will be deleted at the specified date.
+                    * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
       subresources:
         status: {}
       additionalPrinterColumns:

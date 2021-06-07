@@ -33,29 +33,29 @@ search: autoscaler, HorizontalPodAutoscaler
 ### `NamespaceMetric`
 {{ cr_spec }}
 
-### `DaemonsetMetric` (не доступен пользователям)
+### `DaemonsetMetric` (недоступен пользователям)
 {{ cr_spec }}
 
 ## Cluster Custom resources
 
-### `ClusterServiceMetric` (не доступен пользователям)
+### `ClusterServiceMetric` (недоступен пользователям)
 {{ cr_spec }}
 
-### `ClusterIngressMetric` (не доступен пользователям)
+### `ClusterIngressMetric` (недоступен пользователям)
 {{ cr_spec }}
 
-### `ClusterPodMetric` (не доступен пользователям)
+### `ClusterPodMetric` (недоступен пользователям)
 {{ cr_spec }}
 
-### `ClusterDeploymentMetric` (не доступен пользователям)
-{{ cr_spec }}
-#### Пример
-
-### `ClusterStatefulSetMetric` (не доступен пользователям)
+### `ClusterDeploymentMetric` (недоступен пользователям)
 {{ cr_spec }}
 #### Пример
 
-### `ClusterDaemonsetMetric` (не доступен пользователям)
+### `ClusterStatefulSetMetric` (недоступен пользователям)
+{{ cr_spec }}
+#### Пример
+
+### `ClusterDaemonsetMetric` (недоступен пользователям)
 {{ cr_spec }}
 
 ## PrometheusRule

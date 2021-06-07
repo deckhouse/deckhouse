@@ -176,7 +176,7 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
         * It is calculated automatically using arguments derived from the kube-apiserver startup;
         * If the calculation fails, then it is set to `/etc/kubernetes/pki/apiserver-etcd-client.key`;
 
-* `kubeEtcdAdditionalInstances` — parameters for collecting metrics of the padditional kube-etcd instance. They can be used, e.g., with kube-etcd-events on kops-based installations (it is discovered automatically in this module);
+* `kubeEtcdAdditionalInstances` — parameters for collecting metrics of the additional kube-etcd instance. They can be used, e.g., with kube-etcd-events on kops-based installations (it is discovered automatically in this module);
   * Format — an array of instances:
     * `name` — an instance's short name;
       * A mandatory parameter;
