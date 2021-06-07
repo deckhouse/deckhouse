@@ -29,8 +29,8 @@ func Synthetic() []runnerConfig {
 			period: 200 * time.Millisecond,
 			config: checker.SmokeMiniAvailable{
 				Path:        "/",
-				DnsTimeout:  100 * time.Millisecond,
-				HttpTimeout: 100 * time.Millisecond,
+				DnsTimeout:  2 * time.Second,
+				HttpTimeout: 2 * time.Second,
 			},
 		}, {
 			group:  groupName,
@@ -39,7 +39,7 @@ func Synthetic() []runnerConfig {
 			period: 200 * time.Millisecond,
 			config: checker.DnsAvailable{
 				Domain:     "kubernetes.default",
-				DnsTimeout: 100 * time.Millisecond,
+				DnsTimeout: 2 * time.Second,
 			},
 		}, {
 			group:  groupName,

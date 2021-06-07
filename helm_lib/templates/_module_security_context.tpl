@@ -16,6 +16,16 @@ securityContext:
   runAsGroup: 65534
 {{- end }}
 
+{{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . }} */ -}}
+{{- /* returns PodSecurityContext parameters for Pod with user and group nobody with write access to mounted volumes */ -}}
+{{- define "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" }}
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} */ -}}
 {{- /* returns PodSecurityContext parameters for Pod with user and group 0 */ -}}
 {{- define "helm_lib_module_pod_security_context_run_as_user_root" }}

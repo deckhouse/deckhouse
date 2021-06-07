@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -27,27 +28,42 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/ready", readyHandler)
-	http.HandleFunc("/", rootHandler)
-	http.HandleFunc("/error", errorHandler)
-	http.HandleFunc("/api", apiHandler)
-	http.HandleFunc("/disk", diskHandler)
-	http.HandleFunc("/dns", dnsHandler)
-	http.HandleFunc("/neighbor", neighborHandler)
-	http.HandleFunc("/neighbor-via-service", neighborViaServiceHandler)
-	http.HandleFunc("/prometheus", prometheusHandler)
+	s := &http.Server{
+		Handler: setupHandlers(),
+		Addr:    listenHost + ":" + listenPort,
+	}
 
 	sigs := make(chan os.Signal, 1)
-
 	signal.Notify(sigs, syscall.SIGTERM)
-
 	go func() {
 		sig := <-sigs
 		ready = false
 		log.Info(sig)
+		s.Shutdown(context.TODO())
 	}()
 
-	log.Fatal(http.ListenAndServe(listenHost+":"+listenPort, nil))
+	err := s.ListenAndServe()
+	if err == nil || err == http.ErrServerClosed {
+		log.Info("Shutdown.")
+		return
+	}
+	log.Fatal(err)
+}
+
+func setupHandlers() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/ready", readyHandler)
+	mux.HandleFunc("/", rootHandler)
+	mux.HandleFunc("/error", errorHandler)
+	mux.HandleFunc("/api", apiHandler)
+	mux.HandleFunc("/disk", diskHandler)
+	mux.HandleFunc("/dns", dnsHandler)
+	mux.HandleFunc("/neighbor", neighborHandler)
+	mux.HandleFunc("/neighbor-via-service", neighborViaServiceHandler)
+	mux.HandleFunc("/prometheus", prometheusHandler)
+
+	return mux
 }
 
 func readyHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,9 +138,9 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 
 func diskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
-	originalContent := string(time.Now().UnixNano())
-	tmpFilePath := fmt.Sprintf("/disk/sm-%s", string(time.Now().UnixNano()))
-	err := ioutil.WriteFile(tmpFilePath, []byte(originalContent), 0644)
+	originalContent := fmt.Sprint(time.Now().UnixNano())
+	tmpFilePath := fmt.Sprintf("/disk/sm-%s", originalContent)
+	err := ioutil.WriteFile(tmpFilePath, []byte(originalContent), 0o644)
 	if err != nil {
 		log.Error(err)
 		w.WriteHeader(500)
