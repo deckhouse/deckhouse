@@ -217,56 +217,6 @@ data:
 		}
 	})
 
-	Context("draining_nodes", func() {
-		for _, gDraining := range []bool{true, false} {
-			for _, gUnschedulable := range []bool{true, false} {
-				Context(fmt.Sprintf("Draining: %t, Unschedulable: %t", gDraining, gUnschedulable), func() {
-					draining := gDraining
-					unschedulable := gUnschedulable
-					BeforeEach(func() {
-						f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable)))
-						f.RunHook()
-					})
-
-					It("Works as expected", func() {
-						Expect(f).To(ExecuteSuccessfully())
-						for _, nodeName := range nodeNames {
-							if draining {
-								By(fmt.Sprintf("%s must have /drained", nodeName), func() {
-									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeTrue())
-								})
-
-								By(fmt.Sprintf("%s must not have /draining", nodeName), func() {
-									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/draining`).Exists()).To(BeFalse())
-								})
-
-								By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
-									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
-									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
-								})
-							} else {
-								By(fmt.Sprintf("%s must not have /drained", nodeName), func() {
-									Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/drained`).Exists()).To(BeFalse())
-								})
-
-								if unschedulable {
-									By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
-										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
-										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
-									})
-								} else {
-									By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
-										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeFalse())
-									})
-								}
-							}
-						}
-					})
-				})
-			}
-		}
-	})
-
 	Context("process_updated_nodes :: ", func() {
 		for _, gUpdated := range []bool{true, false} {
 			for _, gReady := range []bool{true, false} {

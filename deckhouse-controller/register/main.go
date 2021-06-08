@@ -43,6 +43,9 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 	files := make(map[string]interface{})
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if f != nil && f.IsDir() {
+			if f.Name() == "internal" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if filepath.Ext(path) != ".go" {
