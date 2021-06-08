@@ -1,5 +1,7 @@
 run:
   timeout: 10m
+  skip-dirs:
+    - go_lib/dependency/k8s/drain # this code has been copied from kubectl cli. No need to lint external code
 
 issues:
   exclude:

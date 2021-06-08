@@ -62,6 +62,8 @@ func GetAllHooks() ([]Hook, error) {
 				return nil
 			case strings.HasSuffix(path, ".yaml"): // ignore openapi schemas
 				return nil
+			case strings.HasSuffix(path, ".txt"): // ignore txt files
+				return nil
 			case info.IsDir():
 				return nil
 			}
