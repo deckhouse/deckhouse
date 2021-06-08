@@ -21,7 +21,7 @@ func NewFile(sess *session.Session) *File {
 	return &File{Session: sess}
 }
 
-func (f *File) Upload(srcPath string, remotePath string) error {
+func (f *File) Upload(srcPath, remotePath string) error {
 	fType, err := CheckLocalPath(srcPath)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 		}
 	}()
 
-	err = ioutil.WriteFile(srcPath, data, 0600)
+	err = ioutil.WriteFile(srcPath, data, 0o600)
 	if err != nil {
 		return fmt.Errorf("write data to tmp file: %v", err)
 	}
@@ -78,7 +78,7 @@ func (f *File) UploadBytes(data []byte, remotePath string) error {
 	return nil
 }
 
-func (f *File) Download(remotePath string, dstPath string) error {
+func (f *File) Download(remotePath, dstPath string) error {
 	scp := cmd.NewSCP(f.Session)
 	scp.WithRecursive(true)
 	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP()
@@ -132,7 +132,7 @@ func (f *File) DownloadBytes(remotePath string) ([]byte, error) {
 func CreateEmptyTmpFile() (string, error) {
 	tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()))
 
-	file, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return "", err
 	}

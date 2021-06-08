@@ -259,7 +259,6 @@ func getStatusForMissedNode(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 	status := AbsentStatus
 
 	exists, err := IsNodeExistsInCluster(kubeCl, nodeName)
-
 	if err != nil {
 		*allErrs = multierror.Append(*allErrs, err)
 		status = ErrorStatus

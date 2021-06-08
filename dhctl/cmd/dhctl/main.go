@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	_ = os.Mkdir(app.TmpDirName, 0755)
+	_ = os.Mkdir(app.TmpDirName, 0o755)
 
 	exitCode := 0
 

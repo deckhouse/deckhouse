@@ -22,7 +22,7 @@ type Tunnel struct {
 	errorCh chan error
 }
 
-func NewTunnel(sess *session.Session, ttype string, address string) *Tunnel {
+func NewTunnel(sess *session.Session, ttype, address string) *Tunnel {
 	return &Tunnel{
 		Session: sess,
 		Type:    ttype,

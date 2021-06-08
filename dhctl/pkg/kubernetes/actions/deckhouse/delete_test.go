@@ -102,7 +102,7 @@ func TestDeletePods(t *testing.T) {
 	t.Run("With different pods", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
-		_, err := fakeClient.CoreV1().Pods("default").Create(context.TODO(), &v1.Pod{
+		pod := &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withPv",
 				Namespace: "default",
@@ -117,10 +117,11 @@ func TestDeletePods(t *testing.T) {
 					},
 				}},
 			},
-		}, metav1.CreateOptions{})
+		}
+		_, err := fakeClient.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), &v1.Pod{
+		pod2 := &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withDifferentPv",
 				Namespace: "default",
@@ -133,10 +134,11 @@ func TestDeletePods(t *testing.T) {
 					},
 				}},
 			},
-		}, metav1.CreateOptions{})
+		}
+		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), pod2, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), &v1.Pod{
+		pod3 := &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withTwoPv",
 				Namespace: "default",
@@ -159,16 +161,18 @@ func TestDeletePods(t *testing.T) {
 					},
 				},
 			},
-		}, metav1.CreateOptions{})
+		}
+		_, err = fakeClient.CoreV1().Pods("default").Create(context.TODO(), pod3, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		_, err = fakeClient.CoreV1().Pods("test-ns").Create(context.TODO(), &v1.Pod{
+		pod4 := &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "withoutPv",
 				Namespace: "test-ns",
 			},
 			Spec: v1.PodSpec{},
-		}, metav1.CreateOptions{})
+		}
+		_, err = fakeClient.CoreV1().Pods("test-ns").Create(context.TODO(), pod4, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		err = DeletePods(fakeClient)

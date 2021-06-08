@@ -77,7 +77,7 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 	return cmd.StdoutBytes(), err
 }
 
-func (u *UploadScript) ExecuteBundle(parentDir string, bundleDir string) (stdout []byte, err error) {
+func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
 	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
 

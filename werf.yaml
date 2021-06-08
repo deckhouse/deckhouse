@@ -391,11 +391,11 @@ git:
         - go.sum
       setup:
         - "**/*.go"
-        - hack/build.sh
+        - Makefile
 ansible:
   beforeInstall:
     - apk:
-        name: git,ca-certificates
+        name: git,ca-certificates,make
         update_cache: yes
     - command: rm -rf /var/cache/apk/*
 
@@ -405,9 +405,9 @@ ansible:
         chdir: /dhctl
 
   setup:
-    - command: ./build.sh
+    - command: make build
       args:
-        chdir: /dhctl/hack
+        chdir: /dhctl
 ---
 image: dhctl-tests
 fromImage: base-for-go
@@ -417,14 +417,14 @@ git:
 ansible:
   beforeInstall:
     - apk:
-        name: git,ca-certificates,curl,bash
+        name: git,ca-certificates,curl,bash,make
         update_cache: yes
     - command: rm -rf /var/cache/apk/*
 
   install:
-  - shell: |
-      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-        | sh -s -- -b $(go env GOPATH)/bin v1.32.2
+  - shell: make deps
+    args:
+      chdir: /dhctl
 ---
 artifact: jq
 from: {{ env "BASE_ALPINE" }}
@@ -600,7 +600,7 @@ git:
   - candi
 import:
 - artifact: dhctl
-  add: /dhctl/hack/dhctl
+  add: /tmp/dhctl
   to: /usr/bin/dhctl
   before: setup
 - artifact: terraform-provider-vsphere

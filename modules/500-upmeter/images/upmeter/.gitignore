@@ -1,9 +1,3 @@
 # garbage left by tests
 *.sqlite
 
-# IDE
-.idea
-.vscode
-
-# helpers
-bin/

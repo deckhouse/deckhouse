@@ -12,7 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -65,11 +65,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `Namespace "d8-system"`,
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Update(context.TODO(), manifest.(*apiv1.Namespace), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Namespaces().Update(context.TODO(), manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -77,11 +77,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `Admin ClusterRole "cluster-admin"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoles().Create(context.TODO(), manifest.(*rbacv1.ClusterRole), v1.CreateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoles().Create(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoles().Update(context.TODO(), manifest.(*rbacv1.ClusterRole), v1.UpdateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoles().Update(context.TODO(), manifest.(*rbacv1.ClusterRole), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -89,11 +89,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `ClusterRoleBinding "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), v1.CreateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoleBindings().Update(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), v1.UpdateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoleBindings().Update(context.TODO(), manifest.(*rbacv1.ClusterRoleBinding), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -101,11 +101,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `ServiceAccount "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Create(context.TODO(), manifest.(*apiv1.ServiceAccount), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Create(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Update(context.TODO(), manifest.(*apiv1.ServiceAccount), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Update(context.TODO(), manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -113,11 +113,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `ConfigMap "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseConfigMap(cfg.DeckhouseConfig) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps("d8-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
 				return err
 			},
 		},
@@ -128,11 +128,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `Secret "deckhouse-registry"`,
 			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.DockerCfg) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -143,11 +143,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `Secret "d8-cluster-terraform-state"`,
 			Manifest: func() interface{} { return manifests.SecretWithTerraformState(cfg.TerraformState) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -159,11 +159,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -174,11 +174,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			Name:     `Secret "d8-cluster-configuration"`,
 			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(context.TODO(), manifest.(*apiv1.Secret), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -193,7 +193,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -201,12 +201,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				if err != nil {
 					return err
 				}
-				_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
-					context.TODO(),
+				_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(context.TODO(),
 					"d8-provider-cluster-configuration",
 					types.MergePatchType,
 					data,
-					v1.PatchOptions{},
+					metav1.PatchOptions{},
 				)
 				return err
 			},
@@ -220,7 +219,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -233,7 +232,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 					"d8-static-cluster-configuration",
 					types.MergePatchType,
 					data,
-					v1.PatchOptions{},
+					metav1.PatchOptions{},
 				)
 				return err
 			},
@@ -247,11 +246,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return manifests.ClusterUUIDConfigMap(cfg.UUID)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().ConfigMaps("kube-system").Update(context.TODO(), manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -264,7 +263,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return manifests.KubeDNSService(cfg.KubeDNSAddress)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Services("kube-system").Create(context.TODO(), manifest.(*apiv1.Service), v1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Services("kube-system").Create(context.TODO(), manifest.(*apiv1.Service), metav1.CreateOptions{})
 				if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
 					log.InfoLn("Service for DNS already exists. Skip!")
 					return nil
@@ -272,7 +271,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Services("kube-system").Update(context.TODO(), manifest.(*apiv1.Service), v1.UpdateOptions{})
+				_, err := kubeCl.CoreV1().Services("kube-system").Update(context.TODO(), manifest.(*apiv1.Service), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -284,11 +283,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 			return deckhouseDeploymentFromConfig(cfg)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), v1.CreateOptions{})
+			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), manifest.(*appsv1.Deployment), v1.UpdateOptions{})
+			_, err := kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), manifest.(*appsv1.Deployment), metav1.UpdateOptions{})
 			return err
 		},
 	})
@@ -339,11 +338,11 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) err
 			return manifests.DeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), v1.CreateOptions{})
+			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), metav1.CreateOptions{})
 			return err
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), manifest.(*appsv1.Deployment), v1.UpdateOptions{})
+			_, err := kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), manifest.(*appsv1.Deployment), metav1.UpdateOptions{})
 			return err
 		},
 	}

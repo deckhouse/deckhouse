@@ -154,7 +154,7 @@
   - pwd
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
-  - werf run dhctl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/dhctl/hack/" -- bash test.sh --gitlab
+  - werf run dhctl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/dhctl" -- make ci
   except:
   - schedules
   - alpha
