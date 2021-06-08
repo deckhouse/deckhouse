@@ -5,15 +5,19 @@ properties:
     additionalProperties:
       type: string
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
+      If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+
+      You can set it to `false` to avoid adding any nodeSelector.
   tolerations:
     type: array
     description: |
-      Like `spec.tolerations` for Kubernetes pod.
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-      Use [automatic](/overview.html#выделение-узлов-под-определенный-вид-нагрузки) if not specified. Set `false` to turn off automatic.
+      If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+
+      You can set it to `false` to avoid adding any tolerations.
     items:
       type: object
       properties:

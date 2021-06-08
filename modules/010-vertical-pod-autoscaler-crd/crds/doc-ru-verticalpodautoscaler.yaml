@@ -1,19 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: verticalpodautoscalers.autoscaling.k8s.io
-  labels:
-    heritage: deckhouse
-    module: vertical-pod-autoscaler-crd
 spec:
-  group: autoscaling.k8s.io
-  scope: Namespaced
-  names:
-    plural: verticalpodautoscalers
-    singular: verticalpodautoscaler
-    kind: VerticalPodAutoscaler
-    shortNames:
-    - vpa
   version: v1beta1
   versions:
   - name: v1beta1
@@ -30,56 +15,39 @@ spec:
     openAPIV3Schema:
       properties:
         spec:
-          required: []
           properties:
             targetRef:
-              type: object
               description: |
                 Указывает на некий контроллер-объект Kubernetes, отвечающий за управление pod'ами.
 
                 Поддерживаются все распространенные типы контроллеров: `Deployment`, `StatefulSet`, `DaemonSet`, `CronJobs` а также любые кастомные типы, реализующие подресурс scale.
               properties:
                 apiVersion:
-                  type: string
-                  description: API версия объекта
+                  description: API-версия объекта.
                 kind:
-                  type: string
-                  description: 'Тип объекта'
+                  description: Тип объекта.
                 name:
-                  type: string
-                  description: 'Имя объекта'
+                  description: Имя объекта.
             updatePolicy:
-              type: object
               properties:
                 updateMode:
-                  type: string
                   description: |
                     Режим работы VPA-контроллера
                     - `Auto` — В данный момент Auto и Recreate режимы работы делают одно и то же. Однако, когда в Kubernetes появится [pod inplace resource update](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md#in-place-updates), данный режим будет делать именно его.
                     - `Recreate` — Разрешает VPA изменять ресурсы у запущенных подов, т.е. рестартить их при работе. В случае работы одного пода (replicas: 1) — это приведет к недоступности сервиса, на время рестарта. В данном режиме VPA не пересоздает поды, которые были созданы без контроллера.
                     - `Initial` — Разрешает VPA изменять ресурсы подов, но только при их создании (не во время работы).
                     - `Off` — Запрещает VPA автоматическое изменение ресурсов. Autoscaler подсчитывает рекомендации и хранит их в поле status объекта VPA. Посмотреть, какие ресурсы рекомендует поставить VPA можно с помощью `kubectl describe vpa <vpa-name>`.
-                  enum: [ 'Auto', 'Recreate', 'Initial', 'Off' ]
-                  x-doc-default: 'Auto'
             resourcePolicy:
-              type: object
               properties:
                 containerPolicies:
-                  type: array
-                  description: 'Политики VPA для конкретных контейнеров'
+                  description: 'Политики VPA для конкретных контейнеров.'
                   items:
-                    type: object
                     properties:
                       containerName:
-                        type: string
                         description: 'Имя контейнера.'
                       mode:
-                        type: string
                         description: 'Включает или отключает работу автоскейлинга.'
-                        enum: ["Auto", "Off"]
                       minAllowed:
-                        type: object
                         description: 'Минимальная граница `cpu` и `memory`.'
                       maxAllowed:
-                        type: object
                         description: 'Максимальная граница `cpu` и `memory`.'

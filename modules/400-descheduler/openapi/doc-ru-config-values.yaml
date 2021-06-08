@@ -1,70 +1,35 @@
-type: object
 properties:
   removePodsViolatingNodeAffinity:
-    type: boolean
-    default: true
     description: |
       Эта стратегия гарантирует, что все поды нарушающие anti-affinity будут удалены с узлов.
   removePodsViolatingInterPodAntiAffinity:
-    type: boolean
-    default: true
     description: |
       Эта стратегия гарантирует, что все поды нарушающие node affinity будут удалены с узлов.
   removeDuplicates:
-    type: boolean
-    default: false
     description: |
       Эта стратегия гарантирует, что на одном узле работает только один под, связанный с ReplicaSet (RS), ReplicationController (RC), StatefulSet, или Job.
   lowNodeUtilization:
-    type: boolean
-    default: false
     description: |
       Эта стратегия находит недоутилизированные ноды и эвиктит поды с нагруженных нод (если это возможно) с надеждой, что они будут зашедулены на недоутилизированные ноды.
   removePodsViolatingNodeTaints:
-    type: boolean
-    default: false
     description: |
       Эта стратегия гарантирует, что поды, нарушающие NoSchedule на нодах, будут удалены.
   removePodsViolatingTopologySpreadConstraint:
-    type: boolean
-    default: false
     description: |
       Эта стратегия гарантирует, что поды, нарушающие [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов.
   removePodsHavingTooManyRestarts:
-    type: boolean
-    default: false
     description: |
       Эта стратегия гарантирует, что поды, имеющие больше 100 перезапусков контейнеров (включая init-контейнеры), будут удалены с узлов.
   podLifeTime:
-    type: boolean
-    default: false
     description: |
       Эта стратегия гарантирует, что поды в состоянии Pending старше 24 часов, будут удалены с узлов.
   nodeSelector:
-    type: object
-    additionalProperties:
-      type: string
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
-    type: array
     description: |
-      Like `spec.tolerations` for Kubernetes pod.
+      Структура, аналогичная  `spec.tolerations` Kubernetes pod.
 
-      Use [automatic](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
-    items:
-      type: object
-      properties:
-        effect:
-          type: string
-        key:
-          type: string
-        operator:
-          type: string
-        tolerationSeconds:
-          type: integer
-          format: int64
-        value:
-          type: string
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

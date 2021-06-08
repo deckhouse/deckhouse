@@ -22,12 +22,19 @@ function checks() {
 
 function check_doc() {
     filename=${1}
-    docs_pattern="docs/(CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
+
+    docs_pattern="modules/[^/]+/docs/|docs/(site|documentation)/pages"
+    if ! [[ "$filename" =~ $docs_pattern ]]; then
+        echo "skip ${filename}"
+        return 0
+    fi
+
+    docs_pattern="modules/[^/]+/docs/(CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
 
     if [[ "$filename" =~ /docs/[^/]+.md ]] && ! [[ "$filename" =~ $docs_pattern ]]; then
-        echo "$filename is not allowed. You can place it in the 'internal' folder for example."
+        echo "ERROR: $filename is not allowed. You can place it in the 'internal' folder for example."
         cat <<EOF
-    Only the following files (and their Russian versions) are allowed in the module '/docs/' folder:
+    Only the following files (and their Russian versions with _RU.md suffux) are allowed in the module '/docs/' folder:
         CONFIGURATION.md
         CR.md
         FAQ.md

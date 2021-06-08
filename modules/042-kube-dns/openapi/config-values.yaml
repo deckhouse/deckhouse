@@ -3,17 +3,16 @@ properties:
   upstreamNameservers:
     type: array
     description: |
-      Cписок IP-адресов рекурсивных DNS-серверов, которые CoreDNS будет использовать для резолва внешних доменов.
+      A list of IP addresses of recursive DNS servers that CoreDNS will use to resolve external domains.
 
-      По умолчанию - список из `/etc/resolv.conf`.
+      By default, the `/etc/resolv.conf` list is used.
     items:
       type: string
       pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
   hosts:
     description: |
-      Cтатический список хостов в стиле /etc/hosts.
-
-      Опциональный параметр.
+      A static list of hosts similar to that of /etc/hosts.
+    x-doc-required: false
     type: array
     items:
       type: object
@@ -26,7 +25,7 @@ properties:
           pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}$'
   stubZones:
     description: |
-      Cписок дополнительных зон для обслуживания CoreDNS.
+      A list of additional zones CoreDNS should be authoritative for.
     type: array
     default: []
     items:
@@ -34,26 +33,25 @@ properties:
       properties:
         zone:
           description: |
-            Зона CoreDNS.
-
-            **Пример:** `consul.local`
+            The CoreDNS zone.
           type: string
           pattern: '^[0-9a-zA-Z\.-]+$'
+          x-doc-example: consul.local
         upstreamNameservers:
           description: |
-            Список IP-адресов рекурсивных DNS-серверов, которые CoreDNS будет использовать для резолва доменов в этой зоне.
+            A list of IP addresses of recursive DNS servers that CoreDNS will use to resolve domains in this zone.
           type: array
           items:
             type: string
             pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}(:[0-9]{1,})?$'
   enableLogs:
     description: |
-      Позволяет включить логирование в CoreDNS.
+      Enable CoreDNS logging.
     type: boolean
     default: false
   clusterDomainAliases:
     description: |
-      Список алиасов домена кластера, резолвятся наравне с `global.discovery.clusterDomain`.
+      A list of cluster domain aliases; these are resolved on par with `global.discovery.clusterDomain`.
     type: array
     items:
       type: string

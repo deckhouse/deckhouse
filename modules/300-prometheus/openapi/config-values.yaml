@@ -85,7 +85,7 @@ properties:
   grafana:
     type: object
     default: {}
-    desription: Grafana installation-related settings.
+    description: Grafana installation-related settings.
     properties:
       useDarkTheme:
         type: boolean

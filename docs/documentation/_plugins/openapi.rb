@@ -145,7 +145,7 @@ module Jekyll
         end
 
         if attributes.has_key?('x-doc-example')
-            exampleObject = attributes['example']
+            exampleObject = attributes['x-doc-example']
         elsif attributes.has_key?('example')
             exampleObject = attributes['example']
         elsif attributes.has_key?('x-examples')
