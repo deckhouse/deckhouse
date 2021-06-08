@@ -17,7 +17,7 @@ export GO111MODULE=on
 
 # Check that we do not have new code after go generate
 register_path="cmd/deckhouse-controller/register-go-hooks.go"
-file_before=$(mktemp /tmp/register-before.XXXXX)
+file_before=$(mktemp /tmp/register-before.XXXXXX)
 cp "$register_path" "$file_before"
 go generate
 
