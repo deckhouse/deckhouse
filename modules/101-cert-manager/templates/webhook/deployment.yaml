@@ -28,6 +28,9 @@ spec:
       app: webhook
   template:
     metadata:
+      annotations:
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
+        checksum/certificate: {{ include (print .Template.BasePath "/webhook/secret-tls.yaml") . | sha256sum }}
       labels:
         app: webhook
     spec:
