@@ -12,11 +12,11 @@ git:
     - go.sum
     setup:
     - "**/*.go"
-    - hack/build.sh
+    - Makefile
 ansible:
   beforeInstall:
   - apk:
-      name: git,ca-certificates
+      name: git,ca-certificates,make
       update_cache: yes
   - command: rm -rf /var/cache/apk/*
 
@@ -26,9 +26,9 @@ ansible:
       chdir: /dhctl
 
   setup:
-  - command: /dhctl/hack/build.sh
+  - command: make build
     args:
-      chdir: /dhctl/hack
+      chdir: /dhctl
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ env "BASE_ALPINE" }}
@@ -36,7 +36,7 @@ docker:
   ENTRYPOINT: ["dhctl"]
 import:
 - artifact: dhctl
-  add: /dhctl/hack/dhctl
+  add: /tmp/dhctl
   to: /usr/bin/dhctl
   before: setup
 git:

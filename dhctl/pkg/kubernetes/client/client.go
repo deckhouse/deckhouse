@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	sh_kube "github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/kube/fake"
+	klient "github.com/flant/kube-client/client"
 
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -17,10 +16,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-// KubernetesClient is a wrapper around KubernetesClient from shell-operator which is a wrapper around kubernetes.Interface
-// KubernetesClient adds ability to connect to API server through ssh tunnel and kubectl proxy.
+type KubeClient = klient.Client
+
+// KubernetesClient connects to kubernetes API server through ssh tunnel and kubectl proxy.
 type KubernetesClient struct {
-	sh_kube.KubernetesClient
+	KubeClient
 	SSHClient *ssh.Client
 	KubeProxy *frontend.KubeProxy
 }
@@ -30,7 +30,7 @@ func NewKubernetesClient() *KubernetesClient {
 }
 
 func NewFakeKubernetesClient() *KubernetesClient {
-	return &KubernetesClient{KubernetesClient: fake.NewFakeCluster("").KubeClient}
+	return &KubernetesClient{KubeClient: klient.NewFake(nil)}
 }
 
 func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
@@ -40,7 +40,7 @@ func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 
 // Init initializes kubernetes client
 func (k *KubernetesClient) Init() error {
-	kubeClient := sh_kube.NewKubernetesClient()
+	kubeClient := klient.New()
 	kubeClient.WithRateLimiterSettings(5, 10)
 
 	switch {
@@ -62,7 +62,7 @@ func (k *KubernetesClient) Init() error {
 		return fmt.Errorf("initialize kube client: %s", err)
 	}
 
-	k.KubernetesClient = kubeClient
+	k.KubeClient = kubeClient
 	return nil
 }
 

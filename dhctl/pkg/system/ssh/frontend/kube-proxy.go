@@ -122,7 +122,7 @@ func (k *KubeProxy) proxyCMD() *Command {
 	return cmd
 }
 
-func (k *KubeProxy) healthMonitor(proxyErrorCh chan error, tunnelErrorCh chan error) {
+func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error) {
 	defer log.DebugF("Kubeproxy health monitor stopped\n")
 	log.DebugF("Kubeproxy health monitor started\n")
 

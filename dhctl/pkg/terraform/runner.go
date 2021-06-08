@@ -117,7 +117,7 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 		return r
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), stateData, 0600)
+	err = ioutil.WriteFile(tmpFile.Name(), stateData, 0o600)
 	if err != nil {
 		log.ErrorF("can't write terraform state for runner %s: %s\n", r.step, err)
 		return r
@@ -134,7 +134,7 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 		return r
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), variablesData, 0600)
+	err = ioutil.WriteFile(tmpFile.Name(), variablesData, 0o600)
 	if err != nil {
 		log.ErrorF("can't write terraform variables for runner %s: %s\n", r.step, err)
 		return r

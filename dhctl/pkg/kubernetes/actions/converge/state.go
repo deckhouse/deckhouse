@@ -281,7 +281,13 @@ func SaveClusterIntermediateTerraformState(kubeCl *client.KubernetesClient, outp
 		},
 		PatchFunc: func(patch []byte) error {
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), manifests.TerraformClusterStateName, types.MergePatchType, patch, metav1.PatchOptions{})
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Patch(
+				context.TODO(),
+				manifests.TerraformClusterStateName,
+				types.MergePatchType,
+				patch,
+				metav1.PatchOptions{},
+			)
 			return err
 		},
 	}
@@ -334,7 +340,7 @@ func NewClusterStateSaver(kubeCl *client.KubernetesClient) *terraform.StateSaver
 	})
 }
 
-func NewNodeStateSaver(kubeCl *client.KubernetesClient, nodeName string, nodeGroup string, nodeGroupSettings []byte) *terraform.StateSaver {
+func NewNodeStateSaver(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, nodeGroupSettings []byte) *terraform.StateSaver {
 	return terraform.NewStateSaver(func(outputs *terraform.PipelineOutputs) error {
 		err := SaveNodeIntermediateTerraformState(kubeCl, nodeName, nodeGroup, outputs, nodeGroupSettings)
 		if errors.Is(err, ErrNoIntermediateTerraformState) {

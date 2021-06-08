@@ -3,6 +3,7 @@ GOLANGCI_LINT_VERSION=1.39.0
 GOFUMPT_VERSION=0.1.1
 GOARCH=amd64
 UNAME=$(shell uname -s)
+DEV_CONTAINER_NAME=dhctl-dev
 
 GOFUMPT_BIN=/tmp/gofumpt-$(GOFUMPT_VERSION)
 GOLANGCILINT_BIN=/tmp/golangci-lint-$(GOLANGCI_LINT_VERSION)
@@ -16,7 +17,7 @@ ifndef OS
 endif
 
 
-.PHONY : deps fmt lint build test ci all
+.PHONY : deps fmt lint build test all ci devenv devstop
 
 all: deps fmt build test
 
@@ -40,7 +41,7 @@ test:
 
 build:
 	mkdir -p bin
-	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/bashible-apiserver .
+	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/dhctl ./cmd/dhctl
 
 ci: deps lint
 	tmpfile=$(mktemp /tmp/coverage-report.XXXXXX)
@@ -48,3 +49,29 @@ ci: deps lint
         && echo "Coverage: $(go tool cover -func  ${tmpfile} | grep total | awk '{print $3}')" \
         && echo "Success!" \
         || exit 1
+
+# Shell script within makefile https://stackoverflow.com/a/29085760
+devenv:
+	@set -e ;\
+	docker pull registry.flant.com/sys/antiopa/dev/install:master ;\
+	CONTAINER_ID=$$(docker ps -aqf "name=$(DEV_CONTAINER_NAME)") ;\
+	echo ;\
+	test -n "$$CONTAINER_ID" && echo "Container $$CONTAINER_ID exists, entering." || echo "Creating container..." ;\
+	echo ;\
+	test -z "$$CONTAINER_ID" && CONTAINER_ID=$$(docker run \
+			--name "$(DEV_CONTAINER_NAME)" \
+			--detach \
+			--rm \
+			-v $(HOME)/.ssh/:/root/.ssh/ \
+			--mount type=tmpfs,destination=/tmp:exec \
+			-v "$$(pwd):/dhctl" \
+			-v "$$(pwd)/../candi:/deckhouse/candi" \
+			registry.flant.com/sys/antiopa/dev/install:master \
+			tail -f /dev/null) \
+		&& docker exec    "$$CONTAINER_ID" apk add go curl \
+		&& docker exec -i "$$CONTAINER_ID" sh -c "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b \"$$(go env GOPATH)\" /bin v$(GOLANGCI_LINT_VERSION)" \
+		&& docker exec    "$$CONTAINER_ID" sh -c 'ln -fs /root/go/bin/golangci-lint /usr/local/bin/golangci-lint' ;\
+	docker exec -it -w /dhctl "$$CONTAINER_ID" bash
+
+devstop:
+	@docker kill $$(docker ps -f name=$(DEV_CONTAINER_NAME) -q) 2&>/dev/null

@@ -29,7 +29,7 @@ func Edit(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	err = ioutil.WriteFile(tmpFile.Name(), data, 0600)
+	err = ioutil.WriteFile(tmpFile.Name(), data, 0o600)
 	if err != nil {
 		log.ErrorF("can't write write cluster configuration to the file %s: %s\n", tmpFile.Name(), err)
 		return nil, err

@@ -16,8 +16,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
-var defaultLogger Logger
-var emptyLogger Logger = &SilentLogger{}
+var (
+	defaultLogger Logger
+	emptyLogger   Logger = &SilentLogger{}
+)
 
 func init() {
 	defaultLogger = &DummyLogger{}
@@ -115,7 +117,7 @@ func NewPrettyLogger() *PrettyLogger {
 	}
 }
 
-func (d *PrettyLogger) LogProcess(p string, t string, run func() error) error {
+func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
 	format, ok := d.processTitles[p]
 	if !ok {
 		format = d.processTitles["default"]
@@ -214,7 +216,7 @@ func NewJSONLogger() *SimpleLogger {
 	return simpleLogger
 }
 
-func (d *SimpleLogger) LogProcess(p string, t string, run func() error) error {
+func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
 	d.logger.WithField("action", "start").WithField("process", p).Infoln(t)
 	err := run()
 	d.logger.WithField("action", "end").WithField("process", p).Infoln(t)
@@ -276,7 +278,7 @@ func (d *SimpleLogger) Write(content []byte) (int, error) {
 
 type DummyLogger struct{}
 
-func (d *DummyLogger) LogProcess(_ string, t string, run func() error) error {
+func (d *DummyLogger) LogProcess(_, t string, run func() error) error {
 	fmt.Println(t)
 	err := run()
 	fmt.Println(t)
@@ -336,7 +338,7 @@ func (d *DummyLogger) Write(content []byte) (int, error) {
 	return len(content), nil
 }
 
-func Process(p string, t string, run func() error) error {
+func Process(p, t string, run func() error) error {
 	return defaultLogger.LogProcess(p, t, run)
 }
 
@@ -398,7 +400,7 @@ func GetSilentLogger() Logger {
 
 type SilentLogger struct{}
 
-func (d *SilentLogger) LogProcess(_ string, t string, run func() error) error {
+func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	err := run()
 	return err
 }

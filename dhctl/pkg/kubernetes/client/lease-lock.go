@@ -79,7 +79,6 @@ func (l *LeaseLock) Unlock() {
 		}
 		return err
 	})
-
 	if err != nil {
 		log.Errorf("Error while Unlock lease %v", err)
 	}

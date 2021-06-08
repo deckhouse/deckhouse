@@ -75,7 +75,7 @@ func NewTempStateCache(identity string) (*StateCache, error) {
 
 // NewTempStateCache creates new cache instance in specified directory
 func NewStateCache(dir string) (*StateCache, error) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("can't create cache directory: %w", err)
 	}
 
@@ -89,7 +89,7 @@ func NewStateCache(dir string) (*StateCache, error) {
 
 // SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) {
-	if err := ioutil.WriteFile(s.GetPath(name), content, 0600); err != nil {
+	if err := ioutil.WriteFile(s.GetPath(name), content, 0o600); err != nil {
 		log.ErrorF("Can't save terraform state in cache: %v", err)
 	}
 }
@@ -117,7 +117,7 @@ func (s *StateCache) InCache(name string) bool {
 
 func (s *StateCache) Clean() {
 	_ = os.RemoveAll(s.dir)
-	if err := os.MkdirAll(s.dir, 0755); err != nil {
+	if err := os.MkdirAll(s.dir, 0o755); err != nil {
 		return
 	}
 

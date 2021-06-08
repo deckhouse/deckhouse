@@ -23,7 +23,7 @@ func (s *Client) Start() (*Client, error) {
 // Easy access to frontends
 
 // Tunnel is used to open local (L) and remote (R) tunnels
-func (s *Client) Tunnel(ttype string, address string) *frontend.Tunnel {
+func (s *Client) Tunnel(ttype, address string) *frontend.Tunnel {
 	return frontend.NewTunnel(s.Settings, ttype, address)
 }
 

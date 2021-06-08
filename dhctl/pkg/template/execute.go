@@ -14,7 +14,7 @@ import (
 const (
 	tmpDirPrefix = "candi-bundle-"
 
-	bundlePermissions = 0700
+	bundlePermissions = 0o700
 )
 
 type RenderedTemplate struct {

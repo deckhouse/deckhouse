@@ -38,6 +38,7 @@ type logLine struct {
 func (l *logLine) String() string {
 	return fmt.Sprintf("\t%s/%s: %s\n", l.Module, l.Component, l.Message)
 }
+
 func (l *logLine) StringWithLogLevel() string {
 	return fmt.Sprintf("\t%s/%s: [%s] %s\n", l.Module, l.Component, l.Level, l.Message)
 }
@@ -109,7 +110,6 @@ func (d *LogPrinter) printErrorsForTask(taskID string, errorTaskTime time.Time) 
 
 		return nil
 	})
-
 	if err != nil {
 		log.DebugLn(lastErr)
 		return
