@@ -67,18 +67,12 @@ spec:
         status: {}
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Описывает runtime параметры группы узлов.
-          required:
-            - spec
           properties:
             status: &status
-              type: object
-              required: []
               properties:
                 ready:
-                  type: integer
                   description: "Number of ready Kubernetes nodes in the group."
                 nodes:
                   type: integer
@@ -134,17 +128,11 @@ spec:
                             type: string
                             description: "Type of operation."
                 conditionSummary:
-                  type: object
                   properties:
                     statusMessage:
                       description: "Status message about group handling."
-                      type: string
                     ready:
                       description: "Status of the condition summary."
-                      enum:
-                        - "True"
-                        - "False"
-                      type: string
             spec:
               type: object
               required:
@@ -161,34 +149,16 @@ spec:
                       управляется cloud-controller-manager'ом (объект Node автоматически обогащается информацией о зоне и регионе по
                       данным, полученным от облака; при удалении узла из облака, соответствующий ему Node-объект будет
                       удален в Kubernetes).
-                  type: string
-                  enum:
-                    - Cloud
-                    - Static
-                    - Hybrid
                 kubernetesVersion:
                   description: |
                     Желаемая minor-версия Kubernetes.
 
                     По умолчанию соответствует глобально выбранной для кластера версии (см. документацию по установке) или, если таковая не определена, текущей версии control-plane'а.
-                  type: string
-                  example: '1.19'
-                  enum:
-                    - "1.14"
-                    - "1.15"
-                    - "1.16"
-                    - "1.17"
-                    - "1.18"
-                    - "1.19"
-                    - "1.20"
-                    - "1.21"
                 cri:
-                  type: object
                   description: |
                     Параметры container runtime.
                   properties:
                     type: &criType
-                      type: string
                       description: |
                         Тип сontainer runtime.
 
@@ -200,27 +170,19 @@ spec:
                         - "Containerd"
                         - "NotManaged"
                     containerd: &criContainerd
-                      type: object
                       description: |
                         Параметры работы Containerd.
 
                         При настройке этих параметров, `cri.type` должен быть — `Containerd`.
                       properties:
                         maxConcurrentDownloads:
-                          type: integer
                           description: |
                             Максимальное количество параллельных потоков загрузки для каждой операции pull.
-                          x-doc-default: 3
                 cloudInstances: &cloudInstances
                   description: |
                     Параметры заказа облачных виртуальных машин.
 
                     **Внимание!** Допустимо использовать только совместно с `nodeType: Cloud`.
-                  type: object
-                  required:
-                  - classReference
-                  - minPerZone
-                  - maxPerZone
                   properties:
                     zones:
                       description: |
@@ -234,82 +196,51 @@ spec:
                         - Espoo
                         - Tampere
                         ```
-                      type: array
-                      items:
-                        type: string
                     minPerZone:
                       description: |
                         Минимальное количество инстансов в зоне. Проставляется в объект MachineDeployment и в качестве нижней границы в cluster-autoscaler.
-                      type: integer
-                      minimum: 0
                     maxPerZone:
                       description: |
                         Максимальное количество инстансов в зоне. Проставляется как верхняя граница в cluster-autoscaler.
-                      type: integer
-                      minimum: 0
                     maxUnavailablePerZone:
                       description: |
                         Сколько инстансов может быть недоступно при RollingUpdate'е.
-                      type: integer
-                      x-doc-default: 0
-                      minimum: 0
                     maxSurgePerZone:
                       description: |
                         Сколько инстансов создавать одновременно при scale-up.
-                      type: integer
-                      x-doc-default: 1
-                      minimum: 0
                     standby:
                       description: |
                         Количество подогретых инстансов для этой `NodeGroup`.
 
                         Значение может быть абсолютным (например, `2`) или процентом желаемых узлов (например, `10%`). Абсолютное значение рассчитывается из процента от максимального количества узлов путем округления в меньшую сторону, но минимум — `1`.
-                      pattern: '^[0-9]+%?$'
-                      x-kubernetes-int-or-string: true
                     standbyHolder:
                       description: |
                         Параметры "занимателя" ресурсов для подогретых инстансов.
-                      type: object
                       properties:
                         notHeldResources:
                           description: |
                             Ресурсы, которые не будут заняты.
-                          type: object
                           properties:
                             cpu:
                               description: |
                                 Количество CPU.
 
                                 Значение может быть абсолютным (например, `1`) или в _millicore_-формате (например, `1500m`).
-                              pattern: '^[0-9]+m?$'
-                              x-kubernetes-int-or-string: true
                             memory:
                               description: |
                                 Количество памяти.
 
                                 Значение может быть абсолютным в байтах (например, `128974848`) или в kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
-                              pattern: '^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                              x-kubernetes-int-or-string: true
                     classReference:
                       description: |
                         Ссылка на объект `InstanceClass`. Уникален для каждого `cloud-provider-`модуля.
-                      type: object
                       properties:
                         kind:
                           description: |
                             Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего `cloud-provider-`модуля.
-                          type: string
-                          enum:
-                          - OpenStackInstanceClass
-                          - GCPInstanceClass
-                          - VsphereInstanceClass
-                          - AWSInstanceClass
-                          - YandexInstanceClass
-                          - AzureInstanceClass
                         name:
                           description: |
                             Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
-                          type: string
                 nodeTemplate: &nodeTemplate
                   description: |
                     Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
@@ -326,13 +257,8 @@ spec:
                       key: ship-class
                       value: frigate
                     ```
-                  type: object
                   properties:
                     labels:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
@@ -343,10 +269,6 @@ spec:
                           app: warp-drive-ai
                         ```
                     annotations:
-                      type: object
-                      additionalProperties:
-                        type: string
-                      x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
 
@@ -356,7 +278,6 @@ spec:
                           ai.fleet.com/discombobulate: "true"
                         ```
                     taints:
-                      type: array
                       description: |
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
@@ -369,28 +290,11 @@ spec:
                           key: ship-class
                           value: frigate
                         ```
-                      items:
-                        type: object
-                        properties:
-                          effect:
-                            type: string
-                            enum:
-                              - NoSchedule
-                              - PreferNoSchedule
-                              - NoExecute
-                          key:
-                            type: string
-                          value:
-                            type: string
                 static:
-                  description: Static node parameters
-                  type: object
+                  description: Параметры статического узла.
                   properties:
                     internalNetworkCIDRs:
-                      description: Subnet CIDR
-                      type: array
-                      items:
-                        type: string
+                      description: CIDR подсети
                 chaos: &chaos
                   description: |
                     Настройки chaos monkey.
@@ -400,59 +304,37 @@ spec:
                     mode: DrainAndReboot
                     period: 24h
                     ```
-                  type: object
                   properties:
                     mode:
-                      type: string
                       description: |
                         Режим работы chaos monkey.
 
                         - `DrainAndDelete` — при срабатывании drain'ит и удаляет ноду
                         - `Disabled` — не трогает данную NodeGroup.
-                      x-doc-default: 'Disabled'
-                      enum:
-                        - Disabled
-                        - DrainAndDelete
                     period:
-                      type: string
                       description: |
                         В какой интервал времени сработает chaos monkey (указывать можно в [golang формате](https://golang.org/pkg/time/#ParseDuration)).
-                      pattern: '^[0-9]+[mh]{1}$'
-                      x-doc-default: '6h'
                 operatingSystem: &operatingSystem
-                  type: object
                   description: |
                     Параметры операционной системы.
                   properties:
                     manageKernel:
-                      type: boolean
                       description: |
                         Автоматическое управление ядром операционной системы.
-                      x-doc-default: true
                 disruptions: &disruptions
-                  type: object
                   description: |
                     Параметры обновлений приводящих к возможному простою.
-                  required:
-                    - approvalMode
                   properties:
                     approvalMode:
-                      type: string
                       description: |
                         Режим выдачи разрешения на disruptive обновление.
                         - `Manual` — отключить автоматическую выдачу разрешений на disruption, когда disruption потребуется – загорится специальный алерт.
                         - `Automatic` —  автоматически выдавать разрешения на disruption при обновлении (значение по умолчанию).
-                      enum:
-                        - Manual
-                        - Automatic
                     automatic:
-                      type: object
                       description: |
                         Дополнительные параметры для режима `Automatic`.
                       properties:
                         drainBeforeApproval:
-                          type: boolean
-                          x-doc-default: true
                           description: |
                             Выгон (draining) подов с ноды, перед выдачей разрешения на disruption.
                 docker:
@@ -460,88 +342,53 @@ spec:
                     Параметры настройки Docker.
 
                     При настройке этих параметров, `cri.type` должен быть — `Docker`.
-                  type: object
                   properties:
                     maxConcurrentDownloads:
-                      type: integer
                       description: |
                         Максимальное количество потоков одновременного скачивания docker образов.
-                      x-doc-default: 3
                     manage:
                       type: boolean
                       description: |
                         Автоматическое управление версией и параметрами Docker.
-                      x-doc-default: true
                 kubelet: &kubelet
-                  type: object
                   description: |
                     Параметры настройки kubelet.
                   properties:
                     maxPods:
-                      type: integer
                       description: |
                         Максимальное количество подов на нодах данной `NodeGroup`.
-                      x-doc-default: 110
                     rootDir:
-                      type: string
                       description: |
                         Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
-                      x-doc-default: '/var/lib/kubelet'
     - name: v1alpha2
       served: true
       storage: false
       additionalPrinterColumns: *additionalPrinterColumns
-      subresources:
-        status: {}
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Описывает runtime параметры группы узлов.
-          required:
-            - spec
           properties:
             status: *status
             spec:
-              type: object
-              required:
-                - nodeType
               properties:
                 nodeType: *nodeType
                 cri:
-                  type: object
                   description: |
                     Параметры container runtime.
                   properties:
                     type: *criType
                     containerd: *criContainerd
                     docker:
-                      type: object
                       description: |
                         Параметры настройки Docker.
                       properties:
                         maxConcurrentDownloads:
-                          type: integer
                           description: |
                             Максимальное количество потоков одновременного скачивания docker образов.
-                          x-doc-default: 3
                         manage:
-                          type: boolean
                           description: |
                             Автоматическое управление версией и параметрами Docker.
-                          x-doc-default: true
-                  oneOf:
-                    - properties:
-                        type:
-                          enum: ["Docker"]
-                        docker: {}
-                    - properties:
-                        type:
-                          enum: ["Containerd"]
-                        containerd: {}
-                    - properties:
-                        type:
-                          enum: ["NotManaged"]
                 cloudInstances: *cloudInstances
                 nodeTemplate: *nodeTemplate
                 chaos: *chaos

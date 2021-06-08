@@ -2,6 +2,31 @@
 title: "Модуль vertical-pod-autoscaler: примеры конфигурации"
 ---
 
+## Настройка модуля
+```yaml
+verticalPodAutoscaler: |
+  nodeSelector:
+    node-role/example: ""
+  tolerations:
+  - key: dedicated
+    operator: Equal
+    value: example
+```
+
+## Пример минимального CR `VerticalPodAutoscaler`
+
+```yaml
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: my-app-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: my-app
+```
+
 ## Пример полного CR `VerticalPodAutoscaler`
 
 ```yaml
@@ -26,18 +51,4 @@ spec:
         memory: 300Mi
         cpu: 350m
       mode: Auto
-```
-
-## Пример минимального CR `VerticalPodAutoscaler`
-
-```yaml
-apiVersion: autoscaling.k8s.io/v1beta2
-kind: VerticalPodAutoscaler
-metadata:
-  name: my-app-vpa
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: StatefulSet
-    name: my-app
 ```

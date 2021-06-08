@@ -4,54 +4,54 @@ properties:
     type: boolean
     default: true
     description: |
-      Эта стратегия гарантирует, что все поды нарушающие anti-affinity будут удалены с узлов.
+      This strategy ensures that all pods violating anti-affinity rules are removed from the nodes.
   removePodsViolatingInterPodAntiAffinity:
     type: boolean
     default: true
     description: |
-      Эта стратегия гарантирует, что все поды нарушающие node affinity будут удалены с узлов.
+      This strategy ensures that all pods violating node affinity rules are removed from the nodes.
   removeDuplicates:
     type: boolean
     default: false
     description: |
-      Эта стратегия гарантирует, что на одном узле работает только один под, связанный с ReplicaSet (RS), ReplicationController (RC), StatefulSet, или Job.
+      This strategy ensures that only one pod associated with ReplicaSet (RS), ReplicationController (RC), StatefulSet, or Job runs on a node.
   lowNodeUtilization:
     type: boolean
     default: false
     description: |
-      Эта стратегия находит недоутилизированные ноды и эвиктит поды с нагруженных нод (если это возможно) с надеждой, что они будут зашедулены на недоутилизированные ноды.
+      The descheduler finds underutilized nodes and evicts pods from overutilized nodes hoping that these pods will be rescheduled on underutilized ones.
   removePodsViolatingNodeTaints:
     type: boolean
     default: false
     description: |
-      Эта стратегия гарантирует, что поды, нарушающие NoSchedule на нодах, будут удалены.
+      This strategy ensures that pods violating NoSchedule taints on nodes are evicted.
   removePodsViolatingTopologySpreadConstraint:
     type: boolean
     default: false
     description: |
-      Эта стратегия гарантирует, что поды, нарушающие [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов.
+      This strategy ensures that pods violating the [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes.
   removePodsHavingTooManyRestarts:
     type: boolean
     default: false
     description: |
-      Эта стратегия гарантирует, что поды, имеющие больше 100 перезапусков контейнеров (включая init-контейнеры), будут удалены с узлов.
+      This strategy ensures that pods having over a hundred container restarts (including init-containers) are removed from nodes.
   podLifeTime:
     type: boolean
     default: false
     description: |
-      Эта стратегия гарантирует, что поды в состоянии Pending старше 24 часов, будут удалены с узлов.
+      This strategy ensures that pods that are Pending for more than 24 hours are deleted from nodes.
   nodeSelector:
     type: object
     additionalProperties:
       type: string
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/ru/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
-      Like `spec.tolerations` for Kubernetes pod.
+      The same as `spec.tolerations` for the Kubernetes pod.
 
       Use [automatic](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
     items:

@@ -21,9 +21,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Описывает linux-пользователей, которые будут созданы на всех узлах.
+            Defines the linux users to create on all nodes.
 
-            Домашний каталог пользователя создается в директории `/home/deckhouse/`.
+            The user's home directory is created in the `/home/deckhouse/` directory.
           required:
             - spec
           properties:
@@ -39,7 +39,7 @@ spec:
                   description: |
                     Node user ID.
 
-                    Неизменяемый в течение жизни ресурса параметр.
+                    This parameter does not change during the entire resource life.
                   example: '1001'
                   minimum: 1001
                 sshPublicKey:
@@ -51,7 +51,7 @@ spec:
                   description: |
                     Hashed user password.
 
-                    Формат соответствует хешам паролей, содержащихся в `/etc/shadow`. Его можно получить при помощи команды `openssl passwd -6`.
+                    The format corresponds to the password hashes in `/etc/shadow`. Yoou can get it using the following command: `openssl passwd -6`.
                   example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
                 isSudoer:
                   type: boolean
