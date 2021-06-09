@@ -71,6 +71,10 @@ spec:
             name: data
             readOnly: false
           env:
+          - name: UPMETER_CP_SCHEDULER_IMAGE
+            value: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.alpine }}"
+          - name: UPMETER_CP_SCHEDULER_IMAGE_PULL_SECRETS
+            value: "deckhouse-registry"
           - name: UPMETER_TLS
             value: "true"
           - name: UPMETER_SERVICE_HOST

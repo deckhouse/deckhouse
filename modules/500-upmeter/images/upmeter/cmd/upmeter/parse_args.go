@@ -106,6 +106,16 @@ func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {
 		Envar("KUBE_CLIENT_BURST").
 		Default("10"). // DefaultBurst from k8s.io/client-go/rest/config.go
 		IntVar(&config.ClientBurst)
+
+	cmd.Flag("cp-scheduler-image", "Image for control plane scheduler probe").
+		Envar("UPMETER_CP_SCHEDULER_IMAGE").
+		Default(kubernetes.DefaultAlpineImage).
+		StringVar(&config.CpSchedulerImage.Name)
+
+	cmd.Flag("cp-scheduler-pull-secrets", "Image pull secrets names for control plane scheduler image").
+		Envar("UPMETER_CP_SCHEDULER_IMAGE_PULL_SECRETS").
+		Default("").
+		StringsVar(&config.CpSchedulerImage.PullSecrets)
 }
 
 type loggerConfig struct {

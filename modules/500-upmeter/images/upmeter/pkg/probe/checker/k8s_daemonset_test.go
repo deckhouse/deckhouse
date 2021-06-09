@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"d8.io/upmeter/pkg/check"
+	k8saccess "d8.io/upmeter/pkg/kubernetes"
 )
 
 func NewFake(client kube.KubernetesClient) *FakeAccess {
@@ -30,6 +31,10 @@ func (a *FakeAccess) Kubernetes() kubernetes.Interface {
 
 func (a *FakeAccess) ServiceAccountToken() string {
 	return "pewpew"
+}
+
+func (a *FakeAccess) CpSchedulerImage() *k8saccess.ProbeImage {
+	return createTestProbeImage("test-image:latest", nil)
 }
 
 func getTestDsPodsReadinessChecker() (*fake.FakeCluster, *dsPodsReadinessChecker) {
