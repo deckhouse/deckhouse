@@ -56,7 +56,7 @@ func (c *podLifecycleChecker) BusyWith() string {
 }
 
 func (c *podLifecycleChecker) Check() check.Error {
-	pod := createPodObject(c.node)
+	pod := createPodObject(c.node, c.access.CpSchedulerImage())
 	c.checker = c.new(pod)
 	return c.checker.Check()
 }
@@ -204,7 +204,7 @@ func (c *podDeletionChecker) Check() check.Error {
 	return nil
 }
 
-func createPodObject(nodeName string) *v1.Pod {
+func createPodObject(nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
 	nodeAffinity := createNodeAffinityObject(nodeName)
 
 	podName := util.RandomIdentifier("upmeter-control-plane-scheduler")
@@ -224,10 +224,11 @@ func createPodObject(nodeName string) *v1.Pod {
 			},
 		},
 		Spec: v1.PodSpec{
+			ImagePullSecrets: image.GetPullSecrets(),
 			Containers: []v1.Container{
 				{
 					Name:            "pause",
-					Image:           "alpine:3.12",
+					Image:           image.GetImageName(),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Command: []string{
 						"true",
