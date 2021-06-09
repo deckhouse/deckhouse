@@ -245,7 +245,12 @@ function __main__() {
     ng="$(jq --arg effective_kubernetes_version "$effective_kubernetes_version" '.kubernetesVersion = $effective_kubernetes_version' <<< "$ng")"
 
     # detect cri
-    default_cri="Docker"
+    if semver::ge "$effective_kubernetes_version" "1.19"; then
+      default_cri="Containerd"
+    else
+      default_cri="Docker"
+    fi
+
     if values::has global.clusterConfiguration.defaultCRI ; then
       default_cri="$(values::get global.clusterConfiguration.defaultCRI)"
     fi
