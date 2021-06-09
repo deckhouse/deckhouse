@@ -6,9 +6,9 @@ import (
 	"os"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
+	"github.com/flant/kube-client/klogtologrus"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
-	sh_klog_to_logrus "github.com/flant/shell-operator/pkg/utils/klogtologrus"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -41,7 +41,7 @@ func main() {
 	})
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
-		sh_klog_to_logrus.InitAdapter(sh_app.DebugKubernetesAPI)
+		klogtologrus.InitAdapter(sh_app.DebugKubernetesAPI)
 		return nil
 	})
 

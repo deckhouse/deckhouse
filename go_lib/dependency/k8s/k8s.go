@@ -1,7 +1,7 @@
 package k8s
 
 import (
-	"github.com/flant/shell-operator/pkg/kube/fake"
+	"github.com/flant/kube-client/fake"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

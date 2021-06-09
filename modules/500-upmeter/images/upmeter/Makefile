@@ -46,7 +46,6 @@ ci: deps lint
         || exit 1
 
 build:
-	mkdir -p bin
 	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/upmeter ./cmd/upmeter/
 
 build-docker:

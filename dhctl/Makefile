@@ -40,7 +40,6 @@ test:
 	go test -race ./...
 
 build:
-	mkdir -p bin
 	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/dhctl ./cmd/dhctl
 
 ci: deps lint
