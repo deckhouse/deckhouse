@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/shell-operator/pkg/kube/fake"
+	"github.com/flant/kube-client/fake"
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
@@ -154,7 +154,7 @@ func (mdc mockedDependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Cl
 	if mdc.K8sClient != nil {
 		return mdc.K8sClient, nil
 	}
-	return fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).KubeClient, nil
+	return fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client, nil
 }
 
 func (mdc mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
@@ -164,7 +164,7 @@ func (mdc mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s
 
 // SetK8sVersion change FakeCluster versions. KubeClient returns with resources of specified version
 func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
-	cli := fake.NewFakeCluster(ver).KubeClient
+	cli := fake.NewFakeCluster(ver).Client
 	mdc.K8sClient = cli
 }
 
@@ -176,6 +176,6 @@ func newMockedContainer() *mockedDependencyContainer {
 
 		HTTPClient: http.NewClientMock(ctrl),
 		EtcdClient: etcd.NewClientMock(ctrl),
-		K8sClient:  fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).KubeClient,
+		K8sClient:  fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
 	}
 }

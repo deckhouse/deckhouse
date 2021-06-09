@@ -1,7 +1,7 @@
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/kube"
+	klient "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
@@ -9,7 +9,7 @@ type KubernetesPatch struct {
 	*object_patch.ObjectPatcher
 }
 
-func NewKubernetesPatch(kubeClient kube.KubernetesClient) *KubernetesPatch {
+func NewKubernetesPatch(kubeClient klient.Client) *KubernetesPatch {
 	op := object_patch.NewObjectPatcher(kubeClient)
 	return &KubernetesPatch{op}
 }

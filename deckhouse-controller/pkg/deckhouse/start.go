@@ -7,8 +7,8 @@ import (
 	"time"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
+	klient "github.com/flant/kube-client/client"
 	sh_app "github.com/flant/shell-operator/pkg/app"
-	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	log "github.com/sirupsen/logrus"
 
@@ -65,7 +65,8 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 
 	// Create and initialize a Kubernetes client for the RegistryWatcher and the AddonOperator
 	// Register metrics for client-go with custom labels.
-	kube.RegisterKubernetesClientMetrics(metricStorage, d.AddonOperator.GetMainKubeClientMetricLabels())
+	//nolint:staticcheck
+	klient.RegisterKubernetesClientMetrics(metricStorage, d.AddonOperator.GetMainKubeClientMetricLabels())
 	// Initialize a Kubernetes client with settings, metricStorage and custom metric labels.
 	kubeClient, err := d.AddonOperator.InitMainKubeClient()
 	if err != nil {
@@ -125,7 +126,7 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 }
 
 // UpdateDeploymentImageAndExit updates "deckhouseImageId" label of deployment/deckhouse
-func UpdateDeploymentImageAndExit(kubeClient kube.KubernetesClient, newImageID string) {
+func UpdateDeploymentImageAndExit(kubeClient klient.Client, newImageID string) {
 	deployment, err := GetDeploymentOfCurrentPod(kubeClient)
 	if err != nil {
 		log.Errorf("Get deployment of current pod: %s", err)
@@ -164,7 +165,7 @@ func NormalizeLabelValue(value string) string {
 // Image name should be taken from container spec. ContainerStatus contains bad image name
 // if multiple tags has one digest!
 // https://github.com/kubernetes/kubernetes/issues/51017
-func GetCurrentPodImageInfo(kubeClient kube.KubernetesClient) (imageName string, imageID string) {
+func GetCurrentPodImageInfo(kubeClient klient.Client) (imageName string, imageID string) {
 	res, err := GetCurrentPod(kubeClient)
 	if err != nil {
 		log.Debugf("Get current pod info: %v", err)

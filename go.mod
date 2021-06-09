@@ -11,8 +11,9 @@ require (
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20210526084343-dcf1732d2d7c // branch: master
-	github.com/flant/shell-operator v1.0.2-0.20210524145531-147332b951de // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20210605151357-2b59abdcb324 // branch: master
+	github.com/flant/kube-client v0.0.6
+	github.com/flant/shell-operator v0.0.0-20210531110705-3c2c19fc6876 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3

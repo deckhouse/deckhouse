@@ -18,9 +18,9 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
+	klient "github.com/flant/kube-client/client"
+	"github.com/flant/kube-client/fake"
 	. "github.com/flant/shell-operator/pkg/hook/types"
-	"github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/kube/fake"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	hookcontext "github.com/flant/shell-operator/test/hook/context"
@@ -85,7 +85,7 @@ func (hec *HookExecutionConfig) kubernetesResource(kind, namespace, name string)
 
 	// avoid situation of different groups: v1/v1beta1/etc
 	for _, gvr := range possibleGVR {
-		b, err := hec.fakeCluster.KubeClient.Dynamic().Resource(gvr).Namespace(namespace).Get(context.TODO(), name, v1.GetOptions{})
+		b, err := hec.fakeCluster.Client.Dynamic().Resource(gvr).Namespace(namespace).Get(context.TODO(), name, v1.GetOptions{})
 		if err == nil {
 			return b.UnstructuredContent()
 		}
@@ -125,11 +125,11 @@ type HookExecutionConfig struct {
 	Session *gexec.Session
 
 	fakeClusterVersion k8s.FakeClusterVersion
-	fakeCluster        *fake.FakeCluster
+	fakeCluster        *fake.Cluster
 }
 
-func (hec *HookExecutionConfig) KubeClient() kube.KubernetesClient {
-	return hec.fakeCluster.KubeClient
+func (hec *HookExecutionConfig) KubeClient() klient.Client {
+	return hec.fakeCluster.Client
 }
 
 func (hec *HookExecutionConfig) RegisterCRD(group, version, kind string, namespaced bool) {
@@ -320,8 +320,8 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 			panic(err)
 		}
 		hec.fakeCluster = hec.BindingContextController.FakeCluster()
-		hec.fakeCluster.KubeClient.WithServer("fake-test")
-		dependency.TestDC.K8sClient = hec.fakeCluster.KubeClient
+		hec.fakeCluster.Client.WithServer("fake-test")
+		dependency.TestDC.K8sClient = hec.fakeCluster.Client
 
 		if hec.GoHook != nil {
 			// create GlobalHook or Module and convert its config
@@ -563,13 +563,13 @@ func (hec *HookExecutionConfig) RunHook() {
 	}
 }
 
-func (hec *HookExecutionConfig) getFakeClient() kube.KubernetesClient {
+func (hec *HookExecutionConfig) getFakeClient() klient.Client {
 	f := hec.fakeCluster
 	if f == nil {
 		f = fake.NewFakeCluster(hec.fakeClusterVersion)
 	}
 
-	return f.KubeClient
+	return f.Client
 }
 
 // hookColoredOutput colored stdout and stderr streams for shell hooks
