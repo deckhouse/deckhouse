@@ -1,37 +1,14 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: clusterauthorizationrules.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: user-authz
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: clusterauthorizationrules
-    singular: clusterauthorizationrule
-    kind: ClusterAuthorizationRule
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Управляет настройками RBAC и авторизацией по namespace.
-          required:
-          - spec
           properties:
             spec:
-              type: object
-              required:
-              - subjects
               properties:
                 accessLevel:
-                  type: string
                   description: |
                     Уровень доступа:
                     * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
@@ -47,29 +24,18 @@ spec:
 
                       **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
                     * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
-                  enum: [User,Master,PrivilegedUser,Deploy,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
-                  example: 'PrivilegedUser'
                 portForwarding:
-                  type: boolean
-                  default: false
                   description: |
                     Разрешить/запретить выполнять `port-forward`.
                 allowScale:
-                  type: boolean
-                  default: false
                   description: |
                     Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
                 allowAccessToSystemNamespaces:
-                  type: boolean
-                  x-doc-versionType: ee
-                  x-doc-default: false
                   description: |
                     Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
 
                     **Доступно только** с включённым параметром `enableMultiTenancy`.
                 limitNamespaces:
-                  type: array
-                  x-doc-versionType: ee
                   description: |
                     Белый список разрешённых namespace в формате регулярных выражений.
 
@@ -78,12 +44,7 @@ spec:
                     * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
 
                     **Доступно только** с включённым параметром `enableMultiTenancy`.
-                  items:
-                    type: string
-                    minLength: 1
-                    example: 'production-.*'
                 subjects:
-                  type: array
                   description: |
                     Пользователи и/или группы, которым необходимо предоставить права.
 
@@ -91,27 +52,15 @@ spec:
 
                     **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/ru/documentation/v1/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
                   items:
-                    type: object
-                    required:
-                    - kind
-                    - name
                     properties:
                       kind:
-                        type: string
-                        enum: [User,Group,ServiceAccount]
                         description: 'Тип ресурса.'
-                        example: 'Group'
                       name:
-                        type: string
-                        minLength: 1
                         description: 'Имя ресурса.'
                         example: 'some-group-name'
                       namespace:
-                        type: string
-                        minLength: 1
                         description: 'Namespace для ServiceAccount.'
                 additionalRoles:
-                  type: array
                   description: |
                     Дополнительные роли, которые необходимо выдать для заданных `subjects`.
 
@@ -128,24 +77,10 @@ spec:
                       name: cluster-read-all
                     ```
                   items:
-                    type: object
-                    required:
-                    - apiGroup
-                    - kind
-                    - name
                     properties:
                       apiGroup:
-                        type: string
-                        description: "apiGroup`а для пользователей."
-                        example: 'rbac.authorization.k8s.io'
-                        minLength: 1
+                        description: "apiGroup для пользователей."
                       kind:
-                        type: string
                         description: 'Kind роли.'
-                        enum: [ClusterRole, Role]
-                        example: 'ClusterRole'
                       name:
-                        type: string
                         description: 'Название роли.'
-                        minLength: 1
-                        example: 'cluster-admin'

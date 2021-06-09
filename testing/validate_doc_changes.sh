@@ -77,7 +77,7 @@ function check_resource() {
 JOB_TOKEN=$1
 SKIP_LABEL_NAME='Skip doc validation'
 hasErrors=0
-pattern_resources="openapi/.+.y[a]?ml$|crds/.+.y[a]?ml$"
+pattern_resources="openapi/config-values.y[a]?ml$|crds/.+.y[a]?ml$"
 pattern_yaml=".+\.y[a]?ml$"
 
 if [[ -z $CI_OPEN_MERGE_REQUESTS ]]; then
