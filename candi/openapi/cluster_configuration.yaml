@@ -48,7 +48,7 @@ apiVersions:
         - "Docker"
         - "Containerd"
         - "NotManaged"
-        default: "Docker"
+        default: "Containerd"
       kubernetesVersion:
         type: string
         enum:
