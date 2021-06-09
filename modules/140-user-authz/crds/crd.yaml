@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Управляет настройками RBAC и авторизацией по namespace.
+            This object manages RBAC and namespace-based authorization.
           required:
           - spec
           properties:
@@ -33,32 +33,32 @@ spec:
                 accessLevel:
                   type: string
                   description: |
-                    Уровень доступа:
-                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
-                    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать секреты, а также позволяет удалять поды (что обеспечивает возможность перезагрузки);
-                    * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять namespace и все объекты, которые обычно нужны для прикладных задач;
+                    Access level:
+                    * `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
+                    * `PrivilegedUser` — the same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them);
+                    * `Editor` — is the same as `PrivilegedUser` + can create and edit namespaces and all objects that are usually required for application tasks;
 
-                      **Важно!** т.к. Editor уполномочен редактировать RoleBindings, он может сам себе расширить полномочия в рамках namespace.
-                    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например, `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet` и т.д). Роль для работы оператора кластера.
+                      **Caution!** since `Editor` can edit `RoleBindings`, he can broader his privileges within the namespace;
+                    * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges`, and `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — the same as `Editor` + can manage a limited set of cluster-wide objects that can be used in application tasks (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators.
 
-                      **Важно!** т.к. `ClusterEditor` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
-                    * `ClusterAdmin` — то же самое, что и ClusterEditor + Admin, но позволяет управлять служебными cluster-wide объектами (производные ресурсы, например, MachineSets, Machines, OpenstackInstanceClasses..., а так же ClusterAuthorizationRule). Роль для работы администратора кластера.
+                      **Caution!** since `ClusterEditor` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
+                    * `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage cluster-wide service objects (e.g.,  MachineSets, Machines, OpenstackInstanceClasses..., as well as ClusterAuthorizationRule). This role is best suited for cluster administrators.
 
-                      **Важно!** т.к. `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия.
-                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
+                      **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
+                    * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` (see below) restrictions remain valid).
                   enum: [User,Master,PrivilegedUser,Deploy,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
                   example: 'PrivilegedUser'
                 portForwarding:
                   type: boolean
                   default: false
                   description: |
-                    Разрешить/запретить выполнять `port-forward`.
+                    Allow/disallow the user to do `port-forwarding`.
                 allowScale:
                   type: boolean
                   default: false
                   description: |
-                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                    Defines if scaling of Deployments and StatefulSets is allowed/not allowed.
                 allowAccessToSystemNamespaces:
                   type: boolean
                   description: |
@@ -70,11 +70,11 @@ spec:
                 limitNamespaces:
                   type: array
                   description: |
-                    List of namespace regex-patterns to allow for user.
+                    List of regex-patterns that define namespaces accessible by the user.
 
-                    Политика:
-                    * Если список указан, то разрешаем доступ только по нему.
-                    * Если список не указан, то считаем, что разрешено всё, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    The decision making process:
+                    * If the list is defined, then only its constituents are accessible.
+                    * If the list is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
 
                     Option available only if `enableMultiTenancy` option is enabled.
                   x-doc-versionType: ee
@@ -85,11 +85,11 @@ spec:
                 subjects:
                   type: array
                   description: |
-                    Пользователи и/или группы, которым необходимо предоставить права.
+                    Users and/or groups to grant privileges.
 
-                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
 
-                    **Важно!** При использовании совместно с модулем [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/), для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    **Caution!** Note that you must use the user's `email` as the username to grant privileges to the specific user if this module is used together with the [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/) module.
                   items:
                     type: object
                     required:
@@ -115,7 +115,7 @@ spec:
                   description: |
                     Additional roles to bind for subjects.
 
-                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                    This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
 
                     Example:
                     ```yaml
