@@ -75,6 +75,18 @@ subsets:
 				Expect(f.ValuesGet("userAuthn.internal.kubernetesApiserverTargetPort").String()).To(Equal("443"))
 				Expect(f.ValuesGet("userAuthn.internal.kubernetesApiserverAddresses").String()).To(MatchJSON(`["192.168.1.1","192.168.1.2","192.168.1.3"]`))
 			})
+			Context("Test before helm ", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				})
+				It("Should update internal values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+					Expect(f.ValuesGet("userAuthn.internal.kubernetesApiserverTargetPort").String()).To(Equal("443"))
+					Expect(f.ValuesGet("userAuthn.internal.kubernetesApiserverAddresses").String()).To(MatchJSON(`["192.168.1.1","192.168.1.2","192.168.1.3"]`))
+				})
+			})
 		})
 	})
 })
