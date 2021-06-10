@@ -48,7 +48,8 @@ func applyKubernetesEndpointsFilter(obj *unstructured.Unstructured) (go_hook.Fil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/user-authn",
+	Queue:        "/modules/user-authn",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "port",
