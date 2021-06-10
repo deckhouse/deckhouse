@@ -208,7 +208,7 @@ dhcpOptions:
 $ yc compute instance list | grep nat
 | ef378c62hvqi075cp57j | kube-yc-nat | ru-central1-c | RUNNING | 130.193.44.28   | 192.168.178.22 |
 
-$ yc vpc route-table update --name kube-yc --route "0.0.0.0/0=192.168.178.22"
+$ yc vpc route-table update --name kube-yc --route destination=0.0.0.0/0,next-hop=192.168.178.22
 ```
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSnNqebgRdwGP8lhKMJfrn5c0QXDpe9YdmIlK4eDberysLLgYiKNuwaPLHcyQhJigvQ21SANH89uipE/pub?w=812&h=655)
