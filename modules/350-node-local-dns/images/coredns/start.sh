@@ -1,5 +1,6 @@
 #!/bin/bash
 
+lockfile-remove /tmp/lock
 # Setup interface
 dev_name="nodelocaldns"
 if ! ip link show "$dev_name" >/dev/null 2>&1 ; then
