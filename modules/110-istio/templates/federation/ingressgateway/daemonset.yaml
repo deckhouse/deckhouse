@@ -199,7 +199,6 @@ spec:
       - configMap:
           defaultMode: 420
           name: istio-{{ $revision }}
-          optional: true
         name: config-volume
       - name: ingressgateway-certs
         secret:
