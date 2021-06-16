@@ -1,16 +1,16 @@
 ---
-title: "Использование Proxy"
-lang: ru
+title: "Proxy usage"
+lang: en
 ---
 
-# Настройка прокси для репозиториев
-* Подготавливаем виртуальную машину для прокси.
-* Машина должна быть доступна для нод, которые будут использовать ее как прокси, и иметь доступ в интернет.
-* Устанавливаем на машину squid (на примере Ubuntu):
+# Setting up a proxy for repositories
+* Prepare the VM for setting up the proxy.
+* The machine must be accessible to the nodes that will use it as a proxy and be connected to the Internet.
+* Install squid on the machine (in our example, the Ubuntu machine is used):
 ```
 apt-get install squid
 ```
-* Создаем конфиг:
+* Create a config file:
 ```
 cat <<EOF > /etc/squid/squid.conf
 auth_param basic program /usr/lib/squid3/basic_ncsa_auth /etc/squid/passwords
@@ -21,19 +21,19 @@ http_access allow authenticated
 # Choose the port you want. Below we set it to default 3128.
 http_port 3128
 ```
-* Создаем пользователя (для примера test/test):
+* Create a user (test/test):
 ```
 echo "test:$(openssl passwd -crypt test)" >> /etc/squid/passwords
 ```
-* Запускаем и разрешаем автозагрузку squid:
+* Start squid and enable the system to start it up automatically:
 ```
 systemctl restart squid
 systemctl enable squid
 ```
-# Настройка использования прокси в Deckhouse
-Эта настройка расположена в [ClusterConfiguration](../../candi/openapi/cluster_configuration.yaml).
+# Configuring proxy usage in Deckhouse
+Insert the appropriate configuration into the [ClusterConfiguration](../../candi/openapi/cluster_configuration.yaml) file.
 
-Пример:
+An example:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
