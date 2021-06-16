@@ -58,7 +58,6 @@
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
     fi
-  - ls -la shell-operator
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
