@@ -211,7 +211,7 @@ metadata:
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
 					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
-					f.AddHookEnv("RANDOM_SEED=7")
+					f.AddHookEnv("D8_TEST_RANDOM_SEED=11")
 					f.RunHook()
 				})
 
@@ -229,7 +229,7 @@ metadata:
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLargeBroken + stateNodes + stateMachines)
 					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
-					f.AddHookEnv("RANDOM_SEED=7")
+					f.AddHookEnv("D8_TEST_RANDOM_SEED=11")
 					f.RunHook()
 				})
 
@@ -247,7 +247,7 @@ metadata:
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines + stateMachineVictim)
 					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
-					f.AddHookEnv("RANDOM_SEED=7")
+					f.AddHookEnv("D8_TEST_RANDOM_SEED=11")
 					f.RunHook()
 				})
 
@@ -265,7 +265,7 @@ metadata:
 				BeforeEach(func() {
 					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
 					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
-					f.AddHookEnv("RANDOM_SEED=0")
+					f.AddHookEnv("D8_TEST_RANDOM_SEED=0")
 					f.RunHook()
 				})
 

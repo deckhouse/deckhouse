@@ -64,6 +64,8 @@ func GetAllHooks() ([]Hook, error) {
 				return nil
 			case strings.HasSuffix(path, ".txt"): // ignore txt files
 				return nil
+			case strings.HasSuffix(path, ".md"): // ignore Markdown files
+				return nil
 			case info.IsDir():
 				return nil
 			}

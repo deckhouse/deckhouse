@@ -1,0 +1,264 @@
+package hooks
+
+import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+)
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Settings: &go_hook.HookConfigSettings{
+		ExecutionMinInterval: 5 * time.Second,
+		ExecutionBurst:       3,
+	},
+	Queue: "/modules/node-manager/chaos_monkey",
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:                         "ngs",
+			ApiVersion:                   "deckhouse.io/v1alpha2",
+			Kind:                         "NodeGroup",
+			WaitForSynchronization:       pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   chaosFilterNodeGroup,
+		},
+		{
+			Name:       "nodes",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "node.deckhouse.io/group",
+						Operator: v1.LabelSelectorOpExists,
+					},
+				},
+			},
+			WaitForSynchronization:       pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   chaosFilterNode,
+		},
+		{
+			Name:                         "machines",
+			ApiVersion:                   "machine.sapcloud.io/v1alpha1",
+			Kind:                         "Machine",
+			WaitForSynchronization:       pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   chaosFilterMachine,
+		},
+	},
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "monkey",
+			Crontab: "* * * * *",
+		},
+	},
+}, handleChaosMonkey)
+
+func handleChaosMonkey(input *go_hook.HookInput) error {
+	random := time.Now().Unix()
+	testRandomSeed := os.Getenv("D8_TEST_RANDOM_SEED")
+	if testRandomSeed != "" {
+		res, _ := strconv.ParseInt(testRandomSeed, 10, 64)
+		random = res
+	}
+	randomizer := rand.New(rand.NewSource(random))
+
+	nodeGroups, machines, nodes, err := prepareChaosData(input)
+	if err != nil {
+		input.LogEntry.Infof(err.Error()) // just info message, already have a victim
+		return nil
+	}
+
+	// preparation complete, main hook logic goes here
+	for _, ng := range nodeGroups {
+		if ng.ChaosMode != "DrainAndDelete" {
+			continue
+		}
+
+		chaosPeriod, err := time.ParseDuration(ng.ChaosPeriod)
+		if err != nil {
+			input.LogEntry.Warnf("chaos period (%s) for NodeGroup:%s is invalid", ng.ChaosPeriod, ng.Name)
+			continue
+		}
+
+		run := randomizer.Uint32() % uint32(chaosPeriod.Milliseconds()/1000/60)
+
+		if run != 0 {
+			continue
+		}
+
+		nodeGroupNodes := nodes[ng.Name]
+		if len(nodeGroupNodes) == 0 {
+			continue
+		}
+
+		victimNode := nodeGroupNodes[randomizer.Intn(len(nodeGroupNodes))]
+
+		victimMachine, ok := machines[victimNode.Name]
+		if !ok {
+			continue
+		}
+
+		err = input.ObjectPatcher.MergePatchObject(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
+		if err != nil {
+			return err
+		}
+		err = input.ObjectPatcher.DeleteObjectInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func prepareChaosData(input *go_hook.HookInput) ([]chaosNodeGroup, map[string]chaosMachine, map[string][]chaosNode, error) {
+	snap := input.Snapshots["machines"]
+	machines := make(map[string]chaosMachine, len(snap)) // map by node name
+	for _, sn := range snap {
+		machine := sn.(chaosMachine)
+		if machine.IsAlreadyMonkeyVictim {
+			return nil, nil, nil, fmt.Errorf("machine %s is already marked as chaos monkey victim. Exiting", machine.Name) // If there are nodes in deleting state then do nothing
+		}
+		machines[machine.Node] = machine
+	}
+
+	// collect NodeGroup with Enabled chaos monkey
+	snap = input.Snapshots["ngs"]
+	nodeGroups := make([]chaosNodeGroup, 0)
+	for _, sn := range snap {
+		ng := sn.(chaosNodeGroup)
+		// if chaos mode is empty - it's disabled
+		if ng.ChaosMode == "" || !ng.IsReadyForChaos {
+			continue
+		}
+		nodeGroups = append(nodeGroups, ng)
+	}
+
+	// map nodes by NodeGroup
+	nodes := make(map[string][]chaosNode)
+	snap = input.Snapshots["nodes"]
+	for _, sn := range snap {
+		node := sn.(chaosNode)
+		if v, ok := nodes[node.NodeGroup]; ok {
+			v = append(v, node)
+			nodes[node.NodeGroup] = v
+		} else {
+			nodes[node.NodeGroup] = []chaosNode{node}
+		}
+	}
+
+	return nodeGroups, machines, nodes, nil
+}
+
+func chaosFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var machine v1alpha1.Machine
+
+	err := sdk.FromUnstructured(obj, &machine)
+	if err != nil {
+		return nil, err
+	}
+
+	isMonkeyVictim := false
+	if _, ok := machine.Labels["node.deckhouse.io/chaos-monkey-victim"]; ok {
+		isMonkeyVictim = true
+	}
+
+	return chaosMachine{
+		Name:                  machine.Name,
+		Node:                  machine.Labels["node"],
+		IsAlreadyMonkeyVictim: isMonkeyVictim,
+	}, nil
+}
+
+func chaosFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var node corev1.Node
+
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return nil, err
+	}
+
+	return chaosNode{
+		Name:      node.Name,
+		NodeGroup: node.Labels["node.deckhouse.io/group"],
+	}, nil
+}
+
+func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ng v1alpha2.NodeGroup
+
+	err := sdk.FromUnstructured(obj, &ng)
+	if err != nil {
+		return nil, err
+	}
+
+	isReadyForChaos := false
+	if ng.Spec.NodeType == "Cloud" {
+		if ng.Status.Desired > 1 && ng.Status.Desired == ng.Status.Ready {
+			isReadyForChaos = true
+		}
+	} else {
+		if ng.Status.Nodes > 1 && ng.Status.Nodes == ng.Status.Ready {
+			isReadyForChaos = true
+		}
+	}
+
+	period := ng.Spec.Chaos.Period
+	if period == "" {
+		period = "6h"
+	}
+
+	return chaosNodeGroup{
+		Name:            ng.Name,
+		ChaosMode:       ng.Spec.Chaos.Mode,
+		ChaosPeriod:     period,
+		IsReadyForChaos: isReadyForChaos,
+	}, nil
+}
+
+type chaosNodeGroup struct {
+	Name            string
+	ChaosMode       string
+	ChaosPeriod     string // default 6h
+	IsReadyForChaos bool
+}
+
+type chaosMachine struct {
+	Name                  string
+	Node                  string
+	IsAlreadyMonkeyVictim bool
+}
+
+type chaosNode struct {
+	Name      string
+	NodeGroup string
+}
+
+var (
+	victimAnnotationPatch, _ = json.Marshal(
+		map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					"node.deckhouse.io/chaos-monkey-victim": "",
+				},
+			},
+		},
+	)
+)
