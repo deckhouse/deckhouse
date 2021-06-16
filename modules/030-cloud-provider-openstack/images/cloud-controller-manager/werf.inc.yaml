@@ -5,7 +5,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_DEBIAN" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/openstack-cloud-controller-manager-amd64
     to: /bin/openstack-cloud-controller-manager
     before: setup
@@ -20,7 +20,7 @@ docker:
     container: docker
   ENTRYPOINT: ["/bin/openstack-cloud-controller-manager"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ env "BASE_GOLANG_BUSTER" }}
 git:
   - add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches

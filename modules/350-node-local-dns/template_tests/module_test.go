@@ -20,7 +20,6 @@ var _ = Describe("Module :: node-local-dns :: helm temtplate", func() {
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
 		hec.ValuesSet("global.discovery.clusterDNSAddress", "192.168.0.10")
-		hec.ValuesSet("global.modulesImages.tags.common.kubeCaAuthProxy", "testtag")
 	})
 
 	Context("Test helm render", func() {

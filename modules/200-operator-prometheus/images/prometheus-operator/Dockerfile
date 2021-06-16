@@ -1,5 +1,6 @@
+ARG BASE_ALPINE
 ARG BASE_GOLANG_BUSTER
-FROM $BASE_GOLANG_BUSTER
+FROM $BASE_GOLANG_BUSTER as artifact
 RUN apt update && apt install -qfy \
   bash make git patch ca-certificates openssh-client openssl
 RUN mkdir /coreos && cd /coreos \
@@ -11,9 +12,7 @@ RUN patch -p1 < prometheus-probes.patch && \
     patch -p1 < scrape_params.patch && \
     make operator
 
-# todo: подобрать подходящий образ
-FROM quay.io/prometheus/busybox:latest
-COPY --from=0 /coreos/prometheus-operator/operator /bin/operator
-# On busybox 'nobody' has uid `65534'
+FROM $BASE_ALPINE
+COPY --from=artifact /coreos/prometheus-operator/operator /bin/operator
 USER 65534
 ENTRYPOINT ["/bin/operator"]

@@ -3,5 +3,23 @@
   {{- $patch := $value.patch | toString }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/041-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
+    to: /iptables-wrapper-installer.sh
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /usr/local/bin
+    to: /usr/local/bin
+    includePaths:
+      - kube-proxy
+    before: setup
+shell:
+  beforeInstall:
+    - apk add --no-cache iptables ip6tables conntrack-tools
+  setup:
+    - /iptables-wrapper-installer.sh
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: k8s.gcr.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeProxy }}
 {{- end }}

@@ -10,15 +10,14 @@ import:
     add: /pause
     to: /pause
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/_output/bin/kube-apiserver
     to: /usr/bin/kube-apiserver
     before: setup
-
 docker:
   ENTRYPOINT: ["/usr/bin/kube-apiserver"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   {{- if semverCompare "<1.21" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
   {{- else }}

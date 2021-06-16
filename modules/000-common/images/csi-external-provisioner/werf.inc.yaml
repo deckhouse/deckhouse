@@ -1,8 +1,21 @@
+# Based on https://github.com/kubernetes-csi/external-provisioner/blob/master/Dockerfile
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.provisioner }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /
+    to: /
+    includePaths:
+      - csi-provisioner
+    before: setup
+docker:
+  ENTRYPOINT: ["/csi-provisioner"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: k8s.gcr.io/sig-storage/csi-provisioner:{{ $value.csi.provisioner }}
   {{- end }}
 {{- end }}

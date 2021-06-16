@@ -6,9 +6,9 @@ import:
     add: /pause
     to: /pause
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /usr/local/bin
-    to: /usr/local/bin
+    to: /usr/bin
     includePaths:
     - etcd
     - etcdctl
@@ -19,7 +19,7 @@ shell:
   - |
     echo "hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4" >> /etc/nsswitch.conf
 docker:
-  ENTRYPOINT: ["/usr/local/bin/etcd"]
+  ENTRYPOINT: ["/usr/bin/etcd"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-from: k8s.gcr.io/etcd:3.4.13-0
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: k8s.gcr.io/etcd:3.4.13-0@sha256:4ad90a11b55313b182afc186b9876c8e891531b8db4c9bf1541953021618d0e2

@@ -1,6 +1,6 @@
 ARG BASE_GOLANG_ALPINE
 ARG BASE_ALPINE
-FROM $BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE as artifact
 ADD go.mod /app/
 WORKDIR /app
 RUN go mod download
@@ -8,4 +8,4 @@ ADD smoke-mini.go /app/
 RUN go build .
 
 FROM $BASE_ALPINE
-COPY --from=0 /app/smoke-mini /smoke-mini
+COPY --from=artifact /app/smoke-mini /smoke-mini

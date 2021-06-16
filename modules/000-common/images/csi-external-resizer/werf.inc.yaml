@@ -1,8 +1,21 @@
+# Based on https://github.com/kubernetes-csi/external-resizer/blob/master/Dockerfile
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.resizer }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /
+    to: /
+    includePaths:
+      - csi-resizer
+    before: setup
+docker:
+  ENTRYPOINT: ["/csi-resizer"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: k8s.gcr.io/sig-storage/csi-resizer:{{ $value.csi.resizer }}
   {{- end }}
 {{- end }}

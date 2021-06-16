@@ -1,6 +1,7 @@
+ARG BASE_DEBIAN
+# controller artifact
 ARG BASE_GOLANG_BUSTER
-FROM $BASE_GOLANG_BUSTER
-
+FROM $BASE_GOLANG_BUSTER as artifact
 WORKDIR /src/
 COPY lua-info.patch /
 COPY omit-helm-secrets.patch /
@@ -11,21 +12,75 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /omit-helm-secrets.patch && \
     make build
 
+# IngressNginxController docker image
+FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.25.1@sha256:0c4941fa8c812dd44297b5f4900e3b26c3e6a8a42940e48fe9a1a585fe8f7e25 as controller_0_25_1
 
-FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.25.1
+# Final image
+FROM $BASE_DEBIAN
+# Based on https://github.com/kubernetes/ingress-nginx/blob/nginx-0.25.1/images/nginx/rootfs/Dockerfile
+# Based on https://github.com/kubernetes/ingress-nginx/blob/nginx-0.25.1/rootfs/Dockerfile
 
-COPY --from=0 /src/bin/amd64/nginx-ingress-controller /src/bin/amd64/dbg /
+ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/bin
+# Add LuaRocks paths
+# see https://github.com/openresty/docker-openresty/blob/de05cd72594498b83e3a97e2f632da6aa75ec01d/bionic/Dockerfile#L168
+ENV LUA_CPATH=/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/openresty/site/lualib/?.so;/usr/local/openresty/lualib/?.so;./?.so;/usr/local/lib/lua/5.1/?.so;/usr/local/openresty/luajit/lib/lua/5.1/?.so;/usr/local/lib/lua/5.1/loadall.so;/usr/local/openresty/luajit/lib/lua/5.1/?.so;;
+ENV LUA_PATH=/usr/local/openresty/site/lualib/?.ljbc;/usr/local/openresty/site/lualib/?/init.ljbc;/usr/local/openresty/lualib/?.ljbc;/usr/local/openresty/lualib/?/init.ljbc;/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/site/lualib/?/init.lua;/usr/local/openresty/lualib/?.lua;/usr/local/openresty/lualib/?/init.lua;./?.lua;/usr/local/openresty/luajit/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/openresty/luajit/share/lua/5.1/?.lua;/usr/local/openresty/luajit/share/lua/5.1/?/init.lua;/usr/local/lib/lua/?.lua;/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;;
 
+COPY --from=controller_0_25_1 /usr/local /usr/local
+COPY --from=controller_0_25_1 /opt /opt
+COPY --from=controller_0_25_1 --chown=www-data:www-data /etc /etc
+COPY --from=controller_0_25_1 --chown=www-data:www-data /ingress-controller /ingress-controller
+
+COPY --from=controller_0_25_1 --chown=www-data:www-data /dbg /dbg
+COPY --from=controller_0_25_1 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
+
+COPY --from=artifact /src/bin/amd64/nginx-ingress-controller /src/bin/amd64/dbg /
 COPY balancer-lua.patch /
-USER root
-RUN apt-get update && apt-get install -y --no-install-recommends patch && \
-    apt-get clean -y && \
-    rm -rf \
-        /var/cache/debconf/* \
-        /var/lib/apt/lists/* \
-        /tmp/* \
-        /var/tmp/* && \
-    cd / && patch -p1 < /balancer-lua.patch
-USER www-data
 
 COPY rootfs /
+
+RUN clean-install \
+    bash \
+    curl \
+    ca-certificates \
+    unzip \
+    git \
+    openssh-client \
+    dumb-init \
+    libgeoip1 \
+    diffutils \
+    libcap2-bin \
+    patch\
+ && cp /usr/local/openresty/nginx/conf/mime.types /etc/nginx/mime.types \
+ && cp /usr/local/openresty/nginx/conf/fastcgi_params /etc/nginx/fastcgi_params \
+ && ln -s /usr/local/openresty/nginx/modules /etc/nginx/modules \
+ && mkdir /var/log/nginx \
+# Fix permission during the build to avoid issues at runtime
+# with volumes (custom templates)
+ && bash -eu -c ' \
+  writeDirs=( \
+    /etc/ingress-controller/ssl \
+    /etc/ingress-controller/auth \
+    /var/log \
+    /var/log/nginx \
+    /tmp \
+  ); \
+  for dir in "${writeDirs[@]}"; do \
+    mkdir -p ${dir}; \
+    chown -R www-data.www-data ${dir}; \
+  done' \
+  && setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap -v cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap    cap_net_bind_service=+ep /usr/local/openresty/nginx/sbin/nginx \
+  && setcap -v cap_net_bind_service=+ep /usr/local/openresty/nginx/sbin/nginx \
+  && ln -sf /dev/stdout /usr/local/openresty/nginx/logs/access.log \
+  && ln -sf /dev/stderr /usr/local/openresty/nginx/logs/error.log \
+  && ln -s /usr/local/openresty/nginx/logs/* /var/log/nginx \
+  && cd / && patch -p1 < /balancer-lua.patch
+
+WORKDIR  /etc/nginx
+USER www-data
+EXPOSE 80 443
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/nginx-ingress-controller"]
+

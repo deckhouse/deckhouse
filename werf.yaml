@@ -22,13 +22,19 @@ cleanup:
       repository: http://nl.alpinelinux.org/alpine/edge/community/
       update_cache: yes
 
-  - name: "Install cfssl and rgxg"
+  - name: "Install rgxg"
     apk:
       name:
-        - cfssl
         - rgxg
       repository: http://nl.alpinelinux.org/alpine/edge/testing/
       update_cache: yes
+
+  - name: "install cfssl"
+    get_url:
+      url: https://github.com/cloudflare/cfssl/releases/download/v1.6.0/cfssl_1.6.0_linux_amd64
+      checksum: "sha256:b830b0faf606cb2ae8b45c783edf4776eedb3728efd515e7f1ce63b3a475d667"
+      dest: /usr/local/bin/cfssl
+      mode: +x
 
   - name: "Install yq"
     get_url:
