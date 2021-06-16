@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
 ARG BASE_GOLANG_ALPINE
-FROM $BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE as artifact
 WORKDIR /go/src/github.com/pusher/oauth2_proxy
 
 # Download tools
@@ -18,7 +18,7 @@ RUN patch -p1 < /cookie-refresh.patch \
 
 FROM $BASE_ALPINE
 RUN apk --update add curl bash  ca-certificates && update-ca-certificates
-COPY --from=0 /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
+COPY --from=artifact /go/src/github.com/pusher/oauth2_proxy/oauth2_proxy /bin/oauth2_proxy
 
 EXPOSE 8080 4180
 ENTRYPOINT [ "/bin/oauth2_proxy" ]

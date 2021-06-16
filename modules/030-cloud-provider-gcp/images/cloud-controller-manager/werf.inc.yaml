@@ -4,13 +4,28 @@
     {{- if semverCompare "=1.16" $version }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /usr/local/bin/cloud-controller-manager
+    to: /usr/local/bin/cloud-controller-manager
+    before: setup
+shell:
+  beforeInstall:
+    - apk add --no-cache ca-certificates
+docker:
+  ENV:
+    container: docker
+  ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: gcr.io/google-containers/cloud-controller-manager:{{ $value.ccm.gcp }}
     {{- else }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/gcp-cloud-controller-manager
     to: /usr/local/bin/cloud-controller-manager
     before: setup
@@ -22,7 +37,7 @@ docker:
     container: docker
   ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
   - add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches

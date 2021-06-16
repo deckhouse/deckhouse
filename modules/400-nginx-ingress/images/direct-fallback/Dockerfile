@@ -1,4 +1,5 @@
-FROM nginx:1.13.10-alpine
+ARG BASE_NGINX_ALPINE
+FROM $BASE_NGINX_ALPINE
 
 RUN rm -rf /etc/nginx
 

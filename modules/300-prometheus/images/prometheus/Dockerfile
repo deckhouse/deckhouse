@@ -1,5 +1,6 @@
 ARG BASE_GOLANG_BUSTER
-FROM $BASE_GOLANG_BUSTER
+ARG BASE_ALPINE
+FROM $BASE_GOLANG_BUSTER as artifact
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - &&  \
   apt install -y nodejs && \
@@ -21,12 +22,12 @@ RUN patch -p1 < sample_limit_annotation.patch && \
   patch -p1 < successfully_sent_metric.patch && \
   make build
 
-FROM quay.io/prometheus/busybox-linux-amd64@sha256:de4af55df1f648a334e16437c550a2907e0aed4f0b0edf454b0b215a9349bdbb
-COPY --from=0 /prometheus/prometheus/prometheus                             /bin/prometheus
-COPY --from=0 /prometheus/prometheus/promtool                               /bin/promtool
-COPY --from=0 /prometheus/prometheus/documentation/examples/prometheus.yml  /etc/prometheus/prometheus.yml
-COPY --from=0 /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
-COPY --from=0 /prometheus/prometheus/consoles/                              /usr/share/prometheus/consoles/
+FROM $BASE_ALPINE
+COPY --from=artifact /prometheus/prometheus/prometheus                             /bin/prometheus
+COPY --from=artifact /prometheus/prometheus/promtool                               /bin/promtool
+COPY --from=artifact /prometheus/prometheus/documentation/examples/prometheus.yml  /etc/prometheus/prometheus.yml
+COPY --from=artifact /prometheus/prometheus/console_libraries/                     /usr/share/prometheus/console_libraries/
+COPY --from=artifact /prometheus/prometheus/consoles/                              /usr/share/prometheus/consoles/
 
 RUN ln -s /usr/share/prometheus/console_libraries /usr/share/prometheus/consoles/ /etc/prometheus/
 RUN mkdir -p /prometheus && \

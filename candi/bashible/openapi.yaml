@@ -131,6 +131,19 @@ apiVersions:
                     type: string
                   registrar:
                     type: string
+              controlPlane:
+                type: object
+                properties:
+                  etcd:
+                    type: string
+                  kubeApiServer:
+                    type: string
+                  kubeControllerManager:
+                    type: string
+                  kubeScheduler:
+                    type: string
+                  kubeProxy:
+                    type: string
     oneOf:
     - required: [clusterBootstrap]
       properties:

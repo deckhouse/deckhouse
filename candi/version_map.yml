@@ -88,18 +88,36 @@ k8s:
       gcp: v1.15.4
     csi:
       openstack: v1.19.0
-      provisioner: v1.6.1
-      attacher: v2.2.1
-      resizer: v1.0.0
-      registrar: v2.0.1
+      provisioner: v1.6.1@sha256:3b9b5ae677fd74de3b1cde5d3606a970f615b598730aa003c0f52e755c78862e
+      attacher: v2.2.1@sha256:a37e146d9743b87ba51eb4617489448174c513ee5deac0172cc4c802716e97b7
+      resizer: v1.0.0@sha256:5a8d85cdd1c80f43fb8fe6dcde1fae707a3177aaf0a786ff4b9f6f20247ec3ff
+      registrar: v2.0.1@sha256:e07f914c32f0505e4c470a62a40ee43f84cbf8dc46ff861f31b14457ccbad108
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:d9156baf649cd356bad6be119a62cf137b73956957604275ab8e3008bee96c8f
+      kubeProxy: sha256:656661fb58ea588a4633d8af66989a4b7fa5f9f1380fcf2bbbb07546390c681a
   '1.17':
     patch: 17
     cni_version: 0.8.7
     bashible: *bashible
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:1662f271dd9a3d22969728eae30f9d182d74c9c717e4d75673dc94c274ebada5
+      kubeProxy: sha256:0129daab4e24ce16a1f07bda844a4483dbddb040f38b678361bf1042f2aaf2b8
   '1.18':
     patch: 19
     cni_version: 0.8.7
     bashible: *bashible
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:8e53f64eb94c247e1603a6b27b93423a8b3cefa620323b9f5a941ca1d08dae63
+      kubeProxy: sha256:d1be1ae53829a1ac6a1bdb274bb8eddac325eef50f2a30e5add44179423bd90d
   '1.19':
     patch: 11
     cni_version: 0.8.7
@@ -135,14 +153,20 @@ k8s:
       yandex: v0.19.3-fix.3
       aws: b390ec15ea471adc8312b4528cf37814852b993e
       vsphere: v1.19.1
-      azure: v0.6.0
+      azure: v0.6.0@sha256:8073113a20882642a980b338635cdc5945e5673a18aef192090e6fde2b89a75c
       gcp: ca1e685df450fd5d32b57a659eb363b870b03937
     csi:
       openstack: v1.19.0
-      provisioner: v2.0.4
-      attacher: v3.0.2
-      resizer: v1.0.0
-      registrar: v2.0.1
+      provisioner: v2.0.4@sha256:bec571992d40203edcd056ac0b0d97003887ee5e4be144c41932d18639673b03
+      attacher: v3.0.2@sha256:6f80b12657a7e0a5c683b24e806c4bbbe33a43e39b041fe9b7514d665d478ea4
+      resizer: v1.0.0@sha256:5a8d85cdd1c80f43fb8fe6dcde1fae707a3177aaf0a786ff4b9f6f20247ec3ff
+      registrar: v2.0.1@sha256:e07f914c32f0505e4c470a62a40ee43f84cbf8dc46ff861f31b14457ccbad108
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:ff131a993bf2db7ac8d57928152d36cca16b2aaa64dfef44f8aa69811adaec7a
+      kubeProxy: sha256:2f06ab7e7897d2dafeef064f4c4edf79ef6166055041486860c2df42343f60b9
   '1.20':
     patch: 7
     cni_version: 0.8.7
@@ -152,14 +176,20 @@ k8s:
       yandex: v0.20.4
       aws: 9e3808d53f0364178f2c40476ea368f3c5140d39
       vsphere: v1.20.0
-      azure: v0.7.2
+      azure: v0.7.2@sha256:67d0dfedb0829c06a757357db744d438a2e79cb4f7fa956659264c77c05bbf66
       gcp: 880c0a9ded79c51a2be835b0872de3597cff059b
     csi:
       openstack: v1.20.1
-      provisioner: v2.1.0
-      attacher: v3.1.0
-      resizer: v1.1.0
-      registrar: v2.1.0
+      provisioner: v2.1.0@sha256:20c828075d1e36f679d6a91e905b0927141eef5e15be0c9a1ca4a6a0ed9313d2
+      attacher: v3.1.0@sha256:50c3cfd458fc8e0bf3c8c521eac39172009382fc66dc5044a330d137c6ed0b09
+      resizer: v1.1.0@sha256:7a5ba58a44e0d749e0767e4e37315bcf6a61f33ce3185c1991848af4db0fb70a
+      registrar: v2.1.0@sha256:a61d309da54641db41fb8f35718f744e9f730d4d0384f8c4b186ddc9f06cbd5f
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:6fdb12580353b6cd59de486ca650e3ba9270bc8d52f1d3052cd9bb1d4f28e189
+      kubeProxy: sha256:5d2be61150535ed37b7a5fa5a8239f89afee505ab2fae05247447851eed710a8
   '1.21':
     patch: 1
     cni_version: 0.8.7
@@ -169,11 +199,17 @@ k8s:
       yandex: v0.21.0
       aws: d31100461a83378b658b1ab2c689d79987a0d863
       vsphere: v1.20.0
-      azure: v1.0.0
+      azure: v1.0.0@sha256:b31991b6056a879ddc15eac8d6f3025b4c3f1e86617f91d320b1dcba22db0217
       gcp: f385bda395a6a64d9964605ab0a69d071155f2e5
     csi:
       openstack: v1.21.0
-      provisioner: v2.1.0
-      attacher: v3.1.0
-      resizer: v1.1.0
-      registrar: v2.1.0
+      provisioner: v2.1.0@sha256:20c828075d1e36f679d6a91e905b0927141eef5e15be0c9a1ca4a6a0ed9313d2
+      attacher: v3.1.0@sha256:50c3cfd458fc8e0bf3c8c521eac39172009382fc66dc5044a330d137c6ed0b09
+      resizer: v1.1.0@sha256:7a5ba58a44e0d749e0767e4e37315bcf6a61f33ce3185c1991848af4db0fb70a
+      registrar: v2.1.0@sha256:a61d309da54641db41fb8f35718f744e9f730d4d0384f8c4b186ddc9f06cbd5f
+    controlPlane:
+      # etcd: sha256 digest isn't needed because this component is compiled from source
+      # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
+      # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
+      kubeScheduler: sha256:a8c4084db3b381f0806ea563c7ec842cc3604c57722a916c91fb59b00ff67d63
+      kubeProxy: sha256:53af05c2a6cddd32cebf5856f71994f5d41ef2a62824b87f140f2087f91e4a38

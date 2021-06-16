@@ -3,10 +3,21 @@
   {{- $patch := $value.patch | toString }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: k8s.gcr.io/kube-scheduler:v{{ printf "%s.%s" $version $patch }}
+from: {{ env "BASE_ALPINE" }}
 import:
   - image: common/pause
     add: /pause
     to: /pause
     before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /usr/local/bin
+    to: /usr/bin
+    includePaths:
+      - kube-scheduler
+    before: setup
+docker:
+  ENTRYPOINT: ["/usr/bin/kube-scheduler"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: k8s.gcr.io/kube-scheduler:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeScheduler }}
 {{- end }}

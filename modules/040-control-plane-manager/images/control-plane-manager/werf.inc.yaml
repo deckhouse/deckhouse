@@ -6,7 +6,7 @@ import:
     add: /pause
     to: /pause
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /usr/local/bin
     to: /usr/local/bin
     includePaths:
@@ -26,7 +26,7 @@ shell:
 docker:
   ENTRYPOINT: ["/control-plane-manager"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ env "BASE_GOLANG_16_BUSTER" }}
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches

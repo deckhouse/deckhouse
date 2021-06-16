@@ -11,7 +11,7 @@ import:
     to: /pause
     before: setup
   {{- if semverCompare ">=1.19" $version }}
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/_output/bin/kube-controller-manager
     to: /usr/bin/kube-controller-manager
     before: setup
@@ -38,7 +38,7 @@ docker:
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
   {{- if semverCompare ">=1.19" $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   {{- if semverCompare "<1.21" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
   {{- else }}

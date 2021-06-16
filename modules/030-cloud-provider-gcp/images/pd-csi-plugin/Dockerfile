@@ -1,15 +1,16 @@
 ARG BASE_ALPINE
 ARG BASE_GOLANG_ALPINE
-FROM $BASE_GOLANG_ALPINE as builder
+ARG BASE_DEBIAN
+FROM $BASE_GOLANG_ALPINE as artifact
 WORKDIR /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver
 RUN wget https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver/archive/v0.7.0.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver/
 RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-X main.vendorVersion='"${TAG:-latest}"' -extldflags "-static"' -o bin/gce-pd-csi-driver ./cmd/
 
-FROM gcr.io/google-containers/debian-base-amd64:v2.0.0 as base
-RUN clean-install udev
+FROM $BASE_DEBIAN as base
+RUN apt-get update && apt-get install -y --no-install-recommends udev && apt-get clean -y && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
 
-FROM gcr.io/google-containers/debian-base-amd64:v2.0.0
-COPY --from=builder /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver/bin/gce-pd-csi-driver /gce-pd-csi-driver
-RUN clean-install util-linux e2fsprogs mount ca-certificates udev xfsprogs
+FROM $BASE_DEBIAN
+COPY --from=artifact /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver/bin/gce-pd-csi-driver /gce-pd-csi-driver
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux e2fsprogs mount ca-certificates udev xfsprogs && apt-get clean -y && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
 COPY --from=base /lib/udev/scsi_id /lib/udev_containerized/scsi_id
 ENTRYPOINT [ "/gce-pd-csi-driver" ]

@@ -1,8 +1,21 @@
+# Based on https://github.com/kubernetes-csi/node-driver-registrar/blob/master/Dockerfile
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.registrar }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    add: /
+    to: /
+    includePaths:
+      - csi-node-driver-registrar
+    before: setup
+docker:
+  ENTRYPOINT: ["/csi-node-driver-registrar"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: k8s.gcr.io/sig-storage/csi-node-driver-registrar:{{ $value.csi.registrar }}
   {{- end }}
 {{- end }}

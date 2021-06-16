@@ -1,6 +1,6 @@
 ARG BASE_ALPINE
 ARG BASE_GOLANG_ALPINE
-FROM $BASE_GOLANG_ALPINE
+FROM $BASE_GOLANG_ALPINE as artifact
 
 RUN apk add bash git make
 
@@ -21,10 +21,10 @@ FROM $BASE_ALPINE
 RUN apk add --update ca-certificates openssl curl tini
 
 RUN mkdir -p /app/bin
-COPY --from=0 /app/bin/dex-k8s-authenticator /app/bin/
-COPY --from=0 /app/html /app/html
-COPY --from=0 /app/templates /app/templates
-COPY --from=0 /app/entrypoint.sh /
+COPY --from=artifact /app/bin/dex-k8s-authenticator /app/bin/
+COPY --from=artifact /app/html /app/html
+COPY --from=artifact /app/templates /app/templates
+COPY --from=artifact /app/entrypoint.sh /
 
 RUN mkdir -p /certs && chmod a+x /entrypoint.sh
 

@@ -5,7 +5,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_DEBIAN" }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/cinder-csi-plugin
     to: /bin/cinder-csi-plugin
     before: setup
@@ -20,7 +20,7 @@ docker:
     container: docker
   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder-{{ $version | replace "." "-" }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ env "BASE_GOLANG_BUSTER" }}
 shell:
   beforeInstall:

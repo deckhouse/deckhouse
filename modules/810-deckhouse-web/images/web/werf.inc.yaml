@@ -14,7 +14,7 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}/static
-from: jekyll/jekyll:3.8
+from: jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34
 mount:
   - from: build_dir
     to: /usr/local/bundle
