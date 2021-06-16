@@ -13,6 +13,7 @@
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - chmod -R 777 .
   - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - unset WERF_ENABLE_PROCESS_EXTERMINATOR
   - |
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -171,6 +172,7 @@
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - chmod -R 777 .
   - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - unset WERF_ENABLE_PROCESS_EXTERMINATOR
   - |
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
