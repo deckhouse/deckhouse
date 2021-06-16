@@ -41,6 +41,8 @@ function __config__() {
         - key: app
           operator: In
           values: ["controller"]
+        - key: ingress-nginx-failover
+          operator: DoesNotExist
       jqFilter: |
         {
           "controllerName": .metadata.labels.name,

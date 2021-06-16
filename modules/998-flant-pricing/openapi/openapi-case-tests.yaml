@@ -9,11 +9,12 @@ positive:
         bundle: "Default"
         cloudProvider: "TestCloud"
         controlPlaneVersion: "1.19"
-        minimalKubeletVersion: "1.19"
         clusterType: "Static"
-        mastersCount: 3
-        kops: False
-        masterIsDedicated: True
-        masterMinCPU: 4
-        masterMinMemory: 8265010916
+        nodeStats:
+          minimalKubeletVersion: "1.19"
+          staticNodesCount: 0
+          mastersCount: 3
+          masterIsDedicated: True
+          masterMinCPU: 4
+          masterMinMemory: 8265010916
         terraformManagerEnabled: True

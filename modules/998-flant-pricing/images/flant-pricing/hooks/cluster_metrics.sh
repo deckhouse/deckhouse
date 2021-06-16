@@ -48,7 +48,6 @@ function __main__() {
   }' | jq -rc >> $METRICS_PATH
 
   output_metric "flant_pricing_masters_count" "$FP_MASTERS_COUNT"
-  output_metric "flant_pricing_kops" "$FP_KOPS"
   output_metric "flant_pricing_master_is_dedicated" "$FP_MASTER_IS_DEDICATED"
   output_metric "flant_pricing_master_min_cpu" "$FP_MASTER_MIN_CPU"
   output_metric "flant_pricing_master_min_memory" "$FP_MASTER_MIN_MEMORY"

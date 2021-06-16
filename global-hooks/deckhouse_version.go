@@ -3,6 +3,7 @@ package hooks
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -23,7 +24,7 @@ func discoverDeckhouseVersion(input *go_hook.HookInput) error {
 	if err != nil {
 		input.LogEntry.Warnf("cannot get deckhouse version: %v", err)
 	} else {
-		version = string(content)
+		version = strings.TrimSuffix(string(content), "\n")
 	}
 
 	input.Values.Set("global.deckhouseVersion", version)

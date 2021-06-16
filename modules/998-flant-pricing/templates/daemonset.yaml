@@ -72,21 +72,19 @@ spec:
         - name: FP_CONTROL_PLANE_VERSION
           value: {{ .Values.flantPricing.internal.controlPlaneVersion | quote }}
         - name: FP_MINIMAL_KUBELET_VERSION
-          value: {{ .Values.flantPricing.internal.minimalKubeletVersion | quote }}
+          value: {{ .Values.flantPricing.internal.nodeStats.minimalKubeletVersion | quote }}
         - name: FP_PLAN
           value: {{ .Values.flantPricing.plan | quote }}
         - name: FP_CLUSTER_TYPE
           value: {{ .Values.flantPricing.internal.clusterType | quote }}
         - name: FP_MASTERS_COUNT
-          value: {{ .Values.flantPricing.internal.mastersCount | quote }}
-        - name: FP_KOPS
-          value: {{ .Values.flantPricing.internal.kops | int | quote }}
+          value: {{ .Values.flantPricing.internal.nodeStats.mastersCount | quote }}
         - name: FP_MASTER_IS_DEDICATED
-          value: {{ .Values.flantPricing.internal.masterIsDedicated | int | quote }}
+          value: {{ .Values.flantPricing.internal.nodeStats.masterIsDedicated | int | quote }}
         - name: FP_MASTER_MIN_CPU
-          value: {{ .Values.flantPricing.internal.masterMinCPU | quote }}
+          value: {{ .Values.flantPricing.internal.nodeStats.masterMinCPU | quote }}
         - name: FP_MASTER_MIN_MEMORY
-          value: {{ .Values.flantPricing.internal.masterMinMemory | quote }}
+          value: {{ .Values.flantPricing.internal.nodeStats.masterMinMemory | quote }}
         - name: FP_PLAN_IS_BOUGHT_AS_BUNDLE
           value: {{ .Values.flantPricing.planIsBoughtAsBundle | int | quote }}
         - name: FP_AUXILIARY_CLUSTER

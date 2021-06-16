@@ -4,38 +4,40 @@ properties:
     type: integer
     default: 0
     description: |
-      Количество контактных лиц, за которые необходимо чаржить.
+      The number of contact persons for which we need to charge.
   doNotChargeForRockSolid:
     type: boolean
     default: false
     description: |
-      Входит ли канал обновлений RockSolid в стоимость, или надо за него чаржить отдельно.
+      Is the RockSolid update channel included in the price, or should we charge for it separately.
   plan:
     type: string
     enum: ["Standard", "Silver", "Gold", "Platinum"]
     default: Standard
+    x-examples: ["Standard"]
     description: |
-      Тарифный план.
+      Tariff plan.
   planIsBoughtAsBundle:
     type: boolean
     default: false
     description: |
-      Куплен ли "пакет".
+      Whether a "package" has been purchased.
   auxiliaryCluster:
     type: boolean
     default: false
     description: |
-      Этот кластер является вспомогательным.
+      This cluster is auxiliary.
   clusterType:
     type: string
-    enum: [ "Cloud", "Hybrid", "Static" ]
+    enum: ["Cloud", "Hybrid", "Static"]
+    x-examples: ["Cloud"]
     description: |
-      Задаёт тип кластера в экспортируемых метриках, отключая автоматическое определение.
+      Sets the cluster type in exported metrics, disabling automatic detection.
   nodesDiscount:
     type: integer
     default: 0
     description: |
-      Скидка за ноды в процентах, без символа %. Например: 10, 20, 30.
+      Discount for nodes as a percentage, without the % symbol. For example: 10, 20, 30.
   promscale:
     type: object
     default: {}
@@ -44,34 +46,36 @@ properties:
         type: string
         default: "https://kulkulator.flant.com/write"
         description: |
-          URL для отправки метрик.
+          URL for sending metrics.
   ***REMOVED***:
     type: object
     default: {}
     description: |
-      Параметры для формирования ***REMOVED*** реестра.
+      Parameters for generating the ***REMOVED*** registry.
     required: [team, host]
     properties:
       team:
         type: string
+        x-examples: ["teamA"]
         description: |
-          Команда, обслуживающая этот кластер.
+          The team serving this cluster.
       host:
         type: string
+        x-examples: ["hostA"]
         description: |
-          Имя хоста, на котором запускать `kubectl`.
+          The hostname on which to run `kubectl`.
       kubectl:
         type: string
         default: "sudo kubectl"
         description: |
-          Команда `kubectl` (с sudo, если необходимо).
+          Kubectl command (with sudo if needed).
       kubeconfig:
         type: string
         default: "/root/.kube/config"
         description: |
-          Путь до файла `kubeconfig`.
+          The path to the `kubeconfig` file.
       context:
         type: string
         default: ""
         description: |
-          Какой `context` использовать из указанного `kubeconfig`.
+          Which `context` to use from the specified `kubeconfig`.

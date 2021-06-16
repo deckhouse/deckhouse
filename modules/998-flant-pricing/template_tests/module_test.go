@@ -36,7 +36,7 @@ discovery:
   clusterMasterCount: 3
   d8SpecificNodeCountByRole:
     system: 1
-  kubernetesVersion: 1.16.15
+  kubernetesVersion: 1.19.8
 modules:
   placement: {}
 `
@@ -62,14 +62,15 @@ internal:
   releaseChannel: Alpha
   bundle: Default
   cloudProvider: AWS
-  controlPlaneVersion: 1.14
-  minimalKubeletVersion: 1.14
+  controlPlaneVersion: 1.19
   clusterType: Hybrid
-  mastersCount: 3
-  kops: true
-  masterIsDedicated: true
-  masterMinCPU: 4
-  masterMinMemory: 800000
+  nodeStats:
+    minimalKubeletVersion: 1.19
+    staticNodesCount: 1
+    mastersCount: 3
+    masterIsDedicated: true
+    masterMinCPU: 4
+    masterMinMemory: 800000
   prometheusAPIClientTLS:
     certificate: string
     key: string
@@ -79,7 +80,7 @@ internal:
 var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Kops cluster", func() {
+	Context("Cluster", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("flantPricing", moduleValues)
@@ -122,17 +123,15 @@ var _ = Describe("Module :: flant-pricing :: helm template ::", func() {
 - name: FP_CLOUD_PROVIDER
   value: AWS
 - name: FP_CONTROL_PLANE_VERSION
-  value: "1.14"
+  value: "1.19"
 - name: FP_MINIMAL_KUBELET_VERSION
-  value: "1.14"
+  value: "1.19"
 - name: FP_PLAN
   value: Standard
 - name: FP_CLUSTER_TYPE
   value: Hybrid
 - name: FP_MASTERS_COUNT
   value: "3"
-- name: FP_KOPS
-  value: "1"
 - name: FP_MASTER_IS_DEDICATED
   value: "1"
 - name: FP_MASTER_MIN_CPU

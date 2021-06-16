@@ -33,11 +33,12 @@ status:
 
 		It("Should run correctly on single master", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("flantPricing.internal.minimalKubeletVersion").String()).To(Equal(`1.16`))
-			Expect(f.ValuesGet("flantPricing.internal.mastersCount").String()).To(Equal(`1`))
-			Expect(f.ValuesGet("flantPricing.internal.masterIsDedicated").String()).To(Equal(`false`))
-			Expect(f.ValuesGet("flantPricing.internal.masterMinCPU").String()).To(Equal(`4`))
-			Expect(f.ValuesGet("flantPricing.internal.masterMinMemory").String()).To(Equal(`16560077788`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.minimalKubeletVersion").String()).To(Equal(`1.16`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.staticNodesCount").String()).To(Equal(`0`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.mastersCount").String()).To(Equal(`1`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterIsDedicated").String()).To(Equal(`false`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterMinCPU").String()).To(Equal(`4`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterMinMemory").String()).To(Equal(`16560077788`))
 		})
 	})
 
@@ -87,6 +88,7 @@ metadata:
   name: node1
   labels:
     node.deckhouse.io/group: ng0
+    node.deckhouse.io/type: Static
 status:
   nodeInfo:
     kubeletVersion: v1.16.15
@@ -97,6 +99,7 @@ metadata:
   name: node2
   labels:
     node.deckhouse.io/group: ng0
+    node.deckhouse.io/type: Static
 status:
   nodeInfo:
     kubeletVersion: v1.15.12
@@ -107,6 +110,7 @@ metadata:
   name: node3
   labels:
     node.deckhouse.io/group: ng0
+    node.deckhouse.io/type: Cloud
 status:
   nodeInfo:
     kubeletVersion: v1.16.15
@@ -115,11 +119,12 @@ status:
 		})
 		It("Should run correctly on multi master", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("flantPricing.internal.minimalKubeletVersion").String()).To(Equal(`1.15`))
-			Expect(f.ValuesGet("flantPricing.internal.mastersCount").String()).To(Equal(`2`))
-			Expect(f.ValuesGet("flantPricing.internal.masterIsDedicated").String()).To(Equal(`true`))
-			Expect(f.ValuesGet("flantPricing.internal.masterMinCPU").String()).To(Equal(`2`))
-			Expect(f.ValuesGet("flantPricing.internal.masterMinMemory").String()).To(Equal(`8280038894`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.minimalKubeletVersion").String()).To(Equal(`1.15`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.staticNodesCount").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.mastersCount").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterIsDedicated").String()).To(Equal(`true`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterMinCPU").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterMinMemory").String()).To(Equal(`8280038894`))
 		})
 	})
 
@@ -160,11 +165,12 @@ status:
 
 		It("Should run correctly on single master", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("flantPricing.internal.minimalKubeletVersion").String()).To(Equal(`1.19`))
-			Expect(f.ValuesGet("flantPricing.internal.mastersCount").String()).To(Equal(`2`))
-			Expect(f.ValuesGet("flantPricing.internal.masterIsDedicated").String()).To(Equal(`false`))
-			Expect(f.ValuesGet("flantPricing.internal.masterMinCPU").String()).To(Equal(`2`))
-			Expect(f.ValuesGet("flantPricing.internal.masterMinMemory").String()).To(Equal(`7949344768`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.minimalKubeletVersion").String()).To(Equal(`1.19`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.staticNodesCount").String()).To(Equal(`0`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.mastersCount").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterIsDedicated").String()).To(Equal(`false`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterMinCPU").String()).To(Equal(`2`))
+			Expect(f.ValuesGet("flantPricing.internal.nodeStats.masterMinMemory").String()).To(Equal(`7949344768`))
 		})
 	})
 })

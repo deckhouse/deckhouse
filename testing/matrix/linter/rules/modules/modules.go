@@ -162,11 +162,6 @@ func isExistsOnFilesystem(parts ...string) bool {
 func getModulePaths(modulesDir string) ([]string, error) {
 	var chartDirs = make([]string, 0)
 
-	if isExistsOnFilesystem(modulesDir, ChartConfigFilename) {
-		chartDirs = append(chartDirs, modulesDir)
-		return chartDirs, nil
-	}
-
 	// Here we find all dirs and check for Chart.yaml in them.
 	err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
