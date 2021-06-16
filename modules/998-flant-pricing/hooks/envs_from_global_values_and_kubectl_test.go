@@ -3,7 +3,10 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/discovery/fake"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -15,7 +18,9 @@ global:
   clusterConfiguration:
     clusterType: Static
 flantPricing:
-  internal: {}
+  internal:
+    nodeStats:
+      staticNodesCount: 0
 `
 		initValuesStatic = `
 global:
@@ -23,28 +28,37 @@ global:
   clusterConfiguration:
     clusterType: Static
 flantPricing:
-  internal: {}
+  internal:
+    nodeStats:
+      staticNodesCount: 0
 `
 		initValuesCloudClusterWithStaticNodes = `
 global:
   enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
   clusterConfiguration:
-    clusterType: Static
-  discovery:
-    nodeCountByType:
-      static: 5
+    clusterType: Cloud
 flantPricing:
-  internal: {}
+  internal:
+    nodeStats:
+      staticNodesCount: 1
 `
-		initValuesKops = `
+		initValuesCloudClusterWithoutStaticNodeCount = `
 global:
-  enabledModules: ["deckhouse"]
-  discovery:
-    kubernetesVersion: 1.14.1
+  enabledModules: ["deckhouse", "cloud-provider-openstack", "terraform-manager"]
+  clusterConfiguration:
+    clusterType: Cloud
 flantPricing:
   internal: {}
 `
 	)
+
+	BeforeEach(func() {
+		dependency.TestDC.K8sClient.Discovery().(*fake.FakeDiscovery).FakedServerVersion = &version.Info{
+			Major:      "1",
+			Minor:      "16",
+			GitVersion: "v1.16.5-rc.0",
+		}
+	})
 
 	a := HookExecutionConfigInit(initValuesHybridWithCloudProvider, `{}`)
 
@@ -59,7 +73,6 @@ flantPricing:
 			Expect(a.ValuesGet("flantPricing.internal.cloudProvider").String()).To(Equal(`openstack`))
 			Expect(a.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(a.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Hybrid`))
-			Expect(a.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
 			Expect(a.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`true`))
 		})
 	})
@@ -77,7 +90,6 @@ flantPricing:
 			Expect(b.ValuesGet("flantPricing.internal.cloudProvider").String()).To(Equal(`none`))
 			Expect(b.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(b.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Static`))
-			Expect(b.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
 			Expect(b.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`false`))
 		})
 	})
@@ -95,32 +107,13 @@ flantPricing:
 			Expect(c.ValuesGet("flantPricing.internal.cloudProvider").String()).To(Equal(`openstack`))
 			Expect(c.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(c.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Hybrid`))
-			Expect(c.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
 			Expect(c.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`true`))
 		})
 	})
 
-	d := HookExecutionConfigInit(initValuesKops, `{}`)
+	e := HookExecutionConfigInit(initValuesHybridWithCloudProvider, `{}`)
 
-	Context("Kops cluster", func() {
-		BeforeEach(func() {
-			d.BindingContexts.Set(d.GenerateBeforeHelmContext())
-			d.RunHook()
-		})
-
-		It("Should work properly", func() {
-			Expect(d).To(ExecuteSuccessfully())
-			Expect(d.ValuesGet("flantPricing.internal.cloudProvider").String()).To(Equal(`none`))
-			Expect(d.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
-			Expect(d.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Cloud`))
-			Expect(d.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`true`))
-			Expect(d.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`false`))
-		})
-	})
-
-	e := HookExecutionConfigInit(initValuesCloudClusterWithStaticNodes, `{}`)
-
-	Context("Cloud cluster with static nodes and clusterType override", func() {
+	Context("Hybrid cluster and cloud-provider-openstack is enabled with clusterType override", func() {
 		BeforeEach(func() {
 			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
 			e.ValuesSet("flantPricing.clusterType", "Cloud")
@@ -128,12 +121,24 @@ flantPricing:
 		})
 
 		It("Should work properly", func() {
-			Expect(c).To(ExecuteSuccessfully())
+			Expect(e).To(ExecuteSuccessfully())
 			Expect(e.ValuesGet("flantPricing.internal.cloudProvider").String()).To(Equal(`openstack`))
 			Expect(e.ValuesGet("flantPricing.internal.controlPlaneVersion").String()).To(Equal(`1.16`))
 			Expect(e.ValuesGet("flantPricing.internal.clusterType").String()).To(Equal(`Cloud`))
-			Expect(e.ValuesGet("flantPricing.internal.kops").String()).To(Equal(`false`))
 			Expect(e.ValuesGet("flantPricing.internal.terraformManagerEnabled").String()).To(Equal(`true`))
+		})
+	})
+
+	d := HookExecutionConfigInit(initValuesCloudClusterWithoutStaticNodeCount, `{}`)
+
+	Context("Cluster without `internal.nodeStats.staticNodesCount` value", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.GenerateBeforeHelmContext())
+			d.RunHook()
+		})
+
+		It("Should exit with error", func() {
+			Expect(d).NotTo(ExecuteSuccessfully())
 		})
 	})
 })

@@ -252,7 +252,7 @@ function resources_metrics() {
 
 function rps_metrics() {
   metric_name="flant_pricing_ingress_nginx_controllers_rps"
-  group="group_helm_rps_metrics"
+  group="group_rps_metrics"
   jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
 
   prom_result="$(prometheus_query 'sum(rate(ingress_nginx_overall_requests_total[20m])) or vector(0)')"
@@ -272,12 +272,94 @@ function rps_metrics() {
     ' <<< "$prom_result" >> $METRICS_PATH
 }
 
+function prometheus_series_metrics() {
+  metric_name="flant_pricing_prometheus_series"
+  group="group_prometheus_series_metrics"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+
+  prom_result="$(prometheus_query 'max(prometheus_tsdb_head_series{service="prometheus"})')"
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
+  fi
+
+  jq --arg metric_name $metric_name --arg group "$group" '.data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber),
+      "labels": {}
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
+}
+
+function node_os_image_metrics() {
+  metric_name="flant_pricing_node_os_image_count"
+  group="group_node_os_image_metrics"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+
+  prom_result="$(prometheus_query 'sum(kube_node_info) by (os_image)')"
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
+  fi
+
+  jq -rc --arg metric_name $metric_name --arg group "$group" '
+    .data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber),
+      "labels": {
+        "os_image": (
+          .metric.os_image | ascii_downcase |
+          [
+            match("(?:(r)ed (h)at (e)nterprise (l)inux.*(7))|(?:(centos).*(7))|(?:(ubuntu).*(16.04|18.04|20.04))").captures // [{string: "unknown"}] |
+            .[] | select(.string) | .string
+          ] | join("-") | .= sub("r-h-e-l"; "rhel")
+        )
+      }
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
+}
+
+function node_cri_metrics() {
+  metric_name="flant_pricing_node_cri_count"
+  group="group_node_cri_metrics"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+
+  prom_result="$(prometheus_query 'sum(kube_node_info) by (container_runtime_version)')"
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
+  fi
+
+  jq -rc --arg metric_name $metric_name --arg group "$group" '
+    .data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber),
+      "labels": {
+        "cri": (.metric.container_runtime_version | split("://") | .[0]),
+        "version": (.metric.container_runtime_version | split("://") | .[1])
+      }
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
+}
+
 function __main__() {
   terraform_state_metrics
   helm_releases_metrics
   helm_deprecated_resources_metrics
   resources_metrics
   rps_metrics
+  prometheus_series_metrics
+  node_os_image_metrics
+  node_cri_metrics
 }
 
 hook::run "$@"

@@ -1,0 +1,46 @@
+properties:
+  contacts:
+    description: |
+      Количество контактных лиц, за которые необходимо чаржить.
+  doNotChargeForRockSolid:
+    description: |
+      Входит ли канал обновлений RockSolid в стоимость, или надо за него чаржить отдельно.
+  plan:
+    description: |
+      Тарифный план.
+  planIsBoughtAsBundle:
+    description: |
+      Куплен ли "пакет".
+  auxiliaryCluster:
+    description: |
+      Этот кластер является вспомогательным.
+  clusterType:
+    description: |
+      Задаёт тип кластера в экспортируемых метриках, отключая автоматическое определение.
+  nodesDiscount:
+    description: |
+      Скидка за ноды в процентах, без символа %. Например: 10, 20, 30.
+  promscale:
+    properties:
+      url:
+        description: |
+          URL для отправки метрик.
+  ***REMOVED***:
+    description: |
+      Параметры для формирования ***REMOVED*** реестра.
+    properties:
+      team:
+        description: |
+          Команда, обслуживающая этот кластер.
+      host:
+        description: |
+          Имя хоста, на котором запускать `kubectl`.
+      kubectl:
+        description: |
+          Команда `kubectl` (с sudo, если необходимо).
+      kubeconfig:
+        description: |
+          Путь до файла `kubeconfig`.
+      context:
+        description: |
+          Какой `context` использовать из указанного `kubeconfig`.

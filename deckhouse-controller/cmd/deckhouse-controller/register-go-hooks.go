@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/deckhouse/deckhouse/global-hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"
+	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-aws/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-azure/hooks"
@@ -24,4 +25,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-ping/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-prometheus-madison-integration/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/998-flant-pricing/hooks"
 )

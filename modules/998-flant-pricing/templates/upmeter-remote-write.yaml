@@ -1,0 +1,17 @@
+{{- if (.Values.global.enabledModules | has "upmeter") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: UpmeterRemoteWrite
+metadata:
+  name: {{ .Chart.Name }}-promscale
+{{ include "helm_lib_module_labels" (list . (dict "app" "flant-pricing")) | indent 2 }}
+spec:
+  additionalLabels:
+    cluster_uuid: {{ .Values.global.discovery.clusterUUID }}
+  config:
+    url: {{ .Values.flantPricing.promscale.url }}
+    basicAuth:
+      username: {{ .Values.flantPricing.internal.promscale.basic_auth.username | quote }}
+      password: {{ .Values.flantPricing.internal.promscale.basic_auth.password | quote }}
+  intervalSeconds: 300
+{{- end }}

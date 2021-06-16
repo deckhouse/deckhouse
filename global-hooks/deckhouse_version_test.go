@@ -52,6 +52,20 @@ var _ = Describe("Global hooks :: deckhouse_version ", func() {
 			Expect(f.ValuesGet("global.deckhouseVersion").String()).To(Equal(`21.01-hotfix1`))
 		})
 	})
+
+	Context("With number version and newline", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			err := writeVersionTMPFile("21.05\n")
+			Expect(err).To(BeNil())
+			f.RunHook()
+		})
+
+		It("Should run", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.deckhouseVersion").String()).To(Equal(`21.05`))
+		})
+	})
 })
 
 func writeVersionTMPFile(content string) error {
