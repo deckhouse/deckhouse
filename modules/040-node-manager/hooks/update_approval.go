@@ -7,12 +7,12 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
 )
 
@@ -23,21 +23,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Queue: "/modules/node-manager/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:                   "configuration_checksums_secret",
-			WaitForSynchronization: &waitForSync,
-			ApiVersion:             "v1",
-			Kind:                   "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-cloud-instance-manager"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"configuration-checksums"},
-			},
-			FilterFunc: updateApprovalSecretFilter,
-		},
+		// api: "v1",
+		// kind: "Secret",
+		// ns: "8-cloud-instance-manager"
+		// name: "configuration-checksums"
+		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
 			WaitForSynchronization: &waitForSync,
@@ -284,7 +274,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 		if len(snap) == 0 {
 			return fmt.Errorf("no configuration_checksums_secret snapshot found")
 		}
-		ngChecksum, ok := snap[0].(confChecksumSecret).Data[ngName]
+		ngChecksum, ok := snap[0].(shared.ConfigurationChecksum)[ngName]
 		if !ok {
 			ngChecksum = ""
 		}
@@ -349,26 +339,6 @@ type updateNodeGroup struct {
 	NodeType    string
 	Disruptions v1alpha2.Disruptions
 	Status      v1alpha2.NodeGroupStatus
-}
-
-type confChecksumSecret struct {
-	Data map[string]string
-}
-
-func updateApprovalSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sec corev1.Secret
-
-	err := sdk.FromUnstructured(obj, &sec)
-	if err != nil {
-		return nil, err
-	}
-
-	data := make(map[string]string, len(sec.Data))
-	for k, v := range sec.Data {
-		data[k] = string(v)
-	}
-
-	return confChecksumSecret{Data: data}, nil
 }
 
 func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

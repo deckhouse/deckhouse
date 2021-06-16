@@ -646,6 +646,16 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		ObjectPatcher: NewKubernetesPatch(hec.getFakeClient()),
 	}
 
+	if len(hec.extraHookEnvs) > 0 {
+		for _, envpair := range hec.extraHookEnvs {
+			pair := strings.Split(envpair, "=")
+			_ = os.Setenv(pair[0], pair[1])
+			defer func(key string) {
+				_ = os.Unsetenv(key)
+			}(pair[0])
+		}
+	}
+
 	hec.GoHookError = hec.GoHook.Hook.Run(hookInput)
 
 	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
