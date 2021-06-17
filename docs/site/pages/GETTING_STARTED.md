@@ -10,9 +10,9 @@ toc: false
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 
 <div markdown="1">
-Probably, you have already familiarized yourself with the main [Deckhouse features](/en/features.html).
+Probably, you have already familiarized yourself with the main [Deckhouse features](/en/index.html#features).
 
-This getting started guide walks you through the step-by-step process of installing the Community Edition of Deckhouse. *(See the [products](/en/products.html#ce-vs-ee) section for more info on licensing options and the differences between the CE and EE versions).*
+This getting started guide walks you through the step-by-step process of installing the Community Edition of Deckhouse. *(See the [comparsion](/en/community/community_edition.html#ce-vs-ee) section for more info on licensing options and the differences between the CE and EE versions).*
 
 The Deckhouse platform runs both on bare metal servers and on the infrastructure of the supported cloud providers. However, the installation process differs depending on the infrastructure chosen. That is why we provide various installation examples below.
 
@@ -473,6 +473,6 @@ To disable the module, set the parameter to `false`.
 
 Now that everything is up and running as intended, you can refer to [the documentation](/en/documentation/v1/) about the system in general and Deckhouse components in particular.
 
-Please, reach us via our [online community](/en/community.html#online-community) if you have any questions.
+Please, reach us via our [online community](/en/community/about.html#online-community) if you have any questions.
 
 </div>

@@ -95,3 +95,21 @@ $( document ).ready(function() {
         $('.notice__share_message.disabled').removeClass("disabled");
     }
 });
+
+/* features tabs */
+
+$(document).ready(function() {
+    $('[data-features-tabs-trigger]').on('click', function() {
+        var name = $(this).attr('data-features-tabs-trigger');
+        var $parent = $(this).closest('[data-features-tabs]');
+        var $triggers = $parent.find('[data-features-tabs-trigger]');
+        var $contents = $parent.find('[data-features-tabs-content]');
+        var $content = $parent.find('[data-features-tabs-content=' + name + ']');
+
+        $triggers.removeClass('active');
+        $contents.removeClass('active');
+
+        $(this).addClass('active');
+        $content.addClass('active');
+    })
+});

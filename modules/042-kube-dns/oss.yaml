@@ -1,5 +1,5 @@
 - name: CoreDNS
   link: https://github.com/coredns/coredns
   description: A DNS server/forwarder that chains plugins.
-  logo: https://coredns.io/images/CoreDNS_Colour_Horizontal.png
+  logo: https://raw.githubusercontent.com/coredns/logo/master/Icon/CoreDNS_Colour_Icon.svg
   licence: Apache License 2.0

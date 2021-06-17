@@ -7,15 +7,11 @@
 }
 
 .header {
-    // position: sticky;
-    // top: 0px;
-    // z-index: 100;
     background: $color-inverse;
     box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.15);
     &__logo {
         img {
             height: 50px;
-            margin-left: 42px;
         }
     }
     &__content {
@@ -33,6 +29,36 @@
         list-style-type: none;
         padding: 0;
         margin: 0 0 0 auto;
+
+        &-item-icon {
+            margin-left: 10px;
+            position: relative;
+            top: 3px;
+            @media (min-width: $container-breakpoint-lg) {
+                margin-left: 20px;
+            }
+            &_first {
+                margin-left: 20px;
+                @media (min-width: $container-breakpoint-lg) {
+                    margin-left: 35px;
+                }
+            }
+            a {
+                display: inline-block;
+                svg {
+                    height: 15px;
+                    @media (min-width: $container-breakpoint-lg) {
+                        height: 20px;
+                    }
+                    path {
+                        fill: $color-alt;
+                    }
+                }
+                &:hover svg path {
+                    fill: $color-main;
+                }
+            }
+        }
 
         &-item {
             position: relative;
@@ -59,6 +85,10 @@
                 background-repeat: no-repeat;
                 background-size: contain;
                 margin-left: 5px;
+                margin-bottom: -3px;
+                @media (min-width: $container-breakpoint-lg) {
+                    margin-bottom: 0px;
+                }
             }
             &_active {
                 &:after {
@@ -75,6 +105,9 @@
             a {
                 color: $color-main;
                 text-decoration: none;
+                &:hover {
+                    color: $color-alt;
+                }
             }
         }
     }
