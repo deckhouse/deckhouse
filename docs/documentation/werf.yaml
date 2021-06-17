@@ -142,13 +142,13 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/openstack/openapi/
+- add: /ee/candi/cloud-providers/openstack/openapi/
   to: /src/modules/030-cloud-provider-openstack/crds/
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/vsphere/openapi/
+- add: /ee/candi/cloud-providers/vsphere/openapi/
   to: /src/modules/030-cloud-provider-vsphere/crds/
   owner: jekyll
   group: jekyll
@@ -160,7 +160,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /modules/110-istio/crds/
+- add: /ee/modules/110-istio/crds/
   to: /src/modules/110-istio/crds/
   owner: jekyll
   group: jekyll

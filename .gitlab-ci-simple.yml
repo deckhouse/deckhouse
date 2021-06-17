@@ -16,12 +16,18 @@ stages:
 
 variables:
   WERF_CHANNEL: "ea"
+  WERF_ENV: FE
   WERF_STAPEL_IMAGE_NAME: "${DECKHOUSE_READ_REGISTRY}/flant/stapel"
   WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
 
 Build Modules Images:
   extends: .Build Modules Images template
+  tags:
+  - deckhouse
+
+Go Generate:
+  extends: .Go Generate template
   tags:
   - deckhouse
 
@@ -49,6 +55,7 @@ Hooks Configuration Tests:
     - "Hooks Configuration Tests"
     - "Build"
     - "Build Modules Images"
+    - "Go Generate"
 
 early-access:
   <<: *base_deploy

@@ -6,9 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/testing/matrix/linter"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
-	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
 
 func TestMatrix(t *testing.T) {
@@ -17,21 +15,11 @@ func TestMatrix(t *testing.T) {
 }
 
 var _ = Describe("Matrix tests", func() {
-	modules, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
+	_, err := modules.GetDeckhouseModulesWithValuesMatrixTests()
 
-	modulesCH := make(chan utils.Module, len(modules))
 	Context("module discovery", func() {
 		It("", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
-	})
-
-	Context("run", func() {
-		for _, module := range modules {
-			modulesCH <- module
-			It("for module "+module.Name, func() {
-				Expect(linter.Run("", <-modulesCH)).ToNot(ErrorOccurred())
-			})
-		}
 	})
 })

@@ -90,7 +90,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	)
 
 	// 0. Get values from values-default.yaml
-	globalValuesRaw, err := ioutil.ReadFile(filepath.Join("/deckhouse", "modules", "values-default.yaml"))
+	globalValuesRaw, err := ioutil.ReadFile(filepath.Join("/deckhouse", "modules", "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

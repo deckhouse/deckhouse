@@ -30,11 +30,24 @@ func (t *TestCases) HaveValuesCases() bool {
 }
 
 func GetAllOpenAPIDirs() ([]string, error) {
-	var dirs []string
-	openAPIDirs, err := filepath.Glob("/deckhouse/modules/*/openapi")
-	if err != nil {
-		return nil, err
+	var (
+		dirs        []string
+		openAPIDirs []string
+	)
+
+	for _, possibleDir := range []string{
+		"/deckhouse/modules/*/openapi",
+		"/deckhouse/ee/modules/*/openapi",
+		"/deckhouse/ee/fe/modules/*/openapi",
+	} {
+		globDirs, err := filepath.Glob(possibleDir)
+		if err != nil {
+			return nil, err
+		}
+
+		openAPIDirs = append(openAPIDirs, globDirs...)
 	}
+
 	// TODO - Global scheme currently not supported
 	// openAPIDirs = append(openAPIDirs, "/deckhouse/global-hooks/openapi")
 	for _, openAPIDir := range openAPIDirs {

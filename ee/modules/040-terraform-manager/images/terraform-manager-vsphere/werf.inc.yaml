@@ -1,6 +1,9 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+- add: /ee/candi/cloud-providers/vsphere
+  to: /deckhouse/candi/cloud-providers/vsphere
 import:
 - artifact: terraform-provider-vsphere
   add: /terraform-provider-vsphere/terraform-provider-vsphere

@@ -44,9 +44,19 @@ func (hc *HookConfig) String() string {
 // FIXME use addon-operator’s methods to discover all hooks.
 func GetAllHooks() ([]Hook, error) {
 	hooks := []Hook{}
-	hookDirs, err := filepath.Glob("/deckhouse/modules/*/hooks")
-	if err != nil {
-		return []Hook{}, err
+
+	var hookDirs []string
+	for _, possibleDir := range []string{
+		"/deckhouse/modules/*/hooks",
+		"/deckhouse/ee/modules/*/hooks",
+		"/deckhouse/ee/fe/modules/*/hooks",
+	} {
+		result, err := filepath.Glob(possibleDir)
+		if err != nil {
+			return []Hook{}, err
+		}
+
+		hookDirs = append(hookDirs, result...)
 	}
 
 	hookDirs = append(hookDirs, "/deckhouse/global-hooks")
