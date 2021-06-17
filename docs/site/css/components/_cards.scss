@@ -4,7 +4,6 @@
     background: $color-smooth;
     padding: 100px 0;
     &__content {
-        padding-left: $logo-spacing;
         box-sizing: border-box;
         display: flex;
         flex-direction: row;
@@ -68,7 +67,6 @@
 .cards-blocks {
     padding: 100px 0;
     &__content {
-        padding-left: $logo-spacing;
         box-sizing: border-box;
     }
     &__title {

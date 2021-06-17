@@ -721,3 +721,7 @@ entries:
                 ru: Настройки
                 en: Configuration
               url: /modules/450-network-gateway/configuration.html
+    - title:
+        ru: Используемое ПО
+        en: Used software
+      url: /oss_info.html

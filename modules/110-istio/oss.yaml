@@ -7,5 +7,5 @@
 - name: Kiali
   link: https://github.com/kiali/kiali
   description: Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.
-  logo: https://avatars.githubusercontent.com/u/36001875?s=200&v=4
+  logo: https://i.imgur.com/0F7W94F.png
   licence: Apache License 2.0

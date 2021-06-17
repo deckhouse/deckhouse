@@ -61,6 +61,13 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation
+    - name: "Prepare OSS licence info"
+      shell: |
+        export MODULES_DIR=/src/modules
+        bash ./modules_generate_ossinfo.sh
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
     - name: "Generate sidebars"
       shell: |
         export MODULES_DIR=modules_en
@@ -101,7 +108,7 @@ git:
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*/docs/','*/openapi/','*/crds/']
+  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
   excludePaths: ['*/docs/internal/','110-istio/crds']
 # CRDs
 - add: /modules/010-user-authn-crd/crds/

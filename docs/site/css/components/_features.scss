@@ -4,7 +4,6 @@
     &__title {
         margin-top: 0;
         margin-bottom: $spacing-l;
-        padding-left: $logo-spacing;
         box-sizing: border-box;
     }
     &__item {
@@ -16,7 +15,7 @@
             flex-direction: row;
             justify-content: flex-start;
             align-items: flex-start;
-            padding: 125px 0 125px $logo-spacing;
+            padding: 125px 0;
             box-sizing: border-box;
         }
         &-header {

@@ -3,10 +3,6 @@ topnav:
 - title: Topnav
   items:
   - title:
-      ru: Возможности
-      en: Features
-    url: /features.html
-  - title:
       ru: Быстрый старт
       en: Getting started
     url: /getting_started.html
@@ -17,15 +13,46 @@ topnav:
   - title:
       ru: Сообщество
       en: Community
-    url: /community.html
+    url: '#'
+    items:
+    - title:
+        ru: О сообществе
+        en: About
+      url: /community/about.html
+    - title:
+        ru: Deckhouse Platform CE
+        en: Deckhouse Platform CE
+      url: /community/community_edition.html
+    - title:
+        ru: Используемое ПО
+        en: Used software
+      url: /documentation/v1/oss_info.html
   - title:
       ru: Продукты
       en: Products
-    url: /products.html
+    url: '#'
+    items:
+    - title:
+        ru: Deckhouse Platform EE
+        en: Deckhouse Platform EE
+      url: /products/enterprise_edition.html
+    - title:
+        ru: Deckhouse Commander
+        en: Deckhouse Commander
+      url: /products/commander.html
   - title:
       ru: Услуги
       en: Services
-    url: /services.html
+    url: '#'
+    items:
+    - title:
+        ru: Managed Deckhouse
+        en: Managed Deckhouse
+      url: /services/managed.html
+    - title:
+        ru: Обучение и консультации
+        en: Training & Consulting
+      url: /services/training.html
   - title:
       ru: О нас
       en: About us

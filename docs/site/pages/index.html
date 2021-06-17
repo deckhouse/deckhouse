@@ -9,226 +9,328 @@ anchors_disabled: true
 
 <section class="product-intro">
   <div class="product-intro__content container">
-    <div class="product-intro__diagram">
-      <img src="{{ site.baseurl }}/images/diagrams/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
-    </div>
-    <div class="product-intro__about">
-      <div class="product-intro__logo">
-        <img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
-      </div>
+    <div class="product-intro__head">
       <h1 class="product-intro__title text_lead">
         NoOps<br>
         Kubernetes<br>
         platform
       </h1>
+      <div class="product-intro__logo">
+        <img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
+      </div>
+    </div>
+    <div class="product-intro__diagram">
+      <img src="{{ site.baseurl }}/images/diagrams/deckhouse-platform.svg" alt="Deckhouse Kubernetes Platform" />
+    </div>
+    <div class="product-intro__info">
       <div class="product-intro__description text_base">
         Deckhouse is an operator which creates homogeneous Kubernetes clusters anywhere and fully manages them.
         It supplies all necessary addons to provide observability, security, and service mesh.
       </div>
-      <ul class="product-intro__features list">
-        <li>
-          Fully identical Kubernetes anywhere
+      <ul class="product-intro__features">
+        <li class="text_base text_bold">
+          Fully identical<br>
+          Kubernetes anywhere
         </li>
-        <li>
-          Day 1 success with Kubernetes
+        <li class="text_base text_bold">
+          Day 1 success<br>
+          with Kubernetes
         </li>
-        <li>
-          Available in Community Edition &amp; Enterprise Edition
+        <li class="text_base text_bold">
+          Available in<br>
+          Community Edition &amp;<br>
+          Enterprise Edition
         </li>
       </ul>
       <div class="product-intro__actions button-group">
         {% unless site.mode == "local" %}
-        <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
+        <a href="/{{ page.lang }}/documentation/" class="button button_alt">Documentation</a>
         {% endunless %}
-        <a href="/{{ page.lang }}/features.html" class="button button_default">Read more</a>
+        <a href="https://github.com/deckhouse/deckhouse" target="_blank" class="button button_default">GitHub</a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="product-intro">
-  <div class="product-intro__content container">
-    <div class="product-intro__about">
-      <div class="product-intro__logo">
-        <img src="{{ site.baseurl }}/images/logos/deckhouse-commander.svg" alt="Deckhouse Commander" style="margin-left: -7px" />
-      </div>
-      <h1 class="product-intro__title text_lead">
-        Centralized<br>
-        control for all<br>
-        your clusters
-      </h1>
-      <div class="product-intro__description text_base">
-        Deckhouse Commander is an orchestrator which manages many clusters across clouds and on-premises. It gives you a single point of control via API &amp; UI.
-      </div>
-      <ul class="product-intro__features list">
-        <li>
-          Day 1 success with hybrid infrastructure
-        </li>
-        <li class="text_alt">
-          Coming soon
-        </li>
-      </ul>
-      <div class="product-intro__actions button-group">
-        {% unless site.mode == "local" %}
-        <a href="javascript:Smallchat('open')" class="button button_alt">Contact sales</a>
-        {% endunless %}
-        <a href="/{{ page.lang }}/products.html#deckhouse-commander" class="button button_default">Read more</a>
-      </div>
-    </div>
-    <div class="product-intro__diagram">
-      <img src="{{ site.baseurl }}/images/diagrams/deckhouse-commander.svg" alt="Deckhouse Kubernetes Platform" />
-    </div>
-  </div>
-</section>
+<section class="features-tabs container" data-features-tabs>
 
-<section class="features">
-
-  <h2 class="text_h1 text_alt features__title container">
+  <h2 class="text_h1 text_alt features-tabs__title">
     Why do I need Deckhouse Platform?
   </h2>
 
-  <div class="features__item features__item_even">
-      <div class="features__item-content container">
-          <div class="features__item-header">
-              <h2 class="features__item-title text_h1">
-                Developers
-              </h2>
-          </div>
-          <ul class="features__item-list">
-              <li>
-                Focus on application development. Your infrastructure becomes just a well-known API that is transparent and fully managed everywhere (any clouds, bare metal servers or hybrid).
-              </li>
-              <li>
-                Build and update apps quickly. Benefit from a true CI/CD enabler.
-              </li>
-              <li>
-                Deploy &amp; test new features with no limits: create new environments whenever you want.
-              </li>
-              <li>
-                Enjoy automated canary deployments and service mesh with Istio.
-              </li>
-              <li>
-                Boost your observability with easy to use dashboards.
-              </li>
-              <li>
-                Use custom metrics for out-of-the-box autoscaling.
-              </li>
-          </ul>
-      </div>
+  <div class="features-tabs__tabs">
+    <a href="javascript:void(0)" class="features-tabs__tabs-item active" data-features-tabs-trigger="developers">
+      Developers
+    </a>
+    <a href="javascript:void(0)" class="features-tabs__tabs-item" data-features-tabs-trigger="devops">
+      DevOps / SRE
+    </a>
+    <a href="javascript:void(0)" class="features-tabs__tabs-item" data-features-tabs-trigger="business">
+      Business leaders
+    </a>
   </div>
 
-  <div class="features__item">
-      <div class="features__item-content container">
-          <div class="features__item-header">
-              <h2 class="features__item-title text_h1">
-                DevOps / SRE
-              </h2>
-          </div>
-          <ul class="features__item-list">
-              <li>
-                Forget about low-level Kubernetes machinery and focus on real DevOps and SRE, but not infrastructure itself.
-              </li>
-              <li>
-                Run ready-to-use Kubernetes clusters in 15 minutes.
-              </li>
-              <li>
-                Roll out fully identical clusters anywhere: bare-metal servers, private or public clouds.
-              </li>
-              <li>
-                Leverage integrated and ready-to-use HPA for your apps.
-              </li>
-              <li>
-                Never miss important updates from upstream Kubernetes, certificate renewals, etc.
-              </li>
-              <li>
-                Get out-of-the-box security features including single sign-on, support for external authentication providers, and role-based access control.
-              </li>
-          </ul>
-      </div>
-  </div>
-  <div class="features__item features__item_even">
-      <div class="features__item-content container">
-          <div class="features__item-header">
-              <h2 class="features__item-title text_h1">
-                Business leaders
-              </h2>
-          </div>
-          <ul class="features__item-list">
-            <li>
-              Leverage the latest containerisation technology to build cutting edge services and products.
-            </li>
-            <li>
-              Shorten time-to-market with the properly rolled out &amp; maintained Kubernetes.
-            </li>
-            <li>
-              Boost teams efficiency by 300% equipping them with the best OSS tools for Kubernetes.
-            </li>
-            <li>
-              Save on infrastructure with automatic downscaling. Consume only what is needed at the moment.
-            </li>
-            <li>
-              Get a platform based on upstream Kubernetes and Open Source core avoiding a vendor lock-in.
-            </li>
-          </ul>
-      </div>
+  <div class="features-tabs__item active" data-features-tabs-content="developers">
+    <ul class="features-tabs__item-list">
+      <li>
+        Focus on application development. Your infrastructure becomes just a well-known API that is transparent and
+        fully managed everywhere (any clouds, bare metal servers or hybrid).
+      </li>
+      <li>
+        Build and update apps quickly. Benefit from a true CI/CD enabler.
+      </li>
+      <li>
+        Deploy &amp; test new features with no limits: create new environments whenever you want.
+      </li>
+      <li>
+        Enjoy automated canary deployments and service mesh with Istio.
+      </li>
+      <li>
+        Boost your observability with easy to use dashboards.
+      </li>
+      <li>
+        Use custom metrics for out-of-the-box autoscaling.
+      </li>
+    </ul>
   </div>
 
-  <div class="features__item">
-      <div class="features__item-content container">
-          <div class="features__item-header">
-              <h2 class="features__item-title text_h1 text_alt">
-                When do I need<br>
-                Deckhouse Commander?
-              </h2>
-          </div>
-          <ul class="features__item-list">
-            <li>
-              If you work with a few Kubernetes, Deckhouse Platform will perfectly fit your needs.
-            </li>
-            <li>
-              Deckhouse Commander comes in handy when you need to manage 10+ clusters, no matter where they are deployed: on-premises, private clouds, public clouds, mixed infrastructure.
-            </li>
-          </ul>
-      </div>
+  <div class="features-tabs__item" data-features-tabs-content="devops">
+    <ul class="features-tabs__item-list">
+      <li>
+        Forget about low-level Kubernetes machinery and focus on real DevOps and SRE, but not infrastructure itself.
+      </li>
+      <li>
+        Run ready-to-use Kubernetes clusters in 15 minutes.
+      </li>
+      <li>
+        Roll out fully identical clusters anywhere: bare-metal servers, private or public clouds.
+      </li>
+      <li>
+        Leverage integrated and ready-to-use HPA for your apps.
+      </li>
+      <li>
+        Never miss important updates from upstream Kubernetes, certificate renewals, etc.
+      </li>
+      <li>
+        Get out-of-the-box security features including single sign-on, support for external authentication providers,
+        and role-based access control.
+      </li>
+    </ul>
+  </div>
+
+  <div class="features-tabs__item" data-features-tabs-content="business">
+    <ul class="features-tabs__item-list">
+      <li>
+        Leverage the latest containerisation technology to build cutting edge services and products.
+      </li>
+      <li>
+        Shorten time-to-market with the properly rolled out &amp; maintained Kubernetes.
+      </li>
+      <li>
+        Boost teams efficiency by 300% equipping them with the best OSS tools for Kubernetes.
+      </li>
+      <li>
+        Save on infrastructure with automatic downscaling. Consume only what is needed at the moment.
+      </li>
+      <li>
+        Get a platform based on upstream Kubernetes and Open Source core avoiding a vendor lock-in.
+      </li>
+    </ul>
   </div>
 </section>
 
-<!--
+<section class="features-icons" id="features">
 
-<section class="work">
-  <div class="work__content container">
-    <h2 class="text_h1">
-      How does Deckhouse work?
-    </h2>
+  <h2 class="text_h1 text_alt features-icons__title container">
+    What makes Deckhouse Platform special?
+  </h2>
 
-    <div class="work__item">
-      <div class="work__item-num">
-        1
+  <div class="features-icons__item features-icons__item_even">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/robot.svg" alt="" />
       </div>
-      <h3 class="work__item-title text_h3">
-        Fully manages VMs (IaS)<br>
-        or bare-metal servers
-      </h3>
-      <div class="work__item-diagram">
-        {% include diagrams/deckhouse-platform-work-1.svg %}
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          NoOps
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            System software on the nodes (kernel, CRI, kubelet, etc.) is automatically managed.
+          </li>
+          <li>
+            Kubernetes core software (control plane, etcd, certificates, etc.) is automatically managed.
+          </li>
+          <li>
+            Kubernetes platform components are automatically managed.
+          </li>
+          <li>
+            Bug-free Kubernetes as all components are regularly updated (delay from upstream is less than 1 month).
+          </li>
+          <li>
+            To upgrade Kubernetes to another minor version, you need to change one line in your configuration. Upgrades
+            to new patch versions are made automatically.
+          </li>
+        </ul>
       </div>
     </div>
+  </div>
 
-    <div class="work__item">
-      <div class="work__item-num">
-        2
+  <div class="features-icons__item">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/sla.svg" alt="" />
       </div>
-      <h3 class="work__item-title text_h3">
-        Unites them into<br>
-        Kubernetes cluster
-      </h3>
-      <div class="work__item-diagram">
-        {% include diagrams/deckhouse-platform-work-1.svg %}
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          SLA by design
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            Thanks to NoOps approach and everything carefully tested before being released, reliability is our
+            cornerstone.
+          </li>
+          <li>
+            Thus, we can provide SLA even without direct access to your infrastructure — 99,95%*.
+            <ul>
+              <li>
+                * To achieve this, the architecture of your clusters should be approved by our engineers and our
+                guidelines should be followed.
+              </li>
+              <li>
+                * This applies to the <a href="/{{ page.lang }}/products/enterprise_edition.html">Enterprise
+                  Edition</a> only.
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="features-icons__item features-icons__item_even">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/cloud.svg" alt="" />
+      </div>
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          Runs anywhere
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            Clusters are infrastructure-agnostic since they can be deployed on a public cloud of your choice (AWS, GCP,
+            Microsoft Azure, OVH Cloud) or even bare-metal servers.
+          </li>
+          <li>
+            Self-hosted cloud solutions (OpenStack and vSphere) are also supported*.
+            <ul>
+              <li>
+                * This applies to the <a href="/{{ page.lang }}/products/enterprise_edition.html">Enterprise
+                  Edition</a> only.
+              </li>
+            </ul>
+          </li>
+          <li>
+            Kubernetes clusters created with Deckhouse are entirely identical no matter which underlying infrastructure
+            is in use. All platform features &amp; modules are available everywhere.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="features-icons__item">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/opensource.svg" alt="" />
+      </div>
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          Industry trusted solution
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            It’s 100% vanilla Kubernetes since we follow the upstream version of Kubernetes.
+          </li>
+          <li>
+            Based on <a href="https://github.com/flant/shell-operator" target="_blank">shell-operator</a> &amp; <a
+              href="https://github.com/flant/addon-operator" target="_blank">addon-operator</a> Open Source projects
+            that have been around for 2+ years and adopted by various vendors.
+          </li>
+          <li>
+            Avoid vendor lock-in as the core of the platform and CE is free and Open Source.
+            <ul>
+              <li>
+                The EE edition development process is also public (on GitHub) and all source code is open (but <a
+                  href="/{{ page.lang }}/products/enterprise_edition.html">not free</a>).
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="features-icons__item features-icons__item_even">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/easy.svg" alt="" style="margin-top: -50px" />
+      </div>
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          Kubernetes, the easy way
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            Deploying Deckhouse is extremely simple: a couple of CLI commands and 8 minutes are all you need to get
+            production-ready Kubernetes.
+          </li>
+          <li>
+            Ready-to-use configurations for each cloud provider are available — just choose the one that fits best for
+            you.
+          </li>
+          <li>
+            Even deploying on bare metal is not a big deal anymore.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="features-icons__item">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/box.svg" alt="" />
+      </div>
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          Feature-complete platform
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            Get auto-scaling, observability, security, service mesh right out of the box!
+            <ul>
+              <li>
+                You can get a more comprehensive understanding of modules available in Deckhouse via <a
+                  href="/{{ page.lang }}/documentation/v1/">documentation</a>.
+              </li>
+            </ul>
+          </li>
+          <li>
+            Kubernetes has a lot to offer, but this choice followed by further configuration, integration, and
+            maintenance becomes a real challenge. Overcome it with Deckhouse!
+            <ul>
+              <li>
+                Our basic principles are feature-complete Kubernetes, the integrity of all components, and simplicity
+                not limiting flexibility.
+              </li>
+            </ul>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
-
--->
 
 {% include clients.html %}

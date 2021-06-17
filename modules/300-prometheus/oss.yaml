@@ -1,19 +1,19 @@
 - name: Prometheus
   link: https://github.com/prometheus/prometheus
   description: A systems and service monitoring system.
-  logo: https://avatars.githubusercontent.com/u/3380462?s=200&v=4
+  logo: https://cncf-branding.netlify.app/img/projects/prometheus/icon/color/prometheus-icon-color.svg
   licence: Apache License 2.0
 
 - name: Grafana
   link: https://github.com/grafana/grafana
   description: An open-source platform for monitoring and observability.
-  logo: https://github.com/grafana/grafana/raw/main/docs/logo-horizontal.png
+  logo: https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg
   licence: GNU Affero General Public License v3.0
 
 - name: Trickster
   link: https://github.com/trickstercache/trickster
   description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
-  logo: https://github.com/trickstercache/trickster/raw/main/docs/images/logos/trickster-text.svg
+  logo: https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg
   licence: Apache License 2.0
 
 

@@ -58,8 +58,22 @@
                   {%- if page.mode == 'ssi' and site.mode != 'local' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
                   {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
                   {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
+                  {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
                   {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}">
                   <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title[page.lang] %}{{ item.title[page.lang] }}{% else %}{{ item.title }}{% endif -%}</a>
+
+                  {% if item.items %}
+                    <div class="submenu-container">
+                      <ul class="submenu">
+                        {% for subitem in item.items %}
+                          {%- assign item_url_parts = subitem.url | split: '/' -%}
+                          <li data-proofer-ignore class="submenu-item">
+                              <a href="/{{ page.lang }}{{ subitem.url }}" class="submenu-item-link">{%- if subitem.title[page.lang] %}{{ subitem.title[page.lang] }}{% else %}{{ subitem.title }}{% endif -%}</a>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
               </li>
               {% endfor %}
           {% endfor %}
@@ -95,6 +109,16 @@
                 </li>
               </ul>
             </div>
+          </li>
+          <li class="header__navigation-item-icon header__navigation-item-icon_first">
+            <a href="https://t.me/deckhouse" target="_blank">
+              {% include icons/telegram.svg %}
+            </a>
+          </li>
+          <li class="header__navigation-item-icon">
+            <a href="https://github.com/deckhouse/deckhouse" target="_blank">
+              {% include icons/github.svg %}
+            </a>
           </li>
       </ul>
     </div>

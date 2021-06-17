@@ -8,18 +8,28 @@
     font-weight: $font-weight-semibold;
     &_default {
         color: $color-main;
+        background: $color-inverse;
         border: 2px solid $color-main;
     }
     &_alt {
         color: $color-inverse;
         background: $color-alt;
+        border: 2px solid $color-alt;
     }
     &_inverse {
         color: $color-alt;
         background: $color-inverse;
+        border: 2px solid $color-inverse;
     }
     &_big {
         font-size: $font-size-h2;
+    }
+    &_default, &_alt {
+        &:hover {
+            color: $color-inverse;
+            background: $color-main;
+            border: 2px solid $color-main;
+        }
     }
 }
 
