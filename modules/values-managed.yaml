@@ -1,21 +1,4 @@
-global:
-  discovery: {}
-  modulesImages: {}
-  modules:
-    ingressClass: nginx
-    placement: {}
-    https:
-      mode: CertManager
-      certManager:
-        clusterIssuerName: letsencrypt
-    resourcesRequests:
-      everyNode:
-        cpu: 300m
-        memory: 512Mi
-      internal: {}
-##########################################
-# Список включенных по умолчанию модулей #
-##########################################
+# CE Bundle "Managed"
 operatorPrometheusCrdEnabled: true
 priorityClassEnabled: true
 prometheusCrdEnabled: true
@@ -27,13 +10,10 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 verticalPodAutoscalerEnabled: true
-monitoringApplicationsEnabled: true
 monitoringCustomEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 prometheusMadisonIntegrationEnabled: true
-extendedMonitoringEnabled: true
-nodeLocalDnsEnabled: true
 deschedulerEnabled: true
 ingressNginxEnabled: true
 dashboardEnabled: true

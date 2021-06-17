@@ -131,18 +131,30 @@ func helmignoreModuleRule(name, path string) errors.LintRuleError {
 func GetDeckhouseModulesWithValuesMatrixTests() ([]utils.Module, error) {
 	var modules []utils.Module
 
+	var possibleModulesPaths []string
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
-		modulesDir = defaultDeckhouseModulesDir
+		possibleModulesPaths = []string{
+			"/deckhouse/modules",
+			"/deckhouse/ee/modules",
+			"/deckhouse/ee/fe/modules",
+		}
+	} else {
+		possibleModulesPaths = []string{modulesDir}
 	}
 
-	modulePaths, err := getModulePaths(modulesDir)
-	if err != nil {
-		return modules, fmt.Errorf("search modules with %q: %v", ChartConfigFilename, err)
+	var modulesPaths []string
+	for _, possibleModuleDir := range possibleModulesPaths {
+		result, err := getModulePaths(possibleModuleDir)
+		if err != nil {
+			return modules, fmt.Errorf("search modules with %q: %v", ChartConfigFilename, err)
+		}
+
+		modulesPaths = append(modulesPaths, result...)
 	}
 
 	var lintRuleErrorsList errors.LintRuleErrorsList
-	for _, modulePath := range modulePaths {
+	for _, modulePath := range modulesPaths {
 		module, ok := lintModuleStructure(&lintRuleErrorsList, modulePath)
 		if !ok {
 			continue

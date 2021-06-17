@@ -123,9 +123,9 @@ func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
 
 	rwrIngress := ingress.DeepCopy()
 	rwrIngress.ObjectMeta = metav1.ObjectMeta{
-		Name:            rwrIngress.ObjectMeta.Name + "-rwr",
-		Namespace:       rwrIngress.ObjectMeta.Namespace,
-		Annotations:     rwrIngress.ObjectMeta.Annotations,
+		Name:        rwrIngress.ObjectMeta.Name + "-rwr",
+		Namespace:   rwrIngress.ObjectMeta.Namespace,
+		Annotations: rwrIngress.ObjectMeta.Annotations,
 	}
 	rwrIngress.Status = extensionsv1beta1.IngressStatus{}
 
@@ -138,9 +138,9 @@ func rewriteTargetMigration(ingress *extensionsv1beta1.Ingress) error {
 			rwrIngress.Annotations["kubernetes.io/ingress.class"] = rwrIngress.Annotations["kubernetes.io/ingress.class"] + "-rwr"
 		}
 	} else {
-			rwrIngress.Annotations = make(map[string]string)
-			rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
-    }
+		rwrIngress.Annotations = make(map[string]string)
+		rwrIngress.Annotations["kubernetes.io/ingress.class"] = "nginx-rwr"
+	}
 
 	if !rewriteTargetMigrationRequired(ingress) {
 		return createOrUpdateIngress(rwrIngress)

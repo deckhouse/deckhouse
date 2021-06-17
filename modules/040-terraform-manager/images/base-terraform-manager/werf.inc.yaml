@@ -46,6 +46,7 @@ git:
   - candi
   excludePaths:
   - "candi/docs"
+  - "candi/cloud-providers"
 ansible:
   install:
   - name: "Install terraform"

@@ -1,0 +1,4 @@
+# FE Bundle "Managed"
+monitoringApplicationsEnabled: true
+prometheusMadisonIntegrationEnabled: true
+extendedMonitoringEnabled: true

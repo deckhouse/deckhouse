@@ -185,23 +185,9 @@ ansible:
 docker:
   ENV:
     PATH: /usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin
-
----
-image: base
-fromImage: common-base
-import:
-- artifact: helm
-  add: /helm/helm
-  to: /usr/local/bin/helm
-  before: install
-ansible:
-  install:
-    - name: "Install helm 2to3 plugin"
-      command: /usr/local/bin/helm plugin install https://github.com/helm/helm-2to3.git
-
 ---
 image: dev
-fromImage: base
+fromImage: common-base
 fromCacheVersion: 2020-05-08.1
 git:
 - add: /
@@ -226,7 +212,10 @@ git:
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml
   - global-hooks/**/*.go
-  - modules/images_tags.json
+  - modules/images_tags_*.json
+  - ee
+{{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
@@ -236,13 +225,32 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
+- artifact: helm
+  add: /helm/helm
+  to: /usr/local/bin/helm
+  before: install
 ansible:
   setup:
   - name: "Add modules images tags.json"
     copy:
       content: |
-{{ .Files.Get "modules/images_tags.json" | indent 8 }}
+{{ .Files.Get (printf "modules/images_tags_%s.json" .Env) | indent 8 }}
       dest: /deckhouse/modules/images_tags.json
+
+{{- range $key := list "default" "managed" "minimal" }}
+  - name: "Add bundle {{ $key }}"
+    copy:
+      content: |
+{{ $.Files.Get (printf "modules/values-%s.yaml" $key ) | indent 8 }}
+{{- if eq $.Env "EE" }}
+{{ $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | indent 8 }}
+{{- end }}
+{{- if eq $.Env "FE" }}
+{{ $.Files.Get (printf "ee/modules/values-%s.yaml" $key ) | indent 8 }}
+{{ $.Files.Get (printf "ee/fe/modules/values-%s.yaml" $key ) | indent 8 }}
+{{- end }}
+      dest: /deckhouse/modules/values-{{ $key }}.yaml
+{{- end }}
 
   - name: "Add version info"
     copy:
@@ -271,9 +279,6 @@ docker:
 image: tests
 fromImage: base-for-go
 fromCacheVersion: "20210413"
-mount:
-- fromPath: modules/images_tags.json
-  to: /deckhouse/modules/images_tags.json
 git:
 - add: /
   to: /deckhouse
@@ -281,7 +286,12 @@ git:
     install:
       - go.mod
       - go.sum
-  excludePaths: ['docs', 'modules/images_tags.json']
+  excludePaths:
+  - docs
+  - modules/images_tags_*.json
+  - ee
+{{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
@@ -321,6 +331,12 @@ ansible:
       curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
         | sh -s -- -b $(go env GOPATH)/bin v1.32.2
 
+  setup:
+  - name: "Add modules images tags.json"
+    copy:
+      content: |
+{{ .Files.Get (printf "modules/images_tags_%s.json" .Env) | indent 8 }}
+      dest: /deckhouse/modules/images_tags.json
 docker:
   ENV:
     ADDON_OPERATOR_NAMESPACE: tests
@@ -335,7 +351,7 @@ fromImage: base-for-go
 fromCacheVersion: "20210413"
 git:
 - add: /
-  to: /src
+  to: /deckhouse
   includePaths:
     - dhctl
     - deckhouse-controller
@@ -364,7 +380,8 @@ git:
       - global-hooks/**/*.go
       - go_lib/**/*.go
       - modules/**/*.go
-
+{{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: libjq
   add: /libjq
@@ -374,14 +391,14 @@ import:
 shell:
   beforeInstall:
   - apk add --no-cache git ca-certificates gcc libc-dev
-  - mkdir /src /out
+  - mkdir /deckhouse /out
 
   install:
-  - cd /src
+  - cd /deckhouse
   - go mod download
 
   setup:
-  - cd /src/deckhouse-controller
+  - cd /deckhouse/deckhouse-controller
   - ./go-build.sh /libjq
   - mv deckhouse-controller /out
 
@@ -604,6 +621,7 @@ git:
   to: /deckhouse
   includePaths:
   - candi
+{{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: dhctl
   add: /tmp/dhctl

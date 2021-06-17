@@ -1,3 +1,22 @@
+.Go Generate template:
+  stage: build_modules_images
+  before_script:
+  - rm -rf shell-operator || true
+  - git submodule update --init --recursive
+  script:
+  - docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+  - git diff --exit-code
+  except:
+    variables:
+      - $CI_PIPELINE_SOURCE == "schedule" && $CLOUD_LAYOUTS_SCHEDULE != "1"
+    refs:
+      - alpha
+      - beta
+      - early-access
+      - stable
+      - rock-solid
+  interruptible: true
+
 .Build Modules Images template:
   stage: build_modules_images
   before_script:
@@ -20,7 +39,7 @@
   artifacts:
     when: always
     paths:
-    - modules/images_tags.json
+    - modules/images_tags_${WERF_ENV}.json
     expire_in: 30 days
 
 .Build template:
@@ -37,13 +56,14 @@
   - werf build --disable-auto-host-cleanup=true
   - docker pull $(werf stage image dev);
   - docker pull $(werf stage image dev/install);
+  - REGISTRY_SUFFIX=$(echo $WERF_ENV | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
       echo $DECKHOUSE_REGISTRY_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_USER" --password-stdin $DECKHOUSE_REGISTRY_HOST > /dev/null;
-      werf build --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true;
+      werf build --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/$REGISTRY_SUFFIX/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true;
       DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
       DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
-      DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe:${CI_COMMIT_TAG};
-      DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/install:${CI_COMMIT_TAG};
+      DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/$REGISTRY_SUFFIX:${CI_COMMIT_TAG};
+      DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/$REGISTRY_SUFFIX/install:${CI_COMMIT_TAG};
       docker image tag $(werf stage image dev) $DESTINATION_IMAGE;
       docker image tag $(werf stage image dev) $DECKHOUSE_DESTINATION_IMAGE;
       docker image tag $(werf stage image dev/install) $DESTINATION_INSTALL_IMAGE;

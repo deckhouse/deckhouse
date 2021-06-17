@@ -19,11 +19,6 @@ function cleanup() {
     } || cleanup_exit_code="$?"
   fi
 
-  {
-    chmod -R 777 /tmp
-    chmod -R 777 /deckhouse
-  } || cleanup_exit_code="$?"
-
   if [[ -n "$test_failed" ]]; then
     exit 1
   fi

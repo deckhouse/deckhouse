@@ -1,5 +1,7 @@
 .Cloud layouts Tests template for docker:
   stage: cloud_testing_docker
+  variables:
+    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: &before_script
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
@@ -11,9 +13,6 @@
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - mkdir -p layouts-tests-tmp
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-  - chmod -R 777 .
-  - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-  - unset WERF_ENABLE_PROCESS_EXTERMINATOR
   - |
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -22,7 +21,7 @@
       -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
       -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
       -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-      -v $(pwd):/deckhouse -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 999:999 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
+      -v $(pwd)/testing:/deckhouse/testing -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 999:999 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
       -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &after_script
   - |
@@ -105,6 +104,8 @@
 
 .Cloud layouts Tests template for containerd:
   stage: cloud_testing_containerd
+  variables:
+    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: *before_script
   script: *script
   after_script: *after_script
@@ -159,6 +160,8 @@
 
 .Cloud layouts Tests vSphere template for docker:
   stage: cloud_testing_docker
+  variables:
+    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: &vsphere_before_script
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
@@ -170,14 +173,11 @@
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - mkdir -p layouts-tests-tmp
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-  - chmod -R 777 .
-  - chmod -R 777 "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
-  - unset WERF_ENABLE_PROCESS_EXTERMINATOR
   - |
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
       -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
-      -v $(pwd):/deckhouse -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 997:997 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
+      -v $(pwd)/testing:/deckhouse/testing -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 997:997 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
       -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &vsphere_after_script
   - |
@@ -224,6 +224,8 @@
 
 .Cloud layouts Tests vSphere template for containerd:
   stage: cloud_testing_containerd
+  variables:
+    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: *vsphere_before_script
   script: *vsphere_script
   after_script: *vsphere_after_script

@@ -18,6 +18,6 @@ cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
-ln -s ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml ${MODULES_DIR}/values.yaml
+cat ${MODULES_DIR}/values-${bundles_map[$bundle]}.yaml >> ${MODULES_DIR}/values.yaml
 
 exec /sbin/tini -- /usr/bin/deckhouse-controller "$@"

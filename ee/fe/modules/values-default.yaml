@@ -1,0 +1,5 @@
+# FE Bundle "Default"
+monitoringApplicationsEnabled: true
+prometheusMadisonIntegrationEnabled: true
+extendedMonitoringEnabled: true
+nginxIngressEnabled: true

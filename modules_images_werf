@@ -8,7 +8,7 @@ function bp() {
   if [[  "$DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES" == "true" ]]; then
     pull
   fi
-  # TODO когда будет принято в мастер убрать --disable-auto-host-cleanup=true чтобы работала автоочистка на раннерах
+
   werf build --config modules_images_werf.yaml --report-path images_tags_werf.json --disable-auto-host-cleanup=true
   if [[ -n ${CI_COMMIT_TAG} ]]; then
     werf build --config modules_images_werf.yaml --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO --disable-auto-host-cleanup=true
@@ -28,7 +28,7 @@ function bp() {
           ($image.key | split("/")[1] | to_camel_case): $image.value.DockerTag
         }
       }
-    )' images_tags_werf.json > modules/images_tags.json
+    )' images_tags_werf.json > modules/images_tags_${WERF_ENV}.json
 
   rm images_tags_werf.json
 }

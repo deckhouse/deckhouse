@@ -21,4 +21,4 @@ It is aimed to improve UX and DX.
 - [ ] Substitute matrix tests by providing `x-examples` fields to previously added specs  
 - [ ] Delete `modules/$MODULE_NAME/values.yaml`
 - [ ] Delete `modules/$MODULE_NAME/values_matrix_tests.yaml`
-- [ ] Execute code-gen script to ensure new hooks registration `go generate deckhouse-controller/register.go`
+- [ ] Execute code-gen script to ensure new hooks registration `go generate tools/register.go`

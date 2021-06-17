@@ -1,5 +1,8 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+- add: /candi/cloud-providers/azure
+  to: /deckhouse/candi/cloud-providers/azure
 ansible:
   install:
   - name: "Create a directory for terraform provider azurerm"
