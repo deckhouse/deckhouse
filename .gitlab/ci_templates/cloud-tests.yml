@@ -1,7 +1,5 @@
 .Cloud layouts Tests template for docker:
   stage: cloud_testing_docker
-  variables:
-    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: &before_script
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
@@ -13,6 +11,7 @@
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
   - mkdir -p layouts-tests-tmp
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
+  - export WERF_ENABLE_PROCESS_EXTERMINATOR=""
   - |
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -104,8 +103,6 @@
 
 .Cloud layouts Tests template for containerd:
   stage: cloud_testing_containerd
-  variables:
-    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: *before_script
   script: *script
   after_script: *after_script
@@ -160,8 +157,6 @@
 
 .Cloud layouts Tests vSphere template for docker:
   stage: cloud_testing_docker
-  variables:
-    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: &vsphere_before_script
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
@@ -224,8 +219,6 @@
 
 .Cloud layouts Tests vSphere template for containerd:
   stage: cloud_testing_containerd
-  variables:
-    WERF_ENABLE_PROCESS_EXTERMINATOR: ""
   before_script: *vsphere_before_script
   script: *vsphere_script
   after_script: *vsphere_after_script
