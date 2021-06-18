@@ -22,6 +22,7 @@ import (
 	klient "github.com/flant/kube-client/client"
 	"github.com/flant/kube-client/fake"
 	. "github.com/flant/shell-operator/pkg/hook/types"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	hookcontext "github.com/flant/shell-operator/test/hook/context"
@@ -644,13 +645,16 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	// TODO: assert on logging hook
 	logger, _ := test.NewNullLogger()
 
+	// make spec generator to reproduce behavior with deferred object mutations like in addon-operator
+	patchCollector := object_patch.NewPatchCollector()
+
 	hookInput := &go_hook.HookInput{
 		Snapshots:        formattedSnapshots,
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,
 		LogEntry:         logger.WithField("output", "gohook"),
-		ObjectPatcher:    NewKubernetesPatch(hec.getFakeClient()),
+		ObjectPatcher:    patchCollector,
 	}
 
 	if len(hec.extraHookEnvs) > 0 {
@@ -679,6 +683,12 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		patchedConfigValuesBytes, err := valuesPatch.ApplyStrict(hec.configValues.JSONRepr)
 		Expect(err).ShouldNot(HaveOccurred())
 		hec.configValues = values_store.NewStoreFromRawJSON(patchedConfigValuesBytes)
+	}
+
+	if operations := patchCollector.Operations(); len(operations) > 0 {
+		objectPatcher := NewKubernetesPatch(hec.getFakeClient())
+		err := objectPatcher.GenerateFromJSONAndExecuteOperations(operations)
+		Expect(err).ShouldNot(HaveOccurred())
 	}
 
 	By("Validating resulting values")
