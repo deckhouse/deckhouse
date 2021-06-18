@@ -13,7 +13,7 @@ spec:
   secretRef:
     name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
     namespace: d8-cloud-instance-manager
-  {{- $additionalTags := mergeOverwrite (.Values.nodeManager.internal.cloudProvider.azure.additionalTags | default dict) (.nodeGroup.instanceClass.additionalTags | default dict) }}
+  {{- $additionalTags := mergeOverwrite dict (.Values.nodeManager.internal.cloudProvider.azure.additionalTags | default dict) (.nodeGroup.instanceClass.additionalTags | default dict) }}
   tags:
     # This is mandatory as the safety controller uses this tag to identify VMs created by this controller.
     kubernetes.io-cluster-{{ .Values.global.discovery.clusterUUID }}: "1"

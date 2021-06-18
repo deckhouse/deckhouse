@@ -102,6 +102,63 @@ internal:
       uid: 1001
 `
 
+const nodeManagerAzure = `
+internal:
+  bashibleChecksumMigration: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: azure
+    machineClassKind: AzureMachineClass
+    azure:
+      sshPublicKey: sshPublicKey 
+      clientId: clientId 
+      clientSecret: clientSecret 
+      subscriptionId: subscriptionId 
+      tenantId: tenantId 
+      location: location 
+      resourceGroupName: resourceGroupName 
+      vnetName: vnetName 
+      subnetName: subnetName 
+      urn: urn 
+      diskType: diskType 
+      additionalTags: []
+  nodeGroups:
+  - name: worker
+    instanceClass:
+      flavorName: m1.large
+      imageName: ubuntu-18-04-cloud-amd64
+      machineType: mymachinetype
+      preemptible: true #optional
+      diskType: superdisk #optional
+      diskSizeGb: 42 #optional
+    nodeType: Cloud
+    kubernetesVersion: "1.19"
+    cri:
+      type: "Docker"
+    cloudInstances:
+      classReference:
+        kind: GCPInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 2
+      zones:
+      - zonea
+      - zoneb
+  machineControllerManagerEnabled: true
+  nodeUsers:
+  - name: test
+    spec:
+      extraGroups:
+      - docker
+      - fax
+      isSudoer: true
+      passwordHash: $salt$pass
+      sshPublicKey: ssh-rsa pubkey
+      uid: 1001
+`
+
 const nodeManagerGCP = `
 internal:
   bashibleChecksumMigration: {}
@@ -839,7 +896,7 @@ ccc: ddd
 			Expect(simpleMachineClassSecretA.Exists()).To(BeTrue())
 			Expect(simpleMachineDeploymentA.Exists()).To(BeTrue())
 			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(simpleMachineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("ce97cc47b065dba5aac19c0019bdbbab1dad1b5160a991106ac42a55ee8f33ba"))
+			Expect(simpleMachineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("06fc1339c280004581ec19e19e6eef8f3ee919931dbc450b60db608cd074feca"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
@@ -1190,6 +1247,177 @@ ccc: ddd
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f, nodeManagerNamespace)
+		})
+	})
+
+	Context("Setting tags/labels to MachineClass", func() {
+
+		providerValues := `{ "o":"provider", "z":"provider" }`
+		nodeGroupValues := `{ "a":"nodegroup", "o":"nodegroup" }`
+		// Basically asserting that provider entries are overwritten with nodegroup ones
+		assertValues := func(machineClass object_store.KubeObject, mapPath string) {
+			mapJSON := machineClass.Field(mapPath).String()
+			a := machineClass.Field(mapPath + ".a").String()
+			o := machineClass.Field(mapPath + ".o").String()
+			z := machineClass.Field(mapPath + ".z").String()
+			Expect(a).To(Equal("nodegroup"), `"a" must be "nodegroup" in `+mapPath+" "+mapJSON)
+			Expect(o).To(Equal("nodegroup"), `"o" must be "nodegroup" in `+mapPath+" "+mapJSON)
+			Expect(z).To(Equal("provider"), `"z" must be "provider" in `+mapPath+" "+mapJSON)
+		}
+
+		Context("AWS", func() {
+			f := SetupHelmConfig(``)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerAWS)
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.aws.tags", providerValues)
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("spec.tags must contain tags from cloud provider and nodegroup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				mcls := f.KubernetesResource("AWSMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+
+				Expect(mcls.Exists()).To(BeTrue())
+
+				assertValues(mcls, "spec.tags")
+			})
+
+			// Important! If checksum changes, the MachineDeployments will re-deploy!
+			// All nodes in MD will reboot! If you're not sure, don't change it.
+			It("preserves checksum", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
+				Expect(checksum).To(Equal("32ed026c31873a9b40c14182924c1d5d6766f025581f4562652f8ccb784898f2"))
+			})
+		})
+
+		Context("Openstack", func() {
+			f := SetupHelmConfig(``)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.openstack.tags", providerValues)
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("spec.tags must contain tags from cloud provider and nodegroup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				mcls := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+
+				Expect(mcls.Exists()).To(BeTrue())
+
+				assertValues(mcls, "spec.tags")
+			})
+
+			// Important! If checksum changes, the MachineDeployments will re-deploy!
+			// All nodes in MD will reboot! If you're not sure, don't change it.
+			It("preserves checksum", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
+				Expect(checksum).To(Equal("453963d10ea1bfa125d4186fe8a3cf9ec01cc769c694b0c0a74ed781364cb71e"))
+			})
+		})
+
+		Context("Azure", func() {
+			f := SetupHelmConfig(``)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerAzure)
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.azure.additionalTags", providerValues)
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("spec.tags must contain tags from cloud provider and nodegroup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				mcls := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+
+				Expect(mcls.Exists()).To(BeTrue())
+
+				assertValues(mcls, "spec.tags")
+			})
+
+			// Important! If checksum changes, the MachineDeployments will re-deploy!
+			// All nodes in MD will reboot! If you're not sure, don't change it.
+			It("preserves checksum", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
+				Expect(checksum).To(Equal("891a23e39148fe1457b88ad65898164c65df2e4cd34b013e4289127091089d95"))
+			})
+		})
+
+		Context("GCP", func() {
+			f := SetupHelmConfig(``)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerGCP)
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.gcp.labels", providerValues)
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("spec.labels must contain labels from cloud provider and nodegroup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				mcls := f.KubernetesResource("GCPMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+
+				Expect(mcls.Exists()).To(BeTrue())
+
+				assertValues(mcls, "spec.labels")
+			})
+
+			// Important! If checksum changes, the MachineDeployments will re-deploy!
+			// All nodes in MD will reboot! If you're not sure, don't change it.
+			It("preserves checksum", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
+				Expect(checksum).To(Equal("c87109f7fbd4b885f754a0f3d913bbc4340e5a585449ed29e36930b6b6503ac6"))
+			})
+		})
+
+		Context("Yandex", func() {
+			f := SetupHelmConfig(``)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerYandex)
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.yandex.labels", providerValues)
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("spec.labels must contain labels from cloud provider and nodegroup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				mcls := f.KubernetesResource("YandexMachineClass", "d8-cloud-instance-manager", "worker-02320933")
+
+				Expect(mcls.Exists()).To(BeTrue())
+
+				assertValues(mcls, "spec.labels")
+			})
+
+			// Important! If checksum changes, the MachineDeployments will re-deploy!
+			// All nodes in MD will reboot! If you're not sure, don't change it.
+			It("preserves checksum", func() {
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()
+				Expect(checksum).To(Equal("55b0c5ac9c7e72252f509bc825f5046e198eab25ebd80efa3258cfb38e881359"))
+			})
 		})
 	})
 })
