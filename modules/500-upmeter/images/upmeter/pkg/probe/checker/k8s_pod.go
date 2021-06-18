@@ -144,8 +144,7 @@ func (c *podScheduledChecker) Check() check.Error {
 	}
 
 	for _, pod := range podList.Items {
-		phase := pod.Status.Phase
-		isScheduled := phase == v1.PodRunning || phase == v1.PodSucceeded || pod.Spec.Hostname != ""
+		isScheduled := pod.Spec.NodeName != ""
 		if isScheduled {
 			return nil
 		}
