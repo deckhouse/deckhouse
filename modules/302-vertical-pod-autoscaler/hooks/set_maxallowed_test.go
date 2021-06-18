@@ -155,11 +155,11 @@ status:
     memory: "520093696"
 `))
 			Expect(vpaNodeExporter.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
-- containerName: kubelet-eviction-thresholds-exporter
+- containerName: kube-rbac-proxy
   maxAllowed:
     cpu: 341m
     memory: "155299493"
-- containerName: kube-rbac-proxy
+- containerName: kubelet-eviction-thresholds-exporter
   maxAllowed:
     cpu: 341m
     memory: "155299493"
@@ -197,11 +197,11 @@ and global variables controlPlaneRequestsCpu, controlPlaneRequestsMemory, everyN
     memory: "8589934592"
 `))
 			Expect(vpaNodeExporter.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
-- containerName: kubelet-eviction-thresholds-exporter
+- containerName: kube-rbac-proxy
   maxAllowed:
     cpu: 100m
     memory: "40077288"
-- containerName: kube-rbac-proxy
+- containerName: kubelet-eviction-thresholds-exporter
   maxAllowed:
     cpu: 100m
     memory: "40077288"
