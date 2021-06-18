@@ -65,7 +65,8 @@ spec:
 			  }
 			`
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse()).To(MatchJSON(expectedJSON))
+			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse().DropFields("status", "metadata.creationTimestamp")).
+				To(MatchJSON(expectedJSON))
 		})
 	})
 
@@ -111,7 +112,8 @@ metadata:
 			        }
 			`
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse()).To(MatchJSON(expectedJSON))
+			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse().DropFields("status", "metadata.creationTimestamp")).
+				To(MatchJSON(expectedJSON))
 		})
 	})
 
@@ -398,7 +400,7 @@ metadata:
   name: wor-ker
   annotations:
     a: a
-    node-manager.deckhouse.io/last-applied-node-template: '{"annotations":{"a":"a"},"labels":{"a":"a"},"taints":[{"effect":"NoSchedule","key":"a"}]}'
+    node-manager.deckhouse.io/last-applied-node-template: '{"annotations":{"a":"a"},"labels":{"a":"a"},"taints":[{"key":"a","effect":"NoSchedule"}]}'
   labels:
     a: a
     node.deckhouse.io/group: wor-ker
@@ -409,11 +411,13 @@ spec:
   - key: a
     effect: NoSchedule`
 
-			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").
+				Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).
+				String()
 			node := f.KubernetesGlobalResource("Node", "wor-ker").Parse()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
-			Expect(node).To(MatchYAML(expectedYAML))
+			Expect(node.DropFields("status", "metadata.creationTimestamp")).To(MatchYAML(expectedYAML))
 		})
 	})
 

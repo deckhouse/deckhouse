@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/iancoleman/strcase"
 	"github.com/imdario/mergo"
@@ -186,4 +187,55 @@ func (kr KubeResult) AsStringSlice() []string {
 	}
 
 	return result
+}
+
+func (kr KubeResult) DropFields(fields ...string) KubeResult {
+	if !kr.IsObject() {
+		return kr
+	}
+	// Ignored fields index:
+	// - array with zero length -> fully ignored path
+	// - array -> field has subpaths to ignore
+	fieldsIdx := map[string][]string{}
+	for _, v := range fields {
+		parts := strings.SplitN(v, ".", 2)
+		root := parts[0]
+		// Field is fully ignored, its subpathes are not important now.
+		if len(parts) == 1 {
+			fieldsIdx[root] = make([]string, 0)
+		}
+
+		if v, ok := fieldsIdx[root]; ok {
+			// Index has zero length array, do not append subpaths.
+			if len(v) == 0 {
+				continue
+			}
+		} else {
+			fieldsIdx[root] = make([]string, 0)
+		}
+		if len(parts) > 1 {
+			fieldsIdx[root] = append(fieldsIdx[root], parts[1])
+		}
+	}
+
+	resMap := map[string]interface{}{}
+	kr.ForEach(func(key, value gjson.Result) bool {
+		keyStr := key.String()
+		newFields, ok := fieldsIdx[keyStr]
+		// Non-ignored field
+		if !ok {
+			resMap[keyStr] = json.RawMessage(value.Raw)
+			return true
+		}
+		// Fully ignored field.
+		if len(newFields) == 0 {
+			return true
+		}
+		// Recurse drop for field with ignored subpaths.
+		resMap[keyStr] = json.RawMessage(KubeResult{Result: value}.DropFields(newFields...).Raw)
+		return true
+	})
+	mapBytes, _ := json.Marshal(resMap)
+
+	return KubeResult{Result: gjson.ParseBytes(mapBytes)}
 }
