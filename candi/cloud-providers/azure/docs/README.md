@@ -21,7 +21,8 @@ title: "Cloud provider — Azure: Развертывание"
     * `natGatewayPublicIpCount` — количество IP-адресов для [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([тарификация](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
     * По умолчанию `0` (`NAT Gateway` не используется).
     * Опциональный параметр.
-* `tags` — список тегов в формате `key: value`, которые будут назначены всем ресурсам кластера.
+* `tags` — список тегов в формате `key: value`, которые будут назначены всем ресурсам кластера. Если поменять теги в рабочем кластере, то после конвержа
+    необходимо пересоздать все машины, чтобы теги применились.
 * `masterNodeGroup` — спека для описания NG мастера.
     * `replicas` — сколько мастер-узлов создать.
     * `zones` — список зон, в которых допустимо создавать мастер-узлы.

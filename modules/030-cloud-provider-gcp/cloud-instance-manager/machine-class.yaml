@@ -27,9 +27,9 @@ spec:
     automaticRestart: true
     onHostMaintenance: MIGRATE
     preemptible: {{ .nodeGroup.instanceClass.preemptible | default false }}
-{{- $labels := .Values.nodeManager.internal.cloudProvider.gcp.labels }}
+{{- $labels := merge dict .Values.nodeManager.internal.cloudProvider.gcp.labels }}
 {{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
-{{- $labels :=  mergeOverwrite $labels .nodeGroup.instanceClass.additionalLabels }}
+  {{- $labels :=  mergeOverwrite $labels .nodeGroup.instanceClass.additionalLabels }}
 {{- end }}
 {{- if gt (len $labels) 0 }}
   labels:
