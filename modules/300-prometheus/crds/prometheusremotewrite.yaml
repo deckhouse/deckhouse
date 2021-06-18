@@ -21,9 +21,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+            Resource for including 'remote_write' data from the local Prometheus into a separate longterm storage (E.g: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
 
-            Таких ресурсов в кластере может быть любое количество.
+            A cluster can have any number of such resources.
           required:
             - spec
           properties:
@@ -33,82 +33,67 @@ spec:
                 - url
               properties:
                 url:
-                  x-description: The URL of the endpoint to send samples to.
-                  description: |
-                    Адрес, по которому Prometheus будет отправлять данные.
+                  description: The URL of the endpoint to send samples to.
                   type: string
                   example: https://victoriametrics-test.domain.com/api/v1/write
                 basicAuth:
-                  x-description: BasicAuth for the URL.
-                  description: Параметры базовой авторизации для отправки данных.
+                  description: BasicAuth for the URL.
                   properties:
                     password:
-                      description: Пароль для аутентификации.
+                      description: Password for the authentication.
                       type: string
                     username:
-                      description: Имя пользователя для аутентификации.
+                      description: Username for the authentication.
                       type: string
                   required:
                   - password
                   - username
                   type: object
                 writeRelabelConfigs:
-                  x-description: The list of remote write relabel configurations.
                   description: |
-                    Параметры для relabel'инга данных для отправки.
+                    The list of remote write relabel configurations.
 
-                    Например, если необходимо удалить лишние метрики или произвести [релейбл данных](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs).
+                    For example, if you need to remove unnecessary metrics or perform [data relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs).
                   type: array
                   items:
                     type: object
                     properties:
                       action:
-                        x-description: Action to perform based on regex matching.
-                        description: |
-                          Действие, выполняемое при соответствии регулярному выражению.
+                        description: Action to perform based on regex matching.
                         type: string
                         x-doc-default: replace
                       modulus:
-                        description: |
-                          Модуль для хеширования значений исходного лейбла.
-                        x-description: Modulus to take of the hash of the source label values.
+                        description: Modulus to take of the hash of the source label values.
                         format: int64
                         type: integer
                       regex:
-                        x-description: Regular expression against which the extracted value is matched. Default is '(.*)'
-                        description: |
-                          Регулярное выражение для применения к извлеченному значению.
+                        description: Regular expression against which the extracted value is matched. Default is '(.*)'
                         type: string
                         x-doc-default: '(.*)'
                       replacement:
-                        x-description: Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'
                         description: |
-                          На что заменять, в случае соответствия шаблону регулярного выражения.
+                          Replacement value against which a regex replace is performed if the regular expression matches.
 
-                          Доступны regexp-группы.
+                          Regex capture groups are available.
                         type: string
                         x-doc-default: '$1'
                       separator:
-                        x-description: Separator placed between concatenated source label values. default is ';'.
-                        description: |
-                          Символ, разделяющий исходные метки.
+                        description: Separator placed between concatenated source label values.
                         type: string
                         x-doc-default: ';'
                       sourceLabels:
                         type: array
-                        x-description: The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
                         description: |
-                          Исходные метки для выбора значений.
+                          The source labels select values from existing labels.
 
-                          Исходные метки объединяются с учетом разделителя (`separator`), и к ним применяется фильтр регулярного выражения, по результатам чего содержимое заменяется, принимается или удаляется.
+                          Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
                         items:
                           type: string
                       targetLabel:
-                        x-description: Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.
                         description: |
-                          Метка, в которую записывается результирующее значение при замене.
+                          Label to which the resulting value is written in a replace action. It is mandatory for replace actions.
 
-                          Поле является обезательным при `action: replace`.
+                          Regex capture groups are available.
                         type: string
       additionalPrinterColumns:
         - name: URL
