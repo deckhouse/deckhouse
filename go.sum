@@ -149,8 +149,8 @@ github.com/evanphx/json-patch/v5 v5.1.0/go.mod h1:G79N1coSVB93tBe7j6PhzjmR3/2Vvl
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/flant/addon-operator v1.0.0-rc.1.0.20210605151357-2b59abdcb324 h1:rLtI6KRNkanwF00SHvAC0UNqdnXmWaXhuVVEY4U9t4I=
-github.com/flant/addon-operator v1.0.0-rc.1.0.20210605151357-2b59abdcb324/go.mod h1:ZBip/nJEx1KjCbxur0Yo9JtMolxizETRT9cuFeeO288=
+github.com/flant/addon-operator v1.0.0-rc.1.0.20210616113412-97f096353d3b h1:e4qb4wmFZvJcf84s5fM9+GoZpHe4Wlu0MlWeIaB7Qjs=
+github.com/flant/addon-operator v1.0.0-rc.1.0.20210616113412-97f096353d3b/go.mod h1:IQLkF3Wy0jYgL7fhgDeC0l601C7tyIYFuQIsZx0At0o=
 github.com/flant/kube-client v0.0.6 h1:cHFMf7xGtJOgg+KBuPcA+7q+M7IJRSgf2pHVStv2aj0=
 github.com/flant/kube-client v0.0.6/go.mod h1:pVKIewJQ5oaBiE6AlTaWAUkd0548DEiyvkqkLaby3Zg=
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWDDKFlwgETsT1OiXD1gZtRHcNxAs1lc=

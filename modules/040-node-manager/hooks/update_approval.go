@@ -2,7 +2,6 @@ package hooks
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,9 +22,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Queue: "/modules/node-manager/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
+		// snapshot: "configuration_checksums_secret"
 		// api: "v1",
 		// kind: "Secret",
-		// ns: "8-cloud-instance-manager"
+		// ns: "d8-cloud-instance-manager"
 		// name: "configuration-checksums"
 		shared.ConfigurationChecksumHookConfig(),
 		{
@@ -55,12 +55,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleUpdateApproval(input *go_hook.HookInput) error {
 	approver := &updateApprover{
-		finished:   false,
+		finished: false,
+
 		nodes:      make(map[string]updateApprovalNode),
 		nodeGroups: make(map[string]updateNodeGroup),
 	}
 
-	snap := input.Snapshots["ngs"]
+	snap := input.Snapshots["configuration_checksums_secret"]
+	if len(snap) == 0 {
+		input.LogEntry.Warn("no configuration_checksums_secret snapshot found. Skipping run")
+		return nil
+	}
+	approver.ngChecksums = snap[0].(shared.ConfigurationChecksum)
+
+	snap = input.Snapshots["ngs"]
 	for _, s := range snap {
 		ng := s.(updateNodeGroup)
 		approver.nodeGroups[ng.Name] = ng
@@ -70,6 +78,8 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	for _, s := range snap {
 		n := s.(updateApprovalNode)
 		approver.nodes[n.Name] = n
+
+		setNodeMetric(input, n, approver.nodeGroups[n.NodeGroup], approver.ngChecksums[n.NodeGroup])
 	}
 
 	err := approver.processUpdatedNodes(input)
@@ -99,8 +109,9 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 type updateApprover struct {
 	finished bool
 
-	nodes      map[string]updateApprovalNode
-	nodeGroups map[string]updateNodeGroup
+	ngChecksums shared.ConfigurationChecksum
+	nodes       map[string]updateApprovalNode
+	nodeGroups  map[string]updateNodeGroup
 }
 
 // Approve updates
@@ -174,6 +185,7 @@ ngLoop:
 		if err != nil {
 			return err
 		}
+		setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
 		ar.finished = true
 	}
 
@@ -213,6 +225,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		ar.finished = true
 
 		var patch map[string]interface{}
+		var metricStatus string
 
 		switch {
 		case !*ng.Disruptions.Automatic.DrainBeforeApproval:
@@ -225,6 +238,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 					},
 				},
 			}
+			metricStatus = "DisruptionApproved"
 
 		case !node.IsUnschedulable:
 			// If node is not unschedulable – mark it for draining
@@ -235,6 +249,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 					},
 				},
 			}
+			metricStatus = "DrainingForDisruption"
 
 		default:
 			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
@@ -246,6 +261,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 					},
 				},
 			}
+			metricStatus = "DisruptionApproved"
 		}
 
 		patchData, _ := json.Marshal(patch)
@@ -253,6 +269,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
+		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 
 	}
 
@@ -270,14 +287,8 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 
 		nodeChecksum := node.ConfigurationChecksum
 		ngName := node.NodeGroup
-		snap := input.Snapshots["configuration_checksums_secret"]
-		if len(snap) == 0 {
-			return fmt.Errorf("no configuration_checksums_secret snapshot found")
-		}
-		ngChecksum, ok := snap[0].(shared.ConfigurationChecksum)[ngName]
-		if !ok {
-			ngChecksum = ""
-		}
+
+		ngChecksum := ar.ngChecksums[ngName]
 
 		if nodeChecksum == "" || ngChecksum == "" {
 			continue
@@ -312,6 +323,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
+		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
 	}
 
@@ -326,6 +338,7 @@ type updateApprovalNode struct {
 
 	IsReady              bool
 	IsApproved           bool
+	IsDisruptionApproved bool
 	IsWaitingForApproval bool
 
 	IsDisruptionRequired bool
@@ -381,7 +394,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 		return nil, err
 	}
 
-	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained bool
+	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained, isDisruptionApproved bool
 
 	if _, ok := node.Annotations["update.node.deckhouse.io/approved"]; ok {
 		isApproved = true
@@ -394,6 +407,9 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
 		isDraining = true
+	}
+	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
+		isDisruptionApproved = true
 	}
 	configChecksum, ok := node.Annotations["node.deckhouse.io/configuration-checksum"]
 	if !ok {
@@ -417,6 +433,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	n := updateApprovalNode{
 		Name:                  node.Name,
 		IsApproved:            isApproved,
+		IsDisruptionApproved:  isDisruptionApproved,
 		ConfigurationChecksum: configChecksum,
 		NodeGroup:             nodeGroup,
 		IsReady:               isReady,
@@ -428,4 +445,60 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}
 
 	return n, nil
+}
+
+func setNodeMetric(input *go_hook.HookInput, node updateApprovalNode, ng updateNodeGroup, desiredChecksum string) {
+	nodeStatus := calculateNodeStatus(node, ng, desiredChecksum)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, nodeStatus)
+}
+
+func calculateNodeStatus(node updateApprovalNode, ng updateNodeGroup, desiredChecksum string) string {
+	switch {
+	case node.IsWaitingForApproval:
+		return "WaitingForApproval"
+
+	case node.IsApproved && node.IsDisruptionRequired && node.IsDraining:
+		return "DrainingForDisruption"
+
+	case node.IsApproved && node.IsDisruptionRequired && ng.Disruptions.ApprovalMode == "Automatic":
+		return "WaitingForDisruptionApproval"
+
+	case node.IsApproved && node.IsDisruptionRequired && ng.Disruptions.ApprovalMode == "Manual":
+		return "WaitingForManualDisruptionApproval"
+
+	case node.IsApproved && node.IsDisruptionApproved:
+		return "DisruptionApproved"
+
+	case node.IsApproved:
+		return "Approved"
+
+	case node.ConfigurationChecksum != desiredChecksum:
+		return "ToBeUpdated"
+
+	case node.ConfigurationChecksum == desiredChecksum:
+		return "UpToDate"
+
+	default:
+		return "Unknown"
+	}
+}
+
+var metricStatuses = []string{
+	"WaitingForApproval", "Approved", "DrainingForDisruption", "WaitingForDisruptionApproval",
+	"WaitingForManualDisruptionApproval", "DisruptionApproved", "ToBeUpdated", "UpToDate",
+}
+
+func setNodeStatusesMetrics(input *go_hook.HookInput, nodeName, nodeGroup, nodeStatus string) {
+	for _, status := range metricStatuses {
+		var value float64 = 0
+		if status == nodeStatus {
+			value = 1
+		}
+		labels := map[string]string{
+			"node":       nodeName,
+			"node_group": nodeGroup,
+			"status":     status,
+		}
+		input.MetricsCollector.Set("node_group_node_status", value, labels)
+	}
 }

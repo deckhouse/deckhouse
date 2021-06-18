@@ -295,6 +295,10 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng1").Field("status").String()).To(MatchJSON(`{"extra":"thing","nodes":2,"ready":1,"upToDate": 2, "conditionSummary": {"statusMessage": "", "ready": "True"}}`))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "ng-2").Field("status").String()).To(MatchJSON(`{"nodes":0,"ready":0,"upToDate": 0, "error": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "conditionSummary": {"statusMessage": "Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.", "ready": "False"}}`))
+			// MachineDeployment metrics should be set
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(1))
+			Expect(metrics[0].Labels).To(BeEquivalentTo(map[string]string{"name": "md-ng1", "node_group": "ng1"}))
 		})
 	})
 

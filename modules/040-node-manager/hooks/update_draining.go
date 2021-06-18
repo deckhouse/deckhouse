@@ -103,6 +103,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.LogEntry.Errorf("node drain patch failed: %s", err)
 			continue
 		}
+
 	}
 
 	return nil

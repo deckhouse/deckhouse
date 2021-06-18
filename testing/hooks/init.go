@@ -15,6 +15,7 @@ import (
 	. "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
@@ -107,6 +108,10 @@ type CustomCRD struct {
 	Namespaced bool
 }
 
+type TestMetricsCollector interface {
+	CollectedMetrics() []operation.MetricOperation
+}
+
 type HookExecutionConfig struct {
 	tmpDir                   string // FIXME
 	HookPath                 string
@@ -121,6 +126,7 @@ type HookExecutionConfig struct {
 	extraHookEnvs            []string
 	ValuesValidator          *validation.ValuesValidator
 	GoHookError              error
+	MetricsCollector         TestMetricsCollector
 
 	Session *gexec.Session
 
@@ -633,17 +639,18 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	}
 
 	// TODO: assert on metrics
-	var metricsOperation []operation.MetricOperation
+	metricsCollector := metrics.NewCollector(hec.HookPath)
+	hec.MetricsCollector = metricsCollector
 	// TODO: assert on logging hook
 	logger, _ := test.NewNullLogger()
 
 	hookInput := &go_hook.HookInput{
-		Snapshots:     formattedSnapshots,
-		Values:        patchableValues,
-		ConfigValues:  patchableConfigValues,
-		Metrics:       &metricsOperation,
-		LogEntry:      logger.WithField("output", "gohook"),
-		ObjectPatcher: NewKubernetesPatch(hec.getFakeClient()),
+		Snapshots:        formattedSnapshots,
+		Values:           patchableValues,
+		ConfigValues:     patchableConfigValues,
+		MetricsCollector: metricsCollector,
+		LogEntry:         logger.WithField("output", "gohook"),
+		ObjectPatcher:    NewKubernetesPatch(hec.getFakeClient()),
 	}
 
 	if len(hec.extraHookEnvs) > 0 {
