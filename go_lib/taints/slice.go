@@ -20,7 +20,7 @@ func (s Slice) HasKey(key string) bool {
 }
 
 func (s Slice) WithoutKey(key string) Slice {
-	res := make(Slice, 0, len(s)-1)
+	res := make(Slice, 0)
 	for _, t := range s {
 		if t.Key == key {
 			continue
