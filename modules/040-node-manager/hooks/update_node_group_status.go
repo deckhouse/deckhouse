@@ -28,9 +28,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:       "/modules/node-manager/update_ngs_statuses",
 	Kubernetes: []go_hook.KubernetesConfig{
+		// snapshot: "configuration_checksums_secret"
 		// api: "v1",
 		// kind: "Secret",
-		// ns: "8-cloud-instance-manager"
+		// ns: "d8-cloud-instance-manager"
 		// name: "configuration-checksums"
 		shared.ConfigurationChecksumHookConfig(),
 		{
@@ -106,6 +107,7 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}
 
 	return statusMachineDeployment{
+		Name:                md.Name,
 		Replicas:            md.Spec.Replicas,
 		NodeGroup:           md.Labels["node-group"],
 		LastMachineFailures: md.Status.FailedMachines,
@@ -191,9 +193,9 @@ func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	var res []string
 
-	b := sec.Data["zones"]
+	zonesDataBytes := sec.Data["zones"]
 
-	err = json.Unmarshal(b, &res)
+	err = json.Unmarshal(zonesDataBytes, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +224,14 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		} else {
 			mdMap[md.NodeGroup] = []statusMachineDeployment{md}
 		}
+
+		// set metric for MachineDeployment
+		labels := map[string]string{
+			"node_group": md.NodeGroup,
+			"name":       md.Name,
+		}
+
+		input.MetricsCollector.Set("machine_deployment_node_group_info", 1, labels)
 	}
 
 	// count instances of each node group
@@ -397,6 +407,7 @@ type statusNode struct {
 }
 
 type statusMachineDeployment struct {
+	Name                string
 	Replicas            int32
 	NodeGroup           string
 	LastMachineFailures []*v1alpha1.MachineSummary

@@ -7,10 +7,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 )
 
 func getDeploymentImage(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -74,10 +72,7 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 		}
 	}
 
-	*input.Metrics = append(*input.Metrics, operation.MetricOperation{
-		Name:   "d8_deckhouse_is_not_on_release_channel",
-		Action: "set",
-		Value:  pointer.Float64Ptr(metricResult),
-	})
+	input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", metricResult, nil)
+
 	return nil
 }

@@ -5,11 +5,9 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 )
 
 func nameFromService(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -77,11 +75,7 @@ func discoverApps(input *go_hook.HookInput) error {
 		enabledApplications[convertedApp] = struct{}{}
 	}
 
-	*input.Metrics = append(*input.Metrics, operation.MetricOperation{
-		Name:   "d8_monitoring_applications_old_prometheus_target_total",
-		Action: "set",
-		Value:  pointer.Float64Ptr(float64(len(enabledApplications))),
-	})
+	input.MetricsCollector.Set("d8_monitoring_applications_old_prometheus_target_total", float64(len(enabledApplications)), nil)
 
 	for _, app := range input.Snapshots["service"] {
 		convertedApp := app.(string)
