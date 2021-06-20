@@ -77,6 +77,7 @@ Test Main Deploy:
     WERF_RELEASE: "deckhouse-site"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
     WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+    WERF_ENV: web-test
   environment:
     name: web-test
     url: https://deckhouse.test.flant.com
@@ -89,6 +90,7 @@ Test Doc Deploy :
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_ENV: web-test
   environment:
     name: web-test
     url: https://deckhouse.test.flant.com
@@ -102,6 +104,7 @@ Stage Main Deploy:
     WERF_RELEASE: "deckhouse-site"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
     WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+    WERF_ENV: web-stage
   environment:
     name: web-stage
     url: https://deckhouse.stage.flant.com
@@ -114,6 +117,7 @@ Stage Doc Deploy :
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_ENV: web-stage
   environment:
     name: web-stage
     url: https://deckhouse.stage.flant.com
@@ -127,6 +131,7 @@ EARLY Main Deploy:
     WERF_RELEASE: "deckhouse-site"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
     WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+    WERF_ENV: web-early
   environment:
     name: web-early
     url: https://early.deckhouse.io
@@ -139,6 +144,7 @@ EARLY Doc Deploy :
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc"
     WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_ENV: web-early
   environment:
     name: web-early
     url: https://early.deckhouse.io
