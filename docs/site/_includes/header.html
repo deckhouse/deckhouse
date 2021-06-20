@@ -59,7 +59,8 @@
                   {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
                   {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
                   {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
-                  {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}">
+                  {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
+                  {%- if item.items %} data-proofer-ignore{% endif %}>
                   <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title[page.lang] %}{{ item.title[page.lang] }}{% else %}{{ item.title }}{% endif -%}</a>
 
                   {% if item.items %}
@@ -77,7 +78,7 @@
               </li>
               {% endfor %}
           {% endfor %}
-          <li class="header__navigation-item header__navigation-item_parent submenu-parent">
+          <li class="header__navigation-item header__navigation-item_parent submenu-parent" data-proofer-ignore>
             <a href="#">
                 {%- if page.lang == "ru" %}
                     Русский

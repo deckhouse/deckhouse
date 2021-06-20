@@ -201,9 +201,9 @@ module Jekyll
             end
             if attributes_type != ''
                 if attributes.has_key?("items")
-                    result.push(format_key_name(name)+ '(<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)')
+                    result.push(format_key_name(name)+ ' (<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)')
                 else
-                    result.push(format_key_name(name)+ '(<i>' +  format_type(attributes_type, nil) + '</i>)')
+                    result.push(format_key_name(name)+ ' (<i>' +  format_type(attributes_type, nil) + '</i>)')
                 end
             else
                 result.push(format_key_name(name))

@@ -51,7 +51,7 @@ function main() {
     new_path=$(jq -rc '.new_path' <<< ${FILE_DIFF})
 
     # skip documentation
-    pattern="doc-ru-.+.y[a]?ml$|_RU.md$|docs/site/_.+|docs/documentation/_.+"
+    pattern="doc-ru-.+.y[a]?ml$|_RU.md$|_ru.html$|docs/site/_.+|docs/documentation/_.+"
     if [[ "$new_path" =~ $pattern ]] ; then
       echo "  * skip documentation: $new_path"
       continue

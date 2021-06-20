@@ -31,7 +31,7 @@ cp -Rf ${_TMPDIR}/site/doc/js/ ${_TMPDIR}/site/doc/en/
 
 docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 --allow-hash-href --check-html --empty-alt-ignore \
    --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-   --url-swap "\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
+   --url-swap "\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
 
 if [ "$_TMPDIR" != "" ] ; then
     echo $_TMPDIR

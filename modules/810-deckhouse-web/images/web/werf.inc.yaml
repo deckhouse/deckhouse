@@ -29,6 +29,14 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
   setup:
+    - name: "Merging modules of all releases"
+      shell: |
+        cp -rf /src/ee/modules /src
+        cp -rf /src/fe/modules /src
+        cp /src/modules/010-prometheus-crd/crds/*.yaml /src/modules/300-prometheus/crds
+        rm -rf /src/modules/010-prometheus-crd
+      args:
+        executable: /bin/bash
     - name: "Preparing modules structure"
       shell: |
         export MODULES_SRC_DIR=/src/modules
@@ -148,71 +156,87 @@ git:
     setup: ['**/*']
   excludePaths: ['*/docs/internal/','110-istio/crds']
   includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-# CRDs
-- add: /modules/010-user-authn-crd/crds/
-  to: /src/modules/150-user-authn/crds/
+- add: /ee/modules
+  to: /src/ee/modules
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/openapi/
-  to: /src/modules/040-node-manager/crds/
+  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  excludePaths: ['*/docs/internal/','110-istio/crds']
+- add: /ee/fe/modules
+  to: /src/fe/modules
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  excludePaths: ['*/docs/internal/','110-istio/crds']
+# CRDs
+- add: /modules/010-user-authn-crd/crds
+  to: /src/modules/150-user-authn/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/openapi
+  to: /src/modules/040-node-manager/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*node_group.yaml']
-- add: /candi/cloud-providers/aws/openapi/
-  to: /src/modules/030-cloud-provider-aws/crds/
+- add: /candi/cloud-providers/aws/openapi
+  to: /src/modules/030-cloud-provider-aws/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/azure/openapi/
-  to: /src/modules/030-cloud-provider-azure/crds/
+- add: /candi/cloud-providers/azure/openapi
+  to: /src/modules/030-cloud-provider-azure/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/gcp/openapi/
-  to: /src/modules/030-cloud-provider-gcp/crds/
+- add: /candi/cloud-providers/gcp/openapi
+  to: /src/modules/030-cloud-provider-gcp/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/openstack/openapi/
-  to: /src/modules/030-cloud-provider-openstack/crds/
+- add: /ee/candi/cloud-providers/openstack/openapi
+  to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vsphere/openapi/
-  to: /src/modules/030-cloud-provider-vsphere/crds/
+- add: /ee/candi/cloud-providers/vsphere/openapi
+  to: /src/ee/modules/030-cloud-provider-vsphere/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/openapi/
-  to: /src/modules/030-cloud-provider-yandex/crds/
+- add: /candi/cloud-providers/yandex/openapi
+  to: /src/modules/030-cloud-provider-yandex/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /ee/modules/110-istio/crds/
-  to: /src/modules/110-istio/crds/
+- add: /ee/modules/110-istio/crds
+  to: /src/ee/modules/110-istio/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*istiofederation.yaml','*istiomulticluster.yaml']
-- add: /modules/010-prometheus-crd/crds/
-  to: /src/modules/300-prometheus/crds/
+- add: /modules/010-prometheus-crd/crds
+  to: /src/modules/010-prometheus-crd/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /modules/010-vertical-pod-autoscaler-crd/crds/
-  to: /src/modules/302-vertical-pod-autoscaler/crds/
+- add: /modules/010-vertical-pod-autoscaler-crd/crds
+  to: /src/modules/302-vertical-pod-autoscaler/crds
   owner: jekyll
   group: jekyll
   stageDependencies:
