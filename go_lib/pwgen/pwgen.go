@@ -3,9 +3,11 @@ package pwgen
 import "crypto/rand"
 
 var num = "0123456789"
-var alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+var lowercaseAlpha = "abcdefghijklmnopqrstuvwxyz"
+var alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + lowercaseAlpha
 var symbols = "[]{}<>()=-_!@#$%^&*.,"
 var alphaNum = num + alpha
+var alphaNumLowerCase = num + lowercaseAlpha
 var alphaNumSymbols = alphaNum + symbols
 
 func generateString(length int, chars string) string {
@@ -37,6 +39,11 @@ func Symbols(length int) string {
 // AlphaNum generates a random string of the given length out of alphanumeric characters
 func AlphaNum(length int) string {
 	return generateString(length, alphaNum)
+}
+
+// AlphaNum generates a random string of the given length out of alphanumeric characters without UpperCase letters
+func AlphaNumLowerCase(length int) string {
+	return generateString(length, alphaNumLowerCase)
 }
 
 // AlphaNumSymbols generates a random string of the given length out of alphanumeric characters and

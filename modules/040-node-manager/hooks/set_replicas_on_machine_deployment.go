@@ -1,0 +1,146 @@
+package hooks
+
+import (
+	"encoding/json"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+)
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/node-manager/set_replicas_on_machine_deployment",
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:                   "mds",
+			ApiVersion:             "machine.sapcloud.io/v1alpha1",
+			Kind:                   "MachineDeployment",
+			WaitForSynchronization: pointer.BoolPtr(false),
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-cloud-instance-manager"},
+				},
+			},
+			FilterFunc: setReplicasFilterMD,
+		},
+		{
+			Name:                   "ngs",
+			ApiVersion:             "deckhouse.io/v1alpha2",
+			Kind:                   "NodeGroup",
+			WaitForSynchronization: pointer.BoolPtr(false),
+			FilterFunc:             setReplicasFilterNG,
+		},
+	},
+}, handleSetReplicas)
+
+type setReplicasNodeGroup struct {
+	Name string
+	Min  int32
+	Max  int32
+}
+type setReplicasMachineDeployment struct {
+	Name      string
+	NodeGroup string
+	Replicas  int32
+}
+
+func setReplicasFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var ng v1alpha2.NodeGroup
+
+	err := sdk.FromUnstructured(obj, &ng)
+	if err != nil {
+		return nil, err
+	}
+
+	var min, max int32
+
+	if ng.Spec.CloudInstances.MinPerZone != nil {
+		min = *ng.Spec.CloudInstances.MinPerZone
+	}
+
+	if ng.Spec.CloudInstances.MaxPerZone != nil {
+		max = *ng.Spec.CloudInstances.MaxPerZone
+	}
+
+	return setReplicasNodeGroup{
+		Name: ng.Name,
+		Min:  min,
+		Max:  max,
+	}, nil
+}
+
+func setReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var md v1alpha1.MachineDeployment
+
+	err := sdk.FromUnstructured(obj, &md)
+	if err != nil {
+		return nil, err
+	}
+
+	return setReplicasMachineDeployment{
+		Name:      md.Name,
+		NodeGroup: md.Labels["node-group"],
+		Replicas:  md.Spec.Replicas,
+	}, nil
+}
+
+func handleSetReplicas(input *go_hook.HookInput) error {
+	nodeGroups := make(map[string]setReplicasNodeGroup)
+
+	snap := input.Snapshots["ngs"]
+	for _, sn := range snap {
+		ng := sn.(setReplicasNodeGroup)
+		nodeGroups[ng.Name] = ng
+	}
+
+	snap = input.Snapshots["mds"]
+	for _, sn := range snap {
+		md := sn.(setReplicasMachineDeployment)
+
+		ng, ok := nodeGroups[md.NodeGroup]
+		if !ok {
+			input.LogEntry.Warnf("can't find NodeGroup %s to get min and max instances per zone", md.NodeGroup)
+			continue
+		}
+
+		var desiredReplicas = md.Replicas
+
+		switch {
+		case ng.Min >= ng.Max:
+			desiredReplicas = ng.Max
+
+		case md.Replicas == 0:
+			desiredReplicas = ng.Min
+
+		case md.Replicas <= ng.Min:
+			desiredReplicas = ng.Min
+
+		case md.Replicas > ng.Max:
+			desiredReplicas = ng.Max
+		}
+
+		if desiredReplicas == md.Replicas {
+			// replicas not changed, we don't need to patch deployment
+			continue
+		}
+
+		patch := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"replicas": desiredReplicas,
+			},
+		}
+		data, _ := json.Marshal(patch)
+
+		err := input.ObjectPatcher.MergePatchObject(data, "machine.sapcloud.io/v1alpha1", "MachineDeployment", "d8-cloud-instance-manager", md.Name, "")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

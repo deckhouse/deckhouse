@@ -191,9 +191,6 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 		It("Expired token must be deleted. A new token for NodeGroup static-0 must have generated.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.BindingContexts.Get("0.snapshots.ngs").Array()).To(HaveLen(2))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens").Array()).To(HaveLen(1))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.0.filterResult.validFor").Int()).To(BeNumerically("<", 0))
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 
 			Expect(f.ValuesGet("nodeManager.internal.bootstrapTokens").Map()).To(HaveLen(1))
@@ -247,11 +244,6 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 		It("Expired token must be deleted. Almost expired token must be kept. A new token must have generated.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.BindingContexts.Get("0.snapshots.ngs").Array()).To(HaveLen(2))
-
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens").Array()).To(HaveLen(2))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.0.filterResult.validFor").Int()).To(BeNumerically("<", 3300))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.1.filterResult.validFor").Int()).To(BeNumerically(">", 3300))
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-kkkkkk").Exists()).To(BeTrue())
 
@@ -305,18 +297,6 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 		It("Expired token must be deleted. Almost expired token must be kept. Actual token must be stored to values.", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.BindingContexts.Get("0.snapshots.ngs").Array()).To(HaveLen(2))
-
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens").Array()).To(HaveLen(4))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.0.filterResult.validFor").Int()).To(BeNumerically("<", -3300))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.0.filterResult.bootstrapToken").String()).To(Equal("aaaaaa.aaaaaaaaaaaaaaaa"))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.1.filterResult.validFor").Value()).To(BeNil())
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.1.filterResult.bootstrapToken").Value()).To(BeNil())
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.2.filterResult.validFor").Int()).To(BeNumerically(">", 3300))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.2.filterResult.bootstrapToken").String()).To(Equal("kkkkkk.kkkkkkkkkkkkkkkk"))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.3.filterResult.validFor").Int()).To(BeNumerically(">", 17500))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.3.filterResult.bootstrapToken").String()).To(Equal("ssssss.ssssssssssssssss"))
-
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-kkkkkk").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-ssssss").Exists()).To(BeTrue())
@@ -352,18 +332,6 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 
 		It("Expired token must be deleted. Almost expired token must be kept. Actual token must be stored to values.", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
-			Expect(f.BindingContexts.Get("0.snapshots.ngs").Array()).To(HaveLen(2))
-
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens").Array()).To(HaveLen(4))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.0.filterResult.validFor").Int()).To(BeNumerically("<", -3300))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.0.filterResult.bootstrapToken").String()).To(Equal("aaaaaa.aaaaaaaaaaaaaaaa"))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.1.filterResult.validFor").Value()).To(BeNil())
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.1.filterResult.bootstrapToken").Value()).To(BeNil())
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.2.filterResult.validFor").Int()).To(BeNumerically(">", 3300))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.2.filterResult.bootstrapToken").String()).To(Equal("kkkkkk.kkkkkkkkkkkkkkkk"))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.3.filterResult.validFor").Int()).To(BeNumerically(">", 17500))
-			Expect(f.BindingContexts.Get("0.snapshots.bootstrap_tokens.3.filterResult.bootstrapToken").String()).To(Equal("ssssss.ssssssssssssssss"))
 
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-aaaaaa").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "kube-system", "bootstrap-token-kkkkkk").Exists()).To(BeTrue())

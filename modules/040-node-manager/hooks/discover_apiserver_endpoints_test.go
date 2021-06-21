@@ -68,7 +68,7 @@ subsets:
 
 	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateSingleAddress, 1))
 			f.RunHook()
 		})
 
@@ -79,7 +79,7 @@ subsets:
 
 		Context("Someone added additional addresses to .subsets[]", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateMultipleAddresses, 1))
 				f.RunHook()
 			})
 
@@ -90,7 +90,7 @@ subsets:
 
 			Context("Someone added address with different port", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(stateMultupleAddressesWithDifferentPorts))
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateMultupleAddressesWithDifferentPorts, 1))
 					f.RunHook()
 				})
 
@@ -104,7 +104,7 @@ subsets:
 
 	Context("Endpoint default/kubernetes has multiple addresses in .subsets[]", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateMultipleAddresses))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateMultipleAddresses, 1))
 			f.RunHook()
 		})
 
@@ -115,7 +115,7 @@ subsets:
 
 		Context("Someone set number of addresses in .subsets[] to one", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateSingleAddress))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateSingleAddress, 1))
 				f.RunHook()
 			})
 
