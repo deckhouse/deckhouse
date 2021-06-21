@@ -48,6 +48,7 @@ spec:
         app: dhcp
     spec:
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}

@@ -37,6 +37,7 @@ const globalValues = `
         csiExternalAttacher119: imagehash
         csiExternalResizer119: imagehash
         csiNodeDriverRegistrar119: imagehash
+        resolvWatcher: imagehash
       cloudProviderVsphere:
         vsphereCsi: imagehash
         cloudControllerManager119: imagehash

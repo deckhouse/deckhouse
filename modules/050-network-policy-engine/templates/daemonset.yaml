@@ -80,6 +80,7 @@ spec:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
 {{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
       volumes:
       - name: lib-modules

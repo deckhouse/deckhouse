@@ -180,6 +180,7 @@ spec:
         - /pause
 {{- end }}
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       volumes:
       - secret:

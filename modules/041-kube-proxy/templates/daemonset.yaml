@@ -132,6 +132,7 @@ spec:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: d8-kube-proxy
       volumes:
       - name: config

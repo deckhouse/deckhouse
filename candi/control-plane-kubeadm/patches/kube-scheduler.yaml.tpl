@@ -79,3 +79,11 @@ spec:
         requests:
           cpu: "{{ div (mul $millicpu 10) 100 }}m"
           memory: "{{ div (mul $memory 10) 100 }}"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-scheduler
+  namespace: kube-system
+spec:
+  dnsPolicy: ClusterFirstWithHostNet

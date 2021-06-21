@@ -79,3 +79,11 @@ spec:
         requests:
           cpu: "{{ div (mul $millicpu 20) 100 }}m"
           memory: "{{ div (mul $memory 20) 100 }}"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
+  dnsPolicy: ClusterFirstWithHostNet

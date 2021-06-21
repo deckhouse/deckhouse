@@ -52,3 +52,11 @@ spec:
         requests:
           cpu: "{{ div (mul $millicpu 35) 100 }}m"
           memory: "{{ div (mul $memory 35) 100 }}"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  dnsPolicy: ClusterFirstWithHostNet
