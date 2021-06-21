@@ -10,6 +10,7 @@ global:
         certManagerController: tagstring
         certManagerWebhook: tagstring
         certManagerCainjector: tagstring
+        certManagerAcmeSolver: tagstring
   discovery:
     clusterControlPlaneIsHighlyAvailable: true
     d8SpecificNodeCountByRole:
@@ -32,4 +33,4 @@ certManager:
     webhookCAKey: string
     webhookCrt: string
     webhookKey: string
-    
+
