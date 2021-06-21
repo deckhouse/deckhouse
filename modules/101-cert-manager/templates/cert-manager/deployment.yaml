@@ -53,6 +53,7 @@ spec:
           - --webhook-dns-names=cert-manager-webhook,cert-manager-webhook.$(POD_NAMESPACE),cert-manager-webhook.$(POD_NAMESPACE).svc
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
+          - "--acme-http01-solver-image={{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.certManagerAcmeSolver }}"
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}

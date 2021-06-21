@@ -1,27 +1,41 @@
 diff --git a/pkg/issuer/acme/http/pod.go b/pkg/issuer/acme/http/pod.go
-index 94fe5d9d5..d227700d9 100644
+index 94fe5d9d5..a0e252a64 100644
 --- a/pkg/issuer/acme/http/pod.go
 +++ b/pkg/issuer/acme/http/pod.go
-@@ -167,6 +167,22 @@ func (s *Solver) buildDefaultPod(ch *v1alpha1.Challenge) *corev1.Pod {
+@@ -155,6 +155,12 @@ func (s *Solver) buildPod(ch *v1alpha1.Challenge) *corev1.Pod {
+ func (s *Solver) buildDefaultPod(ch *v1alpha1.Challenge) *corev1.Pod {
+ 	podLabels := podLabels(ch)
+
++	imagePullSecrets := []corev1.LocalObjectReference{
++		{
++			Name: "acme-solver-deckhouse-regestry",
++		},
++	}
++
+ 	return &corev1.Pod{
+ 		ObjectMeta: metav1.ObjectMeta{
+ 			GenerateName: "cm-acme-http-solver-",
+@@ -167,6 +173,23 @@ func (s *Solver) buildDefaultPod(ch *v1alpha1.Challenge) *corev1.Pod {
  		},
  		Spec: corev1.PodSpec{
  			RestartPolicy: corev1.RestartPolicyOnFailure,
 +			Tolerations: []corev1.Toleration{
 +				corev1.Toleration{
-+						Effect:			corev1.TaintEffectNoSchedule,
-+						Key: 			"node-role.kubernetes.io/master",
++					Effect: corev1.TaintEffectNoSchedule,
++					Key:    "node-role.kubernetes.io/master",
 +				},
 +				corev1.Toleration{
-+						Key:               "dedicated.deckhouse.io",
-+						Operator:          corev1.TolerationOpEqual,
-+						Value:             "system",
++					Key:      "dedicated.deckhouse.io",
++					Operator: corev1.TolerationOpEqual,
++					Value:    "system",
 +				},
 +				corev1.Toleration{
-+						Key:			"dedicated.deckhouse.io",
-+						Operator:		corev1.TolerationOpEqual,
-+						Value:			"cert-manager",
++					Key:      "dedicated.deckhouse.io",
++					Operator: corev1.TolerationOpEqual,
++					Value:    "cert-manager",
 +				},
 +			},
++			ImagePullSecrets: imagePullSecrets,
  			Containers: []corev1.Container{
  				{
  					Name: "acmesolver",
