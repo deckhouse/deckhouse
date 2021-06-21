@@ -3,7 +3,6 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -190,8 +189,6 @@ spec:
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng4").Field("spec.replicas").String()).To(Equal("4"))
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng5").Field("spec.replicas").String()).To(Equal("5"))
 			Expect(f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "md-ng6").Field("spec.replicas").String()).To(Equal("5"))
-
-			Expect(f.Session.Err).Should(gbytes.Say(`WARNING: can't find NodeGroup ng6 to get min and max instances per zone.`))
 		})
 	})
 })
