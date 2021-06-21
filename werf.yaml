@@ -361,6 +361,7 @@ git:
     - modules/**/*.go
     - go.mod
     - go.sum
+    - tools
   excludePaths:
     - dhctl/development
     - deckhouse-controller/development
@@ -395,6 +396,8 @@ shell:
 
   install:
   - cd /deckhouse
+  # Generate hooks imports for particular edition (CE/EE/FE)
+  - go generate ./tools/register.go
   - go mod download
 
   setup:

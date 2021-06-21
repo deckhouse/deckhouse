@@ -57,12 +57,6 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 		}
 
 		trimDir := workDir
-		if strings.Contains(path, "/ee/fe/") {
-			trimDir += "/ee/fe/"
-		} else if strings.Contains(path, "/ee/") {
-			trimDir += "/ee/"
-		}
-
 		moduleName := filepath.Join(
 			deckhouseModuleName,
 			filepath.Dir(
