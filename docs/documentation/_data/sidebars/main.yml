@@ -661,6 +661,7 @@ entries:
     - title:
         en: Little things
         ru: Приятные мелочи
+      versionType: experimental
       folders:
         - title: basic-auth
           versionType: experimental
@@ -677,6 +678,7 @@ entries:
                 en: Description
               url: /modules/600-secret-copier/
     - title: Bare Metal Support
+      versionType: ee
       folders:
         - title: metallb
           versionType: ee

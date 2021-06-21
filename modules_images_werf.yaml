@@ -42,6 +42,7 @@ cleanup:
   {{- $_ := set $ctx "ImageName" $ImageData._3 }}
   {{- $_ := set $ctx "ImageBuildData" $content }}
   {{- $_ := set $ctx "Files" $Root.Files }}
+  {{- $_ := set $ctx "Env" $Root.Env }}
 ---
 {{ include "module_image_template" $ctx  }}
 {{- end }}
