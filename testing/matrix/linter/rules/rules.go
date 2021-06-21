@@ -217,6 +217,7 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	if l.CheckModuleEnabled("priority-class") {
 		l.ErrorsList.Add(objectPriorityClass(object))
 	}
+	l.ErrorsList.Add(objectDNSPolicy(object))
 
 	l.ErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(l.Module, object))
 	l.ErrorsList.Add(roles.ObjectRBACPlacement(l.Module, object))
@@ -421,5 +422,80 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 		}
 	}
 
+	return errors.EmptyRuleError
+}
+
+func objectDNSPolicy(object storage.StoreObject) errors.LintRuleError {
+	kind := object.Unstructured.GetKind()
+	name := object.Unstructured.GetName()
+	converter := runtime.DefaultUnstructuredConverter
+
+	var dnsPolicy string
+	var hostNetwork bool
+
+	switch kind {
+	case "Deployment":
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		dnsPolicy = string(deployment.Spec.Template.Spec.DNSPolicy)
+		hostNetwork = deployment.Spec.Template.Spec.HostNetwork
+	case "DaemonSet":
+		daemonset := new(appsv1.DaemonSet)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), daemonset)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		dnsPolicy = string(daemonset.Spec.Template.Spec.DNSPolicy)
+		hostNetwork = daemonset.Spec.Template.Spec.HostNetwork
+	case "StatefulSet":
+		statefulset := new(appsv1.StatefulSet)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), statefulset)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		dnsPolicy = string(statefulset.Spec.Template.Spec.DNSPolicy)
+		hostNetwork = statefulset.Spec.Template.Spec.HostNetwork
+	default:
+		return errors.EmptyRuleError
+	}
+
+	switch name {
+	case "cloud-controller-manager", "machine-controller-manager":
+		if hostNetwork && dnsPolicy != "Default" {
+			return errors.NewLintRuleError(
+				"MANIFEST007",
+				object.Identity(),
+				dnsPolicy,
+				"dnsPolicy must be `Default` with hostNetwork = `true`",
+			)
+		}
+	case "deckhouse":
+		if hostNetwork && (dnsPolicy != "Default" && dnsPolicy != "ClusterFirstWithHostNet") {
+			return errors.NewLintRuleError(
+				"MANIFEST007",
+				object.Identity(),
+				dnsPolicy,
+				"dnsPolicy must be `Default` or `ClusterFirstWithHostNet` with hostNetwork = `true`",
+			)
+		}
+	default:
+		if hostNetwork && dnsPolicy != "ClusterFirstWithHostNet" {
+			return errors.NewLintRuleError(
+				"MANIFEST007",
+				object.Identity(),
+				dnsPolicy,
+				"dnsPolicy must be `ClusterFirstWithHostNet` with hostNetwork = `true`",
+			)
+		}
+	}
 	return errors.EmptyRuleError
 }

@@ -41,6 +41,7 @@ const globalValues = `
         csiExternalAttacher119: imagehash
         csiExternalResizer119: imagehash
         csiNodeDriverRegistrar119: imagehash
+        resolvWatcher: imagehash
       cloudProviderAws:
         ebsCsiPlugin: imagehash
         cloudControllerManager116: imagehash

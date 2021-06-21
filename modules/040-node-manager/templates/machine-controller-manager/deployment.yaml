@@ -39,6 +39,8 @@ spec:
 {{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
       serviceAccountName: machine-controller-manager
+      hostNetwork: true
+      dnsPolicy: Default
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -71,6 +73,10 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 5
+          volumeMounts:
+            - name: resolv-conf-volume
+              mountPath: /etc/resolv.conf
+              readOnly: true
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
@@ -90,7 +96,9 @@ spec:
           - "--stale-cache-interval=1h30m"
           env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
-            value: "0.0.0.0"
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
           - name: KUBE_RBAC_PROXY_CONFIG
             value: |
               excludePaths:
@@ -118,5 +126,10 @@ spec:
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
+      volumes:
+        - name: resolv-conf-volume
+          hostPath:
+            path: /var/lib/bashible/resolv/resolv.conf
+            type: File
   {{- end }}
 {{- end }}

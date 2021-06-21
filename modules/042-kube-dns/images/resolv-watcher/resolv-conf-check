@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -Eeuo pipefail
+shopt -s inherit_errexit
+shopt -s failglob
+
+while inotifywait -qq -e modify /etc/resolv.conf; do
+  >&2 echo "/etc/resolv.conf has changed, send SIGUSR1 to CoreDNS process"
+  kill -s SIGUSR1 $(pidof coredns)
+done
