@@ -20,8 +20,6 @@ import (
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
 
-	exitCode := 0
-
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
 	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
@@ -107,16 +105,17 @@ func main() {
 
 	go func() {
 		command, err := kpApp.Parse(os.Args[1:])
+		errorCode := 0
 		if err != nil {
 			log.DebugLn(command)
 			log.ErrorLn(err)
-			exitCode = 1
+			errorCode = 1
 		}
-		tomb.Shutdown()
+		tomb.Shutdown(errorCode)
 	}()
 
 	// Block "main" function until teardown callbacks are finished.
-	tomb.WaitShutdown()
+	exitCode := tomb.WaitShutdown()
 	os.Exit(exitCode)
 }
 

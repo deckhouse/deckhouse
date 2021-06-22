@@ -76,7 +76,7 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 	}
 
 	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-	if err := kubeCl.Init(); err != nil {
+	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 		panic(err)
 	}
 

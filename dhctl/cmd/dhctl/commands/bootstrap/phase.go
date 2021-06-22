@@ -11,10 +11,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -167,10 +168,10 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		cachePath := metaConfig.CachePath()
-		stateCache, err := cache.NewTempStateCache(cachePath)
-		if err != nil {
+		if err = cache.Init(cachePath); err != nil {
 			return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 		}
+		stateCache := cache.Global()
 
 		if !stateCache.InCache("uuid") {
 			return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
@@ -237,7 +238,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 		stateCache.Clean()
 		// Allow to reuse cache because cluster will be bootstrapped again (probably)
-		stateCache.Delete(".tombstone")
+		stateCache.Delete(state.TombstoneKey)
 		return nil
 	}
 
@@ -273,16 +274,16 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 		}
 
 		cachePath := metaConfig.CachePath()
-
-		stateCache, err := cache.NewTempStateCache(cachePath)
-		if err != nil {
+		if err = cache.Init(cachePath); err != nil {
 			// TODO: it's better to ask for confirmation here
 			return fmt.Errorf(cacheMessage, cachePath, err)
 		}
 
+		stateCache := cache.Global()
+
 		if app.DropCache {
 			stateCache.Clean()
-			stateCache.Delete(".tombstone")
+			stateCache.Delete(state.TombstoneKey)
 		}
 
 		clusterUUID, err := generateClusterUUID()

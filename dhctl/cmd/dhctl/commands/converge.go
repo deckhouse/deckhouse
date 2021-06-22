@@ -75,7 +75,7 @@ func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-		if err := kubeCl.Init(); err != nil {
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
 		}
 

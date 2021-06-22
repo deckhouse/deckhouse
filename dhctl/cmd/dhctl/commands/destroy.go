@@ -13,10 +13,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -100,7 +101,7 @@ func deleteResources(k8sCliGetter *k8sClientGetter) error {
 	})
 }
 
-func loadMetaConfig(k8sCliGetter *k8sClientGetter, stateCache *cache.StateCache) (*config.MetaConfig, error) {
+func loadMetaConfig(k8sCliGetter *k8sClientGetter, stateCache state.Cache) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -149,10 +150,11 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 		var err error
 
-		stateCache, err := cache.NewTempStateCache(sshClient.Check().String())
-		if err != nil {
+		if err = cache.Init(sshClient.Check().String()); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
+
+		stateCache := cache.Global()
 
 		var kubeCl *client.KubernetesClient
 
@@ -206,7 +208,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			if err != nil {
 				return err
 			}
-			stateCache.Save("cluster-state", clusterState)
+			if err := stateCache.Save("cluster-state", clusterState); err != nil {
+				return err
+			}
 		}
 
 		// why only nil lock without request unlock
@@ -238,10 +242,10 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 				step = "master-node"
 			}
 
-			for name, state := range nodeGroupStates.State {
+			for name, ngState := range nodeGroupStates.State {
 				stateName := fmt.Sprintf("%s.tfstate", name)
-				if !stateCache.InCache(stateName) {
-					stateCache.Save(stateName, state)
+				if err := saveInCacheIfNotExists(stateCache, stateName, ngState); err != nil {
+					return err
 				}
 
 				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, step).
@@ -260,8 +264,8 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
-		if !stateCache.InCache("base-infrastructure.tfstate") {
-			stateCache.Save("base-infrastructure.tfstate", clusterState)
+		if err := saveInCacheIfNotExists(stateCache, "base-infrastructure.tfstate", clusterState); err != nil {
+			return err
 		}
 
 		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
@@ -295,6 +299,18 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		return runFunc(sshClient)
 	})
 	return cmd
+}
+
+func saveInCacheIfNotExists(stateCache state.Cache, name string, state []byte) error {
+	if stateCache.InCache(name) {
+		return nil
+	}
+
+	if err := stateCache.Save(name, state); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func deleteEntities(kubeCl *client.KubernetesClient) error {

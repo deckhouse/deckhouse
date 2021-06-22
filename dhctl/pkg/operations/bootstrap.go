@@ -16,9 +16,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -235,7 +235,7 @@ func ConnectToKubernetesAPI(sshClient *ssh.Client) (*client.KubernetesClient, er
 			if sshClient != nil {
 				kubeCl = kubeCl.WithSSHClient(sshClient)
 			}
-			if err := kubeCl.Init(); err != nil {
+			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 			return nil
@@ -329,7 +329,7 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 	})
 }
 
-func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache cache.Cache) (map[string]map[int]string, error) {
+func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) (map[string]map[int]string, error) {
 	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)\\.tfstate$", metaConfig.ClusterPrefix)
 	groupsReg, _ := regexp.Compile(nodeGroupRegex)
 

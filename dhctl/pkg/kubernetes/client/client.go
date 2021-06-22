@@ -25,6 +25,13 @@ type KubernetesClient struct {
 	KubeProxy *frontend.KubeProxy
 }
 
+type KubernetesInitParams struct {
+	KubeConfig        string
+	KubeConfigContext string
+
+	KubeConfigInCluster bool
+}
+
 func NewKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{}
 }
@@ -39,15 +46,15 @@ func (k *KubernetesClient) WithSSHClient(client *ssh.Client) *KubernetesClient {
 }
 
 // Init initializes kubernetes client
-func (k *KubernetesClient) Init() error {
+func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	kubeClient := klient.New()
 	kubeClient.WithRateLimiterSettings(5, 10)
 
 	switch {
-	case app.KubeConfigInCluster:
-	case app.KubeConfig != "":
-		kubeClient.WithContextName(app.KubeConfigContext)
-		kubeClient.WithConfigPath(app.KubeConfig)
+	case params.KubeConfigInCluster:
+	case params.KubeConfig != "":
+		kubeClient.WithContextName(params.KubeConfigContext)
+		kubeClient.WithConfigPath(params.KubeConfig)
 	default:
 		port, err := k.StartKubernetesProxy()
 		if err != nil {
@@ -95,4 +102,12 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 
 	log.InfoF("Proxy started on port %s\n", port)
 	return port, nil
+}
+
+func AppKubernetesInitParams() *KubernetesInitParams {
+	return &KubernetesInitParams{
+		KubeConfig:          app.KubeConfig,
+		KubeConfigContext:   app.KubeConfigContext,
+		KubeConfigInCluster: app.KubeConfigInCluster,
+	}
 }

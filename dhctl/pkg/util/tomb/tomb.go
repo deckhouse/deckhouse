@@ -25,8 +25,9 @@ type callback struct {
 }
 
 type teardownCallbacks struct {
-	mutex sync.RWMutex
-	data  []callback
+	mutex    sync.RWMutex
+	data     []callback
+	exitCode int
 
 	exhausted        bool
 	notInterruptable bool
@@ -43,7 +44,7 @@ func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	log.DebugF("teardown callback '%s' added, callbacks in queue: %d\n", name, len(c.data))
 }
 
-func (c *teardownCallbacks) shutdown() {
+func (c *teardownCallbacks) shutdown(exitCode int) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -51,6 +52,8 @@ func (c *teardownCallbacks) shutdown() {
 	if c.exhausted {
 		return
 	}
+
+	c.exitCode = exitCode
 
 	log.DebugF("teardown started, queue length: %d\n", len(c.data))
 
@@ -76,12 +79,13 @@ func RegisterOnShutdown(process string, cb func()) {
 	callbacks.registerOnShutdown(process, cb)
 }
 
-func Shutdown() {
-	callbacks.shutdown()
+func Shutdown(code int) {
+	callbacks.shutdown(code)
 }
 
-func WaitShutdown() {
+func WaitShutdown() int {
 	callbacks.wait()
+	return callbacks.exitCode
 }
 
 func IsInterrupted() bool {
@@ -101,36 +105,51 @@ func WithoutInterruptions(fn func()) {
 
 func WaitForProcessInterruption() {
 	interruptCh := make(chan os.Signal, 1)
-	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
 
-Select:
-	s := <-interruptCh
-
-	switch s {
-	case syscall.SIGTERM, syscall.SIGINT:
-		if callbacks.notInterruptable {
-			goto Select
+	for {
+		s, ok := <-interruptCh
+		if !ok {
+			return
 		}
 
-		// Wait for the second signal to kill the main process immediately.
-		go func() {
-			<-interruptCh
-			log.ErrorLn("Killed by signal twice.")
+		var exitCode int
+		switch s {
+		case syscall.SIGUSR1:
+			exitCode = 1
+		case syscall.SIGTERM, syscall.SIGINT:
+			exitCode = 0
+		default:
 			os.Exit(1)
-		}()
+			return
+		}
 
-		// Close interrupted channel to signal interruptable loops to stop.
-		close(callbacks.interruptedCh)
+		if callbacks.notInterruptable {
+			continue
+		}
 
-		// Run all registered teardown callbacks and print an explanation at the end.
-		callbacks.data = append([]callback{{
-			Name: "Shutdown message",
-			Do: func() {
-				log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
-			},
-		}}, callbacks.data...)
-		Shutdown()
-	default:
-		os.Exit(1)
+		graceShutdownForSignal(interruptCh, exitCode, s)
+		return
 	}
+}
+
+func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Signal) {
+	// Wait for the second signal to kill the main process immediately.
+	go func() {
+		<-interruptCh
+		log.ErrorLn("Killed by signal twice.")
+		os.Exit(1)
+	}()
+
+	// Close interrupted channel to signal interruptable loops to stop.
+	close(callbacks.interruptedCh)
+
+	// Run all registered teardown callbacks and print an explanation at the end.
+	callbacks.data = append([]callback{{
+		Name: "Shutdown message",
+		Do: func() {
+			log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
+		},
+	}}, callbacks.data...)
+	Shutdown(exitCode)
 }

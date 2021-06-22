@@ -1,6 +1,8 @@
 package util
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -38,4 +40,12 @@ func ExcludeElementFromSlice(list []string, elem string) []string {
 	}
 
 	return list
+}
+
+func Sha256Encode(input string) string {
+	hasher := sha256.New()
+
+	hasher.Write([]byte(input))
+
+	return fmt.Sprintf("%x", hasher.Sum(nil))
 }

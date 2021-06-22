@@ -15,10 +15,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -55,7 +56,10 @@ func generateClusterUUID() (string, error) {
 			}
 
 			clusterUUID = genClusterUUID.String()
-			cache.Global().Save("uuid", []byte(clusterUUID))
+			err = cache.Global().Save("uuid", []byte(clusterUUID))
+			if err != nil {
+				return err
+			}
 			log.InfoF("Generated cluster UUID: %s\n", clusterUUID)
 		} else {
 			clusterUUID = string(cache.Global().Load("uuid"))
@@ -123,7 +127,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		if app.DropCache {
 			cache.Global().Clean()
-			cache.Global().Delete(".tombstone")
+			cache.Global().Delete(state.TombstoneKey)
 		}
 
 		var resourcesToCreate *config.Resources
@@ -271,6 +275,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				fakeSession.SetAvailableHosts([]string{address})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
+
+			if err := cache.Global().SaveStruct("cluster-hosts", masterAddressesForSSH); err != nil {
+				log.DebugF("Cannot save ssh hosts %v", err)
+			}
+
 			return nil
 		})
 

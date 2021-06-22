@@ -2,75 +2,26 @@ package cache
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util"
 )
 
-var once sync.Once
-
-func encode(input string) string {
-	// TODO: declare hasher once
-	hasher := sha256.New()
-
-	hasher.Write([]byte(input))
-
-	return fmt.Sprintf("%x", hasher.Sum(nil))
-}
-
-type Cache interface {
-	Save(string, []byte)
-	SaveStruct(string, interface{}) error
-
-	Load(string) []byte
-	LoadStruct(string, interface{}) error
-
-	Delete(string)
-	Clean()
-
-	GetPath(string) string
-	Iterate(func(string, []byte) error) error
-	InCache(string) bool
-}
-
-var (
-	_ Cache = &StateCache{}
-	_ Cache = &DummyCache{}
-)
-
-var globalCache Cache = &DummyCache{}
-
-func initCache(dir string) error {
-	var err error
-	once.Do(func() {
-		globalCache, err = NewTempStateCache(dir)
-	})
-	return err
-}
-
-func Init(dir string) error {
-	return initCache(dir)
-}
-
-func Global() Cache {
-	return globalCache
+// NewTempStateCache creates new cache instance in tmp directory
+func NewTempStateCache(identity string) (*StateCache, error) {
+	cacheDir := filepath.Join(app.CacheDir, util.Sha256Encode(identity))
+	return NewStateCache(cacheDir)
 }
 
 type StateCache struct {
 	dir string
-}
-
-// NewTempStateCache creates new cache instance in tmp directory
-func NewTempStateCache(identity string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.CacheDir, encode(identity))
-	return NewStateCache(cacheDir)
 }
 
 // NewTempStateCache creates new cache instance in specified directory
@@ -88,10 +39,12 @@ func NewStateCache(dir string) (*StateCache, error) {
 }
 
 // SaveStruct saves bytes to a file
-func (s *StateCache) Save(name string, content []byte) {
+func (s *StateCache) Save(name string, content []byte) error {
 	if err := ioutil.WriteFile(s.GetPath(name), content, 0o600); err != nil {
 		log.ErrorF("Can't save terraform state in cache: %v", err)
 	}
+
+	return nil
 }
 
 // SaveStruct saves go struct into the cache as a blob
@@ -102,8 +55,7 @@ func (s *StateCache) SaveStruct(name string, v interface{}) error {
 		return err
 	}
 
-	s.Save(name, b.Bytes())
-	return nil
+	return s.Save(name, b.Bytes())
 }
 
 // InCache checks is file in cache or not
@@ -121,7 +73,7 @@ func (s *StateCache) Clean() {
 		return
 	}
 
-	_, err := os.Create(filepath.Join(s.dir, ".tombstone"))
+	_, err := os.Create(filepath.Join(s.dir, state.TombstoneKey))
 	if err != nil {
 		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
 	}
@@ -178,7 +130,7 @@ func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
 // DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
-func (d *DummyCache) Save(n string, c []byte)                  {}
+func (d *DummyCache) Save(n string, c []byte) error            { return nil }
 func (d *DummyCache) InCache(n string) bool                    { return false }
 func (d *DummyCache) Clean()                                   {}
 func (d *DummyCache) Delete(n string)                          {}
