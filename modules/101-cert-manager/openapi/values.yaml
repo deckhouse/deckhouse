@@ -1,0 +1,41 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-requred-for-helm:
+    - selfSignedCA
+    - webhookCACrt
+    - webhookCAKey
+    - webhookCrt
+    - webhookKey
+    properties:
+      selfSignedCA:
+        type: object
+        default: {}
+        properties:
+          cert:
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+            type: string
+          key:
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+            type: string
+
+      webhookCACrt:
+        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+        type: string
+
+      webhookCAKey:
+        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+        type: string
+
+      webhookCrt:
+        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+        type: string
+
+      webhookKey:
+        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+        type: string
+
