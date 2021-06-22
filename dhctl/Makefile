@@ -37,7 +37,7 @@ fmt:
 	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml --fix
 
 test:
-	go test -race ./...
+	go test ./...
 
 build:
 	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/dhctl ./cmd/dhctl
@@ -67,7 +67,7 @@ devenv:
 			-v "$$(pwd)/../candi:/deckhouse/candi" \
 			registry.flant.com/sys/antiopa/dev/install:master \
 			tail -f /dev/null) \
-		&& docker exec    "$$CONTAINER_ID" apk add go curl \
+		&& docker exec    "$$CONTAINER_ID" apk add go curl make musl\
 		&& docker exec -i "$$CONTAINER_ID" sh -c "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b \"$$(go env GOPATH)\" /bin v$(GOLANGCI_LINT_VERSION)" \
 		&& docker exec    "$$CONTAINER_ID" sh -c 'ln -fs /root/go/bin/golangci-lint /usr/local/bin/golangci-lint' ;\
 	docker exec -it -w /dhctl "$$CONTAINER_ID" bash

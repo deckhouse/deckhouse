@@ -37,7 +37,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		err = log.Process("default", "Remove Deckhouse️", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
 			// auto init
-			err = kubeCl.Init()
+			err = kubeCl.Init(client.AppKubernetesInitParams())
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
@@ -99,7 +99,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-			if err := kubeCl.Init(); err != nil {
+			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 

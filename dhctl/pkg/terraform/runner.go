@@ -15,7 +15,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -65,7 +66,7 @@ type Runner struct {
 	allowedCachedState bool
 	changesInPlan      int
 
-	stateCache cache.Cache
+	stateCache state.Cache
 
 	stateSaver *StateSaver
 
@@ -90,7 +91,7 @@ func NewRunnerFromConfig(cfg *config.MetaConfig, step string) *Runner {
 	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step)
 }
 
-func (r *Runner) WithCache(cache cache.Cache) *Runner {
+func (r *Runner) WithCache(cache state.Cache) *Runner {
 	r.stateCache = cache
 	return r
 }
@@ -176,16 +177,38 @@ func (r *Runner) Init() error {
 
 	if r.statePath == "" {
 		// Save state directly in the cache to prevent state loss
-		stateName := fmt.Sprintf("%s.tfstate", r.name)
+		stateName := r.stateName()
 		r.statePath = r.stateCache.GetPath(stateName)
 
-		if r.stateCache.InCache(stateName) && !r.allowedCachedState {
+		if r.stateCache.InCache(stateName) {
 			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
-			if !r.confirm().
-				WithMessage("Do you want to continue with Terraform state from local cache?").
-				WithYesByDefault().
-				Ask() {
-				return fmt.Errorf(terraformPipelineAbortedMessage)
+			if !r.allowedCachedState {
+				var isConfirm bool
+				switch app.UseTfCache {
+				case app.UseStateCacheYes:
+					isConfirm = true
+				case app.UseStateCacheNo:
+					isConfirm = false
+				default:
+					isConfirm = r.confirm().
+						WithMessage("Do you want to continue with Terraform state from local cache?").
+						WithYesByDefault().
+						Ask()
+				}
+
+				if !isConfirm {
+					return fmt.Errorf(terraformPipelineAbortedMessage)
+				}
+			}
+
+			stateData := r.stateCache.Load(stateName)
+			if len(stateData) > 0 {
+				err := ioutil.WriteFile(r.statePath, stateData, 0o600)
+				if err != nil {
+					err := fmt.Errorf("can't write terraform state for runner %s: %s", r.step, err)
+					log.ErrorLn(err)
+					return err
+				}
 			}
 		}
 	}
@@ -208,6 +231,10 @@ func (r *Runner) Init() error {
 		_, err := r.execTerraform(args...)
 		return err
 	})
+}
+
+func (r *Runner) stateName() string {
+	return fmt.Sprintf("%s.tfstate", r.name)
 }
 
 func (r *Runner) handleChanges() (bool, error) {
@@ -276,6 +303,16 @@ func (r *Runner) Apply() error {
 		}
 
 		_, err = r.execTerraform(args...)
+		if err != nil {
+			return err
+		}
+
+		data, err := r.getState()
+		if err != nil {
+			return err
+		}
+
+		err = r.stateCache.Save(r.stateName(), data)
 		if err != nil {
 			return err
 		}
@@ -414,16 +451,16 @@ func (r *Runner) ResourcesQuantityInState() int {
 		return 0
 	}
 
-	var state struct {
+	var st struct {
 		Resources []json.RawMessage `json:"resources"`
 	}
-	err = json.Unmarshal(data, &state)
+	err = json.Unmarshal(data, &st)
 	if err != nil {
 		log.ErrorLn(err)
 		return 0
 	}
 
-	return len(state.Resources)
+	return len(st.Resources)
 }
 
 func (r *Runner) getState() ([]byte, error) {
