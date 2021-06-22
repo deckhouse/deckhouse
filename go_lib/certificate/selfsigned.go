@@ -20,7 +20,9 @@ type Certificate struct {
 	CA   string `json:"ca"`
 }
 
-func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca Authority) (Certificate, error) {
+type SigningOption func(signing *config.Signing)
+
+func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca Authority, options ...interface{}) (Certificate, error) {
 	logger.Debugf("Generate self-signed cert for %s %v", cn, hosts)
 	request := &csr.CertificateRequest{
 		CN: cn,
@@ -28,6 +30,12 @@ func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca 
 			A: "ecdsa",
 			S: 256,
 		},
+	}
+
+	for _, option := range options {
+		if f, ok := option.(Option); ok {
+			f(request)
+		}
 	}
 
 	// Catch cfssl logs message
@@ -56,9 +64,17 @@ func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca 
 		return Certificate{}, err
 	}
 
-	s, err := local.NewSigner(priv, parsedCa, signer.DefaultSigAlgo(priv), &config.Signing{
+	signingConfig := &config.Signing{
 		Default: config.DefaultConfig(),
-	})
+	}
+
+	for _, option := range options {
+		if f, ok := option.(SigningOption); ok {
+			f(signingConfig)
+		}
+	}
+
+	s, err := local.NewSigner(priv, parsedCa, signer.DefaultSigAlgo(priv), signingConfig)
 	if err != nil {
 		return Certificate{}, err
 	}

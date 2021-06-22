@@ -63,9 +63,9 @@ metadata:
   name: cert-manager-webhook-tls
   namespace: d8-cert-manager
 data:
-  ca.crt: dGVzdA==
-  tls.crt: dGVzdA==
-  tls.key: dGVzdA==
+  ca.crt: dGVzdFRscw==
+  tls.crt: dGVzdFRscw==
+  tls.key: dGVzdFRscw==
 `))
 			f.RunHook()
 		})
@@ -75,8 +75,8 @@ data:
 
 			Expect(f.ValuesGet("certManager.internal.webhookCACrt").String()).To(Equal("test"))
 			Expect(f.ValuesGet("certManager.internal.webhookCAKey").String()).To(Equal("test"))
-			Expect(f.ValuesGet("certManager.internal.webhookCrt").String()).To(Equal("test"))
-			Expect(f.ValuesGet("certManager.internal.webhookKey").String()).To(Equal("test"))
+			Expect(f.ValuesGet("certManager.internal.webhookCrt").String()).To(Equal("testTls"))
+			Expect(f.ValuesGet("certManager.internal.webhookKey").String()).To(Equal("testTls"))
 		})
 
 	})
