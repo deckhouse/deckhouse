@@ -233,9 +233,9 @@
     transform: rotate(-180deg);
 }
 
-.sidebar__item_ee>a:before,
+.sidebar__submenu > .sidebar__item_ee > a:before,
 .sidebar__item_hot>a:before,
-.sidebar__item_experimental>a:before {
+.sidebar__submenu > .sidebar__item_experimental > a:before {
     font-size: 8px;
     color: #fff;
     background: #0066FF;
@@ -255,11 +255,11 @@
     content: 'NEW!';
 }
 
-.sidebar__item_experimental>a:before {
+.sidebar__submenu > .sidebar__item_experimental > a:before {
     content: 'Experimental';
 }
 
-.sidebar__item_ee>a:before {
+.sidebar__submenu > .sidebar__item_ee > a:before {
     content: 'EE Only';
 }
 

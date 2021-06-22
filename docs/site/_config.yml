@@ -12,6 +12,7 @@ site_description:
   en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
   ru: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
 github_repo_path: /deckhouse/deckhouse
+versionType: FE
 
 assets:
   precompile: ['**/*.*']
