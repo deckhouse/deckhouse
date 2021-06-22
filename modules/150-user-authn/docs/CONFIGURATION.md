@@ -42,11 +42,9 @@ data:
   * An example: `1h`
 * `highAvailability` — manually manage the high availability mode. By default, the HA mode gets enabled/disabled automatically. Read [more](../../deckhouse-configure-global.html#parameters) about the HA mode for modules;
 * `nodeSelector` — the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
-    * If the parameter isn't set, then the `{"node-role.deckhouse.io/vsphere-csi-driver":""}` or `{"node-role.deckhouse.io/system":""}` value is used provided that such nodes exist in the cluster. Otherwise, the parameter stays empty;
-    * You can set it to `false` to avoid adding any nodeSelector;
+    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling);
 * `tolerations` — the same as in the pods' `spec.tolerations` parameter in Kubernetes;
-    * If the parameter isn't set, then the `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"vsphere-csi-driver"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}]` value is used;
-    * You can set it to `false` to avoid adding any tolerations;
+    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling);
 * `ingressClass` — the Ingress controller class used for dex and kubeconfig-generator;
   * An optional parameter; by default, the `modules.ingressClass` global value is used;
 * `https` — selects the type of certificate to use for dex and kubeconfig-generator;

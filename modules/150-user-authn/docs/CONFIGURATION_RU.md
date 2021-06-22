@@ -42,11 +42,9 @@ data:
   * Пример: `1h`
 * `highAvailability` — ручное включение/отключение режима отказоустойчивости. По умолчанию режим отказоустойчивости определяется автоматически. Смотри [подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости для модулей.
 * `nodeSelector` — как в Kubernetes в `spec.nodeSelector` у pod'ов.
-    * Если ничего не указано — будет использоваться значение `{"node-role.deckhouse.io/vsphere-csi-driver":""}` или `{"node-role.deckhouse.io/system":""}` (если в кластере есть такие узлы) или ничего не будет указано.
-    * Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+    * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
-    * Если ничего не указано — будет настроено значение `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"vsphere-csi-driver"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}]`.
-    * Можно указать `false`, чтобы не добавлять никакие toleration'ы.
+    * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 * `ingressClass` — класс Ingress-контроллера, который используется для dex и kubeconfig-generator.
   * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
 * `https` — выбираем, какой тип сертификата использовать для dex и kubeconfig-generator.

@@ -29,8 +29,6 @@ title: "The deckhouse-web module: configuration"
       * `secretName` — the name of the secret in the `d8-system` namespace to use with the documentation web UI (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format);
         * It is set to `false` by default;
 * `nodeSelector` — the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
-    * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling);
-    * You can set it to `false` to avoid adding any nodeSelector;
+    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `tolerations` — the same as in the pods' `spec.tolerations` parameter in Kubernetes;
-    * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling);
-    * You can set it to `false` to avoid adding any tolerations;
+    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
