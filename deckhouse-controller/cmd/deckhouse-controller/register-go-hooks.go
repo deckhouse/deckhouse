@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-prometheus-madison-integration/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/998-flant-pricing/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks"
@@ -26,5 +27,4 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/302-vertical-pod-autoscaler/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-ping/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/600-secret-copier/hooks"
 )
