@@ -23,7 +23,6 @@ monitoringPingEnabled: true
 deschedulerEnabled: true
 ingressNginxEnabled: true
 dashboardEnabled: true
-secretCopierEnabled: true
 deckhouseWebEnabled: true
 helmEnabled: true
 smokeMiniEnabled: true

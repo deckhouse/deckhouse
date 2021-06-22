@@ -3,3 +3,4 @@ monitoringApplicationsEnabled: true
 prometheusMadisonIntegrationEnabled: true
 extendedMonitoringEnabled: true
 nginxIngressEnabled: true
+secretCopierEnabled: true

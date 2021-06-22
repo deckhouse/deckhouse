@@ -2,3 +2,4 @@
 monitoringApplicationsEnabled: true
 prometheusMadisonIntegrationEnabled: true
 extendedMonitoringEnabled: true
+secretCopierEnabled: true
