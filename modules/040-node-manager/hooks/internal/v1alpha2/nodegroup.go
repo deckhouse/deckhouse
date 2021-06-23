@@ -29,28 +29,28 @@ type NodeGroup struct {
 }
 
 type NodeGroupSpec struct {
-	// Type of nodes in group: Cloud, Static, Hybrid
+	// Type of nodes in group: Cloud, Static, Hybrid. Field is required.
 	NodeType string `json:"nodeType,omitempty"`
 
-	// CRI parameters
+	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 
-	// cloudInstances
+	// cloudInstances. Optional.
 	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
 
-	// Default labels, annotations and taints for Nodes in NodeGroup
+	// Default labels, annotations and taints for Nodes in NodeGroup. Optional.
 	NodeTemplate NodeTemplate `json:"nodeTemplate,omitempty"`
 
-	// chaos
+	// Chaos monkey settings. Optional.
 	Chaos Chaos `json:"chaos,omitempty"`
 
-	// operatingSystem
+	// OperatingSystem. Optional.
 	OperatingSystem OperatingSystem `json:"operatingSystem,omitempty"`
 
-	// Disruptions settings for nodes.
+	// Disruptions settings for nodes. Optional.
 	Disruptions Disruptions `json:"disruptions,omitempty"`
 
-	// Kubelet settings for nodes.
+	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
 }
 
@@ -59,10 +59,14 @@ type CRI struct {
 	Type string `json:"type,omitempty"`
 
 	// Containerd runtime parameters.
-	Containerd *Containerd `json:"containerd"`
+	Containerd *Containerd `json:"containerd,omitempty"`
 
 	// Docker settings for nodes.
-	Docker *Docker `json:"docker"`
+	Docker *Docker `json:"docker,omitempty"`
+}
+
+func (c CRI) IsEmpty() bool {
+	return c.Type == "" && c.Containerd == nil && c.Docker == nil
 }
 
 type Containerd struct {
@@ -81,12 +85,12 @@ type Docker struct {
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.
 type CloudInstances struct {
 	// List of availability zones to create instances in.
-	Zones []string `json:"zones,omitempty"`
+	Zones []string `json:"zones"`
 
-	// Minimal amount of instances for the group in each zone.
+	// Minimal amount of instances for the group in each zone. Required.
 	MinPerZone *int32 `json:"minPerZone,omitempty"`
 
-	// Maximum amount of instances for the group in each zone.
+	// Maximum amount of instances for the group in each zone. Required.
 	MaxPerZone *int32 `json:"maxPerZone,omitempty"`
 
 	// Maximum amount of unavailable instances (during rollout) in the group in each zone.
@@ -96,18 +100,33 @@ type CloudInstances struct {
 	MaxSurgePerZone *int32 `json:"maxSurgePerZone,omitempty"`
 
 	// Overprovisioned Nodes for this NodeGroup.
-	Standby intstr.IntOrString `json:"standby,omitempty"`
+	Standby *intstr.IntOrString `json:"standby,omitempty"`
 
 	// Settings for overprovisioned Node holder.
 	StandbyHolder StandbyHolder `json:"standbyHolder,omitempty"`
 
-	// Reference to a ClassInstance resource
-	ClassReference ClassReference `json:"classReference,omitempty"`
+	// Reference to a ClassInstance resource. Required.
+	ClassReference ClassReference `json:"classReference"`
+}
+
+func (c CloudInstances) IsEmpty() bool {
+	return c.Zones == nil &&
+		c.MinPerZone == nil &&
+		c.MaxPerZone == nil &&
+		c.MaxUnavailablePerZone == nil &&
+		c.MaxSurgePerZone == nil &&
+		c.Standby == nil &&
+		c.StandbyHolder.IsEmpty() &&
+		c.ClassReference.IsEmpty()
 }
 
 type StandbyHolder struct {
 	// Describes the amount of resources, that will not be held by standby holder.
 	NotHeldResources Resources `json:"notHeldResources,omitempty"`
+}
+
+func (s StandbyHolder) IsEmpty() bool {
+	return s.NotHeldResources.IsEmpty()
 }
 
 type Resources struct {
@@ -118,12 +137,21 @@ type Resources struct {
 	Memory intstr.IntOrString `json:"memory,omitempty"`
 }
 
+func (r Resources) IsEmpty() bool {
+	v := r.CPU.String() + r.Memory.String()
+	return v == "" || v == "00"
+}
+
 type ClassReference struct {
 	// Kind of a ClassReference resource: OpenStackInstanceClass, GCPInstanceClass, ...
 	Kind string `json:"kind,omitempty"`
 
 	// Name of a ClassReference resource.
 	Name string `json:"name,omitempty"`
+}
+
+func (c ClassReference) IsEmpty() bool {
+	return c.Kind == "" && c.Name == ""
 }
 
 type NodeTemplate struct {
@@ -143,6 +171,10 @@ type NodeTemplate struct {
 	Taints []v1.Taint `json:"taints,omitempty"`
 }
 
+func (n NodeTemplate) IsEmpty() bool {
+	return n.Annotations == nil && n.Labels == nil && n.Taints == nil
+}
+
 // Chaos is a chaos-monkey settings.
 type Chaos struct {
 	// Chaos monkey mode: DrainAndDelete or Disabled (default).
@@ -152,9 +184,17 @@ type Chaos struct {
 	Period string `json:"period,omitempty"`
 }
 
+func (c Chaos) IsEmpty() bool {
+	return c.Mode == "" && c.Period == ""
+}
+
 type OperatingSystem struct {
 	// Enable kernel maintenance from bashible (default true).
 	ManageKernel *bool `json:"manageKernel,omitempty"`
+}
+
+func (o OperatingSystem) IsEmpty() bool {
+	return o.ManageKernel == nil
 }
 
 type Disruptions struct {
@@ -165,9 +205,17 @@ type Disruptions struct {
 	Automatic AutomaticDisruptions `json:"automatic,omitemtpy"`
 }
 
+func (d Disruptions) IsEmpty() bool {
+	return d.ApprovalMode == "" && d.Automatic.IsEmpty()
+}
+
 type AutomaticDisruptions struct {
 	// Indicates if Pods should be drained from node before allow disruption.
 	DrainBeforeApproval *bool `json:"drainBeforeApproval,omitemtpy"`
+}
+
+func (a AutomaticDisruptions) IsEmpty() bool {
+	return a.DrainBeforeApproval == nil
 }
 
 type Kubelet struct {
@@ -177,6 +225,10 @@ type Kubelet struct {
 	// Directory path for managing kubelet files (volume mounts,etc).
 	// Default: '/var/lib/kubelet'
 	RootDir string `json:"rootDir,omitempty"`
+}
+
+func (k Kubelet) IsEmpty() bool {
+	return k.MaxPods == nil && k.RootDir == ""
 }
 
 type NodeGroupStatus struct {
@@ -202,7 +254,7 @@ type NodeGroupStatus struct {
 	UpToDate int32 `json:"upToDate,omitempty"`
 
 	// Number of overprovisioned instances in the group.
-	Standby int32 `json:"standy,omitempty"`
+	Standby int32 `json:"standby,omitempty"`
 
 	// Error message about possible problems with the group handling.
 	Error string `json:"error,omitempty"`

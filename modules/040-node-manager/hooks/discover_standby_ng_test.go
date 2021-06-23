@@ -236,7 +236,7 @@ status: {}
 
 		It("Hook must not fail; standby NG should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"10m","reserveMemory": "10Mi","taints":[{"effect":"NoExecute","key":"ship-class","value":"frigate"}]}`))
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups.0").String()).To(MatchJSON(`{"name":"standby-absolute","standby":5,"reserveCPU":"10m","reserveMemory": "10Mi","taints":[{"key":"ship-class","value":"frigate","effect":"NoExecute"}]}`))
 		})
 	})
 

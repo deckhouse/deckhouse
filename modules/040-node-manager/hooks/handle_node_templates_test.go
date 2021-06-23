@@ -19,6 +19,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: handle_node_templates_test 
 
 		It("Must be executed successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1), "expire group should exist on empty cluster")
 		})
 	})
 
@@ -67,6 +68,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("Node", "wor-ker").Parse().DropFields("status", "metadata.creationTimestamp")).
 				To(MatchJSON(expectedJSON))
+			Expect(f.MetricsCollector.CollectedMetrics()).Should(HaveLen(1), "should have only expire metric for managed node")
 		})
 	})
 
@@ -464,6 +466,36 @@ metadata:
 			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
+		})
+	})
+
+	Context("Unmanaged nodes in cluster", func() {
+		BeforeEach(func() {
+
+			state := `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/group: wor-ker
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: unmanaged-wor-ker
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully; metric should exported", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[1].Labels["node"]).Should(Equal("unmanaged-wor-ker"))
 		})
 	})
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"os"
+	"time"
 
 	"github.com/cloudflare/cfssl/cli/genkey"
 	"github.com/cloudflare/cfssl/config"
@@ -21,6 +22,19 @@ type Certificate struct {
 }
 
 type SigningOption func(signing *config.Signing)
+
+func WithSigningDefaultExpiry(expiry time.Duration) SigningOption {
+	return func(signing *config.Signing) {
+		signing.Default.Expiry = expiry
+		signing.Default.ExpiryString = expiry.String()
+	}
+}
+
+func WithSigningDefaultUsage(usage []string) SigningOption {
+	return func(signing *config.Signing) {
+		signing.Default.Usage = usage
+	}
+}
 
 func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca Authority, options ...interface{}) (Certificate, error) {
 	logger.Debugf("Generate self-signed cert for %s %v", cn, hosts)

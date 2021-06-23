@@ -17,6 +17,24 @@ type Authority struct {
 
 type Option func(request *csr.CertificateRequest)
 
+func WithKeyAlgo(algo string) Option {
+	return func(request *csr.CertificateRequest) {
+		request.KeyRequest.A = algo
+	}
+}
+
+func WithKeySize(size int) Option {
+	return func(request *csr.CertificateRequest) {
+		request.KeyRequest.S = size
+	}
+}
+
+func WithCAExpiry(expiry string) Option {
+	return func(request *csr.CertificateRequest) {
+		request.CA.Expiry = expiry
+	}
+}
+
 func WithCAConfig(caConfig *csr.CAConfig) Option {
 	return func(request *csr.CertificateRequest) {
 		request.CA = caConfig
