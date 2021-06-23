@@ -22,6 +22,12 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: deckhouse
+  updatePolicy:
+    updateMode: Initial
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -37,6 +43,12 @@ spec:
     - containerName: node-exporter
     - containerName: kubelet-eviction-thresholds-exporter
     - containerName: kube-rbac-proxy
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-exporter
+  updatePolicy:
+    updateMode: Auto
 `
 	const TwoVpas = `
 ---
@@ -55,6 +67,12 @@ spec:
       maxAllowed:
         cpu: 227m
         memory: "310373428"
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: deckhouse
+  updatePolicy:
+    updateMode: Initial
 status:
   recommendation:
     containerRecommendations:
@@ -86,6 +104,12 @@ spec:
       maxAllowed:
         cpu: 21m
         memory: "22696559"
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-exporter
+  updatePolicy:
+    updateMode: Auto
 status:
   recommendation:
     containerRecommendations:
@@ -128,8 +152,23 @@ status:
 
 		It("Hook should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			vpaDeckhouse := f.KubernetesResource("VerticalPodAutoscaler", "d8-system", "deckhouse")
+			vpaNodeExporter := f.KubernetesResource("VerticalPodAutoscaler", "d8-monitoring", "node-exporter")
+			Expect(vpaDeckhouse.Exists()).To(BeTrue())
+			Expect(vpaNodeExporter.Exists()).To(BeTrue())
+			Expect(vpaDeckhouse.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+			Expect(vpaNodeExporter.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
+			Expect(vpaDeckhouse.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: Deployment
+name: deckhouse
+`))
+			Expect(vpaNodeExporter.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: DaemonSet
+name: node-exporter
+`))
 		})
-
 	})
 
 	Context("Cluster with two VPAs and set of global.modules.resourcesRequests.internal variables", func() {
@@ -148,6 +187,8 @@ status:
 			vpaNodeExporter := f.KubernetesResource("VerticalPodAutoscaler", "d8-monitoring", "node-exporter")
 			Expect(vpaDeckhouse.Exists()).To(BeTrue())
 			Expect(vpaNodeExporter.Exists()).To(BeTrue())
+			Expect(vpaDeckhouse.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+			Expect(vpaNodeExporter.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
 			Expect(vpaDeckhouse.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
 - containerName: deckhouse
   maxAllowed:
@@ -168,9 +209,17 @@ status:
     cpu: 341m
     memory: "209494708"
 `))
-
+			Expect(vpaDeckhouse.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: Deployment
+name: deckhouse
+`))
+			Expect(vpaNodeExporter.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: DaemonSet
+name: node-exporter
+`))
 		})
-
 	})
 
 	Context("Cluster with two VPAs, and another set of global.modules.resourcesRequests.internal variables", func() {
@@ -190,6 +239,8 @@ and global variables controlPlaneRequestsCpu, controlPlaneRequestsMemory, everyN
 			vpaNodeExporter := f.KubernetesResource("VerticalPodAutoscaler", "d8-monitoring", "node-exporter")
 			Expect(vpaDeckhouse.Exists()).To(BeTrue())
 			Expect(vpaNodeExporter.Exists()).To(BeTrue())
+			Expect(vpaDeckhouse.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+			Expect(vpaNodeExporter.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
 			Expect(vpaDeckhouse.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
 - containerName: deckhouse
   maxAllowed:
@@ -210,9 +261,16 @@ and global variables controlPlaneRequestsCpu, controlPlaneRequestsMemory, everyN
     cpu: 100m
     memory: "54063150"
 `))
-
+			Expect(vpaDeckhouse.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: Deployment
+name: deckhouse
+`))
+			Expect(vpaNodeExporter.Field("spec.targetRef").String()).To(MatchYAML(`
+apiVersion: apps/v1
+kind: DaemonSet
+name: node-exporter
+`))
 		})
-
 	})
-
 })
