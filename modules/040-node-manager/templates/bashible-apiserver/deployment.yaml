@@ -46,6 +46,8 @@ spec:
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" .   | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "bashible-apiserver"))  | indent 6 }}
+      hostNetwork: true
+      dnsPolicy: Default
       serviceAccountName: bashible-apiserver
       imagePullSecrets:
         - name: deckhouse-registry
