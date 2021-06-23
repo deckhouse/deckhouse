@@ -4,7 +4,6 @@ import (
 	. "github.com/benjamintf1/unmarshalledmatchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -191,7 +190,7 @@ spec:
 		})
 		It("Hook must fail", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: UIDs are not unique among NodeUser CRs.`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`UIDs are not unique among NodeUser CRs`))
 		})
 	})
 

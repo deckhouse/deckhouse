@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.15.90
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.9.0

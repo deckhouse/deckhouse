@@ -113,6 +113,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // Also, "node.deckhouse.io/uninitialized" taint is deleted.
 func nodeTemplatesHandler(input *go_hook.HookInput) error {
 	nodes := input.Snapshots["nodes"]
+	// Expire d8_unmanaged_nodes_on_cluster metric and register unmanaged nodes.
+	// This is a separate loop because template applying may return an error.
+	input.MetricsCollector.Expire("")
+	for _, nodeObj := range nodes {
+		node := nodeObj.(NodeSettings)
+		if node.NodeGroup == "" {
+			input.MetricsCollector.Set("d8_unmanaged_nodes_on_cluster", 1, map[string]string{
+				"node": node.Name,
+			})
+		}
+	}
 	if len(nodes) == 0 {
 		return nil
 	}

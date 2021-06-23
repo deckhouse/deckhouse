@@ -1,11 +1,10 @@
 package hooks
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"os/exec"
-	"strings"
+	"strconv"
+	"testing"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -13,18 +12,91 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func calculateEpoch(ngName string, clusterUUID string) string {
-	h := md5.New()
-	b := []byte(clusterUUID + ngName + "\n")
-	h.Write(b)
-	seed := hex.EncodeToString(h.Sum(nil))
+// Test calculateUpdateEpoch method with different input cases:
+// - different clusterID or nodeGroup should return different epoch numbers
+// - also test epoch calculation with different timestamps and for edge cases
+func Test_calculateUpdateEpoch(t *testing.T) {
+	clusterID := "test-cluster-1"
+	nodeGroup := "test-node-group-1"
 
-	epochCmd := exec.Command(`/bin/bash`, `-c`, `awk -v seed="`+seed+`" -v timestamp="1234567890" 'BEGIN{srand(seed); printf("%d\n", ((rand() * 14400) + timestamp) / 14400)}'`)
-	epochOut, err := epochCmd.Output()
-	if err != nil {
-		panic(err)
+	ts0 := 20001
+	epochStr0 := calculateUpdateEpoch(int64(ts0), clusterID, nodeGroup)
+	epoch0, _ := strconv.Atoi(epochStr0)
+
+	if ts0 > epoch0 {
+		t.Fatalf("epoch for %d should not be smaller. Got: %d", ts0, epoch0)
 	}
-	return strings.TrimSpace(string(epochOut))
+
+	// Test different clusterID and nodeGroupName.
+	// 1. epoch for different clusters should be different for the same timestamp and node group name
+	epochStr1 := calculateUpdateEpoch(int64(ts0), "test-cluster-2", nodeGroup)
+	epoch1, _ := strconv.Atoi(epochStr1)
+	if epoch0 == epoch1 {
+		t.Fatalf("epoch for same ts == %d but different cluster should not be equal to %d. Got: %d", ts0, epoch0, epoch1)
+	}
+
+	// 2. epoch for different node groups should be different for the same timestamp and cluster.
+	epochStr1 = calculateUpdateEpoch(int64(ts0), clusterID, "test-node-group-2")
+	epoch1, _ = strconv.Atoi(epochStr1)
+	if epoch0 == epoch1 {
+		t.Fatalf("epoch for same ts == %d but different node group should not be equal to %d. Got: %d", ts0, epoch0, epoch1)
+	}
+
+	// Timestamp cases.
+	// epoch for ts==epoch is epoch
+	ts1 := int64(epoch0)
+	epochStr1 = calculateUpdateEpoch(ts1, clusterID, nodeGroup)
+	epoch1, _ = strconv.Atoi(epochStr1)
+
+	if epoch1 != epoch0 {
+		t.Fatalf("epoch for ts == epoch (%d) should be equal to epoch. Got: %d", ts1, epoch1)
+	}
+
+	// Previous timestamps.
+	// epoch for ts==epoch-1 is epoch
+	ts1 = int64(epoch0 - 1)
+	epochStr1 = calculateUpdateEpoch(ts1, clusterID, nodeGroup)
+	epoch1, _ = strconv.Atoi(epochStr1)
+
+	if epoch1 != epoch0 {
+		t.Fatalf("epoch for ts == epoch-1 (%d) should be equal to %d. Got: %d", ts1, epoch0, epoch1)
+	}
+
+	// epoch for window start ts==(epoch - window size + 1) is epoch
+	ts1 = int64(epoch0 - int(EpochWindowSize) + 1)
+	epochStr1 = calculateUpdateEpoch(ts1, clusterID, nodeGroup)
+	epoch1, _ = strconv.Atoi(epochStr1)
+
+	if epoch1 != epoch0 {
+		t.Fatalf("epoch for ts == epoch-14400+1 (%d) should be equal to %d. Got: %d", ts1, epoch0, epoch1)
+	}
+
+	// epoch for ts==(epoch - window size) should be a previous epoch
+	ts1 = int64(epoch0 - int(EpochWindowSize))
+	epochStr1 = calculateUpdateEpoch(ts1, clusterID, nodeGroup)
+	epoch1, _ = strconv.Atoi(epochStr1)
+
+	if epoch1 != epoch0-int(EpochWindowSize) {
+		t.Fatalf("epoch for ts == epoch-14400 (%d) should not be equal to %d. Got: %d", ts1, epoch0, epoch1)
+	}
+
+	// Future timestamp.
+	// epoch for ts==epoch+1 is the next epoch
+	ts1 = int64(epoch0 + 1)
+	epochStr1 = calculateUpdateEpoch(ts1, clusterID, nodeGroup)
+	epoch1, _ = strconv.Atoi(epochStr1)
+
+	if epoch1 != epoch0+int(EpochWindowSize) {
+		t.Fatalf("epoch for ts == epoch+1 (%d) should be the next epoch (%d). Got: %d", ts1, epoch0+14400, epoch1)
+	}
+
+}
+
+const TestTimestampForUpdateEpoch int64 = 1234567890
+
+// calculateEpoch is a helper to minimize test changes during implementation of Go hooks.
+func calculateEpoch(ngName string, clusterUUID string) string {
+	return calculateUpdateEpoch(TestTimestampForUpdateEpoch, clusterUUID, ngName)
 }
 
 var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
@@ -228,6 +300,18 @@ metadata:
 `
 	)
 
+	// Setup hook for test environment.
+	// Freeze timestampt for updateEpoch field.
+	epochTimestampAccessor = func() int64 {
+		return TestTimestampForUpdateEpoch
+	}
+	// Set Kind for "ics" binding.
+	getCRDsHookConfig.Kubernetes[0].Kind = "D8TestInstanceClass"
+	getCRDsHookConfig.Kubernetes[0].ApiVersion = "deckhouse.io/v1alpha1"
+	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (inUse string, fromSecret string) {
+		return "D8TestInstanceClass", "D8TestInstanceClass"
+	}
+
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.15.5", "kubernetesVersions":["1.15.5"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
@@ -308,61 +392,6 @@ metadata:
 				  }
 				]
 `
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-		})
-	})
-
-	Context("Cluster with two pairs of NG+IC but without provider secret", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper))
-			f.RunHook()
-		})
-
-		It("Hook must not fail, NG statuses must update", func() {
-			expectedJSON := `
-				[
-				  {
-				    "nodeType": "Cloud",
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper1"
-				      },
-				      "zones": []
-				    },
-				    "instanceClass": null,
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.15",
-					"cri": {
-                      "type": "Docker"
-                    },
-				    "name": "proper1",
-                    "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  },
-				  {
-				    "nodeType": "Cloud",
-				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper2"
-				      },
-				      "zones": [
-				        "a",
-				        "b"
-				      ]
-				    },
-				    "instanceClass": null,
-				    "manualRolloutID": "",
-                    "kubernetesVersion": "1.15",
-					"cri": {
-                      "type": "Docker"
-                    },
-				    "name": "proper2",
-                    "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
-				  }
-				]
-`
-			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 		})
 	})
@@ -668,7 +697,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Bad NodeGroup improper: Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
+			Expect(f.LogrusOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
@@ -749,7 +778,7 @@ metadata:
 				`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.Session.Err).Should(gbytes.Say("ERROR: Bad NodeGroup improper: Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(f.LogrusOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
@@ -815,7 +844,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
+			Expect(f.LogrusOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
@@ -881,11 +910,11 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: unknown zones.`))
+			Expect(f.LogrusOutput).Should(gbytes.Say(`unknown cloudInstances\.zones: \[xxx\]`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
-			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("unknown zones."))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(ContainSubstring("unknown cloudInstances.zones"))
 		})
 	})
 
@@ -962,7 +991,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Bad NodeGroup improper: Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
+			Expect(f.LogrusOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
@@ -1128,7 +1157,7 @@ spec:
 
 		It("Hook must fail", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.Session.Err).Should(gbytes.Say(`ERROR: Containerd cri allowed only for kubernetes 1.19+.`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`allowed only for kubernetes 1.19+`))
 		})
 	})
 

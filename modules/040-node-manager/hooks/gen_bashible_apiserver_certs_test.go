@@ -3,7 +3,7 @@ package hooks
 /*
 
 User-stories:
-1. For using TLS for bashiple apiserver need a pair of certificates. This hook generates them and stores in cluster as Secret resource.
+1. For using TLS for bashible apiserver need a pair of certificates. This hook generates them and stores in cluster as Secret resource.
 
 */
 

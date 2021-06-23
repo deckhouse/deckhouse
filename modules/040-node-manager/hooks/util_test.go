@@ -3,6 +3,7 @@ package hooks
 import (
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 )
@@ -28,28 +29,89 @@ func Test_DecodeDataFromSecret(t *testing.T) {
 
 	var v interface{}
 
+	// Secret data has string value.
 	v = data["simple"]
 	if _, ok := v.(string); !ok {
 		t.Fatalf(`data["simple"] should be string. Got type=%T val=%#v`, v, v)
 	}
 
+	// Secret data has JSON-encoded array value.
 	v = data["json_array"]
 	if _, ok := v.([]interface{}); !ok {
 		t.Fatalf(`data["json_array"] should be []interface{}. Got type=%T val=%#v`, v, v)
 	}
 
+	// Secret data has JSON-encoded object value.
 	v = data["json_object"]
 	if _, ok := v.(map[string]interface{}); !ok {
 		t.Fatalf(`data["json_object"] should be map[string]interface{}. Got type=%T val=%#v`, v, v)
 	}
 
+	// Secret data has JSON-encoded string value.
 	v = data["json_string"]
 	if _, ok := v.(string); !ok {
 		t.Fatalf(`data["json_string"] should be string. Got type=%T val=%#v`, v, v)
 	}
 
+	// Secret data has JSON-encoded number value.
 	v = data["json_number"]
 	if _, ok := v.(string); !ok {
 		t.Fatalf(`data["json_number"] should not be converted from string. Got type=%T val=%#v`, v, v)
+	}
+}
+
+func Test_Semver_Min(t *testing.T) {
+	var ver *semver.Version
+
+	// Test nil input
+	ver = SemverMin(nil)
+	if ver != nil {
+		t.Fatalf("SemverMin should return nil when input is nil. Got: %#v", ver)
+	}
+
+	// Test empty array input
+	ver = SemverMin([]*semver.Version{})
+	if ver != nil {
+		t.Fatalf("SemverMin should return nil when input has no items. Got: %#v", ver)
+	}
+
+	// Test input with single item.
+	v19, _ := semver.NewVersion("1.19.0")
+
+	ver = SemverMin([]*semver.Version{v19})
+	if ver == nil {
+		t.Fatalf("SemverMin should return non nil when input has single item. Got: %#v", ver)
+	}
+	if ver.String() != "1.19.0" {
+		t.Fatalf("SemverMin should return '1.19.0'. Got: %#v", ver)
+	}
+
+	// Test input with multiple items.
+	v18, _ := semver.NewVersion("1.18.1")
+	v17, _ := semver.NewVersion("1.17.2")
+
+	ver = SemverMin([]*semver.Version{v19, v17, v18})
+	if ver == nil {
+		t.Fatalf("SemverMin should return non nil when input has multiple items. Got: %#v", ver)
+	}
+	if ver.String() != "1.17.2" {
+		t.Fatalf("SemverMin should return '1.17.2'. Got: %#v", ver.String())
+	}
+}
+
+func Test_Semver_MajMin(t *testing.T) {
+	var ver string
+
+	// Test nil input.
+	ver = SemverMajMin(nil)
+	if ver != "" {
+		t.Fatalf("SemverMajMin should return empty string when input is nil. Got: %v", ver)
+	}
+
+	// Test non-nil input.
+	v19, _ := semver.NewVersion("1.19.3")
+	ver = SemverMajMin(v19)
+	if ver != "1.19" {
+		t.Fatalf("SemverMajMin should return major.minor='1.19'. Got: %v", ver)
 	}
 }

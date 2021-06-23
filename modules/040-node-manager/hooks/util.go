@@ -2,7 +2,9 @@ package hooks
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -38,4 +40,28 @@ func DecodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 	}
 
 	return res, nil
+}
+
+// SemverMajMin is a Go implementation of this bash snippet:
+//   function semver::majmin() {
+//     echo "$(echo $1 | cut -d. -f1,2)"
+//   }
+func SemverMajMin(ver *semver.Version) string {
+	if ver == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d.%d", ver.Major(), ver.Minor())
+}
+
+func SemverMin(versions []*semver.Version) *semver.Version {
+	if len(versions) == 0 {
+		return nil
+	}
+	var res *semver.Version
+	for i, ver := range versions {
+		if res == nil || res.GreaterThan(ver) {
+			res = versions[i]
+		}
+	}
+	return res
 }

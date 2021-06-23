@@ -29,9 +29,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
@@ -127,9 +127,11 @@ type HookExecutionConfig struct {
 	extraHookEnvs            []string
 	ValuesValidator          *validation.ValuesValidator
 	GoHookError              error
+	GoHookBindingActions     []go_hook.BindingAction
 	MetricsCollector         TestMetricsCollector
 
-	Session *gexec.Session
+	Session      *gexec.Session
+	LogrusOutput *gbytes.Buffer
 
 	fakeClusterVersion k8s.FakeClusterVersion
 	fakeCluster        *fake.Cluster
@@ -642,8 +644,14 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	// TODO: assert on metrics
 	metricsCollector := metrics.NewCollector(hec.HookPath)
 	hec.MetricsCollector = metricsCollector
-	// TODO: assert on logging hook
-	logger, _ := test.NewNullLogger()
+
+	// Catch all log messages into assertable buffer.
+	hec.LogrusOutput = gbytes.NewBuffer()
+	logger := logrus.New()
+	logger.SetOutput(hec.LogrusOutput)
+
+	// TODO: assert on binding actions
+	var bindingActions []go_hook.BindingAction
 
 	// make spec generator to reproduce behavior with deferred object mutations like in addon-operator
 	patchCollector := object_patch.NewPatchCollector()
@@ -655,6 +663,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		MetricsCollector: metricsCollector,
 		LogEntry:         logger.WithField("output", "gohook"),
 		ObjectPatcher:    patchCollector,
+		BindingActions:   &bindingActions,
 	}
 
 	if len(hec.extraHookEnvs) > 0 {
@@ -690,6 +699,8 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		err := objectPatcher.GenerateFromJSONAndExecuteOperations(operations)
 		Expect(err).ShouldNot(HaveOccurred())
 	}
+
+	hec.GoHookBindingActions = bindingActions
 
 	By("Validating resulting values")
 	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.values.JSONRepr))).To(Succeed())
