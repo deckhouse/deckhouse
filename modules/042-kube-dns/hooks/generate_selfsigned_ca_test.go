@@ -11,7 +11,14 @@ import (
 )
 
 const (
-	initValuesString       = `{"kubeDns":{"internal":{"stsPodsHostsAppenderWebhook":{}}}}`
+	initValuesString = `{
+  "kubeDns": {
+    "clusterDomainAliases": ["abc"],
+    "internal": {
+      "stsPodsHostsAppenderWebhook":{}
+    }
+  }
+}`
 	initConfigValuesString = `{}`
 )
 

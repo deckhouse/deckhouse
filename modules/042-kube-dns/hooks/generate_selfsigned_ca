@@ -29,6 +29,15 @@ EOF
 }
 
 function __main__() {
+  # Do not generate certificates if cluster domain aliases are not enabled
+  if ! values::has kubeDns.clusterDomainAliases ; then
+    return 0
+  fi
+
+  if ! values::has kubeDns.clusterDomainAliases.0 ; then
+    return 0
+  fi
+
   if context::has snapshots.secret.0; then
     values::set kubeDns.internal.stsPodsHostsAppenderWebhook.crt "$(context::get snapshots.secret.0.filterResult.crt)"
     values::set kubeDns.internal.stsPodsHostsAppenderWebhook.key "$(context::get snapshots.secret.0.filterResult.key)"

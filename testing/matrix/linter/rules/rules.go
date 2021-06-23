@@ -469,7 +469,7 @@ func objectDNSPolicy(object storage.StoreObject) errors.LintRuleError {
 	}
 
 	switch name {
-	case "cloud-controller-manager", "machine-controller-manager":
+	case "cloud-controller-manager", "machine-controller-manager", "bashible-apiserver":
 		if hostNetwork && dnsPolicy != "Default" {
 			return errors.NewLintRuleError(
 				"MANIFEST007",
