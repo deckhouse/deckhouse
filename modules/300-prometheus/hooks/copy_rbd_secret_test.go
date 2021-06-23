@@ -34,7 +34,7 @@ kind: Secret
 metadata:
   name: existing-secret
   namespace: my-ns-a
-type: Opaque
+type: kubernetes.io/rbd
 ---
 apiVersion: v1
 data:
@@ -43,7 +43,7 @@ kind: Secret
 metadata:
   name: existing-secret
   namespace: d8-monitoring
-type: Opaque
+type: kubernetes.io/rbd
 ---
 apiVersion: v1
 data:
@@ -51,6 +51,15 @@ data:
 kind: Secret
 metadata:
   name: non-existing-secret
+  namespace: my-ns-b
+type: kubernetes.io/rbd
+---
+apiVersion: v1
+data:
+  foo: bm9uZXhpc3QK
+kind: Secret
+metadata:
+  name: non-needed-secret
   namespace: my-ns-b
 type: Opaque
 `
@@ -79,6 +88,14 @@ type: Opaque
 			data, err := base64.StdEncoding.DecodeString(copiedSecret.Field("data.foo").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(data)).Should(ContainSubstring("hopheylalaley"))
+		})
+
+		It("Non-needed (Opaque) secret should not be copied", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			sourceSecret := f.KubernetesResource("Secret", "my-ns-b", "non-needed-secret")
+			Expect(sourceSecret.Exists()).To(BeTrue())
+			copiedSecret := f.KubernetesResource("Secret", "d8-monitoring", "non-needed-secret")
+			Expect(copiedSecret.Exists()).To(BeFalse())
 		})
 	})
 })
