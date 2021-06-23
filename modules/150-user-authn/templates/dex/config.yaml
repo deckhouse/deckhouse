@@ -113,10 +113,10 @@
         startTLS: true
         {{- end }}
         userSearch:
-{{ $provider.ldap.userSearch | toYaml | indent 8 }}
+{{ $provider.ldap.userSearch | toYaml | indent 10 }}
         {{- if $provider.ldap.groupSearch }}
         groupSearch:
-{{ $provider.ldap.groupSearch | toYaml | indent 8 }}
+{{ $provider.ldap.groupSearch | toYaml | indent 10 }}
         {{- end }}
         usernamePrompt: {{ $provider.ldap.usernamePrompt | default "LDAP username" | quote }}
       {{- end }}
