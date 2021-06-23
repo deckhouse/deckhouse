@@ -74,6 +74,7 @@ spec:
                   enum:
                   - "network-ssd"
                   - "network-hdd"
+                  - "network-ssd-nonreplicated"
                 diskSizeGB:
                   description: Yandex Compute Instance disk size in gigabytes.
                   example: 20
