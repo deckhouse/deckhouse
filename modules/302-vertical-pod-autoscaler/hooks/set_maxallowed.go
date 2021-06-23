@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -11,8 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	autoscaler "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
+
+	autoscaler "github.com/deckhouse/deckhouse/modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1"
 )
 
 /*
@@ -39,6 +39,7 @@ const (
 	groupLabelKey  = "workload-resource-policy.deckhouse.io"
 	everyNodeLabel = "every-node"
 	masterLabel    = "master"
+	vpaAPIVersion  = "autoscaling.k8s.io/v1"
 )
 
 type VPA struct {
@@ -83,7 +84,7 @@ var (
 				Name:                   "Vpa",
 				WaitForSynchronization: pointer.BoolPtr(false),
 				ExecuteHookOnEvents:    pointer.BoolPtr(false),
-				ApiVersion:             "autoscaling.k8s.io/v1",
+				ApiVersion:             vpaAPIVersion,
 				Kind:                   "VerticalPodAutoscaler",
 				LabelSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -161,41 +162,51 @@ func updateVpaResources(input *go_hook.HookInput) error {
 	}
 
 	for _, snapshot := range snapshots {
-		var containerPolicies []autoscaler.ContainerResourcePolicy
-
 		if snapshot == nil {
 			continue
 		}
 		v := snapshot.(*VPA)
 
-		for _, r := range v.ContainerRecommendations {
+		err = input.ObjectPatcher.FilterObject(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var (
 				recommendationsMilliCPU int64
 				recommendationsMemory   int64
+				containerPolicies       []autoscaler.ContainerResourcePolicy
 			)
-			switch v.Label {
-			case masterLabel:
-				recommendationsMilliCPU = r.UncappedTarget.Cpu().MilliValue() * configMasterNodeMilliCPU / totalRequestsMasterNodeMilliCPU
-				recommendationsMemory = r.UncappedTarget.Memory().Value() * configMasterNodeMemory / totalRequestsMasterNodeMemory
-			case everyNodeLabel:
-				recommendationsMilliCPU = r.UncappedTarget.Cpu().MilliValue() * configEveryNodeMilliCPU / totalRequestsEveryNodeMilliCPU
-				recommendationsMemory = r.UncappedTarget.Memory().Value() * configEveryNodeMemory / totalRequestsEveryNodeMemory
-			}
-			newContainerPolicy := autoscaler.ContainerResourcePolicy{ContainerName: r.ContainerName}
-			newContainerPolicy.MaxAllowed = v1.ResourceList{
-				v1.ResourceCPU:    *resource.NewMilliQuantity(recommendationsMilliCPU, resource.BinarySI),
-				v1.ResourceMemory: *resource.NewQuantity(recommendationsMemory, resource.DecimalExponent),
-			}
-			containerPolicies = append(containerPolicies, newContainerPolicy)
-		}
 
-		newResourcePolicyPatch := autoscaler.VerticalPodAutoscaler{Spec: autoscaler.VerticalPodAutoscalerSpec{ResourcePolicy: &autoscaler.PodResourcePolicy{ContainerPolicies: containerPolicies}}}
-		jsonPatch, err := json.Marshal(newResourcePolicyPatch)
-		if err != nil {
-			return err
-		}
+			for _, container := range v.ContainerRecommendations {
+				switch v.Label {
+				case masterLabel:
+					recommendationsMilliCPU = container.UncappedTarget.Cpu().MilliValue() * configMasterNodeMilliCPU / totalRequestsMasterNodeMilliCPU
+					recommendationsMemory = container.UncappedTarget.Memory().Value() * configMasterNodeMemory / totalRequestsMasterNodeMemory
+				case everyNodeLabel:
+					recommendationsMilliCPU = container.UncappedTarget.Cpu().MilliValue() * configEveryNodeMilliCPU / totalRequestsEveryNodeMilliCPU
+					recommendationsMemory = container.UncappedTarget.Memory().Value() * configEveryNodeMemory / totalRequestsEveryNodeMemory
+				}
+				newContainerPolicy := autoscaler.ContainerResourcePolicy{
+					ContainerName: container.ContainerName,
+					MaxAllowed: v1.ResourceList{
+						v1.ResourceCPU:    *resource.NewMilliQuantity(recommendationsMilliCPU, resource.BinarySI),
+						v1.ResourceMemory: *resource.NewQuantity(recommendationsMemory, resource.DecimalExponent),
+					},
+				}
+				containerPolicies = append(containerPolicies, newContainerPolicy)
+			}
 
-		err = input.ObjectPatcher.MergePatchObject(jsonPatch, "autoscaling.k8s.io/v1", "VerticalPodAutoscaler", v.Namespace, v.Name, "")
+			vpa := &autoscaler.VerticalPodAutoscaler{}
+			err := sdk.FromUnstructured(obj, vpa)
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse vpa object from unstructured: %v", err)
+			}
+
+			vpa.Spec.ResourcePolicy = &autoscaler.PodResourcePolicy{ContainerPolicies: containerPolicies}
+
+			resObj, err := sdk.ToUnstructured(vpa)
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse unstructured to object: %v", err)
+			}
+			return resObj, nil
+		}, vpaAPIVersion, "VerticalPodAutoscaler", v.Namespace, v.Name, "")
 		if err != nil {
 			return err
 		}
@@ -209,53 +220,3 @@ func getPathInt(input *go_hook.HookInput, path string) (int64, error) {
 	}
 	return input.Values.Get(path).Int(), nil
 }
-
-/*
-err = input.ObjectPatcher.FilterObject(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	var (
-		recommendationsMilliCPU int64
-		recommendationsMemory   int64
-		containerPolicies       []autoscaler.ContainerResourcePolicy
-	)
-
-	v := &autoscaler.VerticalPodAutoscaler{}
-	err := sdk.FromUnstructured(obj, v)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse vpa object from unstructured: %v", err)
-	}
-
-	for _, container := range v.Status.Recommendation.ContainerRecommendations {
-		switch v.Labels[groupLabelKey] {
-		case masterLabel:
-			recommendationsMilliCPU = container.UncappedTarget.Cpu().MilliValue() * configMasterNodeMilliCPU / totalRequestsMasterNodeMilliCPU
-			recommendationsMemory = container.UncappedTarget.Memory().Value() * configMasterNodeMemory / totalRequestsMasterNodeMemory
-		case everyNodeLabel:
-			recommendationsMilliCPU = container.UncappedTarget.Cpu().MilliValue() * configEveryNodeMilliCPU / totalRequestsEveryNodeMilliCPU
-			recommendationsMemory = container.UncappedTarget.Memory().Value() * configEveryNodeMemory / totalRequestsEveryNodeMemory
-		}
-		newContainerPolicy := autoscaler.ContainerResourcePolicy{ContainerName: container.ContainerName}
-		for _, cp := range v.Spec.ResourcePolicy.ContainerPolicies {
-			if cp.ContainerName == container.ContainerName {
-				newContainerPolicy = cp
-				break
-			}
-		}
-		newContainerPolicy.MaxAllowed = v1.ResourceList{
-			v1.ResourceCPU:    *resource.NewMilliQuantity(recommendationsMilliCPU, resource.BinarySI),
-			v1.ResourceMemory: *resource.NewQuantity(recommendationsMemory, resource.DecimalExponent),
-		}
-		containerPolicies = append(containerPolicies, newContainerPolicy)
-	}
-	if v.Spec.ResourcePolicy == nil {
-		v.Spec.ResourcePolicy = &autoscaler.PodResourcePolicy{}
-	}
-
-	v.Spec.ResourcePolicy.ContainerPolicies = containerPolicies
-
-	result, err := sdk.ToUnstructured(v)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse unstructured to object: %v", err)
-	}
-	return result, nil
-}, v.APIVersion, v.Kind, v.Namespace, v.Name, "")
-*/
