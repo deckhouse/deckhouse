@@ -1,53 +1,59 @@
+:100644 100644 b5c94862a 191f96cf6 M	discovery/kubernetes/pod.go
+:100644 100644 107534540 9ffdd6b56 M	discovery/kubernetes/service.go
+:100644 100644 d9ed8a02b 79cfea1a1 M	scrape/scrape.go
+:100644 100644 4a7b6eb0f 5022a8055 M	scrape/target.go
+
 diff --git a/discovery/kubernetes/pod.go b/discovery/kubernetes/pod.go
-index baf58d24..5a6bfd9a 100644
+index b5c94862a..191f96cf6 100644
 --- a/discovery/kubernetes/pod.go
 +++ b/discovery/kubernetes/pod.go
-@@ -239,6 +239,7 @@ func (p *Pod) buildPod(pod *apiv1.Pod) *targetgroup.Group {
- 
+@@ -245,6 +245,7 @@ func (p *Pod) buildPod(pod *apiv1.Pod) *targetgroup.Group {
+
  			tg.Targets = append(tg.Targets, model.LabelSet{
  				model.AddressLabel:            lv(addr),
-+				model.SampleLimitLabel:        lv(""),
++				"__sample_limit__":            lv(""),
  				podContainerNameLabel:         lv(c.Name),
  				podContainerPortNumberLabel:   lv(ports),
  				podContainerPortNameLabel:     lv(port.Name),
 diff --git a/discovery/kubernetes/service.go b/discovery/kubernetes/service.go
-index ca01a5b3..296a6a75 100644
+index 107534540..9ffdd6b56 100644
 --- a/discovery/kubernetes/service.go
 +++ b/discovery/kubernetes/service.go
-@@ -180,6 +180,7 @@ func (s *Service) buildService(svc *apiv1.Service) *targetgroup.Group {
- 
+@@ -187,6 +187,7 @@ func (s *Service) buildService(svc *apiv1.Service) *targetgroup.Group {
+
  		labelSet := model.LabelSet{
  			model.AddressLabel:       lv(addr),
-+			model.SampleLimitLabel:   lv(""),
++			"__sample_limit__":       lv(""),
  			servicePortNameLabel:     lv(port.Name),
  			servicePortProtocolLabel: lv(string(port.Protocol)),
- 		}
+ 			serviceType:              lv(string(svc.Spec.Type)),
 diff --git a/scrape/scrape.go b/scrape/scrape.go
-index c216f03f..c1b1455e 100644
+index d9ed8a02b..79cfea1a1 100644
 --- a/scrape/scrape.go
 +++ b/scrape/scrape.go
-@@ -219,6 +219,10 @@ func newScrapePool(cfg *config.ScrapeConfig, app Appendable, jitterSeed uint64,
+@@ -294,6 +294,11 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, jitterSeed
  		}
  		opts.target.SetMetadataStore(cache)
- 
+
 +		limit := opts.target.SampleLimit()
 +		if limit == 0 {
-+			limit = opts.limit
++			limit = opts.sampleLimit
 +		}
++
  		return newScrapeLoop(
  			ctx,
  			opts.scraper,
-@@ -233,7 +237,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app Appendable, jitterSeed uint64,
- 				if err != nil {
- 					panic(err)
- 				}
--				return appender(app, opts.limit)
-+				return appender(app, limit)
+@@ -303,7 +308,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, jitterSeed
+ 				return mutateSampleLabels(l, opts.target, opts.honorLabels, opts.mrc)
  			},
+ 			func(l labels.Labels) labels.Labels { return mutateReportSampleLabels(l, opts.target) },
+-			func(ctx context.Context) storage.Appender { return appender(app.Appender(ctx), opts.sampleLimit) },
++			func(ctx context.Context) storage.Appender { return appender(app.Appender(ctx), limit) },
  			cache,
  			jitterSeed,
+ 			opts.honorTimestamps,
 diff --git a/scrape/target.go b/scrape/target.go
-index 678438e9..4c2d9123 100644
+index 4a7b6eb0f..5022a8055 100644
 --- a/scrape/target.go
 +++ b/scrape/target.go
 @@ -19,6 +19,7 @@ import (
@@ -57,13 +63,13 @@ index 678438e9..4c2d9123 100644
 +	"strconv"
  	"sync"
  	"time"
- 
-@@ -224,6 +225,18 @@ func (t *Target) URL() *url.URL {
+
+@@ -225,6 +226,18 @@ func (t *Target) URL() *url.URL {
  	}
  }
- 
+
 +func (t *Target) SampleLimit() int {
-+	limit := t.labels.Get(model.SampleLimitLabel)
++	limit := t.labels.Get("__sample_limit__")
 +	if limit == "" {
 +		return 0
 +	}
@@ -77,17 +83,3 @@ index 678438e9..4c2d9123 100644
  // Report sets target data about the last scrape.
  func (t *Target) Report(start time.Time, dur time.Duration, err error) {
  	t.mtx.Lock()
-diff --git a/vendor/github.com/prometheus/common/model/labels.go b/vendor/github.com/prometheus/common/model/labels.go
-index 41051a01..ebca7a61 100644
---- a/vendor/github.com/prometheus/common/model/labels.go
-+++ b/vendor/github.com/prometheus/common/model/labels.go
-@@ -45,6 +45,9 @@ const (
- 	// scrape a target.
- 	MetricsPathLabel = "__metrics_path__"
- 
-+	// TODO
-+	SampleLimitLabel = "__sample_limit__"
-+
- 	// ReservedLabelPrefix is a prefix which is not legal in user-supplied
- 	// label names.
- 	ReservedLabelPrefix = "__"
