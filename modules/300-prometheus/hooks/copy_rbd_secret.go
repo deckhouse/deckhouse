@@ -79,14 +79,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, copyRBDSecretHandler)
 
 func copyRBDSecretHandler(input *go_hook.HookInput) error {
-	storageClassSnap, ok := input.Snapshots["rbd_storageclass"]
-	if !ok {
-		return errors.New("no storageClasses snapshot")
-	}
-
-	secretSnap, ok := input.Snapshots["rbd_secret"]
-	if !ok {
-		return errors.New("no secrets snapshot")
+	secretSnap := input.Snapshots["rbd_secret"]
+	if len(secretSnap) == 0 {
+		return nil
 	}
 
 	secretsToCopy := make(map[string]*v1.Secret)
@@ -110,6 +105,8 @@ func copyRBDSecretHandler(input *go_hook.HookInput) error {
 			secretsToCopy[secret.Name] = secret
 		}
 	}
+
+	storageClassSnap := input.Snapshots["rbd_storageclass"]
 
 	for _, storageClass := range storageClassSnap {
 		userSecret := storageClass.(storageClassObject).UserSecretName
