@@ -57,9 +57,15 @@ spec:
         image: "{{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.nodeManager.bashibleApiserver }}"
         imagePullPolicy: IfNotPresent
         args:
+          - "--bind-address=$(HOST_IP)"
           - "--cert-dir=/var/certs"
           - "--secure-port=11223"
           - "--v=2"
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
           - name: certs
             mountPath: /var/certs
