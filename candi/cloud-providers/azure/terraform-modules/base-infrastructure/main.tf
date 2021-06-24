@@ -128,8 +128,8 @@ resource "azurerm_virtual_network_peering" "kube-with-remote" {
 resource "azurerm_virtual_network_peering" "remote-with-kube" {
   count                        = length(local.peered_vnets)
   name                         = join("-with-", [local.peered_vnets_data[count.index].name, azurerm_virtual_network.kube.name])
-  resource_group_name          = local.peered_vnets[count.index].resource_group_name
-  virtual_network_name         = local.peered_vnets[count.index].name
+  resource_group_name          = local.peered_vnets_data[count.index].resource_group_name
+  virtual_network_name         = local.peered_vnets_data[count.index].name
   remote_virtual_network_id    = azurerm_virtual_network.kube.id
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
