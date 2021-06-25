@@ -86,6 +86,10 @@ func (l *LeaseLock) Unlock() {
 	l.lease = nil
 }
 
+func (l *LeaseLock) StopAutoRenew() {
+	close(l.exitRenewCh)
+}
+
 func (l *LeaseLock) startAutoRenew() {
 	defer log.Debugln("lease autorenew stopped")
 	log.Debugln("lease autorenew started")

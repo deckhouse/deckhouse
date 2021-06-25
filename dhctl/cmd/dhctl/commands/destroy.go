@@ -46,16 +46,19 @@ func newK8sClientGetter(sshClient *ssh.Client) *k8sClientGetter {
 	}
 }
 
-func (g *k8sClientGetter) convergeUnlock(onlyNil bool) {
-	if onlyNil {
+func (g *k8sClientGetter) convergeUnlock(stopAutoRenewOnly bool) {
+	if g.convergeLock == nil {
+		return
+	}
+
+	if stopAutoRenewOnly {
+		g.convergeLock.StopAutoRenew()
 		g.convergeLock = nil
 		return
 	}
 
-	if g.convergeLock != nil {
-		g.convergeLock.Unlock()
-		g.convergeLock = nil
-	}
+	g.convergeLock.Unlock()
+	g.convergeLock = nil
 }
 
 func (g *k8sClientGetter) get() (*client.KubernetesClient, error) {
@@ -213,7 +216,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			}
 		}
 
-		// why only nil lock without request unlock
+		// why only unwatch lock without request unlock
 		// user may not delete resources and converge still working in cluster
 		// all node groups removing may still in long time run and
 		// we get race (destroyer destroy node group, auto applayer create nodes)
