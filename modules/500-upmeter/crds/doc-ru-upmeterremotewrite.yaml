@@ -45,6 +45,10 @@ spec:
                           type: string
                           description: Пароль для аутентификации.
                           minLength: 1
+                    bearerToken:
+                      type: string
+                      description: Токен для аутентификации.
+                      minLength: 1
                 additionalLabels:
                   type: object
                   description: Дополнительные метки для добавления ко всем метрикам.

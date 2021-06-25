@@ -56,6 +56,10 @@ spec:
                           type: string
                           description: The password for authentication.
                           minLength: 1
+                    bearerToken:
+                      type: string
+                      description: Bearer token.
+                      minLength: 1
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.

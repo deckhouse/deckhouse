@@ -198,9 +198,10 @@ func newExportConfig(rw *v1.RemoteWrite) exportingConfig {
 
 	return exportingConfig{
 		exporterConfig: &cortex.Config{
-			Name:      rw.Name,
-			Endpoint:  rw.Spec.Config.Endpoint,
-			BasicAuth: rw.Spec.Config.BasicAuth,
+			Name:        rw.Name,
+			Endpoint:    rw.Spec.Config.Endpoint,
+			BasicAuth:   rw.Spec.Config.BasicAuth,
+			BearerToken: rw.Spec.Config.BearerToken,
 		},
 		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,
 		labels:   labels,

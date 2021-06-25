@@ -6,8 +6,9 @@ import (
 
 // refer to cortex.Config
 type RemoteWriteConfig struct {
-	Endpoint  string            `json:"url"`
-	BasicAuth map[string]string `json:"basicAuth"`
+	Endpoint    string            `json:"url"`
+	BasicAuth   map[string]string `json:"basicAuth"`
+	BearerToken string            `json:"bearerToken"`
 }
 
 type RemoteWriteSpec struct {
