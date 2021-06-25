@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             Параметры группы Azure Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
@@ -47,3 +47,5 @@ spec:
                 additionalTags:
                   description: |
                     Дополнительные теги, которые будут присвоены созданным инстансам.
+    - name: v1
+      schema: *schema

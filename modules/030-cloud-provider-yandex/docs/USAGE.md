@@ -14,7 +14,7 @@ cloudProviderYandex: |
 ## An example of the `YandexInstanceClass` CR
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
   name: test

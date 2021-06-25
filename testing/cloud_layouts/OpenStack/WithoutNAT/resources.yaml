@@ -21,7 +21,7 @@ spec:
       key: dedicated.deckhouse.io
       value: system
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass
 metadata:
   name: system

@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             Параметры instance в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
@@ -46,3 +46,5 @@ spec:
                   type: array
                   description: |
                     Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего InstanceClass.
+    - name: v1
+      schema: *schema

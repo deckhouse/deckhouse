@@ -12,7 +12,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -75,6 +75,10 @@ spec:
                     The additional security groups to add to provisioned instances of the specific InstanceClass.
                   items:
                     type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
   scope: Cluster
   names:
     plural: awsinstanceclasses

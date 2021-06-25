@@ -25,7 +25,7 @@ spec:
       value: system
   nodeType: Cloud
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
 metadata:
   name: system

@@ -12,7 +12,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -109,6 +109,10 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
   scope: Cluster
   names:
     plural: openstackinstanceclasses
