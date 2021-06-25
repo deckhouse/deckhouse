@@ -9,7 +9,7 @@ function __config__() {
     - name: aws_instance_classes
       group: main
       keepFullObjectsInMemory: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: AWSInstanceClass
       jqFilter: |
         {

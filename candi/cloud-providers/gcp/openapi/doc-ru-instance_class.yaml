@@ -10,7 +10,7 @@ spec:
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             Описывает параметры группы GCP Instances, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
@@ -58,3 +58,5 @@ spec:
                     project: cms-production
                     severity: critical
                     ```
+    - name: v1
+      schema: *schema

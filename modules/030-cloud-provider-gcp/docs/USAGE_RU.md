@@ -5,7 +5,7 @@ title: "Сloud provider — GCP: примеры конфигурации"
 ## Пример CR `GCPInstanceClass`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GCPInstanceClass
 metadata:
   name: test

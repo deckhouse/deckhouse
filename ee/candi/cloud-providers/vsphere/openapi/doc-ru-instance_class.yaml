@@ -12,7 +12,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -123,6 +123,10 @@ spec:
                       x-doc-default: 80
                       minimum: 0
                       maximum: 100
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
   scope: Cluster
   names:
     plural: vsphereinstanceclasses

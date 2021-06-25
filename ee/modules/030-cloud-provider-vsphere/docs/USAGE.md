@@ -5,7 +5,7 @@ title: "Сloud provider — VMware vSphere: usage"
 ## An example of the `VsphereInstanceClass` CR
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VsphereInstanceClass
 metadata:
   name: test

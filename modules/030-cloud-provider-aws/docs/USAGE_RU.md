@@ -5,7 +5,7 @@ title: "Сloud provider — AWS: примеры конфигурации"
 ## Пример CR `AWSInstanceClass`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
 metadata:
   name: worker

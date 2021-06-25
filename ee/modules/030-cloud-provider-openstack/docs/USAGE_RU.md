@@ -5,7 +5,7 @@ title: "Сloud provider — OpenStack: примеры конфигурации"
 ## Пример CR `OpenStackInstanceClass`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass
 metadata:
   name: test
