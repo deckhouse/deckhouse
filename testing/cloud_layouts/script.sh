@@ -155,7 +155,7 @@ trap cleanup_delay EXIT
 
 for ((i=0; i<10; i++)); do
   smoke_mini_addr=$(kubectl -n d8-upmeter get ep smoke-mini -o json | jq -re '.subsets[].addresses[0] | .ip') && break
-  >&2 echo "Attempt to get Endpoints for smoki-mini #$i failed. Sleeping 30 seconds..."
+  >&2 echo "Attempt to get Endpoints for smoke-mini #$i failed. Sleeping 30 seconds..."
   sleep 30
 done
 
