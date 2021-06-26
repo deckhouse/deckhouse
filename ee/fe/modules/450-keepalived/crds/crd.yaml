@@ -43,16 +43,10 @@ spec:
                   description: |
                     Defines the `nodeSelector` parameter for keepalived pods.
 
-                    If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
-                    You can set it to `false` to avoid adding any nodeSelector.
-
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
                   description: |
                     Defines `tolerations` for keepalived pods.
-
-                    If the parameter is omitted, it will be set [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
-                    You can set it to `false` to avoid adding any tolerations.
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:

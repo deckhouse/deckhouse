@@ -47,13 +47,13 @@ properties:
     description: |
       The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/ru/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as `spec.tolerations` for the Kubernetes pod.
 
-      Use [automatic](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:

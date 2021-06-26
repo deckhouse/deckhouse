@@ -71,9 +71,7 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у подов.
 
-                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
-
-                    Можно указать `false`, чтобы не добавлять никакой nodeSelector.
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
@@ -81,9 +79,7 @@ spec:
                   description: |
                     Как в `spec.tolerations` у подов.
 
-                    Если ничего не указано — будет [использоваться автоматика](https://early.deckhouse.io/overview.html#выделение-узлов-под-определенный-вид-нагрузки).
-
-                    Можно указать `false`, чтобы не добавлять никакие toleration’ы.
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:
