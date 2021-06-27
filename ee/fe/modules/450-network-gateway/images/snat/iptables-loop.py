@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 import json
 import os, time
 

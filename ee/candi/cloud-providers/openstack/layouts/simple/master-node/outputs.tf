@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 output "master_ip_address_for_ssh" {
   value = openstack_compute_instance_v2.master.network[0].fixed_ip_v4
 }

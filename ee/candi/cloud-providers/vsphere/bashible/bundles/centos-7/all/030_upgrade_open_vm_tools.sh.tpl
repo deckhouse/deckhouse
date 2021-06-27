@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 bb-yum-install "open-vm-tools-0:10.3.*"
 
 bb-event-on 'bb-package-installed' 'restart-open-vm-tools'

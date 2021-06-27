@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 variable "layout_security_group_ids" {
   default = []
   type = list(string)

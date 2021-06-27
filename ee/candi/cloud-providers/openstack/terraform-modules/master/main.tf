@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 locals {
   metadata_tags = merge(var.tags, var.additional_tags)
 }

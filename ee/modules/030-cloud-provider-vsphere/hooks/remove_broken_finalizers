@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 # current revision of vsphere CSI driver isn't supported, so this hook hack around a bug in it
 source /deckhouse/shell_lib.sh
 

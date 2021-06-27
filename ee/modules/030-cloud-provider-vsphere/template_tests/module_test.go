@@ -1,4 +1,9 @@
 /*
+Copyright 2021 Flant CJSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+*/
+
+/*
 
 User-stories:
 1. There are module settings. They must be exported via Secret d8-node-manager-cloud-provider.

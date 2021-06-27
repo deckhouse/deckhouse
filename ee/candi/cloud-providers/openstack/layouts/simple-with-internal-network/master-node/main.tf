@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 locals {
   network_security = local.pod_network_mode == "DirectRoutingWithPortSecurityEnabled"
   security_group_names = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])

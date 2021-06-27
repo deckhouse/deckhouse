@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 output "master_ip_address_for_ssh" {
   value = vsphere_virtual_machine.master.default_ip_address
 }
