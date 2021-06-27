@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
-import kubernetes
-import copy
-import sys
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
 
+import copy
 from abc import ABC, abstractmethod
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
+
+import kubernetes
+import sys
 
 kubernetes.config.load_incluster_config()
 

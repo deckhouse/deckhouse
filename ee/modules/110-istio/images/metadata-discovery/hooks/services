@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
+
 for f in $(find /frameworks/shell/ -type f -iname "*.sh"); do
   source $f
 done

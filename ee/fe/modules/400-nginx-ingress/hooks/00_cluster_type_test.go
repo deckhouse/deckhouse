@@ -1,4 +1,9 @@
 /*
+Copyright 2021 Flant CJSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+*/
+
+/*
 
 User-stories:
 1. There are controller-manager pod in cluster. It has --cloud-provider=XXX arg. It has different labels in different types of clusters. Hook must parse this arg and store to `nginxIngress.internal.clusterType`

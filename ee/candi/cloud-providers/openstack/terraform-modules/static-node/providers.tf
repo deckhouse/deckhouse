@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 provider "openstack" {
   auth_url = var.providerClusterConfiguration.provider.authURL
   domain_name = var.providerClusterConfiguration.provider.domainName

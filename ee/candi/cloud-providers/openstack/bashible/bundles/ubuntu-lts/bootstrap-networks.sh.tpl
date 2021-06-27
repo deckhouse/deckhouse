@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 shopt -s extglob
 
 ip_addr_show_output=$(ip -json addr show)

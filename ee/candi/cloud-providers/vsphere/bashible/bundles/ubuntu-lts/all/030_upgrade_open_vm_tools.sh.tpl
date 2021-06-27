@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 if bb-is-ubuntu-version? 20.04 ; then
   bb-apt-install "open-vm-tools=2:11.2.5-2ubuntu1~ubuntu20.04.*"
 elif bb-is-ubuntu-version? 18.04 ; then

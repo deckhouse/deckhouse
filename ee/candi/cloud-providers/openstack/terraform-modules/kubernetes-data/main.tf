@@ -1,3 +1,6 @@
+# Copyright 2021 Flant CJSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE
+
 resource "openstack_blockstorage_volume_v2" "kubernetes_data" {
   name = join("-", [var.prefix, "kubernetes-data", var.node_index])
   description = "volume for etcd and kubernetes certs"
