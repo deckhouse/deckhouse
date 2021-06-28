@@ -81,9 +81,10 @@ func SetupHelmConfig(values string) *Config {
 		os.Exit(1)
 	}
 
+	moduleValuesKey := addonutils.ModuleNameToValuesKey(moduleName)
 	defaultConfigValues := addonutils.Values{
 		addonutils.GlobalValuesKey: map[string]interface{}{},
-		moduleName:                 map[string]interface{}{},
+		moduleValuesKey:            map[string]interface{}{},
 	}
 	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {

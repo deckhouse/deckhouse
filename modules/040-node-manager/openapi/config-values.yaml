@@ -1,0 +1,41 @@
+type: object
+properties:
+  instancePrefix:
+    type: string
+    description: |
+      The prefix to use when creating instances via the corresponding cloud provider module.
+    x-examples:
+      - kube
+  mcmEmergencyBrake:
+    type: boolean
+    default: false
+    x-examples:
+    - false
+    description: |
+      Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes. Warning! Use this flag only if you know what you are doing and clearly understand the consequences!
+  allowedBundles:
+    type: array
+    default:
+      - "ubuntu-lts"
+      - "centos-7"
+    x-examples:
+      - ["ubuntu-tls"]
+    items:
+      type: string
+    description: |
+      Names of available bashible OS bundles to reduce helm release size. Warning! This is a temporary workaround until proper solution is implemented.
+  allowedKubernetesVersions:
+    type: array
+    default:
+      - "1.16"
+      - "1.17"
+      - "1.18"
+      - "1.19"
+      - "1.20"
+      - "1.21"
+    x-examples:
+      - ["1.19"]
+    items:
+      type: string
+    description: |
+      Names of available Kubernetes versions to reduce helm release size. Warning! This is a temporary workaround until proper solution is implemented.

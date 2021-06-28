@@ -1,0 +1,10 @@
+properties:
+  mcmEmergencyBrake:
+    description: |
+      Флаг отключения machine-controller-manager для случаев, когда вносятся потенциально опасные изменения. Использовать только в полном осознании зачем это делать.
+  allowedBundles:
+    description: |
+      Параметр для bashible
+  allowedKubernetesVersions:
+    description: |
+      Параметр для bashible
