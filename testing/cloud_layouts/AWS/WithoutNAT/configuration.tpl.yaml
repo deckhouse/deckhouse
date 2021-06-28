@@ -14,7 +14,7 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: dec-registry.deckhouse.io/sys/antiopa
+  imagesRepo: dev-registry.deckhouse.io/sys/antiopa
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
   configOverrides:
