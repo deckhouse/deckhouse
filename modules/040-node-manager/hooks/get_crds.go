@@ -454,6 +454,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))
 	}
 
+	if !input.Values.Exists("nodeManager.internal") {
+		input.Values.Set("nodeManager.internal", map[string]interface{}{})
+	}
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
 }

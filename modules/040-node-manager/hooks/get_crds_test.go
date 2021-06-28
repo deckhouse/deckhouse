@@ -274,7 +274,7 @@ kind: D8TestInstanceClass
 metadata:
   name: proper2
 `
-		stateICIMroper = `
+		stateICImproper = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: D8TestInstanceClass
@@ -593,7 +593,7 @@ metadata:
 
 	Context("Cluster with two proper pairs of NG+IC, one improper IC and provider secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateICIMroper + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateICImproper + stateCloudProviderSecret))
 			f.RunHook()
 		})
 
@@ -733,7 +733,7 @@ metadata:
   some: data2
 -
   name: improper
-  some: imdata
+  nodeType: Cloud
 `))
 			f.RunHook()
 		})
@@ -745,7 +745,7 @@ metadata:
 				[
 				  {
 				    "name": "improper",
-				    "some": "imdata"
+				    "nodeType": "Cloud"
 				  },
 				  {
 				    "cloudInstances": {
@@ -946,7 +946,7 @@ metadata:
  some: data2
 -
  name: improper
- some: imdata
+ nodeType: Cloud
 `))
 			f.RunHook()
 		})
@@ -958,7 +958,7 @@ metadata:
 				[
 				  {
 				    "name": "improper",
-				    "some": "imdata"
+				    "nodeType": "Cloud"
 				  },
 				  {
 				    "cloudInstances": {
@@ -1025,8 +1025,15 @@ apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
+spec:
+  nodeType: Static
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
 `
-			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
 			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.16")
 			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.0")
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
@@ -1049,8 +1056,15 @@ apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
+spec:
+  nodeType: Cloud
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
 `
-			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
 			f.ValuesSet("global.clusterConfiguration.kubernetesVersion", "1.15")
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
 			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.0")
@@ -1073,8 +1087,15 @@ apiVersion: deckhouse.io/v1alpha2
 kind: NodeGroup
 metadata:
   name: test
+spec:
+  nodeType: Cloud
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
 `
-			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.16.0")
 			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.16.0")
 			f.RunHook()
@@ -1095,11 +1116,17 @@ kind: NodeGroup
 metadata:
   name: test
 spec:
+  nodeType: Cloud
   nodeTemplate:
     labels:
       node-role.deckhouse.io/system: ""
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
 `
-			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
 			f.RunHook()
 		})
 
@@ -1118,11 +1145,17 @@ kind: NodeGroup
 metadata:
   name: test
 spec:
+  nodeType: Cloud
   nodeTemplate:
     labels:
       node-role.deckhouse.io/stateful: ""
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: proper1
+    zones: [a,b]
 `
-			f.BindingContexts.Set(f.KubeStateSet(ng))
+			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
 			f.RunHook()
 		})
 

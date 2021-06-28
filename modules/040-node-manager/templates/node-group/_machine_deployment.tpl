@@ -3,25 +3,19 @@
   {{- $ng := index . 1 }}
   {{- $zone_name := index . 2 }}
 ---
+  {{- $hash := (printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8) }}
+  {{- $machineClassName := (printf "%s-%s" $ng.name $hash) }}
+  {{- $machineDeploymentName := $machineClassName }}
+  {{- if $context.Values.nodeManager.internal.instancePrefix }}
+    {{- $instancePrefix := $context.Values.nodeManager.internal.instancePrefix }}
+    {{- $machineDeploymentName = (printf "%s-%s" $instancePrefix $machineClassName) }}
+  {{- end }}
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  {{- if $context.Values.nodeManager.internal.instancePrefix }}
-  name: {{ $context.Values.nodeManager.internal.instancePrefix}}-{{ $ng.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
-  {{- else }}
-  name: {{ $ng.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
-  {{- end }}
+  name: {{ $machineDeploymentName }}
   annotations:
     zone: {{ $zone_name | quote }}
-  # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible.
-  {{- if hasKey $context.Values.nodeManager.internal.bashibleChecksumMigration $ng.name }}
-    {{- $migrationData := (pluck $ng.name $context.Values.nodeManager.internal.bashibleChecksumMigration | first) }}
-    {{- if not $migrationData.machineClassChecksumBeforeMigration }}
-    checksum/machine-class-before-migration: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
-    {{- else if eq $migrationData.machineClassChecksumBeforeMigration (include "node_group_machine_class_checksum" (list $context $ng $zone_name)) }}
-    checksum/machine-class-before-migration: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
-    {{- end }}
-  {{- end }}
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | indent 2 }}
 spec:
@@ -39,22 +33,29 @@ spec:
       labels:
         instance-group: {{ $ng.name }}-{{ $zone_name }}
       annotations:
-  # Миграция: удалить когда все кластеры переедут на NodeGroup без .spec.bashible.
-  {{- if hasKey $context.Values.nodeManager.internal.bashibleChecksumMigration $ng.name }}
-    {{- $migrationData := (pluck $ng.name $context.Values.nodeManager.internal.bashibleChecksumMigration | first) }}
-    {{- if not $migrationData.machineClassChecksumBeforeMigration }}
-        bashible-bundle: {{ $migrationData.bashibleBundle | quote }}
-        checksum/bashible-bundles-options: {{ $migrationData.bashibleChecksum | quote }}
-    {{- else if eq $migrationData.machineClassChecksumBeforeMigration (include "node_group_machine_class_checksum" (list $context $ng $zone_name)) }}
-        bashible-bundle: {{ $migrationData.bashibleBundle | quote }}
-        checksum/bashible-bundles-options: {{ $migrationData.bashibleChecksum | quote }}
-    {{- end }}
-  {{- end }}
-        checksum/machine-class: {{ include "node_group_machine_class_checksum" (list $context $ng $zone_name) | quote }}
+      {{/*
+      1 When helm renders MachineDeployment for the first time, there is no checksum in values, so we calculate
+        the checksum right here in the template.
+
+      2 Before helm (hooks/machineclass_checksum_collect.go), when a MachineDeployment was created or updated,
+        we save the checksum to values.
+
+      3 On rendering, we reuse the checksum from values to avoid the update of a MachineDeployment, even if
+        nodegroup or instanceclass has changed. So nodes don't start to update along with MachineClass update.
+
+      4 After helm (hooks/machineclass_checksum_assign.go), MachineClasses already are updated. The checksum recalculates
+        in and updated in values, and also in MachineDeployments specs. Thus we ensure that nodes start to update
+        only after MachineClasses have been updated in cluster.
+      */}}
+      {{- if hasKey $context.Values.nodeManager.internal.machineDeployments $machineDeploymentName }}
+        checksum/machine-class: {{ index (index $context.Values.nodeManager.internal.machineDeployments $machineDeploymentName) "checksum" | quote }}
+      {{- else }}
+        checksum/machine-class: {{ include "node_group_machine_class_checksum" (list $context $ng) | quote }}
+      {{- end }}
     spec:
       class:
         kind: {{ $context.Values.nodeManager.internal.cloudProvider.machineClassKind }}
-        name: {{ $ng.name }}-{{ printf "%v%v" $context.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+        name: {{ $machineClassName }}
       nodeTemplate:
         metadata:
           labels:

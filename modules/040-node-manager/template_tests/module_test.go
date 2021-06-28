@@ -61,9 +61,24 @@ clusterConfiguration:
     password: "test"
 `
 
+// Defaults from openapi/config-values.yaml.
+const nodeManagerConfigValues = `
+allowedBundles:
+  - "ubuntu-lts"
+  - "centos-7"
+allowedKubernetesVersions:
+  - "1.16"
+  - "1.17"
+  - "1.18"
+  - "1.19"
+  - "1.20"
+  - "1.21"
+mcmEmergencyBrake: false
+`
+
 const nodeManagerAWS = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -120,7 +135,7 @@ internal:
 
 const nodeManagerAzure = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -177,7 +192,7 @@ internal:
 
 const nodeManagerGCP = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -234,7 +249,7 @@ internal:
 
 const faultyNodeManagerOpenstack = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -280,7 +295,7 @@ internal:
 
 const nodeManagerOpenstack = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -367,7 +382,7 @@ internal:
 
 const nodeManagerVsphere = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -427,7 +442,7 @@ internal:
 
 const nodeManagerYandex = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -494,7 +509,7 @@ internal:
 
 const nodeManagerStatic = `
 internal:
-  bashibleChecksumMigration: {}
+  machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
   kubernetesCA: myclusterca
@@ -526,23 +541,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	})
 
 	Context("AWS", func() {
-		Describe("With manual-rollout-id", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerAWS)
-				setBashibleAPIServerTLSValues(f)
-				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
-				f.HelmRender()
-			})
-
-			It("should render correctly", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("7b787b33650a0f9166b6eacfdaff5d7c1e0cc508d2831d392ca938e47b7460f6"))
-			})
-		})
-
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerAWS)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
@@ -618,14 +618,10 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassA.Exists()).To(BeTrue())
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
@@ -643,23 +639,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	})
 
 	Context("GCP", func() {
-		Describe("With manual-rollout-id", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerGCP)
-				setBashibleAPIServerTLSValues(f)
-				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
-				f.HelmRender()
-			})
-
-			It("should render correctly", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("48aa95710a1ea40e5dc26d36a8a0b2d461a85e4fc47953e94a84cef64a4060ca"))
-			})
-		})
-
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerGCP)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerGCP)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
@@ -736,14 +717,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
-
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("a9e6ed184c6eab25aa7e47d3d4c7e5647fee9fa5bc2d35eb0232eab45749d3ae"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
@@ -763,7 +739,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	Context("Openstack", func() {
 		Describe("Openstack faulty config", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", faultyNodeManagerOpenstack)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+faultyNodeManagerOpenstack)
 				setBashibleAPIServerTLSValues(f)
 				f.HelmRender()
 			})
@@ -774,23 +750,8 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			})
 		})
 
-		Describe("With manual-rollout-id", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
-				setBashibleAPIServerTLSValues(f)
-				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
-				f.HelmRender()
-			})
-
-			It("should render correctly", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("9b3c57c4b09792ff626866698884907c89dc3f8d6571b81a5c226e1cae35057d"))
-			})
-		})
-
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
@@ -884,14 +845,10 @@ aaa: xxx
 
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
 
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"))
 
 			Expect(simpleMachineClassA.Exists()).To(BeTrue())
 			Expect(simpleMachineClassA.Field("spec.networks").String()).To(MatchYAML(`
@@ -911,8 +868,6 @@ ccc: ddd
 			Expect(simpleMachineClassA.Field("spec.imageName").String()).To(MatchYAML(`centos`))
 			Expect(simpleMachineClassSecretA.Exists()).To(BeTrue())
 			Expect(simpleMachineDeploymentA.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(simpleMachineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("06fc1339c280004581ec19e19e6eef8f3ee919931dbc450b60db608cd074feca"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
@@ -930,23 +885,8 @@ ccc: ddd
 	})
 
 	Context("Vsphere", func() {
-		Describe("With manual-rollout-id", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerVsphere)
-				setBashibleAPIServerTLSValues(f)
-				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
-				f.HelmRender()
-			})
-
-			It("should render correctly", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("72d791f90322f67ea0f42d80fbae93c5e5dacf3b26e2dc0cf03c8bad0a0bb072"))
-			})
-		})
-
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerVsphere)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerVsphere)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
@@ -1023,14 +963,9 @@ ccc: ddd
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e54154626facdf7ba3937af03fb11ac3e626cf1ebab8e36fb17c8320ed4ae906"))
-
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e54154626facdf7ba3937af03fb11ac3e626cf1ebab8e36fb17c8320ed4ae906"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
@@ -1048,23 +983,8 @@ ccc: ddd
 	})
 
 	Context("Yandex", func() {
-		Describe("With manual-rollout-id", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("nodeManager", nodeManagerYandex)
-				setBashibleAPIServerTLSValues(f)
-				f.ValuesSet("nodeManager.internal.nodeGroups.0.manualRolloutID", "test")
-				f.HelmRender()
-			})
-
-			It("should render correctly", func() {
-				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
-				// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-				Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("d0de381052e706a0e28a9b2cfde60ed2e29854900549ef253d1283d1673a6625"))
-			})
-		})
-
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerYandex)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandex)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
@@ -1141,14 +1061,9 @@ ccc: ddd
 			Expect(machineClassSecretA.Exists()).To(BeTrue())
 			Expect(machineDeploymentA.Exists()).To(BeTrue())
 
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentA.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e8f505559b08cf2de57171d574feae2b258c66d9adf83808fc173e70cb006c47"))
-
 			Expect(machineClassB.Exists()).To(BeTrue())
 			Expect(machineClassSecretB.Exists()).To(BeTrue())
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
-			// Important! If checksum changes, the MachineDeployments will re-deploy! All nodes in MD will reboot! If you're not sure, don't change it.
-			Expect(machineDeploymentB.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("e8f505559b08cf2de57171d574feae2b258c66d9adf83808fc173e70cb006c47"))
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
@@ -1167,7 +1082,7 @@ ccc: ddd
 
 	Context("Static", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("nodeManager", nodeManagerStatic)
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStatic)
 			setBashibleAPIServerTLSValues(f)
 			f.HelmRender()
 		})
@@ -1267,7 +1182,6 @@ ccc: ddd
 	})
 
 	Context("Setting tags/labels to MachineClass", func() {
-
 		providerValues := `{ "o":"provider", "z":"provider" }`
 		nodeGroupValues := `{ "a":"nodegroup", "o":"nodegroup" }`
 		// Basically asserting that provider entries are overwritten with nodegroup ones
@@ -1286,7 +1200,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSetFromYaml("nodeManager", nodeManagerAWS)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.aws.tags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
 				setBashibleAPIServerTLSValues(f)
@@ -1317,7 +1231,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSetFromYaml("nodeManager", nodeManagerOpenstack)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.openstack.tags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
 				setBashibleAPIServerTLSValues(f)
@@ -1348,7 +1262,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSetFromYaml("nodeManager", nodeManagerAzure)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAzure)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.azure.additionalTags", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalTags", nodeGroupValues)
 				setBashibleAPIServerTLSValues(f)
@@ -1379,7 +1293,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSetFromYaml("nodeManager", nodeManagerGCP)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerGCP)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.gcp.labels", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
 				setBashibleAPIServerTLSValues(f)
@@ -1410,7 +1324,7 @@ ccc: ddd
 
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSetFromYaml("nodeManager", nodeManagerYandex)
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandex)
 				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider.yandex.labels", providerValues)
 				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.instanceClass.additionalLabels", nodeGroupValues)
 				setBashibleAPIServerTLSValues(f)
