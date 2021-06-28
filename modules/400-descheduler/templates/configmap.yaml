@@ -55,6 +55,20 @@ data:
         enabled: false
 {{- end }}
 
+{{- if .Values.descheduler.highNodeUtilization }}
+      "HighNodeUtilization":
+        enabled: true
+        params:
+          nodeFit: true
+          nodeResourceUtilizationThresholds:
+            thresholds:
+              "cpu" : 50
+              "memory": 50
+{{- else }}
+      "HighNodeUtilization":
+        enabled: false
+{{- end }}
+
 {{- if .Values.descheduler.removePodsViolatingNodeTaints }}
       "RemovePodsViolatingNodeTaints":
         enabled: true

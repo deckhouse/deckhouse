@@ -18,9 +18,10 @@ The descheduler discovers pods based on policies and evicts the non-relevant one
 
 This module adds a [descheduler](https://github.com/kubernetes-incubator/descheduler) Deployment to the cluster. It runs every 15 minutes, finds the non-optimal pods using the [config-map](templates/config-map.yaml), and evicts them.
 
-The descheduler has 8 strategies built-in:
+The descheduler has 9 strategies built-in:
 * RemoveDuplicates (**disabled by default**)
 * LowNodeUtilization (**disabled by default**)
+* HighNodeUtilization (**disabled by default**)
 * RemovePodsViolatingInterPodAntiAffinity (**enabled by default**)
 * RemovePodsViolatingNodeAffinity (**enabled by default**)
 * RemovePodsViolatingNodeTaints (**disabled by default**)
@@ -46,6 +47,14 @@ The thresholds for identifying underutilized or overutilized nodes are currently
   * cpu — 80%
   * memory — 90%
   * pods — 80%
+
+#### HighNodeUtilization
+
+This strategy finds nodes that are under utilized and evicts pods in the hope that these pods will be scheduled compactly into fewer nodes. This strategy must be used with the scheduler strategy `MostRequestedPriority`
+The thresholds for identifying underutilized nodes are currently preset and cannot be changed:
+* Criteria to identify underutilized nodes:
+  * cpu — 50%
+  * memory — 50%
 
 #### RemovePodsViolatingInterPodAntiAffinity
 
