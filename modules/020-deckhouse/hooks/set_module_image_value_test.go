@@ -63,7 +63,5 @@ spec:
 			Expect(deployment.Exists()).To(BeTrue())
 			Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.flant.com/sys/antiopa/dev:test"))
 		})
-
 	})
-
 })
