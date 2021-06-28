@@ -15,7 +15,7 @@
 {{- $experimentalOption := "--experimental-patches" -}}
 {{- if semverCompare "<1.19" .kubernetesVersion -}}
   {{- $experimentalOption = "--experimental-kustomize" -}}
-{{- end -}}
+{{- end }}
 
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
