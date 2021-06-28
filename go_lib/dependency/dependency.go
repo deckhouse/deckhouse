@@ -17,6 +17,7 @@ limitations under the License.
 package dependency
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -26,6 +27,7 @@ import (
 	"github.com/flant/kube-client/fake"
 	"github.com/gojuno/minimock/v3"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/etcd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -38,6 +40,7 @@ type Container interface {
 	MustGetEtcdClient(endpoints []string, options ...etcd.Option) etcd.Client
 	GetK8sClient(options ...k8s.Option) (k8s.Client, error)
 	MustGetK8sClient(options ...k8s.Option) k8s.Client
+	GetRegistryClient(repo string) (cr.Client, error)
 }
 
 var (
@@ -59,6 +62,7 @@ type dependencyContainer struct {
 	httpClient http.Client
 	etcdClient etcd.Client
 	k8sClient  k8s.Client
+	crClient   cr.Client
 
 	m         sync.RWMutex
 	isTestEnv *bool
@@ -138,6 +142,24 @@ func (dc *dependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Clien
 	return client
 }
 
+func (dc *dependencyContainer) GetRegistryClient(repo string) (cr.Client, error) {
+	if dc.isTestEnvironment() {
+		return TestDC.GetRegistryClient(repo)
+	}
+
+	if dc.crClient != nil {
+		return dc.crClient, nil
+	}
+
+	client, err := cr.NewClient(repo)
+	if err != nil {
+		return nil, err
+	}
+
+	dc.crClient = client
+	return client, nil
+}
+
 // WithExternalDependencies decorate function with external dependencies
 func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) error) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
@@ -152,6 +174,7 @@ type mockedDependencyContainer struct {
 	HTTPClient *http.ClientMock
 	EtcdClient *etcd.ClientMock
 	K8sClient  k8s.Client
+	CRClient   *cr.ClientMock
 }
 
 func (mdc mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
@@ -178,6 +201,13 @@ func (mdc mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s
 	return k
 }
 
+func (mdc mockedDependencyContainer) GetRegistryClient(string) (cr.Client, error) {
+	if mdc.CRClient != nil {
+		return mdc.CRClient, nil
+	}
+	return nil, fmt.Errorf("no CR client")
+}
+
 // SetK8sVersion change FakeCluster versions. KubeClient returns with resources of specified version
 func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 	cli := fake.NewFakeCluster(ver).Client
@@ -193,5 +223,6 @@ func newMockedContainer() *mockedDependencyContainer {
 		HTTPClient: http.NewClientMock(ctrl),
 		EtcdClient: etcd.NewClientMock(ctrl),
 		K8sClient:  fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client,
+		CRClient:   cr.NewClientMock(ctrl),
 	}
 }
