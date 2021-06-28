@@ -165,7 +165,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 Below is an example of a MetalLB config with access from the internal network only.
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main

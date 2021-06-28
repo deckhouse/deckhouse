@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -66,7 +66,7 @@ spec:
                     Список дополнительных групп, в которые должен быть включен пользователь.
                   items:
                     type: string
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - name: Uid
           jsonPath: .spec.uid
           type: number
@@ -84,3 +84,8 @@ spec:
           type: date
           description: >
             CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

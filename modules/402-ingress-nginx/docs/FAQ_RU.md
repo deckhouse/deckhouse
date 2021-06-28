@@ -167,7 +167,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 Пример MetalLB с доступом только из внутренней сети
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main

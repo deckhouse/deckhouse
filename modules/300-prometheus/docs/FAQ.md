@@ -47,7 +47,7 @@ To add your dashboard to Grafana, create the dedicated [`GrafanaDashboardDefinit
 
 An example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
 metadata:
   name: my-dashboard
@@ -78,7 +78,7 @@ Parameters:
 
 An example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
   name: my-rules
@@ -101,7 +101,7 @@ A detailed description of the resource parameters is available in the [Grafana d
 
 An example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
   name: another-prometheus

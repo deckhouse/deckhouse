@@ -16,7 +16,7 @@ function __config__() {
       queue: /ingress_controller_metrics
       keepFullObjectsInMemory: false
       waitForSynchronization: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: IngressNginxController
       jqFilter: |
         {

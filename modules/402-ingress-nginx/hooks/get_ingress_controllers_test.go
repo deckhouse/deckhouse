@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Ingress nginx hooks :: get controller crds ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": 0.25, "internal": {"webhookCertificates":{}}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "IngressNginxController", true)
+	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -41,7 +41,7 @@ var _ = Describe("Ingress nginx hooks :: get controller crds ::", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: test
@@ -96,7 +96,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: test
@@ -106,7 +106,7 @@ spec:
   resourcesRequests:
     mode: Static
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: test-2
@@ -125,7 +125,7 @@ spec:
     httpPort: 80
     httpsPort: 443
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: test-3

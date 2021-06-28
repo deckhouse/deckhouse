@@ -47,7 +47,7 @@ subsets:
 
 Пример:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
 metadata:
   name: my-dashboard
@@ -78,7 +78,7 @@ spec:
 
 Пример:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
   name: my-rules
@@ -101,7 +101,7 @@ spec:
 
 Пример:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
   name: another-prometheus

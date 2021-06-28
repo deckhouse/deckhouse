@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "prometheusremotewrite",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "PrometheusRemoteWrite",
 			FilterFunc: filterRemoteWriteCRD,
 		},

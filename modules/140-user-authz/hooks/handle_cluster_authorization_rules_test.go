@@ -75,14 +75,14 @@ metadata:
 `
 	stateCARs = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: car0
 spec:
   accessLevel: ClusterEditor
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: car1
@@ -93,7 +93,7 @@ spec:
 
 var _ = Describe("User Authz hooks :: stores handler ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterAuthorizationRule", false)
+	f.RegisterCRD("deckhouse.io", "v1", "ClusterAuthorizationRule", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {

@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -47,3 +47,7 @@ spec:
                     ID клиентов, которым позволена cross аутентификация. [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth).
                   items:
                     type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

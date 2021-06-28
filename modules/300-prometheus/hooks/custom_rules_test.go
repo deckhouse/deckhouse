@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Prometheus hooks :: custom rules ::", func() {
 	f := HookExecutionConfigInit(``, ``)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "CustomPrometheusRules", false)
+	f.RegisterCRD("deckhouse.io", "v1", "CustomPrometheusRules", false)
 	f.RegisterCRD("monitoring.coreos.com", "v1", "PrometheusRule", true)
 
 	Context("Empty cluster", func() {
@@ -38,7 +38,7 @@ var _ = Describe("Prometheus hooks :: custom rules ::", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
   name: test
@@ -90,7 +90,7 @@ spec:
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
   name: test
@@ -124,7 +124,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
   name: one
@@ -135,7 +135,7 @@ spec:
     - alert: Rule1
       expr: testit
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
   name: two

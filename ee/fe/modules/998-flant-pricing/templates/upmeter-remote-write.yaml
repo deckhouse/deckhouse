@@ -1,6 +1,6 @@
 {{- if (.Values.global.enabledModules | has "upmeter") }}
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: UpmeterRemoteWrite
 metadata:
   name: {{ .Chart.Name }}-promscale

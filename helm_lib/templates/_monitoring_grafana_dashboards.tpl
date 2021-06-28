@@ -20,7 +20,7 @@
     {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
     {{- $resourceName = (printf "%s-%s" $context.Chart.Name $resourceName) }}
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
 metadata:
   name: d8-{{ $resourceName }}

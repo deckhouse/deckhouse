@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Prometheus hooks :: grafana additional datasource ::", func() {
 	f := HookExecutionConfigInit(`{"prometheus":{"internal":{"grafana":{}}}}`, ``)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "GrafanaAdditionalDatasource", false)
+	f.RegisterCRD("deckhouse.io", "v1", "GrafanaAdditionalDatasource", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -37,7 +37,7 @@ var _ = Describe("Prometheus hooks :: grafana additional datasource ::", func() 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
   name: test
@@ -81,7 +81,7 @@ spec:
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
   name: test
@@ -116,7 +116,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
   name: test
@@ -125,7 +125,7 @@ spec:
   type: test
   access: proxy
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
   name: test-next

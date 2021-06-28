@@ -12,7 +12,7 @@ EOF
 function __main__() {
   if values::has istio.internal.deployDexAuthenticator ; then
     cat <<EOF | kubectl apply -f -
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
  name: istio

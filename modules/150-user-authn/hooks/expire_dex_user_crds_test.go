@@ -25,12 +25,12 @@ import (
 
 var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "User", false)
+	f.RegisterCRD("deckhouse.io", "v1", "User", false)
 
 	Context("User expiration schedule", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
@@ -44,7 +44,7 @@ spec:
 status:
   expireAt: "2020-02-02T22:22:22Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: future
@@ -58,7 +58,7 @@ spec:
 status:
   expireAt: "2150-10-10T10:10:10Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: without-ttl

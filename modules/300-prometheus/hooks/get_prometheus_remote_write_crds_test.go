@@ -27,7 +27,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: get_prometheus_remote_write_
 	const (
 		firstPrometheusRemoteWrite = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
 metadata:
   name: test-remote-write
@@ -43,7 +43,7 @@ spec:
 `
 		secondPrometheusRomteWrite = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
 metadata:
   name: test-remote-write-second
@@ -56,7 +56,7 @@ spec:
 	)
 
 	f := HookExecutionConfigInit(`{"prometheus":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "PrometheusRemoteWrite", false)
+	f.RegisterCRD("deckhouse.io", "v1", "PrometheusRemoteWrite", false)
 
 	Context("Synchronization", func() {
 		BeforeEach(func() {

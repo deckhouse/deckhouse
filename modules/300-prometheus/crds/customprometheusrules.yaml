@@ -18,7 +18,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -77,3 +77,7 @@ spec:
                               type: object
                             record:
                               type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

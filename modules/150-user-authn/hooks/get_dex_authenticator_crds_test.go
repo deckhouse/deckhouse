@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "DexAuthenticator", true)
+	f.RegisterCRD("deckhouse.io", "v1", "DexAuthenticator", true)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -53,7 +53,7 @@ data:
   client-secret: dGVzdA==
   cookie-secret: dGVzdE5leHQ=
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: test
@@ -124,7 +124,7 @@ data:
   client-secret: dGVzdA==
   cookie-secret: dGVzdE5leHQ=
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: test
@@ -178,7 +178,7 @@ data:
   client-secret: dGVzdA==
   cookie-secret: dGVzdE5leHQ=
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: test

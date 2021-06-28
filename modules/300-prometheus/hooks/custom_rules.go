@@ -67,7 +67,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "rules",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "CustomPrometheusRules",
 			FilterFunc: filterCustomRule, // jqFilter: '{"name": .metadata.name, "groups": .spec.groups}'
 		},

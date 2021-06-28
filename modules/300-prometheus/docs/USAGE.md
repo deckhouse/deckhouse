@@ -27,7 +27,7 @@ Prometheus supports remote_write'ing data from the local Prometheus to a separat
 
 ### Example of the basic PrometheusRemoteWrite
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
 metadata:
   name: test-remote-write
@@ -37,7 +37,7 @@ spec:
 
 ### Example of the expanded PrometheusRemoteWrite
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
 metadata:
   name: test-remote-write

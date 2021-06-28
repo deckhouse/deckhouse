@@ -35,7 +35,7 @@ function __config__() {
       queue: /modules/$(module::name::kebab_case)
       includeSnapshotsFrom: ["car"]
       keepFullObjectsInMemory: true
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: ClusterAuthorizationRule
 EOF
 }

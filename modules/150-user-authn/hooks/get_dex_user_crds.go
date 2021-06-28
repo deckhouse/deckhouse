@@ -108,7 +108,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "users",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "User",
 			FilterFunc: applyDexUserFilter,
 		},
@@ -139,7 +139,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 
 		err = input.ObjectPatcher.MergePatchObject(
 			/*patch*/ jsonMergePatch,
-			/*apiVersion*/ "deckhouse.io/v1alpha1",
+			/*apiVersion*/ "deckhouse.io/v1",
 			/*kind*/ "User",
 			/*namespace*/ "",
 			/*name*/ dexUser.Name,

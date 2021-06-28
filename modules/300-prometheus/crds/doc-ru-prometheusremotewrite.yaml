@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
@@ -54,8 +54,13 @@ spec:
                           Метка, в которую записывается результирующее значение при замене.
 
                           Поле является обезательным при `action: replace`.
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string
           jsonPath: .spec.url
           description: 'Prometheus Remote write URL.'
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

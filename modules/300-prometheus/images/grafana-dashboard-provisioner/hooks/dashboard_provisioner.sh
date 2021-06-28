@@ -23,7 +23,7 @@ function __config__() {
     configVersion: v1
     kubernetes:
     - name: dashboard_resources
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: GrafanaDashboardDefinition
       includeSnapshotsFrom:
       - dashboard_resources

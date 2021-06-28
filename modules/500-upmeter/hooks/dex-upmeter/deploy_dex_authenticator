@@ -30,7 +30,7 @@ function __main__() {
       allowedGroups="allowedGroups: $(values::get upmeter.auth.webui.allowedUserGroups)"
     fi
     cat <<EOF | kubectl apply -f -
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: upmeter

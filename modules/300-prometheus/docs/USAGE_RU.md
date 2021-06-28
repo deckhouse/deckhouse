@@ -27,7 +27,7 @@ prometheus: |
 
 ### Пример минимального PrometheusRemoteWrite
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
 metadata:
   name: test-remote-write
@@ -37,7 +37,7 @@ spec:
 
 ### Пример расширенного PrometheusRemoteWrite
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
 metadata:
   name: test-remote-write

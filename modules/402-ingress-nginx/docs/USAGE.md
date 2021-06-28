@@ -5,7 +5,7 @@ title: "The ingress-nginx module: usage"
 {% raw %}
 ## A general example
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -27,7 +27,7 @@ spec:
 
 ## An example for AWS (Network Load Balancer)
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -47,7 +47,7 @@ You can get the list of subnets for a specific installation using the following 
 **Caution!** Note that attaching an annotation to a running Service will not work; you will need to recreate it.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -62,7 +62,7 @@ spec:
 
 ## An example for GCP
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -73,7 +73,7 @@ spec:
 
 ## An example for Openstack
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main-lbwpp
@@ -89,7 +89,7 @@ spec:
 ## An example for Bare Metal
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main

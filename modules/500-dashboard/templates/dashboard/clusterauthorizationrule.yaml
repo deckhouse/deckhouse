@@ -3,7 +3,7 @@
     {{- cat "On https.mode Disabled the only allowed accessLevel is User" | fail }}
   {{- end }}
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: d8-dashboard

@@ -21,7 +21,7 @@ title: "Модуль user-authn: примеры конфигурации"
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: my-cool-app # поды аутентификатора будут иметь префикс my-cool-app
@@ -70,7 +70,7 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 ### Github
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: github
@@ -92,7 +92,7 @@ spec:
 
 ### GitLab
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: gitlab
@@ -117,7 +117,7 @@ spec:
 
 ### Atlassian Crowd
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: crowd
@@ -142,7 +142,7 @@ spec:
 
 ### Bitbucket Cloud
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: gitlab
@@ -166,7 +166,7 @@ spec:
 
 ### OIDC (OpenID Connect)
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: okta
@@ -188,7 +188,7 @@ spec:
 
 ### LDAP
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: active-directory
@@ -234,7 +234,7 @@ spec:
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexClient
 metadata:
   name: myname
@@ -270,7 +270,7 @@ data:
 ## Пример создания статического пользователя
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin

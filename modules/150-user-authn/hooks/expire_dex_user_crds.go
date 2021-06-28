@@ -66,7 +66,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "users",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "User",
 			FilterFunc: applyDexUserExpireFilter,
 		},
@@ -84,7 +84,7 @@ func expireDexUsers(input *go_hook.HookInput) error {
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {
 			err := input.ObjectPatcher.DeleteObject(
-				/*apiVersion*/ "deckhouse.io/v1alpha1",
+				/*apiVersion*/ "deckhouse.io/v1",
 				/*kind*/ "User",
 				/*namespace*/ "",
 				/*name*/ dexUserExpire.Name,
