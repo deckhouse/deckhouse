@@ -56,7 +56,7 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.flant.com/sys/antiopa
+  imagesRepo: registry.deckhouse.io/fe
   registryDockerCfg: | # base64 encoded section of docker.auths {"auths":{"registry.example.com":{"username":"oauth2","password":"token"}}}
     eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJ1c2VybmFtZSI6Im9hdXRoMiIsInBhc3N3b3JkIjoidG9rZW4ifX19Cg==
   releaseChannel: Stable
@@ -112,10 +112,8 @@ For example, use a docker image from the Flant docker registry:
 
 1. Pull a fresh Docker image for desired release channel (we picked the Alpha channel for an example)
     ```bash
-    docker pull registry.flant.com/sys/antiopa/install:alpha
+    docker pull registry.deckhouse.io/fe/install:alpha
     ```
-    > To pull an image from the registry.flant.com, you need to register a personal user token.
-    https://docs.gitlab.com/ce/user/profile/personal_access_tokens.html#creating-a-personal-access-token
 2.  Run docker container and connect the terminal session to it:
    
   * `config.yaml` - configuration file for the cluster bootstrap as described above.
@@ -123,7 +121,7 @@ For example, use a docker image from the Flant docker registry:
      docker run -it \
        -v $(pwd)/config.yaml:/config.yaml \
        -v $HOME/.ssh/:/tmp/.ssh/ \
-       registry.flant.com/sys/antiopa/install:alpha \
+       registry.deckhouse.io/fe/install:alpha \
        bash
      ```
      > MacOS users do not need to mount the .ssh folder to the `/tmp`.

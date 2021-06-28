@@ -337,7 +337,7 @@ spec:
         - ^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$
         - --collector.textfile.directory
         - /host/textfile
-        image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+        image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
         imagePullPolicy: IfNotPresent
         name: node-exporter
         resources:
@@ -364,7 +364,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
-        image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+        image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
         imagePullPolicy: IfNotPresent
         name: kubelet-eviction-thresholds-exporter
         resources:
@@ -415,7 +415,7 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-metrics
                   name: node-exporter
-        image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+        image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
         imagePullPolicy: IfNotPresent
         name: kube-rbac-proxy
         ports:
@@ -967,7 +967,7 @@ items:
             - ^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$
             - --collector.textfile.directory
             - /host/textfile
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
           imagePullPolicy: IfNotPresent
           name: node-exporter
           resources:
@@ -999,7 +999,7 @@ items:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
           imagePullPolicy: IfNotPresent
           name: kubelet-eviction-thresholds-exporter
           resources:
@@ -1055,7 +1055,7 @@ items:
                       resource: daemonsets
                       subresource: prometheus-metrics
                       name: node-exporter
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
           imagePullPolicy: IfNotPresent
           name: kube-rbac-proxy
           ports:
@@ -1172,8 +1172,8 @@ items:
           type: PodScheduled
       containerStatuses:
         - containerID: docker://608aea933d83d64e63731eefdb6c6b4ea2e5976048f3c285d15f2bc0da76ec89
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
           lastState: {}
           name: kube-rbac-proxy
           ready: true
@@ -1183,8 +1183,8 @@ items:
             running:
               startedAt: "2021-05-08T14:19:43Z"
         - containerID: docker://c6a127473c06af705e4e6d8af4bfb8c49a49f7cc3cddbea063340221327ae1c6
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
           lastState: {}
           name: kubelet-eviction-thresholds-exporter
           ready: true
@@ -1194,8 +1194,8 @@ items:
             running:
               startedAt: "2021-05-08T14:19:43Z"
         - containerID: docker://26c9c096aee5d6a8c69ce3344bbb7f3701d997c848ba621c64611f48ddab63da
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
           lastState: {}
           name: node-exporter
           ready: true
@@ -1254,7 +1254,7 @@ items:
             - ^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$
             - --collector.textfile.directory
             - /host/textfile
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
           imagePullPolicy: IfNotPresent
           name: node-exporter
           resources:
@@ -1286,7 +1286,7 @@ items:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
           imagePullPolicy: IfNotPresent
           name: kubelet-eviction-thresholds-exporter
           resources:
@@ -1342,7 +1342,7 @@ items:
                       resource: daemonsets
                       subresource: prometheus-metrics
                       name: node-exporter
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
           imagePullPolicy: IfNotPresent
           name: kube-rbac-proxy
           ports:
@@ -1459,8 +1459,8 @@ items:
           type: PodScheduled
       containerStatuses:
         - containerID: docker://8bc0ce49bace801d3d4740102d6cf10bfdb74121bccb2ca7e3ac8381ae622d32
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
           lastState: {}
           name: kube-rbac-proxy
           ready: true
@@ -1470,8 +1470,8 @@ items:
             running:
               startedAt: "2021-05-08T14:19:28Z"
         - containerID: docker://c5110045c6fca03d4486fef8475252d612226c4803a16c20f3b85412a223ae6f
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
           lastState: {}
           name: kubelet-eviction-thresholds-exporter
           ready: true
@@ -1481,8 +1481,8 @@ items:
             running:
               startedAt: "2021-05-08T14:19:28Z"
         - containerID: docker://4dda7d6e579fba532e3ef5b6fd4877e6d21a6e2c73ad9671b147eb84154e44de
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
           lastState: {}
           name: node-exporter
           ready: true
@@ -1541,7 +1541,7 @@ items:
             - ^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$
             - --collector.textfile.directory
             - /host/textfile
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
           imagePullPolicy: IfNotPresent
           name: node-exporter
           resources:
@@ -1573,7 +1573,7 @@ items:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
           imagePullPolicy: IfNotPresent
           name: kubelet-eviction-thresholds-exporter
           resources:
@@ -1629,7 +1629,7 @@ items:
                       resource: daemonsets
                       subresource: prometheus-metrics
                       name: node-exporter
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
           imagePullPolicy: IfNotPresent
           name: kube-rbac-proxy
           ports:
@@ -1746,8 +1746,8 @@ items:
           type: PodScheduled
       containerStatuses:
         - containerID: docker://3c69821c8fe5272235c3f41a59f9e6f6143608bccbd4f0c2942f84532d0bf479
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
           lastState: {}
           name: kube-rbac-proxy
           ready: true
@@ -1757,8 +1757,8 @@ items:
             running:
               startedAt: "2021-05-08T14:18:44Z"
         - containerID: docker://e6b8a95f2fa4a732c2b98f8e2cec4b31823c7c7c0a87aacb6fcf2f70041ec8e5
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
           lastState: {}
           name: kubelet-eviction-thresholds-exporter
           ready: true
@@ -1768,8 +1768,8 @@ items:
             running:
               startedAt: "2021-05-08T14:18:43Z"
         - containerID: docker://4f12f5705354fc0e93d2b44d372821a28de1a768819577b9240883ae3811abc3
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
           lastState: {}
           name: node-exporter
           ready: true
@@ -1828,7 +1828,7 @@ items:
             - ^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$
             - --collector.textfile.directory
             - /host/textfile
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
           imagePullPolicy: IfNotPresent
           name: node-exporter
           resources:
@@ -1860,7 +1860,7 @@ items:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
           imagePullPolicy: IfNotPresent
           name: kubelet-eviction-thresholds-exporter
           resources:
@@ -1916,7 +1916,7 @@ items:
                       resource: daemonsets
                       subresource: prometheus-metrics
                       name: node-exporter
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
           imagePullPolicy: IfNotPresent
           name: kube-rbac-proxy
           ports:
@@ -2033,8 +2033,8 @@ items:
           type: PodScheduled
       containerStatuses:
         - containerID: docker://04a332e41fd3eea06f046d9d4d47c23c0e7defb22b17d1eb61e740b23f94baad
-          image: registry.flant.com/sys/antiopa/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
+          image: registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy:526c5255969dcd342888947e2d3bab781eed225bb969ca0dd3bdbd30
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/common/kube-rbac-proxy@sha256:233267845d84dc0b09667abfc0fc63479001cb4d71159697f7f4542e2a4f64af
           lastState: {}
           name: kube-rbac-proxy
           ready: true
@@ -2044,8 +2044,8 @@ items:
             running:
               startedAt: "2021-05-08T14:18:24Z"
         - containerID: docker://6491c1fe866c951c1f91f4c29105885e95d5652de640068f20a767ac36c5d27d
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter:455222c1194ecff9aa77c8ae0daa936260e43d420ae6e512a1026dae
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/kubelet-eviction-thresholds-exporter@sha256:59d8f21a33bf92a5feed1667a3b56be759e91cc4d9e46563543fad6597bb5e88
           lastState: {}
           name: kubelet-eviction-thresholds-exporter
           ready: true
@@ -2055,8 +2055,8 @@ items:
             running:
               startedAt: "2021-05-08T14:18:24Z"
         - containerID: docker://9dcf7b850f708d92620ab70887ddd8ce7b03bc0dc177b5195b4da99557ebd228
-          image: registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
-          imageID: docker-pullable://registry.flant.com/sys/antiopa/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
+          image: registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter:05e2b2361ad1d69b3ae23b369308e759540b3413834f0011e318768b
+          imageID: docker-pullable://registry.deckhouse.io/deckhouse/ce/monitoring-kubernetes/node-exporter@sha256:0b6dcee73e71b22e5018cf5243888056978b1188b32b2ba084929cb1db9e946c
           lastState: {}
           name: node-exporter
           ready: true

@@ -42,7 +42,7 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 1
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     deckhouse:

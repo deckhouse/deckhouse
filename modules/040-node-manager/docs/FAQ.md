@@ -218,7 +218,7 @@ mcmEmergencyBrake: true
 ```
 ## How do I restore the master node if kubelet cannot load the control plane components?
 
-Such a situation may occur if images of the `control plane` components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if docker (container) is used). In this case, `kubelet` cannot pull images of the `control plane` components when restarted since the master node lacks authorization parameters required for accessing `registry.flant.com`.
+Such a situation may occur if images of the `control plane` components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/docker` (`/var/lib/containerd`) was deleted if docker (container) is used). In this case, `kubelet` cannot pull images of the `control plane` components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
 Here is how you can restore the master node:
 ### Docker
@@ -227,7 +227,7 @@ Execute the following command to restore the master node in any cluster running 
 ```
 kubectl -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r 'del(.auths."registry.flant.com".username, .auths."registry.flant.com".password)'
+jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
 ```
 Copy the output of the command and add it to the `/root/.docker/config.json` file on the corrupted master.
 Next, you need to pull images of `control plane` components to the corrupted master:
@@ -245,7 +245,7 @@ Execute the following command to restore the master node in any cluster running 
 ```
 kubectl -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.flant.com".auth'
+jq -r '.auths."registry.deckhouse.io".auth'
 ```
 Copy the command's output and use it for setting the AUTH variable on the corrupted master.
 Next, you need to pull images of `control plane` components to the corrupted master:

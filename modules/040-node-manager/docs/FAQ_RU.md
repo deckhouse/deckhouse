@@ -219,7 +219,7 @@ mcmEmergencyBrake: true
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control-plane?
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
-компонентов `control-plane` (например, удалена директория `/var/lib/docker` при использовании docker или `/var/lib/containerd` при использовании containerd). В этом случае при рестарте `kubelet` он не сможет выкачать образы `control-plane`-компонентов, поскольку на master-узле нет параметров авторизации в `registry.flant.com`.
+компонентов `control-plane` (например, удалена директория `/var/lib/docker` при использовании docker или `/var/lib/containerd` при использовании containerd). В этом случае при рестарте `kubelet` он не сможет выкачать образы `control-plane`-компонентов, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
 
 Как восстановить:
 ### Docker
@@ -229,7 +229,7 @@ mcmEmergencyBrake: true
 ```
 kubectl -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r 'del(.auths."registry.flant.com".username, .auths."registry.flant.com".password)'
+jq -r 'del(.auths."registry.deckhouse.io".username, .auths."registry.deckhouse.io".password)'
 ```
 Вывод команды нужно скопировать и добавить его в файл `/root/.docker/config.json` на поврежденном мастере.
 Далее, на поврежденном мастере нужно загрузить образы `control-plane` компонентов:
@@ -248,7 +248,7 @@ done
 ```
 kubectl -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.flant.com".auth'
+jq -r '.auths."registry.deckhouse.io".auth'
 ```
 Вывод команды нужно скопировать и присвоить переменной AUTH на поврежденном мастере.
 Далее, на поврежденном мастере нужно загрузить образы `control-plane` компонентов:

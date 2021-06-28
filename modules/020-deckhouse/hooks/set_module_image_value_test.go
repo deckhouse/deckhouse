@@ -28,7 +28,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: set module image value ::", f
 global:
   deckhouseVersion: "12345"
   modulesImages:
-    registry: registry.flant.com/sys/antiopa
+    registry: registry.deckhouse.io
 deckhouse:
   internal:
     currentReleaseImageName: "test"
@@ -52,7 +52,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.flant.com/sys/antiopa/dev:test
+        image: registry.deckhouse.io/deckhouse/ce/dev:test
 `, 1))
 			f.RunHook()
 		})
@@ -61,7 +61,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(deployment.Exists()).To(BeTrue())
-			Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.flant.com/sys/antiopa/dev:test"))
+			Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/ce/dev:test"))
 		})
 	})
 })

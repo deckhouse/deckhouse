@@ -78,7 +78,7 @@ sshPublicKeys:
 masterNodeGroup:
   ...
 deckhouse:
-  imagesRepo: registry.flant.com/sys/antiopa
+  imagesRepo: registry.deckhouse.io/fe
   registryDockerCfg: ...
   releaseChannel: Alpha
   bundle: Default

@@ -26,7 +26,6 @@ export BASE_DEBIAN=${BASE_DEBIAN:-"debian:buster"}
 export BASE_NGINX_ALPINE=${BASE_NGINX_ALPINE:-"nginx:1.15-alpine"}
 export BASE_PYTHON_ALPINE=${BASE_PYTHON_ALPINE:-"python:3.7.9-alpine3.12"}
 export BASE_UBUNTU=${BASE_UBUNTU:-"ubuntu:18.04"}
-export WERF_REPO=${WERF_REPO:-"registry.flant.com/sys/antiopa"}
 
 if [[ "$1" == "--debug" ]]; then
   DEBUG=yes
@@ -125,7 +124,11 @@ fi
 if [[ -z "$(docker ps --filter "name=$CONTAINER_NAME" -q)" ]]; then
   PATH="$HOME/bin/:$PATH"
   # shellcheck disable=SC2046
+  echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  export WERF_REPO=${DEV_REGISTRY_PATH:-"dev-registry.deckhouse.io/sys/antiopa"}
 
   werf build tests
   # shellcheck disable=SC2016

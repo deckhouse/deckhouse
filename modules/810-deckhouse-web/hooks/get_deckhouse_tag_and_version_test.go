@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.flant.com/sys/antiopa:stable
+        image: registry.deckhouse.io/deckhouse/ce:stable
 `
 		stateWithAbsentAnnotation = `
 ---
@@ -57,7 +57,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.flant.com/sys/antiopa:sometag
+        image: registry.deckhouse.io/deckhouse/ce:sometag
 `
 	)
 

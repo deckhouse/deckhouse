@@ -19,7 +19,7 @@ global:
           customCertificate:
             secretName: plainstring
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: registry.example.com
     tags:
       common:

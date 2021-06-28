@@ -5,13 +5,13 @@ set -e
 
 function bp() {
   # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
-  if [[  "$DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES" == "true" ]]; then
+  if [[  "${DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES}" == "true" ]]; then
     pull
   fi
 
   werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
   if [[ -n ${CI_COMMIT_TAG} ]]; then
-    werf build --config modules_images_werf.yaml --repo $DECKHOUSE_REGISTRY_HOST/deckhouse/fe/ --secondary-repo $WERF_REPO
+    werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/ --secondary-repo ${WERF_REPO}
   fi
 
   jq '
@@ -34,7 +34,6 @@ function bp() {
 }
 
 function cleanup() {
-  docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   werf cleanup --config modules_images_werf.yaml --without-kube
 }
 
@@ -68,8 +67,14 @@ fi
 SUBCOMMAND=$1
 shift
 
+echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
+
 type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
 type werf && source $(werf ci-env gitlab --verbose --as-file)
+
+export WERF_REPO="${DEV_REGISTRY_PATH}"
 
 case "$SUBCOMMAND" in
   bp )

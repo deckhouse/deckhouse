@@ -20,7 +20,7 @@ docker:
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
 git:
-  - add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  - add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
 shell:
   beforeInstall:

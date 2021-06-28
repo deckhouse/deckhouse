@@ -6,7 +6,7 @@ global:
       - ["cert-manager", "vertical-pod-autoscaler-crd", "priority-class"]
       - ["cert-manager"]
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: registry.example.com
     tags:
       common:

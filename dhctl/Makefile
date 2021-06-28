@@ -66,7 +66,7 @@ ci: deps lint
 # Shell script within makefile https://stackoverflow.com/a/29085760
 devenv:
 	@set -e ;\
-	docker pull registry.flant.com/sys/antiopa/dev/install:master ;\
+	docker pull dev-registry.deckhouse.io/sys/antiopa/dev/install:master ;\
 	CONTAINER_ID=$$(docker ps -aqf "name=$(DEV_CONTAINER_NAME)") ;\
 	echo ;\
 	test -n "$$CONTAINER_ID" && echo "Container $$CONTAINER_ID exists, entering." || echo "Creating container..." ;\
@@ -79,7 +79,7 @@ devenv:
 			--mount type=tmpfs,destination=/tmp:exec \
 			-v "$$(pwd):/dhctl" \
 			-v "$$(pwd)/../candi:/deckhouse/candi" \
-			registry.flant.com/sys/antiopa/dev/install:master \
+			dev-registry.deckhouse.io/dev/install:master \
 			tail -f /dev/null) \
 		&& docker exec    "$$CONTAINER_ID" apk add go curl make musl\
 		&& docker exec -i "$$CONTAINER_ID" sh -c "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b \"$$(go env GOPATH)\" /bin v$(GOLANGCI_LINT_VERSION)" \

@@ -19,8 +19,13 @@ set -e
 WERF_CHANNEL=${WERF_CHANNEL:-alpha}
 BASEDIR=${BASEDIR:-$(pwd)/docs}
 
+echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
 type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
 type werf && source $(werf ci-env gitlab --verbose --as-file)
+export WERF_REPO=${DEV_REGISTRY_PATH:-"dev-registry.deckhouse.io/sys/antiopa"}
+
 
 if [ -z "$_TMPDIR"  ] ; then
     echo "_TMPDIR is not specified. You should make cleanup manually."

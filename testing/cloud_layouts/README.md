@@ -10,7 +10,7 @@ docker run \
   -v /deckhouse:/deckhouse \
   -v "$(pwd)/testing/cloud_layouts:/deckhouse/testing/cloud_layouts" \
   -v "$(pwd)/layouts-tests-tmp:/tmp" \
-  -w /deckhouse registry.flant.com/sys/antiopa/dev/install:master
+  -w /deckhouse dev-registry.deckhouse.io/sys/antiopa/dev/install:master
 ```
 ```bash
 dhctl destroy \

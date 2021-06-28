@@ -27,7 +27,7 @@ var _ = Describe("Module :: userAuthn :: helm template :: custom-certificate", f
 	const globalValues = `
 enabledModules: ["vertical-pod-autoscaler-crd", "user-authn", "cert-manager"]
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     common:
