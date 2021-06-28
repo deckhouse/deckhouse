@@ -22,6 +22,7 @@ data:
   {{- $_ := set $yandexValues "shouldAssignPublicIPAddress" .Values.cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress }}
   {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
   {{- $_ := set $yandexValues "labels" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.labels | default dict) }}
+  {{- $_ := set $yandexValues "nodeNetworkCIDR" .Values.cloudProviderYandex.internal.providerClusterConfiguration.nodeNetworkCIDR }}
 
   {{- $_ := set $yandexValues "instanceClassDefaults" dict }}
   {{- $_ := set $yandexValues.instanceClassDefaults "imageID" .Values.cloudProviderYandex.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.imageID }}

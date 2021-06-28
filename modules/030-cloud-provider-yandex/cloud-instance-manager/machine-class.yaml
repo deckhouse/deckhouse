@@ -49,6 +49,7 @@ spec:
 {{- end }}
   metadata:
     ssh-keys: "user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
+    node-network-cidr: "{{ .Values.nodeManager.internal.cloudProvider.yandex.nodeNetworkCIDR }}"
   secretRef:
     namespace: d8-cloud-instance-manager
     name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

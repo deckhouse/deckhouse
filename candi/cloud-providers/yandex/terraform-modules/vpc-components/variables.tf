@@ -44,6 +44,11 @@ variable "nat_instance_external_address" {
   default = null
 }
 
+variable "nat_instance_internal_address" {
+  type = string
+  default = null
+}
+
 variable "nat_instance_internal_subnet_id" {
   type = string
   default = null

@@ -36,6 +36,10 @@ locals {
   subnets = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
   internal_subnet = element(local.subnets, var.nodeIndex)
 
+  // TODO apply external_subnet_id_from_ids to external_subnet_id directly after remove externalSubnetID
+  external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? local.external_subnet_ids[var.nodeIndex] : null
+
+  external_subnet_id = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
   assign_external_ip_address = (local.external_subnet_id == null) && (length(local.external_ip_addresses) > 0) ? true : false
   external_ip = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
 }
@@ -90,5 +94,6 @@ resource "yandex_compute_instance" "static" {
   metadata = {
     ssh-keys = "user:${local.ssh_public_key}"
     user-data = base64decode(var.cloudConfig)
+    node-network-cidr = local.node_network_cidr
   }
 }

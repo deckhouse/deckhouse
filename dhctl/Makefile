@@ -56,6 +56,9 @@ test:
 build:
 	GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o /tmp/dhctl ./cmd/dhctl
 
+build-dev:
+	mkdir -p $$(pwd)/hack && GOOS="$(OS)" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o $$(pwd)/hack ./cmd/dhctl
+
 ci: deps lint
 	tmpfile=$(mktemp /tmp/coverage-report.XXXXXX)
 	go test -cover -coverprofile=${tmpfile} -vet=off ./pkg/... \
@@ -76,6 +79,7 @@ devenv:
 			--detach \
 			--rm \
 			-v $(HOME)/.ssh/:/root/.ssh/ \
+			-v $$(pwd)/.state/:/.state/ \
 			--mount type=tmpfs,destination=/tmp:exec \
 			-v "$$(pwd):/dhctl" \
 			-v "$$(pwd)/../candi:/deckhouse/candi" \
