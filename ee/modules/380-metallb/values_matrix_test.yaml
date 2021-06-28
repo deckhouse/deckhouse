@@ -30,7 +30,7 @@ global:
       - ["vertical-pod-autoscaler-crd", "priority-class"]
       - ["priority-class"]
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
     tags:
       metallb:

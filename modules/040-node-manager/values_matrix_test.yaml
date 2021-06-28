@@ -18,7 +18,7 @@ matrixTestDefaults:
 global:
   enabledModules: ["vertical-pod-autoscaler-crd", "priority-class"]
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
     tags:
       nodeManager:

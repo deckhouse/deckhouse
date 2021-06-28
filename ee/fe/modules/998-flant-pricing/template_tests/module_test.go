@@ -26,7 +26,7 @@ clusterName: my_cluster
 deckhouseVersion: dev
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-pricing", "operator-prometheus-crd"]
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     flantPricing:

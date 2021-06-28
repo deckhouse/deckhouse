@@ -1,7 +1,7 @@
 global:
   enabledModules: ["vertical-pod-autoscaler-crd"]
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
     tags:
       common:

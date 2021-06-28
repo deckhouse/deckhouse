@@ -40,7 +40,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     nodeManager:
@@ -128,17 +128,17 @@ internal:
     type: azure
     machineClassKind: AzureMachineClass
     azure:
-      sshPublicKey: sshPublicKey 
-      clientId: clientId 
-      clientSecret: clientSecret 
-      subscriptionId: subscriptionId 
-      tenantId: tenantId 
-      location: location 
-      resourceGroupName: resourceGroupName 
-      vnetName: vnetName 
-      subnetName: subnetName 
-      urn: urn 
-      diskType: diskType 
+      sshPublicKey: sshPublicKey
+      clientId: clientId
+      clientSecret: clientSecret
+      subscriptionId: subscriptionId
+      tenantId: tenantId
+      location: location
+      resourceGroupName: resourceGroupName
+      vnetName: vnetName
+      subnetName: subnetName
+      urn: urn
+      diskType: diskType
       additionalTags: []
   nodeGroups:
   - name: worker

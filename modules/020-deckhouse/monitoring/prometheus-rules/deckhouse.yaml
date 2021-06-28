@@ -158,7 +158,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse не может подключиться к registry
       description: |
-        У deckhouse нет доступа к registry (обычно registry.flant.com), в котором он каждые 15 секунд проверяет наличие нового Docker образа. Пока у deckhouse нет доступа к registry — он не будет автоматически обновляться.
+        У deckhouse нет доступа к registry (обычно registry.deckhouse.io), в котором он каждые 15 секунд проверяет наличие нового Docker образа. Пока у deckhouse нет доступа к registry — он не будет автоматически обновляться.
 
         Обычно этот алерт означает, что у pod'а deckhouse есть какие-то проблемы с доступом в интернет.
 

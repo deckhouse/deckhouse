@@ -52,7 +52,7 @@ properties:
     additionalProperties: true
     type: object
     x-examples:
-    - registry: registry.flant.com
+    - registry: registry.deckhouse.io
       registryDockercfg: registry.example.com
       tags: {}
   modules:

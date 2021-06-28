@@ -4,7 +4,7 @@ global:
     - ["vertical-pod-autoscaler-crd"]
     - ["vertical-pod-autoscaler-crd", "control-plane-manager", "priority-class"]
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
     tags:
       monitoringKubernetesControlPlane:

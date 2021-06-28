@@ -4,9 +4,12 @@
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
     fi
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
-  - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
   script:
   - werf cleanup --without-kube
   only:

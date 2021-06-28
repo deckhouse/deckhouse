@@ -99,7 +99,7 @@ spec:
         k8s-app: kube-proxy
     spec:
       containers:
-      - image: registry.flant.com/sys/antiopa/kube-proxy/kube-proxy-1-19:58231d9eb1224489c785f5a7cf3b087c5dc6cb84074f6dd653784206
+      - image: registry.deckhouse.io/deckhouse/ce/kube-proxy/kube-proxy-1-19:58231d9eb1224489c785f5a7cf3b087c5dc6cb84074f6dd653784206
         imagePullPolicy: IfNotPresent
         name: kube-proxy
       hostNetwork: true

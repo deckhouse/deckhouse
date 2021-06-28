@@ -32,7 +32,7 @@ import (
 const globalValuesFmt = `
 enabledModules: [%q]
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     common:

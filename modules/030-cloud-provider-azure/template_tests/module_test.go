@@ -49,7 +49,7 @@ const globalValues = `
   modules:
     placement: {}
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
     tags:
       common:

@@ -20,6 +20,7 @@ variables:
   WERF_STAPEL_IMAGE_NAME: "${DECKHOUSE_READ_REGISTRY}/flant/stapel"
   WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
+  DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
 
 Build Modules Images:
   extends: .Build Modules Images template

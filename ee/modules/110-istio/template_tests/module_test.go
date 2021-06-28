@@ -33,7 +33,7 @@ modules:
       clusterIssuerName: letsencrypt
     mode: CertManager
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: mydockercfg
   tags:
     common:
@@ -205,14 +205,14 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV181.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(iopV180alpha1.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 
-			Expect(deploymentOperatorv181.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.flant.com:ov181hashstring`))
-			Expect(deploymentOperatorv180alpha1.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.flant.com:ov180a1hashstring`))
+			Expect(deploymentOperatorv181.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.deckhouse.io:ov181hashstring`))
+			Expect(deploymentOperatorv180alpha1.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.deckhouse.io:ov180a1hashstring`))
 
-			Expect(iopV181.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.flant.com:prv181hashstring`))
-			Expect(iopV180alpha1.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.flant.com:prv180a1hashstring`))
+			Expect(iopV181.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.deckhouse.io:prv181hashstring`))
+			Expect(iopV180alpha1.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.deckhouse.io:prv180a1hashstring`))
 
-			Expect(iopV181.Field("spec.values.pilot.image").String()).To(Equal(`registry.flant.com:piv181hashstring`))
-			Expect(iopV180alpha1.Field("spec.values.pilot.image").String()).To(Equal(`registry.flant.com:piv180a1hashstring`))
+			Expect(iopV181.Field("spec.values.pilot.image").String()).To(Equal(`registry.deckhouse.io:piv181hashstring`))
+			Expect(iopV180alpha1.Field("spec.values.pilot.image").String()).To(Equal(`registry.deckhouse.io:piv180a1hashstring`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x8x1`))
 			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")

@@ -1,7 +1,7 @@
 global:
   enabledModules: ["cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class"]
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
   discovery:
     clusterControlPlaneIsHighlyAvailable: true

@@ -35,7 +35,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     common:
@@ -59,7 +59,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     common:
@@ -84,7 +84,7 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     common:
@@ -108,7 +108,7 @@ modules:
   placement: {}
 enabledModules: ["vertical-pod-autoscaler-crd"]
 modulesImages:
-  registry: registry.flant.com
+  registry: registry.deckhouse.io
   registryDockercfg: cfg
   tags:
     common:

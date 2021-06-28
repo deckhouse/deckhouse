@@ -94,7 +94,7 @@ spec:
                 - node-a-1
             weight: 1
       containers:
-      - image: registry.flant.com/sys/antiopa/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -111,7 +111,7 @@ metadata:
 spec:
   nodeName: node-a-1
   containers:
-  - image: registry.flant.com/sys/antiopa/upmeter/smoke-mini:whatever
+  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
     name: smoke-mini
   affinity:
     nodeAffinity:
@@ -184,7 +184,7 @@ spec:
                 - node-a-1
             weight: 1
       containers:
-      - image: registry.flant.com/sys/antiopa/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -201,7 +201,7 @@ metadata:
 spec:
   nodeName: node-a-1
   containers:
-  - image: registry.flant.com/sys/antiopa/upmeter/smoke-mini:whatever
+  - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
     name: smoke-mini
   affinity:
     nodeAffinity:
@@ -263,7 +263,7 @@ spec:
                 - node-a-1
             weight: 1
       containers:
-      - image: registry.flant.com/sys/antiopa/upmeter/smoke-mini:whatever
+      - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
         name: smoke-mini
 status:
   collisionCount: 0
@@ -280,7 +280,7 @@ metadata:
 spec:
   nodeName: ""
   containers:
-    - image: registry.flant.com/sys/antiopa/upmeter/smoke-mini:whatever
+    - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
       name: smoke-mini
   affinity:
     nodeAffinity:

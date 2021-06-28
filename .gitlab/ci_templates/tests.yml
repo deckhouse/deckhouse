@@ -5,10 +5,13 @@
       export CI_COMMIT_TAG="";
     fi
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
-  - pwd
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
+  - pwd
   - werf run tests
       --docker-options="-w /deckhouse"
       -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/matrix/
@@ -33,10 +36,13 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
-  - pwd
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
+  - pwd
   - werf run tests
       --docker-options="-w /deckhouse"
       -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/
@@ -61,10 +67,13 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
-  - pwd
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
+  - pwd
   - werf run tests
      --docker-options="-w /deckhouse"
      -- go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
@@ -136,7 +145,6 @@
       export CI_COMMIT_TAG="";
     fi
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
   - export BASEDIR=$(pwd)/docs
   - export _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
   - bash testing/check_links.sh
@@ -166,10 +174,13 @@
       export CI_COMMIT_TAG="";
     fi
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
-  - pwd
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
+  - pwd
   - werf run dhctl-tests --docker-options="-v $(pwd):/deckhouse -w /deckhouse/dhctl" -- make ci
   except:
   - schedules
@@ -189,10 +200,13 @@
       export CI_COMMIT_TAG="";
     fi
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
-  - pwd
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
+  - pwd
   - werf run tests
     --docker-options="-w /deckhouse -e "TERM=xterm-256color""
     -- sh -c "go generate tools/register.go && golangci-lint run"
@@ -216,10 +230,13 @@
   - rm -rf shell-operator || true
   - git submodule update --init --recursive
   script:
-  - echo $DECKHOUSE_REGISTRY_READ_PASSWORD | docker login --username="$DECKHOUSE_REGISTRY_READ_USER" --password-stdin $DECKHOUSE_REGISTRY_READ_HOST > /dev/null
-  - pwd
+  - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - export WERF_REPO="${DEV_REGISTRY_PATH}"
+  - pwd
   - werf run tests
     --docker-options="-v $(pwd):/deckhouse -w /deckhouse"
     -- ginkgo -vet=off ./testing/openapi_cases/

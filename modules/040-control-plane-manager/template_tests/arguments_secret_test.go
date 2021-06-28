@@ -36,7 +36,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
         milliCpuControlPlane: 1024
         memoryControlPlane: 536870912
   modulesImages:
-    registry: registry.flant.com
+    registry: registry.deckhouse.io
     registryDockercfg: cfg
     tags:
       controlPlaneManager:
