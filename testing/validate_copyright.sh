@@ -103,7 +103,7 @@ echo
 
 for item in ${DIFF_DATA}; do
 
-  pattern="\.go$|/[^/.]+$|\.sh$|\.hcl$|\.lua$|\.py$"
+  pattern="\.go$|/[^/.]+$|\.sh$|\.lua$|\.py$"
   if [[ "$item" =~ $pattern ]]; then
     if ! check_file_copyright "${item}"; then
       hasErrors=1
