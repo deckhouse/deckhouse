@@ -16,10 +16,25 @@
 
 shopt -s extglob
 
-ip_addr_show_output=$(ip -json addr show)
-primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-primary_ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$primary_mac" '.[] | select(.address == $mac) | .ifname')"
+function ip_in_subnet(){
+  python3 -c "import ipaddress; exit(0) if ipaddress.ip_address('$1') in ipaddress.ip_network('$2') else exit(1)"
+  return $?
+}
 
+if ! metadata="$(curl -sH Metadata-Flavor:Google 169.254.169.254/computeMetadata/v1/instance/?recursive=true 2>/dev/null)"; then
+  echo "Can't get network cidr from metadata"
+  exit 1
+fi
+
+network_cidr=$(echo "$metadata" | jq -er '.attributes."node-network-cidr"')
+if [ -z "$network_cidr" ]; then
+  echo "network cidr is empty"
+  exit 1
+fi
+
+ip_addr_show_output=$(ip -json addr show)
+primary_mac="$(grep -m 1 -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
+primary_ifname="$(echo "$ip_addr_show_output" | jq -re --arg mac "$primary_mac" '.[] | select(.address == $mac) | .ifname')"
 for i in /sys/class/net/!($primary_ifname); do
   if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio_net.*' 1>/dev/null 2>&1; then
     continue
@@ -28,7 +43,18 @@ for i in /sys/class/net/!($primary_ifname); do
   ifname=$(basename "$i")
   mac="$(echo "$ip_addr_show_output" | jq -re --arg ifname "$ifname" '.[] | select(.ifname == $ifname) | .address')"
 
-  cat > /etc/netplan/100-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
+  ip="$(echo "$metadata" | jq --arg m "$mac" -er '.networkInterfaces[] | select(.mac == $m) | .ip')"
+  route_settings=""
+  if ip_in_subnet "$ip" "$network_cidr"; then
+    read -r -d '' route_settings <<ROUTE_EOF
+      routes:
+      - to: $network_cidr
+        scope: link
+ROUTE_EOF
+  fi
+
+# Configure the internal interface to route all vpc to all vm
+  cat > /etc/netplan/999-cim-"$ifname".yaml <<BOOTSTRAP_NETWORK_EOF
 network:
   version: 2
   ethernets:
@@ -39,10 +65,9 @@ network:
         use-routes: false
       match:
         macaddress: $mac
+      $route_settings
 BOOTSTRAP_NETWORK_EOF
 done
-
 netplan generate
 netplan apply
-
 shopt -u extglob

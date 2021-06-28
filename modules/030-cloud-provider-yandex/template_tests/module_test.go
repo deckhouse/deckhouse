@@ -101,6 +101,7 @@ const moduleValues = `
         folderID: myfoldid
       labels:
         test: test
+      nodeNetworkCIDR: 10.100.0.1/24
 `
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
@@ -164,6 +165,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
           },
           "shouldAssignPublicIPAddress": true,
           "labels": {"test": "test"},
+		  "nodeNetworkCIDR": "10.100.0.1/24",
 		  "instanceClassDefaults": {
 			  "imageID": "test"
 		  }

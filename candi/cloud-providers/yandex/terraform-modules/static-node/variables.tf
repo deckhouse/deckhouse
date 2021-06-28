@@ -46,9 +46,13 @@ locals {
   memory = local.instance_class.memory / 1024
   disk_size_gb = lookup(local.instance_class, "diskSizeGb", 20)
   image_id = local.instance_class.imageID
+  node_network_cidr = var.providerClusterConfiguration.nodeNetworkCIDR
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
+
+  external_subnet_ids = lookup(local.instance_class, "externalSubnetIDs", [])
   external_ip_addresses = lookup(local.instance_class, "externalIPAddresses", [])
-  external_subnet_id = lookup(local.instance_class, "externalSubnetID", null)
+  external_subnet_id_deprecated = lookup(local.instance_class, "externalSubnetID", null)
+
   network_type = contains(keys(local.instance_class), "networkType") ? lower(local.instance_class.networkType) : null
   additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.instance_class, "additionalLabels", {}))
 }

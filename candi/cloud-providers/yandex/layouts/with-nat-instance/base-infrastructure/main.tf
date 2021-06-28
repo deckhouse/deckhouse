@@ -29,12 +29,16 @@ module "vpc_components" {
   prefix = local.prefix
   network_id = local.network_id
   node_network_cidr = local.node_network_cidr
+
   dhcp_domain_name = local.dhcp_domain_name
   dhcp_domain_name_servers = local.dhcp_domain_name_servers
+
   should_create_nat_instance = true
   nat_instance_external_address = local.nat_instance_external_address
+  nat_instance_internal_address = local.nat_instance_internal_address
   nat_instance_internal_subnet_id = local.nat_instance_internal_subnet_id
   nat_instance_external_subnet_id = local.nat_instance_external_subnet_id
   nat_instance_ssh_key = var.providerClusterConfiguration.sshPublicKey
+
   labels = local.labels
 }

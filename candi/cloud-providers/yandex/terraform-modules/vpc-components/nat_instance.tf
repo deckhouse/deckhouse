@@ -89,6 +89,7 @@ resource "yandex_compute_instance" "nat_instance" {
     subnet_id      = data.yandex_vpc_subnet.internal_subnet.id
     nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address ? var.nat_instance_external_address : null
+    ip_address     = local.nat_instance_internal_address_calculated
   }
 
   lifecycle {

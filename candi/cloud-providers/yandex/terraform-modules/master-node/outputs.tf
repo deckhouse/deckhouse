@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  master_internal_ip_iface_index = local.external_subnet_id != null ? 1 : 0
+}
+
 output "master_ip_address_for_ssh" {
   value = lookup(yandex_compute_instance.master.network_interface.0, "nat_ip_address", "") != "" ? yandex_compute_instance.master.network_interface.0.nat_ip_address : yandex_compute_instance.master.network_interface.0.ip_address
 }
 
 output "node_internal_ip_address" {
-  value = yandex_compute_instance.master.network_interface.0.ip_address
+  value = yandex_compute_instance.master.network_interface[local.master_internal_ip_iface_index].ip_address
 }
 
 output "kubernetes_data_device_path" {
