@@ -35,7 +35,7 @@ function request_gitlab_api() {
 
 function check_flant_license() {
   filename=${1}
-  if [[ $filename =~ "/ee/" ]]; then
+  if [[ $filename =~ ^/?ee/ ]]; then
     grep -Pzo "$EE_LICENSE" $filename >&/dev/null
     if [ $? -gt 0 ]; then
       echo "ERROR: $filename doesn't contain EE license"
@@ -104,7 +104,8 @@ echo
 for item in ${DIFF_DATA}; do
 
   pattern="\.go$|/[^/.]+$|\.sh$|\.lua$|\.py$"
-  if [[ "$item" =~ $pattern ]]; then
+  skip_pattern="geohash.lua$|Dockerfile$|Makefile$|/docs/documentation/|/docs/site/|bashrc$|inputrc$"
+  if [[ "$item" =~ $pattern ]] && ! [[ "$item" =~ $skip_pattern ]]; then
     if ! check_file_copyright "${item}"; then
       hasErrors=1
     fi
