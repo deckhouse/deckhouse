@@ -5,7 +5,7 @@ title: "Модуль upmeter: пример конфигурации remote_write
 ## Пример конфигурации remote_write
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: UpmeterRemoteWrite
 metadata:
   labels:

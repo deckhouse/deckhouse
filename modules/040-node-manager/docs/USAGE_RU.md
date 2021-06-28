@@ -47,7 +47,7 @@ spec:
 ## Пример описания `NodeUser`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: testuser

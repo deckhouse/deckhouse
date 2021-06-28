@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -95,8 +95,13 @@ spec:
 
                           Regex capture groups are available.
                         type: string
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string
           jsonPath: .spec.url
           description: 'Prometheus Remote write URL.'
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

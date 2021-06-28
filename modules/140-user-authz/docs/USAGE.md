@@ -5,7 +5,7 @@ title: "The user-authz module: usage"
 ## An example of `ClusterAuthorizationRule`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: test
@@ -49,7 +49,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
   An example:
   ```bash
   kubectl create -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   kind: ClusterAuthorizationRule
   metadata:
     name: gitlab-runner-deploy
@@ -176,7 +176,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
 
 Создадим `ClusterAuthorizationRule`:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: myuser

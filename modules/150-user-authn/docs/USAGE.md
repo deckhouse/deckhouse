@@ -21,7 +21,7 @@ title: "The user-authn module: usage"
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: my-cool-app # the authenticator's pods will be prefixed with my-cool-app
@@ -70,7 +70,7 @@ nginx.ingress.kubernetes.io/satisfy: "any"
 ### Github
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: github
@@ -92,7 +92,7 @@ If the Github organization is managed by the client, go to `Settings` -> `Applic
 
 ### GitLab
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: gitlab
@@ -117,7 +117,7 @@ Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html
 
 ### Atlassian Crowd
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: crowd
@@ -142,7 +142,7 @@ Paste the generated `Application Name` and `Password` into the [DexProvider](cr.
 
 ### Bitbucket Cloud
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: gitlab
@@ -166,7 +166,7 @@ Paste the generated `Key` and `Secret` into the [DexProvider](cr.html#dexprovide
 
 ### OIDC (OpenID Connect)
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: okta
@@ -187,7 +187,7 @@ Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html
 
 ### LDAP
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: active-directory
@@ -233,7 +233,7 @@ The [`DexClient`](cr.html#dexclient) custom resource enables applications to use
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexClient
 metadata:
   name: myname
@@ -269,7 +269,7 @@ data:
 ## An example of creating a static user:
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin

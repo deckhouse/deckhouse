@@ -167,7 +167,7 @@ spec:
       kind: OpenStackInstanceClass
       name: worker
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main

@@ -9,7 +9,7 @@ title: "Сloud provider — OpenStack: FAQ"
 ### An example of IngressNginxController
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main

@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Node user hooks :: get nodeuser crds ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "nodeUser", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeUser", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -25,7 +25,7 @@ var _ = Describe("Node user hooks :: get nodeuser crds ::", func() {
 		Context("With adding nodeUser object", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: test.user
@@ -71,7 +71,7 @@ spec:
 			Context("With updating nodeUser object", func() {
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: test.user
@@ -110,7 +110,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: test.user1
@@ -120,7 +120,7 @@ spec:
   passwordHash: "$saltpasswordhash"
   isSudoer: true
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: test.user2
@@ -164,7 +164,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: test.user1
@@ -174,7 +174,7 @@ spec:
   passwordHash: "$saltpasswordhash"
   isSudoer: true
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeUser
 metadata:
   name: test.user2

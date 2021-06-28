@@ -9,7 +9,7 @@ metadata:
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: Конфигурация отправки результатов проб модуля upmeter по протоколу `remote_write`.
@@ -57,3 +57,7 @@ spec:
                   enum:
                     - 30
                     - 300
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

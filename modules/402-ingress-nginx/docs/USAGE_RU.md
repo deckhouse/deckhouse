@@ -5,7 +5,7 @@ title: "Модуль ingress-nginx: пример конфигурации"
 {% raw %}
 ## Общий пример
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -27,7 +27,7 @@ spec:
 
 ## Пример для AWS (Network Load Balancer)
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -47,7 +47,7 @@ spec:
 **Внимание!** Добавление аннотации на существующий Service не сработает, необходимо будет его пересоздать.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -62,7 +62,7 @@ spec:
 
 ## Пример для GCP
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
  name: main
@@ -73,7 +73,7 @@ spec:
 
 ## Пример для Openstack
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main-lbwpp
@@ -89,7 +89,7 @@ spec:
 ## Пример для Bare Metal
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main

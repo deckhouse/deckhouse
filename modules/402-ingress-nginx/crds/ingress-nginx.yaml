@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           required: ['spec']
@@ -455,7 +455,7 @@ spec:
                     inlet:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.ingressClass
           name: Ingress Class
           description: 'Name of served ingress class.'
@@ -468,3 +468,8 @@ spec:
           name: Controller Version
           description: 'Current NGINX Ingress Controller version.'
           type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

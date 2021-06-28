@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             Управляет настройками RBAC и авторизацией по namespace.
@@ -84,3 +84,7 @@ spec:
                         description: 'Kind роли.'
                       name:
                         description: 'Название роли.'
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

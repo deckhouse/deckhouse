@@ -128,7 +128,7 @@ C `Pods` сложнее — из ресурса, который скейлит H
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: ServiceMetric
 metadata:
   name: rmq-queue-forum-messages
@@ -169,7 +169,7 @@ spec:
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
 metadata:
   name: php-fpm-active-workers
@@ -204,7 +204,7 @@ spec:
 {% raw %}
 ```yaml
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
 metadata:
   name: php-fpm-active-worker

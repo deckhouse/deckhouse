@@ -47,7 +47,7 @@ func (m *RemoteWriteMonitor) Start(ctx context.Context) error {
 			types.WatchEventModified,
 			types.WatchEventDeleted,
 		},
-		ApiVersion:              "deckhouse.io/v1alpha1",
+		ApiVersion:              "deckhouse.io/v1",
 		Kind:                    "UpmeterRemoteWrite",
 		LogEntry:                m.logger.WithField("component", "upmeterremotewrite-monitor"),
 		KeepFullObjectsInMemory: true,

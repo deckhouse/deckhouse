@@ -18,7 +18,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -43,8 +43,13 @@ spec:
                     JSON-манифест dashboard.
 
                     **Важно!** Следите, чтобы помимо `uid` в манифесте не было "местного" `id` по адресу `.id`.
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.folder
           name: Folder
           description: 'Folder in Grafana.'
           type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

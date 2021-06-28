@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("User Authn hooks :: get dex client crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "DexClient", true)
+	f.RegisterCRD("deckhouse.io", "v1", "DexClient", true)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -37,7 +37,7 @@ metadata:
 data:
   clientSecret: dGVzdA==
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexClient
 metadata:
   name: opendistro
@@ -106,7 +106,7 @@ metadata:
 data:
   clientSecret: dGVzdA==
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexClient
 metadata:
   name: opendistro
@@ -161,7 +161,7 @@ metadata:
 data:
   clientSecret: dGVzdA==
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexClient
 metadata:
   name: opendistro
@@ -170,7 +170,7 @@ spec:
   redirectURIs:
   - https://opendistro.example.com/callback
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexClient
 metadata:
   name: grafana

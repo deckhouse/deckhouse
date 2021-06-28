@@ -18,7 +18,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -43,8 +43,13 @@ spec:
                     The dashboard's JSON manifest.
 
                     **Caution!** Make sure that there is no "local" `id` (at the `.id` address) in the manifest in addition to the `uid`.
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.folder
           name: Folder
           description: 'Folder in Grafana.'
           type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

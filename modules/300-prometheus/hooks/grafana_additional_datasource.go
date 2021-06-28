@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "grafana_additional_datasources",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "GrafanaAdditionalDatasource",
 			FilterFunc: filterGrafanaDSCRD,
 		},

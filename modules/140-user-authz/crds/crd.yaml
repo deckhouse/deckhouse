@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -149,3 +149,7 @@ spec:
                         description: 'Name of the role.'
                         minLength: 1
                         example: 'cluster-admin'
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

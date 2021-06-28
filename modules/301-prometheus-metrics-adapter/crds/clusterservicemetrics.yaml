@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: 'ClusterServiceMetric is handy interface for configuring custom Service-related metrics in prometheus-metrics-adapter.'
@@ -33,3 +33,7 @@ spec:
                   type: string
                   description: |
                     PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+    - name: v1beta1
+      served: true
+      storage: false
+      schema: *schema

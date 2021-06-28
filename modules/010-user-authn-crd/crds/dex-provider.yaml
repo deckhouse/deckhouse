@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           required: ['spec']
@@ -419,7 +419,7 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.type
           name: Type
           description: 'Type of authentication provider.'
@@ -428,3 +428,8 @@ spec:
           name: Display Name
           description: 'Name that will be displayed on the providers selection screen.'
           type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

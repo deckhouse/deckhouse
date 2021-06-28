@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "User", false)
+	f.RegisterCRD("deckhouse.io", "v1", "User", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -27,7 +27,7 @@ var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 		Context("With adding User object", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
@@ -68,7 +68,7 @@ spec:
 			When("User resource changed", func() {
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
@@ -113,7 +113,7 @@ status:
 			Context("With updating User object", func() {
 				BeforeEach(func() {
 					f.KubeStateSet(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
@@ -151,7 +151,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
@@ -162,7 +162,7 @@ spec:
   - Everyone
   password: password
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: user

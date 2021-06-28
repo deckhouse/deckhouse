@@ -128,7 +128,7 @@ Suppose there is a "send_forum_message" queue in RabbitMQ, and this message brok
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: ServiceMetric
 metadata:
   name: rmq-queue-forum-messages
@@ -169,7 +169,7 @@ Suppose we want the average number of php-fpm workers in the "mybackend" deploym
 
 {% raw %}
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
 metadata:
   name: php-fpm-active-workers
@@ -204,7 +204,7 @@ The deployment is scaled based on the percentage of active php-fpm workers.
 {% raw %}
 ```yaml
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1beta1
 kind: PodMetric
 metadata:
   name: php-fpm-active-worker

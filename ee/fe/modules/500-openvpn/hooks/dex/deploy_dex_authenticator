@@ -16,7 +16,7 @@ function __main__() {
       allowedGroups="allowedGroups: $(values::get openvpn.auth.allowedUserGroups)"
     fi
     cat <<EOF | kubectl apply -f -
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: openvpn

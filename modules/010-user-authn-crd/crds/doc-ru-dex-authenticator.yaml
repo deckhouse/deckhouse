@@ -19,7 +19,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             При появлении объекта `DexAuthenticator` в namespace будут созданы:
@@ -140,7 +140,12 @@ spec:
                         type: string
                     type: object
                   type: array
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.applicationDomain
           name: Domain
           type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

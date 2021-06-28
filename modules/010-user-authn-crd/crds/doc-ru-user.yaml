@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -79,9 +79,9 @@ spec:
                     * Появляется только при заполнении поля `.spec.ttl`.
                     * При достижении этой даты учетная запись будет удалена.
                     * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя.
-      subresources:
+      subresources: &subresources
         status: {}
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.email
           name: Email
           type: string
@@ -92,3 +92,9 @@ spec:
           name: Expire_at
           type: string
           format: date-time
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      subresources: *subresources
+      additionalPrinterColumns: *additionalPrinterColumns

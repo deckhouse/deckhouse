@@ -1,7 +1,7 @@
 spec:
   versions:
     - name: v1alpha1
-      schema:
+      schema: &schema
         openAPIV3Schema:
           description: |
             Ресурс хранения `PrometheusRule`.  [Подробнее...](https://early.deckhouse.io/ru/documentation/v1/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
@@ -41,3 +41,7 @@ spec:
                                 type: string
                             record:
                               type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

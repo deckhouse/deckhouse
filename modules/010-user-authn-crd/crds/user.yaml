@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -72,9 +72,9 @@ spec:
                     * It is shown only of the `.spec.ttl` field is set.
                     * The user account will be deleted at the specified date.
                     * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
-      subresources:
+      subresources: &subresources
         status: {}
-      additionalPrinterColumns:
+      additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.email
           name: Email
           type: string
@@ -85,3 +85,9 @@ spec:
           name: Expire_at
           type: string
           format: date-time
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      subresources: *subresources
+      additionalPrinterColumns: *additionalPrinterColumns

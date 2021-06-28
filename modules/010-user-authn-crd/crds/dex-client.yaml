@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema:
+      schema: &schema
         openAPIV3Schema:
           type: object
           description: |
@@ -45,3 +45,7 @@ spec:
                   description: 'OAuth2 client IDs that allowed cross authentication with the current client. [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)'
                   items:
                     type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

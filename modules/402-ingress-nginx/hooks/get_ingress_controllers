@@ -9,7 +9,7 @@ function __config__() {
     - name: controller
       group: main
       keepFullObjectsInMemory: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: IngressNginxController
       queue: /modules/$(module::name::kebab_case)
       jqFilter: |

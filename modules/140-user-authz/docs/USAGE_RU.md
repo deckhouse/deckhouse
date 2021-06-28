@@ -5,7 +5,7 @@ title: "Модуль user-authz: примеры конфигурации"
 ## Пример `ClusterAuthorizationRule`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: test
@@ -49,7 +49,7 @@ spec:
   Пример:
   ```bash
   kubectl create -f - <<EOF
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   kind: ClusterAuthorizationRule
   metadata:
     name: gitlab-runner-deploy
@@ -177,7 +177,7 @@ spec:
 
 Создадим `ClusterAuthorizationRule`:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: myuser

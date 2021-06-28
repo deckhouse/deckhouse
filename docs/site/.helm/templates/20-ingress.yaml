@@ -73,7 +73,7 @@ spec:
 {{- end }}
 {{- if or (eq .Values.global.env "web-production") (eq .Values.global.env "web-stage") }}
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
   name: {{ .Chart.Name }}-public

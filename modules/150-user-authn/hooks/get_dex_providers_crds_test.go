@@ -12,7 +12,7 @@ var _ = Describe("User Authn hooks :: get dex providers crds ::", func() {
 	const (
 		bitbucketCR = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: bitbucket
@@ -28,7 +28,7 @@ spec:
 `
 		oidcCR = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
   name: oidc-notslu-gif-ed
@@ -49,7 +49,7 @@ spec:
 	)
 
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "DexProvider", false)
+	f.RegisterCRD("deckhouse.io", "v1", "DexProvider", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
