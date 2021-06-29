@@ -25,6 +25,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 /*
@@ -49,8 +51,6 @@ DESIGN
 */
 
 const (
-	NodeTypeCloud = "Cloud"
-
 	machineDeploymentsInternalValuesPath = "nodeManager.internal.machineDeployments"
 )
 
@@ -168,7 +168,7 @@ func parseNodeGroupValues(values *go_hook.PatchableValues) ([]*nodeGroupValue, e
 
 func chooseNodeGroupByMachineDeployment(ngs []*nodeGroupValue, md machineDeployment) *nodeGroupValue {
 	for _, ng := range ngs {
-		if ng.Type != NodeTypeCloud {
+		if ng.Type != ngv1.NodeTypeCloudEphemeral {
 			continue
 		}
 

@@ -31,8 +31,8 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calc
 
 	const workerNodeGroupValues = `[{
                           "name": "worker",
-                          "nodeType": "Cloud",
-                          "cloudInstances": { 
+                          "nodeType": "CloudEphemeral",
+                          "cloudInstances": {
                               "classReference": { "kind": "OpenStackInstanceClass", "name": "worker-small" },
                               "maxPerZone": 3,
                               "minPerZone": 3,
@@ -87,12 +87,12 @@ spec: {}
 
 	Context("Single checksum", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml(valuesRoot, []byte(`{ 
-				"aaa": { 
-					"checksum": "NONSENSE", 
-					"nodeGroup": "worker", 
+			f.ValuesSetFromYaml(valuesRoot, []byte(`{
+				"aaa": {
+					"checksum": "NONSENSE",
+					"nodeGroup": "worker",
 					"name": "aaa"
-				} 
+				}
 			}`))
 			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(workerNodeGroupValues))
 
@@ -128,12 +128,12 @@ spec: {}
 			// No MachineDeployment state here. We should not touch a MachineDeployment if there is
 			// no nodegroup for it. The hook should fail in this test if we do.
 
-			f.ValuesSetFromYaml(valuesRoot, []byte(`{ 
-				"aaa": { 
-					"checksum": "NONSENSE", 
-					"nodeGroup": "worker", 
+			f.ValuesSetFromYaml(valuesRoot, []byte(`{
+				"aaa": {
+					"checksum": "NONSENSE",
+					"nodeGroup": "worker",
 					"name": "aaa"
-				} 
+				}
 			}`))
 			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`[]`))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -163,7 +163,7 @@ internal:
       diskType: gp2
       iops: 42
       instanceType: t2.medium
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -199,7 +199,7 @@ internal:
       preemptible: true #optional
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -235,7 +235,7 @@ internal:
       preemptible: true #optional
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -275,7 +275,7 @@ internal:
       additionalNetworks:
       - mynetwork
       - mynetwork2
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -297,7 +297,7 @@ internal:
       additionalTags:
         aaa: bbb
         ccc: ddd
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -341,7 +341,7 @@ internal:
       runtimeOptions: # optional
         nestedHardwareVirtualization: true
         memoryReservation: 42
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -387,7 +387,7 @@ internal:
       additionalSubnets: [aaa, bbb]
       additionalLabels: # optional
         my: label
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
