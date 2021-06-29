@@ -92,7 +92,7 @@ nodeGroup:
   maxPerZone: 3
   minPerZone: 1
   name: master
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   zones:
   - nova
 k8s:

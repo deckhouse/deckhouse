@@ -17,7 +17,7 @@
 {{- define "cluster_autoscaler_enabled" }}
   {{- if include "kubernetes_version_enabled" . }}
     {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-      {{- if eq $ng.nodeType "Cloud" }}
+      {{- if eq $ng.nodeType "CloudEphemeral" }}
         {{- if lt (int $ng.cloudInstances.minPerZone) (int $ng.cloudInstances.maxPerZone) }}
           not empty string
         {{- end }}

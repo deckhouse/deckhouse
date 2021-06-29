@@ -49,7 +49,7 @@ spec:
             - matchExpressions:
               - operator: In
                 key: node.deckhouse.io/type
-                values: ["Cloud"]
+                values: ["CloudEphemeral"]
       imagePullSecrets:
       - name: deckhouse-registry
 {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | indent 6 }}

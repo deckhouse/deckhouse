@@ -35,7 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
+var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
 func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string) (string, error) {
 	var cloudData string
@@ -80,11 +80,9 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)
 
-	resourceSchema := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "nodegroups"}
-
 	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
 		res, err := kubeCl.Dynamic().
-			Resource(resourceSchema).
+			Resource(nodeGroupResource).
 			Create(context.TODO(), &doc, metav1.CreateOptions{})
 		if err == nil {
 			log.InfoF("NodeGroup %q created\n", res.GetName())
@@ -98,7 +96,7 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 				return err
 			}
 			_, err = kubeCl.Dynamic().
-				Resource(resourceSchema).
+				Resource(nodeGroupResource).
 				Patch(context.TODO(), doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 			if err != nil {
 				return err

@@ -43,7 +43,7 @@ properties:
         x-examples: ["1.19"]
       clusterType:
         type: string
-        enum: ["Cloud", "Static", "Hybrid"]
+        enum: ["Cloud", "Hybrid", "Static"]
         x-examples: ["Cloud"]
       nodeStats:
         type: object

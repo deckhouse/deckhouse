@@ -32,7 +32,7 @@ import (
 
 var stateNGStatic = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: static-0
@@ -42,12 +42,12 @@ spec:
 
 var stateNGCloud = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: cloud0
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 `
 
 var stateTokenJunk = `
@@ -132,7 +132,7 @@ data:
 
 var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
@@ -321,7 +321,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			// There are two NodeGroups and only three tokens left. Nothing was added.
 			nlist, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
 				Group:    "deckhouse.io",
-				Version:  "v1alpha2",
+				Version:  "v1",
 				Resource: "nodegroups",
 			}).List(context.Background(), v1.ListOptions{})
 			Expect(len(nlist.Items)).To(Equal(2))
@@ -357,7 +357,7 @@ var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", f
 			// There are two NodeGroups and only three tokens left. Nothing was added.
 			nlist, _ := f.KubeClient().Dynamic().Resource(schema.GroupVersionResource{
 				Group:    "deckhouse.io",
-				Version:  "v1alpha2",
+				Version:  "v1",
 				Resource: "nodegroups",
 			}).List(context.Background(), v1.ListOptions{})
 			Expect(len(nlist.Items)).To(Equal(2))

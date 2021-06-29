@@ -20,7 +20,7 @@ touch /var/lib/bashible/discovered-node-ip
   {{- if and .clusterBootstrap.cloud .clusterBootstrap.cloud.nodeIP }}
 echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
 
-# For Cloud or Hybrid node we try to discover IP from Node object
+# For CloudEphemeral, CloudPermanent or CloudStatic node we try to discover IP from Node object
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json 2> /dev/null)" ; then

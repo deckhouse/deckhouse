@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -67,7 +67,7 @@ metadata:
 	Context("draining_nodes", func() {
 		var initialState = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
@@ -77,7 +77,7 @@ status:
   desired: 1
   ready: 1
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: undisruptable-worker

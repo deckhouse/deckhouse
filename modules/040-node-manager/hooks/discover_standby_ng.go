@@ -31,19 +31,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 type StandbyNodeGroupInfo struct {
 	Name                    string
 	MaxInstances            int
 	Standby                 *intstr.IntOrString
-	StandbyNotHeldResources v1alpha2.Resources
+	StandbyNotHeldResources ngv1.Resources
 	Taints                  []v1.Taint
 }
 
 func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	nodeGroup := new(v1alpha2.NodeGroup)
+	nodeGroup := new(ngv1.NodeGroup)
 	err := sdk.FromUnstructured(obj, nodeGroup)
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_groups",
-			ApiVersion: "deckhouse.io/v1alpha2",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "NodeGroup",
 			FilterFunc: standbyNodeGroupFilter,
 		},
@@ -270,7 +270,7 @@ func setNodeGroupStandbyStatus(patcher go_hook.ObjectPatcher, nodeGroupName stri
 			"standby": standby,
 		},
 	})
-	return patcher.MergePatchObject(statusStandbyPatch, "deckhouse.io/v1alpha2", "NodeGroup", "", nodeGroupName, "/status")
+	return patcher.MergePatchObject(statusStandbyPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, "/status")
 }
 
 var NumPercentRegex = regexp.MustCompile(`^([0-9]+)%$`)

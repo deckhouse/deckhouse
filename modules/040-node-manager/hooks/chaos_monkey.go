@@ -27,12 +27,12 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -44,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "ngs",
-			ApiVersion:                   "deckhouse.io/v1alpha2",
+			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeGroup",
 			WaitForSynchronization:       pointer.BoolPtr(false),
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
@@ -55,11 +55,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "nodes",
 			ApiVersion: "v1",
 			Kind:       "Node",
-			LabelSelector: &v1.LabelSelector{
-				MatchExpressions: []v1.LabelSelectorRequirement{
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
 						Key:      "node.deckhouse.io/group",
-						Operator: v1.LabelSelectorOpExists,
+						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
 			},
@@ -218,7 +218,7 @@ func chaosFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1alpha2.NodeGroup
+	var ng v1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
@@ -226,7 +226,7 @@ func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}
 
 	isReadyForChaos := false
-	if ng.Spec.NodeType == "Cloud" {
+	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
 		if ng.Status.Desired > 1 && ng.Status.Desired == ng.Status.Ready {
 			isReadyForChaos = true
 		}

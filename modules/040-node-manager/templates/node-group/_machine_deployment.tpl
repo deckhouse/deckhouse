@@ -61,7 +61,7 @@ spec:
           labels:
             node-role.kubernetes.io/{{ $ng.name }}: ""
             node.deckhouse.io/group: {{ $ng.name }}
-            node.deckhouse.io/type: Cloud
+            node.deckhouse.io/type: CloudEphemeral
   {{- if hasKey $ng "nodeTemplate" }}
     {{- if hasKey $ng.nodeTemplate "labels" }}
 {{ $ng.nodeTemplate.labels | toYaml | indent 12 }}

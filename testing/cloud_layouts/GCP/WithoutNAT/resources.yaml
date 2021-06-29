@@ -1,5 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system
@@ -23,7 +23,7 @@ spec:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: system
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
 kind: GCPInstanceClass

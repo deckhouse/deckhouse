@@ -272,7 +272,7 @@ properties:
             nodeType:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
-              enum: ["Cloud", "Hybrid", "Static"]
+              enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
             cri:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
@@ -306,7 +306,7 @@ properties:
               instanceClass: # minimum
                 ami: myami
                 instanceType: t2.medium
-              nodeType: Cloud
+              nodeType: CloudEphemeral
               kubernetesVersion: "1.16"
               cri:
                 type: "Docker"

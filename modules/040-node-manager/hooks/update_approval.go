@@ -28,7 +28,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                   "ngs",
 			WaitForSynchronization: &waitForSync,
-			ApiVersion:             "deckhouse.io/v1alpha2",
+			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			FilterFunc:             updateApprovalNodeGroupFilter,
 		},
@@ -166,7 +166,7 @@ ngLoop:
 		approvedNodeName := ""
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
-		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != "Cloud" {
+		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
 			var allReady = true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
@@ -365,13 +365,13 @@ type updateApprovalNode struct {
 
 type updateNodeGroup struct {
 	Name        string
-	NodeType    string
-	Disruptions v1alpha2.Disruptions
-	Status      v1alpha2.NodeGroupStatus
+	NodeType    ngv1.NodeType
+	Disruptions ngv1.Disruptions
+	Status      ngv1.NodeGroupStatus
 }
 
 func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1alpha2.NodeGroup
+	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {

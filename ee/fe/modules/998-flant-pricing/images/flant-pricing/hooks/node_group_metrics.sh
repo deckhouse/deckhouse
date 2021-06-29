@@ -15,7 +15,7 @@ function __config__() {
       group: ngs
       keepFullObjectsInMemory: false
       queue: /node_group_metrics
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: NodeGroup
       jqFilter: if .status.nodes == .status.upToDate then 1 else 0 end
 EOF

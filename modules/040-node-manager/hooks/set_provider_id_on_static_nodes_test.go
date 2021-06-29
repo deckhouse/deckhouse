@@ -39,7 +39,7 @@ metadata:
   name: node-2
   labels:
     node.deckhouse.io/group: worker
-    node.deckhouse.io/type: Cloud
+    node.deckhouse.io/type: CloudEphemeral
 ---
 apiVersion: v1
 kind: Node

@@ -6,7 +6,7 @@ metadata:
 spec:
   machineSize: Standard_D2_v2
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
@@ -24,4 +24,4 @@ spec:
     labels:
       node-role.deckhouse.io/frontend: ""
       node-role.deckhouse.io/system: ""
-  nodeType: Cloud
+  nodeType: CloudEphemeral

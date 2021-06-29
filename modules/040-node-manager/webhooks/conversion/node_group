@@ -19,6 +19,21 @@ source /shell_lib.sh
 function __config__() {
   cat <<EOF
 configVersion: v1
+kubernetes:
+  - name: cluster_config
+    apiVersion: v1
+    kind: Secret
+    queue: "cache-cluster-config"
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    nameSelector:
+      matchNames:
+        - d8-provider-cluster-configuration
+    jqFilter: '.data."cloud-provider-cluster-configuration.yaml" // ""'
 kubernetesCustomResourceConversion:
   - name: alpha1_to_alpha2
     crdName: nodegroups.deckhouse.io
@@ -30,6 +45,17 @@ kubernetesCustomResourceConversion:
     conversions:
     - fromVersion: deckhouse.io/v1alpha2
       toVersion: deckhouse.io/v1alpha1
+  - name: alpha2_to_v1
+    includeSnapshotsFrom: ["cluster_config"]
+    crdName: nodegroups.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1
+  - name: v1_to_alpha2
+    crdName: nodegroups.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1
+      toVersion: deckhouse.io/v1alpha2
 EOF
 }
 
@@ -58,6 +84,52 @@ function __on_conversion::alpha2_to_alpha1() {
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
        if .spec.cri.docker then .spec.docker = .spec.cri.docker end
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+EOF
+  fi
+}
+
+
+function __on_conversion::alpha2_to_v1() {
+  cluster_config_json="$(context::jq '.snapshots.cluster_config[0].filterResult' | base64 -d | yq eval -I0 -j)"
+  # shellcheck disable=SC2016
+  if converted=$(context::jq -r --argjson config "$cluster_config_json" '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1" |
+       .metadata.name as $ngName |
+       .spec.nodeType |= if . == "Cloud" then "CloudEphemeral" elif . == "Static" then "Static" else
+          if ($config | .nodeGroups += [{"name": "master"}] | .nodeGroups[] | select($ngName == .name) // false) then
+            "CloudPermanent"
+          else
+            "CloudStatic"
+          end
+        end
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v1_to_alpha2() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       .spec.nodeType |= if . == "CloudEphemeral" then "Cloud" elif . == "CloudPermanent" or . == "CloudStatic" then "Hybrid" else "Static" end
      else . end
   )')
   then

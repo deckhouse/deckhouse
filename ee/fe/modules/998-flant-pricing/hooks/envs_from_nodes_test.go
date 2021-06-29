@@ -115,7 +115,7 @@ metadata:
   name: node3
   labels:
     node.deckhouse.io/group: ng0
-    node.deckhouse.io/type: Cloud
+    node.deckhouse.io/type: CloudEphemeral
 status:
   nodeInfo:
     kubeletVersion: v1.16.15

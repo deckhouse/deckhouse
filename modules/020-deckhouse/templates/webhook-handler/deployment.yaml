@@ -90,6 +90,8 @@ spec:
           name: tmp
         - mountPath: /hooks
           name: hooks
+        - mountPath: /.kube
+          name: kube
       volumes:
       - name: certs
         secret:
@@ -100,3 +102,6 @@ spec:
         name: tmp
       - emptyDir: {}
         name: hooks
+      - emptyDir:
+          medium: Memory
+        name: kube

@@ -70,8 +70,6 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
-    nodeCountByType:
-      cloud: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.16.4
 `

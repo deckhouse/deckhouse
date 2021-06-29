@@ -18,7 +18,7 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
       additionalPrinterColumns: &additionalPrinterColumns
         - name: Type
           type: string
@@ -362,7 +362,7 @@ spec:
                         Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
     - name: v1alpha2
       served: true
-      storage: false
+      storage: true
       additionalPrinterColumns: *additionalPrinterColumns
       schema:
         openAPIV3Schema:
@@ -389,6 +389,81 @@ spec:
                         manage:
                           description: |
                             Автоматическое управление версией и параметрами Docker.
+                cloudInstances: *cloudInstances
+                nodeTemplate: *nodeTemplate
+                chaos: *chaos
+                operatingSystem: *operatingSystem
+                disruptions: *disruptions
+                kubelet: *kubelet
+    - name: v1
+      served: true
+      storage: false
+      additionalPrinterColumns: *additionalPrinterColumns
+      subresources:
+        status: { }
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes the runtime parameters of the node group.
+          required:
+            - spec
+          properties:
+            status: *status
+            spec:
+              type: object
+              required:
+                - nodeType
+              properties:
+                nodeType:
+                  description: |
+                    Тип узлов, которые представляет эта группа.
+                    - CloudEphemeral — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере.
+                    - CloudPermanent - узлы этой группу берутся из ProviderClusterConfiguration и создаются/удаляются через dhctl
+                    - CloudStatic - статический узел (созданный вручную или любыми внешними инструментами), размещенный в том же облаке, с
+                      которым настроена интеграция у одного из облачных провайдеров, на таком узле работает CSI и такой узел
+                      управляется cloud-controller-manager'ом (объект Node автоматически обогащается информацией о зоне и регионе по
+                      данным, полученным от облака; при удалении узла из облака, соответствующий ему Node-объект будет
+                      удален в Kubernetes).
+                    - Static — статический узел, размещенный на железном сервере или виртуальной машине. Узел не управляется
+                      cloud-controller-manager'ом, даже если включен один из облачных провайдеров.
+                  type: string
+                  enum:
+                    - CloudEphemeral
+                    - CloudPermanent
+                    - CloudStatic
+                    - Static
+                cri:
+                  type: object
+                  description: |
+                    Параметры container runtime.
+                  properties:
+                    type: *criType
+                    containerd: *criContainerd
+                    docker:
+                      type: object
+                      description: Параметры настройки Docker.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: Максимальное количество потоков одновременного скачивания docker образов.
+                          x-doc-default: 3
+                        manage:
+                          type: boolean
+                          x-doc-default: true
+                          description: Автоматическое управление версией и параметрами Docker.
+                  oneOf:
+                    - properties:
+                        type:
+                          enum: [ "Docker" ]
+                        docker: { }
+                    - properties:
+                        type:
+                          enum: [ "Containerd" ]
+                        containerd: { }
+                    - properties:
+                        type:
+                          enum: [ "NotManaged" ]
                 cloudInstances: *cloudInstances
                 nodeTemplate: *nodeTemplate
                 chaos: *chaos

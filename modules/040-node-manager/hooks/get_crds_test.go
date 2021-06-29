@@ -119,68 +119,68 @@ var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
 	const (
 		stateNGProper = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: proper1
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
       name: proper1
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: proper2
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
       name: proper2
     zones: [a,b]
 `
-		stateNGStaticAndHybrid = `
+		stateNGStaticAndCloudPermanent = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: static1
 spec:
   nodeType: Static
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
-  name: hybrid1
+  name: cp1
 spec:
-  nodeType: Hybrid
+  nodeType: CloudPermanent
 `
 		stateNGProperManualRolloutID = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: proper1
   annotations:
     manual-rollout-id: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
       name: proper1
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: proper2
   annotations:
     manual-rollout-id: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -190,12 +190,12 @@ spec:
 `
 		stateNGWrongKind = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: improper
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: ImproperInstanceClass
@@ -203,12 +203,12 @@ spec:
 `
 		stateNGWrongRefName = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: improper
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -216,12 +216,12 @@ spec:
 `
 		stateNGWrongZones = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: improper
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -232,12 +232,12 @@ spec:
 
 		stateNGSimple = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: proper1
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -246,7 +246,7 @@ spec:
 
 		stateNGDockerUnmanaged = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: proper1
@@ -255,7 +255,7 @@ spec:
     type: Docker
     docker:
       manage: false
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -329,7 +329,7 @@ metadata:
 	}
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.15.5", "kubernetesVersions":["1.15.5"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "D8TestInstanceClass", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
@@ -368,7 +368,7 @@ metadata:
 			expectedJSON := `
 				[
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -386,7 +386,7 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -424,9 +424,9 @@ metadata:
 		})
 	})
 
-	Context("Proper cluster with two pairs of NG+IC, provider secret and two extra NodeGroups — static and hybrid", func() {
+	Context("Proper cluster with two pairs of NG+IC, provider secret and two extra NodeGroups — static and CloudPermanent", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret + stateNGStaticAndHybrid))
+			f.BindingContexts.Set(f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret + stateNGStaticAndCloudPermanent))
 			f.RunHook()
 		})
 
@@ -441,12 +441,12 @@ metadata:
                       "type": "Docker"
                     },
 					"manualRolloutID": "",
-                    "name": "hybrid1",
-                    "nodeType": "Hybrid",
-                    "updateEpoch": "` + calculateEpoch("hybrid1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+                    "name": "cp1",
+                    "nodeType": "CloudPermanent",
+                    "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
                   },
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -468,7 +468,7 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -507,9 +507,9 @@ metadata:
 		})
 	})
 
-	Context("Schedule: Proper cluster with two pairs of NG+IC, provider secret and two extra NodeGroups — static and hybrid", func() {
+	Context("Schedule: Proper cluster with two pairs of NG+IC, provider secret and two extra NodeGroups — static and CloudPermanent", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret + stateNGStaticAndHybrid)
+			f.KubeStateSet(stateNGProper + stateICProper + stateCloudProviderSecret + stateNGStaticAndCloudPermanent)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunHook()
 		})
@@ -525,12 +525,12 @@ metadata:
                       "type": "Docker"
                     },
                     "manualRolloutID": "",
-                    "name": "hybrid1",
-                    "nodeType": "Hybrid",
-                    "updateEpoch": "` + calculateEpoch("hybrid1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
+                    "name": "cp1",
+                    "nodeType": "CloudPermanent",
+                    "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
                   },
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -552,7 +552,7 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -603,7 +603,7 @@ metadata:
 			expectedJSON := `
 				[
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -625,7 +625,7 @@ metadata:
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
-				    "nodeType": "Cloud",
+				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
 				      "classReference": {
 				        "kind": "D8TestInstanceClass",
@@ -678,7 +678,7 @@ metadata:
 						"c"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -699,7 +699,7 @@ metadata:
 				        "b"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -733,7 +733,7 @@ metadata:
   some: data2
 -
   name: improper
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 `))
 			f.RunHook()
 		})
@@ -745,7 +745,7 @@ metadata:
 				[
 				  {
 				    "name": "improper",
-				    "nodeType": "Cloud"
+				    "nodeType": "CloudEphemeral"
 				  },
 				  {
 				    "cloudInstances": {
@@ -759,7 +759,7 @@ metadata:
 						"c"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -780,7 +780,7 @@ metadata:
 				        "b"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -825,7 +825,7 @@ metadata:
 						"c"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -846,7 +846,7 @@ metadata:
 				        "b"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -891,7 +891,7 @@ metadata:
 						"c"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -912,7 +912,7 @@ metadata:
 				        "b"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -946,7 +946,7 @@ metadata:
  some: data2
 -
  name: improper
- nodeType: Cloud
+ nodeType: CloudEphemeral
 `))
 			f.RunHook()
 		})
@@ -958,7 +958,7 @@ metadata:
 				[
 				  {
 				    "name": "improper",
-				    "nodeType": "Cloud"
+				    "nodeType": "CloudEphemeral"
 				  },
 				  {
 				    "cloudInstances": {
@@ -972,7 +972,7 @@ metadata:
 						"c"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper1",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -993,7 +993,7 @@ metadata:
 				        "b"
 				      ]
 				    },
-                    "nodeType": "Cloud",
+                    "nodeType": "CloudEphemeral",
 				    "name": "proper2",
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.15",
@@ -1021,7 +1021,7 @@ metadata:
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
@@ -1052,12 +1052,12 @@ spec:
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -1083,12 +1083,12 @@ spec:
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     classReference:
       kind: D8TestInstanceClass
@@ -1111,12 +1111,12 @@ spec:
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   nodeTemplate:
     labels:
       node-role.deckhouse.io/system: ""
@@ -1140,12 +1140,12 @@ spec:
 		BeforeEach(func() {
 			ng := `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   nodeTemplate:
     labels:
       node-role.deckhouse.io/stateful: ""

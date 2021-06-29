@@ -27,7 +27,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: set_replicas_on_machine_de
 	const (
 		staticNGs = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng-static-1
@@ -36,7 +36,7 @@ spec:
 `
 		stateNGs = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng1
@@ -45,7 +45,7 @@ spec:
     maxPerZone: 2
     minPerZone: 5 # $ng_min_instances -ge $ng_max_instances
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng20
@@ -54,7 +54,7 @@ spec:
     maxPerZone: 4
     minPerZone: 3 # "$replicas" == "null"
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng21
@@ -63,7 +63,7 @@ spec:
     maxPerZone: 4
     minPerZone: 3 # $replicas -eq 0
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng3
@@ -72,7 +72,7 @@ spec:
     maxPerZone: 10
     minPerZone: 6 # $replicas -le $ng_min_instances
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng4
@@ -81,7 +81,7 @@ spec:
     maxPerZone: 4
     minPerZone: 3 # $replicas -gt $ng_max_instances
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng5
@@ -164,7 +164,7 @@ spec:
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
 	Context("Empty cluster", func() {

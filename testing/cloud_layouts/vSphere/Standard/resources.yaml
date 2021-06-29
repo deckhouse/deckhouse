@@ -30,12 +30,12 @@ spec:
   mainNetwork: DEVOPS_36
   datastore: 3par_4_Lun105
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     zones:
     - X2-A

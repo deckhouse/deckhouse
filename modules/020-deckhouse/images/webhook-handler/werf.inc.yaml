@@ -1,5 +1,13 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ env "BASE_SHELL_OPERATOR" }}
+ansible:
+  beforeInstall:
+    - name: "Install yq"
+      get_url:
+        url: https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_linux_amd64
+        checksum: "sha256:a1cfa39a9538e27f11066aa5659b32f9beae1eea93369d395bf45bcfc8a181dc"
+        dest: /usr/local/bin/yq
+        mode: +x
 git:
 - add: /modules
   to: /available_hooks/

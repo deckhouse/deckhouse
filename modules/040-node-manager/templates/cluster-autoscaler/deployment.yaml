@@ -1,6 +1,6 @@
 {{- define "cluster_autoscaler_nodes" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-    {{- if eq $ng.nodeType "Cloud" }}
+    {{- if eq $ng.nodeType "CloudEphemeral" }}
       {{- range $zone_name := $ng.cloudInstances.zones }}
         {{- if $.Values.nodeManager.internal.instancePrefix }}
 - --nodes={{ $ng.cloudInstances.minPerZone }}:{{ $ng.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $.Values.nodeManager.internal.instancePrefix }}-{{ $ng.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}

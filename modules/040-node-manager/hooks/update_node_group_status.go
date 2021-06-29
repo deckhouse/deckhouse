@@ -33,7 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:                   "ngs",
 			Kind:                   "NodeGroup",
-			ApiVersion:             "deckhouse.io/v1alpha1",
+			ApiVersion:             "deckhouse.io/v1",
 			WaitForSynchronization: pointer.BoolPtr(false),
 			FilterFunc:             updStatusFilterNodeGroup,
 		},
@@ -157,7 +157,7 @@ func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1alpha2.NodeGroup
+	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
@@ -350,7 +350,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		)
 
 		err := input.ObjectPatcher.MergePatchObject(patchData,
-			"deckhouse.io/v1alpha1", "NodeGroup",
+			"deckhouse.io/v1", "NodeGroup",
 			"", ngName,
 			"/status",
 		)
@@ -366,7 +366,7 @@ func updateStatusBuildPatch(
 	nodesNum, readyNodesNum, uptodateNodesCount,
 	minPerZone, maxPerZone,
 	desiredMax, instancesNum int32,
-	nodeType, statusMsg string,
+	nodeType ngv1.NodeType, statusMsg string,
 	lastMachineFailures []*v1alpha1.MachineSummary,
 ) []byte {
 	ready := "True"
@@ -379,8 +379,7 @@ func updateStatusBuildPatch(
 		"ready":    readyNodesNum,
 		"upToDate": uptodateNodesCount,
 	}
-	if nodeType == "Cloud" {
-
+	if nodeType == ngv1.NodeTypeCloudEphemeral {
 		patch["min"] = minPerZone
 		patch["max"] = maxPerZone
 		patch["desired"] = desiredMax
@@ -408,7 +407,7 @@ func updateStatusBuildPatch(
 
 type statusNodeGroup struct {
 	Name       string
-	NodeType   string
+	NodeType   ngv1.NodeType
 	MinPerZone int32
 	MaxPerZone int32
 	ZonesNum   int32

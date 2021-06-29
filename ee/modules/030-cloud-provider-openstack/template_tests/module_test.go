@@ -30,6 +30,8 @@ func Test(t *testing.T) {
 
 const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd"]
+  clusterConfiguration:
+    clusterType: Cloud
   modules:
     placement: {}
   modulesImages:
@@ -55,8 +57,6 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       master: 3
       worker: 1
-    nodeCountByType:
-      cloud: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.16.4
     defaultStorageClass: fastssd

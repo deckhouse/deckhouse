@@ -41,6 +41,8 @@ func Test(t *testing.T) {
 
 const globalValues = `
   enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex"]
+  clusterConfiguration:
+    clusterType: Cloud
   modules:
     placement: {}
   modulesImages:
@@ -65,8 +67,6 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
-    nodeCountByType:
-      cloud: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.16.4
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
