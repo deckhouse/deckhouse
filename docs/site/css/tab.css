@@ -17,6 +17,7 @@
   box-sizing: border-box;
   margin: 10px;
   margin-left: 0;
+  white-space: nowrap;
 
   -webkit-touch-callout: none;
   -webkit-user-select: none;

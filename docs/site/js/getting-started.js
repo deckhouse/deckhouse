@@ -6,13 +6,14 @@ $( document ).ready(function() {
         let auth = btoa(username + ':' + password);
         let config = '{"auths": { "'+ registry +'": { "username": "'+ username +'", "password": "' + password + '", "auth": "' + auth +'"}}}';
         let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
-        let matchStringDockerLogin = 'docker login -u demotoken -p <ACCESS_TOKEN> registry.deckhouse.io';
+        // let matchStringDockerLogin = 'docker login -u demotoken -p <ACCESS_TOKEN> registry.deckhouse.io';
+        let matchStringDockerLogin = '"<ACCESS_TOKEN>"';
         $('.details code span.s').filter(function () {
             return this.innerText == matchStringClusterConfig;
         }).text(btoa(config));
-        $('.language-yaml .highlight code span.s').filter(function () {
+        $('.highlight code span.s2').filter(function () {
             return this.innerText == matchStringDockerLogin;
-        }).text('docker login -u demotoken -p ' + password + ' registry.deckhouse.io');
+        }).text(password);
     } else {
         console.log("No demotoken, so InitConfiguration was not updated");
     }
