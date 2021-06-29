@@ -11,7 +11,7 @@ ingressNginxEnabled: "false"
 
 * `defaultControllerVersion` — the version of the ingress-nginx controller that is used for all controllers by default if the `controllerVersion` parameter is omitted in the IngressNginxController CR.
     * The default version is `0.33`,
-    * Available alternatives are `0.25`, `0.26`, `0.33`.
+    * Available alternatives are `0.25`, `0.26`, `0.33`, `0.46`.
 
 
 Ingress controllers are configured using the [IngressNginxController](cr.html#ingressnginxcontroller) Custom Resource.

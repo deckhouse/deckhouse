@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -46,12 +47,17 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	})
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {
+			var certificates string
 			for _, ingressName := range []string{"test", "test-lbwpp", "test-next", "solid"} {
-				hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS"+ingressName, `
-certificate: teststring
-key: teststring
-`)
+				certificates += fmt.Sprintf(`
+- controllerName: %s
+  ingressClass: nginx
+  data:
+    certificate: teststring
+    key: teststring
+`, ingressName)
 			}
+			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", certificates)
 
 			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", `
 - name: test
@@ -65,10 +71,8 @@ key: teststring
     hsts: true
     hstsOptions:
       maxAge: "123456789123456789"
-    geoIP2: {}
     resourcesRequests:
       mode: VPA
-      static: {}
       vpa:
         cpu:
           max: 100m
@@ -89,15 +93,8 @@ key: teststring
     ingressClass: nginx
     controllerVersion: "0.26"
     inlet: LoadBalancerWithProxyProtocol
-    hstsOptions: {}
-    loadBalancer: {}
-    geoIP2: {}
     resourcesRequests:
       mode: Static
-      static: {}
-      vpa:
-        cpu: {}
-        memory: {}
     loadBalancerWithProxyProtocol:
       annotations:
         my: annotation
@@ -107,45 +104,22 @@ key: teststring
       - 2.2.2.2
 - name: test-next
   spec:
-    config: {}
     ingressClass: test
     controllerVersion: "0.33"
     inlet: "HostPortWithProxyProtocol"
-    hstsOptions: {}
-    loadBalancer: {}
-    loadBalancerWithProxyProtocol: {}
     geoIP2:
-      maxmindLicenseKey: 12345
+      maxmindLicenseKey: abc12345
       maxmindEditionIDs: ["GeoIPTest", "GeoIPTest2"]
     resourcesRequests:
       mode: Static
-      static: {}
-      vpa:
-        cpu: {}
-        memory: {}
     hostPortWithProxyProtocol:
       httpPort: 80
       httpsPort: 443
-    hostPort: {}
 - name: solid
   spec:
-    config: {}
-    hstsOptions: {}
     ingressClass: solid
     controllerVersion: "0.33"
     inlet: "HostWithFailover"
-    hostWithFailover: {}
-    geoIP2: {}
-    loadBalancer: {}
-    loadBalancerWithProxyProtocol: {}
-    hostPort: {}
-    hostPortWithProxyProtocol: {}
-    resourcesRequests:
-      mode: Static
-      static: {}
-      vpa:
-        cpu: {}
-        memory: {}
 `)
 			hec.HelmRender()
 		})
@@ -198,7 +172,7 @@ key: teststring
 				testNextArgs = append(testNextArgs, result.String())
 			}
 
-			Expect(testNextArgs).Should(ContainElement("--maxmind-license-key=12345"))
+			Expect(testNextArgs).Should(ContainElement("--maxmind-license-key=abc12345"))
 			Expect(testNextArgs).Should(ContainElement("--maxmind-edition-ids=GeoIPTest,GeoIPTest2"))
 
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-next-config").Exists()).To(BeTrue())

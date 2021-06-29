@@ -60,13 +60,7 @@ type OrderCertificateRequest struct {
 	WaitTimeout time.Duration
 }
 
-func ApplyCertificateSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, err
-	}
-
+func ParseSecret(secret *v1.Secret) *CertificateSecret {
 	cc := &CertificateSecret{
 		Name: secret.Name,
 	}
@@ -82,6 +76,18 @@ func ApplyCertificateSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	} else if client, ok := secret.Data["client.key"]; ok {
 		cc.Key = client
 	}
+
+	return cc
+}
+
+func ApplyCertificateSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	cc := ParseSecret(secret)
 
 	return cc, err
 }
@@ -120,6 +126,7 @@ func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.
 
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
 		for _, request := range requests {
+			valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
 			if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
 				var secret *CertificateSecret
 
@@ -139,29 +146,30 @@ func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.
 					}
 					if !shouldGenerateNewCert {
 						info := CertificateInfo{Certificate: string(secret.Crt), Key: string(secret.Key)}
-						input.Values.Set(fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName), info)
+						input.Values.Set(valueName, info)
 						continue
 					}
 				}
 			}
 
-			err := issueCertificate(input, dc, request)
+			info, err := IssueCertificate(input, dc, request)
 			if err != nil {
 				return err
 			}
+			input.Values.Set(valueName, info)
 		}
 		return nil
 	}
 }
 
-func issueCertificate(input *go_hook.HookInput, dc dependency.Container, request OrderCertificateRequest) error {
+func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request OrderCertificateRequest) (*CertificateInfo, error) {
 	if request.WaitTimeout == 0 {
 		request.WaitTimeout = certificateWaitTimeoutDefault
 	}
 
 	k8, err := dc.GetK8sClient()
 	if err != nil {
-		return fmt.Errorf("can't init Kubernetes client: %v", err)
+		return nil, fmt.Errorf("can't init Kubernetes client: %v", err)
 	}
 
 	// Delete existing CSR from the cluster.
@@ -169,7 +177,7 @@ func issueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 
 	csrPEM, key, err := certificate.GenerateCSR(input.LogEntry, request.CommonName, request.Group)
 	if err != nil {
-		return fmt.Errorf("error generating CSR: %v", err)
+		return nil, fmt.Errorf("error generating CSR: %v", err)
 	}
 
 	// Create new CSR in the cluster.
@@ -194,7 +202,7 @@ func issueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	// Create CSR.
 	req, err := k8.CertificatesV1beta1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("error creating CertificateSigningRequest: %v", err)
+		return nil, fmt.Errorf("error creating CertificateSigningRequest: %v", err)
 	}
 
 	// Add CSR approved status.
@@ -207,13 +215,13 @@ func issueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 		})
 	_, err = k8.CertificatesV1beta1().CertificateSigningRequests().UpdateStatus(context.TODO(), csr, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("error updating status of CertificateSigningRequest: %v", err)
+		return nil, fmt.Errorf("error updating status of CertificateSigningRequest: %v", err)
 	}
 
 	// Approve CSR.
 	_, err = k8.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(context.TODO(), csr, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("error approving of CertificateSigningRequest: %v", err)
+		return nil, fmt.Errorf("error approving of CertificateSigningRequest: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), request.WaitTimeout)
@@ -221,14 +229,13 @@ func issueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 
 	crtPEM, err := csrutil.WaitForCertificate(ctx, k8, req.Name, req.UID)
 	if err != nil {
-		return fmt.Errorf("%s CertificateSigningRequest was not signed: %v", request.CommonName, err)
+		return nil, fmt.Errorf("%s CertificateSigningRequest was not signed: %v", request.CommonName, err)
 	}
 
 	// Delete CSR.
 	_ = k8.CertificatesV1beta1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
 
 	info := CertificateInfo{Certificate: string(crtPEM), Key: string(key), CertificateUpdated: true}
-	input.Values.Set(fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName), info)
 
-	return nil
+	return &info, nil
 }

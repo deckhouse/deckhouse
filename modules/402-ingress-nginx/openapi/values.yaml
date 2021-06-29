@@ -1,0 +1,242 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-required-for-helm:
+    - ingressControllers
+    properties:
+      webhookCertificates:
+        type: object
+        default: {}
+        properties:
+          ca:
+            type: string
+            x-examples: ["testca"]
+          key:
+            type: string
+            x-examples: ["testkey"]
+          crt:
+            type: string
+            x-examples: ["testcrt"]
+      nginxAuthTLS:
+        type: ['null', array]
+        default: []
+        items:
+          type: object
+          properties:
+            controllerName:
+              type: string
+              x-examples: ["test"]
+            ingressClass:
+              type: string
+              x-examples: ["nginx"]
+            data:
+              type: object
+              default: {}
+              properties:
+                certificate:
+                  type: string
+                  x-examples: ["---certificate-string---"]
+                key:
+                  type: string
+                  x-examples: ["---key-string---"]
+                certificate_updated:
+                  type: boolean
+                  x-examples: [true]
+      ingressControllers:
+        type: ['null', array]
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-examples: ["test"]
+            spec:
+              type: object
+              default: {}
+              x-required-for-helm:
+                - ingressClass
+                - inlet
+              properties:
+                ingressClass:
+                  type: string
+                  x-examples: ["nginx"]
+                inlet:
+                  type: string
+                  x-examples: ["HostWithFailover"]
+                controllerVersion:
+                  type: string
+                  x-examples: ["0.26"]
+                enableIstioSidecar:
+                  type: boolean
+                waitLoadBalancerOnTerminating:
+                  type: integer
+                nodeSelector:
+                    type: object
+                    additionalProperties:
+                      type: string
+                    description: |
+                      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+                      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/ru/documentation/v1/#advanced-scheduling).
+                tolerations:
+                    type: array
+                    description: |
+                      The same as `spec.tolerations` for the Kubernetes pod.
+
+                      Use [automatic](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                    items:
+                      type: object
+                      properties:
+                        effect:
+                          type: string
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        tolerationSeconds:
+                          type: integer
+                          format: int64
+                        value:
+                          type: string
+                loadBalancer:
+                  type: object
+                  default: {}
+                  properties:
+                    sourceRanges:
+                      type: array
+                      items:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties: true
+                    behindL7Proxy:
+                      type: boolean
+                    realIPHeader:
+                      type: string
+                loadBalancerWithProxyProtocol:
+                  type: object
+                  default: {}
+                  properties:
+                    sourceRanges:
+                      type: array
+                      items:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties: true
+                hostPort:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
+                    behindL7Proxy:
+                      type: boolean
+                    realIPHeader:
+                      type: string
+                hostPortWithProxyProtocol:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
+                hostWithFailover:
+                  type: object
+                  default: {}
+                  additionalProperties: true
+                acceptRequestsFrom:
+                  type: array
+                  items:
+                    type: string
+                hsts:
+                  type: boolean
+                hstsOptions:
+                  type: object
+                  properties:
+                    maxAge:
+                      type: string
+                    preload:
+                      type: boolean
+                    includeSubDomains:
+                      type: boolean
+                geoIP2:
+                  type: object
+                  properties:
+                    maxmindLicenseKey:
+                      type: string
+                    maxmindEditionIDs:
+                      type: array
+                      items:
+                        type: string
+                legacySSL:
+                  type: boolean
+                disableHTTP2:
+                  type: boolean
+                config:
+                  type: object
+                  additionalProperties: true
+                additionalHeaders:
+                  type: object
+                  additionalProperties: true
+                resourcesRequests:
+                  type: object
+                  default: {}
+                  properties:
+                    mode:
+                      type: string
+                      x-examples: ["VPA", "Static"]
+                    vpa:
+                      type: object
+                      default: {}
+                      properties:
+                        mode:
+                          type: string
+                        cpu:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                              x-examples: ["200m"]
+                            min:
+                              type: string
+                        memory:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                            min:
+                              type: string
+                              x-examples: ["100Mi"]
+                    static:
+                      type: object
+                      default: {}
+                      properties:
+                        cpu:
+                          type: string
+                          x-examples: ["100m"]
+                        memory:
+                          type: string
+                customErrors:
+                  type: object
+                  properties:
+                    serviceName:
+                      type: string
+                    namespace:
+                      type: string
+                    codes:
+                      type: array
+                      items:
+                        type: string
+                underscoresInHeaders:
+                  type: boolean

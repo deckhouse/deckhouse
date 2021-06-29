@@ -51,20 +51,26 @@ spec:
                       **Caution!** There can be only one controller with this inlet type on a host.
 
                       **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 10354, 10355.
-                  enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol"]
+                  enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
                   description: |
                     One of the supported NGINX Ingress Controller versions.
 
                     **By default**: the version in the module settings is used.
-                  enum: ['0.25', '0.26', '0.33']
+                  enum: ['0.25', '0.26', '0.33', '0.46']
                 enableIstioSidecar:
                   type: boolean
                   description: |
                     Attach annotations to the controller pods to automatically inject Istio sidecar containers.
 
                     With this flag set, the controller can only serve services that Istio controls.
+                waitLoadBalancerOnTerminating:
+                  x-kubernetes-int-or-string: true
+                  type: integer
+                  default: 60
+                  description: |
+                    The number of seconds before the /healthz location will start to return a 500 code when the pod enters the Terminating state.
                 nodeSelector:
                   type: object
                   additionalProperties:

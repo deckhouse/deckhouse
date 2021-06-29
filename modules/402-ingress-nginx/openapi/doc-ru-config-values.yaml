@@ -1,0 +1,4 @@
+properties:
+  defaultControllerVersion:
+    description: |
+      Версия контроллера ingress-nginx, которая будет использоваться для всех контроллеров по умолчанию, если небыл задан параметр `controllerVersion` в IngressNginxController CR.

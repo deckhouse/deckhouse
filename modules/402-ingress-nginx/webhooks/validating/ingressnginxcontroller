@@ -33,7 +33,7 @@ EOF
 
 function __main__() {
   if context::jq -e -r '.review.request.name | endswith("-failover")' >/dev/null 2>&1; then
-    # -failover suffix is reserved kfor HostWithFailover inlet
+    # -failover suffix is reserved for HostWithFailover inlet
     # To avoid collisions, we should forbid saving controllers with such name.
     cat <<EOF > $VALIDATING_RESPONSE_PATH
 {"allowed":false, "message":"it is forbidden to create IngressNginxController with '-failover' suffix"}
