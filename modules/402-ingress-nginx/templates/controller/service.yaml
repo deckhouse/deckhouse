@@ -3,10 +3,10 @@
   {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
     {{ $annotations := "" }}
     {{ $sourceRanges := "" }}
-    {{- if eq $crd.spec.inlet "LoadBalancer" }}
+    {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
       {{ $annotations = $crd.spec.loadBalancer.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancer.sourceRanges  }}
-    {{- else if eq $crd.spec.inlet "LoadBalancerWithProxyProtocol" }}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
       {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
     {{- end }}

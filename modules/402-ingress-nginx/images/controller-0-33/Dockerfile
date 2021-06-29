@@ -51,6 +51,7 @@ COPY --from=controller_0_33_0 --chown=www-data:www-data /wait-shutdown /wait-shu
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY balancer-lua.patch /
+COPY nginx-tpl.patch /
 COPY rootfs /
 
 RUN apk update \
@@ -100,7 +101,9 @@ RUN apk update \
   &&  ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log \
   && apk del libcap \
-  && cd / && patch -p1 < /balancer-lua.patch
+  && cd / \
+  && patch -p1 < /balancer-lua.patch \
+  && patch -p1 < /nginx-tpl.patch
 
 WORKDIR /
 USER www-data

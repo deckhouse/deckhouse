@@ -1,5 +1,6 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+{{- $crdChecksum := toJson $crd | sha256sum }}
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
     {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -37,6 +38,8 @@ metadata:
   name: proxy-{{ $crd.name }}-failover
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name "ingress-nginx-safe-update" "" )) | indent 2 }}
+  annotations:
+    ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   updateStrategy:
     type: OnDelete

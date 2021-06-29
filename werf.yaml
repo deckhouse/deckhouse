@@ -365,6 +365,7 @@ git:
   excludePaths:
     - dhctl/development
     - deckhouse-controller/development
+    - deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
   stageDependencies:
     install:
       - dhctl/go.mod

@@ -3,6 +3,12 @@
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
 {{- $failover := index . 3 }}
+{{- $crdChecksum := toJson $crd | sha256sum }}
+
+{{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
+{{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $hostPort := $crd.spec.hostPort | default dict }}
+{{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
 
   {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -17,18 +23,21 @@ spec:
     apiVersion: "apps/v1"
     kind: DaemonSet
     name: controller-{{ $name }}
-    {{- if eq $crd.spec.resourcesRequests.mode "VPA" }}
+    {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
+      {{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
+      {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
+      {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
   updatePolicy:
-    updateMode: {{ $crd.spec.resourcesRequests.vpa.mode | default "Initial" | quote }}
+    updateMode: {{ $resourcesRequestsVPA.mode | default "Initial" | quote }}
   resourcePolicy:
     containerPolicies:
     - containerName: controller
       maxAllowed:
-        cpu: {{ $crd.spec.resourcesRequests.vpa.cpu.max | default "50m" | quote }}
-        memory: {{ $crd.spec.resourcesRequests.vpa.memory.max | default "200Mi" | quote }}
+        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
       minAllowed:
-        cpu: {{ $crd.spec.resourcesRequests.vpa.cpu.min | default "10m" | quote }}
-        memory: {{ $crd.spec.resourcesRequests.vpa.memory.min | default "50Mi" | quote }}
+        cpu: {{ $resourcesRequestsVPA_CPU.min | default "10m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.min | default "50Mi" | quote }}
     {{- else }}
   updatePolicy:
     updateMode: "Off"
@@ -64,6 +73,7 @@ metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/controller-version: {{ $crd.spec.controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
+    ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
   updateStrategy:
   {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
@@ -127,7 +137,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
   {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-    {{- if $crd.spec.geoIP2.maxmindLicenseKey }}
+    {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
           value: "true"
     {{- end }}
@@ -159,48 +169,58 @@ spec:
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
   {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-    {{- if $crd.spec.geoIP2.maxmindLicenseKey }}
-        - --maxmind-license-key={{ $crd.spec.geoIP2.maxmindLicenseKey }}
-      {{- if $crd.spec.geoIP2.maxmindEditionIDs }}
-        - --maxmind-edition-ids={{ $crd.spec.geoIP2.maxmindEditionIDs | join "," }}
+    {{- if $geoIP2.maxmindLicenseKey }}
+        - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+      {{- if $geoIP2.maxmindEditionIDs }}
+        - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
       {{- end }}
     {{- end }}
   {{- end }}
   {{- if semverCompare ">=0.26" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
         lifecycle:
+  {{- if eq $crd.spec.inlet "HostPort"}}
+          postStart:
+            exec:
+              command: [ "/bin/bash", "-c", "echo -n ok > /tmp/healthz" ]
+          preStop:
+            exec:
+              command: [ "/bin/bash", "-c", "rm -f /tmp/healthz && sleep {{ $crd.spec.waitLoadBalancerOnTerminating }} && /wait-shutdown" ]
+  {{- else }}
           preStop:
             exec:
               command:
                 - /wait-shutdown
   {{- end }}
+  {{- end }}
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
-  {{- if eq $crd.spec.resourcesRequests.mode "Static" }}
-            cpu: {{ $crd.spec.resourcesRequests.static.cpu | default "50m" | quote }}
-            memory: {{ $crd.spec.resourcesRequests.static.memory | default "200Mi" | quote }}
+  {{- if eq ($resourcesRequests.mode | default "") "Static" }}
+    {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
+            cpu: {{ $resourcesRequestsStatic.cpu | default "50m" | quote }}
+            memory: {{ $resourcesRequestsStatic.memory | default "200Mi" | quote }}
   {{- end }}
         ports:
         - containerPort: 80
   {{- if eq $crd.spec.inlet "HostPort"}}
-    {{- if $crd.spec.hostPort.httpPort }}
-          hostPort: {{ $crd.spec.hostPort.httpPort }}
+    {{- if $hostPort.httpPort }}
+          hostPort: {{ $hostPort.httpPort }}
     {{- end }}
   {{- end }}
   {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
-    {{- if $crd.spec.hostPortWithProxyProtocol.httpPort }}
-          hostPort: {{ $crd.spec.hostPortWithProxyProtocol.httpPort }}
+    {{- if $hostPortWithProxyProtocol.httpPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpPort }}
     {{- end }}
   {{- end }}
         - containerPort: 443
   {{- if eq $crd.spec.inlet "HostPort"}}
-    {{- if $crd.spec.hostPort.httpsPort }}
-          hostPort: {{ $crd.spec.hostPort.httpsPort }}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
     {{- end }}
   {{- end }}
   {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
-    {{- if $crd.spec.hostPortWithProxyProtocol.httpsPort }}
-          hostPort: {{ $crd.spec.hostPortWithProxyProtocol.httpsPort }}
+    {{- if $hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
     {{- end }}
   {{- end }}
         volumeMounts:
@@ -280,7 +300,6 @@ spec:
         secret:
           secretName: ingress-nginx-{{ $crd.name }}-auth-tls
 {{- end }}
-
 
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}

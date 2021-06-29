@@ -49,6 +49,7 @@ COPY --from=controller_0_26_1 --chown=www-data:www-data /wait-shutdown /wait-shu
 COPY --from=artifact /src/bin/amd64/nginx-ingress-controller /src/bin/amd64/dbg /
 COPY --from=controller_lua /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY balancer-lua.patch /
+COPY nginx-tpl.patch /
 
 COPY rootfs /
 
@@ -89,7 +90,9 @@ RUN clean-install \
   && ln -sf /dev/stdout /usr/local/openresty/nginx/logs/access.log \
   && ln -sf /dev/stderr /usr/local/openresty/nginx/logs/error.log \
   && ln -s /usr/local/openresty/nginx/logs/* /var/log/nginx \
-  && cd / && patch -p1 < /balancer-lua.patch
+  && cd / \
+  && patch -p1 < /balancer-lua.patch \
+  && patch -p1 < /nginx-tpl.patch
 
 WORKDIR  /etc/nginx
 USER www-data

@@ -3,6 +3,12 @@
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
 {{- $failover := index . 3 }}
+
+{{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $hstsOptions := $crd.spec.hstsOptions | default dict }}
+{{- $hostPort := $crd.spec.hostPort | default dict }}
+{{- $loadBalancer := $crd.spec.loadBalancer | default dict }}
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -39,11 +45,11 @@ data:
   proxy-next-upstream: "error timeout invalid_header http_502 http_503 http_504"
   hsts: {{ $crd.spec.hsts | default false | quote }}
   {{- if $crd.spec.hsts }}
-  hsts-max-age: {{ $crd.spec.hstsOptions.maxAge | default 31536000 | quote }}
-    {{- if hasKey $crd.spec.hstsOptions "preload" }}
-  hsts-preload: {{ $crd.spec.hstsOptions.preload | quote }}
+  hsts-max-age: {{ $hstsOptions.maxAge | default 31536000 | quote }}
+    {{- if hasKey $hstsOptions "preload" }}
+  hsts-preload: {{ $hstsOptions.preload | quote }}
     {{- end }}
-  hsts-include-subdomains: {{ $crd.spec.hstsOptions.includeSubDomains | default false | quote }}
+  hsts-include-subdomains: {{ $hstsOptions.includeSubDomains | default false | quote }}
   {{- end }}
   # This is a formula to calculate maximum theoretical amount of accepted connections: worker_processes * worker_connections.
   # By taking default values from upstream nginx-ingress we get this many connections at worst: 16384 * 4 = 65536.
@@ -88,21 +94,21 @@ data:
   #   *   Either it fully ignores X-Forwarded-* header
   #   *   EIther it respects all X-Forwarded-* header from ANY IP address
   {{- if eq $crd.spec.inlet "LoadBalancer" }}
-    {{- if $crd.spec.loadBalancer.behindL7Proxy }}
+    {{- if $loadBalancer.behindL7Proxy }}
   proxy-real-ip-cidr: "0.0.0.0/0"
   use-forwarded-headers: "true"
-      {{- if $crd.spec.loadBalancer.realIPHeader }}
-  forwarded-for-header: {{ $crd.spec.loadBalancer.realIPHeader }}
+      {{- if $loadBalancer.realIPHeader }}
+  forwarded-for-header: {{ $loadBalancer.realIPHeader }}
       {{- end }}
     {{- end }}
   {{- end }}
 
   {{- if eq $crd.spec.inlet "HostPort" }}
-    {{- if $crd.spec.hostPort.behindL7Proxy }}
+    {{- if $hostPort.behindL7Proxy }}
   proxy-real-ip-cidr: "0.0.0.0/0"
   use-forwarded-headers: "true"
-      {{- if $crd.spec.hostPort.realIPHeader }}
-  forwarded-for-header: {{ $crd.spec.hostPort.realIPHeader }}
+      {{- if $hostPort.realIPHeader }}
+  forwarded-for-header: {{ $hostPort.realIPHeader }}
       {{- end }}
     {{- end }}
   {{- end }}
@@ -117,7 +123,7 @@ data:
   {{- end }}
 
   {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-    {{- if $crd.spec.geoIP2.maxmindLicenseKey }}
+    {{- if $geoIP2.maxmindLicenseKey }}
   use-geoip2: "true"
     {{- end }}
   {{- end }}
@@ -129,11 +135,11 @@ data:
     "user": "$remote_user",
     "address": "$remote_addr",
   {{- if eq $crd.spec.inlet "LoadBalancer" }}
-    {{- if $crd.spec.loadBalancer.behindL7Proxy }}
+    {{- if $loadBalancer.behindL7Proxy }}
     "connection_from": "$realip_remote_addr",
     {{- end }}
   {{- else if eq $crd.spec.inlet "HostPort" }}
-    {{- if $crd.spec.hostPort.behindL7Proxy }}
+    {{- if $hostPort.behindL7Proxy }}hostPort
     "connection_from": "$realip_remote_addr",
     {{- end }}
   {{- else if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
