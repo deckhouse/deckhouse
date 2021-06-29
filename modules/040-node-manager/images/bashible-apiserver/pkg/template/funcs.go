@@ -29,7 +29,7 @@ import (
 
 // Copied from helm/helm. funcMap there is a private function.
 
-// funcMap returns a mapping of all of the functions that Engine has.
+// FuncMap returns a mapping of all of the functions that Engine has.
 //
 // Because some functions are late-bound (e.g. contain getContext-sensitive
 // data), the functions may not all perform identically outside of an Engine

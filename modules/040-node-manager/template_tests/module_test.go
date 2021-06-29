@@ -1213,7 +1213,6 @@ ccc: ddd
 				mcls := f.KubernetesResource("AWSMachineClass", "d8-cloud-instance-manager", "worker-02320933")
 
 				Expect(mcls.Exists()).To(BeTrue())
-
 				assertValues(mcls, "spec.tags")
 			})
 
@@ -1244,7 +1243,6 @@ ccc: ddd
 				mcls := f.KubernetesResource("OpenstackMachineClass", "d8-cloud-instance-manager", "worker-02320933")
 
 				Expect(mcls.Exists()).To(BeTrue())
-
 				assertValues(mcls, "spec.tags")
 			})
 
@@ -1275,7 +1273,6 @@ ccc: ddd
 				mcls := f.KubernetesResource("AzureMachineClass", "d8-cloud-instance-manager", "worker-02320933")
 
 				Expect(mcls.Exists()).To(BeTrue())
-
 				assertValues(mcls, "spec.tags")
 			})
 
@@ -1306,7 +1303,6 @@ ccc: ddd
 				mcls := f.KubernetesResource("GCPMachineClass", "d8-cloud-instance-manager", "worker-02320933")
 
 				Expect(mcls.Exists()).To(BeTrue())
-
 				assertValues(mcls, "spec.labels")
 			})
 
@@ -1337,7 +1333,6 @@ ccc: ddd
 				mcls := f.KubernetesResource("YandexMachineClass", "d8-cloud-instance-manager", "worker-02320933")
 
 				Expect(mcls.Exists()).To(BeTrue())
-
 				assertValues(mcls, "spec.labels")
 			})
 
