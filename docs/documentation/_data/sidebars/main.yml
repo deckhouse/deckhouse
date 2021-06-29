@@ -175,7 +175,9 @@ entries:
                     ru: Описание
                     en: Description
                   url: /modules/030-cloud-provider-yandex/
-                - title: Примеры
+                - title:
+                    ru: Примеры
+                    en: Usage
                   url: /modules/030-cloud-provider-yandex/usage.html
                 - title:
                     ru: Справка
