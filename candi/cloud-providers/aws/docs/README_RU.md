@@ -86,7 +86,7 @@ title: "Cloud provider — AWS: Развертывание"
 <!--- Исходник: https://docs.google.com/drawings/d/1kln-DJGFldcr6gayVtFYn_3S50HFIO1PLTc1pC_b3L0/edit --->
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: Standard
 provider:
@@ -127,7 +127,7 @@ tags:
 <!--- Исходник: https://docs.google.com/drawings/d/1JDmeSY12EoZ3zBfanEDY-QvSgLekzw6Tzjj2pgY8giM/edit --->
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithoutNAT
 provider:

@@ -35,7 +35,7 @@ var _ = Describe("Global hooks :: enable_cloud_provider ::", func() {
 
 	clusterConfigManifest := func(provider string) string {
 		data := `---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:

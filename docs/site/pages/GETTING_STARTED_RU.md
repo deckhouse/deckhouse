@@ -73,7 +73,7 @@ toc: false
 ```yaml
 # секция с общими параметрами кластера (ClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: ClusterConfiguration
 # тип инфраструктуры: bare-metal (Static) или облако (Cloud)
@@ -89,7 +89,7 @@ clusterDomain: "cluster.local"
 ---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse
@@ -119,7 +119,7 @@ deckhouse:
 ---
 # секция с параметрами bare metal-кластера (StaticClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: StaticClusterConfiguration
 # адресное пространство для внутренней сети кластера
@@ -176,7 +176,7 @@ yc iam key create --service-account-name candi --output candi-sa-key.json
 ```yaml
 # секция с общими параметрами кластера (ClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: ClusterConfiguration
 # тип инфраструктуры: bare-metal (Static) или облако (Cloud)
@@ -198,7 +198,7 @@ clusterDomain: "cluster.local"
 ---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # секция с параметрами Deckhouse
@@ -225,7 +225,7 @@ deckhouse:
 ---
 # секция с параметрами облачного провайдера (YandexClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: YandexClusterConfiguration
 # публичная часть SSH-ключа для доступа к узлам облака
@@ -286,7 +286,7 @@ provider:
 ```yaml
 # секция первичной инициализации Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse

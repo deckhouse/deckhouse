@@ -144,7 +144,7 @@ title: Cloud provider - Vsphere
 <!--- Исходник: https://docs.google.com/drawings/d/1QOgPkq_xfBWMMI3SEU4Q9lyZM5mIWWbF_MwVsd06diE/edit --->
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VsphereClusterConfiguration
 layout: Standard
 provider:

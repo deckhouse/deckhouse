@@ -1,6 +1,6 @@
 kind: InitConfiguration
 apiVersions:
-- apiVersion: deckhouse.io/v1alpha1
+- apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
     additionalProperties: false
@@ -8,7 +8,7 @@ apiVersions:
     properties:
       apiVersion:
         type: string
-        enum: [deckhouse.io/v1alpha1]
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
       kind:
         type: string
         enum: [InitConfiguration]

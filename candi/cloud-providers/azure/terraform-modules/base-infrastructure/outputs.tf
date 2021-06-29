@@ -14,7 +14,7 @@
 
 output "cloud_discovery_data" {
   value = {
-    "apiVersion"        = "deckhouse.io/v1alpha1"
+    "apiVersion"        = "deckhouse.io/v1"
     "kind"              = "AzureCloudDiscoveryData"
     "resourceGroupName" = azurerm_resource_group.kube.name
     "vnetName"          = azurerm_virtual_network.kube.name

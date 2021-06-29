@@ -41,7 +41,7 @@ cloudProviderAws:
 		// correct cdd
 		stateBCloudDiscoveryData = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "AWSCloudDiscoveryData",
   "instances": {
     "iamProfileName": "zzz-node",
@@ -63,7 +63,7 @@ cloudProviderAws:
 		// wrong cdd
 		stateCCloudDiscoveryData = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "AWSCloudDiscoveryData",
   "instances": {
     "additionalSecurityGroups": [
@@ -74,7 +74,7 @@ cloudProviderAws:
 
 		// correct cc
 		stateBClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: Standard
 masterNodeGroup:
@@ -103,7 +103,7 @@ sshPublicKey: kekekey
 
 		// wrong cc
 		stateDClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 vpcNetworkCIDR: 1.1.1.1.1.1/16
 `

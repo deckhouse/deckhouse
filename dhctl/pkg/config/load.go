@@ -81,6 +81,17 @@ func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
 	return &index, err
 }
 
+// v1alpha1 was changed to v1 in-place. To keep the backward compatibility we check old and new schemas
+func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.Schema {
+	schema := s.Get(index)
+	if schema == nil && index.Version == "deckhouse.io/v1alpha1" {
+		index.Version = "deckhouse.io/v1"
+		return s.Get(index)
+	}
+
+	return schema
+}
+
 func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -89,7 +100,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		)
 	}
 
-	schema := s.Get(index)
+	schema := s.getV1alpha1CompatibilitySchema(index)
 	if schema == nil {
 		return fmt.Errorf("Schema for %s does not found.", index.String())
 	}

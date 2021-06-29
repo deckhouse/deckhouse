@@ -27,5 +27,5 @@ locals {
 }
 
 output "cloud_discovery_data" {
-  value = merge(local.cloud_discovery_data, {"apiVersion": "deckhouse.io/v1alpha1","kind":"OpenStackCloudDiscoveryData"})
+  value = merge(local.cloud_discovery_data, {"apiVersion": "deckhouse.io/v1","kind":"OpenStackCloudDiscoveryData"})
 }

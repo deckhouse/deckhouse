@@ -16,7 +16,52 @@ package config
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestVersionBackwardCompatibility(t *testing.T) {
+	newStore := newSchemaStore("/tmp")
+
+	schema := []byte(`
+kind: ClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, clusterType]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [ClusterConfiguration]
+      clusterType:
+        type: string
+        enum: [Cloud, Static]
+`)
+
+	err := newStore.upload(schema)
+	require.NoError(t, err)
+
+	oldDoc := []byte(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+clusterType: Cloud
+`)
+	newDoc := []byte(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+`)
+	_, err = newStore.Validate(&oldDoc)
+	assert.NoError(t, err)
+	_, err = newStore.Validate(&newDoc)
+	assert.NoError(t, err)
+}
 
 func TestSchemaStore(t *testing.T) {
 	newStore := newSchemaStore("/tmp")

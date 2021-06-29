@@ -3,7 +3,7 @@
 
 output "cloud_discovery_data" {
   value = {
-    "apiVersion" = "deckhouse.io/v1alpha1"
+    "apiVersion" = "deckhouse.io/v1"
     "kind" = "OpenStackCloudDiscoveryData"
     "layout" = var.providerClusterConfiguration.layout
     "internalNetworkNames" = [data.openstack_networking_network_v2.external.name]

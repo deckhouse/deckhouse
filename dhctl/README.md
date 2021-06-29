@@ -41,7 +41,7 @@ A configuration file is a YAML file with several sections.
 
 Configuration example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
@@ -53,7 +53,7 @@ kubernetesVersion: "1.19"
 cri: "Containerd"
 clusterDomain: "cluster.local"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/fe
@@ -78,7 +78,7 @@ Example for OpenStack based installation:
 ```yaml
 ...
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 sshPublicKey: "ssh-rsa publicsshkeyhere"

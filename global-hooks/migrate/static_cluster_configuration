@@ -55,7 +55,7 @@ function __on_startup() {
   fi
 
   config=$(cat <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 ${cidrs}

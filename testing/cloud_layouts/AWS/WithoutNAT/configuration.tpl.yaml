@@ -1,5 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
@@ -11,7 +11,7 @@ kubernetesVersion: '${KUBERNETES_VERSION}'
 defaultCRI: '${CRI}'
 clusterDomain: "cluster.local"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: dev-registry.deckhouse.io/sys/antiopa
@@ -25,7 +25,7 @@ deckhouse:
       modules:
         publicDomainTemplate: "%s.k8s.smoke.flant.com"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AWSClusterConfiguration
 layout: WithoutNAT
 provider:

@@ -18,7 +18,7 @@ dhctl render kubeadm-config --config=/config.yaml
 
 Example `config.yaml`:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: KubeadmConfigTemplateData
 clusterConfiguration:
   cloud:

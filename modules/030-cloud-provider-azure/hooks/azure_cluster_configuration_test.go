@@ -30,7 +30,7 @@ import (
 var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_configuration ::", func() {
 	var providerClusterConfiguration = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "AzureClusterConfiguration",
   "layout": "Standard",
   "sshPublicKey": "ssh-rsa AAA",
@@ -86,7 +86,7 @@ var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_conf
 
 	var providerClusterConfigurationBad = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "AzureClusterConfiguration",
   "layout": "Standard"
 }
@@ -94,7 +94,7 @@ var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_conf
 
 	var providerDiscoveryData = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "AzureCloudDiscoveryData",
   "resourceGroupName": "example",
   "vnetName": "example",
@@ -110,7 +110,7 @@ var _ = Describe("Modules :: cloud-provider-azure :: hooks :: azure_cluster_conf
 
 	var providerDiscoveryDataBad = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "AzureCloudDiscoveryData"
 }
 `
