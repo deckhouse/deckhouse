@@ -103,7 +103,7 @@ spec:
       labels:
         node-role.kubernetes.io/ng1: ""
         node.deckhouse.io/group: ng1
-        node.deckhouse.io/type: Cloud
+        node.deckhouse.io/type: CloudEphemeral
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -118,7 +118,7 @@ spec:
       labels:
         node-role.kubernetes.io/ng1: ""
         node.deckhouse.io/group: ng1
-        node.deckhouse.io/type: Cloud
+        node.deckhouse.io/type: CloudEphemeral
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
@@ -133,7 +133,7 @@ spec:
       labels:
         node-role.kubernetes.io/ng1-big: ""
         node.deckhouse.io/group: ng1-big
-        node.deckhouse.io/type: Cloud
+        node.deckhouse.io/type: CloudEphemeral
 `
 
 		stateNodes = `

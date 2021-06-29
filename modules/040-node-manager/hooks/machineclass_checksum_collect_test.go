@@ -51,7 +51,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum coll
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups",
 				[]byte(`[{
-                          "cloudInstances": { 
+                          "cloudInstances": {
                               "classReference": { "kind": "OpenStackInstanceClass", "name": "worker-small" },
                               "maxPerZone": 3,
                               "minPerZone": 3,
@@ -67,7 +67,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum coll
                           "kubernetesVersion": "1.21",
                           "manualRolloutID": "",
                           "name": "worker",
-                          "nodeType": "Cloud",
+                          "nodeType": "CloudEphemeral",
                           "updateEpoch": "112714"
 			}]`))
 			f.KubeStateSet(`
@@ -104,7 +104,7 @@ spec:
           labels:
             node-role.kubernetes.io/worker: ""
             node.deckhouse.io/group: worker
-            node.deckhouse.io/type: Cloud
+            node.deckhouse.io/type: CloudEphemeral
         spec: {}
 `)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -166,7 +166,7 @@ spec:
           labels:
             node-role.kubernetes.io/worker: ""
             node.deckhouse.io/group: worker
-            node.deckhouse.io/type: Cloud
+            node.deckhouse.io/type: CloudEphemeral
         spec: {}
 `)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

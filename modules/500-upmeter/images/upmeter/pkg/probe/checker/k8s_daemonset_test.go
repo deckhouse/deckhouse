@@ -836,7 +836,7 @@ items:
         kubernetes.io/os: linux
         node-role.kubernetes.io/worker: ""
         node.deckhouse.io/group: worker
-        node.deckhouse.io/type: Cloud
+        node.deckhouse.io/type: CloudEphemeral
         node.kubernetes.io/instance-type: 69a1095b-ceec-404f-8545-800391cdbce1
         topology.cinder.csi.openstack.org/zone: nova
         topology.kubernetes.io/region: HetznerFinland
