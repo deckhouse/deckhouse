@@ -22,7 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "node_group",
-			ApiVersion: "deckhouse.io/v1alpha2",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "NodeGroup",
 			FilterFunc: depRequiredFilterNG,
 		},
@@ -80,7 +80,7 @@ type depRequiredNG struct {
 }
 
 func depRequiredFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1alpha2.NodeGroup
+	var ng v1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
@@ -89,7 +89,7 @@ func depRequiredFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	return depRequiredNG{
 		Name:    ng.Name,
-		IsCloud: ng.Spec.NodeType == "Cloud",
+		IsCloud: ng.Spec.NodeType == v1.NodeTypeCloudEphemeral,
 	}, nil
 }
 

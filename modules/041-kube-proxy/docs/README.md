@@ -8,7 +8,7 @@ For security reasons, for NodePort services, connections are only allowed to the
 
 Here is an example of a NodeGroup annotation:
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: myng

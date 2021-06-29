@@ -27,11 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/taints"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 /**
-HandleNodeTemplates hook applies annotations, taints and labels to Hybrid and Static nodes
+HandleNodeTemplates hook applies annotations, taints and labels to CloudStatic, CloudPermanent and Static nodes
 and deletes "node.deckhouse.io/uninitialized" taint.
 */
 
@@ -43,7 +43,7 @@ const (
 
 type NodeSettings struct {
 	Name                    string
-	NodeType                string
+	NodeType                ngv1.NodeType
 	NodeGroup               string
 	Annotations             map[string]string
 	Labels                  map[string]string
@@ -53,7 +53,7 @@ type NodeSettings struct {
 
 // Hook will be executed when NodeType or NodeTemplate are changed.
 func desiredNodeSettingsFromNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	nodeGroup := new(v1alpha2.NodeGroup)
+	nodeGroup := new(ngv1.NodeGroup)
 	err := sdk.FromUnstructured(obj, nodeGroup)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "ngs",
-			ApiVersion:             "deckhouse.io/v1alpha2",
+			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			FilterFunc:             desiredNodeSettingsFromNodeGroupFilter,
 			WaitForSynchronization: go_hook.Bool(false),
@@ -176,7 +176,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 				return nil, err
 			}
 
-			if nodeGroup.NodeType == "Cloud" {
+			if nodeGroup.NodeType == ngv1.NodeTypeCloudEphemeral {
 				err = fixCloudNodeTaints(nodeObj, node, nodeGroup)
 			} else {
 				err = applyNodeTemplate(nodeObj, node, nodeGroup)
@@ -236,10 +236,10 @@ func applyNodeTemplate(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSettin
 
 	// 1.3. Add label with nodeGroup type
 	nodeGroupType, ok := newLabels["node.deckhouse.io/type"]
-	if !ok || nodeGroupType != nodeGroup.NodeType {
+	if !ok || nodeGroupType != nodeGroup.NodeType.String() {
 		labelsChanged = true
 	}
-	newLabels["node.deckhouse.io/type"] = nodeGroup.NodeType
+	newLabels["node.deckhouse.io/type"] = nodeGroup.NodeType.String()
 
 	// 2. Annotations
 	// 2.1. Merge node.annotations with nodeTemplate.annotations and remove excess keys.

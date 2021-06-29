@@ -25,24 +25,24 @@ import (
 
 var _ = Describe("Modules :: node-manager :: hooks :: deployment_required ::", func() {
 	const (
-		nodeGroupHybrid = `
+		nodeGroupCloudPermanent = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: master
 spec:
-  nodeType: Hybrid
+  nodeType: CloudPermanent
 status: {}
 `
-		nodeGroupCloud = `
+		nodeGroupCloudEphemeral = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 status: {}
 `
 		machineDeployment = `
@@ -78,7 +78,7 @@ metadata:
 	)
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.16.15", "kubernetesVersions":["1.16.15"]},"clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineSet", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
@@ -95,9 +95,9 @@ metadata:
 		})
 	})
 
-	Context("Cluster with Hybrid NG only", func() {
+	Context("Cluster with CloudPermanent NG only", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeGroupHybrid))
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupCloudPermanent))
 			f.RunHook()
 		})
 
@@ -107,9 +107,9 @@ metadata:
 		})
 	})
 
-	Context("Cluster with Cloud NG only", func() {
+	Context("Cluster with CloudEphemeral NG only", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeGroupCloud))
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupCloudEphemeral))
 			f.RunHook()
 		})
 

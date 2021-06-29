@@ -107,7 +107,7 @@ internal:
       diskType: gp2
       iops: 42
       instanceType: t2.medium
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -164,7 +164,7 @@ internal:
       preemptible: true #optional
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -221,7 +221,7 @@ internal:
       preemptible: true #optional
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -277,7 +277,7 @@ internal:
   - name: worker
     instanceClass:
       flavorName: m1.large
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -333,7 +333,7 @@ internal:
       additionalNetworks:
       - mynetwork
       - mynetwork2
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -355,7 +355,7 @@ internal:
       additionalTags:
         aaa: bbb
         ccc: ddd
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -414,7 +414,7 @@ internal:
       runtimeOptions: # optional
         nestedHardwareVirtualization: true
         memoryReservation: 42
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"
@@ -481,7 +481,7 @@ internal:
       additionalSubnets: [aaa, bbb]
       additionalLabels: # optional
         my: label
-    nodeType: Cloud
+    nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
       type: "Docker"

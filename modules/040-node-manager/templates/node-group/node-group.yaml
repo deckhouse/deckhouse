@@ -1,5 +1,5 @@
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{- if eq $ng.nodeType "Cloud" }}
+  {{- if or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud") }}
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
       {{- range $zone_name := $ng.cloudInstances.zones }}
         {{- include "node_group_machine_class" (list $ $ng $zone_name) }}

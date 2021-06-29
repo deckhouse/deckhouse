@@ -34,7 +34,7 @@ function __config__() {
       queue: /node_metrics
       keepFullObjectsInMemory: false
       waitForSynchronization: false
-      apiVersion: deckhouse.io/v1alpha1
+      apiVersion: deckhouse.io/v1
       kind: NodeGroup
       jqFilter: |
         {
@@ -68,11 +68,14 @@ function __main__() {
         jq -nr --arg pricing_node_type "$pricing_node_type" \
           --arg virtualization "$virtualization" \
           --argjson ng "$ng_data" '
-          if $pricing_node_type == "unknown" and $ng.nodeType == "Cloud" then "Ephemeral"
-          elif $pricing_node_type == "unknown" and $ng.nodeType == "Hybrid" then "VM"
-          elif $pricing_node_type == "unknown" and $virtualization != "unknown" then "VM"
-          elif $pricing_node_type != "unknown" then $pricing_node_type
-          else "Hard"
+          if $pricing_node_type != "unknown"
+            then $pricing_node_type
+          else
+            if $ng.nodeType == "CloudEphemeral" then "Ephemeral"
+            elif $ng.nodeType == "CloudPermanent" or $ng.nodeType == "CloudStatic" then "VM"
+            elif $ng.nodeType == "Static" and $virtualization != "unknown" then "VM"
+            else "Hard"
+            end
           end
       ')"
     fi

@@ -3,7 +3,7 @@
 
   {{- include "node_group_bashible_bootstrap_script_base_bootstrap" $context }}
 
-  {{- if eq .nodeGroup.nodeType "Cloud" }}
+  {{- if eq .nodeGroup.nodeType "CloudEphemeral" }}
 # Put bootstrap log information to Machine resource status
 patch_pending=true
 output_log_port=8000

@@ -26,7 +26,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -46,7 +46,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "ngs",
-			ApiVersion:             "deckhouse.io/v1alpha2",
+			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			WaitForSynchronization: pointer.BoolPtr(false),
 			FilterFunc:             setReplicasFilterNG,
@@ -66,7 +66,7 @@ type setReplicasMachineDeployment struct {
 }
 
 func setReplicasFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1alpha2.NodeGroup
+	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {

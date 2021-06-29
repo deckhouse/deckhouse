@@ -519,7 +519,7 @@ items:
         kubernetes.io/os: linux
         node-role.kubernetes.io/master: ""
         node.deckhouse.io/group: master
-        node.deckhouse.io/type: Hybrid
+        node.deckhouse.io/type: CloudPermanent
         node.kubernetes.io/instance-type: 69a1095b-ceec-404f-8545-800391cdbce1
         topology.cinder.csi.openstack.org/zone: nova
         topology.kubernetes.io/region: HetznerFinland
@@ -625,7 +625,7 @@ items:
         kubernetes.io/os: linux
         node-role.kubernetes.io/master: ""
         node.deckhouse.io/group: master
-        node.deckhouse.io/type: Hybrid
+        node.deckhouse.io/type: CloudPermanent
         node.kubernetes.io/instance-type: 69a1095b-ceec-404f-8545-800391cdbce1
         topology.cinder.csi.openstack.org/zone: nova
         topology.kubernetes.io/region: HetznerFinland
@@ -731,7 +731,7 @@ items:
         kubernetes.io/os: linux
         node-role.kubernetes.io/master: ""
         node.deckhouse.io/group: master
-        node.deckhouse.io/type: Hybrid
+        node.deckhouse.io/type: CloudPermanent
         node.kubernetes.io/instance-type: 69a1095b-ceec-404f-8545-800391cdbce1
         topology.cinder.csi.openstack.org/zone: nova
         topology.kubernetes.io/region: HetznerFinland
@@ -821,7 +821,7 @@ items:
         flannel.alpha.coreos.com/public-ip: 192.168.199.82
         node.alpha.kubernetes.io/ttl: "0"
         node.deckhouse.io/virtualization: kvm
-        node.machine.sapcloud.io/last-applied-anno-labels-taints: '{"metadata":{"creationTimestamp":null,"labels":{"node-role.kubernetes.io/worker":"","node.deckhouse.io/group":"worker","node.deckhouse.io/type":"Cloud"}},"spec":{}}'
+        node.machine.sapcloud.io/last-applied-anno-labels-taints: '{"metadata":{"creationTimestamp":null,"labels":{"node-role.kubernetes.io/worker":"","node.deckhouse.io/group":"worker","node.deckhouse.io/type":"CloudEphemeral"}},"spec":{}}'
         update.node.deckhouse.io/waiting-for-approval: ""
         volumes.kubernetes.io/controller-managed-attach-detach: "true"
       creationTimestamp: "2020-12-18T08:38:59Z"

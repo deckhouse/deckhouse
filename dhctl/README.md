@@ -152,12 +152,12 @@ spec:
   imageName: ubuntu-18-04-cloud-amd64
   mainNetwork: standard
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     minPerZone: 2
     maxPerZone: 4

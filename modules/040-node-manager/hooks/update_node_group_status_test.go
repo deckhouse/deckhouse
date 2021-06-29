@@ -27,12 +27,12 @@ var _ = Describe("Modules :: node-manager :: hooks :: update_node_group_status :
 	const (
 		stateCloudNG1 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng1
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     maxPerZone: 5
     minPerZone: 1
@@ -41,12 +41,12 @@ status:
 `
 		stateCloudNG2 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: ng-2
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     maxPerZone: 3
     minPerZone: 2
@@ -56,7 +56,7 @@ status:
 `
 		stateNG1 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroups
 metadata:
   name: ng1
@@ -67,7 +67,7 @@ status:
 `
 		stateNG2 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroups
 metadata:
   name: ng-2
@@ -261,7 +261,7 @@ status:
 	)
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 

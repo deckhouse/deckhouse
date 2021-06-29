@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if or (eq .nodeGroup.nodeType "Cloud") (eq .nodeGroup.nodeType "Hybrid") }}
+{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 function get_data_device_secret() {
   secret="d8-masters-kubernetes-data-device-path"

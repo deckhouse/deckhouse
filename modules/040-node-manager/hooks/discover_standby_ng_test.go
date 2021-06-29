@@ -29,22 +29,22 @@ var _ = Describe("Modules :: node-manager :: hooks :: discover_standby_ng ::", f
 	const (
 		nodeGroupWithoutStandby = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: normal
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 status: {}
 `
 		nodeGroupStandbyAbsolute = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: standby-absolute
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     maxPerZone: 10
     minPerZone: 1
@@ -61,12 +61,12 @@ status: {}
 `
 		nodeGroupStandbyAbsoluteTooBigStandby = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: standby-absolute
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     maxPerZone: 10
     minPerZone: 1
@@ -83,12 +83,12 @@ status: {}
 `
 		nodeGroupStandbyPercent = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: standby-percent
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     maxPerZone: 20
     minPerZone: 1
@@ -174,12 +174,12 @@ status:
 `
 		nodeGroupStandbyAbsoluteNotHeldResources = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: standby-absolute
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     maxPerZone: 10
     minPerZone: 1
@@ -217,8 +217,7 @@ status: {}
 		"internal": {}
 	}
 }`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {

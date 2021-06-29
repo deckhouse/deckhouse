@@ -19,7 +19,7 @@
   {{- $driverRegistrarImage := printf "%s:%s" $context.Values.global.modulesImages.registry $driverRegistrarImageTag }}
 
   {{- if $driverRegistrarImageTag }}
-    {{- if (include "helm_lib_cluster_has_non_static_nodes" $context) }}
+    {{- if (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -74,8 +74,9 @@ spec:
               - operator: In
                 key: node.deckhouse.io/type
                 values:
-                - Cloud
-                - Hybrid
+                - CloudEphemeral
+                - CloudPermanent
+                - CloudStatic
       imagePullSecrets:
       - name: deckhouse-registry
 {{ include "helm_lib_priority_class" (tuple $context "system-node-critical") | indent 6 }}

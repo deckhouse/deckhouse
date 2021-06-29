@@ -31,7 +31,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: update_approval ::", func()
 	const (
 		initialState = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker
@@ -41,7 +41,7 @@ status:
   desired: 1
   ready: 1
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: undisruptable-worker
@@ -66,7 +66,7 @@ data:
 	nodeNames := []string{"worker-1", "worker-2", "worker-3"}
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -84,7 +84,7 @@ data:
 			for _, gWaitingForApproval := range []bool{true, false} {
 				for _, gNodeReady := range []bool{true, false} {
 					for _, gNgReady := range []bool{true, false} {
-						for _, gNodeType := range []string{"Cloud", "Hybrid", "Static"} {
+						for _, gNodeType := range []string{"CloudEphemeral", "CloudPermanent", "Static"} {
 							Context(fmt.Sprintf("Approved: %t, AproveRequired: %v, NodeReady: %t, NgReady: %t, NodeType: %s", gOneIsApproved, gWaitingForApproval, gNodeReady, gNgReady, gNodeType), func() {
 								oneIsApproved := gOneIsApproved
 								waitingForApproval := gWaitingForApproval
@@ -127,13 +127,13 @@ data:
 												Expect(approvedNotReadyCount).To(Equal(0))
 												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
 											})
-										} else if !ngReady && nodeReady && nodeType != "Cloud" {
+										} else if !ngReady && nodeReady && nodeType != "CloudEphemeral" {
 											By("If nodeType is not Cloud, ng will not have desired field, so if all existing nodes are ready – 1 node should be approved", func() {
 												Expect(approvedReadyCount).To(Equal(1))
 												Expect(approvedNotReadyCount).To(Equal(0))
 												Expect(waitingForApprovalCount).To(Equal(len(nodeNames) - 1))
 											})
-										} else if !ngReady && nodeReady && nodeType == "Cloud" {
+										} else if !ngReady && nodeReady && nodeType == "CloudEphemeral" {
 											By("If ng desired != ready, but all existing nodes are ready – there should be no approved nodes", func() {
 												Expect(approvedReadyCount + approvedNotReadyCount).To(Equal(0))
 												Expect(waitingForApprovalCount).To(Equal(len(nodeNames)))
@@ -322,7 +322,7 @@ metadata:
 data:
   test: dXBkYXRlZA== # updated
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
@@ -554,7 +554,7 @@ status:
 func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady bool, nodeType string) string {
 	const tpl = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker-2
@@ -562,12 +562,12 @@ spec:
   nodeType: {{ $.NodeType }}
 status:
 {{- if $.NgReady }}
-  {{- if eq $.NodeType "Cloud" }}
+  {{- if eq $.NodeType "CloudEphemeral" }}
   desired: 3
   {{- end }}
   ready: 3
 {{- else }}
-  {{- if eq $.NodeType "Cloud" }}
+  {{- if eq $.NodeType "CloudEphemeral" }}
   desired: 3
   {{- end }}
   ready: 2
@@ -619,7 +619,7 @@ status:
 
 const tpl = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: worker-2

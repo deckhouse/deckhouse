@@ -1,10 +1,10 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: system
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   cloudInstances:
     minPerZone: 1
     maxPerZone: 1

@@ -29,24 +29,24 @@ var _ = Describe("Modules :: node-manager :: hooks :: chaos_monkey ::", func() {
 	const (
 		stateCloudNGSmall = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: too-small
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
 status:
   desired: 1
   ready: 1
 `
 		stateCloudNGLarge = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: largeng
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   chaos:
     mode: DrainAndDelete
     period: 5m
@@ -56,12 +56,12 @@ status:
 `
 		stateCloudNGLargeBroken = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: largeng
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   chaos:
     mode: DrainAndDelete
     period: 5m
@@ -72,24 +72,24 @@ status:
 
 		stateHybridNGSmall = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: too-small
 spec:
-  nodeType: Hybrid
+  nodeType: CloudPermanent
 status:
   nodes: 1
   ready: 1
 `
 		stateHybridNGLarge = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: largeng
 spec:
-  nodeType: Hybrid
+  nodeType: CloudPermanent
   chaos:
     mode: DrainAndDelete
     period: 5m
@@ -99,12 +99,12 @@ status:
 `
 		stateHybridNGLargeBroken = `
 ---
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: largeng
 spec:
-  nodeType: Hybrid
+  nodeType: CloudPermanent
   chaos:
     mode: DrainAndDelete
     period: 5m
@@ -192,7 +192,7 @@ metadata:
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha2", "NodeGroup", false)
+	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
 
 	Context("Empty cluster", func() {

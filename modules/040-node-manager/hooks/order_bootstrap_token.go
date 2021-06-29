@@ -30,7 +30,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                "ngs",
-			ApiVersion:          "deckhouse.io/v1alpha2",
+			ApiVersion:          "deckhouse.io/v1",
 			Kind:                "NodeGroup",
 			ExecuteHookOnEvents: pointer.BoolPtr(false),
 			FilterFunc:          bootstrapTokenFilterNodeGroup,
@@ -113,12 +113,18 @@ func bootstrapTokenFilterSecret(obj *unstructured.Unstructured) (go_hook.FilterR
 }
 
 func bootstrapTokenFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng v1alpha2.NodeGroup
+	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
 
 	var needToken bool
-	if ng.Spec.NodeType == "Static" || ng.Spec.NodeType == "Hybrid" {
+	switch ng.Spec.NodeType {
+	case ngv1.NodeTypeStatic, ngv1.NodeTypeCloudPermanent, ngv1.NodeTypeCloudStatic:
+		needToken = true
+
+	// migration at 25.06.2021, this case have to be deleted after 01.09.2021
+	case "Hybrid":
+		// to avoid race on migration
 		needToken = true
 	}
 

@@ -50,8 +50,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       worker: 1
       master:
         __ConstantChoices__: "3"
-    nodeCountByType:
-      cloud: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.15.4
 `

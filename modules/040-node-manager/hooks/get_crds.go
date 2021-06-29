@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1alpha2"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
@@ -54,14 +54,14 @@ func applyInstanceClassCrdFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 type NodeGroupCrdInfo struct {
 	Name            string
-	Spec            v1alpha2.NodeGroupSpec
+	Spec            ngv1.NodeGroupSpec
 	ManualRolloutID string
 }
 
 // applyNodeGroupCrdFilter returns name, spec and manualRolloutID from the NodeGroup
 func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	nodeGroup := new(v1alpha2.NodeGroup)
-	err := sdk.FromUnstructured(obj, nodeGroup)
+	var nodeGroup ngv1.NodeGroup
+	err := sdk.FromUnstructured(obj, &nodeGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 		},
 		{
 			Name:       "ngs",
-			ApiVersion: "deckhouse.io/v1alpha2",
+			ApiVersion: "deckhouse.io/v1",
 			Kind:       "NodeGroup",
 			FilterFunc: applyNodeGroupCrdFilter,
 		},
@@ -285,7 +285,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
 
-		if nodeGroup.Spec.NodeType == "Static" {
+		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
 			if staticValue, has := input.Values.GetOk("nodeManager.internal.static"); has {
 				static := staticValue.Map()
 				if len(static) > 0 {
@@ -294,7 +294,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 
-		if nodeGroup.Spec.NodeType == "Cloud" && kindInUse != "" {
+		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			instanceClasses := make(map[string]interface{})
 
 			for _, icsItem := range input.Snapshots["ics"] {
@@ -385,9 +385,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 
 			if ngForValues["cloudInstances"] == nil {
-				ngForValues["cloudInstances"] = v1alpha2.CloudInstances{}
+				ngForValues["cloudInstances"] = ngv1.CloudInstances{}
 			}
-			cloudInstances := ngForValues["cloudInstances"].(v1alpha2.CloudInstances)
+			cloudInstances := ngForValues["cloudInstances"].(ngv1.CloudInstances)
 			cloudInstances.Zones = zones
 			ngForValues["cloudInstances"] = cloudInstances
 		}
@@ -432,9 +432,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		}
 
 		if ngForValues["cri"] == nil {
-			ngForValues["cri"] = v1alpha2.CRI{}
+			ngForValues["cri"] = ngv1.CRI{}
 		}
-		cri := ngForValues["cri"].(v1alpha2.CRI)
+		cri := ngForValues["cri"].(ngv1.CRI)
 		cri.Type = newCRIType
 		ngForValues["cri"] = cri
 
@@ -461,7 +461,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func nodeGroupForValues(nodeGroupSpec *v1alpha2.NodeGroupSpec) map[string]interface{} {
+func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{} {
 	res := make(map[string]interface{})
 
 	res["nodeType"] = nodeGroupSpec.NodeType
@@ -497,7 +497,7 @@ func setNodeGroupErrorStatus(patcher go_hook.ObjectPatcher, nodeGroupName, messa
 		},
 	})
 	// Patches are deferred, error is always nil.
-	_ = patcher.MergePatchObject(statusErrorPatch, "deckhouse.io/v1alpha2", "NodeGroup", "", nodeGroupName, "/status")
+	_ = patcher.MergePatchObject(statusErrorPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, "/status")
 }
 
 var epochTimestampAccessor = func() int64 {

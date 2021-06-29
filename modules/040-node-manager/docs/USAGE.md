@@ -5,12 +5,12 @@ title: "Managing nodes: usage"
 ## An example of the `NodeGroup` configuration
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: test
 spec:
-  nodeType: Cloud
+  nodeType: CloudEphemeral
   kubernetesVersion: "1.16"
   cloudInstances:
     zones:

@@ -8,7 +8,7 @@ title: "Модуль kube-proxy"
 
 Пример аннотации для NodeGroup:
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: myng

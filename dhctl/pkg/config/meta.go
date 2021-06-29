@@ -176,7 +176,7 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 // MasterNodeGroupManifest prepares NodeGroup custom resource for master nodes
 func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 	spec := map[string]interface{}{
-		"nodeType": "Hybrid",
+		"nodeType": "CloudPermanent",
 		"disruptions": map[string]interface{}{
 			"approvalMode": "Manual",
 		},
@@ -197,7 +197,7 @@ func (m *MetaConfig) MasterNodeGroupManifest() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"apiVersion": "deckhouse.io/v1alpha1",
+		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]interface{}{
 			"name": "master",
@@ -212,13 +212,13 @@ func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[st
 		terraNodeGroup.NodeTemplate = make(map[string]interface{})
 	}
 	return map[string]interface{}{
-		"apiVersion": "deckhouse.io/v1alpha1",
+		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]interface{}{
 			"name": terraNodeGroup.Name,
 		},
 		"spec": map[string]interface{}{
-			"nodeType": "Hybrid",
+			"nodeType": "CloudPermanent",
 			"disruptions": map[string]interface{}{
 				"approvalMode": "Manual",
 			},
@@ -307,7 +307,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 
 	nodeGroup := map[string]interface{}{
 		"name":     "master",
-		"nodeType": "Hybrid",
+		"nodeType": "CloudPermanent",
 		"cloudInstances": map[string]interface{}{
 			"classReference": map[string]string{
 				"name": "master",
