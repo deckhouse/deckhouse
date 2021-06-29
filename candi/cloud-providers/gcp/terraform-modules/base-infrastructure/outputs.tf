@@ -14,7 +14,7 @@
 
 output "cloud_discovery_data" {
   value = {
-    "apiVersion"        = "deckhouse.io/v1alpha1"
+    "apiVersion"        = "deckhouse.io/v1"
     "kind"              = "GCPCloudDiscoveryData"
     "networkName"       = google_compute_network.kube.name
     "subnetworkName"    = google_compute_subnetwork.kube.name

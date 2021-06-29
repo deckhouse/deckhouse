@@ -14,7 +14,7 @@
 
 output "cloud_discovery_data" {
   value = {
-    "apiVersion" = "deckhouse.io/v1alpha1"
+    "apiVersion" = "deckhouse.io/v1"
     "kind" = "YandexCloudDiscoveryData"
     "region" = "ru-central1"
     "routeTableID" = module.vpc_components.route_table_id

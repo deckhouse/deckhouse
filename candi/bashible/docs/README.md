@@ -68,7 +68,7 @@ dhctl render bashible-bundle --config=/config.yaml
 
 Example for `config.yaml`:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: BashibleTemplateData
 bundle: ubuntu-lts
 provider: OpenStack

@@ -89,7 +89,7 @@ title: "Cloud provider — Yandex: Развертывание"
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
 provider:
@@ -156,7 +156,7 @@ dhcpOptions:
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: WithoutNAT
 provider:
@@ -222,7 +222,7 @@ $ yc vpc route-table update --name kube-yc --route destination=0.0.0.0/0,next-ho
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: WithNATInstance
 withNATInstance:

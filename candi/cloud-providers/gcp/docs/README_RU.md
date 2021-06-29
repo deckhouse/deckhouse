@@ -82,7 +82,7 @@ title: "Cloud provider — GCP: Развертывание"
 <!--- Исходник: https://docs.google.com/drawings/d/1VTAoz6-65q7m99KA933e1phWImirxvb9-OLH9DRtWPE/edit --->
 
 ```
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: Standard
 standard:
@@ -146,7 +146,7 @@ provider:
 <!--- Исходник: https://docs.google.com/drawings/d/1uhWbQFiycsFkG9D1vNbJNrb33Ih4YMdCxvOX5maW5XQ/edit --->
 
 ```
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: WithoutNAT
 subnetworkCIDR: 10.0.0.0/24                                 # required

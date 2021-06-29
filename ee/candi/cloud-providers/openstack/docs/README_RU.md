@@ -118,7 +118,7 @@ floating ip.
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
 ```
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
@@ -189,7 +189,7 @@ virtual ip создаётся в публичной сети, то он всё �
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
 ```
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: StandardWithNoRouter
 standardWithNoRouter:
@@ -248,7 +248,7 @@ virtual ip создаётся в публичной сети, то он всё �
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
 ```
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Simple
 simple:
@@ -307,7 +307,7 @@ Master-узел и узлы кластера подключаются к сущ�
 
 
 ```
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:

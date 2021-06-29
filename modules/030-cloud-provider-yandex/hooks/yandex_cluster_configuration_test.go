@@ -41,7 +41,7 @@ cloudProviderYandex:
 		// correct cdd
 		stateBCloudDiscoveryData = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "defaultLbTargetGroupNetworkId": "test",
   "internalNetworkIDs": [
     "test"
@@ -66,7 +66,7 @@ cloudProviderYandex:
 		// wrong cdd
 		stateCCloudDiscoveryData = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "internalNetworkIDs": [
     "testtest"
   ],
@@ -76,7 +76,7 @@ cloudProviderYandex:
 
 		// correct cc
 		stateBClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 existingNetworkID: enpma5uvcfbkuac1i1jb
 kind: YandexClusterConfiguration
 layout: WithNATInstance
@@ -102,7 +102,7 @@ withNATInstance:
 
 		// wrong cc
 		stateDClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: WithNATInstance
 `

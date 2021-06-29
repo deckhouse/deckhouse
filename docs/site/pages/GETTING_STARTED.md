@@ -72,7 +72,7 @@ Create the cluster configuration file (<code>config.yml</code>) and insert the f
 ```yaml
 # general cluster parameters (ClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: ClusterConfiguration
 # type of the infrastructure: bare-metal (Static) or Cloud (Cloud)
@@ -88,7 +88,7 @@ clusterDomain: "cluster.local"
 ---
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse configuration
@@ -118,7 +118,7 @@ deckhouse:
 ---
 # section with the parameters of the bare metal cluster (StaticClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: StaticClusterConfiguration
 # address space for the cluster's internal network
@@ -175,7 +175,7 @@ yc iam key create --service-account-name candi --output candi-sa-key.json
 ```yaml
 # general cluster parameters (ClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: ClusterConfiguration
 # type of the infrastructure: bare-metal (Static) or Cloud (Cloud)
@@ -197,7 +197,7 @@ clusterDomain: "cluster.local"
 ---
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse parameters
@@ -224,7 +224,7 @@ deckhouse:
 ---
 # section containing the parameters of the cloud provider (YandexClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: YandexClusterConfiguration
 # public SSH key for accessing cloud nodes
@@ -285,7 +285,7 @@ Create configuration file (<code>config.yml</code>) for Deckhouse:
 ```yaml
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse parameters

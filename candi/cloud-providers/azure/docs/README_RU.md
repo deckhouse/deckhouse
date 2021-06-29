@@ -7,7 +7,7 @@ title: "Cloud provider — Azure: Развертывание"
 Схема размещения описывается объектом AzureClusterConfiguration.
 
 Его поля:
-* `apiVersion` — deckhouse.io/v1alpha1
+* `apiVersion` — deckhouse.io/v1
 * `kind` — AzureClusterConfiguration
 * `layout` — архитектура расположения ресурсов в облаке.
     * Варианты — `Standard` (описание ниже).
@@ -96,7 +96,7 @@ title: "Cloud provider — Azure: Развертывание"
 
 ```yaml
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
 sshPublicKey: "ssh-rsa ..." # required

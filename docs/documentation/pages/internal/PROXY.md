@@ -35,7 +35,7 @@ Insert the appropriate configuration into the [ClusterConfiguration](../../candi
 
 An example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:

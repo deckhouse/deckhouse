@@ -83,7 +83,7 @@ fi
 cluster_configuration=''
 if [[ $clusterType == "Static" ]]; then
   cluster_configuration=$(cat <<END
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: $clusterType
 podSubnetCIDR: $(deckhouse-controller global values | yq r - global.discovery.podSubnet)
@@ -95,7 +95,7 @@ END
 )
 elif [[ $clusterType == "Cloud" ]]; then
   cluster_configuration=$(cat <<END
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: $clusterType
 cloud:

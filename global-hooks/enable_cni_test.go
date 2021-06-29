@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Global hooks :: enable_cni ::", func() {
 	clusterConfigurationYaml := `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 `

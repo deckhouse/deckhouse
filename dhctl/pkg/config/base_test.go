@@ -23,7 +23,7 @@ import (
 func TestParseConfigFromData(t *testing.T) {
 	clusterConfig := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 kubernetesVersion: "1.16"
@@ -32,7 +32,7 @@ serviceSubnetCIDR: 10.111.0.0/16
 `
 	initConfig := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
    imagesRepo: test
@@ -41,7 +41,7 @@ deckhouse:
 `
 	staticConfig := `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - 192.168.0.0/24

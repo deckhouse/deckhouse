@@ -47,14 +47,14 @@ cloudProviderVsphere:
 	var (
 		stateACloudDiscoveryData = `
 {
-  "apiVersion":"deckhouse.io/v1alpha1",
+  "apiVersion":"deckhouse.io/v1",
   "kind":"VsphereCloudDiscoveryData",
   "vmFolderPath":"test",
   "resourcePoolPath": "test"
 }
 `
 		stateAClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VsphereClusterConfiguration
 layout: Standard
 provider:

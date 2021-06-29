@@ -41,8 +41,8 @@ kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 Объекты доступны напрямую в апи так:
 
 ```
-GET /api/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
-GET /api/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
+GET /api/bashible.deckhouse.io/v1/bashibles/ubuntu-lts.master
+GET /api/bashible.deckhouse.io/v1/nodegroupbundles/ubuntu-lts.master
 ```
 
 API-сервер генерирует содержание на лету для запрошенного бандла. Шаблоны находятся в контейнере сервера. Все объекты

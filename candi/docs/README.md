@@ -21,7 +21,7 @@ Configuration is a single YAML file, which contains several YAML documents separ
 
 Example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
@@ -31,7 +31,7 @@ kubernetesVersion: 1.19
 defaultCRI: "Containerd"
 clusterDomain: cluster.local
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.example.com/deckhouse
@@ -85,7 +85,7 @@ There is a special option for bare metal clusters, which is located in the separ
 
 Example:
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - 192.168.0.0/24

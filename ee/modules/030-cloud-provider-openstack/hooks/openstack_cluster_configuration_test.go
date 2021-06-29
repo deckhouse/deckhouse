@@ -135,7 +135,7 @@ cloudProviderOpenstack:
 }
 `
 		stateAClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:

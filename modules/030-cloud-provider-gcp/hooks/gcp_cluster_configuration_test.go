@@ -30,7 +30,7 @@ import (
 var _ = Describe("Modules :: cloud-provider-gcp :: hooks :: gcp_cluster_configuration ::", func() {
 	var providerClusterConfiguration = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "GCPClusterConfiguration",
   "layout": "Standard",
   "sshKey": "ssh-rsa AAA",
@@ -77,7 +77,7 @@ var _ = Describe("Modules :: cloud-provider-gcp :: hooks :: gcp_cluster_configur
 
 	var providerClusterConfigurationBad = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "GCPClusterConfiguration",
   "layout": "Standard"
 }
@@ -85,7 +85,7 @@ var _ = Describe("Modules :: cloud-provider-gcp :: hooks :: gcp_cluster_configur
 
 	var providerDiscoveryData = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "GCPCloudDiscoveryData",
   "networkName": "example",
   "subnetworkName": "example",
@@ -103,7 +103,7 @@ var _ = Describe("Modules :: cloud-provider-gcp :: hooks :: gcp_cluster_configur
 
 	var providerDiscoveryDataBad = `
 {
-  "apiVersion": "deckhouse.io/v1alpha1",
+  "apiVersion": "deckhouse.io/v1",
   "kind": "GCPCloudDiscoveryData"
 }
 `
@@ -186,7 +186,7 @@ data:
 			Expect(f.ValuesGet("cloudProviderGcp.internal.providerClusterConfiguration.").String()).To(Equal(""))
 
 			Expect(f.ValuesGet("cloudProviderGcp.internal.providerClusterConfiguration.provider.serviceAccountJSON").String()).To(MatchJSON(`{"type": "test", "project_id": "test", "private_key_id": "test", "private_key": "test", "client_email": "test@test", "client_id": "test", "auth_uri": "test", "token_uri": "test", "auth_provider_x509_cert_url": "test", "client_x509_cert_url": "test"}`))
-			Expect(f.ValuesGet("cloudProviderGcp.internal.providerDiscoveryData").String()).To(MatchJSON(`{"apiVersion":"deckhouse.io/v1alpha1","kind":"GCPCloudDiscoveryData","networkName":"example","subnetworkName":"example","zones":["a","b","c"],"disableExternalIP":true,"instances":{"image":"ubuntu","diskSizeGb":50,"diskType":"pd-standard","networkTags":[""],"labels":{}}}`))
+			Expect(f.ValuesGet("cloudProviderGcp.internal.providerDiscoveryData").String()).To(MatchJSON(`{"apiVersion":"deckhouse.io/v1","kind":"GCPCloudDiscoveryData","networkName":"example","subnetworkName":"example","zones":["a","b","c"],"disableExternalIP":true,"instances":{"image":"ubuntu","diskSizeGb":50,"diskType":"pd-standard","networkTags":[""],"labels":{}}}`))
 		})
 	})
 

@@ -32,7 +32,7 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 
 	var (
 		stateAClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 cloud:
@@ -54,7 +54,7 @@ data:
   "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration))
 
 		stateBClusterConfiguration = `
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
