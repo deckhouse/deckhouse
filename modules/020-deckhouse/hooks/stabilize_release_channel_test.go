@@ -36,7 +36,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			"global": {
 				"deckhouseVersion": "12345",
 				"modulesImages": {
-					"registry": "registry.flant.com/sys/antiopa"
+					"registry": "registry.flant.com/sys/deckhouse-oss"
 				}
 			},
 			"deckhouse": {
@@ -65,7 +65,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			"global": {
 				"deckhouseVersion": "12345",
 				"modulesImages": {
-					"registry": "registry.flant.com/sys/antiopa"
+					"registry": "registry.flant.com/sys/deckhouse-oss"
 				}
 			},
 			"deckhouse": {
@@ -95,20 +95,20 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			"global": {
 				"deckhouseVersion": "12345",
 				"modulesImages": {
-					"registry": "registry.flant.com/sys/antiopa"
+					"registry": "registry.flant.com/sys/deckhouse-oss"
 				}
 			},
 			"deckhouse": {
 				"releaseChannel": "EarlyAccess",
 				"internal": {
-					"currentReleaseImageName": "registry.flant.com/sys/antiopa:early_access"
+					"currentReleaseImageName": "registry.flant.com/sys/deckhouse-oss:early_access"
 				}
 			}
 		}`, `{}`)
 
 		table.DescribeTable("tags", func(rcName, rcTag string) {
 			f.ValuesSet(releaseChannelKey, rcName)
-			oldImage := "registry.flant.com/sys/antiopa:" + rcTag
+			oldImage := "registry.flant.com/sys/deckhouse-oss:" + rcTag
 			f.ValuesSet(imageKey, oldImage)
 
 			f.RunHook()
@@ -130,13 +130,13 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			"global": {
 				"deckhouseVersion": "12345",
 				"modulesImages": {
-					"registry": "registry.flant.com/sys/antiopa"
+					"registry": "registry.flant.com/sys/deckhouse-oss"
 				}
 			},
 			"deckhouse": {
 				"releaseChannel": "EarlyAccess",
 				"internal": {
-					"currentReleaseImageName": "registry.flant.com/sys/antiopa:early_access"
+					"currentReleaseImageName": "registry.flant.com/sys/deckhouse-oss:early_access"
 				}
 			}
 		}`, `{}`)
@@ -153,8 +153,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			currentReleaseChannel := releaseChannelFromName(currentRelease)
 			expectedReleaseChannel := currentReleaseChannel - 1
 
-			currentImage := "registry.flant.com/sys/antiopa:" + currentReleaseChannel.Tag()
-			expectedImage := "registry.flant.com/sys/antiopa:" + expectedReleaseChannel.Tag()
+			currentImage := "registry.flant.com/sys/deckhouse-oss:" + currentReleaseChannel.Tag()
+			expectedImage := "registry.flant.com/sys/deckhouse-oss:" + expectedReleaseChannel.Tag()
 
 			f.ValuesSet(releaseChannelKey, desiredRelease)
 			f.ValuesSet(imageKey, currentImage)
@@ -184,7 +184,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 
 			currentReleaseChannel := releaseChannelFromName(currentRelease)
 
-			currentImage := "registry.flant.com/sys/antiopa:" + currentReleaseChannel.Tag()
+			currentImage := "registry.flant.com/sys/deckhouse-oss:" + currentReleaseChannel.Tag()
 
 			f.ValuesSet(releaseChannelKey, desiredRelease)
 			f.ValuesSet(imageKey, currentImage)
@@ -214,13 +214,13 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			"global": {
 				"deckhouseVersion": "12345",
 				"modulesImages": {
-					"registry": "registry.flant.com/sys/antiopa"
+					"registry": "registry.flant.com/sys/deckhouse-oss"
 				}
 			},
 			"deckhouse": {
 				"releaseChannel": "EarlyAccess",
 				"internal": {
-					"currentReleaseImageName": "registry.flant.com/sys/antiopa:early_access"
+					"currentReleaseImageName": "registry.flant.com/sys/deckhouse-oss:early_access"
 				}
 			}
 		}`, `{}`)
@@ -240,8 +240,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 
 			mockDistinctDigest(desiredTag)
 
-			currentImage := "registry.flant.com/sys/antiopa:" + currentTag
-			desiredImage := "registry.flant.com/sys/antiopa:" + desiredTag
+			currentImage := "registry.flant.com/sys/deckhouse-oss:" + currentTag
+			desiredImage := "registry.flant.com/sys/deckhouse-oss:" + desiredTag
 
 			f.ValuesSet(releaseChannelKey, desiredRelease)
 			f.ValuesSet(imageKey, currentImage)
@@ -261,8 +261,8 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 
 	Context("parsing current release channel", func() {
 		const (
-			repo             = "registry.flant.com/sys/antiopa"
-			imageFromRepo    = "registry.flant.com/sys/antiopa:early-access"
+			repo             = "registry.flant.com/sys/deckhouse-oss"
+			imageFromRepo    = "registry.flant.com/sys/deckhouse-oss:early-access"
 			imageNotFromRepo = "registry.flant.com/experiments:early-access"
 		)
 

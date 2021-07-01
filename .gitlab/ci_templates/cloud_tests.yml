@@ -177,6 +177,7 @@
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
       -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
       -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
+      -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
       -v $(pwd)/testing:/deckhouse/testing -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 997:997 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
       -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &vsphere_after_script
