@@ -55,7 +55,6 @@ Web links test:
     --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
     --set "global.env=${CI_ENVIRONMENT_SLUG}"
   needs:
-  - "Build"
   - "Doc web build"
   - "Main web build"
   - "Web links test"
