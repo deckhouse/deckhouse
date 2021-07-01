@@ -58,6 +58,37 @@
   - "Build Modules Images"
   interruptible: true
 
+.OpenAPI validation template:
+  stage: testing
+  before_script:
+    - if [[ -z ${CI_COMMIT_TAG} ]]; then
+      export CI_COMMIT_TAG="";
+      fi
+    - rm -rf shell-operator || true
+    - git submodule update --init --recursive
+  script:
+    - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+    - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+    - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
+    - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+    - type werf && source $(werf ci-env gitlab --verbose --as-file)
+    - export WERF_REPO="${DEV_REGISTRY_PATH}"
+    - pwd
+    - werf run tests
+      --docker-options="-w /deckhouse"
+      -- ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/openapi_validation/
+  except:
+    - schedules
+    - alpha
+    - beta
+    - early-access
+    - stable
+    - rock-solid
+  needs:
+    - "Build"
+    - "Build Modules Images"
+  interruptible: true
+
 .Tests template:
   stage: testing
   before_script:

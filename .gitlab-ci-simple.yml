@@ -47,6 +47,11 @@ Hooks Configuration Tests:
   tags:
     - deckhouse
 
+OpenAPI Validation:
+  extends: .OpenAPI validation template
+  tags:
+    - deckhouse
+
 .base_deploy: &base_deploy
   extends: .base_deploy_template
   tags:
@@ -54,6 +59,7 @@ Hooks Configuration Tests:
   needs:
     - "Matrix Tests"
     - "Hooks Configuration Tests"
+    - "OpenAPI Validation"
     - "Build"
     - "Build Modules Images"
     - "Go Generate"

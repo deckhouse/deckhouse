@@ -11,9 +11,9 @@ issues:
 
 linters-settings:
   gci:
-    local-prefixes: fox.flant.com/
+    local-prefixes: github.com/deckhouse/
   goimports:
-    local-prefixes: fox.flant.com/
+    local-prefixes: github.com/deckhouse/
   golint:
     min-confidence: 0
   errcheck:
