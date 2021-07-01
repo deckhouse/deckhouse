@@ -21,13 +21,9 @@ Deckhouse Platform follows the upstream version of Kubernetes, building all its 
 
 # Current status
 
-While Deckhouse Platform has a vast history of being used internally in Flant and is ready for production, it is still experiencing the final touches of becoming available as an end-user product.
+Deckhouse Platform has a vast history of being used internally in Flant and is ready for production. Its beta testing started in May'21 when the first public demo tokens were issued. By the end of Jun'21, it was tested by 300+ engineers, and its source code went public via GitHub.
 
-* At the moment, you can install only the EE edition of Deckhouse Platform that includes experimental modules. To get your trial token for an early access to the platform, please contact us in [Telegram](https://t.me/deckhouse).
-* Both official editions, CE and EE, will become available not later than June 15th, 2021.
-
-When your demo access is expired, you will be able to switch your installation to CE (relevant guidelines will follow) or purchase EE.
-The code of the Platform is not available in its GitHub repository yet. It will be published not later than June 15th, 2021.
+Deckhouse Platform CE is now freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/). Please, follow our [getting started](https://deckhouse.io/en/getting_started.html) instructions to begin your journey with Deckhouse Platform.
 
 # Online community
 In addition to common GitHub features, here are some other online resources related to Deckhouse:
