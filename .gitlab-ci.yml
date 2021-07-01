@@ -72,7 +72,7 @@ Build CE:
     WERF_ENV: CE
   only:
   - tags
-   - main
+  - main
   - /^release-.*$/
 
 Build EE:
