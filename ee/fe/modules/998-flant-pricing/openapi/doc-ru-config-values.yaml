@@ -25,9 +25,9 @@ properties:
       url:
         description: |
           URL для отправки метрик.
-  ***REMOVED***:
+  kubeall:
     description: |
-      Параметры для формирования ***REMOVED*** реестра.
+      Параметры для формирования kubeall реестра.
     properties:
       team:
         description: |

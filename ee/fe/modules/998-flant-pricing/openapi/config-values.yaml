@@ -47,11 +47,11 @@ properties:
         default: "https://kulkulator.flant.com/write"
         description: |
           URL for sending metrics.
-  ***REMOVED***:
+  kubeall:
     type: object
     default: {}
     description: |
-      Parameters for generating the ***REMOVED*** registry.
+      Parameters for generating the kubeall registry.
     required: [team, host]
     properties:
       team:

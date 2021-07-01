@@ -1,6 +1,6 @@
 positive:
   configValues:
-    - ***REMOVED***:
+    - kubeall:
         team: test
         host: test.control-plane
   values:

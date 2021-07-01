@@ -63,7 +63,7 @@ function __main__() {
   if [[ "$FP_KUBEALL_TEAM" != "" && "$FP_KUBEALL_HOST" != "" ]]; then
     echo '
     {
-      "name": "flant_pricing_***REMOVED***",
+      "name": "flant_pricing_kubeall",
       "set": '$(date +%s)',
       "labels": {
         "team": "'$FP_KUBEALL_TEAM'",

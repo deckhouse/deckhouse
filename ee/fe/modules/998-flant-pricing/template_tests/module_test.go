@@ -55,7 +55,7 @@ auxiliaryCluster: false
 clusterType: Hybrid
 nodesDiscount: 10
 promscale: {}
-***REMOVED***:
+kubeall:
   team: ""
   host: ""
   kubectl: "sudo kubectl"

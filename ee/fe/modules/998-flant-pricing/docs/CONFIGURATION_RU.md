@@ -12,7 +12,7 @@ title: "Модуль flant-pricing: настройки"
 
 ```yaml
 flantPricing: |
-  ***REMOVED***:
+  kubeall:
     team: myteam
     host: myproject.kube-master-0
     kubeconfig: /etc/kubernetes/admin.conf

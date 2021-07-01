@@ -11,8 +11,8 @@ EOF
 }
 
 function __main__() {
-  mkdir -p /tmp/***REMOVED***
-  values::get global.discovery.clusterType > /tmp/***REMOVED***/cluster_type
+  mkdir -p /tmp/kubeall
+  values::get global.discovery.clusterType > /tmp/kubeall/cluster_type
 }
 
 hook::run $@
