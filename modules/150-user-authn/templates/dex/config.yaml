@@ -49,7 +49,7 @@
           {{- end }}
         {{- end }}
         {{- if $provider.github.teamNameField }}
-        teamNameField: {{ $provider.github.teamNameField }}
+        teamNameField: {{ $provider.github.teamNameField | lower }}
         {{- end }}
         useLoginAsID: {{ $provider.github.useLoginAsID | default false }}
         loadAllGroups: {{ $provider.github.loadAllGroups | default false }}

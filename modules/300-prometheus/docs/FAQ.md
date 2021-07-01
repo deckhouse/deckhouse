@@ -107,7 +107,7 @@ metadata:
   name: another-prometheus
 spec:
   type: prometheus
-  access: proxy
+  access: Proxy
   url: https://another-prometheus.example.com/prometheus
   basicAuth: true
   basicAuthUser: foo

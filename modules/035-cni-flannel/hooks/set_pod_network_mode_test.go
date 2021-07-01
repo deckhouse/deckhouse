@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Modules :: cniFlannel :: hooks :: set_pod_network_mode ::", func() {
-	f := HookExecutionConfigInit(`{"cniFlannel":{"podNetworkMode":"host-gw", "internal":{}}}`, ``)
+	f := HookExecutionConfigInit(`{"cniFlannel":{"podNetworkMode":"HostGW", "internal":{}}}`, ``)
 
 	state := `
 ---
@@ -84,7 +84,7 @@ data:
 		It("Must be executed successfully", func() {
 			By("podNetworkMode must be vxlan, because secret has higher priority, than config", func() {
 				f.BindingContexts.Set(f.KubeStateSet(state))
-				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 				f.RunHook()
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("vxlan"))
 			})
@@ -112,7 +112,7 @@ data:
 	Context("BeforeHelm on empty cluster", func() {
 		It("Should use config values", func() {
 			By("podNetworkMode must be host-gw", func() {
-				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()
 				Expect(f.ValuesGet("cniFlannel.internal.podNetworkMode").String()).To(Equal("host-gw"))
@@ -125,7 +125,7 @@ data:
 	Context("BeforeHelm on cluster with Secret", func() {
 		It("Should use value from Secret", func() {
 			By("podNetworkMode must be vxlan", func() {
-				f.ConfigValuesSet("cniFlannel.podNetworkMode", "host-gw")
+				f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 				f.KubeStateSet(state)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()

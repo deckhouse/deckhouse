@@ -54,5 +54,6 @@ spec:
     namespace: d8-cloud-instance-manager
     name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
 {{- if hasKey .nodeGroup.instanceClass "networkType" }}
-  networkType: {{ .nodeGroup.instanceClass.networkType }}
+  {{- $networkDict := dict "Standard" "STANDARD" "SoftwareAccelerated" "SOFTWARE_ACCELERATED" }}
+  networkType: {{ get $networkDict .nodeGroup.instanceClass.networkType }}
 {{- end }}

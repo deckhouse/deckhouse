@@ -44,7 +44,7 @@ metadata:
 spec:
   url: /abc
   type: test
-  access: proxy
+  access: Proxy
 `))
 				f.RunHook()
 			})
@@ -88,7 +88,7 @@ metadata:
 spec:
   url: /def
   type: test
-  access: direct
+  access: Direct
 `))
 					f.RunHook()
 				})
@@ -123,7 +123,7 @@ metadata:
 spec:
   url: /abc
   type: test
-  access: proxy
+  access: Proxy
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -132,7 +132,7 @@ metadata:
 spec:
   url: /def
   type: test-next
-  access: direct
+  access: Direct
 `))
 			f.RunHook()
 		})

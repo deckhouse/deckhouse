@@ -12,7 +12,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema: &schema
+      schema:
         openAPIV3Schema:
           type: object
           description: |
@@ -123,7 +123,114 @@ spec:
     - name: v1
       served: true
       storage: false
-      schema: *schema
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - cores
+                - memory
+              properties:
+                cores:
+                  description: |
+                    Amount of CPU cores to provision on a Yandex Compute Instance.
+                  example: 4
+                  type: integer
+                coreFraction:
+                  description: Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  example: 20
+                  x-doc-default: 100
+                  enum: [ 0,5,20,50,100 ]
+                  type: integer
+                gpus:
+                  description: |
+                    Number of GPUs on a Yandex Compute Instance.
+                  example: 4
+                  x-doc-default: 0
+                  type: integer
+                memory:
+                  description: Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  example: 8192
+                  type: integer
+                imageID:
+                  description: |
+                    Image ID to use while provisioning Yandex Compute Instances.
+
+                    `masterInstanceClass` image from `providerClusterConfiguration` will be used by default.
+                  example: fd8nb7ecsbvj76dfaa8b
+                  type: string
+                platformID:
+                  description: |
+                    Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
+                  x-doc-default: standard-v2
+                  type: string
+                preemptible:
+                  description: Should a provisioned Yandex Compute Instance be preemtible.
+                  type: boolean
+                  x-doc-default: false
+                diskType:
+                  description: |
+                    Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+                  example: "network-hdd"
+                  x-doc-default: "network-ssd"
+                  type: string
+                  enum:
+                    - "network-ssd"
+                    - "network-hdd"
+                    - "network-ssd-nonreplicated"
+                diskSizeGB:
+                  description: Yandex Compute Instance disk size in gigabytes.
+                  example: 20
+                  x-doc-default: 50
+                  type: integer
+                assignPublicIPAddress:
+                  description: Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  example: false
+                  x-doc-default: false
+                  type: boolean
+                mainSubnet:
+                  description: |
+                    Subnet ID that VirtualMachines' primary NIC will connect to.
+                  x-doc-default: subnet from `zoneToSubnetIdMap` Deckhouse config.
+                  example: e9bnc7g9mu9mper9clk4
+                  type: string
+                additionalSubnets:
+                  description: Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  example:
+                    - b0csh41c1or82vuch89v
+                    - e2lgddi5svochh5fbq96
+                  type: array
+                  items:
+                    type: string
+                additionalLabels:
+                  type: object
+                  description: |
+                    Additional labels.
+
+                    Example:
+                    ```yaml
+                    project: cms-production
+                    severity: critical
+                    ```
+                  x-kubernetes-preserve-unknown-fields: true
+                  additionalProperties:
+                    type: string
+                networkType:
+                  type: string
+                  enum:
+                    - Standard
+                    - SoftwareAccelerated
+                  default: Standard
+                  description: |
+                    Network type: Standard or SoftwareAccelerated
   scope: Cluster
   names:
     plural: yandexinstanceclasses

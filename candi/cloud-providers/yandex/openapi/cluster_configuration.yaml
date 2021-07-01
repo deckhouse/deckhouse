@@ -63,8 +63,8 @@ apiVersions:
               networkType:
                 type: string
                 enum:
-                  - STANDARD
-                  - SOFTWARE_ACCELERATED
+                  - Standard
+                  - SoftwareAccelerated
       nodeGroups:
         type: array
         items:
@@ -137,8 +137,8 @@ apiVersions:
                 networkType:
                   type: string
                   enum:
-                    - STANDARD
-                    - SOFTWARE_ACCELERATED
+                    - Standard
+                    - SoftwareAccelerated
       existingNetworkID:
         type: string
       nodeNetworkCIDR:
