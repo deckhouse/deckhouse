@@ -26,7 +26,7 @@
       -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &after_script
   - |
-    if [[ ("$CI_COMMIT_REF_NAME" == "master") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
+    if [[ ("$CI_COMMIT_REF_NAME" == "main") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
       curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
         -H 'Content-Type: application/json' \
         -d "{
@@ -181,7 +181,7 @@
       -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &vsphere_after_script
   - |
-    if [[ ("$CI_COMMIT_REF_NAME" == "master") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
+    if [[ ("$CI_COMMIT_REF_NAME" == "main") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then
       curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
         -H 'Content-Type: application/json' \
         -d "{

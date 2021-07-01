@@ -39,7 +39,7 @@ Build Modules Images CE:
     WERF_ENV: CE
   only:
   - tags
-  - master
+  - main
   - /^release-.*$/
 
 Build Modules Images EE:
@@ -50,7 +50,7 @@ Build Modules Images EE:
     WERF_ENV: EE
   only:
   - tags
-  - master
+  - main
   - /^release-.*$/
 
 Build Modules Images FE:
@@ -72,7 +72,7 @@ Build CE:
     WERF_ENV: CE
   only:
   - tags
-   - master
+   - main
   - /^release-.*$/
 
 Build EE:
@@ -83,7 +83,7 @@ Build EE:
     WERF_ENV: EE
   only:
   - tags
-  - master
+  - main
   - /^release-.*$/
 
 Build FE:
@@ -286,7 +286,7 @@ alpha:
     name: alpha
   only:
     - tags
-    - master
+    - main
     - /^release-.*$/
 
 beta:
