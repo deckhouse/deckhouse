@@ -234,6 +234,7 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 		l.ErrorsList.Add(objectPriorityClass(object))
 	}
 	l.ErrorsList.Add(objectDNSPolicy(object))
+	l.ErrorsList.Add(objectResolvConfVolume(object))
 
 	l.ErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(l.Module, object))
 	l.ErrorsList.Add(roles.ObjectRBACPlacement(l.Module, object))
@@ -444,6 +445,7 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 func objectDNSPolicy(object storage.StoreObject) errors.LintRuleError {
 	kind := object.Unstructured.GetKind()
 	name := object.Unstructured.GetName()
+	namespace := object.Unstructured.GetNamespace()
 	converter := runtime.DefaultUnstructuredConverter
 
 	var dnsPolicy string
@@ -484,34 +486,148 @@ func objectDNSPolicy(object storage.StoreObject) errors.LintRuleError {
 		return errors.EmptyRuleError
 	}
 
+	if shouldSkipDNSPolicyResource(name, kind, namespace, hostNetwork, dnsPolicy) {
+		return errors.EmptyRuleError
+	}
+
+	if !hostNetwork {
+		return errors.EmptyRuleError
+	}
+
+	if dnsPolicy == "ClusterFirstWithHostNet" {
+		return errors.EmptyRuleError
+	}
+
+	return errors.NewLintRuleError(
+		"MANIFEST007",
+		object.Identity(),
+		dnsPolicy,
+		"dnsPolicy must be `ClusterFirstWithHostNet` when hostNetwork is `true`",
+	)
+
+}
+
+func shouldSkipDNSPolicyResource(name string, kind string, namespace string, hostNetwork bool, dnsPolicy string) bool {
 	switch name {
-	case "cloud-controller-manager", "machine-controller-manager", "bashible-apiserver":
-		if hostNetwork && dnsPolicy != "Default" {
-			return errors.NewLintRuleError(
-				"MANIFEST007",
-				object.Identity(),
-				dnsPolicy,
-				"dnsPolicy must be `Default` with hostNetwork = `true`",
-			)
-		}
+	// Cloud controller manager should work if cluster dns isn't responding or if cni isn't working
+	case "cloud-controller-manager":
+		return kind == "Deployment" && strings.HasPrefix(namespace, "d8-cloud-provider-") && hostNetwork && dnsPolicy == "Default"
+
+	// Bashible-apiserver should work if cluster dns isn't responding or if cni isn't working
+	case "bashible-apiserver":
+		return kind == "Deployment" && namespace == "d8-cloud-instance-manager" && hostNetwork && dnsPolicy == "Default"
+
+	// Deckhouse main pod use Default policy when cluster isn't bootstrapped
 	case "deckhouse":
-		if hostNetwork && (dnsPolicy != "Default" && dnsPolicy != "ClusterFirstWithHostNet") {
-			return errors.NewLintRuleError(
-				"MANIFEST007",
-				object.Identity(),
-				dnsPolicy,
-				"dnsPolicy must be `Default` or `ClusterFirstWithHostNet` with hostNetwork = `true`",
-			)
-		}
+		return kind == "Deployment" && namespace == "d8-system" && hostNetwork && dnsPolicy == "Default"
+
 	default:
-		if hostNetwork && dnsPolicy != "ClusterFirstWithHostNet" {
-			return errors.NewLintRuleError(
-				"MANIFEST007",
-				object.Identity(),
-				dnsPolicy,
-				"dnsPolicy must be `ClusterFirstWithHostNet` with hostNetwork = `true`",
-			)
+		return false
+	}
+}
+
+func objectResolvConfVolume(object storage.StoreObject) errors.LintRuleError {
+	kind := object.Unstructured.GetKind()
+	name := object.Unstructured.GetName()
+	namespace := object.Unstructured.GetNamespace()
+	converter := runtime.DefaultUnstructuredConverter
+
+	var volumes []v1.Volume
+	var objectHaveResolvConfVolume bool
+
+	switch kind {
+	case "Deployment":
+		deployment := new(appsv1.Deployment)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), deployment)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		volumes = deployment.Spec.Template.Spec.Volumes
+	case "DaemonSet":
+		daemonset := new(appsv1.DaemonSet)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), daemonset)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		volumes = daemonset.Spec.Template.Spec.Volumes
+	case "StatefulSet":
+		statefulset := new(appsv1.StatefulSet)
+
+		err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), statefulset)
+		if err != nil {
+			return newConvertError(object, err)
+		}
+
+		volumes = statefulset.Spec.Template.Spec.Volumes
+
+	default:
+		return errors.EmptyRuleError
+	}
+
+	for _, v := range volumes {
+		if v.Name == "resolv-conf-volume" && v.VolumeSource.HostPath.Path == "/var/lib/bashible/resolv/resolv.conf" {
+			objectHaveResolvConfVolume = true
+			break
 		}
 	}
+
+	if shouldSkipResolvConfMountResource(name, kind, namespace) {
+		if objectHaveResolvConfVolume {
+			return errors.EmptyRuleError
+		}
+
+		return errors.NewLintRuleError(
+			"MANIFEST007",
+			object.Identity(),
+			objectHaveResolvConfVolume,
+			"object should use `resolv-conf` volume",
+		)
+	}
+
+	if objectHaveResolvConfVolume {
+		return errors.NewLintRuleError(
+			"MANIFEST007",
+			object.Identity(),
+			objectHaveResolvConfVolume,
+			"object should not use `resolv-conf` volume",
+		)
+	}
+
 	return errors.EmptyRuleError
+}
+
+func shouldSkipResolvConfMountResource(name string, kind string, namespace string) bool {
+	// all of those pod should use resolv-conf-volume
+	switch name {
+	case "cloud-controller-manager":
+		return kind == "Deployment" && strings.HasPrefix(namespace, "d8-cloud-provider-")
+
+	case "node-termination-handler":
+		return kind == "DaemonSet" && strings.HasPrefix(namespace, "d8-cloud-provider-")
+
+	case "csi-controller":
+		return kind == "StatefulSet" && strings.HasPrefix(namespace, "d8-cloud-provider-")
+
+	case "csi-controller-legacy":
+		return kind == "StatefulSet" && namespace == "d8-cloud-provider-vsphere"
+
+	case "csi-node":
+		return kind == "DaemonSet" && strings.HasPrefix(namespace, "d8-cloud-provider-")
+
+	case "machine-controller-manager":
+		return kind == "Deployment" && namespace == "d8-cloud-instance-manager"
+
+	case "d8-kube-dns":
+		return kind == "Deployment" && namespace == "kube-system"
+
+	case "node-local-dns":
+		return kind == "DaemonSet" && namespace == "d8-system"
+
+	default:
+		return false
+	}
 }
