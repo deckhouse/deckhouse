@@ -20,8 +20,8 @@ import (
 
 var _ = Describe("Prometheus-madison hooks :: madison revoke ::", func() {
 	const (
-		initValuesString       = `{"global": {"project": "test-me"}, "prometheusMadisonIntegration": {"madisonAuthKey": "***REMOVED***"}}`
-		initConfigValuesString = `{"prometheusMadisonIntegration": {"madisonSelfSetupKey": true, "madisonAuthKey": "***REMOVED***"} }`
+		initValuesString       = `{"global": {"project": "test-me"}, "prometheusMadisonIntegration": {"madisonAuthKey": "removed"}}`
+		initConfigValuesString = `{"prometheusMadisonIntegration": {"madisonSelfSetupKey": true, "madisonAuthKey": "removed"} }`
 	)
 
 	Context("Project is archived", func() {

@@ -31,7 +31,7 @@ title: "Интеграция с Madison"
 --------------------------
 
 * У Madison есть [API самонастройки](https://fox.flant.com/tnt/madison/issues/73), которое позволяет, имея общий shared-ключ, зарегистрировать ключ для проекта.
-* Для deckhouse [заведен](https://madison.flant.com/self_setup_keys/***REMOVED***) такой общий ключ, который позволяет регистрировать Prometheus'ы, и он [захардкожен прямо в исходниках](https://github.com/deckhouse/deckhouse/tree/master/modules/340-prometheus-mdison-integration/initial_values).
+* Для deckhouse [заведен](https://madison.flant.com/self_setup_keys/removed) такой общий ключ, который позволяет регистрировать Prometheus'ы, и он [захардкожен прямо в исходниках](https://github.com/deckhouse/deckhouse/tree/master/modules/340-prometheus-mdison-integration/initial_values).
 * При каждом запуске deckhouse (точнее при каждой установке модуля):
     * если в `prometheus.madisonAuthKey` ничего нет — модуль ([хук initial_values](https://github.com/deckhouse/deckhouse/tree/master/modules/340-prometheus-mdison-integration/initial_values)) пытается получить новый ключ через API самонастройки Madison и записать его в `prometheus.madisonAuthKey` (этот ключ и используется в `madison-proxy` для аутентификации в Madison);
     * если в `prometheus.madisonAuthKey` уже есть ключ — модуль пытается обновить сведения для этого ключа (имя проекта и URL для grafana и prometheus).
