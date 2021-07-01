@@ -17,16 +17,16 @@
 source /deckhouse/shell_lib.sh
 
 function __config__() {
-  cat << EOF
+  cat <<EOF
     configVersion: v1
     afterHelm: 10
 EOF
 }
 
 function __main__() {
-  if values::has dashboard.internal.deployDexAuthenticator ; then
+  if values::has dashboard.internal.deployDexAuthenticator; then
     cat <<EOF | kubectl apply -f -
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
  name: dashboard
@@ -44,7 +44,7 @@ spec:
   applicationIngressClassName: "$(module::ingress_class)"
 EOF
   else
-    if kubectl -n d8-dashboard get dexauthenticator dashboard >/dev/null 2>/dev/null ; then
+    if kubectl -n d8-dashboard get dexauthenticator dashboard >/dev/null 2>/dev/null; then
       kubectl -n d8-dashboard delete dexauthenticator dashboard >/dev/null 2>/dev/null
     fi
   fi

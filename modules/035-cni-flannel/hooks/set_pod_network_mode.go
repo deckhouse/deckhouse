@@ -81,10 +81,17 @@ func setPodNetworkMode(input *go_hook.HookInput) error {
 		}
 	}
 
-	var podNetworkMode string = "host-gw"
+	var podNetworkMode = "host-gw"
 
 	if input.ConfigValues.Exists("cniFlannel.podNetworkMode") {
-		podNetworkMode = input.ConfigValues.Get("cniFlannel.podNetworkMode").String()
+		configPodNetworkMode := input.ConfigValues.Get("cniFlannel.podNetworkMode").String()
+		switch configPodNetworkMode {
+		case "HostGW":
+			podNetworkMode = "host-gw"
+
+		case "VXLAN":
+			podNetworkMode = "vxlan"
+		}
 	}
 
 	if flannelConfig.PodNetworkMode != "" {

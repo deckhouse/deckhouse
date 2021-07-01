@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -41,6 +42,11 @@ func filterGrafanaDSCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	spec["isDefault"] = false
 	spec["version"] = 1
 	spec["editable"] = false
+	access, ok := spec["access"].(string)
+	if ok {
+		// For grafana datasource we have to change access (Direct/Proxy) to direct/proxy
+		spec["access"] = strings.ToLower(access)
+	}
 
 	n := GrafanaAdditionalDatasource(spec)
 

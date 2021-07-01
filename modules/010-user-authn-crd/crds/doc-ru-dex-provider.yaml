@@ -17,7 +17,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-      schema: &schema
+      schema:
         openAPIV3Schema:
           type: object
           required: ['spec']
@@ -87,7 +87,7 @@ spec:
                               Если параметр не указан, токен пользователя будет содержать все команды из GitHub.
                             items:
                               type: string
-                gitlab:
+                gitlab: &gitlab
                   type: object
                   required: ['clientID', 'clientSecret']
                   description: |
@@ -119,7 +119,7 @@ spec:
                       type: boolean
                       description: |
                         Позволяет вместо использования внутреннего GitLab ID, использовать имя пользователя.
-                bitbucketCloud:
+                bitbucketCloud: &bitbucketCloud
                   type: object
                   required: ['clientID', 'clientSecret']
                   description: |
@@ -152,7 +152,7 @@ spec:
                         ```yaml
                         groups=["my_team", "my_team/administrators", "my_team/members"]
                         ```
-                crowd:
+                crowd: &crowd
                   type: object
                   required: ['clientID', 'clientSecret', 'baseURL']
                   description: |
@@ -194,7 +194,7 @@ spec:
                         Работает **только** при включенном `publishAPI`.
 
                         Полученные от Crowd данные авторизации и групп сохраняются в кэш на 10 секунд.
-                oidc:
+                oidc: &oidc
                   type: object
                   required: ['clientID', 'clientSecret', 'issuer']
                   description: |
@@ -256,7 +256,7 @@ spec:
                         Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
 
                         По умолчанию будет запрошено подтверждение при первой аутентификации. Допустимые значения могут изменяться в зависимости от Issuer.
-                ldap:
+                ldap: &ldap
                   type: object
                   required: ['host', 'userSearch']
                   description: |
@@ -430,5 +430,111 @@ spec:
     - name: v1
       served: true
       storage: false
-      schema: *schema
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            Описывает конфигурацию подключения стороннего провайдера. С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
+          properties:
+            spec:
+              type: object
+              required: ['displayName', 'type']
+              properties:
+                type:
+                  type: string
+                  description: |
+                    Тип внешнего провайдера.
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                displayName:
+                  type: string
+                  description: |
+                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации. Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
+                github:
+                  type: object
+                  required: ['clientID', 'clientSecret']
+                  description: |
+                    Параметры провайдера GitHub (можно указывать только если `type: Github`).
+                  properties:
+                    clientID:
+                      type: string
+                      description: |
+                        ID организации на GitHub.
+                    clientSecret:
+                      type: string
+                      description: |
+                        Secret организации на GitHub.
+                    teamNameField:
+                      type: string
+                      enum: ['Name', 'Slug', 'Both']
+                      default: 'Name'
+                      description: |
+                        Формат команд, которые будут получены из GitHub.
+
+                        Если в организации `acme` есть группа `Site Reliability Engineers`, то в случае:
+                        * `Name` будет получена группа с именем `['acme:Site Reliability Engineers']`;
+                        * `Slug` будет получена группа с именем `['acme:site-reliability-engineers']`;
+                        * `Both` будут получены группы с именами `['acme:Site Reliability Engineers', 'acme:site-reliability-engineers']`.
+                    useLoginAsID:
+                      type: boolean
+                      description: |
+                        Позволяет вместо использования внутреннего GitHub ID, использовать имя пользователя.
+                    orgs:
+                      type: array
+                      description: |
+                        Массив названий организаций в GitHub.
+                      items:
+                        type: object
+                        required: ['name']
+                        properties:
+                          name:
+                            type: string
+                            description: |
+                              Название организации.
+                          teams:
+                            type: array
+                            description: |
+                              Список команд, допустимых для приема из GitHub.
+                              Токен пользователя будет содержать объединенное множество команд из GitHub и команд из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
+
+                              Если параметр не указан, токен пользователя будет содержать все команды из GitHub.
+                            items:
+                              type: string
+                gitlab: *gitlab
+                bitbucketCloud: *bitbucketCloud
+                crowd: *crowd
+                oidc: *oidc
+                ldap: *ldap
+              oneOf:
+                - properties:
+                    inlet:
+                      enum: ['Github']
+                    github: {}
+                  required: ['github']
+                - properties:
+                    inlet:
+                      enum: ['Gitlab']
+                    gitlab: {}
+                  required: ['gitlab']
+                - properties:
+                    inlet:
+                      enum: ['BitbucketCloud']
+                    bitbucketCloud: {}
+                  required: ['bitbucketCloud']
+                - properties:
+                    inlet:
+                      enum: ['Crowd']
+                    crowd: {}
+                  required: ['crowd']
+                - properties:
+                    inlet:
+                      enum: ['OIDC']
+                    oidc: {}
+                  required: ['oidc']
+                - properties:
+                    inlet:
+                      enum: ['LDAP']
+                    ldap: {}
+                  required: ['ldap']
       additionalPrinterColumns: *additionalPrinterColumns
+

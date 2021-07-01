@@ -37,6 +37,14 @@ variable "clusterUUID" {
   type = string
 }
 
+variable network_types {
+  type = map
+  default = {
+    "Standard" = "standard"
+    "SoftwareAccelerated" = "software_accelerated"
+  }
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   ng = [for i in var.providerClusterConfiguration.nodeGroups: i if i.name == var.nodeGroupName][0]
@@ -53,6 +61,6 @@ locals {
   external_ip_addresses = lookup(local.instance_class, "externalIPAddresses", [])
   external_subnet_id_deprecated = lookup(local.instance_class, "externalSubnetID", null)
 
-  network_type = contains(keys(local.instance_class), "networkType") ? lower(local.instance_class.networkType) : null
+  network_type = contains(keys(local.instance_class), "networkType") ? var.network_types[local.instance_class.networkType] : null
   additional_labels = merge(lookup(var.providerClusterConfiguration, "labels", {}), lookup(local.instance_class, "additionalLabels", {}))
 }

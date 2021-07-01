@@ -1,7 +1,7 @@
 positive:
   configValues:
-    - podNetworkMode: host-gw
-    - podNetworkMode: vxlan
+    - podNetworkMode: HostGW
+    - podNetworkMode: VXLAN
   values:
     - internal:
         podNetworkMode: host-gw
@@ -9,7 +9,8 @@ positive:
         podNetworkMode: vxlan
 negative:
   configValues:
-  - podNetworkMode: foobar
+    - podNetworkMode: foobar
+    - podNetworkMode: host-gw
   values:
   - internal:
       podNetworkMode: foobar
