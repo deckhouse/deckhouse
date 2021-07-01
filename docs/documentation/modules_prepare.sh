@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#MODULES_SRC_DIR=/home/kar/fox/sys/antiopa/modules
+#MODULES_SRC_DIR=/home/kar/fox/sys/deckhouse-oss/modules
 #MODULES_DST_EN=/tmp/mod_en
 #MODULES_DST_RU=/tmp/mod_ru
 

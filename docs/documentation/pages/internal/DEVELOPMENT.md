@@ -22,7 +22,7 @@ Examples:
 - `v1.24.10-alpha`, `v1.24.32-alpha.4` - these versions are distributed to alpha "or below" update channels.
 
 ## How to test the Deckhouse version
-The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/antiopa/dev:<BRANCH>`.
+The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/deckhouse-oss/dev:<BRANCH>`.
 All you need to do to test the new dev version is to change the image in the Deckhouse deployment.
 
 ## Auto-updates
@@ -234,7 +234,7 @@ werf compose up --follow --docker-compose-command-options='-d'
 {% raw %}
 
 Bundle is the Deckhouse delivery edition. Possible values:
-* `Default` — includes the recommended set of modules required for proper cluster operation: monitoring, authorization control, networking, and other needs. The current list can be found [here](https://fox.flant.com/sys/antiopa/-/tree/master/modules/values-default.yaml).
+* `Default` — includes the recommended set of modules required for proper cluster operation: monitoring, authorization control, networking, and other needs. The current list can be found [here](https://fox.flant.com/sys/deckhouse-oss/-/tree/master/modules/values-default.yaml).
 * `Minimal` — the minimum viable set of modules (only the `20-deckhouse` module is included).
 * `Managed` — a set of modules adapted for managed solutions of cloud providers. A list of supported providers:
    * Google Kubernetes Engine (GKE)
@@ -591,7 +591,7 @@ Such an approach allows you to avoid the re-provisioning of PVs (and data loss) 
 
 Note that you cannot mutate the `volumeClaimTemplate`.  Thus, you must delete a statefulset (e.g., using a webhook) when changing the storageClass.
 
-You can find a relevant example in the [prometheus](https://fox.flant.com/sys/antiopa/-/tree/master/modules/300-prometheus/hooks/prometheus_storage_class_change) and [openvpn](https://fox.flant.com/sys/antiopa/-/tree/master/modules/500-openvpn/hooks/storage_class_change) modules' hooks.
+You can find a relevant example in the [prometheus](https://fox.flant.com/sys/deckhouse-oss/-/tree/master/modules/300-prometheus/hooks/prometheus_storage_class_change) and [openvpn](https://fox.flant.com/sys/deckhouse-oss/-/tree/master/modules/500-openvpn/hooks/storage_class_change) modules' hooks.
 
 ### CRDs
 

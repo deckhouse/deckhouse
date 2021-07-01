@@ -15,7 +15,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   devBranch: '${DEV_BRANCH}'
-  imagesRepo: dev-registry.deckhouse.io/sys/antiopa
+  imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   configOverrides:
     prometheusMadisonIntegrationEnabled: false

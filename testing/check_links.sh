@@ -24,7 +24,7 @@ echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGIS
 echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
 type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
 type werf && source $(werf ci-env gitlab --verbose --as-file)
-export WERF_REPO=${DEV_REGISTRY_PATH:-"dev-registry.deckhouse.io/sys/antiopa"}
+export WERF_REPO=${DEV_REGISTRY_PATH:-"dev-registry.deckhouse.io/sys/deckhouse-oss"}
 
 
 if [ -z "$_TMPDIR"  ] ; then
