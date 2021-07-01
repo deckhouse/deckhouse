@@ -229,6 +229,12 @@ Hooks Configuration Tests:
     - werf-distributed
   needs: *needs
 
+OpenAPI Validation:
+  extends: .OpenAPI validation template
+  tags:
+    - werf-distributed
+  needs: *needs
+
 No Cyrillic Validation:
   extends: .No Cyrillic Validation template
   tags:
@@ -257,6 +263,7 @@ Copyright Validation:
   needs:
     - "Matrix Tests"
     - "Hooks Configuration Tests"
+    - "OpenAPI Validation"
     - "Tests"
     - "Build CE"
     - "Build EE"
