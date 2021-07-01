@@ -64,16 +64,22 @@ spec:
             node.deckhouse.io/type: CloudEphemeral
   {{- if hasKey $ng "nodeTemplate" }}
     {{- if hasKey $ng.nodeTemplate "labels" }}
+      {{- if $ng.nodeTemplate.labels }}
 {{ $ng.nodeTemplate.labels | toYaml | indent 12 }}
+      {{- end }}
     {{- end }}
     {{- if hasKey $ng.nodeTemplate "annotations" }}
+      {{- if $ng.nodeTemplate.annotations }}
           annotations:
 {{ $ng.nodeTemplate.annotations | toYaml | indent 12 }}
+      {{- end }}
     {{- end }}
     {{- if hasKey $ng.nodeTemplate "taints" }}
+      {{- if $ng.nodeTemplate.taints }}
         spec:
           taints:
 {{ $ng.nodeTemplate.taints | toYaml | indent 10 }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
