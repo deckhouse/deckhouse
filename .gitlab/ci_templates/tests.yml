@@ -164,7 +164,6 @@
   needs:
     - "Doc web build"
     - "Main web build"
-    - "Build Modules Images"
   interruptible: true
 
 .Dhctl Tests template:
