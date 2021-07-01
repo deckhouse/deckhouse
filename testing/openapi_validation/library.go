@@ -66,6 +66,14 @@ var (
 			// vSphere
 			"apiVersions[0].openAPISpec.properties.cloud.properties.provider",
 		},
+		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
+			// v1alpha1 migrated to v1
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField",
+		},
+		"modules/010-prometheus-crd/crds/grafanaadditionaldatasources.yaml": {
+			// v1alpha1 migrated to v1
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
+		},
 		"modules/035-cni-flannel/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.podNetworkMode",
@@ -73,14 +81,6 @@ var (
 		"modules/042-kube-dns/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.specificNodeType",
-		},
-		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
-			// v1alpha1 migrated to v1
-			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField",
-		},
-		"modules/300-prometheus/crds/grafanaadditionaldatasources.yaml": {
-			// v1alpha1 migrated to v1
-			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
 		"modules/402-ingress-nginx/crds/ingress-nginx.yaml": {
 			// GeoIP base constants: GeoIP2-ISP, GeoIP2-ASN, ...
