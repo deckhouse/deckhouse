@@ -15,7 +15,7 @@ docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
 -  Для редакции EE:
 
    ```shell
-docker login -u demotoken -p <ACCESS_TOKEN> registry.deckhouse.io
+docker login -u license-token -p <LICENSE_TOKEN> registry.deckhouse.io
 docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
 {%- if include.mode == "existing" %} -v $(pwd)/kubeconfig:/kubeconfig {% endif %}
 {%- if include.mode == "cloud" %} -v ./dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ee/install:beta bash
