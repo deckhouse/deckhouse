@@ -18,7 +18,7 @@ deckhouse:
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
   configOverrides:
-    prometheusMadisonIntegrationEnabled: false
+    flantIntegrationEnabled: false
     global:
       clusterName: smoke
       project: dev-rnd

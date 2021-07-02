@@ -18,7 +18,7 @@ deckhouse:
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   configOverrides:
-    prometheusMadisonIntegrationEnabled: false
+    flantIntegrationEnabled: false
     global:
       clusterName: smoke
       project: dev-rnd

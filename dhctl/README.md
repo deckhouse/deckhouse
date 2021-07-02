@@ -65,7 +65,7 @@ deckhouse:
       clusterName: main
       project: pivot
     nginxIngressEnabled: false
-    prometheusMadisonIntegrationEnabled: false
+    flantIntegrationEnabled: false
 ```
 
 

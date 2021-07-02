@@ -1,5 +1,5 @@
 # FE Bundle "Managed"
 monitoringApplicationsEnabled: true
-prometheusMadisonIntegrationEnabled: true
 extendedMonitoringEnabled: true
 secretCopierEnabled: true
+flantIntegrationEnabled: true

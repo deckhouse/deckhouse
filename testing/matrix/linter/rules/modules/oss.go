@@ -165,7 +165,7 @@ var skipOssChecks = map[string]struct{}{
 	"340-monitoring-custom":                   {},
 	"340-monitoring-kubernetes-control-plane": {},
 	"340-monitoring-ping":                     {},
-	"340-prometheus-madison-integration":      {},
+	"340-flant-integration":                   {},
 	"350-node-local-dns":                      {},
 	"400-nginx-ingress":                       {}, // nginx in 402-ingress-nginx
 	"450-network-gateway":                     {},
@@ -174,7 +174,6 @@ var skipOssChecks = map[string]struct{}{
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
 	"810-deckhouse-web":                       {},
-	"998-flant-pricing":                       {},
 	"999-helm":                                {}, // helm in 020-deckhouse
 }
 

@@ -36,6 +36,7 @@ import (
 const (
 	modulesFileName            = "modules-%s.yaml"
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
+	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
 	cloudProvidersFileName     = "cloud-providers-%s.yaml"
 )
 
@@ -52,12 +53,19 @@ var defaultModulesExcludes = []string{
 	".build.yaml",
 }
 
+var stageDependencies = map[string][]string{
+	"setup": []string{
+		"**/*.go",
+	},
+}
+
 type writeSettings struct {
-	Edition      string
-	Prefix       string
-	Dir          string
-	SaveTo       string
-	ExcludePaths []string
+	Edition           string
+	Prefix            string
+	Dir               string
+	SaveTo            string
+	ExcludePaths      []string
+	StageDependencies map[string][]string
 }
 
 func writeSections(settings writeSettings) {
@@ -82,9 +90,10 @@ func writeSections(settings writeSettings) {
 
 	addNewFileEntry := func(file string) {
 		addEntries = append(addEntries, addEntry{
-			Add:          strings.TrimPrefix(file, workDir),
-			To:           filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
-			ExcludePaths: settings.ExcludePaths,
+			Add:               strings.TrimPrefix(file, workDir),
+			To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+			ExcludePaths:      settings.ExcludePaths,
+			StageDependencies: settings.StageDependencies,
 		})
 	}
 
@@ -160,9 +169,10 @@ func deleteRevisionFiles(edition string) {
 }
 
 type addEntry struct {
-	Add          string   `yaml:"add"`
-	To           string   `yaml:"to"`
-	ExcludePaths []string `yaml:"excludePaths,omitempty"`
+	Add               string              `yaml:"add"`
+	To                string              `yaml:"to"`
+	ExcludePaths      []string            `yaml:"excludePaths,omitempty"`
+	StageDependencies map[string][]string `yaml:"stageDependencies,omitempty"`
 }
 
 func cwd() string {
@@ -216,6 +226,13 @@ func executeEdition(edition string) {
 			ExcludePaths: defaultModulesExcludes,
 		})
 		writeSections(writeSettings{
+			Edition:           edition,
+			Prefix:            "ee/fe",
+			Dir:               "modules",
+			SaveTo:            modulesWithDependencies,
+			StageDependencies: stageDependencies,
+		})
+		writeSections(writeSettings{
 			Edition: edition,
 			SaveTo:  cloudProvidersFileName,
 		})
@@ -235,6 +252,13 @@ func executeEdition(edition string) {
 			ExcludePaths: defaultModulesExcludes,
 		})
 		writeSections(writeSettings{
+			Edition:           edition,
+			Prefix:            "ee",
+			Dir:               "modules",
+			SaveTo:            modulesWithDependencies,
+			StageDependencies: stageDependencies,
+		})
+		writeSections(writeSettings{
 			Edition: edition,
 			Prefix:  "ee",
 			Dir:     "candi/cloud-providers",
@@ -248,6 +272,10 @@ func executeEdition(edition string) {
 		writeSections(writeSettings{
 			Edition: edition,
 			SaveTo:  modulesWithExcludeFileName,
+		})
+		writeSections(writeSettings{
+			Edition: edition,
+			SaveTo:  modulesWithDependencies,
 		})
 		writeSections(writeSettings{
 			Edition: edition,
