@@ -33,3 +33,14 @@ spec:
   diskSizeGb: 30
   diskType: gp2
   instanceType: m5.xlarge
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  tolerations:
+  - key: dedicated.deckhouse.io
+    value: system

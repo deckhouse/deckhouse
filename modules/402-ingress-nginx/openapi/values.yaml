@@ -75,6 +75,8 @@ properties:
                   type: boolean
                 waitLoadBalancerOnTerminating:
                   type: integer
+                chaosMonkey:
+                  type: boolean
                 nodeSelector:
                     type: object
                     additionalProperties:
@@ -240,3 +242,7 @@ properties:
                         type: string
                 underscoresInHeaders:
                   type: boolean
+                minReplicas:
+                  type: integer
+                maxReplicas:
+                  type: integer

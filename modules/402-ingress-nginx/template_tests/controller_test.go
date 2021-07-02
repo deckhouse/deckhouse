@@ -35,7 +35,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.16.15")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.19.11")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
@@ -72,13 +72,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     hstsOptions:
       maxAge: "123456789123456789"
     resourcesRequests:
-      mode: VPA
-      vpa:
-        cpu:
-          max: 100m
-        memory:
-          max: 200Mi
-        mode: Auto
+      mode: Static
+      static:
+        cpu: 100m
+        memory: 200Mi
     loadBalancer:
       annotations:
         my: annotation
@@ -86,6 +83,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       sourceRanges:
       - 1.1.1.1
       - 2.2.2.2
+    maxReplicas: 6
+    minReplicas: 2
 - name: test-lbwpp
   spec:
     config:
@@ -102,6 +101,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       sourceRanges:
       - 1.1.1.1
       - 2.2.2.2
+    maxReplicas: 6
+    minReplicas: 2
 - name: test-next
   spec:
     ingressClass: test
@@ -120,13 +121,56 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     ingressClass: solid
     controllerVersion: "0.33"
     inlet: "HostWithFailover"
+    resourcesRequests:
+      mode: VPA
+      static: {}
+      vpa:
+        cpu:
+          max: 100m
+        memory:
+          max: 200Mi
+        mode: Auto
 `)
 			hec.HelmRender()
 		})
 		It("Should add desired objects", func() {
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
-			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test").Exists()).To(BeTrue())
+			testD := hec.KubernetesResource("Deployment", "d8-ingress-nginx", "controller-test")
+			Expect(testD.Exists()).To(BeTrue())
+			Expect(testD.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`
+cpu: 100m
+ephemeral-storage: 150Mi
+memory: 200Mi`))
+			Expect(testD.Field("spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution").String()).To(MatchYAML(`
+- weight: 100
+  podAffinityTerm:
+    labelSelector:
+      matchExpressions:
+      - key: app
+        operator: In
+        values:
+        - controller
+      - key: name
+        operator: In
+        values:
+        - test
+    topologyKey: kubernetes.io/hostname`))
+			Expect(testD.Field("spec.template.spec.topologySpreadConstraints").String()).To(MatchYAML(`
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
+  labelSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - controller
+    - key: name
+      operator: In
+      values:
+      - test
+`))
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
@@ -145,7 +189,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
-			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-lbwpp-auth-tls").Exists()).To(BeTrue())
@@ -181,17 +225,11 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-next-load-balancer").Exists()).ToNot(BeTrue())
 
-			vpaTest := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-test")
-			Expect(vpaTest.Exists()).To(BeTrue())
-			Expect(vpaTest.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
-			Expect(vpaTest.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
-- containerName: controller
-  minAllowed:
-    cpu: 10m
-    memory: 50Mi
-  maxAllowed:
-    cpu: 100m
-    memory: 200Mi`))
+			hpaTest := hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "controller-test")
+			Expect(hpaTest.Exists()).To(BeTrue())
+			Expect(hpaTest.Field("spec.maxReplicas").Int()).To(Equal(int64(6)))
+			Expect(hpaTest.Field("spec.minReplicas").Int()).To(Equal(int64(2)))
+
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next").
 				Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`
 cpu: 50m
@@ -204,6 +242,18 @@ memory: 200Mi`))
 			Expect(mainDS.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"))
 			Expect(mainDS.Field("spec.template.spec.hostNetwork").String()).To(Equal("true"))
 			Expect(mainDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+
+			vpaSolid := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-solid")
+			Expect(vpaSolid.Exists()).To(BeTrue())
+			Expect(vpaSolid.Field("spec.updatePolicy.updateMode").String()).To(Equal("Auto"))
+			Expect(vpaSolid.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
+- containerName: controller
+  minAllowed:
+    cpu: 10m
+    memory: 50Mi
+  maxAllowed:
+    cpu: 100m
+    memory: 200Mi`))
 
 			failoverDS := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-solid-failover")
 			Expect(failoverDS.Exists()).To(BeTrue())

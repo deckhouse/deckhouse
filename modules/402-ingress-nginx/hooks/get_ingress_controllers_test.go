@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": 0.25, "internal": {"webhookCertificates":{}}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
+	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {

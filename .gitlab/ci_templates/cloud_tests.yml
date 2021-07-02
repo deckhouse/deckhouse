@@ -35,6 +35,7 @@
           \"trigger\": \"CloudLayoutTestFailed\",
           \"provider\": \"$PROVIDER\",
           \"layout\": \"$LAYOUT\",
+          \"cri\": \"$CRI\",
           \"kubernetes_version\": \"$KUBERNETES_VERSION\"
         },
         \"annotations\": {
@@ -42,7 +43,9 @@
           \"description\": \"Check GitLab Job log for more information\",
           \"plk_protocol_version\": \"1\",
           \"plk_link_url/job\": \"$CI_JOB_URL\",
-          \"plk_link_title_en/job\": \"GitLab Job\"
+          \"plk_link_title_en/job\": \"GitLab Job\",
+          \"plk_create_group_if_not_exists/cloudlayouttestfailed\": \"CloudLayoutTestFailedGroup,provider=~provider\",
+          \"plk_grouped_by/cloudlayouttestfailed\": \"CloudLayoutTestFailedGroup,provider=~provider\"
         }
       }"
     fi
@@ -191,6 +194,7 @@
           \"trigger\": \"CloudLayoutTestFailed\",
           \"provider\": \"$PROVIDER\",
           \"layout\": \"$LAYOUT\",
+          \"cri\": \"$CRI\",
           \"kubernetes_version\": \"$KUBERNETES_VERSION\"
         },
         \"annotations\": {
@@ -198,7 +202,9 @@
           \"description\": \"Check GitLab Job log for more information\",
           \"plk_protocol_version\": \"1\",
           \"plk_link_url/job\": \"$CI_JOB_URL\",
-          \"plk_link_title_en/job\": \"GitLab Job\"
+          \"plk_link_title_en/job\": \"GitLab Job\",
+          \"plk_create_group_if_not_exists/cloudlayouttestfailed\": \"CloudLayoutTestFailedGroup,provider=~provider\",
+          \"plk_grouped_by/cloudlayouttestfailed\": \"CloudLayoutTestFailedGroup,provider=~provider\"
         }
       }"
     fi
