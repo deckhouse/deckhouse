@@ -68,6 +68,11 @@ spec:
                   default: 60
                   description: |
                     Количество секунд до того, как /healthz начнет возвращать код 500, когда Pod перейдет в статус Terminating.
+                chaosMonkey:
+                  type: boolean
+                  default: false
+                  description: |
+                    Инструмент, позволяющий систематически вызывать случайные прерывания работы Pod'ов контроллера. Предназначен для проверки ingress контроллера на реальную работу отказоустойчивости.
                 nodeSelector:
                   type: object
                   additionalProperties:

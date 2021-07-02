@@ -178,6 +178,10 @@ if [[ -z "$smoke_mini_addr" ]]; then
   exit 1
 fi
 
+if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet'); then
+  ingress="ok"
+fi
+
 for ((i=0; i<10; i++)); do
   for path in api disk dns prometheus; do
     result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")"
@@ -190,8 +194,32 @@ Disk check: $([ "$disk" == "ok" ] && echo "success" || echo "failure")
 DNS check: $([ "$dns" == "ok" ] && echo "success" || echo "failure")
 Prometheus check: $([ "$prometheus" == "ok" ] && echo "success" || echo "failure")
 EOF
-    if [[ "$api" == "ok" && "$disk" == "ok" && "$dns" == "ok" && "$prometheus" == "ok" ]]; then
-      exit 0
+
+  if [[ -n "$ingress_inlet" ]]; then
+    if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
+      ingress_lb="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson | jq -re '.status.loadBalancer.ingress[0].hostname')"
+      if [[ -n "$ingress_lb" ]]; then
+        ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb")"
+        if [[ "$ingress_lb_code" == "404" ]]; then
+          ingress="ok"
+        else
+          >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404."
+        fi
+      else
+        >&2 echo "Can't get svc/nginx-load-balancer LB hostname."
+      fi
+    else
+      >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
+      exit 1
+    fi
+
+    cat <<EOF
+Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo "failure")
+EOF
+  fi
+
+  if [[ "$api" == "ok" && "$disk" == "ok" && "$dns" == "ok" && "$prometheus" == "ok" && "$ingress" == "ok" ]]; then
+    exit 0
   fi
 
   sleep 30

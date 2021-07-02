@@ -4,11 +4,43 @@
 {{- $name := index . 2 }}
 {{- $failover := index . 3 }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
+{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol")) }}
 
 {{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+
+{{- if $loadBalancer }}
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+spec:
+  maxReplicas: {{ $crd.spec.maxReplicas }}
+  minReplicas: {{ $crd.spec.minReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: controller-{{ $name }}
+  targetCPUUtilizationPercentage: 50
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+{{- else }}
 
   {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -56,9 +88,15 @@ spec:
     matchLabels:
       app: controller
       name: {{ $name }}
+{{- end }}
+
 ---
 apiVersion: apps/v1
+{{- if $loadBalancer }}
+kind: Deployment
+{{- else }}
 kind: DaemonSet
+{{- end }}
 metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
@@ -75,12 +113,21 @@ metadata:
     ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
+{{- if $loadBalancer }}
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+{{- else }}
   updateStrategy:
   {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
     type: OnDelete
-  {{ else }}
+  {{- else }}
     type: RollingUpdate
-  {{ end }}
+  {{- end }}
+{{- end }}
   selector:
     matchLabels:
       app: controller
@@ -111,6 +158,40 @@ spec:
 {{ $crd.spec.tolerations | toYaml | indent 6 }}
   {{- else }}
 {{- include "helm_lib_tolerations" (tuple $context "frontend") | indent 6 }}
+  {{- end }}
+  {{- if $loadBalancer }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - controller
+                - key: name
+                  operator: In
+                  values:
+                  - {{ $name }}
+              topologyKey: kubernetes.io/hostname
+    {{- if semverCompare ">= 1.19" $context.Values.global.discovery.kubernetesVersion }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - controller
+          - key: name
+            operator: In
+            values:
+            - {{ $name }}
+    {{- end }}
   {{- end }}
 {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | indent 6 }}
       serviceAccountName: ingress-nginx

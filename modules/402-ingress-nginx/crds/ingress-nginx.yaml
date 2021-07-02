@@ -71,6 +71,11 @@ spec:
                   default: 60
                   description: |
                     The number of seconds before the /healthz location will start to return a 500 code when the pod enters the Terminating state.
+                chaosMonkey:
+                  type: boolean
+                  default: false
+                  description: |
+                    The instrument for unexpected and random termination of ingress controller Pods in a systemic manner. Chaos Monkey tests the resilience of ingress controller.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -438,6 +443,16 @@ spec:
 
                     [This tutorial](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
                   default: false
+                minReplicas:
+                  type: integer
+                  description: |
+                    LoadBalancer and LoadBalancerWithProxyProtocol controller's Horizontal Pod Autoscaler minimum replicas count.
+                  default: 2
+                maxReplicas:
+                  type: integer
+                  description: |
+                    LoadBalancer and LoadBalancerWithProxyProtocol controller's Horizontal Pod Autoscaler maximum replicas count.
+                  default: 6
               oneOf:
                 - properties:
                     inlet:
