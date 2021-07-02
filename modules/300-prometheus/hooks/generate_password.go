@@ -30,9 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func generatePassword(input *go_hook.HookInput) error {
 	if input.Values.Exists("prometheus.auth.externalAuthentication") {
-		if input.ConfigValues.Exists("prometheus.auth.password") {
-			input.ConfigValues.Remove("prometheus.auth.password")
-		}
+		input.ConfigValues.Remove("prometheus.auth.password")
 		if input.ConfigValues.Exists("prometheus.auth") && len(input.ConfigValues.Get("prometheus.auth").Map()) == 0 {
 			input.ConfigValues.Remove("prometheus.auth")
 		}
@@ -44,9 +42,13 @@ func generatePassword(input *go_hook.HookInput) error {
 		return nil
 	}
 
+	if !input.ConfigValues.Exists("prometheus.auth") {
+		input.ConfigValues.Set("prometheus.auth", "{}")
+	}
+
 	generatedPass := pwgen.AlphaNum(20)
 
-	input.Values.Set("prometheus.auth.password", generatedPass)
+	input.ConfigValues.Set("prometheus.auth.password", generatedPass)
 
 	return nil
 }
