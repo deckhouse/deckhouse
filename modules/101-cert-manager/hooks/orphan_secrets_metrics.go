@@ -95,7 +95,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      "certmanager.k8s.io/certificate-Name",
+						Key:      "certmanager.k8s.io/certificate-name",
 						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
