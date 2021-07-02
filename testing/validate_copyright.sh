@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -Eeo pipefail
 
 EE_LICENSE='(?s)Copyright 2021 Flant CJSC.*Licensed under the Deckhouse Platform Enterprise Edition \(EE\) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE'
 CE_LICENSE="(?s)\
@@ -36,19 +36,18 @@ function request_gitlab_api() {
 function check_flant_license() {
   filename=${1}
   if [[ $filename =~ ^/?ee/ ]]; then
-    grep -Pzo "$EE_LICENSE" $filename >&/dev/null
-    if [ $? -gt 0 ]; then
+    if ! grep -Pzq "$EE_LICENSE" $filename; then
       echo "ERROR: $filename doesn't contain EE license"
       return 1
     fi
   else
-    grep -Pzo "$CE_LICENSE" $filename >&/dev/null
-    if [ $? -gt 0 ]; then
+    if ! grep -Pzq "$CE_LICENSE" $filename; then
       echo "ERROR: $filename doesn't contain CE license"
       return 1
     fi
   fi
 }
+
 function check_file_copyright() {
   filename=${1}
 
@@ -92,14 +91,12 @@ for MERGE_REQUEST_ID in ${MERGE_REQUESTS_ARRRAY[*]}; do
   fi
 done
 
-DIFF_DATA=$(git diff origin/master... --name-status -w --ignore-blank-lines --diff-filter=A | awk '{print $2}')
+DIFF_DATA="$(git diff origin/main... --name-status -w --ignore-blank-lines --diff-filter=A | awk '{print $2}')"
 
 if [[ -z $DIFF_DATA ]]; then
   echo "Empty diff data"
   exit 0
 fi
-
-echo
 
 for item in ${DIFF_DATA}; do
 
