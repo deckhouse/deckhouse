@@ -90,8 +90,9 @@ $(document).ready(function() {
 /* Set share link */
 
 $( document ).ready(function() {
-    if ($.cookie("demotoken") ) {
-	$('.notice__share_message a').prop('href','https://early.deckhouse.io/demotoken/auth?demotoken=' + $.cookie("demotoken"));
+    if ($.cookie("demotoken") || $.cookie("license-token") ) {
+        let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
+        $('.notice__share_message a').prop('href','https://early.deckhouse.io/license-token/auth?token=' + token);
         $('.notice__share_message.disabled').removeClass("disabled");
     }
 });

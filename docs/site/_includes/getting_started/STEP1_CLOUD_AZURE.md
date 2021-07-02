@@ -136,7 +136,7 @@ kind: InitConfiguration
 deckhouse:
   # address of the registry where the installer image is located; in this case, the default value for Deckhouse EE is set
   imagesRepo: registry.deckhouse.io/deckhouse/ee
-  # a special string with your token to access Docker registry (generated automatically for your demo token)
+  # a special string with your token to access Docker registry (generated automatically for your license token)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel in use
   releaseChannel: Beta
