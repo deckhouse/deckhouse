@@ -24,23 +24,24 @@ import (
 )
 
 var _ = Describe("Modules :: prometheus :: hooks :: generate_password ", func() {
-
-	f := HookExecutionConfigInit(`{"prometheus":{"internal":{}, "auth": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"prometheus":{"internal":{}, "auth": {}}}`, `{"prometheus":{"auth": {}}}`)
 	Context("without external auth", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
 		It("should generate new password", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.auth.password").String()).ShouldNot(BeEmpty())
+			Expect(f.ConfigValuesGet("prometheus.auth.password").String()).ShouldNot(BeEmpty())
 		})
 	})
 
 	Context("with extisting password", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("prometheus.auth.password", "zxczxczxc")
 			f.RunHook()
 		})
@@ -53,7 +54,8 @@ var _ = Describe("Modules :: prometheus :: hooks :: generate_password ", func() 
 
 	Context("with external auth", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml("prometheus.auth.externalAuthentication", []byte(`{"authURL": "test"}`))
 			f.RunHook()
 		})
