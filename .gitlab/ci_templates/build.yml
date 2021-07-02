@@ -60,7 +60,7 @@
   - docker pull $(werf stage image dev/install)
   - REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
-      werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/ --secondary-repo $WERF_REPO;
+      werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO;
       DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${CI_COMMIT_TAG};
       DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${CI_COMMIT_TAG};
       DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
