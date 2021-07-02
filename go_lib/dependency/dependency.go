@@ -177,31 +177,31 @@ type mockedDependencyContainer struct {
 	CRClient   *cr.ClientMock
 }
 
-func (mdc mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
+func (mdc *mockedDependencyContainer) GetHTTPClient(options ...http.Option) http.Client {
 	return mdc.HTTPClient
 }
 
-func (mdc mockedDependencyContainer) GetEtcdClient(endpoints []string, options ...etcd.Option) (etcd.Client, error) {
+func (mdc *mockedDependencyContainer) GetEtcdClient(endpoints []string, options ...etcd.Option) (etcd.Client, error) {
 	return mdc.EtcdClient, nil
 }
 
-func (mdc mockedDependencyContainer) MustGetEtcdClient(endpoints []string, options ...etcd.Option) etcd.Client {
+func (mdc *mockedDependencyContainer) MustGetEtcdClient(endpoints []string, options ...etcd.Option) etcd.Client {
 	return mdc.EtcdClient
 }
 
-func (mdc mockedDependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Client, error) {
+func (mdc *mockedDependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Client, error) {
 	if mdc.K8sClient != nil {
 		return mdc.K8sClient, nil
 	}
 	return fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client, nil
 }
 
-func (mdc mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
+func (mdc *mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
 	k, _ := mdc.GetK8sClient(options...)
 	return k
 }
 
-func (mdc mockedDependencyContainer) GetRegistryClient(string) (cr.Client, error) {
+func (mdc *mockedDependencyContainer) GetRegistryClient(string) (cr.Client, error) {
 	if mdc.CRClient != nil {
 		return mdc.CRClient, nil
 	}

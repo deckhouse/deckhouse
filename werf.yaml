@@ -363,6 +363,7 @@ git:
     - go.sum
     - tools
   excludePaths:
+    - deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
     - dhctl/development
     - deckhouse-controller/development
     - deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
@@ -382,7 +383,7 @@ git:
       - global-hooks/**/*.go
       - go_lib/**/*.go
       - modules/**/*.go
-{{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
 - artifact: libjq
@@ -395,13 +396,13 @@ shell:
   - apk add --no-cache git ca-certificates gcc libc-dev
   - mkdir /deckhouse /out
 
-  install:
+  setup:
   - cd /deckhouse
   # Generate hooks imports for particular edition (CE/EE/FE)
   - go generate ./tools/register.go
+  # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
+  # into separate phases.
   - go mod download
-
-  setup:
   - cd /deckhouse/deckhouse-controller
   - ./go-build.sh /libjq
   - mv deckhouse-controller /out

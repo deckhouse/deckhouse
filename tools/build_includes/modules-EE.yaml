@@ -15,6 +15,8 @@
   to: /deckhouse/modules/140-user-authz/templates/webhook-daemonset.yaml
 - add: /ee/modules/140-user-authz/templates/webhook-secret.yaml
   to: /deckhouse/modules/140-user-authz/templates/webhook-secret.yaml
+- add: /ee/modules/340-flant-integration
+  to: /deckhouse/modules/340-flant-integration
 - add: /ee/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
 - add: /ee/modules/380-metallb

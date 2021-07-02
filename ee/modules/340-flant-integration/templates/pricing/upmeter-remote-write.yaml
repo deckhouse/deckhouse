@@ -1,0 +1,15 @@
+{{- if (.Values.global.enabledModules | has "upmeter") }}
+---
+apiVersion: deckhouse.io/v1
+kind: UpmeterRemoteWrite
+metadata:
+  name: {{ .Chart.Name }}-promscale
+{{ include "helm_lib_module_labels" (list . (dict "app" "flant-integration")) | indent 2 }}
+spec:
+  additionalLabels:
+    cluster_uuid: {{ .Values.global.discovery.clusterUUID }}
+  config:
+    url: {{ .Values.flantIntegration.metrics.url }}
+    bearerToken: {{ .Values.flantIntegration.internal.licenseKey }}
+  intervalSeconds: 300
+{{- end }}

@@ -109,17 +109,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/998-flant-pricing
-  to: /deckhouse/modules/998-flant-pricing
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   excludePaths:
@@ -199,6 +188,17 @@
     - .build.yaml
 - add: /ee/modules/140-user-authz/templates/webhook-secret.yaml
   to: /deckhouse/modules/140-user-authz/templates/webhook-secret.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/340-flant-integration
+  to: /deckhouse/modules/340-flant-integration
   excludePaths:
     - docs
     - README.md

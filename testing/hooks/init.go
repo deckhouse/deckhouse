@@ -223,7 +223,20 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 
 	var modulePath string
 	if !strings.Contains(wd, "global-hooks") {
-		modulePath = filepath.Dir(wd)
+		modulePath = wd
+		maxDepth := 20
+		for {
+			modulePathCandidate := filepath.Dir(modulePath)
+			if filepath.Base(modulePathCandidate) == "modules" {
+				break
+			}
+			modulePath = modulePathCandidate
+
+			maxDepth--
+			if maxDepth == 0 {
+				panic("cannot find module name")
+			}
+		}
 
 		var err error
 		moduleName, err = library.GetModuleNameByPath(modulePath)

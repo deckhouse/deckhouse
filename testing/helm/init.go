@@ -25,6 +25,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/kube-client/manifest/releaseutil"
+	"github.com/iancoleman/strcase"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
@@ -81,7 +82,9 @@ func SetupHelmConfig(values string) *Config {
 		os.Exit(1)
 	}
 
+	moduleName = strcase.ToLowerCamel(moduleName)
 	moduleValuesKey := addonutils.ModuleNameToValuesKey(moduleName)
+
 	defaultConfigValues := addonutils.Values{
 		addonutils.GlobalValuesKey: map[string]interface{}{},
 		moduleValuesKey:            map[string]interface{}{},

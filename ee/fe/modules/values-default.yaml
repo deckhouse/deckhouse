@@ -1,6 +1,6 @@
 # FE Bundle "Default"
 monitoringApplicationsEnabled: true
-prometheusMadisonIntegrationEnabled: true
 extendedMonitoringEnabled: true
 nginxIngressEnabled: true
 secretCopierEnabled: true
+flantIntegrationEnabled: true

@@ -1,0 +1,21 @@
+---
+title: "Модуль flant-integration: настройки"
+---
+
+Модуль по умолчанию **выключен**.
+
+## Параметры
+
+<!-- SCHEMA -->
+
+## Пример конфигурации
+
+```yaml
+flantIntegration: |
+  licenseKey: s6f8766314a9426faa2b3
+  madisonAuthKey: abc9ydhshy32plkj
+  kubeall:
+    team: myteam
+    host: myproject.kube-master-0
+    kubeconfig: /etc/kubernetes/admin.conf
+```

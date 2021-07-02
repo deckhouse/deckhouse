@@ -15,21 +15,13 @@
 package hooks
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
-
 var _ = Describe("Global hooks :: migrate/panic_on_flant_com_taint ::", func() {
-
 	const (
 		initValuesString       = `{}`
 		initConfigValuesString = `{}`
@@ -151,5 +143,4 @@ metadata:
 			Expect(f).To(Not(ExecuteSuccessfully()))
 		})
 	})
-
 })
