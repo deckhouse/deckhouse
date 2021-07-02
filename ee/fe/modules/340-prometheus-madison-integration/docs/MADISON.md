@@ -16,7 +16,7 @@ title: "Интеграция с Madison"
 
 * У модуля есть секретный value `prometheus.madisonBackends`, который заполняется автоматически списком адресов, в которые резолвится madison-direct.flant.com (каждые 10 минут)ю
 * Для каждого адреса в `prometheus.madisonBackends` генерируется отдельный deployment с `madison-proxy` (в названии используется sha256sum от IP-адреса), который отправляет все запросы на соответствующий ему бекенд Madison'а (там нет mash, один `madison-proxy` шлет запросы на один бекенд Madison'а)ю
-* `madison-proxy` это Nginx с [простейшим конфигом](https://github.com/deckhouse/deckhouse/tree/master/modules/340-prometheus-mdison-integration/images/madison-proxy/rootfs/etc/nginx/nginx.tmpl), задача которого — эмулировать Alertmanager для Prometheus'а и передавать все пришедшие запросы в Madison. Он использует `prometheus.madisonAuthKey` для аутентификации в Madison.
+* `madison-proxy` это Nginx с [простейшим конфигом](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/340-prometheus-madison-integration/images/madison-proxy/rootfs/etc/nginx/nginx.conf), задача которого — эмулировать Alertmanager для Prometheus'а и передавать все пришедшие запросы в Madison. Он использует `prometheus.madisonAuthKey` для аутентификации в Madison.
 * Штатное поведение Prometheus'а — отправлять все алерты всем известным Alertmanager'ам. Так и происходит — каждый экземпляр Prometheus шлет информацию о каждом алерте каждому `madison-proxy`, который, в свою очередь, шлет алерт своему бекенду Madison'а (дедуплицировать алерты — задача Madison).
 * Доставка алертов до Madison работает до тех пор, пока жива хотя бы одна цепочка `madison-proxy` -> `madison backend`.
 
@@ -31,11 +31,10 @@ title: "Интеграция с Madison"
 --------------------------
 
 * У Madison есть [API самонастройки](https://fox.flant.com/tnt/madison/issues/73), которое позволяет, имея общий shared-ключ, зарегистрировать ключ для проекта.
-* Для deckhouse [заведен](https://madison.flant.com/self_setup_keys/removed) такой общий ключ, который позволяет регистрировать Prometheus'ы, и он [захардкожен прямо в исходниках](https://github.com/deckhouse/deckhouse/tree/master/modules/340-prometheus-mdison-integration/initial_values).
+* Для deckhouse заведен такой общий ключ, который позволяет регистрировать Prometheus'ы.
 * При каждом запуске deckhouse (точнее при каждой установке модуля):
-    * если в `prometheus.madisonAuthKey` ничего нет — модуль ([хук initial_values](https://github.com/deckhouse/deckhouse/tree/master/modules/340-prometheus-mdison-integration/initial_values)) пытается получить новый ключ через API самонастройки Madison и записать его в `prometheus.madisonAuthKey` (этот ключ и используется в `madison-proxy` для аутентификации в Madison);
+    * если в `prometheus.madisonAuthKey` ничего нет — модуль пытается получить новый ключ через API самонастройки Madison и записать его в `prometheus.madisonAuthKey` (этот ключ и используется в `madison-proxy` для аутентификации в Madison);
     * если в `prometheus.madisonAuthKey` уже есть ключ — модуль пытается обновить сведения для этого ключа (имя проекта и URL для grafana и prometheus).
-* Список зарегистрированных ключей можно найти в Madison у каждого проекта — ключи называются `kubernetes-{{ global.clusterName }}`, например для someproject можно [посмотреть здесь](https://madison.flant.com/projects/someproject/prometheus_setups).
 * При архивации кластера в Madison срабатывает механизм автоматического отключения алертов. Хук `madison_revoke` регулярно (раз в 5 минут) проверяет статус кластера в Madison и если тот архивирован, то хук делает следующее:
     * выключает механизм саморегистрации, установив `prometheus.madisonSelfSetupKey` = `false`,
     * удаляет ключ `prometheus.madisonAuthKey` из хранилища values.

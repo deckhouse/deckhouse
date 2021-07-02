@@ -16,6 +16,5 @@
         Для поиска можно воспользоваться командой: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
 
         Формат изменился. Необходимо изменить label `prometheus-target` на `prometheus.deckhouse.io/target`.
-        Подробнее [описано в документации](https://github.com/deckhouse/deckhouse/blob/master/docs/guides/MONITORING.md).
       summary: >
         В кластере используются Service'ы с label'ом `prometheus-target` для сбора метрик.

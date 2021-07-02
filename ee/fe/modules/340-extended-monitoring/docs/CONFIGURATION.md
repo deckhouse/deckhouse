@@ -52,7 +52,7 @@ Do not require a Namespace annotation and are enabled by default.
 
 > CAUTION! These annotations DO NOT apply to imagefs (/var/lib/docker by default) and nodefs (/var/lib/kubelet by default) volumes.
 The thresholds for these volumes are configured completely automatically according to the kubelet's [eviction thresholds](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-The default values are available [here](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27); for more info, see the [exporter](https://github.com/deckhouse/deckhouse/blob/master/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/loop).
+The default values are available [here](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27); for more info, see the [exporter](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/loop).
 
 #### Namespaced Kubernetes objects
 

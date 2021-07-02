@@ -176,4 +176,4 @@
         В namespace `d8-monitoring` обнаружен CM `grafana-dashboard-definitions-custom`. Это означает, что используется устаревший метод регистрации кастомных дашборд в Графане.
 
         **Данный метод регистрации dashboard'ов более не работает!**
-        Рекомендация — использовать кастомный [ресурс GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/master/modules/300-prometheus/docs/GRAFANA_DASHBOARD_DEVELOPMENT.md#%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81-grafanadashboarddefinition).
+        Рекомендация — использовать кастомный [ресурс GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md).
