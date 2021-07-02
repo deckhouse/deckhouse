@@ -7,7 +7,6 @@
     else
       SOURCE_IMAGE=${DEV_REGISTRY_PATH}/dev:${CI_COMMIT_REF_NAME};
       SOURCE_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${CI_COMMIT_REF_NAME};
-      CI_COMMIT_TAG=""
     fi
   script:
   # variables
