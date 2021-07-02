@@ -1,10 +1,5 @@
 .base_deploy_template:
   stage: deploy
-  variables:
-    DESTINATION_IMAGE: ${DEV_REGISTRY_PATH}:${CI_JOB_NAME}
-    DESTINATION_INSTALL_IMAGE: ${DEV_REGISTRY_PATH}/install:${CI_JOB_NAME}
-    DECKHOUSE_DESTINATION_IMAGE: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe:${CI_JOB_NAME}
-    DECKHOUSE_DESTINATION_INSTALL_IMAGE: ${DECKHOUSE_REGISTRY_HOST}/deckhouse/fe/install:${CI_JOB_NAME}
   before_script:
   - if [[ -n ${CI_COMMIT_TAG} ]]; then
       SOURCE_IMAGE=${DEV_REGISTRY_PATH}:${CI_COMMIT_TAG};
@@ -15,9 +10,15 @@
       CI_COMMIT_TAG=""
     fi
   script:
+  # variables
+  - REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+  - RELEASE_CHANNEL=$(cut -d ":" -f1 <<< ${CI_JOB_NAME})
+  - DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+  - DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+  - DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+  - DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
   - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
   - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
-  - echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
   - docker image pull ${SOURCE_IMAGE}
   - docker image tag ${SOURCE_IMAGE} ${DESTINATION_IMAGE}
   - docker image push ${DESTINATION_IMAGE}
@@ -30,7 +31,7 @@
   - docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
   - docker image rmi ${SOURCE_IMAGE}
   - docker image rmi ${SOURCE_INSTALL_IMAGE}
-  after_script:
+  # after script
   - docker image rmi ${DESTINATION_IMAGE}
   - docker image rmi ${DESTINATION_INSTALL_IMAGE}
   - docker image rmi ${DECKHOUSE_DESTINATION_IMAGE}
