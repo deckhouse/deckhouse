@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -43,7 +45,7 @@ func generatePassword(input *go_hook.HookInput) error {
 	}
 
 	if !input.ConfigValues.Exists("prometheus.auth") {
-		input.ConfigValues.Set("prometheus.auth", "{}")
+		input.ConfigValues.Set("prometheus.auth", json.RawMessage("{}"))
 	}
 
 	generatedPass := pwgen.AlphaNum(20)

@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Modules :: prometheus :: hooks :: generate_password ", func() {
-	f := HookExecutionConfigInit(`{"prometheus":{"internal":{}, "auth": {}}}`, `{"prometheus":{"auth": {}}}`)
+	f := HookExecutionConfigInit(`{"prometheus":{"internal":{}, "auth": {}}}`, `{"prometheus":{}}`)
 	Context("without external auth", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
