@@ -97,7 +97,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: generator
-        image: $(values::get global.modulesImages.registry )/user-authn/cfssl:$(values::get global.modulesImages.tags.userAuthn.cfssl)
+        image: $(values::get global.modulesImages.registry):$(values::get global.modulesImages.tags.userAuthn.cfssl)
         command: ["bash", "-c"]
         args:
         - |
