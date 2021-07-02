@@ -53,7 +53,7 @@ spec:
           - name: CLUSTER_DOMAIN_ALIASES
             value: {{ .Values.kubeDns.clusterDomainAliases | join " " | quote }}
           - name: INIT_CONTAINER_IMAGE
-            value: {{ .Values.global.modulesImages.registry }}/kube-dns/sts-pods-hosts-appender-init-container:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderInitContainer }}
+            value: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.stsPodsHostsAppenderInitContainer }}
           ports:
           - containerPort: 8080
           readinessProbe:
