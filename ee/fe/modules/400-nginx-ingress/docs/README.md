@@ -20,18 +20,18 @@ Configuration
 
 The module supports multiple controllers — **one** primary controller and **any number** of additional ones — and has the following parameters:
 * `inlet` — the way traffic flows from the outside world;
-    * This parameter is determined automatically based on the cluster type (GCE & ACS — LoadBalancer, AWS — AWSClassicLoadBalancer, Manual — Direct; learn more [here](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/_helpers.tpl#L22-30))!
+    * This parameter is determined automatically based on the cluster type (GCE & ACS — LoadBalancer, AWS — AWSClassicLoadBalancer, Manual — Direct; learn more [here](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/templates/_helpers.tpl#L22-30))!
     * The following inlets are supported:
         * `LoadBalancer` (set automatically for `GCE` & `ACS`) — provisions the LoadBalancer automatically;
         * `AWSClassicLoadBalancer` (set automatically for`AWS`) — зprovisions the LoadBalancer and enables the proxy protocol; this inlet is the default one for AWS;
         * `Direct` (set automatically for  `Manual`) — pods are running in the host network, nginx listens on ports 80 & 443; also, a direct-fallback scheme is implemented for this mode;
         * `NodePort` — the NodePort service; this mode is suitable for situations where you need to configure a third-party load balancer (such as AWS Application Load Balancer, Qrator or CloudFlare). The acceptable range of ports is 30000-32767 (it is set using the `kube-apiserver --service-node-port-range` parameter);
-    * This [file](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/controller.yaml) clearly demonstrates the differences between the four types of inlets;
+    * This [file](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/templates/controller.yaml) clearly demonstrates the differences between the four types of inlets;
 * `nodePortHTTP` — this parameter allows you to specify a specific `nodePort` to expose port 80 for `NodePort` inlets (by default, kube-controller-manager picks a random free port number);
 * `nodePortHTTPS` —  this parameter allows you to specify a specific `nodePort` to expose port 443 for `NodePort` inlets (the default behavior is similar to that of `nodePortHTTP`);
 * `config.hsts` — bool, determines if HSTS is enabled;
     * It is set to `false` by default;
-* `config.legacySSL` — bool, determines whether legacy TLS versions are enabled. Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/templates/_template.config.tpl);
+* `config.legacySSL` — bool, determines whether legacy TLS versions are enabled. Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/templates/_template.config.tpl);
     * By default, only TLSv1.2 and the newest cipher suites are enabled;
 * `config.disableHTTP2` — bool, determines if HTTP/2 is disabled;
     * By default, HTTP/2 is enabled (`false`);
@@ -294,8 +294,8 @@ Statistics
 
 ### Basic principles of collecting statistics
 
-1. Our [nginx module](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/images/controller/rootfs/etc/nginx/template/nginx.tmpl#L750) is called for each request (at the `log_by_lua` stage). It calculates the necessary data and sends them via UDP to `statsd`.
-2. Instead of the regular `statsd`, a sidecar container with [statsd_exporter](https://github.com/prometheus/statsd_exporter) is running in the ingress-controller pod. It collects data in the `statsd` format, parses, aggregates them (according to the [specified rules](https://github.com/deckhouse/deckhouse/blob/master/modules/400-nginx-ingress/images/statsd-exporter/rootfs/etc/statsd_mapping.conf)), and exports them in the Prometheus format.
+1. Our [nginx module](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/images/controller/rootfs/etc/nginx/template/nginx.tmpl#L750) is called for each request (at the `log_by_lua` stage). It calculates the necessary data and sends them via UDP to `statsd`.
+2. Instead of the regular `statsd`, a sidecar container with [statsd_exporter](https://github.com/prometheus/statsd_exporter) is running in the ingress-controller pod. It collects data in the `statsd` format, parses, aggregates them (according to the [specified rules](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/images/statsd-exporter/rootfs/etc/statsd_mapping.conf)), and exports them in the Prometheus format.
 3. Every 30 seconds, Prometheus scrapes both the ingress-controller (since it exports some of the required metrics) and statsd_exporter. Then these data are used for stats.
 
 ### What information does Prometheus collect, and in what form?

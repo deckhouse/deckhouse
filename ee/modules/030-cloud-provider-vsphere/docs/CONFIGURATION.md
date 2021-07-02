@@ -63,12 +63,11 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 ## Environment requirements
 
-1. vSphere version required: `v6.7U2`.
+1. vSphere version required: `v7.0U2`.
 2. vCenter to which master nodes can connect to from within the cluster;
 3. Datacenter with the following components:
 
     1. VirtualMachine template with a [specific](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource;
-        * You can use [this script](https://github.com/deckhouse/deckhouse/blob/master/install-kubernetes/vsphere/prepare-template) to prepare an Ubuntu 18.04 image;
     2. The network must be available on all ESXi where VirtualMachines will be created;
     3. One or more Datastores connected to all ESXi where VirtualMachines will be created;
         * A tag from the tag category in `zoneTagCategory` (`k8s-zone` by default) **must be added** to Datastores. This tag will indicate the **zone**.  All Clusters of a specific zone must have access to all Datastores within the same zone;

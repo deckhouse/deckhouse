@@ -11,7 +11,7 @@ General information
 * The rules in Prometheus are divided into two types:
     * recording rules (the [official documentation](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — allow you to precompute the PromQL expression and save the result to a new metric (it is useful if you need to speed up Grafana or the calculation of other rules).
     * alerting rules (the [official documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)) — allow you to define alert conditions based on the result of the PromQL expression.
-* All the rules are divided according to the module and are located in the [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/master/modules/300-prometheus/monitoring/prometheus-rules/)`. The rules are divided into three categories:
+* All the rules are divided according to the module and are located in the [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/300-prometheus/monitoring/prometheus-rules/)`. The rules are divided into three categories:
     * `coreos` stores rules originating from the prometheus-operator (some of them are modified by us);
     * `kubernetes` stores our rules related to Kubernetes monitoring (the platform — control plane, nginx ingress, prometheus, etc) and monitoring of objects in Kubernetes (pods, cronjobs, disk space, etc.);
     * `applications` stores rules for monitoring applications (e.g., redis, mongo, etc.).
