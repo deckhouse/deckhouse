@@ -4,6 +4,6 @@
 2. Set LB address in `load.yaml` `phantom.address` parameter.
 3. Start the container.
 ```shell
-docker run -v $(pwd):/var/loadtest -it direvius/yandex-tank
+docker run -v "$(pwd):/var/loadtest" -it direvius/yandex-tank
 ```
 4. Follow the given `Web:` url to see online graphs. 

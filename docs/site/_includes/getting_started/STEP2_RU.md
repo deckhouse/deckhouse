@@ -7,18 +7,18 @@
 -  Для редакции CE:
 
    ```shell
-docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
-{%- if include.mode == "existing" %} -v $(pwd)/kubeconfig:/kubeconfig {% endif %}
-{%- if include.mode == "cloud" %} -v $(pwd)/dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ce/install:beta bash
+docker run -it -v "$(pwd)/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/"
+{%- if include.mode == "existing" %} -v "$(pwd)/kubeconfig:/kubeconfig" {% endif %}
+{%- if include.mode == "cloud" %} -v "$(pwd)/dhctl-tmp:/tmp" {% endif %} registry.deckhouse.io/deckhouse/ce/install:beta bash
 ```
 
 -  Для редакции EE:
 
    ```shell
 docker login -u license-token -p <LICENSE_TOKEN> registry.deckhouse.io
-docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
-{%- if include.mode == "existing" %} -v $(pwd)/kubeconfig:/kubeconfig {% endif %}
-{%- if include.mode == "cloud" %} -v $(pwd)/dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ee/install:beta bash
+docker run -it -v "$(pwd)/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/"
+{%- if include.mode == "existing" %} -v "$(pwd)/kubeconfig:/kubeconfig" {% endif %}
+{%- if include.mode == "cloud" %} -v "$(pwd)/dhctl-tmp:/tmp" {% endif %} registry.deckhouse.io/deckhouse/ee/install:beta bash
 ```
 
 {%- if include.mode == "existing" %}
@@ -60,7 +60,7 @@ dhctl bootstrap \
 
 Примечания:
 {%- if include.mode == "cloud" %}
-- Благодаря использованию параметра `-v $(pwd)/dhctl-tmp:/tmp` состояние данных Terraform-инстяллятора будет сохранено во временной директории на хосте запуска, что позволит корректно продолжить установку в случае прерывания работы контейнера с инсталлятором.
+- Благодаря использованию параметра `-v "$(pwd)/dhctl-tmp:/tmp"` состояние данных Terraform-инстяллятора будет сохранено во временной директории на хосте запуска, что позволит корректно продолжить установку в случае прерывания работы контейнера с инсталлятором.
 {%- endif %}
 - В случае возникновения проблем во время разворачивания кластера {% if include.mode="cloud" %}в одном из облачных провайдеров {% endif %}для остановки процесса установки следует воспользоваться следующей командой (файл конфигурации должен совпадать с тем, с которым производилось разворачивание кластера):
 

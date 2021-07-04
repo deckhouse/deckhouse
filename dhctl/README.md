@@ -119,8 +119,8 @@ For example, use a docker image from the Flant docker registry:
   * `config.yaml` - configuration file for the cluster bootstrap as described above.
      ```bash
      docker run -it \
-       -v $(pwd)/config.yaml:/config.yaml \
-       -v $HOME/.ssh/:/tmp/.ssh/ \
+       -v "$(pwd)/config.yaml:/config.yaml" \
+       -v "$HOME/.ssh/:/tmp/.ssh/" \
        registry.deckhouse.io/fe/install:alpha \
        bash
      ```

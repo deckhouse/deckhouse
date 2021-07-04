@@ -746,7 +746,7 @@ Local development
 --------------------
 Create the following symlink to make the development process more convenient:
 ```bash
-sudo ln -s $(pwd) /deckhouse
+sudo ln -s "$(pwd)" /deckhouse
 ```
 In macOS, if the root filesystem is in a Read-only mode, use the following command to create a symlink:
 ```bash
