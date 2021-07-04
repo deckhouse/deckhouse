@@ -9,7 +9,7 @@ The commands below pull the Docker image of the Deckhouse installer and pass the
    ```shell
 docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
 {%- if include.mode == "existing" %} -v $(pwd)/kubeconfig:/kubeconfig {% endif %}
-{%- if include.mode == "cloud" %} -v ./dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ce/install:beta bash
+{%- if include.mode == "cloud" %} -v $(pwd)/dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ce/install:beta bash
 ```
 
 -  For EE installations:
@@ -18,7 +18,7 @@ docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
 docker login -u license-token -p <LICENSE_TOKEN> registry.deckhouse.io
 docker run -it -v $(pwd)/config.yml:/config.yml -v $HOME/.ssh/:/tmp/.ssh/
 {%- if include.mode == "existing" %} -v $(pwd)/kubeconfig:/kubeconfig {% endif %}
-{%- if include.mode == "cloud" %} -v ./dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ee/install:beta bash
+{%- if include.mode == "cloud" %} -v $(pwd)/dhctl-tmp:/tmp {% endif %} registry.deckhouse.io/deckhouse/ee/install:beta bash
 ```
 
 {%- if include.mode == "existing" %}
@@ -60,7 +60,7 @@ dhctl bootstrap \
 
 Notes:
 {%- if include.mode == "cloud" %}
-- The `-v ./dhctl-tmp:/tmp` parameter enables saving the state of the Terraform installer to a temporary directory on the startup host. It allows the installation to continue correctly in case of a failure of the installer's container.
+- The `-v $(pwd)/dhctl-tmp:/tmp` parameter enables saving the state of the Terraform installer to a temporary directory on the startup host. It allows the installation to continue correctly in case of a failure of the installer's container.
 {%- endif %}
 - If any problems {% if include.mode="cloud" %}on the cloud provider side {% endif %}occur, you can stop the process of installation using the following command (the configuration file should be the same you’ve used to initiate the installation):
 
