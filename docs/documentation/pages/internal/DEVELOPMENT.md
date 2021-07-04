@@ -746,11 +746,11 @@ Local development
 --------------------
 Create the following symlink to make the development process more convenient:
 ```bash
-sudo ln -s "$(pwd)" /deckhouse
+sudo ln -s "$PWD" /deckhouse
 ```
 In macOS, if the root filesystem is in a Read-only mode, use the following command to create a symlink:
 ```bash
-echo "deckhouse\t$(pwd)" >> /etc/synthetic.conf
+echo "deckhouse\t$PWD" >> /etc/synthetic.conf
 ```
 and reboot the OS.
 
