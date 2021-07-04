@@ -8,8 +8,8 @@ docker run \
   -ti \
   --entrypoint /bin/bash \
   -v /deckhouse:/deckhouse \
-  -v "$(pwd)/testing/cloud_layouts:/deckhouse/testing/cloud_layouts" \
-  -v "$(pwd)/layouts-tests-tmp:/tmp" \
+  -v "$PWD/testing/cloud_layouts:/deckhouse/testing/cloud_layouts" \
+  -v "$PWD/layouts-tests-tmp:/tmp" \
   -w /deckhouse dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:master
 ```
 ```bash
