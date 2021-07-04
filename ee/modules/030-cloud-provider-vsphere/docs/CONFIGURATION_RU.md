@@ -70,6 +70,7 @@ cloudProviderVsphere: |
 3. Создать Datacenter, а в нём:
 
     1. VirtualMachine template со [специальным](https://github.com/vmware/cloud-init-vmware-guestinfo) cloud-init datasource внутри.
+       * Образ ВМ должен использовать `Virtual machines with hardware version 15 or later` (необходимо для работы online resize).
     2. Network, доступная на всех ESXi, на которых будут создаваться VirtualMachines.
     3. Datastore (или несколько), подключённый ко всем ESXi, на которых будут создаваться VirtualMachines.
         * На Datastore-ы **необходимо** "повесить" тэг из категории тэгов, указанный в `zoneTagCategory` (по умолчанию, `k8s-zone`). Этот тэг будет обозначать **зону**. Все Cluster'а из конкретной зоны должны иметь доступ ко всем Datastore'ам, с идентичной зоной.
