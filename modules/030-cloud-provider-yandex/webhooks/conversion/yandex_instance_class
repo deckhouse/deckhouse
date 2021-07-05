@@ -54,8 +54,8 @@ EOF
 
 function __on_conversion::v1_to_alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
-     if .apiVersion == "deckhouse.io/v1alpha1" then
-       .apiVersion = "deckhouse.io/v1" |
+     if .apiVersion == "deckhouse.io/v1" then
+       .apiVersion = "deckhouse.io/v1alpha1" |
        if .spec.networkType then
           .spec.networkType |= if . == "Standard" then "STANDARD" elif . == "SoftwareAccelerated" then "SOFTWARE_ACCELERATED" else . end
        else . end
