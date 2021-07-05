@@ -17,7 +17,7 @@ locals {
   kube_b_v4_cidr_block = cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 1)
   kube_c_v4_cidr_block = cidrsubnet(var.node_network_cidr, ceil(log(3, 2)), 2)
 
-  nat_instance_internal_address_calculated = var.nat_instance_internal_address == null ? cidrhost(local.kube_c_v4_cidr_block, 100) : var.nat_instance_internal_address
+  nat_instance_internal_address_calculated = var.should_create_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.kube_c_v4_cidr_block, 10) : var.nat_instance_internal_address) : null
 }
 
 resource "yandex_vpc_route_table" "kube" {
