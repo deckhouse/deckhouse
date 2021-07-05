@@ -83,11 +83,10 @@ func parseLicenseKeyFromDockerCredentials(dockerConfig []byte, registry string) 
 		return "", fmt.Errorf("no credentials for current registry")
 	}
 
+	var license string
 	if creds.Password != "" {
-		return creds.Password, nil
-	}
-
-	if creds.Auth != "" {
+		license = creds.Password
+	} else if creds.Auth != "" {
 		auth, err := base64.StdEncoding.DecodeString(creds.Auth)
 		if err != nil {
 			return "", fmt.Errorf(`cannot decode base64 "auth" field`)
@@ -96,10 +95,13 @@ func parseLicenseKeyFromDockerCredentials(dockerConfig []byte, registry string) 
 		if len(parts) != 2 {
 			return "", fmt.Errorf(`unexpected format of "auth" field`)
 		}
-		return parts[1], nil
+		license = parts[1]
 	}
 
-	return "", fmt.Errorf("licenseKey not set in dockerconfig")
+	if license == "" {
+		return "", fmt.Errorf("licenseKey not set in dockerconfig")
+	}
+	return strings.TrimSpace(license), nil
 }
 
 /*

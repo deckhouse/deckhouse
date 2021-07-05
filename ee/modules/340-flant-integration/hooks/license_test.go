@@ -84,6 +84,20 @@ var _ = Describe("Flant integration :: hooks :: license ::", func() {
 
 			Expect(err).ToNot(BeNil())
 		})
+
+		It("Tolerates newline character in password", func() {
+			registry := rand.String(8)
+			auth := getConfig()
+			passwordWithNoSpaces := auth.Password
+			auth.Password = auth.Password + "\n"
+			auth.Auth = base64.StdEncoding.EncodeToString([]byte(auth.Username + ":" + auth.Password))
+			dockerCfg := prepareDockerConfig(auth, registry)
+
+			lic, err := parseLicenseKeyFromDockerCredentials(dockerCfg, registry)
+
+			Expect(err).To(BeNil())
+			Expect(lic).To(Equal(passwordWithNoSpaces))
+		})
 	})
 })
 
