@@ -178,7 +178,7 @@ if [[ -z "$smoke_mini_addr" ]]; then
   exit 1
 fi
 
-if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet'); then
+if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
 fi
 
