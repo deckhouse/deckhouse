@@ -286,43 +286,33 @@ Copyright Validation:
     - WERF_ENV: CE
     - WERF_ENV: EE
     - WERF_ENV: FE
+  only:
+    - tags
 
 alpha:
   <<: *base_deploy
   environment:
     name: alpha
-  only:
-    - tags
-    - main
-    - /^release-.*$/
 
 beta:
   <<: *base_deploy
   environment:
     name: beta
-  only:
-    - tags
 
 early-access:
   <<: *base_deploy
   environment:
     name: early-access
-  only:
-    - tags
 
 stable:
   <<: *base_deploy
   environment:
     name: stable
-  only:
-    - tags
 
 rock-solid:
   <<: *base_deploy
   environment:
     name: rock-solid
-  only:
-    - tags
 
 Cleanup registry:
   extends: .Cleanup registry template
