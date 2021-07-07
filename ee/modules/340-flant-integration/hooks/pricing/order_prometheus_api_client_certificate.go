@@ -13,8 +13,8 @@ var _ = order_certificate.RegisterOrderCertificateHook(
 	[]order_certificate.OrderCertificateRequest{
 		{
 			Namespace:  "d8-flant-integration",
-			SecretName: "flant-pricing-prometheus-api-client-tls",
-			CommonName: "d8-flant-pricing:flant-pricing:prometheus-api-client",
+			SecretName: "pricing-prometheus-api-client-tls",
+			CommonName: "d8-flant-integration:flant-integration:prometheus-api-client",
 			ValueName:  "internal.prometheusAPIClientTLS",
 			Group:      "prometheus:auth",
 			ModuleName: "flantIntegration",

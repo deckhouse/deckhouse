@@ -100,9 +100,9 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", nsName, "deckhouse-registry")
 
 			sa := f.KubernetesResource("ServiceAccount", nsName, "pricing")
-			ds := f.KubernetesResource("DaemonSet", nsName, "flant-pricing")
+			ds := f.KubernetesResource("DaemonSet", nsName, "pricing")
 			s := f.KubernetesResource("Secret", nsName, "grafana-agent-config")
-			pm := f.KubernetesResource("PodMonitor", nsName, "flant-pricing")
+			pm := f.KubernetesResource("PodMonitor", nsName, "pricing")
 			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":pricing")
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":pricing")
 

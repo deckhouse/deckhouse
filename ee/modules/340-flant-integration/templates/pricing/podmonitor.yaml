@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: flant-pricing
+  name: pricing
   namespace: d8-{{ .Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
@@ -25,7 +25,7 @@ spec:
       action: labeldrop
   selector:
     matchLabels:
-      app: flant-pricing
+      app: pricing
   namespaceSelector:
     matchNames:
     - d8-{{ .Chart.Name }}

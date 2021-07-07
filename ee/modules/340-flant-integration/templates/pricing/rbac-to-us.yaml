@@ -8,7 +8,7 @@ metadata:
 rules:
 - apiGroups: ["apps"]
   resources: ["daemonsets/prometheus-metrics"]
-  resourceNames: [{{ .Chart.Name | quote }}]
+  resourceNames: ["pricing"]
   verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -20,7 +20,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: access-to-flant-integration-pricing-metrics
+  name: access-to-pricing-metrics
 subjects:
 - kind: User
   name: d8-monitoring:scraper

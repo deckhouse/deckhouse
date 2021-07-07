@@ -3,13 +3,13 @@
 
   - alert: FlantPricingSucceededSamplesMetricIsAbsent
     expr: |
-      absent(prometheus_remote_storage_samples_bytes_total{job="flant-pricing"}) == 1
+      absent(prometheus_remote_storage_samples_bytes_total{job="pricing"}) == 1
     for: 1h
     labels:
       severity_level: "6"
       tier: cluster
       d8_module: flant-integration
-      d8_component: flant-pricing
+      d8_component: pricing
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
@@ -20,19 +20,19 @@
 
         To get more details:
 
-        Check pods state: `kubectl -n d8-flant-integration get pod -l app=flant-pricing`
-        or logs: `kubectl -n d8-flant-integration logs -l app=flant-pricing -c grafana-agent`
+        Check pods state: `kubectl -n d8-flant-integration get pod -l app=pricing`
+        or logs: `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
       summary: Crucial metrics are missing.
 
   - alert: FlantPricingNotSendingSamples
     expr: |
-      sum(increase(prometheus_remote_storage_samples_bytes_total{job="flant-pricing"}[10m])) == 0
+      sum(increase(prometheus_remote_storage_samples_bytes_total{job="pricing"}[10m])) == 0
     for: 1h
     labels:
       severity_level: "6"
       tier: cluster
       d8_module: flant-integration
-      d8_component: flant-pricing
+      d8_component: pricing
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
@@ -42,19 +42,19 @@
         Succeeded samples metric of the Grafana Agent is not increasing.
 
         To get more details, check logs of the following containers:
-        - `kubectl -n d8-flant-integration logs -l app=flant-pricing -c grafana-agent`
-        - `kubectl -n d8-flant-integration logs -l app=flant-pricing -c flant-pricing`
+        - `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
+        - `kubectl -n d8-flant-integration logs -l app=pricing -c pricing`
       summary: Flant-pricing cluster metrics are not being delivered
 
   - alert: FlantPricingSamplesRateIsLowerThanExpected
     expr: |
-      avg(increase(prometheus_remote_storage_samples_bytes_total{job="flant-pricing"}[10m])) < 1000
+      avg(increase(prometheus_remote_storage_samples_bytes_total{job="pricing"}[10m])) < 1000
     for: 1h
     labels:
       severity_level: "6"
       tier: cluster
       d8_module: flant-integration
-      d8_component: flant-pricing
+      d8_component: pricing
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
@@ -64,7 +64,7 @@
         Succeeded samples rate of the Grafana Agent is too low.
 
         Check logs of the exporter container:
-        - `kubectl -n d8-flant-integration logs -l app=flant-pricing -c flant-pricing`
+        - `kubectl -n d8-flant-integration logs -l app=pricing -c pricing`
       summary: Some of flant-integration cluster metrics are not being delivered.
 
   - alert: FlantPricingMalfunctioning
@@ -72,11 +72,11 @@
     labels:
       tier: cluster
       d8_module: flant-integration
-      d8_component: flant-pricing
+      d8_component: pricing
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_alert_type: "group"
       description: |
         To reach the problem, check grouped alerts.
-      summary: Flant-pricing module is failing.
+      summary: Flant-integration pricing module is failing.
