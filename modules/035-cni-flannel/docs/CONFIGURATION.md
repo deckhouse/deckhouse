@@ -18,5 +18,5 @@ cniFlannelEnabled: "true"
 ## An example of the configuration
 ```yaml
 cniFlannel: |
-  podNetworkMode: vxlan
+  podNetworkMode: VXLAN
 ```
