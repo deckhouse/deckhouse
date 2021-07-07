@@ -189,6 +189,10 @@ EOF
 }
 
 function __on_group::pvc_modified() {
+  if [[ "$(values::get upmeter.smokeMiniDisabled)" == "true" ]]; then
+    return 0
+  fi
+
   for i in $(context::jq -r '.snapshots.pvc_modified | keys[]'); do
     if context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.isDeleted' >/dev/null; then
       pvc_name="$(context::jq -er --argjson i "$i" '.snapshots.pvc_modified[$i].filterResult.name')"
@@ -202,6 +206,10 @@ function __on_group::pvc_modified() {
 }
 
 function __on_group::pvc_deleted() {
+  if [[ "$(values::get upmeter.smokeMiniDisabled)" == "true" ]]; then
+    return 0
+  fi
+
   for i in $(context::jq -r '.snapshots.pods_del | keys[]'); do
     if context::jq -er --argjson i "$i" '.snapshots.pods_del[$i].filterResult.isPending' >/dev/null; then
       pod_name="$(context::get snapshots.pods_del.$i.filterResult.name)"
@@ -214,6 +222,10 @@ function __on_group::pvc_deleted() {
 
 # schedule one sts
 function __on_group::main() {
+  if [[ "$(values::get upmeter.smokeMiniDisabled)" == "true" ]]; then
+    return 0
+  fi
+
   effective_storage_class="false"
   if context::jq -er '.snapshots.default_sc[] | select(.filterResult == true)' >/dev/null; then
     effective_storage_class="$(context::jq -r '[.snapshots.default_sc[] | select(.filterResult == true)] | first | .object.metadata.name')"
