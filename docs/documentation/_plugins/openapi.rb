@@ -21,6 +21,24 @@ module Jekyll
         result
     end
 
+    def convertAPIVersionChannelToInt(channel)
+      return 0 if channel == 'alpha'
+      return 1 if channel == 'beta'
+      2
+    end
+
+    # 1 if a more stable than b or has higher version
+    # -1 if a less stable than b or has lower version
+    def compareAPIVersion(a,b)
+        version = a['name'].scan(/v([1-9]+[0-9]*)((alpha|beta)([1-9]+[0-9]*))?/).flatten
+        aVersion = {"majVersion" => version[0], "stability" => convertAPIVersionChannelToInt(version[2]), "minVersion" => version[3] ? version[3] : 3 }
+        version = b['name'].scan(/v([1-9]+[0-9]*)((alpha|beta)([1-9]+[0-9]*))?/).flatten
+        bVersion = {"majVersion" => version[0], "stability" => convertAPIVersionChannelToInt(version[2]), "minVersion" => version[3] ? version[3] : 3 }
+        return -( aVersion["majVersion"] <=> bVersion["majVersion"] ) if aVersion["majVersion"] != bVersion["majVersion"]
+        return -( aVersion["stability"] <=> bVersion["stability"] ) if aVersion["stability"] != bVersion["stability"]
+        -( aVersion["minVersion"] <=> bVersion["minVersion"] )
+    end
+
     def get_i18n_term(term)
         lang = @context.registers[:page]["lang"]
         i18n = @context.registers[:site].data["i18n"]["common"]
@@ -303,7 +321,7 @@ module Jekyll
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
                      result.push('<div class="tabs">')
                      activeStatus=" active"
-                     input["spec"]["versions"].each do |item|
+                     input["spec"]["versions"].sort{ |a, b| compareAPIVersion(a,b) }.each do |item|
                          #result.push(" onclick=\"openTab(event, 'tabs__btn', 'tabs__content', " + input["spec"]["names"]["kind"].downcase + '_' + item['name'].downcase + ')">' + item['name'].downcase + '</a>')
                          result.push("<a href='javascript:void(0)' class='tabs__btn tabs__btn__%s%s' onclick=\"openTab(event, 'tabs__btn__%s', 'tabs__content__%s', '%s_%s')\">%s</a>" %
                            [ input["spec"]["names"]["kind"].downcase, activeStatus,
@@ -317,7 +335,7 @@ module Jekyll
                  end
 
                  activeStatus=" active"
-                 input["spec"]["versions"].each do |item|
+                 input["spec"]["versions"].sort{ |a, b| compareAPIVersion(a,b) }.each do |item|
                     _primaryLanguage = nil
                     _fallbackLanguage = nil
 
