@@ -3,14 +3,14 @@
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
-  name: flant-pricing
+  name: pricing
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "flant-pricing" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pricing" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: {{ .Chart.Name }}
+    name: pricing
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
@@ -18,29 +18,29 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: flant-pricing
+  name: pricing
   namespace: d8-flant-integration
-{{ include "helm_lib_module_labels" (list . (dict "app" "flant-pricing")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pricing")) | indent 2 }}
 spec:
 {{ include "helm_lib_pdb_daemonset" . | indent 2 }}
   selector:
     matchLabels:
-      app: flant-pricing
+      app: pricing
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: flant-pricing
+  name: pricing
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" "flant-pricing")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pricing")) | indent 2 }}
 spec:
   selector:
     matchLabels:
-      app: flant-pricing
+      app: pricing
   template:
     metadata:
       labels:
-        app: flant-pricing
+        app: pricing
       annotations:
         checksum/config: {{ include "grafana_agent_config" . | sha256sum }}
         checksum/cert: {{ include (print $.Template.BasePath "/pricing/prometheus-api-client-tls.yaml") . | sha256sum}}
@@ -55,7 +55,7 @@ spec:
       initContainers:
 {{ include "helm_lib_module_init_container_chown_nobody_volume" (tuple . "agent-data") | indent 6 }}
       containers:
-      - name: flant-pricing
+      - name: pricing
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.flantIntegration.flantPricing }}
         env:
@@ -118,7 +118,7 @@ spec:
           periodSeconds: 60
         volumeMounts:
         - mountPath: /etc/ssl/prometheus-api-client-tls/
-          name: flant-pricing-prometheus-api-client-tls
+          name: pricing-prometheus-api-client-tls
           readOnly: true
         - mountPath: /tmp
           name: tmp
@@ -174,7 +174,7 @@ spec:
                   apiVersion: v1
                   resource: daemonsets
                   subresource: prometheus-metrics
-                  name: {{ .Chart.Name }}
+                  name: pricing
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
@@ -185,8 +185,8 @@ spec:
       - name: agent-config
         secret:
           secretName: grafana-agent-config
-      - name: flant-pricing-prometheus-api-client-tls
+      - name: pricing-prometheus-api-client-tls
         secret:
-          secretName: flant-pricing-prometheus-api-client-tls
+          secretName: pricing-prometheus-api-client-tls
       - name: tmp
         emptyDir: {}

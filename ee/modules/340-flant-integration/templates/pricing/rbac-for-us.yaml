@@ -4,7 +4,7 @@ kind: ServiceAccount
 metadata:
   name: pricing
   namespace: d8-{{ .Chart.Name }}
-{{ include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pricing")) | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -42,7 +42,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:flant-integration:pricing
-{{ include "helm_lib_module_labels" (list . (dict "app" "flant-pricing")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pricing")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -56,7 +56,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:flant-integration:pricing:rbac-proxy
-{{ include "helm_lib_module_labels" (list . (dict "app" "flant-pricing")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "pricing")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
