@@ -99,7 +99,7 @@ EOF
 
 
 function __on_conversion::alpha2_to_v1() {
-  cluster_config_json="$(context::jq '.snapshots.cluster_config[0].filterResult' | base64 -d | yq eval -I0 -j)"
+  cluster_config_json="$(context::jq -r '.snapshots.cluster_config[0].filterResult' | base64 -d | yq eval -I0 -j)"
   # shellcheck disable=SC2016
   if converted=$(context::jq -r --argjson config "$cluster_config_json" '.review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha2" then
