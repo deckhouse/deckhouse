@@ -49,10 +49,10 @@ spec:
   writeRelabelConfigs:
   - sourceLabels: [__name__]
     action: keep
-    regex: prometheus_build_.*
+    regex: prometheus_build_.*|my_cool_app_metrics_.*
   - sourceLabels: [__name__]
-    action: keep
-    regex: my_cool_app_metrics_.*
+    action: drop
+    regex: my_cool_app_metrics_with_sensitive_data
 ```
 
 
