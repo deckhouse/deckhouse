@@ -53,7 +53,7 @@ bb-apt-package?() {
     else
         VERSION_INSTALLED="$(dpkg -l "$PACKAGE" 2>/dev/null | grep -E "(hi|ii)\s+($PACKAGE)" | awk '{print $3}')" || return 1
 
-        VERSION_REGEX="$(sed -E -e 's/\*/[a-zA-Z0-9_-+~:]*/' -e 's/(.*)/^\1$/' <<< $VERSION_DESIRED)"
+        VERSION_REGEX="$(sed -E -e 's/\*/[a-zA-Z0-9_+~:-]*/' -e 's/(.*)/^\1$/' <<< $VERSION_DESIRED)"
         grep -q "$VERSION_REGEX" <<< $VERSION_INSTALLED
     fi
 }
