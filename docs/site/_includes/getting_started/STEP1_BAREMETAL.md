@@ -44,7 +44,7 @@ deckhouse:
         publicDomainTemplate: "%s.somedomain.com"
     cniFlannelEnabled: true
     cniFlannel:
-      podNetworkMode: vxlan
+      podNetworkMode: VXLAN
     prometheusMadisonIntegrationEnabled: false
     nginxIngressEnabled: false
 ---
@@ -101,7 +101,7 @@ deckhouse:
         publicDomainTemplate: "%s.somedomain.com"
     cniFlannelEnabled: true
     cniFlannel:
-      podNetworkMode: vxlan
+      podNetworkMode: VXLAN
     prometheusMadisonIntegrationEnabled: false
     nginxIngressEnabled: false
 ---
