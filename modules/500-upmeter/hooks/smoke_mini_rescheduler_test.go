@@ -18,21 +18,30 @@ package hooks
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: upmeter :: hooks :: smoke_mini_rescheduler ::", func() {
-	f := HookExecutionConfigInit(`{"upmeter":{"internal":{"smokeMini":{"sts":{"a":{},"b":{},"c":{}}}}}}`, `{}`)
+	Context("Empty cluster", func() {
+		f := HookExecutionConfigInit(`{
+"upmeter":{
+  "internal":{
+    "smokeMini":{
+      "sts":{"a":{},"b":{},"c":{}}
+    }
+  }
+}}`, `{}`)
 
-	tests := []struct {
-		title string
-		state string
-	}{
-		{
-			title: "One node, no pods",
-			state: `
+		DescribeTable("version change",
+			func(state string) {
+				f.BindingContexts.Set(f.KubeStateSet(state))
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+			},
+			Entry("One node, no pods", `
 ---
 apiVersion: v1
 kind: Node
@@ -44,11 +53,8 @@ status:
   conditions:
   - status: "True"
     type: Ready
-`,
-		},
-		{
-			title: "One node and a pod on it",
-			state: `
+`),
+			Entry("One node and a pod on it", `
 ---
 apiVersion: v1
 kind: Node
@@ -123,11 +129,8 @@ spec:
             operator: In
             values:
             - node-a-1
-`,
-		},
-		{
-			title: "Two nodes and a pod",
-			state: `
+`),
+			Entry("Two nodes and a pod", `
 ---
 apiVersion: v1
 kind: Node
@@ -213,11 +216,8 @@ spec:
             operator: In
             values:
             - node-a-1
-`,
-		},
-		{
-			title: "Unscheduled pod",
-			state: `
+`),
+			Entry("Unscheduled pod", `
 ---
 apiVersion: v1
 kind: Node
@@ -292,21 +292,28 @@ spec:
             operator: In
             values:
             - node-a-1
-`,
-		},
-	}
+`))
+	})
 
-	for _, tt := range tests {
-		Context(tt.title, func() {
+	Context("Empty cluster", func() {
+		f := HookExecutionConfigInit(`{"upmeter":{"smokeMiniDisabled": true}}`, `{}`)
 
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(tt.state))
-				f.RunHook()
-			})
-
-			It("Must be executed successfully", func() {
-				Expect(f).To(ExecuteSuccessfully())
-			})
+		It("Should execute successfully", func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  labels:
+    kubernetes.io/hostname: node-a-1
+  name: node-a-1
+status:
+  conditions:
+  - status: "True"
+    type: Ready
+`))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
 		})
-	}
+	})
 })
