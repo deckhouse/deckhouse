@@ -4,7 +4,7 @@
 010-vertical-pod-autoscaler-crd
 010-user-authn-crd
 200-operator-prometheus
-340-flant-integration
+600-flant-integration
 340-monitoring-applications
 400-nginx-ingress
 500-okmeter
