@@ -506,7 +506,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(nginx_connections_current{state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
+              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"})",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -514,7 +514,7 @@
               "step": 10
             },
             {
-              "expr": "sum(nginx_connections_current{state=\"active\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
+              "expr": "sum(nginx_connections_active{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -611,7 +611,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4]))",
+              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -619,7 +619,7 @@
               "step": 10
             },
             {
-              "expr": "sum(rate(nginx_connections_processed_total{stage=\"accepted\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by",
+              "expr": "sum(rate(nginx_connections_accepted{controller=~\"$controller\", app=~\"$app\", node=~\"$node\"}[$__interval_sx4])) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",

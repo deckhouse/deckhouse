@@ -91,7 +91,12 @@ spec:
             - NET_ADMIN
       - name: nginx-exporter
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.nginxIngress.nginxExporter }}
-        args: ["-nginx.scrape_uri=http://127.0.0.1:10253/nginx_status", "-telemetry.address=127.0.0.1:10354", "-insecure=true"]
+        args:
+        - "-web.listen-address=127.0.0.1:10354"
+        - "-nginx.scrape-uri=http://127.0.0.1:10253/nginx_status"
+        - "-nginx.ssl-verify=false"
+        - "-nginx.retries=10"
+        - "-nginx.retry-interval=6s"
         livenessProbe:
           httpGet:
             path: /metrics
