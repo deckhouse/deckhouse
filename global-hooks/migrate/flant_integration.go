@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"os/exec"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -41,6 +42,20 @@ func flantIntegrationMigration(input *go_hook.HookInput, dc dependency.Container
 		Get(context.TODO(), "deckhouse", metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf(`cannot get configmap "deckhouse"`)
+	}
+
+	cmd := exec.Command("helm", "delete", "prometheus-madison-integration", "--dry-run")
+	output, err := cmd.Output()
+	if err != nil {
+		input.LogEntry.Warnf("helm delete prometheus-madison-integration --dry-run: %s", err)
+	} else {
+		input.LogEntry.Warnf("helm delete prometheus-madison-integration --dry-run: %s", output)
+		cmd = exec.Command("helm", "delete", "prometheus-madison-integration")
+		output, err = cmd.Output()
+		if err != nil {
+			return fmt.Errorf("cannot delete helm release prometheus-madison-integration: %s", err)
+		}
+		input.LogEntry.Warnf("helm delete prometheus-madison-integration: %s", output)
 	}
 
 	// Second stage, we can delete other modules data
@@ -120,5 +135,6 @@ func flantIntegrationMigration(input *go_hook.HookInput, dc dependency.Container
 	if err != nil {
 		return fmt.Errorf("cannot update configmap deckhouse")
 	}
+
 	return nil
 }
