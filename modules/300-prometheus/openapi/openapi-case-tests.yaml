@@ -13,6 +13,49 @@ positive:
           certificate: somecertstring
           key: somekeystring
           certificate_updated: true
+        grafana:
+          additionalDatasources:
+          - access: proxy
+            basicAuth: false
+            editable: false
+            isDefault: false
+            jsonData:
+              timeInterval: 30s
+            name: loki
+            orgId: 1
+            type: loki
+            url: http://loki.loki:3100
+            uuid: loki
+            version: 1
+          - access: proxy
+            basicAuth: false
+            editable: false
+            isDefault: false
+            jsonData:
+              httpMethod: POST
+              timeInterval: 30s
+            name: promscale-production
+            orgId: 1
+            type: prometheus
+            url: http://my.domain.com:9091
+            uuid: promscale-production
+            version: 1
+          - access: proxy
+            basicAuth: true
+            basicAuthUser: metric
+            editable: false
+            isDefault: false
+            jsonData:
+              timeInterval: 30s
+            name: external-prometheus
+            orgId: 1
+            secureJsonData:
+              basicAuthPassword: secret
+            type: prometheus
+            url: http://my.domain.com/prometheus/
+            uuid: external-prometheus
+            version: 1
+
 negative:
   values:
     - internal:

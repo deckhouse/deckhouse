@@ -105,6 +105,18 @@ properties:
                   type: integer
                 isDefault:
                   type: boolean
+                basicAuth:
+                  type: boolean
+                basicAuthUser:
+                  type: string
+                jsonData:
+                  type: object
+                  additionalProperties:
+                    type: string
+                secureJsonData:
+                  type: object
+                  additionalProperties:
+                    type: string
         x-examples:
           - additionalDatasources:
               - type: graphite
