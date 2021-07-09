@@ -196,6 +196,7 @@ resource "vsphere_virtual_machine" "master" {
     ignore_changes = [
       extra_config,
       disk,
+      vapp,
     ]
   }
 }
