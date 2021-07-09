@@ -55,6 +55,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, assignMachineClassChecksum)
 
 func assignMachineClassChecksum(input *go_hook.HookInput) error {
+	jsonValues := input.Values.Get(machineDeploymentsInternalValuesPath)
+	if len(jsonValues.Map()) == 0 {
+		return nil
+	}
+
 	checksumTemplate, err := getChecksumTemplate(input.Values)
 	if err != nil {
 		return err
@@ -63,11 +68,6 @@ func assignMachineClassChecksum(input *go_hook.HookInput) error {
 	ngs, err := parseNodeGroupValues(input.Values)
 	if err != nil {
 		return fmt.Errorf("cannot parse nodeGroup values: %v", err)
-	}
-
-	jsonValues := input.Values.Get(machineDeploymentsInternalValuesPath)
-	if !jsonValues.Exists() {
-		return nil
 	}
 
 	mds := make(map[string]machineDeployment)
