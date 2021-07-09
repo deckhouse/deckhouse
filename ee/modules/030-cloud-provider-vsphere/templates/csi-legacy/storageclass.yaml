@@ -22,6 +22,6 @@ allowedTopologies:
     - {{ . }}
   {{- end }}
 allowVolumeExpansion: true
-volumeBindingMode: WaitForFirstConsumer
+volumeBindingMode: Immediate
 {{- end }}
 {{- end }}
