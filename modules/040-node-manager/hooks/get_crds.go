@@ -287,9 +287,8 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
 			if staticValue, has := input.Values.GetOk("nodeManager.internal.static"); has {
-				static := staticValue.Map()
-				if len(static) > 0 {
-					ngForValues["static"] = static
+				if len(staticValue.Map()) > 0 {
+					ngForValues["static"] = staticValue.Value()
 				}
 			}
 		}
