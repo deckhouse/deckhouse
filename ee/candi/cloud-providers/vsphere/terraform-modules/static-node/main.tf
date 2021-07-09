@@ -168,6 +168,7 @@ resource "vsphere_virtual_machine" "node" {
     ignore_changes = [
       extra_config,
       disk,
+      vapp,
     ]
   }
 }
