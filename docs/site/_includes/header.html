@@ -1,6 +1,7 @@
 {% assign topnav = site.data[page.topnav].topnav %}
 
 <div class="header-container">
+  {% unless site.mode == 'local' %}
   <div id="notice" class="notice" data-state="expanded">
     <a href="javascript:void(0)" id="notice-expand" class="notice__expand"></a>
     <a href="javascript:void(0)" id="notice-collapse" class="notice__collapse"></a>
@@ -42,6 +43,7 @@
       {%- endif %}
     </div>
   </div>
+  {% endunless %}
 
   <header class="header">
     <div class="header__content container">
