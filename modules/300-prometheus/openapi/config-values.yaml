@@ -222,7 +222,6 @@ properties:
           - "Off"
   highAvailability:
     type: boolean
-    default: false
     x-examples: [true, false]
     description: |
       Manually enable the high availability mode.
