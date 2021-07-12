@@ -45,8 +45,6 @@ deckhouse:
     cniFlannelEnabled: true
     cniFlannel:
       podNetworkMode: VXLAN
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ---
 # секция с параметрами bare metal-кластера (StaticClusterConfiguration)
 # используемая версия API Deckhouse
@@ -102,8 +100,6 @@ deckhouse:
     cniFlannelEnabled: true
     cniFlannel:
       podNetworkMode: VXLAN
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ---
 # секция с параметрами bare metal-кластера (StaticClusterConfiguration)
 # используемая версия API Deckhouse

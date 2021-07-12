@@ -58,8 +58,6 @@ deckhouse:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ---
 # section containing the parameters of the cloud provider
 # version of the Deckhouse API

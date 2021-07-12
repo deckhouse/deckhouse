@@ -28,8 +28,6 @@ deckhouse:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ```
 {% endofftopic %}
 {% offtopic title="config.yml for EE" %}
@@ -59,7 +57,5 @@ deckhouse:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ```
 {% endofftopic %}

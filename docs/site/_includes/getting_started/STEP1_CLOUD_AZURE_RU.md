@@ -63,8 +63,6 @@ deckhouse:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
         # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ---
 # секция с параметрами облачного провайдера
 apiVersion: deckhouse.io/v1alpha1
@@ -149,8 +147,6 @@ deckhouse:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
         # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
         publicDomainTemplate: "%s.somedomain.com"
-    prometheusMadisonIntegrationEnabled: false
-    nginxIngressEnabled: false
 ---
 # секция с параметрами облачного провайдера
 apiVersion: deckhouse.io/v1alpha1
