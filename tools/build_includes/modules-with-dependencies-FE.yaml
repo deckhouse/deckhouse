@@ -9,11 +9,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/340-prometheus-madison-integration
-  to: /deckhouse/modules/340-prometheus-madison-integration
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/fe/modules/400-nginx-ingress
   to: /deckhouse/modules/400-nginx-ingress
   stageDependencies:

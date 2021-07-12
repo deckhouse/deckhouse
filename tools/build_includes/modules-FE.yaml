@@ -3,8 +3,6 @@
   to: /deckhouse/modules/340-extended-monitoring
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
-- add: /ee/fe/modules/340-prometheus-madison-integration
-  to: /deckhouse/modules/340-prometheus-madison-integration
 - add: /ee/fe/modules/400-nginx-ingress
   to: /deckhouse/modules/400-nginx-ingress
 - add: /ee/fe/modules/450-keepalived
