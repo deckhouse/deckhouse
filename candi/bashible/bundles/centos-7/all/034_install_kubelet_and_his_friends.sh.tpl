@@ -28,7 +28,7 @@ fi
 bb-yum-remove kubeadm
 bb-yum-install "kubelet-$kubernetes_version" "kubectl-$kubernetes_version" "kubernetes-cni-$kubernetes_cni_version"
 
-if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
+if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]] && systemctl is-active -q kubelet; then
   # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations
   systemctl stop kubelet
 fi
