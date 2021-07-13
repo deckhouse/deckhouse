@@ -177,7 +177,7 @@ k8s:
       aws: 9e3808d53f0364178f2c40476ea368f3c5140d39
       vsphere: v1.20.0
       azure: v0.7.2@sha256:67d0dfedb0829c06a757357db744d438a2e79cb4f7fa956659264c77c05bbf66
-      gcp: 880c0a9ded79c51a2be835b0872de3597cff059b
+      gcp: cb50c5bb0ef346a37f3a6d1712cda9fd774fdcd5
     csi:
       openstack: v1.20.1
       provisioner: v2.1.0@sha256:20c828075d1e36f679d6a91e905b0927141eef5e15be0c9a1ca4a6a0ed9313d2
@@ -200,7 +200,7 @@ k8s:
       aws: d31100461a83378b658b1ab2c689d79987a0d863
       vsphere: v1.20.0
       azure: v1.0.0@sha256:b31991b6056a879ddc15eac8d6f3025b4c3f1e86617f91d320b1dcba22db0217
-      gcp: f385bda395a6a64d9964605ab0a69d071155f2e5
+      gcp: 133826d967b2852f8bb8aa177d5f11cb1adb1f01
     csi:
       openstack: v1.21.0
       provisioner: v2.1.0@sha256:20c828075d1e36f679d6a91e905b0927141eef5e15be0c9a1ca4a6a0ed9313d2
