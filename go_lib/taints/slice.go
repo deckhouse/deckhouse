@@ -89,6 +89,10 @@ func (s Slice) Equal(in []v1.Taint) bool {
 // ApplyTemplate use "template" slice to add new taints and update existin.
 // lastApplied slice is used to delete excess taints.
 func (s Slice) ApplyTemplate(template []v1.Taint, lastApplied []v1.Taint) (Slice, bool) {
+	if template == nil && lastApplied == nil {
+		return Slice{}, true
+	}
+
 	changed := false
 	excess := Slice(lastApplied).ExcessKeys(template)
 

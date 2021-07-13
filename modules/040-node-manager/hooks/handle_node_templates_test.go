@@ -515,4 +515,43 @@ metadata:
 		})
 	})
 
+	Context("NodeGroup without taints and Node with taints", func() {
+		BeforeEach(func() {
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: Static
+  nodeTemplate:
+    labels:
+      node.deckhouse.io/group: wor-ker
+      node-role.deckhouse.io/system: ""
+      node-role.deckhouse.io/stateful: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  labels:
+    node.deckhouse.io/group: wor-ker
+spec:
+  taints:
+  - key: a
+    effect: NoSchedule
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must delete the taints completely", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			node := f.KubernetesGlobalResource("Node", "wor-ker").Parse()
+			Expect(node.Get("spec.taints").Array()).To(HaveLen(0))
+		})
+	})
+
 })
