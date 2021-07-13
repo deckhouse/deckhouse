@@ -6,38 +6,47 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: secret-copier :: hooks :: handler ::", func() {
-	const (
-		stateNamespaces = `
----
+	var (
+		stateNSYAML1 = `
 apiVersion: v1
 kind: Namespace
 metadata:
   name: default
----
+`
+		stateNSYAML2 = `
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ns1
----
+`
+		stateNSYAML3 = `
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ns2
----
+`
+		stateNSYAML4 = `
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ns3t
 status:
   phase: Terminating
----
+`
+		stateNSYAML5 = `
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -45,8 +54,7 @@ metadata:
   labels:
     heritage: upmeter
 `
-		stateSecretsNeutral = `
----
+		stateSecretNeutralYAML = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -57,8 +65,7 @@ data:
   supersecret: YWJj
 `
 
-		stateSecretsOriginal = `
----
+		stateSecretOriginalYAML1 = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -70,7 +77,8 @@ metadata:
     certmanager.k8s.io/certificate-name: certname
 data:
   supersecret: czFkYXRh
----
+`
+		stateSecretOriginalYAML2 = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -81,7 +89,8 @@ metadata:
     secret-copier.deckhouse.io/enabled: ""
 data:
   supersecret: czJkYXRh
----
+`
+		stateSecretOriginalYAML3 = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -93,8 +102,7 @@ metadata:
 data:
   supersecret: czNkYXRh
 `
-		stateSecretsExtra = `
----
+		stateSecretExtraYAML1 = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -105,7 +113,8 @@ metadata:
     secret-copier.deckhouse.io/enabled: ""
 data:
   supersecret: ZXMxZGF0YQ==
----
+`
+		stateSecretExtraYAML2 = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -117,8 +126,7 @@ metadata:
 data:
   supersecret: ZXMyZGF0YQ==
 `
-		stateSecretsUpToDate = `
----
+		stateSecretUpToDateYAML = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -130,8 +138,7 @@ metadata:
 data:
   supersecret: czFkYXRh
 `
-		stateSecretsOutDated = `
----
+		stateSecretOutDatedYAML = `
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -144,6 +151,71 @@ data:
   supersecret: b2xkX3MyX2RhdGE=
 `
 	)
+
+	var (
+		ns1             *corev1.Namespace
+		ns2             *corev1.Namespace
+		ns3             *corev1.Namespace
+		ns4             *corev1.Namespace
+		ns5             *corev1.Namespace
+		secretNeutral   *corev1.Secret
+		secretOriginal1 *corev1.Secret
+		secretOriginal2 *corev1.Secret
+		secretOriginal3 *corev1.Secret
+		secretExtra1    *corev1.Secret
+		secretExtra2    *corev1.Secret
+		secretUpToDate  *corev1.Secret
+		secretOutDated  *corev1.Secret
+
+		clusterState string
+	)
+
+	BeforeEach(func() {
+		_ = yaml.Unmarshal([]byte(stateNSYAML1), &ns1)
+		_ = yaml.Unmarshal([]byte(stateNSYAML2), &ns2)
+		_ = yaml.Unmarshal([]byte(stateNSYAML3), &ns3)
+		_ = yaml.Unmarshal([]byte(stateNSYAML4), &ns4)
+		_ = yaml.Unmarshal([]byte(stateNSYAML5), &ns5)
+		_ = yaml.Unmarshal([]byte(stateSecretNeutralYAML), &secretNeutral)
+		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML1), &secretOriginal1)
+		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML2), &secretOriginal2)
+		_ = yaml.Unmarshal([]byte(stateSecretOriginalYAML3), &secretOriginal3)
+		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML1), &secretExtra1)
+		_ = yaml.Unmarshal([]byte(stateSecretExtraYAML2), &secretExtra2)
+		_ = yaml.Unmarshal([]byte(stateSecretUpToDateYAML), &secretUpToDate)
+		_ = yaml.Unmarshal([]byte(stateSecretOutDatedYAML), &secretOutDated)
+
+		nsYAML1, _ := yaml.Marshal(&ns1)
+		nsYAML2, _ := yaml.Marshal(&ns2)
+		nsYAML3, _ := yaml.Marshal(&ns3)
+		nsYAML4, _ := yaml.Marshal(&ns4)
+		nsYAML5, _ := yaml.Marshal(&ns5)
+		secretOriginalYAML1, _ := yaml.Marshal(&secretOriginal1)
+		secretOriginalYAML2, _ := yaml.Marshal(&secretOriginal2)
+		secretOriginalYAML3, _ := yaml.Marshal(&secretOriginal3)
+		secretNeutralYAML, _ := yaml.Marshal(&secretNeutral)
+		secretExtraYAML1, _ := yaml.Marshal(&secretExtra1)
+		secretExtraYAML2, _ := yaml.Marshal(&secretExtra2)
+		secretUpToDateYAML, _ := yaml.Marshal(&secretUpToDate)
+		secretOutDatedYAML, _ := yaml.Marshal(&secretOutDated)
+
+		clusterState = strings.Join([]string{
+			string(nsYAML1),
+			string(nsYAML2),
+			string(nsYAML3),
+			string(nsYAML4),
+			string(nsYAML5),
+			string(secretOriginalYAML1),
+			string(secretOriginalYAML2),
+			string(secretOriginalYAML3),
+			string(secretNeutralYAML),
+			string(secretExtraYAML1),
+			string(secretExtraYAML2),
+			string(secretUpToDateYAML),
+			string(secretOutDatedYAML),
+		}, "---\n")
+
+	})
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
@@ -160,73 +232,81 @@ data:
 
 	Context("Namespaces and all types of secrets are in cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNamespaces + stateSecretsOriginal + stateSecretsNeutral + stateSecretsExtra + stateSecretsOutDated + stateSecretsUpToDate))
+
+			f.BindingContexts.Set(f.KubeStateSet(clusterState))
+
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns1, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns2, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns3, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns4, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns5, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretNeutral.Namespace).Create(context.TODO(), secretNeutral, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal1.Namespace).Create(context.TODO(), secretOriginal1, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal2.Namespace).Create(context.TODO(), secretOriginal2, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretOriginal3.Namespace).Create(context.TODO(), secretOriginal3, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretExtra1.Namespace).Create(context.TODO(), secretExtra1, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretExtra2.Namespace).Create(context.TODO(), secretExtra2, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretUpToDate.Namespace).Create(context.TODO(), secretUpToDate, metav1.CreateOptions{})
+			_, _ = f.KubeClient().CoreV1().Secrets(secretOutDated.Namespace).Create(context.TODO(), secretOutDated, metav1.CreateOptions{})
+
 			f.RunHook()
 		})
 
 		It("Six secrets must be actual", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.KubernetesResource("Secret", "ns1", "es1").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns2", "es2").Exists()).To(BeFalse())
+			_, err := f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "es1", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
 
-			Expect(f.KubernetesResource("Secret", "ns1", "s1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns1", "s2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns1", "s3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns2", "s1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns2", "s2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns2", "s3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns3t", "s1").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns3t", "s2").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns3t", "s3").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns4u", "s1").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns4u", "s2").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns4u", "s3").Exists()).To(BeFalse())
+			_, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "es2", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
 
-			Expect(f.KubernetesResource("Secret", "ns1", "s1").Field("data.supersecret").String()).To(Equal("czFkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns1", "s2").Field("data.supersecret").String()).To(Equal("czJkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns1", "s3").Field("data.supersecret").String()).To(Equal("czNkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s1").Field("data.supersecret").String()).To(Equal("czFkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s2").Field("data.supersecret").String()).To(Equal("czJkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s3").Field("data.supersecret").String()).To(Equal("czNkYXRh"))
+			s, err := f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s1", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s1data"))
+			_, found := s.ObjectMeta.Labels["certmanager.k8s.io/certificate-name"]
+			Expect(found).To(BeFalse())
 
-			Expect(f.KubernetesResource("Secret", "ns1", "s1").Field("metadata.labels").Map()).ToNot(HaveKey("certmanager.k8s.io/certificate-name"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s1").Field("metadata.labels").Map()).ToNot(HaveKey("certmanager.k8s.io/certificate-name"))
-		})
-	})
+			s, err = f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s2", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s2data"))
 
-	Context("Namespaces and all types of secrets are in cluster", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(stateNamespaces + stateSecretsOriginal + stateSecretsNeutral + stateSecretsExtra + stateSecretsOutDated + stateSecretsUpToDate)
-			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
-			f.RunHook()
-		})
+			s, err = f.KubeClient().CoreV1().Secrets("ns1").Get(context.TODO(), "s3", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s3data"))
 
-		It("Six secrets must be actual", func() {
-			Expect(f).To(ExecuteSuccessfully())
+			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s1", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s1data"))
+			_, found = s.ObjectMeta.Labels["certmanager.k8s.io/certificate-name"]
+			Expect(found).To(BeFalse())
 
-			Expect(f.KubernetesResource("Secret", "ns1", "es1").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns2", "es2").Exists()).To(BeFalse())
+			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s2", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s2data"))
 
-			Expect(f.KubernetesResource("Secret", "ns1", "s1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns1", "s2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns1", "s3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns2", "s1").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns2", "s2").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns2", "s3").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "ns3t", "s1").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns3t", "s2").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns3t", "s3").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns4u", "s1").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns4u", "s2").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "ns4u", "s3").Exists()).To(BeFalse())
+			s, err = f.KubeClient().CoreV1().Secrets("ns2").Get(context.TODO(), "s3", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(string(s.Data["supersecret"])).To(Equal("s3data"))
 
-			Expect(f.KubernetesResource("Secret", "ns1", "s1").Field("data.supersecret").String()).To(Equal("czFkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns1", "s2").Field("data.supersecret").String()).To(Equal("czJkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns1", "s3").Field("data.supersecret").String()).To(Equal("czNkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s1").Field("data.supersecret").String()).To(Equal("czFkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s2").Field("data.supersecret").String()).To(Equal("czJkYXRh"))
-			Expect(f.KubernetesResource("Secret", "ns2", "s3").Field("data.supersecret").String()).To(Equal("czNkYXRh"))
+			_, err = f.KubeClient().CoreV1().Secrets("ns3t").Get(context.TODO(), "s1", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns3t").Get(context.TODO(), "s2", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns3t").Get(context.TODO(), "s3", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s1", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s2", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
+			_, err = f.KubeClient().CoreV1().Secrets("ns4u").Get(context.TODO(), "s3", metav1.GetOptions{})
+			Expect(err).ToNot(BeNil())
+
 		})
 	})
 })
