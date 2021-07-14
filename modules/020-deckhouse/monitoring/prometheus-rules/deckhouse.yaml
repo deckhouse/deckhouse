@@ -163,7 +163,7 @@
         Обычно этот алерт означает, что у pod'а deckhouse есть какие-то проблемы с доступом в интернет.
 
   - alert: D8DeckhouseQueueIsHung
-    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length[__SCRAPE_INTERVAL_X_3__])) > 10
+    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*"}[__SCRAPE_INTERVAL_X_3__])) > 10
     labels:
       severity_level: "7"
       tier: cluster
