@@ -1,0 +1,38 @@
+---
+title: "Getting started"
+permalink: en/gs/index.html
+layout: page-nosidebar
+toc: false
+---
+
+<link rel="stylesheet" type="text/css" href='{{ assets["getting-started.css"].digest_path }}' />
+<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+
+{% include getting_started/steps.html steps=1 step=1 title=page.title %}
+
+<p>Probably, you have already familiarized yourself with the main <a href="/{{ page.lang }}/#features">Deckhouse Platform features</a>. This getting started guide walks you through the step-by-step process of installing the platform.</p>
+
+<p>The Deckhouse Platform runs both on bare metal servers and on the infrastructure of the supported cloud providers. The installation process differs depending on the infrastructure chosen, thus we provide various installation examples below.</p>
+
+<h2>Select the infrastructure type to install Deckhouse in</h2>
+
+<div class="button-group gs__platform_buttons">
+  <a class="button button_default" href="/{{ page.lang }}/gs/bm/step2.html">Bare metal</a>
+  <a class="button button_default" href="javascript:void(0)" onclick="$('.gs-cloud-tabs').toggleClass('disabled'); $(this).toggleClass('button_default').toggleClass('button_alt')">Cloud</a>
+  <a class="button button_default" href="/{{ page.lang }}/gs/existing/step2.html">Existing cluster</a>
+</div>
+
+<div class="gs-cloud-tabs disabled">
+  <h2>Select the cloud platform</h2>
+
+    <p>The complete list of supported cloud providers and their specific settings is available in the <a href="/{{ page.lang }}/documentation/v1/kubernetes.html" title="Supported cloud providers and their specific settings">Cloud providers</a> section of the documentation.</p>
+
+  <div class="button-group">
+    <a class="button button_default" href="/{{ page.lang }}/gs/aws/step2.html">Amazon AWS</a>
+    <a class="button button_default" href="/{{ page.lang }}/gs/google/step2.html">Google Cloud</a>
+    <a class="button button_default" href="/{{ page.lang }}/gs/azure/step2.html">Microsoft Azure</a>
+    <a class="button button_default" href="/{{ page.lang }}/gs/openstack/step2.html">OpenStack</a>
+    <a class="button button_default" href="/{{ page.lang }}/gs/yandex/step2.html">Yandex.Cloud</a>
+    <a class="button button_default disabled">VMware vSphere (soon...)</a>
+  </div>
+</div>

@@ -687,7 +687,7 @@ entries:
                 ru: Описание
                 en: Description
               url: /modules/600-secret-copier/
-    - title: Bare Metal Support
+    - title: Bare metal Support
       versionType: ee
       folders:
         - title: metallb

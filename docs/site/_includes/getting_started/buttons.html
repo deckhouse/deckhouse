@@ -1,0 +1,24 @@
+{% assign prev_step = include.step | minus: 1 %}
+{% assign next_step = include.step | plus: 1 %}
+{% if page.platform_code == 'openstack' or page.platform_code == 'vsphere' %}
+{% assign ee_only = true %}
+{% else %}
+{% assign ee_only = false %}
+{% endif %}
+
+<div class="gs-revision-tabs" style="margin-top: 50px;">
+  <div class="button-group">
+  {%- if include.step == 2 and ee_only != true %}
+    <a class="button button_default" href="/{{ page.lang }}/gs/">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+    <a class="button button_alt" href="/{{ page.lang }}/gs/{{ page.platform_code }}/step{{ next_step }}-ce.html">Community Edition</a>
+    <a class="button button_alt" href="/{{ page.lang }}/gs/{{ page.platform_code }}/step{{ next_step }}-ee.html">Enterprise Edition</a>
+  {%- else %}
+    {% unless include.step == 1 %}
+        <a class="button button_default" href="/{{ page.lang }}/gs/{% if include.step >2 %}{{ page.platform_code }}/step{{ prev_step }}{% if page.revision and prev_step > 2 %}-{{ page.revision }}{% endif %}.html{% endif %}">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+        {%- if include.nextStepCaption %}
+          <a class="button button_alt" href="/{{ page.lang }}/gs/{{ page.platform_code }}/step{{ next_step }}{% if page.revision %}-{{ page.revision }}{% endif %}.html">{{ site.data['getting_started']['buttonCaption']['next'][page.lang] }}{{ site.data['getting_started']['buttonCaption'][include.nextStepCaption][page.lang] }}</a>
+        {%- endif %}
+    {% endunless %}
+  {%- endif %}
+  </div>
+</div>

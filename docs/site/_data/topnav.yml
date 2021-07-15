@@ -5,7 +5,7 @@ topnav:
   - title:
       ru: Быстрый старт
       en: Getting started
-    url: /getting_started.html
+    url: /gs/
   - title:
       ru: Документация
       en: Documentation

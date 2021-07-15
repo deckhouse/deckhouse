@@ -5,7 +5,7 @@ permalink: en/kubernetes.html
 
 Deckhouse makes it possible to run the Kubernetes cluster on **any supported infrastructure** and in the **same manner**:
 - on clouds (for more info, see the section for the specific cloud provider);
-- on virtual or bare-metal machines (including on-premises);
+- on virtual or bare metal machines (including on-premises);
 - on a hybrid infrastructure.
 
 Deckhouse automatically configures and manages both the [cluster nodes]({{"/modules/040-node-manager/" | true_relative_url }} ) and the  [control-plane]({{"/modules/040-control-plane-manager/" | true_relative_url }} ), keeping their configuration up-to-date (using Terraform tools).
