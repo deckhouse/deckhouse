@@ -18,6 +18,10 @@ module Jekyll
       return text.end_with? query
     end
 
+    def startswith(text, query)
+      return text.start_with? query if text
+    end
+
     # get_lang_field_or_raise_error filter returns a field from argument hash
     # returns nil if hash is empty
     # returns hash[page.lang] if hash has the field

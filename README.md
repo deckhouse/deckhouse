@@ -3,7 +3,7 @@
 # Main features
 - NoOps: system software on the nodes, Kubernetes core software, Kubernetes platform components are automatically managed.
 - SLA by design: availability guarantees even without direct access to your infrastructure.
-- Fully identical and infrastructure-agnostic clusters. Deploy on a public cloud of your choice (AWS, GCP, Microsoft Azure, OVH Cloud), self-hosted cloud solutions (OpenStack and vSphere), and even bare-metal servers.
+- Fully identical and infrastructure-agnostic clusters. Deploy on a public cloud of your choice (AWS, GCP, Microsoft Azure, OVH Cloud), self-hosted cloud solutions (OpenStack and vSphere), and even bare metal servers.
 - 100 % vanilla Kubernetes based upstream version of Kubernetes.
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - Feature-complete platform. Many features — carefully configured & integrated — are available right out of the box.
@@ -23,7 +23,7 @@ Deckhouse Platform follows the upstream version of Kubernetes, building all its 
 
 Deckhouse Platform has a vast history of being used internally in Flant and is ready for production. Its beta testing started in May'21 when the first public demo tokens were issued. By the end of Jun'21, it was tested by 300+ engineers, and its source code went public via GitHub.
 
-Deckhouse Platform CE is now freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/). Please, follow our [getting started](https://deckhouse.io/en/getting_started.html) instructions to begin your journey with Deckhouse Platform.
+Deckhouse Platform CE is now freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/). Please, follow our [getting started](https://deckhouse.io/en/gs/) instructions to begin your journey with Deckhouse Platform.
 
 # Online community
 In addition to common GitHub features, here are some other online resources related to Deckhouse:

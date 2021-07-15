@@ -1,0 +1,30 @@
+buttonCaption:
+  back:
+    en: Go back
+    ru: Вернуться назад
+  next:
+    en: "Next: "
+    ru: "Далее: "
+  ce: Community Edition
+  ee: Enterprise Edition
+  preparingEnv:
+    en: Preparing environment
+    ru: Подготовка окружения
+  preparingConfig:
+    en: Preparing configuration
+    ru: Подготовка конфигурации
+  installing:
+    en: Installation
+    ru:  Установка
+  addingNode:
+    en: Adding a node
+    ru: Добавление узла
+  workingWithModules:
+    en: Working with modules
+    ru: Работа с модулями
+  checkingStatus:
+    en: Checking the installation status
+    ru: Проверка статуса установки
+  finish:
+    en: What can I do next?
+    ru: Куда двигаться дальше?

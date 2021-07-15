@@ -1,0 +1,80 @@
+@import "components/common/_variables.scss";
+
+.gs-steps {
+    position: relative;
+    width: 90%;
+    margin: 45px auto 65px;
+    &__points {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    &__point {
+        position: relative;
+        &-num {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 30px;
+            height: 30px;
+            box-sizing: border-box;
+            border: 2px solid transparent;
+            transform: rotate(45deg);
+
+            background: $color-smooth;
+            color: #999;
+            &_active {
+                background: $color-inverse;
+                font-weight: $font-weight-semibold;
+                border-color: $color-alt;
+                color: $color-alt;
+            }
+            &_past {
+                font-weight: $font-weight-semibold;
+                background: $color-alt;
+                color: $color-inverse !important;
+                &:hover {
+                    color: $color-inverse !important;
+                    background: $color-main;
+                    border-color: transparent;
+                    text-decoration: none !important;
+                }
+            }
+
+            span {
+                transform: rotate(-45deg);
+            }
+        }
+        &-title {
+            white-space: nowrap;
+            position: absolute;
+            left: 50%;
+            top: 45px;
+            transform: translateX(-50%);
+            font-size: $font-size-base;
+            font-weight: $font-weight-semibold;
+            color: $color-alt;
+        }
+    }
+    &__sections {
+        width: 100%;
+        position: absolute;
+        left: 0;
+        top: 13px;
+        z-index: -1;
+
+        display: flex;
+        flex-direction: row;
+    }
+    &__section {
+        flex: 1;
+        height: 3px;
+        background: $color-smooth;
+        &_past {
+            background: $color-alt;
+        }
+    }
+}

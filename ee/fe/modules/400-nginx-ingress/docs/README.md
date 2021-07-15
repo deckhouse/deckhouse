@@ -119,7 +119,7 @@ To use it, you will need an application that can return pages for the specified 
 Usage
 ---------------------
 
-### Bare Metal + Qrator
+### Bare metal + Qrator
 
 Case study:
 * Non-production environments (test, stage, etc.) and infrastructure components (prometheus, dashboard, etc.) connect to the internet directly.
@@ -263,7 +263,7 @@ nginxIngress: |
       - 0.0.0.0/0
 ```
 
-### Bare Metal + several applications that should not be affiliated
+### Bare metal + several applications that should not be affiliated
 
 Case study:
 * Suppose there is one main application supplemented by two additional ones. However, nobody can know that they belong to the same owners (hosted together).

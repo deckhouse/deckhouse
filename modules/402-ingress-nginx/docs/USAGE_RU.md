@@ -86,7 +86,7 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
-## Пример для Bare Metal
+## Пример для Bare metal
 
 ```yaml
 apiVersion: deckhouse.io/v1

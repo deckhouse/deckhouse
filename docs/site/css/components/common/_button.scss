@@ -7,29 +7,33 @@
     padding: 0.75em 1.5em;
     font-weight: $font-weight-semibold;
     &_default {
-        color: $color-main;
+        color: $color-main !important;
         background: $color-inverse;
         border: 2px solid $color-main;
     }
     &_alt {
-        color: $color-inverse;
+        color: $color-inverse !important;
         background: $color-alt;
         border: 2px solid $color-alt;
     }
     &_inverse {
-        color: $color-alt;
+        color: $color-alt !important;
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
     &_big {
         font-size: $font-size-h2;
     }
-    &_default, &_alt {
-        &:hover {
-            color: $color-inverse;
-            background: $color-main;
-            border: 2px solid $color-main;
-        }
+    &:hover {
+        text-decoration: none !important;
+    }
+    &:not(.button_disabled):hover {
+        color: $color-inverse !important;
+        background: $color-main;
+        border: 2px solid $color-main;
+    }
+    &_disabled {
+        opacity: 0.3;
     }
 }
 

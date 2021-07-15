@@ -6,7 +6,7 @@ columns:
       - title: Documentation
         url: '/documentation/v1/'
       - title: Getting Started
-        url: '/getting_started.html'
+        url: '/gs/'
   - title: Products
     items:
       - title: Deckhouse Platform CE
@@ -34,7 +34,7 @@ columns:
       - title: Документация
         url: '/documentation/v1/'
       - title: Быстрый старт
-        url: '/getting_started.html'
+        url: '/gs/'
   - title: Продукты
     items:
       - title: Deckhouse Platform CE

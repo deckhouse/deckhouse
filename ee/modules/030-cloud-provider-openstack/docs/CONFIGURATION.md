@@ -10,7 +10,7 @@ You can configure the number and parameters of ordering machines in the cloud vi
 
 The module settings are set automatically based on the placement strategy chosen. In most cases, you do not have to configure the module manually.
 
-If you need to configure a module because, say, you have a bare-metal cluster and you need to enable additional instances from vSphere, then refer to the [How to configure a Hybrid cluster in vSphere](faq.html#how-do-i-create-a-hybrid-cluster) section.
+If you need to configure a module because, say, you have a bare metal cluster and you need to enable additional instances from vSphere, then refer to the [How to configure a Hybrid cluster in vSphere](faq.html#how-do-i-create-a-hybrid-cluster) section.
 
 If you have instances in the cluster that use External Networks (other than those set out in the placement strategy), you must pass them via the:
 

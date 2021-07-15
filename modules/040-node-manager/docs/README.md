@@ -31,7 +31,7 @@ Nodes are managed through `node group` management, and each node group performs 
 - a group of monitoring-related nodes;
 - a group of application nodes (the so-called worker nodes), etc.
 
-The nodes belonging to the group have common parameters and are configured automatically according to the group's parameters. Deckhouse scales groups by adding, excluding, and updating their nodes. Both cloud and bare-metal (static) nodes can be combined into a single group. It paves the way for the hybrid clusters, in which you can scale nodes on physical servers via cloud nodes.
+The nodes belonging to the group have common parameters and are configured automatically according to the group's parameters. Deckhouse scales groups by adding, excluding, and updating their nodes. Both cloud and bare metal (static) nodes can be combined into a single group. It paves the way for the hybrid clusters, in which you can scale nodes on physical servers via cloud nodes.
 
 The module supports platforms for which there is a corresponding cloud provider module is available. If there is no support for some cloud platform, you can use its resources in the form of static nodes.
 
@@ -49,7 +49,7 @@ The group monitoring is available for nodes combined into a group:
 
 ## Automatic deploying, configuring and updating Kubernetes nodes
 ### Supported platforms and Kubernetes versions
-Automatic deployment (partially supported for *static/hybrid* nodes/clusters), configuration, and continuing software updates are supported for all cluster types (cloud or `bare-metal`-based).
+Automatic deployment (partially supported for *static/hybrid* nodes/clusters), configuration, and continuing software updates are supported for all cluster types (cloud or `bare metal`-based).
 
 The supported Kubernetes version is specified in parameters right down to the minor version. If the version is not set, the `node-manager` module will use the version specified in the `control plane` parameters.
 

@@ -54,7 +54,7 @@ You have to set the `additionalSecurityGroups` parameter for all OpenStackInstan
 
 ## How do I create a hybrid cluster?
 
-A hybrid cluster combines bare-metal and openstack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
+A hybrid cluster combines bare metal and openstack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
 1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`;
 2. Enable and [configure](configuration.html#параметры) the module.

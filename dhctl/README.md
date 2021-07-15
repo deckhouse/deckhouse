@@ -30,9 +30,9 @@ The first step is setting up a host.
 Only `ubuntu-16.04`, `ubuntu-18.04`, `ubuntu-20.04`, `centos-7` OS are supported.
 
 
-* **Bare Metal** - provide SSH access to the host and sudo access.
-* **Cloud Provider** - ensure that Deckhouse supports your cloud.
-  If it is not, you can still create VMs by hand and follow Bare Metal installation instructions.
+* **Bare metal** - provide SSH access to the host and sudo access.
+* **Cloud provider** - ensure that Deckhouse supports your cloud.
+  If it is not, you can still create VMs by hand and follow bare metal installation instructions.
 
 ### Configuration
 A configuration file is a YAML file with several sections.

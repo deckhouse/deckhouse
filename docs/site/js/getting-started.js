@@ -8,7 +8,7 @@ $( document ).ready(function() {
         let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
         let matchStringDockerLogin = "<LICENSE_TOKEN>";
 
-        $('.details code span.s').filter(function () {
+        $('code span.s').filter(function () {
             return this.innerText == matchStringClusterConfig;
         }).text(btoa(config));
 
@@ -20,4 +20,22 @@ $( document ).ready(function() {
     } else {
         console.log("No license token, so InitConfiguration was not updated");
     }
+});
+
+
+
+$(document).ready(function() {
+    $('[gs-revision-tabs]').on('click', function() {
+        var name = $(this).attr('data-features-tabs-trigger');
+        var $parent = $(this).closest('[data-features-tabs]');
+        var $triggers = $parent.find('[data-features-tabs-trigger]');
+        var $contents = $parent.find('[data-features-tabs-content]');
+        var $content = $parent.find('[data-features-tabs-content=' + name + ']');
+
+        $triggers.removeClass('active');
+        $contents.removeClass('active');
+
+        $(this).addClass('active');
+        $content.addClass('active');
+    })
 });
