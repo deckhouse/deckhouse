@@ -1,3 +1,0 @@
-[submodule "shell-operator"]
-	path = shell-operator
-	url = https://github.com/flant/shell-operator.git

@@ -33,8 +33,6 @@
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
     fi
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
   script:
   - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
   - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
@@ -64,8 +62,6 @@
     - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
       fi
-    - rm -rf shell-operator || true
-    - git submodule update --init --recursive
   script:
     - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
     - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
@@ -95,8 +91,6 @@
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
     fi
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
   script:
   - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
   - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
@@ -278,8 +272,6 @@
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
     fi
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
   script:
   - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
   - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
