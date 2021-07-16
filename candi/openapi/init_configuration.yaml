@@ -15,13 +15,17 @@ apiVersions:
       deckhouse:
         type: object
         oneOf:
-        - required: [imagesRepo, devBranch, configOverrides]
-        - required: [imagesRepo, releaseChannel, configOverrides]
+        - required: [devBranch, configOverrides]
+        - required: [releaseChannel, configOverrides]
         properties:
           imagesRepo:
             type: string
+            minLength: 1
+            default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
             type: string
+            minLength: 1
+            default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
           releaseChannel:
             type: string
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]

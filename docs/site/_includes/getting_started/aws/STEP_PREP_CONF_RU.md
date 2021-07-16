@@ -114,10 +114,6 @@
   kind: InitConfiguration
   # секция с параметрами Deckhouse
   deckhouse:
-    # адрес реестра с образом инсталлятора; указано значение по умолчанию для CE-сборки Deckhouse
-    imagesRepo: registry.deckhouse.io/deckhouse/ce
-    # строка с параметрами подключения к Docker registry
-    registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
     # используемый канал обновлений
     releaseChannel: Beta
     configOverrides:
