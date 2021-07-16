@@ -36,7 +36,8 @@ function __config__() {
       jqFilter: |
           {
             "tag": (.spec.template.spec.containers[0].image | split(":")[1]),
-            "version": (.metadata.annotations."core.deckhouse.io/version" // "unknown")
+            "version": (.metadata.annotations."core.deckhouse.io/version" // "unknown"),
+            "edition": (.metadata.annotations."core.deckhouse.io/edition" // "unknown")
           }
 EOF
 }
@@ -49,6 +50,9 @@ function __main__() {
     fi
     if [[ "$(values::get deckhouseWeb.deckhouseVersion)" != "$(context::get snapshots.d8_deployment.0.filterResult.version)" ]]; then
       values::set deckhouseWeb.deckhouseVersion "\"$(context::get snapshots.d8_deployment.0.filterResult.version)\""
+    fi
+    if [[ "$(values::get deckhouseWeb.deckhouseEdition)" != "$(context::get snapshots.d8_deployment.0.filterResult.edition)" ]]; then
+      values::set deckhouseWeb.deckhouseEdition "\"$(context::get snapshots.d8_deployment.0.filterResult.edition)\""
     fi
   fi
 
