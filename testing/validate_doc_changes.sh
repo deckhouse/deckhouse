@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -Eeo pipefail
 
 function request_gitlab_api() {
   curl --silent -f -H "PRIVATE-TOKEN: ${JOB_TOKEN}"  https://fox.flant.com/api/v4/projects/${CI_PROJECT_ID}/${1}
@@ -110,7 +110,7 @@ for MERGE_REQUEST_ID in ${MERGE_REQUESTS_ARRRAY[*]}; do
   fi
 done
 
-DIFF_DATA=$(git diff origin/master... --name-status -w --ignore-blank-lines --diff-filter=ACMD | awk '{print $2}' )
+DIFF_DATA=$(git diff origin/main... --name-status -w --ignore-blank-lines --diff-filter=ACMD | awk '{print $2}' )
 
 if [[ -z $DIFF_DATA ]]; then
   echo "Empty diff data"

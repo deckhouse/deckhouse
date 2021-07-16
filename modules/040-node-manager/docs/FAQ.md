@@ -63,6 +63,9 @@ kubectl label node <node_name> node.deckhouse.io/group-
    rm -rf /var/lib/cni
    rm -rf /var/lib/etcd
    rm -rf /etc/systemd/system/kubernetes-api-proxy*
+   rm -rf /etc/systemd/system/bashible*
+   rm -rf /etc/systemd/system/sysctl-tuner*
+   rm -rf /etc/systemd/system/kubelet*
    ```
 4. Delete all interfaces:
    ```shell
@@ -72,9 +75,10 @@ kubectl label node <node_name> node.deckhouse.io/group-
    ip link delete cni0
    ip link delete flannel.1
    ```
-5. Create the required directories:
+5. Cleanup systemd:
    ```shell
-   mkdir -p /etc/kubernetes/kubernetes-api-proxy/
+   systemctl daemon-reload
+   systemctl reset-failed
    ```
 6. Start Docker:
    ```shell
@@ -97,7 +101,7 @@ The `node-manager` module creates the `bashible` service on each node. You can b
 You can analyze `cloud-init` to find out what's happening on a node during the bootstrapping process:
 - Find the node that is currently bootstrapping: `kubectl -n d8-cloud-instance-manager  get machine | grep Pending`
 - To show details about a specific `machine`, enter: `kubectl -n d8-cloud-instance-manager describe machine kube-2-worker-01f438cf-757f758c4b-r2nx2`
-You will see the following information:
+  You will see the following information:
 ```shell
 Status:
   Bootstrap Status:
