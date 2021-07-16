@@ -134,60 +134,61 @@ EOF
 
 - Создайте на основе ранее созданной спецификации новую Policy с именем `D8CloudProviderAWS` и примечанием ARN:
   ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
-```
+  aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+  ```
 
-   В ответ отобразится следующий текст:
-   ```yaml
-{
-    "Policy": {
-        "PolicyName": "D8Policy",
-        "PolicyId": "AAA",
-        "Arn": "arn:aws:iam::123:policy/D8Policy",
-        "Path": "/",D8Policy
-        "DefaultVersionId": "v1",
-        "AttachmentCount": 0,
-        "PermissionsBoundaryUsageCount": 0,
-        "IsAttachable": true,
-        "CreateDate": "2020-08-27T02:52:06+00:00",
-        "UpdateDate": "2020-08-27T02:52:06+00:00"
-    }
-}
-```
-- Создайте нового пользователя:
-   ```shell
-aws iam create-user --user-name deckhouse
-```
-
-  В ответ отобразится следующий текст:
-   ```yaml
-{
-    "User": {
-        "Path": "/",
-        "UserName": "deckhouse",
-        "UserId": "AAAXXX",
-        "Arn": "arn:aws:iam::123:user/deckhouse",
-        "CreateDate": "2020-08-27T03:05:42+00:00"
-    }
-}
-```
-- Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
-  ```shell
-aws iam create-access-key --user-name deckhouse
-```
   В ответ отобразится следующий текст:
   ```yaml
-{
-    "AccessKey": {
-        "UserName": "deckhouse",
-        "AccessKeyId": "XXXYYY",
-        "Status": "Active",
-        "SecretAccessKey": "ZZZzzz",
-        "CreateDate": "2020-08-27T03:06:22+00:00"
-    }
-}
-```
+  {
+      "Policy": {
+          "PolicyName": "D8Policy",
+          "PolicyId": "AAA",
+          "Arn": "arn:aws:iam::123:policy/D8Policy",
+          "Path": "/",
+          "DefaultVersionId": "v1",
+          "AttachmentCount": 0,
+          "PermissionsBoundaryUsageCount": 0,
+          "IsAttachable": true,
+          "CreateDate": "2020-08-27T02:52:06+00:00",
+          "UpdateDate": "2020-08-27T02:52:06+00:00"
+      }
+  }
+  ```
+- Создайте нового пользователя:
+  ```shell
+  aws iam create-user --user-name deckhouse
+  ```
+
+  В ответ отобразится следующий текст:
+  ```yaml
+  {
+      "User": {
+          "Path": "/",
+          "UserName": "deckhouse",
+          "UserId": "AAAXXX",
+          "Arn": "arn:aws:iam::123:user/deckhouse",
+          "CreateDate": "2020-08-27T03:05:42+00:00"
+      }
+  }
+  ```
+- Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
+  ```shell
+  aws iam create-access-key --user-name deckhouse
+  ```
+
+  В ответ отобразится следующий текст:
+  ```yaml
+  {
+      "AccessKey": {
+          "UserName": "deckhouse",
+          "AccessKeyId": "XXXYYY",
+          "Status": "Active",
+          "SecretAccessKey": "ZZZzzz",
+          "CreateDate": "2020-08-27T03:06:22+00:00"
+      }
+  }
+  ```
 - Объедините `User` и `Policy`:
   ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
-```
+  aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+  ```
