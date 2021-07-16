@@ -8,6 +8,10 @@
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
   {{- $attacherTimeout := $config.attacherTimeout | default "600s" }}
   {{- $resizerTimeout := $config.resizerTimeout | default "600s" }}
+  {{- $topologyEnabled := true }}
+  {{- if hasKey $config "topologyEnabled" }}
+    {{- $topologyEnabled = $config.topologyEnabled }}
+  {{- end }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
   {{- $additionalControllerArgs := $config.additionalControllerArgs }}
   {{- $additionalControllerVolumes := $config.additionalControllerVolumes }}
@@ -91,8 +95,12 @@ spec:
         - "--timeout={{ $provisionerTimeout }}"
         - "--v=5"
         - "--csi-address=/csi/csi.sock"
+  {{- if $topologyEnabled }}
         - "--feature-gates=Topology=true"
         - "--strict-topology"
+  {{- else }}
+        - "--feature-gates=Topology=false"
+  {{- end }}
   {{- if semverCompare ">= 1.19" $context.Values.global.discovery.kubernetesVersion }}
         - "--default-fstype=ext4"
   {{- end }}

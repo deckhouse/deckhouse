@@ -38,6 +38,10 @@ The module automatically creates StorageClasses that are available in OpenStack.
   * If the parameter is omitted, the default StorageClass is either: 
     * an arbitrary StorageClass present in the cluster that has the default annotation;
     * the first StorageClass created by the module (in accordance with the order in OpenStack).
+* `topologyEnabled` - this feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected;
+  * **Attention!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
+  * Format — bool. An optional parameter;
+  * Set to `true` by default.
 
 ```yaml
 cloudProviderOpenstack: |
