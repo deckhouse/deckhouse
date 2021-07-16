@@ -98,7 +98,7 @@
       config:
         host: {{ $provider.ldap.host | quote }}
         {{- if $provider.ldap.insecureSkipVerify }}
-        insecureSkipVerify: {{ $provider.ldap.insecureSkipVerify | quote }}
+        insecureSkipVerify: true
         {{- end }}
         {{- if $provider.ldap.rootCAData }}
         rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
