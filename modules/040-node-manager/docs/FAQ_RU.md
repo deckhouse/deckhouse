@@ -63,6 +63,9 @@ kubectl label node <node_name> node.deckhouse.io/group-
    rm -rf /var/lib/cni
    rm -rf /var/lib/etcd
    rm -rf /etc/systemd/system/kubernetes-api-proxy*
+   rm -rf /etc/systemd/system/bashible*
+   rm -rf /etc/systemd/system/sysctl-tuner*
+   rm -rf /etc/systemd/system/kubelet*
    ```
 4. Удалим интерфейсы.
    ```shell
@@ -72,9 +75,10 @@ kubectl label node <node_name> node.deckhouse.io/group-
    ip link delete cni0
    ip link delete flannel.1
    ```
-5. Создадим нужные директории.
+5. Очистка systemd:
    ```shell
-   mkdir -p /etc/kubernetes/kubernetes-api-proxy/
+   systemctl daemon-reload
+   systemctl reset-failed
    ```
 6. Запустим обратно Docker.
    ```shell
