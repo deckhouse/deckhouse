@@ -1,8 +1,5 @@
 .Go Generate template:
   stage: build_modules_images
-  before_script:
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
   script:
   - docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
   - git diff --exit-code
@@ -19,9 +16,6 @@
 
 .Build Modules Images template:
   stage: build_modules_images
-  before_script:
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
   script:
   - ./modules_images_werf bp
   except:
@@ -46,8 +40,6 @@
   - if [[ -z ${CI_COMMIT_TAG} ]]; then
       export CI_COMMIT_TAG="";
     fi
-  - rm -rf shell-operator || true
-  - git submodule update --init --recursive
   script:
   - echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
   - echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null

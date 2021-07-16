@@ -16,28 +16,25 @@
 # vim
 *.swp
 
-# idea
+# IDE
 .project
 .settings
 .idea/
-
-# dapp
-/.dapp_build
-.dappfile.render*
+.vscode
+venv/
 
 # modules_images tags
 /modules/images-tags.yaml
+/modules/images-tags-*.yaml
 
-# local development antiopa binary
-/antiopa/antiopa
+# local development deckhouse binary
+/deckhouse/deckhouse
 
-venv/
-.vscode
-.editorconfig
-
+# terraform and dhctl artifacts
 *-tfstate/
 .terraform/
 
+# e2e tests
 testing/cloud_layouts/**/tmp
 testing/cloud_layouts/**/bootstrap.log
 testing/cloud_layouts/**/configuration.yaml

@@ -196,7 +196,6 @@ git:
   - candi
   - modules
   - global-hooks
-  - shell-operator/frameworks/shell
   - shell_lib.sh
   - shell_lib
   - deckhouse-controller/entrypoint.sh
@@ -214,6 +213,10 @@ git:
   - global-hooks/**/*.go
   - modules/images_tags_*.json
   - ee
+- url: https://github.com/flant/shell-operator
+  tag: v1.0.1
+  add: /frameworks/shell
+  to: /deckhouse/shell-operator/frameworks/shell
 {{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/cloud-providers-%s.yaml" .Env) }}
 import:
@@ -508,7 +511,6 @@ ansible:
   - raw: rm -rf /var/cache/apk/*
   setup:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
-
 ---
 artifact: helm
 fromImage: base-for-go
