@@ -3,3 +3,5 @@ cloudProviderOpenstack:
     instances: {}
     zones: []
   instances: {}
+  storageClass:
+    topologyEnabled: true

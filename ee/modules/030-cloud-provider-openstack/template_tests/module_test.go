@@ -137,7 +137,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			cinderCongrollerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller")
+			cinderControllerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller")
 			cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
 			cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-node")
 			cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "csi")
@@ -197,7 +197,8 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			Expect(cinderCSIDriver.Exists()).To(BeTrue())
 			Expect(cinderNodePluginDS.Exists()).To(BeTrue())
 			Expect(cinderControllerPluginSA.Exists()).To(BeTrue())
-			Expect(cinderCongrollerPluginSS.Exists()).To(BeTrue())
+			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
+			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=true`))
 			Expect(cinderAttacherCR.Exists()).To(BeTrue())
 			Expect(cinderAttacherCRB.Exists()).To(BeTrue())
 			Expect(cinderProvisionerCR.Exists()).To(BeTrue())
@@ -300,6 +301,23 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Openstack StorageClass topology disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
+			f.HelmRender()
+		})
+
+		It("Everything must render properly and csi controller provisioner arg must have flag feature-gates=Topology=false", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cinderControllerPluginSS := f.KubernetesResource("StatefulSet", "d8-cloud-provider-openstack", "csi-controller")
+			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
+			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=false`))
 		})
 	})
 })
