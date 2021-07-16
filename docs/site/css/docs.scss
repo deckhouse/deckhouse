@@ -181,7 +181,7 @@
 .layout-sidebar__content {
     width: calc(1000px - 260px - 40px);
     @media (min-width: 1441px) {
-        width:calc(1400px-260px-40px);
+        width: calc(1400px - 260px - 40px);
     }
 }
 

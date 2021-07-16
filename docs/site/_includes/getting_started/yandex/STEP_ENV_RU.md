@@ -1,4 +1,4 @@
-Чтобы **Deckhouse Platform {% if page.revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}** смог управлять ресурсами в Яндекс.Облако, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облако доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Здесь мы представим краткую последовательность необходимых действий:
+Чтобы **Deckhouse Platform {% if page.revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}** смог управлять ресурсами в Яндекс.Облако, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облако доступна в [документации провайдера](https://cloud.yandex.ru/docs/resource-manager/operations/cloud/set-access-bindings). Здесь мы представим краткую последовательность необходимых действий:
 
 - Создайте пользователя с именем `candi`. В ответ вернутся параметры пользователя:
   ```yaml
