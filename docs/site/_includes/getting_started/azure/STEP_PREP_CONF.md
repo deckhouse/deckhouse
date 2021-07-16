@@ -119,10 +119,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
 # Deckhouse parameters
 deckhouse:
-  # address of the registry where the installer image is located; in this case, the default value for Deckhouse CE is set
-  imagesRepo: registry.deckhouse.io/deckhouse/ce
-  # a special string with parameters to access Docker registry
-  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
   # the release channel in use
   releaseChannel: Beta
   configOverrides:
