@@ -39,6 +39,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     core.deckhouse.io/version: {{ .Values.global.deckhouseVersion | quote }}
+    core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | indent 2 }}
 spec:
   replicas: 1

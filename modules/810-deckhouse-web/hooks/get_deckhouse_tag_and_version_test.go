@@ -26,7 +26,7 @@ import (
 var _ = Describe("Modules :: deckhouse-web :: hooks :: get_deckhouse_tag_and_version ::", func() {
 
 	const (
-		initValuesString       = `{"deckhouseWeb":{"deckhouseTag":"","deckhouseVersion":"","internal":{}}}`
+		initValuesString       = `{"deckhouseWeb":{"deckhouseTag":"","deckhouseVersion":"","deckhouseEdition":"","internal":{}}}`
 		initConfigValuesString = `{}`
 
 		stateWithStableChannel = `
@@ -35,7 +35,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    core.deckhouse.io/version: "20.20"
+    core.deckhouse.io/version: "1.25.1"
+    core.deckhouse.io/edition: "CE"
   name: deckhouse
   namespace: d8-system
 spec:
@@ -45,7 +46,7 @@ spec:
       - name: deckhouse
         image: registry.deckhouse.io/deckhouse/ce:stable
 `
-		stateWithAbsentAnnotation = `
+		stateWithAbsentAnnotations = `
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,12 +74,13 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal(""))
 			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal(""))
+			Expect(f.ValuesGet("deckhouseWeb.deckhouseEdition").String()).To(Equal(""))
 		})
 	})
 
 	Context("Absent core.deckhouse.io/version annotation", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateWithAbsentAnnotation))
+			f.BindingContexts.Set(f.KubeStateSet(stateWithAbsentAnnotations))
 			f.RunHook()
 		})
 
@@ -90,23 +92,39 @@ spec:
 		})
 	})
 
+	Context("Absent core.deckhouse.io/edition annotation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateWithAbsentAnnotations))
+			f.RunHook()
+		})
+
+		It("Hook must not fail with an absent edition annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.ValuesGet("deckhouseWeb.deckhouseEdition").String()).To(Equal("unknown"))
+			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal("sometag"))
+		})
+	})
+
 	Context("Deckhouse on update channel", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateWithStableChannel))
 			f.RunHook()
 		})
 
-		It("Hook must not fail, version and channel should be set", func() {
+		It("Hook must not fail, version, edition and channel should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 			Expect(f.BindingContexts.Get("0.snapshots.d8_deployment.0.filterResult").String()).To(MatchJSON(`
 {
 	"tag": "stable",
-	"version": "20.20"
+	"version": "1.25.1",
+	"edition": "CE"
 }
 `))
 			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal("stable"))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal("20.20"))
+			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal("1.25.1"))
+			Expect(f.ValuesGet("deckhouseWeb.deckhouseEdition").String()).To(Equal("CE"))
 		})
 	})
 
