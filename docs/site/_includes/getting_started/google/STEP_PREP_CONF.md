@@ -9,7 +9,7 @@ Prepare the installation configuration of the **Deckhouse Platform {% if page.re
   ```yaml
   # general cluster parameters (ClusterConfiguration)
   # version of the Deckhouse API
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # type of the configuration section
   kind: ClusterConfiguration
   # type of the infrastructure: bare metal (Static) or Cloud (Cloud)
@@ -31,7 +31,7 @@ Prepare the installation configuration of the **Deckhouse Platform {% if page.re
   ---
   # section for bootstrapping the Deckhouse cluster (InitConfiguration)
   # version of the Deckhouse API
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # type of the configuration section
   kind: InitConfiguration
   # Deckhouse parameters
@@ -55,7 +55,7 @@ Prepare the installation configuration of the **Deckhouse Platform {% if page.re
   ---
   # section containing the parameters of the cloud provider
   # version of the Deckhouse API
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # type of the configuration section
   kind: GCPClusterConfiguration
   # pre-defined layout from Deckhouse
@@ -101,7 +101,7 @@ Prepare the installation configuration of the **Deckhouse Platform {% if page.re
   ```yaml
   # general cluster parameters (ClusterConfiguration)
   # version of the Deckhouse API
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # type of the configuration section
   kind: ClusterConfiguration
   # type of the infrastructure: bare metal (Static) or Cloud (Cloud)
@@ -123,7 +123,7 @@ Prepare the installation configuration of the **Deckhouse Platform {% if page.re
   ---
   # section for bootstrapping the Deckhouse cluster (InitConfiguration)
   # version of the Deckhouse API
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # type of the configuration section
   kind: InitConfiguration
   # Deckhouse parameters
@@ -143,7 +143,7 @@ Prepare the installation configuration of the **Deckhouse Platform {% if page.re
   ---
   # section containing the parameters of the cloud provider
   # version of the Deckhouse API
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # type of the configuration section
   kind: GCPClusterConfiguration
   # pre-defined layout from Deckhouse

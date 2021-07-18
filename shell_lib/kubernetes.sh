@@ -97,7 +97,7 @@ function kubernetes::delete_if_exists::non_cascading() {
 }
 
 # $1 namespace
-# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $2 apiVersion (i.e. deckhouse.io/v1)
 # $3 plural kind (i.e. openstackmachineclasses)
 # $4 resourceName (i.e. some-resource-aabbcc)
 # $5 json merge patch body
@@ -106,7 +106,7 @@ function kubernetes::merge_patch() {
 }
 
 # $1 namespace
-# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $2 apiVersion (i.e. deckhouse.io/v1)
 # $3 plural kind (i.e. openstackmachineclasses)
 # $4 resourceName (i.e. some-resource-aabbcc)
 # $5 json merge patch body
@@ -115,7 +115,7 @@ function kubernetes::status::merge_patch() {
 }
 
 # $1 namespace
-# $2 apiVersion (i.e. deckhouse.io/v1alpha1)
+# $2 apiVersion (i.e. deckhouse.io/v1)
 # $3 plural kind (i.e. openstackmachineclasses)
 # $4 resourceName (i.e. some-resource-aabbcc)
 # $5 json patch body

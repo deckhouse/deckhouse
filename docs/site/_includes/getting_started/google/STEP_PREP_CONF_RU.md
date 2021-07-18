@@ -10,7 +10,7 @@
   ```yaml
   # секция с общими параметрами кластера (ClusterConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: ClusterConfiguration
   # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -32,7 +32,7 @@
   ---
   # секция первичной инициализации кластера Deckhouse (InitConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: InitConfiguration
   # конфигурация Deckhouse
@@ -56,7 +56,7 @@
   ---
   # секция с параметрами облачного провайдера
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: GCPClusterConfiguration
   # layout — архитектура расположения ресурсов в облаке
@@ -103,7 +103,7 @@
   ```yaml
   # секция с общими параметрами кластера (ClusterConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: ClusterConfiguration
   # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -125,7 +125,7 @@
   ---
   # секция первичной инициализации кластера Deckhouse (InitConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: InitConfiguration
   # конфигурация Deckhouse
@@ -145,7 +145,7 @@
   ---
   # секция с параметрами облачного провайдера
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: GCPClusterConfiguration
   # layout — архитектура расположения ресурсов в облаке

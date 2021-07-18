@@ -6,7 +6,7 @@
 ```yaml
 # секция с общими параметрами кластера (ClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: ClusterConfiguration
 # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -22,7 +22,7 @@ clusterDomain: "cluster.local"
 ---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse
@@ -49,7 +49,7 @@ deckhouse:
 ---
 # секция с параметрами bare metal-кластера (StaticClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: StaticClusterConfiguration
 # адресное пространство для внутренней сети кластера
@@ -60,7 +60,7 @@ internalNetworkCIDRs:
 ```yaml
 # секция с общими параметрами кластера (ClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: ClusterConfiguration
 # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -76,7 +76,7 @@ clusterDomain: "cluster.local"
 ---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse
@@ -99,7 +99,7 @@ deckhouse:
 ---
 # секция с параметрами bare metal-кластера (StaticClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: StaticClusterConfiguration
 # адресное пространство для внутренней сети кластера

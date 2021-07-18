@@ -8,7 +8,7 @@
 ```yaml
 # секция с общими параметрами кластера (ClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: ClusterConfiguration
 # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -30,7 +30,7 @@ clusterDomain: "cluster.local"
 ---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse
@@ -53,7 +53,7 @@ deckhouse:
         publicDomainTemplate: "%s.somedomain.com"
 ---
 # секция с параметрами облачного провайдера
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: AzureClusterConfiguration
 # layout — архитектура расположения ресурсов в облаке
@@ -91,7 +91,7 @@ provider:
 ```yaml
 # секция с общими параметрами кластера (ClusterConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: ClusterConfiguration
 # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -113,7 +113,7 @@ clusterDomain: "cluster.local"
 ---
 # секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse
@@ -132,7 +132,7 @@ deckhouse:
         publicDomainTemplate: "%s.somedomain.com"
 ---
 # секция с параметрами облачного провайдера
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: AzureClusterConfiguration
 # layout — архитектура расположения ресурсов в облаке

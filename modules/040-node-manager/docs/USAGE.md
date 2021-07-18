@@ -11,38 +11,18 @@ metadata:
   name: test
 spec:
   nodeType: CloudEphemeral
-  kubernetesVersion: "1.16"
   cloudInstances:
     zones:
     - eu-west-1a
     - eu-west-1b
     minPerZone: 1
-    maxPerZone: 3
-    maxUnavailablePerZone: 0
-    maxSurgePerZone: 1
+    maxPerZone: 2
     classReference:
       kind: AWSInstanceClass
       name: test
-  kubelet:
-    maxPods: 150
-    rootDir: "/mnt/data/kubelet"
-  docker:
-    maxConcurrentDownloads: 10
   nodeTemplate:
     labels:
-      environment: production
-      app: warp-drive-ai
-    annotations:
-      ai.fleet.com/discombobulate: "true"
-    taints:
-    - effect: NoExecute
-      key: ship-class
-      value: frigate
-  chaos:
-    mode: DrainAndReboot
-    period: 24h
-  disruptions:
-    approvalMode: Manual
+      tier: test
 ```
 ## An example of the `NodeUser` configuration
 
@@ -56,6 +36,4 @@ spec:
   sshPublicKey: "ssh-rsa xxx"
   passwordHash: $2a$10$GAwx2h0D1jiEeBt.JECSEenGvShJbu.mOSQ/jaRk1ly9c31TcHjim
   isSudoer: true
-  extraGroups:
-  - docker
 ```
