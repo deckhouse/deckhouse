@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -142,7 +143,11 @@ func createSingleResource(kubeCl *client.KubernetesClient, resources *config.Res
 }
 
 func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *config.Resources) error {
-	endChannel := time.After(15 * time.Minute)
+	timeout, err := time.ParseDuration(app.ResourcesTimeout)
+	if err != nil {
+		return fmt.Errorf("cannot parse timeout to create resources: %v", err)
+	}
+	endChannel := time.After(timeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -159,7 +164,7 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources *config.Reso
 
 		select {
 		case <-endChannel:
-			return fmt.Errorf("creating resources failed after 15m waiting")
+			return fmt.Errorf("creating resources failed after %s waiting", app.ResourcesTimeout)
 		case <-ticker.C:
 		}
 	}
