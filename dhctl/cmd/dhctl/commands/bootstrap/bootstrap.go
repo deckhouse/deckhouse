@@ -265,7 +265,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return nil
 		})
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if resourcesToCreate != nil {
