@@ -1,5 +1,4 @@
 global:
-  clusterName: "mycluster"
   highAvailability:
     __ConstantChoices__: [true, false]
   enabledModules: ["operator-prometheus-crd","cert-manager", "priority-class"]

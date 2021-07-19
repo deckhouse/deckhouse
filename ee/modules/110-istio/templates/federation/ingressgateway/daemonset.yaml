@@ -119,13 +119,13 @@ spec:
         - name: ISTIO_META_ROUTER_MODE
           value: sni-dnat
         - name: ISTIO_META_REQUESTED_NETWORK_VIEW
-          value: network-{{ $.Values.global.clusterName }}
+          value: network-{{ $.Values.global.discovery.clusterDomain | replace "." "-" }}
         - name: ISTIO_META_DNS_CAPTURE
           value: "true"
         - name: ISTIO_META_NETWORK
-          value: network-{{ $.Values.global.clusterName }}
+          value: network-{{ $.Values.global.discovery.clusterDomain | replace "." "-" }}
         - name: ISTIO_META_CLUSTER_ID
-          value: {{ $.Values.global.clusterName }}
+          value: {{ $.Values.global.discovery.clusterUUID }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
         imagePullPolicy: IfNotPresent
         ports:

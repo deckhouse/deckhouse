@@ -26,7 +26,7 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
 {{ include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | indent 2 }}
 spec:
-  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  minAvailable: 0
   selector:
     matchLabels:
       app: "operator"
@@ -54,7 +54,6 @@ spec:
 {{- include "helm_lib_tolerations" (tuple $ "system") | indent 6 }}
 {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
-{{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "operator")) | indent 6 }}
       serviceAccountName: operator
       imagePullSecrets:
       - name: deckhouse-registry
