@@ -20,7 +20,8 @@ var (
 	InternalNodeIP = ""
 	DevicePath     = ""
 
-	ResourcesPath = ""
+	ResourcesPath    = ""
+	ResourcesTimeout = "15m"
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -38,7 +39,10 @@ func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 	cmd.Flag("resources", "Path to a file with declared Kubernetes resources in YAML format.").
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)
-
+	cmd.Flag("resources-timeout", "Timeout to create resources.").
+		Envar(configEnvName("RESOURCES_TIMEOUT")).
+		Default(ResourcesTimeout).
+		StringVar(&ResourcesTimeout)
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}
