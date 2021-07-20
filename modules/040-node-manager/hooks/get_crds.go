@@ -248,8 +248,6 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		secretInfo := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{})
 		zonesUntyped := secretInfo["zones"]
 
-		input.LogEntry.Infof("cloud_provider_secret.zones: %T %#v", zonesUntyped, zonesUntyped)
-
 		zonesTyped := make([]string, 0)
 
 		switch v := zonesUntyped.(type) {
