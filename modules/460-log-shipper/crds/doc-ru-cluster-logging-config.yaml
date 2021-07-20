@@ -1,0 +1,100 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterloggingconfigs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterloggingconfigs
+    singular: clusterloggingconfig
+    kind: ClusterLoggingConfig
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            CustomResource для описания источника логов в log-pipeline.
+
+            Каждый CR `ClusterLoggingConfig` описывает правила сбора логов из кластера.
+          properties:
+            spec:
+              type: object
+              required:
+                - type
+                - destinationRefs
+              anyOf:
+              - oneOf:
+                - properties:
+                    type:
+                      enum: [ "KubernetesPods" ]
+                    kubernetesPods: {}
+                  required: ['kubernetesPods']
+                - properties:
+                    type:
+                      enum: [ "File" ]
+                    file: {}
+                  required: ['file']
+              properties:
+                type:
+                  type: string
+                  enum: ["KubernetesPods", "File"]
+                  description: |
+                    Возможные источники логов.
+
+                    `KubernetesPods` собирает логи с подов.
+
+                    `File` позволяет читать локальные файлы, доступыне на ноде.
+                kubernetesPods:
+                  type: object
+                  properties:
+                    namespaceSelector:
+                      type: object
+                      description: Задать фильтр по namespace.
+                      properties:
+                        matchNames:
+                          type: array
+                          items:
+                            type: string
+                    labelSelector:
+                      type: object
+                      description: |
+                        Настройка `labelSelector` позволяет задать фильтр по Pod Labels.
+                        Подробнее про выражения можно узнать в [документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      properties:
+                        matchLabels:
+                          type: object
+                          additionalProperties:
+                            type: string
+                file:
+                  type: object
+                  properties:
+                    include:
+                      type: array
+                      description: Список путей и паттернов для чтения. Поддеживаются wildcards.
+                      example: ['/var/log/*.log', '/var/log/nginx/*.log']
+                      items:
+                        type: string
+                    exclude:
+                      type: array
+                      description: Список путей и паттернов файлов, которые читать не требуется. Поддеживаются wildcards.
+                      example: ['/var/log/nginx/error.log', '/var/log/audit.log']
+                      items:
+                        type: string
+                    lineDelimiter:
+                      type: string
+                      description: Задание символа новой строки.
+                      example: \r\n
+                destinationRefs:
+                  type: array
+                  description: Список бэкендов хранения, в которце будет отправлено сообщение.
+                  items:
+                    type: string

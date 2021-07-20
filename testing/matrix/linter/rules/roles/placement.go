@@ -262,13 +262,16 @@ func handleRootRBACForUs(m utils.Module, object storage.StoreObject, objectName,
 				kind, RootRBACForUsPath,
 			)
 		}
-	default:
-		return errors.NewLintRuleError(
-			"MANIFEST053",
-			object.Identity(),
-			objectName,
-			"%s in %q should equal %q or start with %q", kind, RootRBACForUsPath, m.Name, prefix,
-		)
+	case !strings.HasPrefix(objectName, prefix):
+		if isDeckhouseSystemNamespace(namespace) {
+			return errors.NewLintRuleError(
+				"MANIFEST053",
+				object.Identity(),
+				namespace,
+				"%s in %q should be deployed in namespace %q",
+				kind, RootRBACForUsPath, m.Namespace,
+			)
+		}
 	}
 
 	return errors.EmptyRuleError

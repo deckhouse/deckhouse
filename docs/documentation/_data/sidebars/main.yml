@@ -687,7 +687,24 @@ entries:
                 ru: Описание
                 en: Description
               url: /modules/600-secret-copier/
-    - title: Bare metal Support
+        - title: log-shipper
+          versionType: experimental
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/460-log-shipper/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/460-log-shipper/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title: Custom Resources
+                  url: /modules/460-log-shipper/cr.html
+    - title: Bare Metal Support
       versionType: ee
       folders:
         - title: metallb

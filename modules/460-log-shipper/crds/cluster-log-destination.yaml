@@ -1,0 +1,217 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterlogdestinations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterlogdestinations
+    singular: clusterlogdestination
+    kind: ClusterLogDestination
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            CustomResource for storage in log-pipeline.
+
+            Each CR `ClusterLogDestination` descride one log storage, which you can use in many log sources.
+
+            `metadata.name` — is an upstream name, whick you should use in CR `ClusterLoggingConfig`.
+          properties:
+            spec:
+              type: object
+              required:
+                - type
+              oneOf:
+                - properties:
+                    type:
+                      enum: ["Loki"]
+                    loki: {}
+                - properties:
+                    type:
+                      enum: ["Elasticsearch"]
+                    elasticsearch: {}
+                - properties:
+                    type:
+                      enum: ["Logstash"]
+                    logstash: {}
+              properties:
+                type:
+                  type: string
+                  enum: ["Loki", "Elasticsearch", "Logstash"]
+                  description: Set on of possible output destinations.
+                loki:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    auth:
+                      type: object
+                      properties:
+                        password:
+                          type: string
+                          format: password
+                          description: Base64 encoded basic authentication password.
+                        strategy:
+                          type: string
+                          enum: ["Basic", "Bearer"]
+                          default: "Basic"
+                          description: The authentication strategy to use.
+                        token:
+                          type: string
+                          description: The token to use for bearer authentication.
+                        user:
+                          type: string
+                          description: The basic authentication user name.
+                    endpoint:
+                      type: string
+                      description: The base URL of the Loki instance.
+                    tls:
+                      type: object
+                      required:
+                        - crtFile
+                        - keyFile
+                      description: Configures the TLS options for incoming connections.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Base64 encoded CA certificate in PEM format.
+                        crtFile:
+                          type: string
+                          description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                        keyFile:
+                          type: string
+                          format: password
+                          description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                        keyPass:
+                          type: string
+                          format: string
+                          description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Vector will validate the TLS certificate of the remote host.
+                elasticsearch:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    auth:
+                      type: object
+                      properties:
+                        strategy:
+                          enum: ["Basic", "AWS"]
+                          type: string
+                          default: "Basic"
+                          description: The authentication strategy to use.
+                        password:
+                          type: string
+                          format: password
+                          description: Base64 encoded basic authentication password.
+                        awsAccessKey:
+                          type: string
+                          description: Base64 encoded AWS ACCESS_KEY.
+                        awsSecretKey:
+                          type: string
+                          description: Base64 encoded AWS SECRET_KEY.
+                        awsAssumeRole:
+                          type: string
+                          description: The ARN of an IAM role to assume at startup.
+                        user:
+                          type: string
+                          description: The basic authentication user name.
+                        awsRegion:
+                          type: string
+                          description: AWS region for aws authentication.
+                    index:
+                      type: string
+                      description: Index name to write events to.
+                    endpoint:
+                      type: string
+                      description: The base URL of the Elasticsearch instance.
+                    extraLabels:
+                      type: object
+                      description: A set of labels that will be attached to each batch of events.
+                      example: {"forwarder" : "vector", "key": "value"}
+                      additionalProperties:
+                        type: string
+                        pattern: '^[a-zA-Z0-9_]+$'
+                    tls:
+                      type: object
+                      required:
+                        - crtFile
+                        - keyFile
+                      description: Configures the TLS options for incoming connections.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Base64 encoded CA certificate in PEM format.
+                        crtFile:
+                          type: string
+                          description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                        keyFile:
+                          type: string
+                          format: password
+                          description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                        keyPass:
+                          type: string
+                          format: string
+                          description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Vector will validate the TLS certificate of the remote host.
+                logstash:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    endpoint:
+                      type: string
+                      description: The base URL of the Loki instance.
+                    tls:
+                      type: object
+                      required:
+                        - crtFile
+                        - keyFile
+                      description: Configures the TLS options for incoming connections.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Base64 encoded CA certificate in PEM format.
+                        crtFile:
+                          type: string
+                          description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                        keyFile:
+                          type: string
+                          format: password
+                          description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                        keyPass:
+                          type: string
+                          format: string
+                          description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Vector will validate the TLS certificate of the remote host.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Vector will validate the configured remote host name against the remote host's TLS certificate.
+                extraLabels:
+                  type: object
+                  description: A set of labels that will be attached to each batch of events.
+                  example: {"forwarder" : "vector", "key": "value"}
+                  additionalProperties:
+                    type: string
+                    pattern: '^[a-zA-Z0-9_]+$'

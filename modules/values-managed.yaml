@@ -18,3 +18,4 @@ ingressNginxEnabled: true
 dashboardEnabled: true
 deckhouseWebEnabled: true
 helmEnabled: true
+logShipperEnabled: true

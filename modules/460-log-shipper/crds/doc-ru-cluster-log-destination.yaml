@@ -1,0 +1,210 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterlogdestinations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterlogdestinations
+    singular: clusterlogdestination
+    kind: ClusterLogDestination
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            CustomResource для настройки хранилища log-pipeline.
+
+            Каждый CR `ClusterLogDestination` описывает одно хранилище логов, к которому можно подключить бесконечное количество источников.
+
+            `metadata.name` — задаёт имя upstream, который вы будете использовать в CR `ClusterLoggingConfig`.
+          properties:
+            spec:
+              type: object
+              required:
+                - type
+              oneOf:
+                - properties:
+                    type:
+                      enum: ["Loki"]
+                    loki: {}
+                - properties:
+                    type:
+                      enum: ["Elasticsearch"]
+                    elasticsearch: {}
+                - properties:
+                    type:
+                      enum: ["Logstash"]
+                    logstash: {}
+              properties:
+                type:
+                  type: string
+                  enum: ["Loki", "Elasticsearch", "Logstash"]
+                  description: Возможные бэкенды для сохранения логов.
+                loki:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    auth:
+                      type: object
+                      properties:
+                        password:
+                          type: string
+                          format: password
+                          description: Закодированный в Base64 пароль для Basic-аутентификации.
+                        strategy:
+                          type: string
+                          enum: ["Basic", "Bearer"]
+                          default: "Basic"
+                          description: Тип аутентификации - `Basic` или Bearer`.
+                        token:
+                          type: string
+                          description: Токен для Bearer-аутентификации.
+                        user:
+                          type: string
+                          description: Имя пользователя, используемое при Basic-аутентификации.
+                    endpoint:
+                      type: string
+                      description: URL для подключения к Loki.
+                    tls:
+                      type: object
+                      required:
+                        - crtFile
+                        - keyFile
+                      description: Настройки защищённого TLS соединения.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        crtFile:
+                          type: string
+                          description: Закодированный в Base64 сертификат в формате PEM. keyFile так же необходим.
+                        keyFile:
+                          type: string
+                          format: password
+                          description: Закодированный в Base64 ключ в формате PEM. Если вы добавили ключ, опция crtFile становится обязательной.
+                        keyPass:
+                          type: string
+                          format: string
+                          description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Проверка валидности сертификата на удалённом хосте.
+                elasticsearch:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    auth:
+                      type: object
+                      properties:
+                        strategy:
+                          enum: ["Basic", "AWS"]
+                          type: string
+                          default: "Basic"
+                          description: Тип аутентификации - `Basic` или `AWS`.
+                        password:
+                          type: string
+                          format: password
+                          description: Закодированный в Base64 пароль для basic аутентификации.
+                        awsAccessKey:
+                          type: string
+                          description: Закодированный в Base64 AWS ACCESS_KEY.
+                        awsSecretKey:
+                          type: string
+                          description: Закодированный в Base64 AWS SECRET_KEY.
+                        awsAssumeRole:
+                          type: string
+                          description: ARN роли в IAM.
+                        user:
+                          type: string
+                          description: Имя пользователя, используемое при Basic аутентификации.
+                        awsRegion:
+                          type: string
+                          description: Регион AWS для аутентификации.
+                    index:
+                      type: string
+                      description: Имя индекса, куда будут сохранены данные. Это поле можно задать динамически.
+                    endpoint:
+                      type: string
+                      description: Адрес инстанса elasticsearch.
+                    tls:
+                      type: object
+                      required:
+                        - crtFile
+                        - keyFile
+                      description: Настройки защищённого TLS соединения.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        crtFile:
+                          type: string
+                          description: Закодированный в Base64 сертификат в формате PEM. keyFile так же необходим.
+                        keyFile:
+                          type: string
+                          format: password
+                          description: Закодированный в Base64 ключ в формате PEM. Если вы добавили ключ, опция crtFile становится обязательной.
+                        keyPass:
+                          type: string
+                          format: string
+                          description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Проверка валидности сертификата на удалённом хосте.
+                logstash:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    endpoint:
+                      type: string
+                      description: Адрес приёмника логов.
+                    tls:
+                      type: object
+                      required:
+                        - crtFile
+                        - keyFile
+                      description: Настройки защищённого TLS соединения.
+                      properties:
+                        caFile:
+                          type: string
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        crtFile:
+                          type: string
+                          description: Закодированный в Base64 сертификат в формате PEM. keyFile так же необходим.
+                        keyFile:
+                          type: string
+                          format: password
+                          description: Закодированный в Base64 ключ в формате PEM. Если вы добавили ключ, опция crtFile становится обязательной.
+                        keyPass:
+                          type: string
+                          format: string
+                          description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Проверка валидности сертификата на удалённом хосте.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Проверка соответствия сертификата и имени удалённого хоста.
+                extraLabels:
+                  type: object
+                  description: Дополнительные label, которыми будут снабжаться записи логов
+                  example: {"forwarder" : "vector", "key": "value"}
+                  additionalProperties:
+                    type: string
+                    pattern: '^[a-zA-Z0-9_]+$'

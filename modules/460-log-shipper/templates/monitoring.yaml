@@ -1,0 +1,6 @@
+{{ $ns := printf "d8-%s" $.Chart.Name }}
+---
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+  {{- include "helm_lib_grafana_dashboard_definitions" . }}
+  {{- include "helm_lib_prometheus_rules" (list . $ns) }}
+{{- end }}

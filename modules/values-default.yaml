@@ -27,3 +27,4 @@ deckhouseWebEnabled: true
 helmEnabled: true
 smokeMiniEnabled: true
 upmeterEnabled: true
+logShipperEnabled: true

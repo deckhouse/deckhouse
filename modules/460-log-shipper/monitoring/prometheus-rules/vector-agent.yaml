@@ -1,0 +1,38 @@
+- name: vector-agent
+  rules:
+  - alert: D8VectorAgentNotScheduledOnNode
+    expr: |
+      max by (node) (kube_node_info)
+      unless
+      max by (node) (up{job="vector-agent"})
+    for: 15m
+    labels:
+      severity_level: "7"
+      d8_module: vector-agent
+      d8_component: vector-agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_incident_initial_status: "todo"
+      plk_pending_until_firing_for: "5m"
+      summary: vector-agent Pod cannot schedule on Node {{ $labels.node }}
+      description: |
+        vector-agent Pod cannot schedule on Node {{ $labels.node }}.
+
+        Consider checking state of the d8-log-shipper/vector-agent DaemonSet.
+        `kubectl -n d8-log-shipper get daemonset,pod --selector=app=vector-agent`
+
+  - alert: D8VectorAgentNotScheduledInCluster
+    expr: |
+      count(ALERTS{alertname="D8VectorAgentNotScheduledOnNode"}) > 1
+    labels:
+      d8_module: vector-agent
+      d8_component: vector-agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_group_for__main: "D8VectorAgentNotScheduledOnNode,prometheus=deckhouse"
+      summary: Pods of vector-agent cannot be scheduled in the cluster
+      description: |
+        Pods of vector-agent cannot be scheduled in the cluster.
+        Additional information can be found in linked alerts.

@@ -30,4 +30,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/302-vertical-pod-autoscaler/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-ping/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
 )
