@@ -1,0 +1,188 @@
+{{- if .Values.logShipper.internal.activated }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: vector-agent
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: vector-agent
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: vector-agent
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+spec:
+{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  selector:
+    matchLabels:
+      app: vector-agent
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vector-agent
+  namespace: d8-{{ $.Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | indent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: vector-agent
+  minReadySeconds: 1
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: vector-agent
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: {{ $.Chart.Name }}
+      shareProcessNamespace: true
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      containers:
+        - name: vector-controller
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 10 }}
+          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vectorController }}
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
+          env:
+{{- include "vectorEnv" . | indent 10 }}
+          volumeMounts:
+            - name: vector-config-dir
+              mountPath: /etc/vector/dynamic
+            - name: shell-operator-tmp
+              mountPath: /tmp
+            - name: shell-operator-run
+              mountPath: /var/run
+            - name: vector-sample-config-dir
+              mountPath: /etc/vector/default/defaults.json
+              readOnly: true
+              subPath: defaults.json
+            - name: vector-data-dir
+              mountPath: "/vector-data"
+        - name: vector
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 10 }}
+          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vector }}
+          args:
+            - --config-json
+            - /etc/vector/**/*.json
+          env:
+{{- include "vectorEnv" . | indent 10 }}
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: api
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /health
+              port: api
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+            - name: api
+              containerPort: 8686
+              protocol: TCP
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | indent 14 }}
+          volumeMounts:
+            - name: var-log
+              mountPath: /var/log/
+              readOnly: true
+            - name: var-lib
+              mountPath: /var/lib
+              readOnly: true
+            - name: vector-config-dir
+              mountPath: "/vector-data"
+            - name: vector-config-dir
+              mountPath: /etc/vector/dynamic
+            - name: vector-sample-config-dir
+              mountPath: /etc/vector/default/defaults.json
+              readOnly: true
+              subPath: defaults.json
+        - name: kube-rbac-proxy
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 10 }}
+          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
+          args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254"
+          - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:9090/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ $.Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: vector-agent
+          ports:
+          - containerPort: 9254
+            name: https-metrics
+          resources:
+            requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
+      terminationGracePeriodSeconds: 60
+      volumes:
+        - name: var-log
+          hostPath:
+            path: /var/log/
+        - name: var-lib
+          hostPath:
+            path: /var/lib/
+        - name: vector-data-dir
+          hostPath:
+            path: /mnt/vector-data
+        - name: vector-sample-config-dir
+          projected:
+            sources:
+              - configMap:
+                  name: vector-daemon-config
+        - name: vector-config-dir
+          emptyDir: {}
+        - name: shell-operator-tmp
+          emptyDir: {}
+        - name: shell-operator-run
+          emptyDir: {}
+{{- end }}

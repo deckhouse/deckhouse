@@ -1,0 +1,100 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterloggingconfigs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterloggingconfigs
+    singular: clusterloggingconfig
+    kind: ClusterLoggingConfig
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            CustomResource for source in log-pipeline.
+
+            Each CR `ClusterLoggingConfig` describes rules for log fetching from cluster.
+          properties:
+            spec:
+              type: object
+              required:
+                - type
+                - destinationRefs
+              anyOf:
+              - oneOf:
+                - properties:
+                    type:
+                      enum: [ "KubernetesPods" ]
+                    kubernetesPods: {}
+                  required: ['kubernetesPods']
+                - properties:
+                    type:
+                      enum: [ "File" ]
+                    file: {}
+                  required: ['file']
+              properties:
+                type:
+                  type: string
+                  enum: ["KubernetesPods", "File"]
+                  description: |
+                    Set on of possible input sources.
+
+                    *KubernetesPods* source reads logs from kubernetes pods.
+
+                    *File* source reads local file from node filesystem. 
+                kubernetesPods:
+                  type: object
+                  properties:
+                    namespaceSelector:
+                      type: object
+                      description: Specifies the namespace selector to filter Pods with.
+                      properties:
+                        matchNames:
+                          type: array
+                          items:
+                            type: string
+                    labelSelector:
+                      type: object
+                      description: |
+                        Specifies the label selector to filter Pods with.
+                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      properties:
+                        matchLabels:
+                          type: object
+                          additionalProperties:
+                            type: string
+                file:
+                  type: object
+                  properties:
+                    include:
+                      type: array
+                      description: Array of file patterns to include.
+                      example: ['/var/log/*.log', '/var/log/nginx/*.log']
+                      items:
+                        type: string
+                    exclude:
+                      type: array
+                      description: Array of file patterns to exclude.
+                      example: ['/var/log/nginx/error.log', '/var/log/audit.log']
+                      items:
+                        type: string
+                    lineDelimiter:
+                      type: string
+                      description: String sequence used to separate one file line from another.
+                      example: \r\n
+                destinationRefs:
+                  type: array
+                  description: Array of ClusterLogDestination CR names which this source will output with.
+                  items:
+                    type: string

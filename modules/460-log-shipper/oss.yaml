@@ -1,0 +1,5 @@
+- name: Vector
+  link: https://github.com/timberio/vector
+  description: Vector is a high-performance, observability data pipeline for logs and metrics
+  logo: https://raw.githubusercontent.com/timberio/vector/master/docs/static/favicon.ico
+  licence: Mozilla Public License, version 2.0
