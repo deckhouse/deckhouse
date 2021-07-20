@@ -6,7 +6,7 @@
 ```yaml
 # секция первичной инициализации Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse
@@ -34,7 +34,7 @@ deckhouse:
 ```yaml
 # секция первичной инициализации Deckhouse (InitConfiguration)
 # используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # тип секции конфигурации
 kind: InitConfiguration
 # конфигурация Deckhouse

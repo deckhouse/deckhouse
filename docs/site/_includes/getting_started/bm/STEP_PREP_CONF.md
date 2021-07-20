@@ -6,7 +6,7 @@ Define the three primary sections with parameters of the prospective cluster in 
 ```yaml
 # general cluster parameters (ClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: ClusterConfiguration
 # type of the infrastructure: bare metal (Static) or Cloud (Cloud)
@@ -22,7 +22,7 @@ clusterDomain: "cluster.local"
 ---
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse configuration
@@ -49,7 +49,7 @@ deckhouse:
 ---
 # section with the parameters of the bare metal cluster (StaticClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: StaticClusterConfiguration
 # address space for the cluster's internal network
@@ -60,7 +60,7 @@ internalNetworkCIDRs:
 ```yaml
 # general cluster parameters (ClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: ClusterConfiguration
 # type of the infrastructure: bare metal (Static) or Cloud (Cloud)
@@ -76,7 +76,7 @@ clusterDomain: "cluster.local"
 ---
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse configuration
@@ -99,7 +99,7 @@ deckhouse:
 ---
 # section with the parameters of the bare metal cluster (StaticClusterConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: StaticClusterConfiguration
 # address space for the cluster's internal network

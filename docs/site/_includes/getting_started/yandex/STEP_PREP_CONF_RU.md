@@ -6,7 +6,7 @@
   ```yaml
   # секция с общими параметрами кластера (ClusterConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: ClusterConfiguration
   # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -28,7 +28,7 @@
   ---
   # секция первичной инициализации кластера Deckhouse (InitConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: InitConfiguration
   # секция с параметрами Deckhouse
@@ -52,7 +52,7 @@
   ---
   # секция с параметрами облачного провайдера
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: YandexClusterConfiguration
   # публичная часть SSH-ключа для доступа к узлам облака
@@ -94,7 +94,7 @@
   ```yaml
   # секция с общими параметрами кластера (ClusterConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: ClusterConfiguration
   # тип инфраструктуры: bare metal (Static) или облако (Cloud)
@@ -116,7 +116,7 @@
   ---
   # секция первичной инициализации кластера Deckhouse (InitConfiguration)
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: InitConfiguration
   # секция с параметрами Deckhouse
@@ -136,7 +136,7 @@
   ---
   # секция с параметрами облачного провайдера
   # используемая версия API Deckhouse
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   # тип секции конфигурации
   kind: YandexClusterConfiguration
   # публичная часть SSH-ключа для доступа к узлам облака

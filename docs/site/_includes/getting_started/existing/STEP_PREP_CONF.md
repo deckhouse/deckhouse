@@ -6,7 +6,7 @@ Create configuration file (`config.yml`) for Deckhouse:
 ```yaml
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse parameters
@@ -34,7 +34,7 @@ deckhouse:
 ```yaml
 # section for bootstrapping the Deckhouse cluster (InitConfiguration)
 # version of the Deckhouse API
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # type of the configuration section
 kind: InitConfiguration
 # Deckhouse parameters
