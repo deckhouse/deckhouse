@@ -46,9 +46,9 @@ metadata:
   name: d8-kube-dns-sts-pods-hosts-appender-webhook
   namespace: kube-system
 data:
-  tls.crt: YQo= # a
-  tls.key: Ygo= # b
-  ca.crt:   Ywo= # c
+  tls.crt: YQ== # a
+  tls.key: Yg== # b
+  ca.crt:  Yw== # c
 `
 )
 

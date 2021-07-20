@@ -79,6 +79,21 @@ metadata:
 		return result
 	}
 
+	kubeBrokenNodes := func(quantity int) string {
+		result := ``
+		for i := 1; i <= quantity; i++ {
+			result += fmt.Sprintf(`---
+apiVersion: v1
+kind: Node
+metadata:
+  name: broken-%d
+  labels:
+    node-role.deckhouse.io/: ""
+`, i)
+		}
+		return result
+	}
+
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	Context("With only Master node in a cluster", func() {
@@ -124,6 +139,22 @@ metadata:
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 			Expect(f.ValuesGet("kubeDns.internal.replicas").Int()).To(Equal(int64(3))) // because of the master quantity + 2 limit
+			Expect(f.ValuesGet("kubeDns.internal.specificNodeType").String()).To(Equal("kube-dns"))
+			Expect(f.ValuesGet("kubeDns.internal.enablePodAntiAffinity").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("With 2 Master nodes and 2 specific nodes in a cluster and 5 broken nodes", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(kubeMasterNodes(3) + kubeDNSNodes(1) + kubeBrokenNodes(5)))
+			f.RunHook()
+		})
+
+		It("", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("kubeDns.internal.replicas").Int()).To(Equal(int64(4)))
 			Expect(f.ValuesGet("kubeDns.internal.specificNodeType").String()).To(Equal("kube-dns"))
 			Expect(f.ValuesGet("kubeDns.internal.enablePodAntiAffinity").Bool()).To(BeTrue())
 		})
