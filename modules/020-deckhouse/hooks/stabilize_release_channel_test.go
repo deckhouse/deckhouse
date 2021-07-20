@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -26,6 +28,80 @@ import (
 )
 
 var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::", func() {
+
+	Context("releaseChannel type", func() {
+		It("switches release channels by increment", func() {
+
+			rc := releaseChannel(-2)
+			Expect(rc.IsKnown()).To(BeFalse())
+			Expect(rc.Tag()).To(Equal(""))
+			Expect(rc.String()).To(Equal(""))
+
+			rc++
+			Expect(rc).To(Equal(unknownReleaseChannel))
+			Expect(rc.IsKnown()).To(BeFalse())
+			Expect(rc.Tag()).To(Equal(""))
+			Expect(rc.String()).To(Equal(""))
+
+			rc++
+			Expect(rc).To(Equal(alphaReleaseChannel))
+			Expect(rc.IsKnown()).To(BeTrue())
+			Expect(rc.Tag()).To(Equal("alpha"))
+			Expect(rc.String()).To(Equal("Alpha"))
+
+			rc++
+			Expect(rc).To(Equal(betaReleaseChannel))
+			Expect(rc.IsKnown()).To(BeTrue())
+			Expect(rc.Tag()).To(Equal("beta"))
+			Expect(rc.String()).To(Equal("Beta"))
+
+			rc++
+			Expect(rc).To(Equal(earlyAccessReleaseChannel))
+			Expect(rc.IsKnown()).To(BeTrue())
+			Expect(rc.Tag()).To(Equal("early-access"))
+			Expect(rc.String()).To(Equal("EarlyAccess"))
+
+			rc++
+			Expect(rc).To(Equal(stableReleaseChannel))
+			Expect(rc.IsKnown()).To(BeTrue())
+			Expect(rc.Tag()).To(Equal("stable"))
+			Expect(rc.String()).To(Equal("Stable"))
+
+			rc++
+			Expect(rc).To(Equal(rockSolidReleaseChannel))
+			Expect(rc.IsKnown()).To(BeTrue())
+			Expect(rc.Tag()).To(Equal("rock-solid"))
+			Expect(rc.String()).To(Equal("RockSolid"))
+
+			rc++
+			Expect(rc.IsKnown()).To(BeFalse())
+			Expect(rc.Tag()).To(Equal(""))
+			Expect(rc.String()).To(Equal(""))
+		})
+	})
+
+	Context("parseReleaseChannel function", func() {
+		const (
+			repo             = "registry.flant.com/sys/deckhouse-oss"
+			imageFromRepo    = "registry.flant.com/sys/deckhouse-oss:early-access"
+			imageNotFromRepo = "registry.flant.com/experiments:early-access"
+		)
+
+		It("parses known release channel from the repo", func() {
+			rc, isKnown := parseReleaseChannel(imageFromRepo, repo)
+
+			Expect(rc).To(Equal(earlyAccessReleaseChannel))
+			Expect(isKnown).To(BeTrue())
+		})
+
+		It("parses invalid release channel from the repo", func() {
+			rc, isKnown := parseReleaseChannel(imageNotFromRepo, repo)
+
+			Expect(rc).To(Equal(unknownReleaseChannel))
+			Expect(isKnown).To(BeFalse())
+		})
+	})
+
 	const (
 		releaseChannelKey = "deckhouse.releaseChannel"
 		imageKey          = "deckhouse.internal.currentReleaseImageName"
@@ -90,7 +166,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 		})
 	})
 
-	Context("current image is from the desired release channel", func() {
+	Context("current image from the desired release channel", func() {
 		f := HookExecutionConfigInit(` {
 			"global": {
 				"deckhouseVersion": "12345",
@@ -106,7 +182,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			}
 		}`, `{}`)
 
-		table.DescribeTable("tags", func(rcName, rcTag string) {
+		table.DescribeTable("image tag does not change", func(rcName, rcTag string) {
 			f.ValuesSet(releaseChannelKey, rcName)
 			oldImage := "registry.flant.com/sys/deckhouse-oss:" + rcTag
 			f.ValuesSet(imageKey, oldImage)
@@ -142,12 +218,14 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 		}`, `{}`)
 
 		mockDigestPerReleaseChannel := func() {
+			// all digests differ
 			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (string, error) {
 				return tag, nil
 			})
 		}
 
-		table.DescribeTable("tags upgrade by one for different digests", func(currentRelease, desiredRelease string) {
+		table.DescribeTable("upgrade applies at first new digest", func(currentRelease, desiredRelease string) {
+			// In case when all digests are different (as in mock), upgrade runs by one release channel per hook run.
 			mockDigestPerReleaseChannel()
 
 			currentReleaseChannel := releaseChannelFromName(currentRelease)
@@ -179,7 +257,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			table.Entry("RockSolid -> EarlyAccess", nameRockSolid, nameEarlyAccess),
 		)
 
-		table.DescribeTable("tags don't downgrade for different digests", func(currentRelease, desiredRelease string) {
+		table.DescribeTable("downgrade stops at last similar digest", func(currentRelease, desiredRelease string) {
 			mockDigestPerReleaseChannel()
 
 			currentReleaseChannel := releaseChannelFromName(currentRelease)
@@ -234,7 +312,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			})
 		}
 
-		table.DescribeTable("upgrade release channel to first different digest, skipping the same", func(currentRelease, desiredRelease string) {
+		table.DescribeTable("upgrade finds new non-similar digest", func(currentRelease, desiredRelease string) {
 			currentTag := releaseChannelFromName(currentRelease).Tag()
 			desiredTag := releaseChannelFromName(desiredRelease).Tag()
 
@@ -259,25 +337,42 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 		)
 	})
 
-	Context("parsing current release channel", func() {
-		const (
-			repo             = "registry.flant.com/sys/deckhouse-oss"
-			imageFromRepo    = "registry.flant.com/sys/deckhouse-oss:early-access"
-			imageNotFromRepo = "registry.flant.com/experiments:early-access"
+	Context("registry client returns error", func() {
+		f := HookExecutionConfigInit(` {
+			"global": {
+				"deckhouseVersion": "12345",
+				"modulesImages": {
+					"registry": "registry.flant.com/sys/deckhouse-oss"
+				}
+			},
+			"deckhouse": {
+				"releaseChannel": "EarlyAccess",
+				"internal": {
+					"currentReleaseImageName": "registry.flant.com/sys/deckhouse-oss:early_access"
+				}
+			}
+		}`, `{}`)
+
+		mockDigestError := func() {
+			dependency.TestDC.CRClient.DigestMock.Set(func(tag string) (string, error) {
+				return "", fmt.Errorf("something went wrong")
+			})
+		}
+
+		table.DescribeTable("error is passed out", func(currentRelease, desiredRelease string) {
+			mockDigestError()
+			currentTag := releaseChannelFromName(currentRelease).Tag()
+			currentImage := "registry.flant.com/sys/deckhouse-oss:" + currentTag
+			f.ValuesSet(releaseChannelKey, desiredRelease)
+			f.ValuesSet(imageKey, currentImage)
+
+			f.RunHook()
+
+			Expect(f).ShouldNot(ExecuteSuccessfully())
+		},
+			table.Entry("RockSolid -> Alpha", nameRockSolid, nameAlpha),
+			table.Entry("Alpha -> RockSolid", nameAlpha, nameRockSolid),
 		)
-
-		It("parses known release channel from the repo", func() {
-			rc, isKnown := getCurrentChannel(imageFromRepo, repo)
-
-			Expect(rc).To(Equal(earlyAccessReleaseChannel))
-			Expect(isKnown).To(BeTrue())
-		})
-
-		It("parses invalid release channel from the repo", func() {
-			rc, isKnown := getCurrentChannel(imageNotFromRepo, repo)
-
-			Expect(rc).To(Equal(unknownReleaseChannel))
-			Expect(isKnown).To(BeFalse())
-		})
 	})
+
 })

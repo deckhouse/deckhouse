@@ -37,35 +37,36 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(setReleaseChannel))
 
 func setReleaseChannel(input *go_hook.HookInput, dc dependency.Container) error {
-	const (
-		registryKey       = "global.modulesImages.registry"
-		releaseChannelKey = "deckhouse.releaseChannel"
-		imageKey          = "deckhouse.internal.currentReleaseImageName" // full image name host/ns/repo:tag
-	)
+	const imageKey = "deckhouse.internal.currentReleaseImageName" // full image name host/ns/repo:tag
+
 	var (
-		repo                      = input.Values.Get(registryKey).String()
 		currentImageTag           = input.Values.Get(imageKey).String()
-		desiredReleaseChannelName = input.Values.Get(releaseChannelKey).String()
-		desiredReleaseChannel     = releaseChannelFromName(desiredReleaseChannelName)
+		repo                      = input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
+		desiredReleaseChannelName = input.Values.Get("deckhouse.releaseChannel").String()
 	)
 
 	// Check desired release channel
 	if desiredReleaseChannelName == "" {
+		input.LogEntry.Debug("desired release channel not set")
 		return nil
 	}
+	desiredReleaseChannel := releaseChannelFromName(desiredReleaseChannelName)
 	if !desiredReleaseChannel.IsKnown() {
-		return fmt.Errorf("invalid desired release channel, check 'deckhouse.releaseChannel' in deckhouse configmap")
+		return fmt.Errorf("invalid desired release channel name, check 'deckhouse.releaseChannel' in deckhouse configmap")
 	}
 
 	// Check current release channel
-	currentReleaseChannel, isKnown := getCurrentChannel(currentImageTag, repo)
+	currentReleaseChannel, isKnown := parseReleaseChannel(currentImageTag, repo)
 	if !isKnown {
 		// Current image tag does not match any release channel, cannot stabilize.
+		input.LogEntry.Debug("current tag is not from a release channel")
 		return nil
 	}
 
 	// Should we do anything?
 	if desiredReleaseChannel == currentReleaseChannel {
+		input.LogEntry.Debugf("current tag %q is the desired tag %q, nothing to do",
+			currentReleaseChannel.Tag(), desiredReleaseChannel.Tag())
 		return nil
 	}
 
@@ -86,9 +87,9 @@ func setReleaseChannel(input *go_hook.HookInput, dc dependency.Container) error 
 		newImageTag       = currentImageTag
 	)
 
-	if desiredReleaseChannel < currentReleaseChannel {
-		// Decrease the release channel stability to have newer version.
-		for newReleaseChannel > minReleaseChannel {
+	if currentReleaseChannel > desiredReleaseChannel {
+		// Upgrade, decreasing release channel index
+		for newReleaseChannel > desiredReleaseChannel {
 			newReleaseChannel--
 			tag := repo + ":" + newReleaseChannel.Tag()
 			digest, err := registry.Digest(newReleaseChannel.Tag())
@@ -100,9 +101,10 @@ func setReleaseChannel(input *go_hook.HookInput, dc dependency.Container) error 
 				break
 			}
 		}
+		input.LogEntry.Debugf("upgrading to %s", newImageTag)
 	} else {
-		// Increase the release channel stability and wait for it.
-		for newReleaseChannel < maxReleaseChannel {
+		// Downgrade, increasing release channel index
+		for newReleaseChannel < desiredReleaseChannel {
 			newReleaseChannel++
 			tag := repo + ":" + newReleaseChannel.Tag()
 			digest, err := registry.Digest(newReleaseChannel.Tag())
@@ -116,23 +118,26 @@ func setReleaseChannel(input *go_hook.HookInput, dc dependency.Container) error 
 			}
 			newImageTag = tag
 		}
+		input.LogEntry.Debugf("downgrading to %s", newImageTag)
 	}
 
-	if newImageTag != currentImageTag {
-		input.Values.Set(imageKey, newImageTag)
+	if newImageTag == currentImageTag {
+		input.LogEntry.Warnf("image did not change (%s)", newImageTag)
+		return nil
 	}
 
+	input.Values.Set(imageKey, newImageTag)
 	return nil
 }
 
-func getCurrentChannel(currentImageTag, repo string) (releaseChannel, bool) {
-	parts := strings.Split(currentImageTag, ":")
+func parseReleaseChannel(imageTag, repo string) (releaseChannel, bool) {
+	parts := strings.Split(imageTag, ":")
 	if len(parts) != 2 || parts[0] != repo {
 		return unknownReleaseChannel, false
 	}
-	currentReleaseChannelName := parts[1]
-	currentReleaseChannel := releaseChannelFromName(currentReleaseChannelName)
-	return currentReleaseChannel, currentReleaseChannel.IsKnown()
+	tag := parts[1]
+	relChan := releaseChannelFromName(tag)
+	return relChan, relChan.IsKnown()
 }
 
 const (
