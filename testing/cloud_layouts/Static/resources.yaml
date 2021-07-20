@@ -1,0 +1,16 @@
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
