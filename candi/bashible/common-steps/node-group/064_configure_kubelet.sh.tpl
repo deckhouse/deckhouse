@@ -128,7 +128,6 @@ clusterDomain: {{ .clusterBootstrap.clusterDomain }}
 clusterDNS:
 - {{ .clusterBootstrap.clusterDNSAddress }}
 {{- end }}
-configTrialDuration: 10m0s
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true
 enableDebuggingHandlers: true
