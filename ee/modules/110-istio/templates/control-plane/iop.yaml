@@ -83,7 +83,7 @@ spec:
       meshID: d8-istio-mesh
       network: network-{{ $.Values.global.discovery.clusterDomain | replace "." "-" }}
       multiCluster:
-        clusterName: {{ $.Values.global.discovery.clusterUUID }}
+        clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
 
       logging:
