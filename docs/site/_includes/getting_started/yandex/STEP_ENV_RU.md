@@ -10,7 +10,7 @@ name: candi
 ```
 - Назначьте роль `editor` вновь созданному пользователю для своего облака:
   ```yaml
-yc resource-manager folder add-access-binding <cloudname> --role editor --subject serviceAccount:<userId>
+yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userId>
 ```
 - Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будем авторизовываться в облаке:
   ```yaml

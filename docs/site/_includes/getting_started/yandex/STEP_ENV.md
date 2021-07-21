@@ -10,7 +10,7 @@ name: candi
 ```
 - Assign the `editor` role to the newly created user:
   ```yaml
-yc resource-manager folder add-access-binding <cloudname> --role editor --subject serviceAccount:<userId>
+yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userId>
 ```
 - Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
   ```yaml
