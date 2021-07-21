@@ -11,4 +11,4 @@ sudo apt-get upgrade -y
 sudo apt-get dist-upgrade -y
 
 # Need gnupg for fish
-sudo apt-get install -y gnupg curl cloud-init python3-distutils
+sudo apt-get install -y gnupg curl cloud-init python3-distutils vim
