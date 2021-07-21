@@ -111,12 +111,10 @@ properties:
                   type: string
                 jsonData:
                   type: object
-                  additionalProperties:
-                    type: string
+                  additionalProperties: true
                 secureJsonData:
                   type: object
-                  additionalProperties:
-                    type: string
+                  additionalProperties: true
         x-examples:
           - additionalDatasources:
               - type: graphite
@@ -128,6 +126,9 @@ properties:
                 editable: false
                 version: 1
                 isDefault: false
+                jsonData:
+                  anything: 1
+                  nothing: special
       remoteWrite:
         type: array
         items:

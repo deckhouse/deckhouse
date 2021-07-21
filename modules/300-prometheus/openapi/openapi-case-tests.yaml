@@ -21,6 +21,7 @@ positive:
             isDefault: false
             jsonData:
               timeInterval: 30s
+              integer: 1
             name: loki
             orgId: 1
             type: loki
