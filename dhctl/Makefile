@@ -69,7 +69,7 @@ ci: deps lint
 # Shell script within makefile https://stackoverflow.com/a/29085760
 devenv:
 	@set -e ;\
-	docker pull dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:master ;\
+	docker pull dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:main ;\
 	CONTAINER_ID=$$(docker ps -aqf "name=$(DEV_CONTAINER_NAME)") ;\
 	echo ;\
 	test -n "$$CONTAINER_ID" && echo "Container $$CONTAINER_ID exists, entering." || echo "Creating container..." ;\

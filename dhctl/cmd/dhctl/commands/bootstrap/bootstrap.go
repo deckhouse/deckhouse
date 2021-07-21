@@ -104,6 +104,37 @@ func loadConfigFromFile(path string) (*config.MetaConfig, error) {
 	return metaConfig, nil
 }
 
+func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string) error {
+	bootstrapIdentity := config.GetLocalConvergeLockIdentity("local-bootstraper")
+	leaseLock := client.NewLeaseLock(kubeCl, config.GetConvergeLockLeaseConfig(bootstrapIdentity))
+	err := leaseLock.Lock()
+	if err != nil {
+		return err
+	}
+	defer leaseLock.Unlock()
+
+	if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
+		return err
+	}
+
+	terraNodeGroups := metaConfig.GetTerraNodeGroups()
+	if err := operations.BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups); err != nil {
+		return err
+	}
+
+	return log.Process("bootstrap", "Waiting for additional Nodes", func() error {
+		if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+			return err
+		}
+		for _, terraNodeGroup := range terraNodeGroups {
+			if err := converge.WaitForNodesBecomeReady(kubeCl, terraNodeGroup.Name, terraNodeGroup.Replicas); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
 	app.DefineSSHFlags(cmd)
@@ -231,41 +262,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		if metaConfig.ClusterType != config.CloudClusterType {
-			// The rest of pipeline is additional master and static nodes creating process
-			return nil
-		}
-
-		bootstrapIdentity := config.GetLocalConvergeLockIdentity("local-bootstraper")
-		leaseLock := client.NewLeaseLock(kubeCl, config.GetConvergeLockLeaseConfig(bootstrapIdentity))
-		err = leaseLock.Lock()
-		if err != nil {
-			return err
-		}
-		defer leaseLock.Unlock()
-
-		if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
-			return err
-		}
-
-		terraNodeGroups := metaConfig.GetTerraNodeGroups()
-		if err := operations.BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups); err != nil {
-			return err
-		}
-
-		err = log.Process("bootstrap", "Waiting for additional Nodes", func() error {
-			if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+		if metaConfig.ClusterType == config.CloudClusterType {
+			err := bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
+			if err != nil {
 				return err
 			}
-			for _, terraNodeGroup := range terraNodeGroups {
-				if err := converge.WaitForNodesBecomeReady(kubeCl, terraNodeGroup.Name, terraNodeGroup.Replicas); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
 
 		if resourcesToCreate != nil {
@@ -283,19 +284,21 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return nil
 		})
 
-		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
-			for nodeName, address := range masterAddressesForSSH {
-				fakeSession := sshClient.Settings.Copy()
-				fakeSession.SetAvailableHosts([]string{address})
-				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
-			}
+		if metaConfig.ClusterType == config.CloudClusterType {
+			_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
+				for nodeName, address := range masterAddressesForSSH {
+					fakeSession := sshClient.Settings.Copy()
+					fakeSession.SetAvailableHosts([]string{address})
+					log.InfoF("%s | %s\n", nodeName, fakeSession.String())
+				}
 
-			if err := cache.Global().SaveStruct("cluster-hosts", masterAddressesForSSH); err != nil {
-				log.DebugF("Cannot save ssh hosts %v", err)
-			}
+				if err := cache.Global().SaveStruct("cluster-hosts", masterAddressesForSSH); err != nil {
+					log.DebugF("Cannot save ssh hosts %v", err)
+				}
 
-			return nil
-		})
+				return nil
+			})
+		}
 
 		return nil
 	}
