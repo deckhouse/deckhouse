@@ -215,7 +215,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    **Caution!** Can only be used together with `nodeType: Cloud`.
+                    **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                   - classReference

@@ -182,7 +182,7 @@ spec:
                   description: |
                     Параметры заказа облачных виртуальных машин.
 
-                    **Внимание!** Допустимо использовать только совместно с `nodeType: Cloud`.
+                    **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
                   properties:
                     zones:
                       description: |

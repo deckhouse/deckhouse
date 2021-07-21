@@ -52,4 +52,8 @@ variable "os_iso_url" {
   description = "The download url for the ISO"
   default = ""
 }
+variable "image_name_suffix" {
+  description = "The optional suffix for image name"
+  default = ""
+}
 variable "boot_command" {}

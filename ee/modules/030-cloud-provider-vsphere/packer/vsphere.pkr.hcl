@@ -25,7 +25,7 @@ source "vsphere-iso" "ubuntu" {
   vm_version            = var.vm_hardware_version
   iso_url               = var.os_iso_url
   iso_checksum          = var.iso_checksum
-  vm_name               = "${ var.os_family }-${ var.os_codename }-${ var.os_version }-packer"
+  vm_name               = "${ var.os_family }-${ var.os_codename }-${ var.os_version }-packer${ var.image_name_suffix }"
   guest_os_type         = var.guest_os_type
   disk_controller_type  = ["pvscsi"]
   network_adapters {
