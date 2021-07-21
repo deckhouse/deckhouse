@@ -109,7 +109,7 @@ k8s:
       kubeScheduler: sha256:1662f271dd9a3d22969728eae30f9d182d74c9c717e4d75673dc94c274ebada5
       kubeProxy: sha256:0129daab4e24ce16a1f07bda844a4483dbddb040f38b678361bf1042f2aaf2b8
   '1.18':
-    patch: 19
+    patch: 20
     cni_version: 0.8.7
     bashible: *bashible
     controlPlane:
@@ -119,7 +119,7 @@ k8s:
       kubeScheduler: sha256:8e53f64eb94c247e1603a6b27b93423a8b3cefa620323b9f5a941ca1d08dae63
       kubeProxy: sha256:d1be1ae53829a1ac6a1bdb274bb8eddac325eef50f2a30e5add44179423bd90d
   '1.19':
-    patch: 11
+    patch: 13
     cni_version: 0.8.7
     bashible: &bashible_k8s_ge_1_19
       <<: *bashible
@@ -168,7 +168,7 @@ k8s:
       kubeScheduler: sha256:ff131a993bf2db7ac8d57928152d36cca16b2aaa64dfef44f8aa69811adaec7a
       kubeProxy: sha256:2f06ab7e7897d2dafeef064f4c4edf79ef6166055041486860c2df42343f60b9
   '1.20':
-    patch: 7
+    patch: 9
     cni_version: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -191,7 +191,7 @@ k8s:
       kubeScheduler: sha256:6fdb12580353b6cd59de486ca650e3ba9270bc8d52f1d3052cd9bb1d4f28e189
       kubeProxy: sha256:5d2be61150535ed37b7a5fa5a8239f89afee505ab2fae05247447851eed710a8
   '1.21':
-    patch: 1
+    patch: 3
     cni_version: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
