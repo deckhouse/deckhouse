@@ -19,8 +19,11 @@ package order_certificate
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
+	"github.com/cloudflare/cfssl/helpers"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -33,6 +36,19 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+const (
+	publicDomainPrefix  = "%PUBLIC_DOMAIN%://"
+	clusterDomainPrefix = "%CLUSTER_DOMAIN%://"
+)
+
+func PublicDomainSAN(s string) string {
+	return publicDomainPrefix + s
+}
+
+func ClusterDomainSAN(s string) string {
+	return clusterDomainPrefix + s
+}
 
 // certificateWaitTimeoutDefault controls default amount of time we wait for certificate
 // approval in one iteration.
@@ -51,11 +67,14 @@ type CertificateInfo struct {
 }
 
 type OrderCertificateRequest struct {
-	Namespace   string
-	SecretName  string
-	CommonName  string
+	Namespace  string
+	SecretName string
+	CommonName string
+	SANs       []string
+	Groups     []string
+	Usages     []certificatesv1beta1.KeyUsage
+
 	ValueName   string
-	Group       string
 	ModuleName  string
 	WaitTimeout time.Duration
 }
@@ -125,7 +144,35 @@ func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {
 func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.HookInput, dc dependency.Container) error {
 
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
+		publicDomain := input.Values.Get("global.modules.publicDomainTemplate").String()
+		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
+
 		for _, request := range requests {
+			if request.WaitTimeout == 0 {
+				request.WaitTimeout = certificateWaitTimeoutDefault
+			}
+
+			if request.Usages == nil {
+				request.Usages = []certificatesv1beta1.KeyUsage{
+					certificatesv1beta1.UsageDigitalSignature,
+					certificatesv1beta1.UsageKeyEncipherment,
+					certificatesv1beta1.UsageClientAuth,
+				}
+			}
+
+			// Convert cluster domain and public domain sans
+			for index, san := range request.SANs {
+				switch {
+				case strings.HasPrefix(san, publicDomainPrefix) && publicDomain != "":
+					san = strings.TrimPrefix(san, publicDomainPrefix)
+					request.SANs[index] = fmt.Sprintf(publicDomain, san)
+
+				case strings.HasPrefix(san, clusterDomainPrefix) && clusterDomain != "":
+					san = strings.TrimPrefix(san, clusterDomainPrefix)
+					request.SANs[index] = fmt.Sprintf("%s.%s", san, clusterDomain)
+				}
+			}
+
 			valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
 			if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
 				var secret *CertificateSecret
@@ -138,13 +185,13 @@ func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.
 					}
 				}
 
-				// If existing Certificate expires in more than 7 days - use it.
 				if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
-					shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon(string(secret.Crt), time.Hour*24*7)
+					// Check that certificate is not expired and has the same order request
+					genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*7)
 					if err != nil {
 						return err
 					}
-					if !shouldGenerateNewCert {
+					if !genNew {
 						info := CertificateInfo{Certificate: string(secret.Crt), Key: string(secret.Key)}
 						input.Values.Set(valueName, info)
 						continue
@@ -163,10 +210,6 @@ func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.
 }
 
 func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request OrderCertificateRequest) (*CertificateInfo, error) {
-	if request.WaitTimeout == 0 {
-		request.WaitTimeout = certificateWaitTimeoutDefault
-	}
-
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return nil, fmt.Errorf("can't init Kubernetes client: %v", err)
@@ -175,7 +218,9 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	// Delete existing CSR from the cluster.
 	_ = k8.CertificatesV1beta1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
 
-	csrPEM, key, err := certificate.GenerateCSR(input.LogEntry, request.CommonName, request.Group)
+	csrPEM, key, err := certificate.GenerateCSR(input.LogEntry, request.CommonName,
+		certificate.WithGroups(request.Groups...),
+		certificate.WithSANs(request.SANs...))
 	if err != nil {
 		return nil, fmt.Errorf("error generating CSR: %v", err)
 	}
@@ -191,11 +236,7 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 		},
 		Spec: certificatesv1beta1.CertificateSigningRequestSpec{
 			Request: csrPEM,
-			Usages: []certificatesv1beta1.KeyUsage{
-				certificatesv1beta1.UsageDigitalSignature,
-				certificatesv1beta1.UsageKeyEncipherment,
-				certificatesv1beta1.UsageClientAuth,
-			},
+			Usages:  request.Usages,
 		},
 	}
 
@@ -238,4 +279,50 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	info := CertificateInfo{Certificate: string(crtPEM), Key: string(key), CertificateUpdated: true}
 
 	return &info, nil
+}
+
+// shouldGenerateNewCert checks that the certificate from the cluster matches the order
+func shouldGenerateNewCert(cert []byte, request OrderCertificateRequest, durationLeft time.Duration) (bool, error) {
+	c, err := helpers.ParseCertificatePEM(cert)
+	if err != nil {
+		return false, fmt.Errorf("certificate cannot parsed: %v", err)
+	}
+
+	if c.Subject.CommonName != request.CommonName {
+		return true, nil
+	}
+
+	if !compareArrays(c.Subject.Organization, request.Groups) {
+		return true, nil
+	}
+
+	if !compareArrays(c.DNSNames, request.SANs) {
+		return true, nil
+	}
+
+	// TODO: compare usages
+	// if !compareArrays(c.ExtKeyUsage, request.Usages) {
+	//	  return true, nil
+	// }
+
+	if time.Until(c.NotAfter) < durationLeft {
+		return true, nil
+	}
+	return false, nil
+}
+
+func compareArrays(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	sort.Strings(a)
+	sort.Strings(b)
+
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }

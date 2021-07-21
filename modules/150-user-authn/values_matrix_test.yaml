@@ -14,6 +14,7 @@ global:
         dexAuthenticatorRedis: tagstring
         kubeconfigGenerator: tagstring
   discovery:
+    kubernetesCA: plainstring
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
     d8SpecificNodeCountByRole:
@@ -47,6 +48,9 @@ userAuthn:
         kubeconfigGeneratorMasterCA: plainstring
   idTokenTTL: 10000m
   internal:
+    dexTLS:
+      certificate: plainstring
+      key: plainstring
     customCertificateData:
       tls.crt: plainstring
       tls.key: plainstring
@@ -54,7 +58,6 @@ userAuthn:
       cert: test
       key: test
     kubernetesDexClientAppSecret: plainstring
-    kubernetesCA: plainstring
     providers:
       __ConstantChoices__:
         - __EmptyItem__

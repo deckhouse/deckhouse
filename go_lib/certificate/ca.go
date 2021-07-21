@@ -31,38 +31,6 @@ type Authority struct {
 	Cert string `json:"cert"`
 }
 
-type Option func(request *csr.CertificateRequest)
-
-func WithKeyAlgo(algo string) Option {
-	return func(request *csr.CertificateRequest) {
-		request.KeyRequest.A = algo
-	}
-}
-
-func WithKeySize(size int) Option {
-	return func(request *csr.CertificateRequest) {
-		request.KeyRequest.S = size
-	}
-}
-
-func WithCAExpiry(expiry string) Option {
-	return func(request *csr.CertificateRequest) {
-		request.CA.Expiry = expiry
-	}
-}
-
-func WithCAConfig(caConfig *csr.CAConfig) Option {
-	return func(request *csr.CertificateRequest) {
-		request.CA = caConfig
-	}
-}
-
-func WithKeyRequest(keyRequest *csr.KeyRequest) Option {
-	return func(request *csr.CertificateRequest) {
-		request.KeyRequest = keyRequest
-	}
-}
-
 func GenerateCA(logger *logrus.Entry, cn string, options ...Option) (Authority, error) {
 	request := &csr.CertificateRequest{
 		CN: cn,

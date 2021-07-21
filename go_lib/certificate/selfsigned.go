@@ -52,8 +52,8 @@ func WithSigningDefaultUsage(usage []string) SigningOption {
 	}
 }
 
-func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca Authority, options ...interface{}) (Certificate, error) {
-	logger.Debugf("Generate self-signed cert for %s %v", cn, hosts)
+func GenerateSelfSignedCert(logger *logrus.Entry, cn string, ca Authority, options ...interface{}) (Certificate, error) {
+	logger.Debugf("Generate self-signed cert for %s", cn)
 	request := &csr.CertificateRequest{
 		CN: cn,
 		KeyRequest: &csr.KeyRequest{
@@ -79,10 +79,7 @@ func GenerateSelfSignedCert(logger *logrus.Entry, cn string, hosts []string, ca 
 		return Certificate{}, err
 	}
 
-	req := signer.SignRequest{
-		Hosts:   hosts,
-		Request: string(csrBytes),
-	}
+	req := signer.SignRequest{Request: string(csrBytes)}
 
 	parsedCa, err := helpers.ParseCertificatePEM([]byte(ca.Cert))
 	if err != nil {

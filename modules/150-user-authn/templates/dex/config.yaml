@@ -6,10 +6,11 @@
     config:
       inCluster: true
   web:
-    http: 0.0.0.0:5556
+    https: 0.0.0.0:5556
+    tlsKey: /etc/dex/certs/tls.key
+    tlsCert: /etc/dex/certs/tls.crt
   frontend:
     issuer: "Kubernetes Dex"
-    issuerUrl: "https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}"
     logoUrl: "https://kubernetes.io/images/favicon.png"
   expiry:
     authRequests: "10m"

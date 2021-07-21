@@ -111,23 +111,20 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 }
 
 func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certificate.Certificate, error) {
-	const cn = "cert-manager-webhook"
-	hosts := []string{
+	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
 		"cert-manager-webhook",
-		"cert-manager-webhook.d8-cert-manager",
-		"cert-manager-webhook.d8-cert-manager.svc",
-	}
-
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry, cn, hosts, *ca, func(r *csr.CertificateRequest) {
-		r.Names = []csr.Name{
-			{O: "cert-manager.system"},
-		}
-		r.KeyRequest = &csr.KeyRequest{
+		*ca,
+		certificate.WithGroups("cert-manager.system"),
+		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,
-		}
-	})
-
+		}),
+		certificate.WithSANs(
+			"cert-manager-webhook",
+			"cert-manager-webhook.d8-cert-manager",
+			"cert-manager-webhook.d8-cert-manager.svc",
+		),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate TLS: %v", err)
 	}

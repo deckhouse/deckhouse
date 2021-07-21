@@ -36,6 +36,6 @@ func discoverApiserverCA(input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot find kubernetes ca: %v, (not in pod?)", err)
 	}
 
-	input.Values.Set("userAuthn.internal.kubernetesCA", string(content))
+	input.Values.Set("global.discovery.kubernetesCA", string(content))
 	return nil
 }

@@ -54,7 +54,7 @@ metadata:
 apiVersion: v1
 data:
   oidcIssuerURL: test
-  oidcCA: test
+  oidcIssuerAddress: 8.8.8.8
 kind: ConfigMap
 metadata:
   name: cm
@@ -63,9 +63,19 @@ metadata:
     control-plane-configurator: ""
 `
 	)
+	const values = `
+controlPlaneManager:
+  internal: {}
+  apiserver:
+    authn: {}
+    authz: {}
+global:
+  discovery:
+    kubernetesCA: globaltesttest
+`
 
 	Context("Empty cluster", func() {
-		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`, `{}`)
+		f := HookExecutionConfigInit(values, `{}`)
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -95,7 +105,7 @@ metadata:
 	})
 
 	Context("Secret d8-cloud-instance-manager-cloud-provider is in cluster", func() {
-		f := HookExecutionConfigInit(`{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`, `{}`)
+		f := HookExecutionConfigInit(values, `{}`)
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(configMap))
@@ -119,7 +129,8 @@ metadata:
 				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("testtest"))
 				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("testtest"))
 				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").String()).To(Equal("test"))
-				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").String()).To(Equal("test"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").String()).To(Equal("globaltesttest"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").String()).To(Equal("8.8.8.8"))
 			})
 
 			Context("ConfigMaps were deleted", func() {
@@ -134,6 +145,7 @@ metadata:
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").Exists()).ToNot(BeTrue())
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").Exists()).ToNot(BeTrue())
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").Exists()).ToNot(BeTrue())
 				})
 			})
 		})

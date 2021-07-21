@@ -32,6 +32,7 @@ spec:
         app: dex
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/dex/config.yaml") . | sha256sum }}
+        checksum/tls: {{ include (print $.Template.BasePath "/dex/secret-tls.yaml") . | sha256sum }}
     spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
@@ -48,33 +49,40 @@ spec:
           items:
           - key: config.yaml
             path: config.yaml
+      - name: tls
+        secret:
+          secretName: dex-tls
       containers:
       - name: dex
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.userAuthn.dex }}
-        command: ["/usr/local/bin/dex", "serve", "/etc/dex/config.yaml"]
+        command: ["/usr/local/bin/dex", "serve", "/etc/dex/config/config.yaml"]
         env:
         - name: KUBERNETES_POD_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
         ports:
-        - name: http
+        - name: https
           containerPort: 5556
           protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
             port: 5556
+            scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /healthz
             port: 5556
+            scheme: HTTPS
           initialDelaySeconds: 5
           timeoutSeconds: 1
         volumeMounts:
         - name: original-config
-          mountPath: /etc/dex
+          mountPath: /etc/dex/config
+        - name: tls
+          mountPath: /etc/dex/certs
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}

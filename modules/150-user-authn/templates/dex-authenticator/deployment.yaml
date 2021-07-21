@@ -82,13 +82,11 @@ spec:
         emptyDir: {}
       initContainers:
       - command: ["bash", "-c"]
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         args:
         - |
           ca=$(jo CN=dex-authenticator key="$(jo algo=ecdsa size=256)" ca="$(jo expirty=87600h)" | cfssl gencert -initca -)
           ca_cert=$(echo $ca | jq .cert -r)
 
-          # Создадим конфиг для cfssl gencert
           config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
 
           cert=$(jo CN=dex-authenticator hosts="$(jo -a {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }} {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo $ca | jq .cert -r) -ca-key=<(echo $ca | jq .key -r) -config=<(echo $config) -)
@@ -104,6 +102,7 @@ spec:
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
       containers:
       - name: dex-authenticator
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
@@ -116,6 +115,11 @@ spec:
     {{- end }}
         - --redirect-url=https://{{ $crd.spec.applicationDomain }}
         - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
+        # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
+        - --skip-oidc-discovery
+        - --redeem-url=https://dex.d8-user-authn/token
+        - --login-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}//auth
+        - --oidc-jwks-url=https://dex.d8-user-authn/keys
     {{- if $crd.spec.sendAuthorizationHeader }}
         - --set-authorization-header=true
     {{- end }}

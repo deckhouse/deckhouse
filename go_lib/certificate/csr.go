@@ -25,15 +25,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func GenerateCSR(logger *logrus.Entry, cn string, groups ...string) (csrPEM, key []byte, err error) {
-	request := csr.CertificateRequest{
+func GenerateCSR(logger *logrus.Entry, cn string, options ...Option) (csrPEM, key []byte, err error) {
+	request := &csr.CertificateRequest{
 		CN:         cn,
 		KeyRequest: csr.NewKeyRequest(),
 	}
 
-	for _, group := range groups {
-		request.Names = append(request.Names, csr.Name{O: group})
+	for _, option := range options {
+		option(request)
 	}
+
 	g := &csr.Generator{Validator: Validator}
 
 	// Catch cfssl logs message
@@ -41,7 +42,7 @@ func GenerateCSR(logger *logrus.Entry, cn string, groups ...string) (csrPEM, key
 	log.SetOutput(&buf)
 	defer log.SetOutput(os.Stderr)
 
-	csrPEM, key, err = g.ProcessRequest(&request)
+	csrPEM, key, err = g.ProcessRequest(request)
 	if err != nil {
 		logger.Errorln(buf.String())
 	}

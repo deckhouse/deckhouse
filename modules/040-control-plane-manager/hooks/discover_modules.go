@@ -78,32 +78,44 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		}
 	}
 
-	authzWebhookURLExists := input.ConfigValues.Exists("controlPlaneManager.apiserver.authz.webhookURL")
-	authzWebhookCAExists := input.ConfigValues.Exists("controlPlaneManager.apiserver.authz.webhookCA")
-	authnOIDCIssuerExists := input.ConfigValues.Exists("controlPlaneManager.apiserver.authn.oidcIssuerURL")
-	authnOIDCCAExists := input.ConfigValues.Exists("controlPlaneManager.apiserver.authn.oidcCA")
+	const (
+		userAuthzWebhookURLPath = "controlPlaneManager.apiserver.authz.webhookURL"
+		userAuthzWebhookCAPath  = "controlPlaneManager.apiserver.authz.webhookCA"
+
+		userAuthnOIDCIssuerURLPath     = "controlPlaneManager.apiserver.authn.oidcIssuerURL"
+		userAuthnOIDCIssuerAddressPath = "controlPlaneManager.apiserver.authn.oidcIssuerAddress"
+		userAuthnOIDCIssuerCAPath      = "controlPlaneManager.apiserver.authn.oidcCA"
+	)
+
+	authzWebhookURLExists := input.ConfigValues.Exists(userAuthzWebhookURLPath)
+	authzWebhookCAExists := input.ConfigValues.Exists(userAuthzWebhookCAPath)
+
+	authnOIDCIssuerExists := input.ConfigValues.Exists(userAuthnOIDCIssuerURLPath)
+	authnOIDCCAExists := input.ConfigValues.Exists(userAuthnOIDCIssuerCAPath)
 
 	if !authzWebhookURLExists && !authzWebhookCAExists {
 		// nothing was configured by hand
 		if len(authZData) > 0 {
-			input.Values.Set("controlPlaneManager.apiserver.authz.webhookURL", authZData["url"])
-			input.Values.Set("controlPlaneManager.apiserver.authz.webhookCA", authZData["ca"])
+			input.Values.Set(userAuthzWebhookURLPath, authZData["url"])
+			input.Values.Set(userAuthzWebhookCAPath, authZData["ca"])
 		} else {
-			input.Values.Remove("controlPlaneManager.apiserver.authz.webhookURL")
-			input.Values.Remove("controlPlaneManager.apiserver.authz.webhookCA")
+			input.Values.Remove(userAuthzWebhookURLPath)
+			input.Values.Remove(userAuthzWebhookCAPath)
 		}
 	}
 
 	if !authnOIDCIssuerExists && !authnOIDCCAExists {
 		// nothing was configured by hand
 		if len(authNData) > 0 {
-			input.Values.Set("controlPlaneManager.apiserver.authn.oidcIssuerURL", authNData["oidcIssuerURL"])
-			if ca, ok := authNData["oidcCA"]; ok {
-				input.Values.Set("controlPlaneManager.apiserver.authn.oidcCA", ca)
+			input.Values.Set(userAuthnOIDCIssuerURLPath, authNData["oidcIssuerURL"])
+			input.Values.Set(userAuthnOIDCIssuerCAPath, input.Values.Get("global.discovery.kubernetesCA").String())
+			if address, ok := authNData["oidcIssuerAddress"]; ok {
+				input.Values.Set(userAuthnOIDCIssuerAddressPath, address)
 			}
 		} else {
-			input.Values.Remove("controlPlaneManager.apiserver.authn.oidcIssuerURL")
-			input.Values.Remove("controlPlaneManager.apiserver.authn.oidcCA")
+			input.Values.Remove(userAuthnOIDCIssuerURLPath)
+			input.Values.Remove(userAuthnOIDCIssuerCAPath)
+			input.Values.Remove(userAuthnOIDCIssuerAddressPath)
 		}
 	}
 

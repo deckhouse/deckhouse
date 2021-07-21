@@ -98,11 +98,8 @@ func generateNewBashibleCert(input *go_hook.HookInput) (certificate.Certificate,
 
 	return certificate.GenerateSelfSignedCert(input.LogEntry,
 		"node-manager",
-		[]string{
-			"127.0.0.1",
-			"bashible-api.d8-cloud-instance-manager.svc",
-		},
 		ca,
+		certificate.WithSANs("127.0.0.1", "bashible-api.d8-cloud-instance-manager.svc"),
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
 		certificate.WithSigningDefaultExpiry(87600*time.Hour),
