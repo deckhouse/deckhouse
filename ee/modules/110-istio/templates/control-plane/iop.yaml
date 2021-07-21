@@ -81,9 +81,9 @@ spec:
     global:
       istioNamespace: d8-{{ $.Chart.Name }}
       meshID: d8-istio-mesh
-      network: network-{{ $.Values.global.clusterName }}
+      network: network-{{ $.Values.global.discovery.clusterDomain | replace "." "-" }}
       multiCluster:
-        clusterName: {{ $.Values.global.clusterName }}
+        clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
 
       logging:

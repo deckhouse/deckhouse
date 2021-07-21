@@ -1,5 +1,4 @@
 global:
-  clusterName: "mycluster"
   highAvailability:
     __ConstantChoices__: [true, false]
   enabledModules: ["operator-prometheus-crd","cert-manager", "priority-class"]
@@ -38,6 +37,7 @@ global:
         proxyv2V1x8x2: hashstring
   discovery:
     clusterDomain: my.cluster
+    clusterUUID: aa-bb-cc
     clusterControlPlaneIsHighlyAvailable:
       __ConstantChoices__: [true, false]
     d8SpecificNodeCountByRole:
