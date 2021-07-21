@@ -55,6 +55,7 @@ discovery:
     system: 3
   kubernetesVersion: "1.19"
   clusterDomain: my.domain
+  clusterUUID: aa-bb-cc
 `
 
 const istioValues = `
