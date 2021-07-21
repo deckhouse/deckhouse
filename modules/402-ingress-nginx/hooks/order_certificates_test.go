@@ -43,7 +43,7 @@ var _ = Describe("ingress-nginx :: hooks :: order_certificates", func() {
 	var logEntry = log.WithContext(context.TODO())
 
 	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kubernetes")
-	cert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", []string{"test.kube-system.svc"}, selfSignedCA)
+	cert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", selfSignedCA)
 
 	Context(":: empty_cluster", func() {
 		BeforeEach(func() {

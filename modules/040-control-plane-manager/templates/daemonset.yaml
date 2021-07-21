@@ -28,6 +28,9 @@
     {{- if .Values.controlPlaneManager.apiserver.authn.oidcIssuerURL }}
       {{ $_ := set $tpl_context.apiserver "oidcIssuerURL" .Values.controlPlaneManager.apiserver.authn.oidcIssuerURL }}
     {{- end }}
+    {{- if .Values.controlPlaneManager.apiserver.authn.oidcIssuerAddress }}
+      {{ $_ := set $tpl_context.apiserver "oidcIssuerAddress" .Values.controlPlaneManager.apiserver.authn.oidcIssuerAddress }}
+    {{- end }}
     {{- if .Values.controlPlaneManager.apiserver.authn.oidcCA }}
       {{ $_ := set $tpl_context.apiserver "oidcCA" .Values.controlPlaneManager.apiserver.authn.oidcCA }}
     {{- end }}

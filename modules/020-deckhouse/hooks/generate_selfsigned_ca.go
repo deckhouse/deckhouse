@@ -92,14 +92,18 @@ func generateSelfSignedCertificate(input *go_hook.HookInput) error {
 			webhookServiceHost,
 			input.Values.Get("global.discovery.clusterDomain").String(),
 		)
-		sefSignedCert, err = certificate.GenerateSelfSignedCert(input.LogEntry, "webhook-handler", []string{
-			webhookServiceHost,
-			webhookServiceFQDN,
-			"validating-" + webhookServiceHost,
-			"conversion-" + webhookServiceHost,
-			"validating-" + webhookServiceFQDN,
-			"conversion-" + webhookServiceFQDN,
-		}, sefSignedCA)
+		sefSignedCert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
+			"webhook-handler",
+			sefSignedCA,
+			certificate.WithSANs(
+				webhookServiceHost,
+				webhookServiceFQDN,
+				"validating-"+webhookServiceHost,
+				"conversion-"+webhookServiceHost,
+				"validating-"+webhookServiceFQDN,
+				"conversion-"+webhookServiceFQDN,
+			),
+		)
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned certificate: %v", err)
 		}

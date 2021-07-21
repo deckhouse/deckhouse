@@ -6,6 +6,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 {{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
@@ -21,7 +22,7 @@ spec:
       - path: /
         backend:
           serviceName: dex
-          servicePort: 5556
+          servicePort: 443
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
@@ -30,6 +31,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/limit-rpm: "10"
     # Works only for ingress-controllers >=0.40. It is here to not forget to add the annotation after upgrading ingress controller.
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
@@ -48,8 +50,8 @@ spec:
       - path: /auth
         backend:
           serviceName: dex
-          servicePort: 5556
+          servicePort: 443
       - path: /healthz
         backend:
           serviceName: dex
-          servicePort: 5556
+          servicePort: 443

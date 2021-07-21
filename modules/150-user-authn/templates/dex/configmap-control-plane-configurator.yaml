@@ -1,15 +1,3 @@
-{{- define "is_cpc_cm_ready_to_export" }}
-  {{- if not (eq .Values.userAuthn.controlPlaneConfigurator.dexCAMode "FromIngressSecret") -}}
-    not empty string — ready!
-  {{- else if not (eq (include "helm_lib_module_https_mode" .) "CertManager") -}}
-    not empty string — ready!
-  {{- else if .Values.userAuthn.internal.discoveredDexCA -}}
-    not empty string — ready!
-  {{- end -}}
-{{- end }}
-
-{{- if and .Values.userAuthn.controlPlaneConfigurator.enabled }}
-  {{- if (include "is_cpc_cm_ready_to_export" .) }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -19,9 +7,6 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "dex" "control-plane-configurator" "")) | indent 2 }}
 data:
   oidcIssuerURL: https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
-    {{- if .Values.userAuthn.internal.discoveredDexCA }}
-  oidcCA: |
-{{ .Values.userAuthn.internal.discoveredDexCA | indent 4 }}
-    {{- end }}
-  {{- end }}
+{{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
+  oidcIssuerAddress: {{ .Values.userAuthn.internal.discoveredDexClusterIP | indent 4 }}
 {{- end }}

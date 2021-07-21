@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"time"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/order_certificate"
 )
@@ -25,13 +25,22 @@ import (
 var _ = order_certificate.RegisterOrderCertificateHook(
 	[]order_certificate.OrderCertificateRequest{
 		{
-			Namespace:   "d8-module-name",
-			SecretName:  "module-name-auth-tls",
-			CommonName:  "d8-module-name:module-name:auth",
-			ValueName:   "internal.moduleAuthTLS",
-			Groups:      []string{"prometheus:auth"},
-			ModuleName:  "moduleName",
-			WaitTimeout: 1 * time.Millisecond,
+			Namespace:  "d8-user-authn",
+			SecretName: "dex-tls",
+			CommonName: "dex.d8-user-authn",
+			SANs: []string{
+				"dex.d8-user-authn",
+				"dex.d8-user-authn.svc",
+				order_certificate.ClusterDomainSAN("dex.d8-user-authn.svc"),
+				order_certificate.PublicDomainSAN("dex"),
+			},
+			Usages: []certificatesv1beta1.KeyUsage{
+				certificatesv1beta1.UsageDigitalSignature,
+				certificatesv1beta1.UsageKeyEncipherment,
+				certificatesv1beta1.UsageServerAuth,
+			},
+			ValueName:  "internal.dexTLS",
+			ModuleName: "userAuthn",
 		},
 	},
 )

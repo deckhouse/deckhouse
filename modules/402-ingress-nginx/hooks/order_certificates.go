@@ -116,7 +116,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 				Namespace:  namespace,
 				SecretName: secretName,
 				CommonName: fmt.Sprintf("nginx-ingress:%s", controller.Name),
-				Group:      "ingress-nginx:auth",
+				Groups:     []string{"ingress-nginx:auth"},
 				ModuleName: "ingressNginx",
 			}
 

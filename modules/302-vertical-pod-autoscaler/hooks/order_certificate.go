@@ -115,10 +115,16 @@ func vpaCertHandler(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
-		cert, err := certificate.GenerateSelfSignedCert(input.LogEntry, "vpa-webhook", []string{"vpa-webhook.kube-system", "vpa-webhook.kube-system.svc"}, selfSignedCA)
+
+		cert, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+			"vpa-webhook",
+			selfSignedCA,
+			certificate.WithSANs("vpa-webhook.kube-system", "vpa-webhook.kube-system.svc"),
+		)
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned cert: %v", err)
 		}
+
 		vpaCert.CACert = selfSignedCA.Cert
 		vpaCert.CAKey = selfSignedCA.Key
 		vpaCert.ServerKey = cert.Key
@@ -126,6 +132,5 @@ func vpaCertHandler(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("verticalPodAutoscaler.internal", vpaCert)
-
 	return nil
 }

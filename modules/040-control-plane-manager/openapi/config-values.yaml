@@ -44,6 +44,13 @@ properties:
               OIDC provider URL.
             x-examples:
               - "https://my-super-site.tech/"
+          oidcIssuerAddress:
+            type: string
+            description: |
+              OIDC provider network address alias.
+            x-examples:
+            - "1.2.3.4"
+            - ""
           oidcCA:
             type: string
             description: |

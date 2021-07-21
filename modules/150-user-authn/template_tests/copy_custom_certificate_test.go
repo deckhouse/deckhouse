@@ -46,6 +46,7 @@ modules:
   publicDomainTemplate: "%s.example.com"
   placement: {}
 discovery:
+  kubernetesCA: plainstring
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
@@ -55,7 +56,9 @@ https:
   mode: CustomCertificate
 internal:
   kubernetesDexClientAppSecret: plainstring
-  kubernetesCA: plainstring
+  dexTLS:
+    certificate: plainstring
+    key: plainstring
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY

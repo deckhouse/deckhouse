@@ -60,3 +60,18 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
+{{- if $.apiserver.oidcIssuerAddress }}
+  {{- if $.apiserver.oidcIssuerURL }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  hostAliases:
+  - ip: {{ $.apiserver.oidcIssuerAddress }}
+    hostnames:
+    - {{ trimSuffix "/" (trimPrefix "https://" $.apiserver.oidcIssuerURL) }}
+  {{- end }}
+{{- end }}

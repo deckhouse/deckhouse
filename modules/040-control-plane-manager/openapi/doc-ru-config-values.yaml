@@ -31,6 +31,9 @@ properties:
           oidcCA:
             description: |
               CA OIDC-провайдера.
+          oidcIssuerAddress:
+            description: |
+              Сетевой адрес OIDC-провайдера.
       authz:
         description: |
           Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://early.deckhouse.io/ru/documentation/v1/modules/modules/140-user-authz/)

@@ -7,10 +7,9 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
 spec:
   type: ClusterIP
-  clusterIP: None
   ports:
-  - port: 5556
-    targetPort: http
-    name: http
+  - port: 443
+    targetPort: https
+    name: https
   selector:
     app: dex

@@ -16,7 +16,7 @@ var _ = order_certificate.RegisterOrderCertificateHook(
 			SecretName: "pricing-prometheus-api-client-tls",
 			CommonName: "d8-flant-integration:flant-integration:prometheus-api-client",
 			ValueName:  "internal.prometheusAPIClientTLS",
-			Group:      "prometheus:auth",
+			Groups:     []string{"prometheus:auth"},
 			ModuleName: "flantIntegration",
 		},
 	},
