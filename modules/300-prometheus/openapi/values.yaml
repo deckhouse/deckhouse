@@ -93,6 +93,12 @@ properties:
                   type: string
                 url:
                   type: string
+                user:
+                  type: string
+                database:
+                  type: string
+                withCredentials:
+                  type: boolean
                 name:
                   type: string
                 uuid:
