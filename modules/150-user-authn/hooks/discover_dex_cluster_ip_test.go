@@ -43,6 +43,7 @@ spec:
 		It("Should delete service", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Service", "d8-user-authn", "dex").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("userAuthn.internal.discoveredDexClusterIP").Exists()).To(BeFalse())
 		})
 	})
 
