@@ -31,6 +31,8 @@ import (
 const (
 	certsMetricSnapshot    = "certificates"
 	secretsMetricsSnapshot = "secrets"
+
+	metricsGroup = "orphan_secrets_metrics_hook"
 )
 
 type secretMeta struct {
@@ -109,6 +111,8 @@ func secretsMetricKeyFun(m *secretMeta) string {
 }
 
 func orphanSecretsMetrics(input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire(metricsGroup)
+
 	// in jq filter we see diff secret wit certs
 	// so, we need iterate over certs and check key in secrets map
 	secrets := map[string]bool{}
@@ -136,7 +140,7 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 				"namespace":   certMeta.Namespace,
 				"secret_name": certMeta.SecretName,
 			},
-			metrics.WithGroup("orphan_secrets_metrics_hook"),
+			metrics.WithGroup(metricsGroup),
 		)
 
 	}
