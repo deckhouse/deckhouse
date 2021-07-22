@@ -208,7 +208,10 @@ properties:
         x-examples:
           - tls.crt: plainstring
             tls.key: plainstring
+            ca.crt: plainstring
         properties:
+          ca.crt:
+            type: string
           tls.key:
             type: string
           tls.crt:
