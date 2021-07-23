@@ -30,13 +30,13 @@ global:
   modulesImages:
     registry: registry.deckhouse.io
 deckhouse:
-  internal:
-    currentReleaseImageName: "test"
+  internal: {}
 `, `{}`)
 
 	Context("With Deckhouse pod", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+		Context("when image in absent values", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,14 +54,68 @@ spec:
       - name: deckhouse
         image: registry.deckhouse.io/deckhouse/ce/dev:test
 `, 1))
-			f.RunHook()
+				f.RunHook()
+			})
+
+			It("Should run", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(deployment.Exists()).To(BeTrue())
+				Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/ce/dev:test"))
+			})
 		})
 
-		It("Should run", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
-			Expect(deployment.Exists()).To(BeTrue())
-			Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/ce/dev:test"))
+		Context("when image in present values", func() {
+			BeforeEach(func() {
+				f.ValuesSet("deckhouse.internal.currentReleaseImageName", "registry.deckhouse.io/deckhouse/ce/initial:test")
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: deckhouse
+    heritage: deckhouse
+    module: deckhouse
+  name: deckhouse
+  namespace: d8-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: deckhouse
+        image: registry.deckhouse.io/deckhouse/ce/different:test
+`, 1))
+				f.RunHook()
+			})
+
+			It("Should run", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(deployment.Exists()).To(BeTrue())
+				Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/ce/initial:test"))
+			})
+		})
+	})
+
+	Context("isOnReleaseChannelMetricValue func", func() {
+		It("returns 0 when image is on a release channel", func() {
+			var (
+				repo  = "registry.deckhouse.io/deckhouse/fe"
+				image = "registry.deckhouse.io/deckhouse/fe:early-access"
+			)
+			metricValue := isOnReleaseChannelMetricValue(image, repo)
+			Expect(metricValue).To(Equal(float64(0)))
+		})
+
+		It("returns 1 when image is NOT on a release channel", func() {
+			var (
+				repo  = "registry.deckhouse.io/deckhouse/fe"
+				image = "registry.deckhouse.io/deckhouse/fe:late-access"
+			)
+			metricValue := isOnReleaseChannelMetricValue(image, repo)
+
+			Expect(metricValue).To(Equal(float64(1)))
 		})
 	})
 })
