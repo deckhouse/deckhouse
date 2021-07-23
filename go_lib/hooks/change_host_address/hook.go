@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -49,7 +50,7 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}, nil
 }
 
-func RegisterHook(name, namespace string) bool {
+func RegisterHook(appName, namespace string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
@@ -61,8 +62,14 @@ func RegisterHook(name, namespace string) bool {
 						MatchNames: []string{namespace},
 					},
 				},
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{name},
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "app",
+							Operator: "In",
+							Values:   []string{appName},
+						},
+					},
 				},
 				FilterFunc: getAddress,
 			},
