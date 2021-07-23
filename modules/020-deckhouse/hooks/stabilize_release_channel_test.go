@@ -28,10 +28,8 @@ import (
 )
 
 var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::", func() {
-
 	Context("releaseChannel type", func() {
 		It("switches release channels by increment", func() {
-
 			rc := releaseChannel(-2)
 			Expect(rc.IsKnown()).To(BeFalse())
 			Expect(rc.Tag()).To(Equal(""))
@@ -374,5 +372,4 @@ var _ = Describe("Modules :: deckhouse :: hooks :: stabilize release channel ::"
 			table.Entry("Alpha -> RockSolid", nameAlpha, nameRockSolid),
 		)
 	})
-
 })

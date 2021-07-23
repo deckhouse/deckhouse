@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -67,28 +66,24 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	if len(deckhouseSnapshot) != 1 {
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
 	}
-
 	image := deckhouseSnapshot[0].(string)
-	input.Values.Set(deckhouseImagePath, image)
 
+	// Set deckhouse image only if it was not set before, e.g. by stabilize_release_channel hook
+	if input.Values.Get(deckhouseImagePath).String() == "" {
+		input.Values.Set(deckhouseImagePath, image)
+	}
+
+	// Generate alert for deckhouse being not on release channel
 	repo := input.Values.Get(repoPath).String()
-	repoPattern := fmt.Sprintf("^%s[:,/](.*)$", regexp.QuoteMeta(repo))
-	repoRegex, err := regexp.Compile(repoPattern)
-	if err != nil {
-		return fmt.Errorf("cannot complie regex %q", repoPattern)
-	}
-
-	captureGroups := repoRegex.FindStringSubmatch(image)
-
-	metricResult := float64(1)
-	if len(captureGroups) == 2 {
-		switch captureGroups[1] {
-		case "alpha", "beta", "early-access", "stable", "rock-solid":
-			metricResult = 0
-		}
-	}
-
-	input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", metricResult, nil)
+	input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", isOnReleaseChannelMetricValue(image, repo), nil)
 
 	return nil
+}
+
+func isOnReleaseChannelMetricValue(image, repo string) float64 {
+	_, isKnown := parseReleaseChannel(image, repo)
+	if isKnown {
+		return 0
+	}
+	return 1
 }
