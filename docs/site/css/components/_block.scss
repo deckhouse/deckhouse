@@ -1,7 +1,12 @@
 @import "components/common/_variables.scss";
 
 .block {
-    margin: 75px 0;
+    margin: 75px auto;
+    &_inverse {
+        background: $color-main;
+        color: #fff;
+        padding: 75px 0;
+    }
     &__content {
         box-sizing: border-box;
     }
@@ -10,6 +15,7 @@
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
         &_top {
             align-items: flex-start;
         }
@@ -17,8 +23,10 @@
             width: 45%;
             @media (min-width: $container-breakpoint-lg) {
                 width: 40%;
-                margin-right: 10%;
             }
         }
+    }
+    &__center {
+        text-align: center;
     }
 }

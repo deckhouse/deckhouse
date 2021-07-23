@@ -12,49 +12,60 @@
         width: 150px;
         min-height: 100px;
         vertical-align: bottom;
-        &:not(:first-child) {
-            border-left: 2px solid $color-main;
+        border-left: 2px solid $color-main;
+    }
+    &__cell {
+        & > div {
+            small {
+                opacity: 0.6;
+            }
+        }
+        &_default {
             & > div {
-                padding-bottom: 15px;
-                border-bottom: 2px solid #D8D8D8;
+                // padding-bottom: 15px;
+                // border-bottom: 2px solid #D8D8D8;
                 text-align: center;
             }
         }
-        &:first-child {
+        &_left-title {
+            border-left: none !important;
             background: #25245A;
             color: $color-inverse;
             & > div {
-                padding-bottom: 15px;
-                border-bottom: 2px solid #FFFFFF;
+                // padding-bottom: 15px;
+                // border-bottom: 2px solid #FFFFFF;
                 text-align: left;
-                small {
-                    opacity: 0.6;
-                }
             }
         }
-    }
-    tr:first-child td:not(:first-child) {
-        background: $color-smooth;
-        & > div {
-            text-align: center;
-            border-bottom: none;
-            padding-bottom: 0;
+        &_top-title {
+            background: $color-smooth;
+            & > div {
+                text-align: center;
+                // border-bottom: none !important;
+                // padding-bottom: 0 !important;
+            }
         }
-    }
-
-    &__cell {
-        &_gt {
+        &_separator-title {
+            border-left: none !important;
             padding: 10px 25px !important;
             background: $color-main !important;
             color: $color-inverse !important;
             font-size: $font-size-small !important;
         }
-        &_bt {
+        &_border-top {
             border-top: 2px solid $color-main;
         }
         &_center {
             text-align: center;
             vertical-align: middle !important;
+        }
+        &_mark {
+            &-alt {
+                color: $color-alt;
+            }
+            &-warning {
+                color: #ff662a;
+            }
         }
     }
 

@@ -11,7 +11,10 @@
     box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.15);
     &__logo {
         img {
-            height: 50px;
+            height: 42px;
+            @media (min-width: $container-breakpoint-lg) {
+                height: 50px;
+            }
         }
     }
     &__content {

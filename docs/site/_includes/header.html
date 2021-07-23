@@ -1,4 +1,4 @@
-{% assign topnav = site.data[page.topnav].topnav %}
+{% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 
 <div class="header-container">
   {% unless site.mode == 'local' %}
@@ -65,7 +65,7 @@
                   {%- if item.items %} header__navigation-item_parent submenu-parent{% endif %}
                   {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
                   {%- if item.items %} data-proofer-ignore{% endif %}>
-                  <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title[page.lang] %}{{ item.title[page.lang] }}{% else %}{{ item.title }}{% endif -%}</a>
+                  <a href="/{{ page.lang }}{{ item.url }}">{%- if item.title %}{{ item.title }}{% else %}{{ item.title }}{% endif -%}</a>
 
                   {% if item.items %}
                     <div class="submenu-container">
@@ -73,7 +73,7 @@
                         {% for subitem in item.items %}
                           {%- assign item_url_parts = subitem.url | split: '/' -%}
                           <li data-proofer-ignore class="submenu-item">
-                              <a href="/{{ page.lang }}{{ subitem.url }}" class="submenu-item-link">{%- if subitem.title[page.lang] %}{{ subitem.title[page.lang] }}{% else %}{{ subitem.title }}{% endif -%}</a>
+                              <a href="/{{ page.lang }}{{ subitem.url }}" class="submenu-item-link">{%- if subitem.title %}{{ subitem.title }}{% else %}{{ subitem.title }}{% endif -%}</a>
                           </li>
                         {% endfor %}
                       </ul>

@@ -21,19 +21,27 @@
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &_big {
-        font-size: $font-size-h2;
-    }
-    &:hover {
-        text-decoration: none !important;
-    }
     &:not(.button_disabled):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;
+        text-decoration: none !important;
+    }
+    &_main {
+        color: $color-inverse !important;
+        background: $color-main;
+        border: 2px solid $color-main;
+        &:not(.button_disabled):hover {
+            color: $color-inverse !important;
+            background: $color-alt;
+            border: 2px solid $color-alt;
+        }
     }
     &_disabled {
         opacity: 0.3;
+    }
+    &_big {
+        font-size: $font-size-h2;
     }
 }
 

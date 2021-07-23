@@ -23,6 +23,10 @@
         }
         &-title {
             margin: 0 0 $spacing-m;
+            small {
+                font-weight: $font-weight-regular;
+                opacity: 0.6;
+            }
         }
         &-label {
             color: $color-alt;
@@ -59,7 +63,10 @@
 
             & > li {
                 margin-bottom: $spacing-l;
-                width: 40%;
+                width: 100%;
+                @media (min-width: $container-breakpoint-lg) {
+                    width: 40%;
+                }
                 ul {
                     list-style-type: none;
                     margin: $spacing-m 0 $spacing-l;

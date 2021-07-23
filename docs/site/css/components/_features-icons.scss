@@ -63,7 +63,7 @@ $item-width-lg: ($container-width-lg - $item-gap*3)/4;
             &_num {
                 list-style-type: decimal;
             }
-            a {
+            a:not(.button) {
                 color: $color-alt;
                 &:hover {
                     text-decoration: none;
@@ -91,7 +91,7 @@ $item-width-lg: ($container-width-lg - $item-gap*3)/4;
                     li {
                         opacity: 0.6;
                         font-size: $font-size-small;
-                        margin-bottom: $spacing-m;
+                        margin-bottom: $spacing-s;
                     }
                 }
             }
