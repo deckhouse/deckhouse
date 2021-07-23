@@ -1,0 +1,17 @@
+properties:
+  https:
+    type: object
+    default: {"foo": "bar"}
+    properties:
+      mode:
+        type: string
+        default: "Disabled"
+        enum:
+          - "disabled"
+          - "Cert-Manager"
+          - "Some:Thing"
+          - "Any.Thing"
+          - "Static"
+  highAvailability:
+    type: boolean
+    default: false
