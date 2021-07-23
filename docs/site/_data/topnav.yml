@@ -1,59 +1,66 @@
 ## if you want to list an external url, use external_url instead of url. the theme will apply a different link base.
 topnav:
-- title: Topnav
-  items:
-  - title:
-      ru: Быстрый старт
-      en: Getting started
-    url: /gs/
-  - title:
-      ru: Документация
-      en: Documentation
-    url: /documentation/v1/
-  - title:
-      ru: Сообщество
-      en: Community
-    url: '#'
-    items:
-    - title:
-        ru: О сообществе
-        en: About
-      url: /community/about.html
-    - title:
-        ru: Deckhouse Platform CE
-        en: Deckhouse Platform CE
-      url: /community/community_edition.html
-    - title:
-        ru: Используемое ПО
-        en: Used software
-      url: /documentation/v1/oss_info.html
-  - title:
-      ru: Продукты
-      en: Products
-    url: '#'
-    items:
-    - title:
-        ru: Deckhouse Platform EE
-        en: Deckhouse Platform EE
-      url: /products/enterprise_edition.html
-    - title:
-        ru: Deckhouse Commander
-        en: Deckhouse Commander
-      url: /products/commander.html
-  - title:
-      ru: Услуги
-      en: Services
-    url: '#'
-    items:
-    - title:
-        ru: Managed Deckhouse
-        en: Managed Deckhouse
-      url: /services/managed.html
-    - title:
-        ru: Обучение и консультации
-        en: Training & Consulting
-      url: /services/training.html
-  - title:
-      ru: О нас
-      en: About us
-    url: /about_us.html
+  en:
+    - title: Topnav
+      items:
+      - title: Getting started
+        url: /gs/
+      - title: Documentation
+        url: /documentation/v1/
+      - title: Community
+        url: '#'
+        items:
+        - title: About
+          url: /community/about.html
+        - title: Deckhouse Platform CE
+          url: /community/community_edition.html
+        - title: Used software
+          url: /documentation/v1/oss_info.html
+      - title: Products
+        url: '#'
+        items:
+        - title: Deckhouse Platform EE
+          url: /products/enterprise_edition.html
+        - title: Deckhouse Commander
+          url: /products/commander.html
+      - title: Services
+        url: '#'
+        items:
+        - title: Managed Deckhouse
+          url: /services/managed.html
+        - title: Training & Consulting
+          url: /services/training.html
+      - title: About us
+        url: /about_us.html
+  ru:
+    - title: Topnav
+      items:
+      - title: Быстрый старт
+        url: /gs/
+      - title: Документация
+        url: /documentation/v1/
+      - title: Сообщество
+        url: '#'
+        items:
+        - title: О сообществе
+          url: /community/about.html
+        - title: Deckhouse Platform CE
+          url: /community/community_edition.html
+        - title: Используемое ПО
+          url: /documentation/v1/oss_info.html
+      - title: Продукты
+        url: '#'
+        items:
+        - title: Deckhouse Platform EE
+          url: /products/enterprise_edition.html
+        - title: Deckhouse Commander
+          url: /products/commander.html
+      - title: Услуги
+        url: '#'
+        items:
+        - title: Managed Deckhouse
+          url: /services/managed.html
+        - title: Обучение и консультации
+          url: /services/training.html
+      - title: О нас
+        url: /about_us.html
