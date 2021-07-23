@@ -148,18 +148,6 @@ func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.
 		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
 		for _, request := range requests {
-			if request.WaitTimeout == 0 {
-				request.WaitTimeout = certificateWaitTimeoutDefault
-			}
-
-			if request.Usages == nil {
-				request.Usages = []certificatesv1beta1.KeyUsage{
-					certificatesv1beta1.UsageDigitalSignature,
-					certificatesv1beta1.UsageKeyEncipherment,
-					certificatesv1beta1.UsageClientAuth,
-				}
-			}
-
 			// Convert cluster domain and public domain sans
 			for index, san := range request.SANs {
 				switch {
@@ -213,6 +201,18 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return nil, fmt.Errorf("can't init Kubernetes client: %v", err)
+	}
+
+	if request.WaitTimeout == 0 {
+		request.WaitTimeout = certificateWaitTimeoutDefault
+	}
+
+	if request.Usages == nil {
+		request.Usages = []certificatesv1beta1.KeyUsage{
+			certificatesv1beta1.UsageDigitalSignature,
+			certificatesv1beta1.UsageKeyEncipherment,
+			certificatesv1beta1.UsageClientAuth,
+		}
 	}
 
 	// Delete existing CSR from the cluster.
