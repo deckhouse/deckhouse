@@ -63,3 +63,10 @@ func WithSANs(sans ...string) Option {
 		request.Hosts = append(request.Hosts, sans...)
 	}
 }
+
+// WithCSRKeyRequest redeclare basic(ecdsa 2048) key alg and size
+func WithCSRKeyRequest(keyRequest *csr.KeyRequest) Option {
+	return func(request *csr.CertificateRequest) {
+		request.KeyRequest = keyRequest
+	}
+}

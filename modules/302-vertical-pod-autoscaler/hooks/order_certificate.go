@@ -104,7 +104,7 @@ func vpaCertHandler(input *go_hook.HookInput) error {
 
 	if len(snapshots) > 0 {
 		vpaCert = *snapshots[0].(*vpaCertSecretData)
-		shouldGenerateNewCert, err = certificate.IsCertificateExpiringSoon(vpaCert.ServerCert, time.Hour*7*24)
+		shouldGenerateNewCert, err = certificate.IsCertificateExpiringSoon([]byte(vpaCert.ServerCert), time.Hour*7*24)
 		if err != nil {
 			return err
 		}

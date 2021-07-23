@@ -93,7 +93,7 @@ func orderCertificate(input *go_hook.HookInput, dc dependency.Container) error {
 
 			// If existing Certificate expires in more than 7 days — use it.
 			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
-				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon(string(secret.Crt), time.Hour*24*7)
+				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon(secret.Crt, time.Hour*24*7)
 				if err != nil {
 					return err
 				}
