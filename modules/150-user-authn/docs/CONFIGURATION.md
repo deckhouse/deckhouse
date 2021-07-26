@@ -2,11 +2,11 @@
 title: "The user-authn module: configuration"
 ---
 
-This module is **disabled** by default. To enable it, add the following lines to the `deckhouse` ConfigMap:
+This module is **enabled** by default. To disable it, add the following lines to the `deckhouse` ConfigMap:
 
 ```yaml
 data:
-  userAuthnEnabled: "true"
+  userAuthnEnabled: "false"
 ```
 
 ## Parameters
