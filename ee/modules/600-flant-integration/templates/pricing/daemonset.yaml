@@ -59,10 +59,6 @@ spec:
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.flantIntegration.flantPricing }}
         env:
-        - name: FP_PROJECT
-          value: {{ .Values.global.project | quote }}
-        - name: FP_CLUSTER
-          value: {{ .Values.global.clusterName | quote }}
         - name: FP_RELEASE_CHANNEL
           value: {{ .Values.flantIntegration.internal.releaseChannel | quote }}
         - name: FP_BUNDLE

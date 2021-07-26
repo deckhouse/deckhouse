@@ -82,10 +82,6 @@ deckhouse:
   registryDockerCfg: ...
   releaseChannel: Alpha
   bundle: Default
-  configOverrides:
-    global:
-      clusterName: main
-      project: pivot
 ```
 {% endraw %}
 Так же необходимо указать параметры подключения по ssh, чтобы попасть на сервер для подготовки инфраструктуры и установки deckhouse.
