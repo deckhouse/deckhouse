@@ -89,20 +89,20 @@ Hybrid-кластер представляет собой объединённы
 * `internalNetworkNames` — имена сетей, подключённые к виртуальной машине, и используемые cloud-controller-manager для проставления InternalIP в `.status.addresses` в Node API объект.
   * Формат — массив строк. Например,
 
-      ```yaml
-      internalNetworkNames:
-      - KUBE-3
-      - devops-internal
-      ```
+    ```yaml
+    internalNetworkNames:
+    - KUBE-3
+    - devops-internal
+    ```
 
 * `externalNetworkNames` — имена сетей, подключённые к виртуальной машине, и используемые cloud-controller-manager для проставления ExternalIP в `.status.addresses` в Node API объект.
   * Формат — массив строк. Например,
 
-      ```yaml
-      externalNetworkNames:
-      - KUBE-3
-      - devops-internal
-      ```
+    ```yaml
+    externalNetworkNames:
+    - KUBE-3
+    - devops-internal
+    ```
 
 * `podNetworkMode` - определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это internal сеть, но бывают исключения).
   * Допустимые значение:
@@ -192,19 +192,19 @@ volumeBindingMode: WaitForFirstConsumer
     curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64
     ```
 
-2. Подготавливаем OpenStack RC (openrc) файл, который содержит credentials для обращения к api openstack.
+2. Подготавливаем OpenStack openrc-файл, который содержит credentials для обращения к API OpenStack.
 
-    > Интерфейс получения openrc файла может отличаться в зависимости от провайдера OpenStack. Если провайдер предоставляет
-    > стандартный интерфейс для OpenStack, то скачать openrc файл можно по [инструкции](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
+    > Интерфейс получения openrc-файла может отличаться в зависимости от провайдера OpenStack. Если провайдер предоставляет
+    > стандартный интерфейс для OpenStack, то скачать openrc-файл можно по [инструкции](https://docs.openstack.org/zh_CN/user-guide/common/cli-set-environment-variables-using-openstack-rc.html)
 
 3. Либо устанавливаем OpenStack cli по [инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
-   Либо можно запустить docker контейнер, прокинув внутрь openrc файл и скаченный локально образ ubuntu
+   Либо можно запустить docker контейнер, прокинув внутрь openrc-файл и скаченный локально образ ubuntu
 
     ```shell
     docker run -ti --rm -v ~/ubuntu-18-04-cloud-amd64:/ubuntu-18-04-cloud-amd64 -v ~/.mcs-openrc:/openrc jmcvea/openstack-client
     ```
 
-4. Инициализируем переменные окружения из openrc файла
+4. Инициализируем переменные окружения из openrc-файла
 
     ```shell
     source /openrc
@@ -262,3 +262,29 @@ volumeBindingMode: WaitForFirstConsumer
     | visibility       | private                                                                                                                                                                                                                                                                                   |
     +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     ```
+
+## Как проверить поддерживает ли провайдер SecurityGroups?
+
+Достаточно выполнить команду `openstack security group list`. Если в ответ вы не получите ошибок, то это значит, что [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) поддерживаются.
+
+## Как настроить работу ONLINE ресайз дисков
+
+OpenStack API успешно рапортует о ресайзе, но Cinder никак не оповещает Nova о том, что диск поресайзился, поэтому диск внутри гостевой ОС остаётся старого размера.
+
+Для устранения проблемы необходимо прописать в `cinder.conf` параметры доступа к Nova API. Например, так:
+
+```ini
+[nova]
+interface = admin
+insecure = {{ keystone_service_internaluri_insecure | bool }}
+auth_type = {{ cinder_keystone_auth_plugin }}
+auth_url = {{ keystone_service_internaluri }}/v3
+password = {{ nova_service_password }}
+project_domain_id = default
+project_name = service
+region_name = {{ nova_service_region }}
+user_domain_id = default
+username = {{ nova_service_user_name }}
+```
+
+https://bugs.launchpad.net/openstack-ansible/+bug/1902914

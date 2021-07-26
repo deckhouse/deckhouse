@@ -81,11 +81,6 @@ defaults:
     values:
       lang: ru
   - scope:
-      path: "*/500-basic-auth"
-      type: "pages"
-    values:
-      versionType: experimental
-  - scope:
       path: "*/030-cloud-provider-openstack"
       type: "pages"
     values:
@@ -97,11 +92,6 @@ defaults:
       versionType: ee
   - scope:
       path: "*/340-extended-monitoring"
-      type: "pages"
-    values:
-      versionType: experimental
-  - scope:
-      path: "*/600-secret-copier"
       type: "pages"
     values:
       versionType: experimental
@@ -122,6 +112,21 @@ defaults:
       versionType: experimental
   - scope:
       path: "*/450-network-gateway"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/500-basic-auth"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/600-secret-copier"
+      type: "pages"
+    values:
+      versionType: experimental
+  - scope:
+      path: "*/500-openvpn"
       type: "pages"
     values:
       versionType: experimental

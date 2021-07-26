@@ -65,6 +65,48 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
+- add: /candi/cloud-providers/aws/docs
+  to: /src/modules/030-cloud-provider-aws/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/azure/docs
+  to: /src/modules/030-cloud-provider-azure/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/gcp/docs
+  to: /src/modules/030-cloud-provider-gcp/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/yandex/docs
+  to: /src/modules/030-cloud-provider-yandex/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/openstack/docs
+  to: /src/ee/modules/030-cloud-provider-openstack/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/vsphere/docs
+  to: /src/ee/modules/030-cloud-provider-vsphere/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  stageDependencies:
+    setup: ['**/*']
 - add: /candi/cloud-providers/azure/openapi
   to: /src/modules/030-cloud-provider-azure/crds
   owner: jekyll

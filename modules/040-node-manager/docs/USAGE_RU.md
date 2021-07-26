@@ -33,7 +33,7 @@ metadata:
   name: testuser
 spec:
   uid: 1001
-  sshPublicKey: "ssh-rsa xxx"
-  passwordHash: $2a$10$GAwx2h0D1jiEeBt.JECSEenGvShJbu.mOSQ/jaRk1ly9c31TcHjim
+  sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+  passwordHash: <PASSWORD_HASH>
   isSudoer: true
 ```

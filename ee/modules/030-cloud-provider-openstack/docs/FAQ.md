@@ -255,3 +255,29 @@ volumeBindingMode: WaitForFirstConsumer
     | visibility       | private                                                                                                                                                                                                                                                                                   |
     +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     ```
+
+## How to check whether the provider supports SecurityGroups?
+
+Run the following command: `openstack security group list`. If there are no errors in the output, then [Security Groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
+
+## How to set up online disk resize
+
+The OpenStack API states that the resize is completed successfully. However, Nova does not get any information about the resize from Cinder. As a result, the size of the disk in the guest OS remains the same.
+
+To get rid of this problem, you need to insert the Nova API access parameters into the `cinder.conf` file, e.g., as follows:
+
+```ini
+[nova]
+interface = admin
+insecure = {{ keystone_service_internaluri_insecure | bool }}
+auth_type = {{ cinder_keystone_auth_plugin }}
+auth_url = {{ keystone_service_internaluri }}/v3
+password = {{ nova_service_password }}
+project_domain_id = default
+project_name = service
+region_name = {{ nova_service_region }}
+user_domain_id = default
+username = {{ nova_service_user_name }}
+```
+
+https://bugs.launchpad.net/openstack-ansible/+bug/1902914

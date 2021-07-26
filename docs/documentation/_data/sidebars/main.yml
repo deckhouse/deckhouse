@@ -66,9 +66,17 @@ entries:
                     en: Description
                   url: /modules/030-cloud-provider-aws/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/030-cloud-provider-aws/usage.html
+                    ru: Установка
+                    en: Installation
+                  folders:
+                    - title:
+                        ru: Подготовка окружения
+                        en: Preparing environment
+                      url: /modules/030-cloud-provider-aws/environment.html
+                    - title:
+                        ru: Схемы размещения
+                        en: Layouts
+                      url: /modules/030-cloud-provider-aws/layouts.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -79,8 +87,12 @@ entries:
                       url: /modules/030-cloud-provider-aws/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-aws/cr.html
-              #- title: FAQ
-              #  url: /modules/030-cloud-provider-aws/faq.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/030-cloud-provider-aws/usage.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-aws/faq.html
             - title: Google Cloud Platform
               folders:
                 - title:
@@ -88,9 +100,17 @@ entries:
                     en: Description
                   url: /modules/030-cloud-provider-gcp/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/030-cloud-provider-gcp/usage.html
+                    ru: Установка
+                    en: Installation
+                  folders:
+                    - title:
+                        ru: Подготовка окружения
+                        en: Preparing environment
+                      url: /modules/030-cloud-provider-gcp/environment.html
+                    - title:
+                        ru: Схемы размещения
+                        en: Layouts
+                      url: /modules/030-cloud-provider-gcp/layouts.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -101,6 +121,10 @@ entries:
                       url: /modules/030-cloud-provider-gcp/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-gcp/cr.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/030-cloud-provider-gcp/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-gcp/faq.html
             - title: Microsoft Azure
@@ -110,9 +134,17 @@ entries:
                     en: Description
                   url: /modules/030-cloud-provider-azure/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/030-cloud-provider-azure/usage.html
+                    ru: Установка
+                    en: Installation
+                  folders:
+                    - title:
+                        ru: Подготовка окружения
+                        en: Preparing environment
+                      url: /modules/030-cloud-provider-azure/environment.html
+                    - title:
+                        ru: Схемы размещения
+                        en: Layouts
+                      url: /modules/030-cloud-provider-azure/layouts.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -123,6 +155,10 @@ entries:
                       url: /modules/030-cloud-provider-azure/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-azure/cr.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/030-cloud-provider-azure/usage.html
             - title: Openstack
               versionType: ee
               folders:
@@ -131,9 +167,17 @@ entries:
                     en: Description
                   url: /modules/030-cloud-provider-openstack/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/030-cloud-provider-openstack/usage.html
+                    ru: Установка
+                    en: Installation
+                  folders:
+                    - title:
+                        ru: Подготовка окружения
+                        en: Preparing environment
+                      url: /modules/030-cloud-provider-openstack/environment.html
+                    - title:
+                        ru: Схемы размещения
+                        en: Layouts
+                      url: /modules/030-cloud-provider-openstack/layouts.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -144,6 +188,10 @@ entries:
                       url: /modules/030-cloud-provider-openstack/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-openstack/cr.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/030-cloud-provider-openstack/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-openstack/faq.html
             - title: VMware vSphere
@@ -154,9 +202,17 @@ entries:
                     en: Description
                   url: /modules/030-cloud-provider-vsphere/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/030-cloud-provider-vsphere/usage.html
+                    ru: Установка
+                    en: Installation
+                  folders:
+                    - title:
+                        ru: Подготовка окружения
+                        en: Preparing environment
+                      url: /modules/030-cloud-provider-vsphere/environment.html
+                    - title:
+                        ru: Схемы размещения
+                        en: Layouts
+                      url: /modules/030-cloud-provider-vsphere/layouts.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -167,6 +223,10 @@ entries:
                       url: /modules/030-cloud-provider-vsphere/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-vsphere/cr.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/030-cloud-provider-vsphere/usage.html
                 - title: FAQ
                   url: /modules/030-cloud-provider-vsphere/faq.html
             - title: Yandex.Cloud
@@ -176,9 +236,17 @@ entries:
                     en: Description
                   url: /modules/030-cloud-provider-yandex/
                 - title:
-                    ru: Примеры
-                    en: Usage
-                  url: /modules/030-cloud-provider-yandex/usage.html
+                    ru: Установка
+                    en: Installation
+                  folders:
+                    - title:
+                        ru: Подготовка окружения
+                        en: Preparing environment
+                      url: /modules/030-cloud-provider-yandex/environment.html
+                    - title:
+                        ru: Схемы размещения
+                        en: Layouts
+                      url: /modules/030-cloud-provider-yandex/layouts.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -189,6 +257,12 @@ entries:
                       url: /modules/030-cloud-provider-yandex/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-yandex/cr.html
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/030-cloud-provider-yandex/usage.html
+                - title: FAQ
+                  url: /modules/030-cloud-provider-yandex/faq.html
         - title:
             ru: Управление control plane
             en: Control plane management
