@@ -25,7 +25,7 @@
   oauth2:
     responseTypes: ["code", "token", "id_token"]
     skipApprovalScreen: true
-  {{- if $context.Values.userAuthn.internal.dexUsersCRDs }}
+  {{- if or ($context.Values.userAuthn.internal.dexUsersCRDs) (and (eq (len $context.Values.userAuthn.internal.dexUsersCRDs) 0) (eq (len $context.Values.userAuthn.internal.providers) 0)) }}
   enablePasswordDB: true
   {{- end }}
   {{- if $context.Values.userAuthn.internal.providers }}

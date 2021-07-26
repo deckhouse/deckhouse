@@ -2,11 +2,11 @@
 title: "Модуль user-authn: настройки"
 ---
 
-Модуль по умолчанию **выключен**. Для включения добавьте в CM `deckhouse`:
+Модуль по умолчанию **включен**. Для выключения добавьте в CM `deckhouse`:
 
 ```yaml
 data:
-  userAuthnEnabled: "true"
+  userAuthnEnabled: "false"
 ```
 
 ## Параметры
