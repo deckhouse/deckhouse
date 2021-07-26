@@ -6,7 +6,6 @@ title: "The user-authn module: usage"
 
 {% raw %}
 ```yaml
-  userAuthnEnabled: "true"
   userAuthn: |
     kubeconfigGenerator:
     - id: direct
