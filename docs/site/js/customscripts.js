@@ -114,3 +114,54 @@ $(document).ready(function() {
         $content.addClass('active');
     })
 });
+
+/* Request access */
+var ra = {};
+ra.api_url = 'https://license.deckhouse.io/api/license/request';
+
+function raSend(e) {
+    e.preventDefault();
+    if ($('#h0n3y').val() != '') {
+        raError()
+    } else {
+        $.ajax({
+            type: 'POST',
+            url: ra.api_url,
+            data: ra.form.serialize(),
+            dataType: 'json',
+            success: raSuccess,
+            error: raError
+        });
+    }
+}
+function raSuccess() {
+    ra.intro.hide();
+    ra.success.show();
+}
+function raError() {
+    ra.intro.hide();
+    ra.error.show();
+}
+function raClose() {
+    ra.base.hide();
+    ra.intro.show();
+    ra.error.hide();
+    ra.success.hide();
+}
+function raOpen() {
+    ra.base.show();
+}
+
+$(document).ready(function() {
+    ra.base = $('#request_access');
+    ra.form = $('#request_access_form');
+    ra.intro = $('#request_access_intro');
+    ra.success = $('#request_access_success');
+    ra.error = $('#request_access_error');
+
+    ra.form.on('submit', raSend);
+});
+
+$(document).on('keydown', function(event) {
+    event.key == "Escape" && raClose();
+});

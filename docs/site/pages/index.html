@@ -43,8 +43,9 @@ anchors_disabled: true
         </li>
       </ul>
       <div class="product-intro__actions button-group">
+        <a href="javascript:raOpen()" class="button button_alt">Request access</a>
         {% unless site.mode == "local" %}
-        <a href="/{{ page.lang }}/documentation/v1/" class="button button_alt">Documentation</a>
+        <a href="/{{ page.lang }}/gs/" class="button button_default">Getting started</a>
         {% endunless %}
         <a href="https://github.com/deckhouse/deckhouse" target="_blank" class="button button_default">GitHub</a>
       </div>
