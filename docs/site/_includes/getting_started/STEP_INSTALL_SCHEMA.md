@@ -1,6 +1,6 @@
 ## Installation schema
 
-The general approach to installing Deckhouse Platform {% if page.platform_type == 'baremetal' %}on{% elsif page.platform_type == 'existing' %}into{% else %}in{% endif %} {{ page.platform_name }} includes the following steps:
+The general approach to installing Deckhouse Platform {% if page.platform_type == 'baremetal' %}on{% elsif page.platform_type == 'existing' %}into{% else %}in{% endif %} {{ page.platform_name[page.lang] }} includes the following steps:
 
 -  Run the Docker container on the local machine that will be used to install Deckhouse Platform.
 -  Pass a private SSH key and the cluster's config file in the YAML format (e.g., `config.yml`) to this container.
@@ -22,7 +22,7 @@ The general approach to installing Deckhouse Platform {% if page.platform_type =
     -   OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7.
 
 {% if ee_only != true %}
-## Select the Deckhouse Platform revision to continue installation {% if page.platform_type == 'baremetal' %}on{% else %}in{% endif %} {{ page.platform_name }}
+## Select the Deckhouse Platform revision to continue installation {% if page.platform_type == 'baremetal' %}on{% else %}in{% endif %} {{ page.platform_name[page.lang] }}
 
 [Compare](/en/products/enterprise_edition.html#ce-vs-ee) Enterprise Edition to Community Edition.
 {% endif %}

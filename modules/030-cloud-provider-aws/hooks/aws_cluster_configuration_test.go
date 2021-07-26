@@ -96,8 +96,6 @@ provider:
   providerAccessKeyId: keyzzz
   providerSecretAccessKey: secretzzz
   region: eu-zzz
-standard:
-  associatePublicIPToMasters: true
 sshPublicKey: kekekey
 `
 
@@ -209,7 +207,6 @@ data:
 
 			Expect(d.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: Document validation failed`))
 			Expect(d.Session.Err).Should(gbytes.Say(`.layout in body is required`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.standard in body is required`))
 			Expect(d.Session.Err).Should(gbytes.Say(`vpcNetworkCIDR in body should match`))
 			Expect(d.Session.Err).Should(gbytes.Say(`.provider in body is required`))
 			// etcetera...

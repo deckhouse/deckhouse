@@ -1,7 +1,7 @@
 Подготовьте конфигурацию для установки **Deckhouse Platform {% if page.revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}**:
 - Выберите layout — архитектуру размещения объектов в облаке *(для каждого провайдера есть несколько таких предопределённых layouts в Deckhouse Platform)*.
 
-  Для примера с {{ page.platform_name }} мы возьмем вариант **WithoutNAT**. В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway с общим и единственным source IP. Все узлы, созданные с помощью Deckhouse Platform, опционально могут получить публичный IP (ElasticIP).
+  Для примера с {{ page.platform_name[page.lang] }} мы возьмем вариант **WithoutNAT**. В данной схеме размещения виртуальные машины будут выходить в интернет через NAT Gateway с общим и единственным source IP. Все узлы, созданные с помощью Deckhouse Platform, опционально могут получить публичный IP (ElasticIP).
 
   Другие доступные варианты описаны в секции документации [Cloud providers](https://early.deckhouse.io/ru/documentation/v1/kubernetes.html).
 - Задайте минимальные 3 секции параметров для будущего кластера в файле `config.yml`:

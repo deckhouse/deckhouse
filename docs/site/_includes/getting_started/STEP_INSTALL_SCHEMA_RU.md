@@ -5,7 +5,7 @@
 {% endif %}
 ## Схема установки
 
-Установка Deckhouse Platform {% if page.platform_type == 'baremetal' %}на{% else %}в{% endif %} {{ page.platform_name }} в общем случае выглядит так:
+Установка Deckhouse Platform {% if page.platform_type == 'baremetal' %}на{% else %}в{% endif %} {{ page.platform_name[page.lang] }} выглядит так:
 -  На локальной машине (с которой будет производиться установка) запускается Docker-контейнер.
 -  Этому контейнеру передаются приватный SSH-ключ с локальной машины и файл конфигурации будущего кластера в формате YAML (например, `config.yml`).
 -  Контейнер подключается по SSH к целевой машине (для bare metal-инсталляций) или облаку, после чего происходит непосредственно установка и настройка кластера Kubernetes.
@@ -31,7 +31,7 @@
     -   ОС: Ubuntu Linux 16.04/18.04/20.04 LTS или CentOS 7.
 
 {% if ee_only != true %}
-## Выберите редакцию Deckhouse Platform для продолжения установки в {{ page.platform_name }}
+## Выберите редакцию Deckhouse Platform для продолжения установки в {{ page.platform_name[page.lang] }}
 
 [Сравнить](/ru/products/enterprise_edition.html#ce-vs-ee) возможности редакций Community Edition и Enterprise Edition.
 {% endif %}

@@ -8,7 +8,7 @@ lang: ru
 
 Конфигурация `deckhouse` (ConfigMap `deckhouse`) состоит из [глобальной секции](deckhouse-configure-global.html) и секции модулей.
 
-Редактирование конфигурации `deckhouse`:
+Редактирование конфигурации Deckhouse:
 ```
 kubectl -n d8-system edit cm/deckhouse
 ```

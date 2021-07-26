@@ -22,7 +22,7 @@ import:
 ---
 artifact: static-pages
 from: jekyll/jekyll:3.8
-fromCacheVersion: 202105151
+fromCacheVersion: 20210713
 ansible:
   install:
     - shell: |
