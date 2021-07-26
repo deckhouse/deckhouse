@@ -77,8 +77,7 @@ func handleAuditPolicy(input *go_hook.HookInput) error {
 		var p audit.Policy
 		err := yaml.UnmarshalStrict(data, &p)
 		if err != nil {
-			// too long error, show only in Debug mode
-			input.LogEntry.Debugf("invalid policy.yaml format: %s", err)
+			input.LogEntry.Errorf("invalid policy.yaml format: %s", err)
 			return fmt.Errorf("invalid policy.yaml format")
 		}
 
