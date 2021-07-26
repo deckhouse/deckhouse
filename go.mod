@@ -51,7 +51,7 @@ require (
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
-	helm.sh/helm/v3 v3.2.4
+	helm.sh/helm/v3 v3.6.1
 	k8s.io/api v0.19.11
 	k8s.io/apiextensions-apiserver v0.19.11
 	k8s.io/apimachinery v0.20.5
