@@ -5,20 +5,16 @@ permalink: en/deckhouse-configure-global.html
 
 ## What do I need to configure?
 
-Note that you have to set `project` and `clusterName` since those are mandatory global parameters. Also, we recommend specifying the `modules.publicDomainTemplate` parameter.
+We recommend specifying the `modules.publicDomainTemplate` parameter.
 
 ```yaml
 global: |
-  project: projectname
-  clusterName: main
   modules:
     publicDomainTemplate: "%s.kube.company.my"
 ```
 
 ## Parameters
 
-* `project` (mandatory) — the name of the project.
-* `clusterName` (mandatory) — the name of the cluster.
 * `modules` — parameters of service components:
   * `publicDomainTemplate` (recommended) — the template with the `%s` key as the dynamic string parameter. Deckhouse will use this template for creating DNS records. The latter are necessary for the internal needs of DH and the operation of the modules. **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse. An example of the template: `%s.kube.company.my`. If this parameter is omitted, no Ingress resources will be created.
   * `ingressClass` — the class of the Ingress controller used for service components.

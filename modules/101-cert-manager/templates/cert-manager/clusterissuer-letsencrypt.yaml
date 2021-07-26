@@ -7,7 +7,9 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: "{{ .Values.global.project }}+letsencrypt-{{ .Values.global.clusterName }}@notice.flant.com"
+  {{- if .Values.certManager.internal.email }}
+    email: "{{ .Values.certManager.internal.email }}"
+  {{- end }}
     privateKeySecretRef:
       name: cert-manager-letsencrypt-private-key
     http01: {}

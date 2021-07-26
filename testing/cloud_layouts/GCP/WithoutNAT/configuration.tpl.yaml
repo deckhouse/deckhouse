@@ -20,8 +20,6 @@ deckhouse:
   configOverrides:
     flantIntegrationEnabled: false
     global:
-      clusterName: smoke
-      project: dev-rnd
       modules:
         publicDomainTemplate: "%s.k8s.smoke.flant.com"
 ---

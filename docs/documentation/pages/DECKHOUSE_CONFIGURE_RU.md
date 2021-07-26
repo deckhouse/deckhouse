@@ -25,8 +25,6 @@ metadata:
 data:
   global: |          # <--- очень важно, вертикальная черта!!!
     # Тут кусок Yaml-файла с глобальными настройками
-    project: someproject
-    clusterName: main
     modules:
       publicDomainTemplate: "%s.kube.company.my"
   nginxIngress: |

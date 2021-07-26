@@ -82,3 +82,10 @@ properties:
       Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google)
       из того-же проекта с ролью Администратора DNS
     x-examples: ["eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="]
+
+  email:
+    type: string
+    format: email
+    description: |
+      Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления
+    x-examples: ["example@example.com"]

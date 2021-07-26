@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package madison
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/flant-integration/madison_revoke",
+	Queue: "/modules/flant-integration/connect_revoke",
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "madison_revoke",
@@ -30,26 +31,36 @@ type madisonResponse struct {
 	Error string `json:"error"`
 }
 
-func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	project, ok := input.Values.GetOk("global.project")
-	if !ok || project.String() == "" {
-		input.LogEntry.Error("global project required")
-		return nil // cronjob was with allowFailure: true, so we just log errors
-	}
+type statusRequest struct {
+	AuthKey string `json:"auth_key"`
+}
 
-	key, ok := input.Values.GetOk("flantIntegration.madisonAuthKey")
+func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
+	madisonAuthKey, ok := input.Values.GetOk(madisonKeyPath)
 	if !ok {
 		return nil
 	}
 
-	uri := fmt.Sprintf(madisonRevokeURLPattern, project, key.String())
+	licenseKey, ok := input.Values.GetOk(licenseKeyPath)
+	if !ok {
+		return nil
+	}
+
+	r := statusRequest{AuthKey: madisonAuthKey.String()}
+	payload, err := json.Marshal(r)
+	if err != nil {
+		return fmt.Errorf("cannot marshal status data: %v", r)
+	}
 
 	httpCli := dc.GetHTTPClient()
-	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	req, err := http.NewRequest(http.MethodPost, connectStatusURL, bytes.NewReader(payload))
 	if err != nil {
 		input.LogEntry.Errorf("http request failed: %s", err)
 		return nil
 	}
+	req.Header.Set("Authorization", "Bearer "+licenseKey.String())
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := httpCli.Do(req)
 	if err != nil {

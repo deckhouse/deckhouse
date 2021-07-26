@@ -83,3 +83,10 @@ properties:
       The Service Account for [Google Cloud](usage.html#issuing-a-dns-wildcard-certificate-using-google)
       for the same project that has the DNS Administrator role.
     x-examples: ["eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="]
+
+  email:
+    type: string
+    format: email
+    description: |
+      The email used for sending notifications by LetsEncrypt.
+    x-examples: ["example@example.com"]

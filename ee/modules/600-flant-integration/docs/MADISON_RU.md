@@ -7,8 +7,6 @@ title: "Интеграция с Madison"
 ### Общие сведения
 
 * Prometheus шлет алерты в Madison, думая, что тот является Alertmanager'ом
-* При отправке алертов Prometheus добавляет label `kubernetes={{ global.clusterName }}` (чтобы можно было понять что за
-  кластер в тех проектах, где их несколько)
 
 ### Схема интеграции
 
@@ -57,8 +55,7 @@ title: "Интеграция с Madison"
     * если в `flantIntegration.madisonAuthKey` ничего нет, модуль ([хук registration](https://fox.flant.com/sys/deckhouse-oss/-/tree/main/ee/modules/340-flant-integration/hooks/madison/registration.go))
       пытается получить новый ключ в API самонастройки Madison (через прокси лицензий connect.deckhouse.io) и записать 
       его в `flantIntegration.madisonAuthKey`. Этот ключ и используется в `madison-proxy` для аутентификации в Madison;
-* Список зарегистрированных ключей можно найти в Madison у каждого проекта — ключи
-  называются `kubernetes-{{ global.clusterName }}`, например для tfprod
+* Список зарегистрированных ключей можно найти в Madison у каждого проекта, например для tfprod
   можно [посмотреть здесь](https://madison.flant.com/projects/tfprod/prometheus_setups).
 * При архивации кластера в Madison срабатывает механизм автоматического отключения алертов. Хук `madison_revoke`
   регулярно (раз в 5 минут) проверяет статус кластера в Madison и если тот архивирован, то хук делает следующее:

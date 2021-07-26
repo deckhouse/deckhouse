@@ -43,10 +43,6 @@ deckhouse:
   releaseChannel: Beta
   configOverrides:
     global:
-      # имя кластера; используется, например, в лейблах алертов Prometheus
-      clusterName: somecluster
-      # имя проекта для кластера; используется для тех же целей
-      project: someproject
       modules:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
         # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
@@ -122,10 +118,6 @@ deckhouse:
   releaseChannel: Beta
   configOverrides:
     global:
-      # имя кластера; используется, например, в лейблах алертов Prometheus
-      clusterName: somecluster
-      # имя проекта для кластера; используется для тех же целей
-      project: someproject
       modules:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
         # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com

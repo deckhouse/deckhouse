@@ -37,10 +37,6 @@ deckhouse:
   imagesRepo: registry.example.com/deckhouse
   registryDockerCfg: edsfkslfklsdfkl==
   releaseChannel: Alpha
-  configOverrides:
-    global:
-      clusterName: my-cluster-name
-      project: my-project
 ```
 
 For validation and values defaulting, each configuration object has its OpenAPI specification.

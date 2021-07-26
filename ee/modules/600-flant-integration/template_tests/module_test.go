@@ -21,8 +21,6 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-project: my_project
-clusterName: my_cluster
 deckhouseVersion: dev
 enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd"]
 modulesImages:
@@ -116,10 +114,6 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			// user story #1
 			Expect(ds.Exists()).To(BeTrue())
 			expectedEnvsDS := `
-- name: FP_PROJECT
-  value: my_project
-- name: FP_CLUSTER
-  value: my_cluster
 - name: FP_RELEASE_CHANNEL
   value: Alpha
 - name: FP_BUNDLE

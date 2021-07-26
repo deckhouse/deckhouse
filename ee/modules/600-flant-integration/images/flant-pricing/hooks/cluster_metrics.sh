@@ -37,8 +37,6 @@ function __main__() {
     "name": "flant_pricing_cluster_info",
     "set": '$(date +%s)',
     "labels": {
-      "project": "'$FP_PROJECT'",
-      "cluster": "'$FP_CLUSTER'",
       "release_channel": "'$FP_RELEASE_CHANNEL'",
       "bundle": "'$FP_BUNDLE'",
       "cloud_provider": "'$FP_CLOUD_PROVIDER'",

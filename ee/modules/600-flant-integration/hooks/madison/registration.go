@@ -23,80 +23,53 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue:        "/modules/flant-integration/connect_registration",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 }, dependency.WithExternalDependencies(registrationHandler))
 
 const (
-	madisonBaseURL          = "https://madison.flant.com"
-	madisonUpdateURLPattern = madisonBaseURL + "/api/%s/self_update/%s"
-	madisonRevokeURLPattern = madisonBaseURL + "/api/%s/self_status/%s"
+	connectBaseURL   = "https://connect.deckhouse.io"
+	registrationURL  = connectBaseURL + "/v1/madison_register"
+	connectStatusURL = connectBaseURL + "/v1/madison_status"
 
-	registrationURL = "https://connect.deckhouse.io/v1/madison_register"
+	madisonKeyPath = "flantIntegration.madisonAuthKey"
+	licenseKeyPath = "flantIntegration.internal.licenseKey"
 )
 
 func registrationHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	clusterName := input.Values.Get("global.clusterName").String()
-	if clusterName == "" {
-		input.LogEntry.Error("global clusterName required")
-		return nil
-	}
-
-	projectName := input.Values.Get("global.project").String()
-	if projectName == "" {
-		input.LogEntry.Error("global project required")
-		return nil
-	}
-
-	data, err := createMadisonPayload(input.Values, dc, clusterName)
+	data, err := createMadisonPayload(input.Values, dc)
 	if err != nil {
 		return err
 	}
 
-	const (
-		madisonKeyPath = "flantIntegration.madisonAuthKey"
-		licenseKeyPath = "flantIntegration.internal.licenseKey"
-	)
+	_, ok := input.Values.GetOk(madisonKeyPath)
+	if ok {
+		return nil
+	}
 
-	if authKey, ok := input.Values.GetOk(madisonKeyPath); ok {
-		key := authKey.String()
+	licenseKey, ok := input.Values.GetOk(licenseKeyPath)
+	if !ok {
+		return nil
+	}
 
-		// form request
-		endpoint := fmt.Sprintf(madisonUpdateURLPattern, projectName, key)
-		req, err := newMadisonRequest(endpoint, data)
-		if err != nil {
-			input.LogEntry.Errorf("http request failed: %v", err)
-			return nil
-		}
+	data.Type = "prometheus"
 
-		// call
-		_, err = doMadisonRequest(req, dc, input.LogEntry)
-		if err != nil {
-			err = fmt.Errorf("cannot update in madison (%s %s): %v", req.Method, req.URL, err)
-			input.LogEntry.Errorf(err.Error())
-			return err
-		}
+	// form request to d8-connect proxy
+	req, err := newRegistrationRequest(registrationURL, data, licenseKey.String())
+	if err != nil {
+		input.LogEntry.Errorf("http request failed: %v", err)
+		return nil
+	}
 
-	} else if licenseKey, ok := input.Values.GetOk(licenseKeyPath); ok {
-		data.Type = "prometheus"
-		key := licenseKey.String()
-
-		// form request to d8-connect proxy
-		req, err := newRegistrationRequest(registrationURL, data, projectName, key)
-		if err != nil {
-			input.LogEntry.Errorf("http request failed: %v", err)
-			return nil
-		}
-
-		// call
-		authKey, err := doMadisonRequest(req, dc, input.LogEntry)
-		if err != nil {
-			err := fmt.Errorf("cannot register in madison (%s %s): %v", req.Method, req.URL, err)
-			input.LogEntry.Errorf(err.Error())
-			return err
-		}
-		if authKey != "" {
-			input.ConfigValues.Set(madisonKeyPath, authKey)
-		}
+	// call
+	authKey, err := doMadisonRequest(req, dc, input.LogEntry)
+	if err != nil {
+		err := fmt.Errorf("cannot register in madison (%s %s): %v", req.Method, req.URL, err)
+		input.LogEntry.Errorf(err.Error())
+		return err
+	}
+	if authKey != "" {
+		input.ConfigValues.Set(madisonKeyPath, authKey)
 	}
 
 	return nil
@@ -114,15 +87,8 @@ type extraData struct {
 	Labels map[string]string `json:"labels"`
 }
 
-func createMadisonPayload(values *go_hook.PatchableValues, dc dependency.Container, clusterName string) (madisonRequestData, error) {
-	data := madisonRequestData{
-		Name: "kubernetes-" + clusterName,
-		ExtraData: extraData{
-			Labels: map[string]string{
-				"kubernetes": clusterName,
-			},
-		},
-	}
+func createMadisonPayload(values *go_hook.PatchableValues, dc dependency.Container) (madisonRequestData, error) {
+	data := madisonRequestData{}
 
 	schema := "http"
 	publicDomain := values.Get("global.modules.publicDomainTemplate").String()
@@ -163,6 +129,7 @@ func createMadisonPayload(values *go_hook.PatchableValues, dc dependency.Contain
 
 	data.GrafanaURL = schema + "://" + fmt.Sprintf(publicDomain, "grafana")
 	data.PrometheusURL = data.GrafanaURL + "/prometheus"
+
 	return data, nil
 }
 
@@ -199,17 +166,15 @@ func doMadisonRequest(req *http.Request, dc dependency.Container, logEntry *logr
 }
 
 type registrationData struct {
-	Project string `json:"project"`
 	Payload string `json:"madisonData"`
 }
 
-func newRegistrationRequest(endpoint string, data madisonRequestData, projectName, key string) (*http.Request, error) {
+func newRegistrationRequest(endpoint string, data madisonRequestData, key string) (*http.Request, error) {
 	madisonData, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal madison request data")
 	}
 	proxyData := registrationData{
-		Project: projectName,
 		Payload: string(madisonData),
 	}
 	proxyPayload, err := json.Marshal(proxyData)
@@ -221,20 +186,6 @@ func newRegistrationRequest(endpoint string, data madisonRequestData, projectNam
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	return req, nil
-}
-
-func newMadisonRequest(endpoint string, data madisonRequestData) (*http.Request, error) {
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return nil, fmt.Errorf("cannot marshal madison request data")
-	}
-	req, err := http.NewRequest(http.MethodPut, endpoint, bytes.NewReader(payload))
-	if err != nil {
-		return nil, err
-	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	return req, nil
