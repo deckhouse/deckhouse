@@ -93,10 +93,6 @@ func (g *k8sClientGetter) get() (*client.KubernetesClient, error) {
 		return nil, err
 	}
 
-	if info := deckhouse.GetClusterInfo(kubeCl); info != "" {
-		_ = log.Process("common", "Cluster Info", func() error { log.InfoF(info); return nil })
-	}
-
 	g.kubeCl = kubeCl
 	g.convergeLock = convergeLock
 

@@ -23,10 +23,12 @@ var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 		initValuesString = `
 {
   "global": {
-    "project": "test-me"
   },
   "flantIntegration": {
-    "madisonAuthKey": "abc"
+    "madisonAuthKey": "abc",
+    "internal": {
+      "licenseKey": "xxx"
+    }
   }
 }`
 

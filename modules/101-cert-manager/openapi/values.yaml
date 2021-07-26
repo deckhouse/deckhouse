@@ -39,3 +39,8 @@ properties:
         x-examples: ["YjY0ZW5jX3N0cmluZwo="]
         type: string
 
+      email:
+        type: string
+        format: email
+        x-examples: ["example@example.com"]
+

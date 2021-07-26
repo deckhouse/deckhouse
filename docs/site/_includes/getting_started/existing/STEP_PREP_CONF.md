@@ -21,10 +21,6 @@ deckhouse:
     deckhouse:
       bundle: Minimal
     global:
-      # the cluster name (it is used, e.g., in Prometheus alerts' labels)
-      clusterName: main
-      # the cluster's project name (it is used for the same purpose as the cluster name)
-      project: someproject
       modules:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
@@ -45,10 +41,6 @@ deckhouse:
     deckhouse:
       bundle: Minimal
     global:
-      # the cluster name (it is used, e.g., in Prometheus alerts' labels)
-      clusterName: main
-      # the cluster's project name (it is used for the same purpose as the cluster name)
-      project: someproject
       modules:
         # template that will be used for system apps domains within the cluster
         # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com

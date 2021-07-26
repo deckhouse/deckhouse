@@ -88,5 +88,6 @@ properties:
             x-examples: [true]
       licenseKey:
         type: string
+        x-examples: ["kasakdhaksdhkadkadh"]
         description: |
           Client license key.

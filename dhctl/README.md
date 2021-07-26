@@ -62,8 +62,6 @@ deckhouse:
   releaseChannel: Stable
   configOverrides:
     global:
-      clusterName: main
-      project: pivot
     nginxIngressEnabled: false
     flantIntegrationEnabled: false
 ```
