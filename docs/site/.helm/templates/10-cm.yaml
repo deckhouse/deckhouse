@@ -1,4 +1,3 @@
-{{- if ne .Values.global.env "web-production" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -8,4 +7,3 @@ data:
   # Needs if deploy to empty environment
   releasechannels.json: |
     {{ $.Files.Get "releasechannels.json" | fromJson| toJson }}
-{{- end }}
