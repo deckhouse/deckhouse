@@ -401,12 +401,12 @@ spec:
                           type: string
                           description: |
                             CPU requests.
-                          default: '50m'
+                          default: '500m'
                         memory:
                           type: string
                           description: |
                             Memory requests.
-                          default: '200Mi'
+                          default: '500Mi'
                 customErrors:
                   type: object
                   description: |
@@ -458,24 +458,27 @@ spec:
                     inlet:
                       enum: ['LoadBalancer']
                     loadBalancer: {}
+                  required: ['loadBalancer']
                 - properties:
                     inlet:
                       enum: ['LoadBalancerWithProxyProtocol']
                     loadBalancerWithProxyProtocol: {}
+                  required: ['loadBalancerWithProxyProtocol']
                 - properties:
                     inlet:
                       enum: ['HostPort']
                     hostPort: {}
                   required: ['hostPort']
                 - properties:
-                    hostPortWithProxyProtocol: {}
                     inlet:
                       enum: ['HostPortWithProxyProtocol']
+                    hostPortWithProxyProtocol: {}
                   required: ['hostPortWithProxyProtocol']
                 - properties:
                     inlet:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
+                  required: ['hostWithFailover']
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.ingressClass
           name: Ingress Class

@@ -276,10 +276,13 @@ spec:
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
-  {{- if eq ($resourcesRequests.mode | default "") "Static" }}
+  {{- if and $loadBalancer (not $resourcesRequests) }}
+            cpu: "500m"
+            memory: "500Mi"
+  {{- else if eq ($resourcesRequests.mode | default "") "Static" }}
     {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
-            cpu: {{ $resourcesRequestsStatic.cpu | default "50m" | quote }}
-            memory: {{ $resourcesRequestsStatic.memory | default "200Mi" | quote }}
+            cpu: {{ $resourcesRequestsStatic.cpu | default "500m" | quote }}
+            memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
   {{- end }}
         ports:
         - containerPort: 80

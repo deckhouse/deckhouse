@@ -126,7 +126,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       static: {}
       vpa:
         cpu:
-          max: 100m
+          max: 200m
         memory:
           max: 200Mi
         mode: Auto
@@ -232,9 +232,9 @@ memory: 200Mi`))
 
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-next").
 				Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`
-cpu: 50m
+cpu: 500m
 ephemeral-storage: 150Mi
-memory: 200Mi`))
+memory: 500Mi`))
 			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-test-next").Field("spec.updatePolicy.updateMode").String()).To(Equal("Off"))
 
 			mainDS := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-solid")
@@ -252,7 +252,7 @@ memory: 200Mi`))
     cpu: 10m
     memory: 50Mi
   maxAllowed:
-    cpu: 100m
+    cpu: 200m
     memory: 200Mi`))
 
 			failoverDS := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-solid-failover")

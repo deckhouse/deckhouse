@@ -349,7 +349,7 @@ spec:
                     vpa:
                       type: object
                       description: |
-                        Настройки статического режима управления.
+                        Настройки VPA режима управления.
                       properties:
                         mode:
                           type: string
@@ -396,12 +396,12 @@ spec:
                           type: string
                           description: |
                             Значение для запроса CPU.
-                          default: '50m'
+                          default: '500m'
                         memory:
                           type: string
                           description: |
                             Значение для запроса memory.
-                          default: '200Mi'
+                          default: '500Mi'
                 customErrors:
                   type: object
                   description: |
@@ -451,9 +451,9 @@ spec:
                     hostPort: {}
                   required: ['hostPort']
                 - properties:
-                    hostPortWithProxyProtocol: {}
                     inlet:
                       enum: ['HostPortWithProxyProtocol']
+                    hostPortWithProxyProtocol: {}
                   required: ['hostPortWithProxyProtocol']
                 - properties:
                     inlet:
