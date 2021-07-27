@@ -64,7 +64,7 @@ A particular placement strategy is defined via the `VsphereClusterConfiguration`
 * `masterNodeGroup` — parameters of the master's NodeGroup;
   * `replicas` — the number of master nodes to create;
   * `zones` — nodes can only be created in these zones;
-  * `instanceClass` — partial contents of the fields of the [VsphereInstanceClass]({{"/modules/030-cloud-provider-vsphere/#vsphereinstanceclass-custom-resource" | true_relative_url }} ) CR. Mandatory parameters: `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  The parameters in **bold** are unique for  `VsphereClusterConfiguration`. Possible parameters:
+  * `instanceClass` — partial contents of the fields of the [VsphereInstanceClass](cr.html#vsphereinstanceclass) CR. Mandatory parameters: `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  The parameters in **bold** are unique for  `VsphereClusterConfiguration`. Possible parameters:
     * `numCPUs`
     * `memory`
     * `template`
@@ -96,7 +96,7 @@ A particular placement strategy is defined via the `VsphereClusterConfiguration`
   * `name` — the name of the NodeGroup to use for generating node names;
   * `replicas` — the number of nodes to create;
   * `zones` — nodes can only be created in these zones;
-  * `instanceClass` — partial contents of the fields of the [VsphereInstanceClass]({{"/modules/030-cloud-provider-vsphere/#vsphereinstanceclass-custom-resource" | true_relative_url }} ) CR. Mandatory parameters: `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  The parameters in **bold** are unique for  `VsphereClusterConfiguration`. Possible parameters:
+  * `instanceClass` — partial contents of the fields of the [VsphereInstanceClass](cr.html#vsphereinstanceclass) CR. Mandatory parameters: `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.  The parameters in **bold** are unique for  `VsphereClusterConfiguration`. Possible parameters:
     * `numCPUs`
     * `memory`
     * `template`

@@ -2,7 +2,7 @@
 
 .button {
     display: inline-block;
-    text-decoration: none;
+    text-decoration: none !important;
     box-sizing: border-box;
     padding: 0.75em 1.5em;
     font-weight: $font-weight-semibold;
@@ -50,7 +50,9 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
+    flex-wrap: wrap;
     .button {
         margin-right: 2em;
+        margin-bottom: 2em;
     }
 }

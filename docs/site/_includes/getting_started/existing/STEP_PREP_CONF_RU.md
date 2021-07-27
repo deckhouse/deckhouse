@@ -13,18 +13,18 @@ kind: InitConfiguration
 deckhouse:
   # адрес реестра с образом инсталлятора; указано значение по умолчанию для EE-сборки Deckhouse
   imagesRepo: registry.deckhouse.io/deckhouse/ee
-  # строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего демонстрационного токена)
+  # строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # используемый канал обновлений
-  releaseChannel: Beta
+  releaseChannel: Stable
   configOverrides:
     deckhouse:
       bundle: Minimal
     global:
       modules:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
-        # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
-        publicDomainTemplate: "%s.somedomain.com"
+        # например, Grafana для %s.example.com будет доступна на домене grafana.example.com
+        publicDomainTemplate: "%s.example.com"
 ```
 {%- else %}
 ```yaml
@@ -36,15 +36,15 @@ kind: InitConfiguration
 # конфигурация Deckhouse
 deckhouse:
   # используемый канал обновлений
-  releaseChannel: Beta
+  releaseChannel: Stable
   configOverrides:
     deckhouse:
       bundle: Minimal
     global:
       modules:
         # шаблон, который будет использоваться для составления адресов системных приложений в кластере
-        # например, Grafana для %s.somedomain.com будет доступна на домене grafana.somedomain.com
-        publicDomainTemplate: "%s.somedomain.com"
+        # например, Grafana для %s.example.com будет доступна на домене grafana.example.com
+        publicDomainTemplate: "%s.example.com"
 ```
 {%- endif %}
 

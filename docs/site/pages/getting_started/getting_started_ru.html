@@ -1,5 +1,5 @@
 ---
-title: "Быстрый старт"
+title: "Выбор инфраструктуры"
 permalink: ru/gs/index.html
 layout: page-nosidebar
 lang: ru
@@ -9,31 +9,53 @@ toc: false
 <link rel="stylesheet" type="text/css" href='{{ assets["getting-started.css"].digest_path }}' />
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 
-{% include getting_started/steps.html steps=1 step=1 title=page.title %}
+<p>Скорее всего вы уже ознакомились с основными <a href="/{{ page.lang }}/#features">возможностями Deckhouse
+    Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
 
-<p>Скорее всего вы уже ознакомились с основными <a href="/{{ page.lang }}/#features">возможностями Deckhouse Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
-
-<p>Установка платформы Deckhouse Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться, поэтому ниже приведены примеры установки для разных вариантов.</p>
+<p>Установка платформы Deckhouse Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
+  из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
+  поэтому ниже приведены примеры установки для разных вариантов.</p>
 
 <h2>Выберите тип инфраструктуры, в которой будет устанавливаться Deckhouse Platform</h2>
 
-<div class="button-group">
-  <a class="button button_default" href="/{{ page.lang }}/gs/bm/step2.html">Bare metal</a>
-  <a class="button button_default" href="javascript:void(0)" onclick="$('.gs-cloud-tabs').toggleClass('disabled'); $(this).toggleClass('button_default').toggleClass('button_alt')">Облако</a>
-  <a class="button button_default" href="/{{ page.lang }}/gs/existing/step2.html">Существующий кластер</a>
-</div>
-
-<div class="gs-cloud-tabs disabled">
-  <h2>Выберите облачную платформу</h2>
-
-  <p>Полный список настроек облачных провайдеров Deckhouse Platform доступен <a href="/{{ page.lang }}/documentation/v1/kubernetes.html" title="Поддерживаемые облачные провайдеры и параметры конфигурации облачных провайдеров">в документации</a>.</p>
-
-  <div class="button-group">
-    <a class="button button_default" href="/{{ page.lang }}/gs/aws/step2.html">Amazon AWS</a>
-    <a class="button button_default" href="/{{ page.lang }}/gs/google/step2.html">Google Cloud</a>
-    <a class="button button_default" href="/{{ page.lang }}/gs/azure/step2.html">Microsoft Azure</a>
-    <a class="button button_default" href="/{{ page.lang }}/gs/openstack/step2.html">OpenStack</a>
-    <a class="button button_default" href="/{{ page.lang }}/gs/yandex/step2.html">Yandex.Cloud</a>
-    <a class="button button_default button_disabled">VMware vSphere (скоро...)</a>
+<div class="block" style="margin: 0;">
+  <div class="block__columns block__columns_top">
+    <div>
+      <h3>Облачная платформа</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.data.installTypes %}
+        {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default"
+          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{{ provider[1].name[page.lang] }}</a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+      <p>
+        <small>
+          Полный список настроек облачных провайдеров<br>
+          Deckhouse Platform доступен <a href="/{{ page.lang }}/documentation/v1/kubernetes.html"
+          title="Поддерживаемые облачные провайдеры и параметры конфигурации облачных провайдеров">в документации</a>.
+        </small>
+      </p>
+    </div>
+    <div>
+      <h3>Необлачный кластер</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.data.installTypes %}
+        {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default"
+          href="/{{ page.lang }}/gs/{{ provider[0] }}/step2.html">{{ provider[1].name[page.lang] }}</a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </div>

@@ -143,7 +143,7 @@ A particular placement strategy is defined via the `GCPClusterConfiguration` str
 * `masterNodeGroup` — parameters of the master's NodeGroup;
     * `replicas` — the number of master nodes to create;
     * `zones` — a list of zones where master nodes can be created;
-    * `instanceClass` — partial contents of the [GCPInstanceClass]({{"/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource" | true_relative_url }} ) fields.  The parameters in **bold** are unique for `GCPClusterConfiguration`. Possible values:
+    * `instanceClass` — partial contents of the [GCPInstanceClass](cr.html#gcpinstanceclass) fields.  The parameters in **bold** are unique for `GCPClusterConfiguration`. Possible values:
         * `machineType`
         * `image`
         * `diskSizeGb`
@@ -156,7 +156,7 @@ A particular placement strategy is defined via the `GCPClusterConfiguration` str
     * `name` — the name of the NodeGroup to use for generating node names;
     * `replicas` — the number of nodes;
     * `zones` — a list of zones where static nodes can be created;
-    * `instanceClass` — partial contents of the [GCPInstanceClass]({{"/modules/030-cloud-provider-gcp/docs#gcpinstanceclass-custom-resource" | true_relative_url }} ) fields.  The parameters in **bold** are unique for  `GCPClusterConfiguration`. Possible values:
+    * `instanceClass` — partial contents of the [GCPInstanceClass](cr.html#gcpinstanceclass) fields.  The parameters in **bold** are unique for  `GCPClusterConfiguration`. Possible values:
         * `machineType`
         * `image`
         * `diskSizeGb`
@@ -190,7 +190,7 @@ A particular placement strategy is defined via the `GCPClusterConfiguration` str
             ```
 * `provider` — parameters for connecting to the GCP API;
     * `region` — the name of the region where instances will be provisioned;
-    * `serviceAccountJSON` — `service account key` in the JSON format. [Creating a service account](#creating-a-service-account)
+    * `serviceAccountJSON` — `service account key` in the JSON format. [Creating a service account](environment.html)
 * `zones` — a limited set of zones in which nodes can be created;
   * An optional parameter;
   * Format — an array of strings;

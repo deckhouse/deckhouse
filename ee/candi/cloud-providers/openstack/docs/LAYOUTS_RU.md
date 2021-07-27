@@ -277,10 +277,10 @@ provider:
       * `VXLAN` – между узлами НЕ работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
   * `externalNetworkName` - имя сети для внешнего взаимодействия
   * `masterWithExternalFloatingIP` - флаг, который указывает создавать ли floatingIP на мастер нодах
-* `provider` — передаются [параметры подключения](environment.html) к API OpenStack, они совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](./#параметры).
+* `provider` — передаются [параметры подключения](environment.html) к API OpenStack, они совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](/ru/documentation/v1/modules/030-cloud-provider-openstack/configuration.html).
 * `masterNodeGroup` — спецификация для описания NG мастера.
   * `replicas` — сколько мастер-узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass]({{"/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass" | true_relative_url }} ). Обязательными параметрами являются `flavorName`, `imageName`. Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](cr.html#openstackinstanceclass). Обязательными параметрами являются `flavorName`, `imageName`. Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`
@@ -300,7 +300,7 @@ provider:
 * `nodeGroups` — массив дополнительных NG для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NG:
   * `name` — имя NG, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
-  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass]({{"/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass" | true_relative_url }} ). Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [OpenStackInstanceClass](cr.html#openstackinstanceclass). Допустимые параметры:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`

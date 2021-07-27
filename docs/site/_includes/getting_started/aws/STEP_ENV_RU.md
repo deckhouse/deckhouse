@@ -1,6 +1,7 @@
-Чтобы **Deckhouse Platform {% if page.revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}** смог управлять ресурсами в облаке AWS, необходимо создать IAM-аккаунт. Подробная инструкция по этому действию доступна в [документации провайдера](https://docs.aws.amazon.com/eks/latest/userguide/create-service-account-iam-policy-and-role.html), а здесь мы представим краткую последовательность необходимых действий, выполняемых в консоли.
+Чтобы Deckhouse Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать IAM-аккаунт. Подробная инструкция по этому действию доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-aws/environment.html), а здесь мы представим краткую последовательность необходимых действий, выполняемых в консоли.
 
-- При помощи следующей команды сохраните JSON-спецификацию:
+При помощи следующей команды сохраните JSON-спецификацию:
+
 {% offtopic title="Команда создания policy.json" %}
 ```bash
 cat > policy.json << EOF
@@ -132,13 +133,15 @@ EOF
 ```
 {% endofftopic %}
 
-- Создайте новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:
-  ```shell
-  aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
-  ```
+Создайте на основе ранее созданной спецификации новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:
+{% snippetcut %}
+```shell
+aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+```
+{% endsnippetcut %}
 
-  В ответ отобразится следующий текст:
-  ```yaml
+> В ответ отобразится следующий текст:
+> ```yaml
   {
       "Policy": {
           "PolicyName": "D8Policy",
@@ -154,13 +157,16 @@ EOF
       }
   }
   ```
-- Создайте нового пользователя:
-  ```shell
-  aws iam create-user --user-name deckhouse
-  ```
 
-  В ответ отобразится следующий текст:
-  ```yaml
+Создайте нового пользователя:
+{% snippetcut %}
+```shell
+aws iam create-user --user-name deckhouse
+```
+{% endsnippetcut %}
+
+> В ответ отобразится следующий текст:
+> ```yaml
   {
       "User": {
           "Path": "/",
@@ -171,13 +177,16 @@ EOF
       }
   }
   ```
-- Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
-  ```shell
-  aws iam create-access-key --user-name deckhouse
-  ```
 
-  В ответ отобразится следующий текст:
-  ```yaml
+Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
+{% snippetcut %}
+```shell
+aws iam create-access-key --user-name deckhouse
+```
+{% endsnippetcut %}
+
+> В ответ отобразится следующий текст:
+> ```yaml
   {
       "AccessKey": {
           "UserName": "deckhouse",
@@ -188,7 +197,10 @@ EOF
       }
   }
   ```
-- Объедините `User` и `Policy`:
-  ```shell
-  aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
-  ```
+
+Объедините `User` и `Policy`:
+{% snippetcut %}
+```shell
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+```
+{% endsnippetcut %}

@@ -11,14 +11,14 @@ title: "Cloud provider — Yandex.Cloud: подготовка окружения
 - Создайте пользователя с именем `deckhouse`. В ответ вернутся параметры пользователя:
   ```yaml
 yc iam service-account create --name deckhouse
-id: <userId>
-folder_id: <folderId>
+id: <userID>
+folder_id: <folderID>
 created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
 - Назначьте роль `editor` вновь созданному пользователю для своего облака:
   ```yaml
-  yc resource-manager folder add-access-binding <cloudname> --role editor --subject serviceAccount:<userId>
+  yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
   ```
 - Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будем авторизовываться в облаке:
   ```yaml
@@ -32,4 +32,3 @@ name: deckhouse
 * Общий объём SSD-дисков - 2000 Гб.
 * Количество виртуальных машин - 25.
 * Общий объём RAM виртуальных машин - 256 Гб.
-

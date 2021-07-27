@@ -1,0 +1,375 @@
+global:
+  revisions:
+    - ce
+    - ee
+  step1:
+    name:
+      ru: Выбор инфраструктуры
+      en: Selecting infrastructure
+  layout: page-nosidebar-notitle
+  step:
+    header: getting_started/global/HEADER.md
+    footer: getting_started/global/FOOTER.md
+    output_dir_template: '<LANG>/gs/<INSTALL_CODE>/'
+
+presets:
+  minimal:
+    name:
+      en: Minimal
+      ru: Минимальный
+    recommended: true
+    description:
+      en: |
+        - The cluster consists of one master node and one worker node.
+        - Kubernetes Control Plane and Deckhouse controller run on the master node.
+        - Deckhouse deploys other components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Your applications should run on the worker node.
+      ru: |
+        - Кластер состоит из одного мастер узла и одного worker узла.
+        - Управляющие компоненты Kubernetes кластера и Deckhouse контроллер работают на мастер узле.
+        - Deckhouse запускает другие компоненты (Ingress контроллер, Prometheus, cert-manager и т.д.) на worker узле.
+        - Ваши приложения должны работать на worker узле.
+  ha:
+    name:
+      en: Multi-master
+      ru: Мультимастер
+    description:
+      en: |
+        - Highly Available Kubernetes Control Plane.
+        - The cluster consists of three master nodes and one worker node.
+        - Kubernetes Control Plane and Deckhouse controller run on master nodes.
+        - Deckhouse deploys other components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Your applications should run on the worker node.
+      ru: |
+        - Управляющие компоненты кластера работают в режиме высокой доступности.
+        - Кластер состоит из трёх мастер узлов и одного worker узла.
+        - Управляющие компоненты Kubernetes кластера и Deckhouse контроллер работают на мастер узлах.
+        - Deckhouse запускает другие компоненты (Ingress контроллер, Prometheus, cert-manager и т.д.) на worker узле.
+        - Ваши приложения должны работать на worker узле.
+  production:
+    name:
+      en: Recommended for production
+      ru: Рекомендовано для production
+    description:
+      en: |
+        - Highly Available Kubernetes Control Plane.
+        - The cluster consists of three master nodes, two system nodes, several frontend nodes, and one worker node.
+        - Kubernetes Control Plane and Deckhouse controller run on master nodes.
+        - Deckhouse deploys system components (Prometheus, cert-manager, etc.) on system nodes.
+        - Deckhouse deploys Ingress Controller on frontend nodes. The number of frontend nodes depends on the number of availability zones in a cloud provider.
+        - Your applications should run on the worker node.
+      ru: |
+        - Управляющие компоненты кластера работают в режиме высокой доступности.
+        - Кластер состоит из трёх мастер узлов, двух системных узлов, нескольких фронтовых узлов и одного worker узла.
+        - Управляющие компоненты Kubernetes кластера и Deckhouse контроллер работают на мастер узлах.
+        - Deckhouse запускает системные компоненты (Prometheus, cert-manager и т.д.) на системных узлах.
+        - Deckhouse запускает Ingress Controller на фронтовых узлах. Количество фронтовых узлов зависит от количества зон доступности у облачного провайдера.
+        - Ваши приложения должны работать на worker узле.
+
+installTypes:
+  aws:
+    layouts:
+      without_nat:
+        name: WithoutNAT
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in Amazon AWS"
+      ru: "Deckhouse Platform в Amazon AWS"
+    type: cloud
+    name:
+      en: Amazon AWS
+      ru: Amazon AWS
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  gcp:
+    layouts:
+      without_nat:
+        name: WithoutNAT
+        recommended: true
+      standard:
+        name: Standard
+    pages_title:
+      en: "Deckhouse Platform in Google Cloud"
+      ru: "Deckhouse Platform в Google Cloud"
+    type: cloud
+    name:
+      en: Google Cloud
+      ru: Google Cloud
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  azure:
+    layouts:
+      standard:
+        name: Standard
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in Microsoft Azure"
+      ru: "Deckhouse Platform в Microsoft Azure"
+    type: cloud
+    name:
+      en: Microsoft Azure
+      ru: Microsoft Azure
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  openstack:
+    ee_only: true
+    layouts:
+      standard:
+        name: Standard
+        recommended: true
+      simple_with_internal_network:
+        name: SimpleWithInternalNetwork
+    pages_title:
+      en: "Deckhouse Platform on OpenStack"
+      ru: "Deckhouse Platform на OpenStack"
+    type: cloud
+    name:
+      en: OpenStack
+      ru: OpenStack
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  yandex:
+    layouts:
+      without_nat:
+        name: WithoutNAT
+        recommended: true
+      standard:
+        name: Standard
+      with_nat_instance:
+        name: WithNATInstance
+    pages_title:
+      en: "Deckhouse Platform in Yandex.Cloud"
+      ru: "Deckhouse Platform в Яндекс.Облаке"
+    type: cloud
+    name:
+      en: Yandex.Cloud
+      ru: Яндекс.Облако
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  bm:
+    layouts:
+      default:
+        name: Default
+        recommended: true
+    pages_title:
+      en: "Deckhouse Platform in Bare metal"
+      ru: "Deckhouse Platform в Bare metal"
+    type: baremetal
+    name:
+      en: Bare metal
+      ru: Bare metal
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/<INSTALL_CODE>/step_cluster_setup.html
+      step4:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          ru: Завершение установки
+          en: Finishing installation
+        template: getting_started/<INSTALL_CODE>/STEP_FINALIZE_BM.md
+      step6:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  existing:
+    wip: true
+    layouts:
+      standard:
+        name: Standard
+        recommended: true
+      without_nat:
+        name: WithoutNAT
+    pages_title:
+      en: "Deckhouse Platform in existing cluster"
+      ru: "Deckhouse Platform в существующем кластере"
+    type: existing
+    name:
+      en: Existing cluster
+      ru: Существующий кластер
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: What awaits me?
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+      step4:
+        name:
+          ru: Установка
+          en: Installation
+      step5:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+      step6:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md
+  vsphere:
+    ee_only: true
+    wip: true  # show button with "soon..." caption
+    type: cloud
+    name:
+      en: VMware vSphere
+      ru: VMware vSphere

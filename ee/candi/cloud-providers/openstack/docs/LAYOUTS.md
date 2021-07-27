@@ -245,13 +245,13 @@ A particular placement strategy is defined via the `OpenStackClusterConfiguratio
 * `Standard` — settings for the `Standard` layout;
   * `internalNetworkCIDR` — routing for the internal cluster network;
   * `internalNetworkDNSServers` — a list of addresses of the recursive DNSs of the internal cluster network;
-  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](/candi/cloud-providers/openstack/docs#how-to-check-if-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
+  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://early.deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
   * `externalNetworkName` — the name of the network for external connections;
 * `StandardWithNoRouter` — settings for the `StandardWithNoRouter` layout;
   * `internalNetworkCIDR` — routing for the internal cluster network;
   * `externalNetworkName` — the name of the network for external connections;
   * `externalNetworkDHCP` — this parameter defines if DHCP is enabled in the external network;
-  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](/candi/cloud-providers/openstack/docs#how-to-check-if-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
+  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://early.deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
 * `Simple` — settings for the `Simple` layout;
   * `externalNetworkName` — the name of the network for external connections;
   * `externalNetworkDHCP` — this parameter defines if DHCP is enabled in the external network;
@@ -269,10 +269,10 @@ A particular placement strategy is defined via the `OpenStackClusterConfiguratio
       * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode);
   * `externalNetworkName` — the name of the network for external connections;
   * `masterWithExternalFloatingIP` — this parameter defines if floatingIP must be assigned to master nodes;
-* `provider` — this parameter contains [settings to connect]((/candi/cloud-providers/openstack/docs#getting-credentials)) to the OpenStack API; these settings are the same as those in the  `connection` field of the [cloud-provider-openstack]({{ site.baseurl }}/modules/030-cloud-provider-openstack/#parameters) module;
+* `provider` — this parameter contains settings to connect to the OpenStack API; these settings are the same as those in the  `connection` field of the [cloud-provider-openstack](/en/documentation/v1/modules/030-cloud-provider-openstack/configuration.html) module;
 * `masterNodeGroup` — the definition of the master's NodeGroup;
   * `replicas` — the number of master nodes to create;
-  * `instanceClass` — partial contents of the fields of the [OpenStackInstanceClass]({{"/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass" | true_relative_url }} ) CR. Required parameters: `flavorName`, `imageName`. Possible parameters:
+  * `instanceClass` — partial contents of the fields of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) CR. Required parameters: `flavorName`, `imageName`. Possible parameters:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`
@@ -290,7 +290,7 @@ A particular placement strategy is defined via the `OpenStackClusterConfiguratio
 * `nodeGroups` — an array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways). NodeGroup parameters:
   * `name` — the name of the NodeGroup to use for generating node names;
   * `replicas` — the number of nodes to create;
-  * `instanceClass` — partial contents of the fields of the [OpenStackInstanceClass]({{"/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass" | true_relative_url }} ) CR. Required parameters:  `flavorName`, `imageName`, `mainNetwork`. The parameters in **bold** are unique for `OpenStackClusterConfiguration`. Possible parameters:
+  * `instanceClass` — partial contents of the fields of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) CR. Required parameters:  `flavorName`, `imageName`, `mainNetwork`. The parameters in **bold** are unique for `OpenStackClusterConfiguration`. Possible parameters:
     * `flavorName`
     * `imageName`
     * `rootDiskSize`

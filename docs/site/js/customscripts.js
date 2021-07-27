@@ -165,3 +165,40 @@ $(document).ready(function() {
 $(document).on('keydown', function(event) {
     event.key == "Escape" && raClose();
 });
+
+// Clipbord copy functionality
+var action_toast_timeout;
+function showActionToast(text) {
+  clearTimeout(action_toast_timeout);
+  var action_toast = $('.action-toast');
+  action_toast.text(text).fadeIn()
+  action_toast_timeout = setTimeout(function(){ action_toast.fadeOut() }, 5000);
+}
+
+$(document).ready(function(){
+  new ClipboardJS('[data-snippetcut-btn-name-ru]', {
+    text: function(trigger) {
+      showActionToast('Скопировано в буфер обмена')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-name]').text();
+    }
+  });
+  new ClipboardJS('[data-snippetcut-btn-name-en]', {
+    text: function(trigger) {
+      showActionToast('Has been copied to clipboard')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-name]').text();
+    }
+  });
+  new ClipboardJS('[data-snippetcut-btn-text-en]', {
+    text: function(trigger) {
+      showActionToast('Has been copied to clipboard')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-text]').text();
+    }
+  });
+  new ClipboardJS('[data-snippetcut-btn-text-ru]', {
+    text: function(trigger) {
+      showActionToast('Скопировано в буфер обмена')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-text]').text();
+    }
+  });
+
+});

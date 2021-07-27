@@ -1,6 +1,7 @@
-You have to create an IAM account with the AWS cloud provider so that **Deckhouse Platform {% if page.revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}** can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the provider's [documentation](https://docs.aws.amazon.com/eks/latest/userguide/create-service-account-iam-policy-and-role.html). Below, we will provide a brief overview of the necessary actions:
+You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/en/documentation/v1/modules/030-cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions:
 
-- Create the `JSON specification` using the following command.
+Create the `JSON specification` using the following command.
+
 {% offtopic title="Command to create policy.json" %}
 ```bash
 cat > policy.json << EOF
@@ -132,13 +133,15 @@ EOF
 ```
 {% endofftopic %}
 
-- Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name and the ARN identifier:
-  ```shell
-  aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
-  ```
+Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name:
+{% snippetcut %}
+```shell
+aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+```
+{% endsnippetcut %}
 
-  You will see the following:
-  ```yaml
+> You will see the following:
+> ```yaml
   {
       "Policy": {
           "PolicyName": "D8Policy",
@@ -154,13 +157,16 @@ EOF
       }
   }
   ```
-- Create a new user:
-  ```shell
-  aws iam create-user --user-name deckhouse
-  ```
 
-  You will see the following:
-  ```yaml
+Create a new user:
+{% snippetcut %}
+```shell
+aws iam create-user --user-name deckhouse
+```
+{% endsnippetcut %}
+
+> You will see the following:
+> ```yaml
   {
       "User": {
           "Path": "/",
@@ -171,13 +177,16 @@ EOF
       }
   }
   ```
-- You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
-  ```shell
-  aws iam create-access-key --user-name deckhouse
-  ```
 
-  You will see the following:
-  ```yaml
+You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
+{% snippetcut %}
+```shell
+aws iam create-access-key --user-name deckhouse
+```
+{% endsnippetcut %}
+
+> You will see the following:
+> ```yaml
   {
       "AccessKey": {
           "UserName": "deckhouse",
@@ -188,7 +197,10 @@ EOF
       }
   }
   ```
-- Attach the specified `Policy` to the specified `User`:
-  ```shell
-  aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
-  ```
+
+Attach the specified `Policy` to the specified `User`:
+{% snippetcut %}
+```shell
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+```
+{% endsnippetcut %}

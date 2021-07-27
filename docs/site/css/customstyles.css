@@ -365,7 +365,7 @@ a.accordion-toggle, a.accordion-collapsed {
     content: '\25be';
 }
 .nav li.active > a > span:after {
-    content: '\25b4';
+    content: '\25b8';
 }
 
 .nav a:hover, .nav li.active > a {
@@ -1209,3 +1209,4 @@ h4.panel-title {
         display:block !important;
     }
 }
+

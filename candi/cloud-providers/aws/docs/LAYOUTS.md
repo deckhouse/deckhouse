@@ -95,7 +95,7 @@ A particular placement strategy is defined using the `AWSClusterConfiguration` s
   * `region` — the name of the AWS region where instances will be provisioned;
 * `masterNodeGroup` — parameters of the master's NodeGroup;
   * `replicas` — the number of master nodes to create;
-  * `instanceClass` — partial contents of the [AWSInstanceClass](../../modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource) CR. Possible values:
+  * `instanceClass` — partial contents of the [AWSInstanceClass](cr.html#awsinstanceclass) CR. Possible values:
     * `instanceType`
     * `ami`
     * `additionalSecurityGroups`
@@ -106,7 +106,7 @@ A particular placement strategy is defined using the `AWSClusterConfiguration` s
 * `nodeGroups` — an array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways). Each NodeGroup has the following parameters:
   * `name` — the name of the NodeGroup; it is used to generate the node name;
   * `replicas` — the number of nodes;
-  * `instanceClass` — partial contents of the [AWSInstanceClass]({{"/modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource" | true_relative_url }} ) CR. Possible values:
+  * `instanceClass` — partial contents of the [AWSInstanceClass](cr.html#awsinstanceclass) CR. Possible values:
     * `instanceType`
     * `ami`
     * `additionalSecurityGroups`

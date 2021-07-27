@@ -11,20 +11,20 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 # Deckhouse parameters
 deckhouse:
-  # address of the registry where the installer image is located; in this case, the default value for Deckhouse EE is set
+  # address of the Docker registry where the Deckhouse images are located
   imagesRepo: registry.deckhouse.io/deckhouse/ee
   # a special string with your token to access Docker registry (generated automatically for your license token)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
   # the release channel in use
-  releaseChannel: Beta
+  releaseChannel: Stable
   configOverrides:
     deckhouse:
       bundle: Minimal
     global:
       modules:
         # template that will be used for system apps domains within the cluster
-        # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
-        publicDomainTemplate: "%s.somedomain.com"
+        # e.g., Grafana for %s.example.com will be available as grafana.example.com
+        publicDomainTemplate: "%s.example.com"
 ```
 {%- else %}
 ```yaml
@@ -36,15 +36,15 @@ kind: InitConfiguration
 # Deckhouse parameters
 deckhouse:
   # the release channel in use
-  releaseChannel: Beta
+  releaseChannel: Stable
   configOverrides:
     deckhouse:
       bundle: Minimal
     global:
       modules:
         # template that will be used for system apps domains within the cluster
-        # e.g., Grafana for %s.somedomain.com will be available as grafana.somedomain.com
-        publicDomainTemplate: "%s.somedomain.com"
+        # e.g., Grafana for %s.example.com will be available as grafana.example.com
+        publicDomainTemplate: "%s.example.com"
 ```
 {%- endif %}
 

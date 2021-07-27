@@ -1,5 +1,9 @@
 @import "components/common/_variables.scss";
 
+html {
+    scroll-padding-top: 80px;
+}
+
 .header-container {
     position: sticky;
     top: 0px;

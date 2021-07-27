@@ -1,18 +1,26 @@
-Чтобы **Deckhouse Platform {% if page.revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}** смог управлять ресурсами в Яндекс.Облако, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облако доступна в [документации провайдера](https://cloud.yandex.ru/docs/resource-manager/operations/cloud/set-access-bindings). Здесь мы представим краткую последовательность необходимых действий:
+Для управления ресурсами в Яндекс.Облаке, необходимо создать сервисный аккаунт с правами на редактирование. Подробная инструкция по созданию сервисного аккаунта в Яндекс.Облако доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-yandex/environment.html). Ниже краткая версия:
 
-- Создайте пользователя с именем `candi`. В ответ вернутся параметры пользователя:
-  ```yaml
+Создайте пользователя с именем `candi`. В ответ вернутся параметры пользователя:
+{% snippetcut %}
+```yaml
 yc iam service-account create --name candi
-id: <userId>
-folder_id: <folderId>
+id: <userID>
+folder_id: <folderID>
 created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: candi
 ```
-- Назначьте роль `editor` вновь созданному пользователю для своего облака:
-  ```yaml
-yc resource-manager folder add-access-binding <cloudname> --role editor --subject serviceAccount:<userId>
+{% endsnippetcut %}
+
+Назначьте роль `editor` вновь созданному пользователю для своего облака:
+{% snippetcut %}
+```yaml
+yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
 ```
-- Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будем авторизовываться в облаке:
-  ```yaml
+{% endsnippetcut %}
+
+Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будем авторизовываться в облаке:
+{% snippetcut %}
+```yaml
 yc iam key create --service-account-name candi --output candi-sa-key.json
 ```
+{% endsnippetcut %}

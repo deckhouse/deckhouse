@@ -1,3 +1,8 @@
+function openTabAndSaveStatus(evt, linksClass, contentClass, contentId, storeKey, storeVal) {
+    openTab(evt, linksClass, contentClass, contentId);
+    sessionStorage.setItem(storeKey, storeVal );
+}
+
 function openTab(evt, linksClass, contentClass, contentId) {
   var i, tabcontent, tablinks;
 

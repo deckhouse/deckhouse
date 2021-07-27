@@ -1,5 +1,5 @@
 ---
-title: Deckhouse
+title: NoOps Kubernetes platform
 description: Deckhouse
 permalink: en/
 layout: default
@@ -43,10 +43,10 @@ anchors_disabled: true
         </li>
       </ul>
       <div class="product-intro__actions button-group">
-        <a href="javascript:raOpen()" class="button button_alt">Request access</a>
         {% unless site.mode == "local" %}
-        <a href="/{{ page.lang }}/gs/" class="button button_default">Getting started</a>
+        <a href="/{{ page.lang }}/gs/" class="button button_alt">Getting started</a>
         {% endunless %}
+        <a href="/{{ page.lang }}/documentation/v1/" class="button button_default">Documentation</a>
         <a href="https://github.com/deckhouse/deckhouse" target="_blank" class="button button_default">GitHub</a>
       </div>
     </div>
@@ -328,10 +328,54 @@ anchors_disabled: true
               </li>
             </ul>
           </li>
+          <li>
+            Learn more about the advantages of Deckhouse over EKS, GKE, AKS, and other KaaS platforms
+            <br><br>
+            <a href="/{{ page.lang }}/deckhouse_vs_kaas.html" class="button button_alt">
+              Deckhouse vs KaaS
+            </a>
+          </li>
         </ul>
       </div>
     </div>
   </div>
+
+  <div class="features-icons__item features-icons__item_even">
+    <div class="features-icons__item-content container">
+      <div class="features-icons__item-icon">
+        <img src="{{ site.baseurl }}/images/icons/features/security.svg" alt="" />
+      </div>
+      <div class="features-icons__item-info">
+        <h2 class="features-icons__item-title text_h1">
+          Security
+        </h2>
+        <ul class="features-icons__item-list">
+          <li>
+            Deckhouse provides an advanced set of tools to create a genuinely secure production environment.
+            <br><br>
+            <a href="/{{ page.lang }}/security.html" class="button button_alt">
+              Learn more about security
+            </a>
+          </li>
+          <li>
+            We use secure software for all platform components. All images get pulled strictly from the Deckhouse repository. A set of strict policies and restrictions controls the interaction of cluster components and the platform.
+          </li>
+          <li>
+            The features of the platform include:
+            <ul>
+              <li>secure access to the cluster and components;</li>
+              <li>flexible management of network policies;</li>
+              <li>auditing K8s events;</li>
+              <li>managing TLS certificates;</li>
+              <li>automatic updating of platform and cluster components;</li>
+              <li>monitoring CVEs for the software used.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 {% include clients.html %}
