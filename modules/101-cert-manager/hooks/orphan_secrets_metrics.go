@@ -114,22 +114,22 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricsGroup)
 
 	// in jq filter we see diff secret wit certs
-	// so, we need iterate over certs and check key in secrets map
-	secrets := map[string]bool{}
+	// so, we need iterate over certs and check key in certs map
+	certs := map[string]struct{}{}
 
-	for _, sm := range input.Snapshots[secretsMetricsSnapshot] {
+	for _, sm := range input.Snapshots[certsMetricSnapshot] {
 		meta := sm.(secretMeta)
 		key := secretsMetricKeyFun(&meta)
 		// we do not need to store meta
 		// cert meta and secret meta must equal
 		// here we need store only (hash-)key
-		secrets[key] = true
+		certs[key] = struct{}{}
 	}
 
-	for _, sm := range input.Snapshots[certsMetricSnapshot] {
-		certMeta := sm.(secretMeta)
-		key := secretsMetricKeyFun(&certMeta)
-		if _, exists := secrets[key]; exists {
+	for _, sm := range input.Snapshots[secretsMetricsSnapshot] {
+		secretMetaVal := sm.(secretMeta)
+		key := secretsMetricKeyFun(&secretMetaVal)
+		if _, exists := certs[key]; exists {
 			continue
 		}
 
@@ -137,8 +137,8 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 			"d8_orphan_secrets_without_corresponding_certificate_resources",
 			1.0,
 			map[string]string{
-				"namespace":   certMeta.Namespace,
-				"secret_name": certMeta.SecretName,
+				"namespace":   secretMetaVal.Namespace,
+				"secret_name": secretMetaVal.SecretName,
 			},
 			metrics.WithGroup(metricsGroup),
 		)
