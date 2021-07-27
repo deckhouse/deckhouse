@@ -206,11 +206,11 @@ dhcpOptions:
 * `provider` — параметры подключения к API Yandex.Cloud.
   * `cloudID` — идентификатор облака.
   * `folderID` — идентификатор директории.
-  * `serviceAccountJSON` — JSON, выдаваемый [yc iam key create](#права)
+  * `serviceAccountJSON` — JSON, выдаваемый [yc iam key create](environment.html)
 * `masterNodeGroup` — спецификация для описания NodeGroup мастера.
   * `replicas` — сколько мастер-узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
-  * `instanceClass` — частичное содержимое полей [YandexInstanceClass]({{"/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource" | true_relative_url }} ). Обязательными параметрами являются `cores`, `memory`, `imageID`.
+  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](cr.html#yandexinstanceclass). Обязательными параметрами являются `cores`, `memory`, `imageID`.
     * `cores`
     * `memory`
     * `imageID`
@@ -226,7 +226,7 @@ dhcpOptions:
   * `name` — имя NodeGroup, будет использоваться для генерации имени нод.
   * `replicas` — сколько узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
-  * `instanceClass` — частичное содержимое полей [YandexInstanceClass]({{"/modules/030-cloud-provider-yandex/#yandexinstanceclass-custom-resource" | true_relative_url }} ). Обязательными параметрами являются `cores`, `memory`, `imageID`.
+  * `instanceClass` — частичное содержимое полей [YandexInstanceClass](cr.html#yandexinstanceclass). Обязательными параметрами являются `cores`, `memory`, `imageID`.
     * `cores`
     * `memory`
     * `imageID`
@@ -266,7 +266,7 @@ dhcpOptions:
         ```
 * `nodeNetworkCIDR` — данная подсеть будет разделена на **три** равных части и использована для создания подсетей в трёх зонах Yandex.Cloud.
 * `existingNetworkID` — существующей VPC Network.
-* `dhcpOptions` — список DHCP опций, которые будут установлены на все подсети. [Возможные проблемы](environment.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+* `dhcpOptions` — список DHCP опций, которые будут установлены на все подсети. [Возможные проблемы](faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
   * `domainName` — search домен.
   * `domainNameServers` — список адресов рекурсивных DNS.
 * `sshPublicKey` — публичный ключ для доступа на ноды.

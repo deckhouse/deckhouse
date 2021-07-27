@@ -1,0 +1,30 @@
+addingNode:
+  en: Adding a node
+  ru: Добавление узла
+back:
+  en: Go back
+  ru: Вернуться назад
+checkingStatus:
+  en: Checking the installation status
+  ru: Проверка статуса установки
+finish:
+  en: What can I do next?
+  ru: Куда двигаться дальше?
+getClusterAccess:
+  en: Getting access to the cluster
+  ru: Получаем доступ к кластеру
+installing:
+  en: Installation
+  ru:  Установка
+next:
+  en: "Next: "
+  ru: "Далее: "
+preparingEnv:
+  en: Preparing environment
+  ru: Подготовка окружения
+preparingConfig:
+  en: Setting up cluster
+  ru: Настройка кластера
+workingWithModules:
+  en: Working with modules
+  ru: Работа с модулями

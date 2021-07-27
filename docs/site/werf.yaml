@@ -7,7 +7,7 @@ configVersion: 1
 ---
 artifact: web-static
 from: jekyll/builder:3.8
-fromCacheVersion: 20210401
+fromCacheVersion: 20210702
 ansible:
   install:
     - shell: |
@@ -23,7 +23,7 @@ ansible:
       shell: |
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config _config.yml
+        jekyll build -d /app/_site/ --config _config.yml --trace
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/site/
@@ -45,7 +45,7 @@ git:
 ---
 artifact: web-backend-srv
 from: {{ $BASE_GOLANG_ALPINE }}
-fromCacheVersion: 20210401
+fromCacheVersion: 20210701
 ansible:
   install:
     - name: Build apis

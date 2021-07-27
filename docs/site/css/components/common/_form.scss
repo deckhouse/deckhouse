@@ -40,6 +40,12 @@
   }
 }
 
+.label {
+  font-size: $font-size-small;
+  margin-bottom: $spacing-s;
+  display: block;
+}
+
 .form {
   &__row {
     margin-bottom: $spacing-l;

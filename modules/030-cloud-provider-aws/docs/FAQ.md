@@ -30,7 +30,7 @@ IPv4 CIDR must be unique for each VPC.
 dhctl bootstrap-phase base-infra --config config
 ```
 
-* Set up a peering connection using the instructions [above](#how-do-I-create-a-peering-connection-between-vpcs).
+* Set up a peering connection using the instructions [above](#how-do-i-create-a-peering-connection-between-vpcs).
 * Continue installing the cluster, enter "y" when asked about the terraform cache:
 
 ```

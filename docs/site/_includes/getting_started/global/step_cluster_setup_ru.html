@@ -1,0 +1,76 @@
+## Укажите параметры кластера
+
+<div class="form" style="width: 500px;">
+  <div class="form__row">
+    <label class="label" title="Укажите шаблон DNS, который будет использовать кластер">
+      Шаблон DNS кластера
+    </label>
+    <input class="textfield"
+      type="text" id="clusterdomain"
+      name="domain" placeholder="%s.example.com"
+      autocomplete="off" />
+  </div>
+  <div class="form__row">
+    <label class="label" title="Укажите префикс, который будет использоваться при создании ресурсов в облаке">
+      Префикс ресурсов, создаваемых в облаке
+    </label>
+    <input
+      class="textfield"
+      type="text" id="resourceprefix"
+      name="prefix" placeholder="cloud-demo"
+      autocomplete="off" />
+  </div>
+  <div class="form__row">
+    <label class="label" title="Укажите SSH-ключ доступа к узлам кластера">
+      SSH-ключ доступа к узлам кластера
+    </label>
+    <input
+      class="textfield"
+      type="text" id="sshkey"
+      name="sshkey" placeholder="ssh-rsa ..."
+      autocomplete="off" />
+  </div>
+</div>
+
+<!-- include getting_started/aws/STEP_PREP_CONF_RU.md -->
+## Выберите схему размещения
+
+Схема размещения — это способ расположения ресурсов в облаке. Существует несколько предопределённых схем размещения.
+
+<div class="tabs">
+{% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
+  <a href="javascript:void(0)" class="tabs__btn tabs__btn_layout{% if layout[1].recommended %} active{% endif %}"
+  onclick="openTabAndSaveStatus(event, 'tabs__btn_layout', 'tabs__content_layout', 'layout_{{ layout[0] }}', 'dhctl-layout', '{{ layout[1].name }}');">
+    {{ layout[1].name }}{% if layout[1].recommended %} ({{ site.data.i18n.recommended[page.lang] }}){% endif %}
+  </a>
+{% endfor %}
+</div>
+
+{% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
+<div id="layout_{{ layout[0] }}" class="tabs__content tabs__content_layout {% if layout[1].recommended %} active{% endif %}" markdown="1">
+{% capture layout_path %}getting_started/{{ page.platform_code }}/layouts/{{ layout[0] | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
+{% include  {{ layout_path }} %}
+</div>
+{% endfor %}
+
+## Выберите набор узлов
+<div class="tabs">
+{% for preset in site.data.getting_started.data.presets %}
+  <a href="javascript:void(0)" class="tabs__btn tabs__btn_preset{% if preset[1].recommended %} active{% endif %}"
+  onclick="openTabAndSaveStatus(event, 'tabs__btn_preset', 'tabs__content_preset', 'preset_{{ preset[0] }}', 'dhctl-preset', '{{ preset[0] }}');" title="{{ preset[1].description[page.lang] }}">
+    {{ preset[1].name[page.lang] }}
+  </a>
+{% endfor %}
+</div>
+
+{% for preset in site.data.getting_started.data.presets %}
+<div id="preset_{{ preset[0] }}" class="tabs__content tabs__content_preset{% if preset[1].recommended %} active{% endif %}" markdown="1">
+{% capture preset_path %}getting_started/{{ page.platform_code }}/presets/{{ preset[0] | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
+<!--include  {{ preset_path }} -->
+{{ preset[1].description[page.lang] }}
+</div>
+{% endfor %}
+
+<script type="text/javascript">
+{% include getting_started/global/partials/getting-started-setup.js.inc %}
+</script>

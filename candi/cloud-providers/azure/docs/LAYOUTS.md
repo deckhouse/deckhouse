@@ -65,7 +65,7 @@ It has the following fields:
         * You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
             * `az vm list-skus -l westeurope -o table`
         * The default value is `[1,2,3]`;
-    * `instanceClass` — partial contents of the [AzureInstanceClass]({{"/modules/030-cloud-provider-azure/docs#azureinstanceclass-custom-resource" | true_relative_url }} ) fields.  The parameters in **bold** are unique for `AzureClusterConfiguration`. Possible values:
+    * `instanceClass` — partial contents of the [AzureInstanceClass](cr.html#azureinstanceclass) fields.  The parameters in **bold** are unique for `AzureClusterConfiguration`. Possible values:
         * `machineSize`
         * `diskSizeGb`
         * `urn`
@@ -80,7 +80,7 @@ It has the following fields:
         * You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
             * `az vm list-skus -l westeurope -o table`
         * The default value is `[1,2,3]`;
-    * `instanceClass` — partial contents of the [AzureInstanceClass]({{"/modules/030-cloud-provider-azure/docs#azureinstanceclass-custom-resource" | true_relative_url }} ) fields.  The parameters in **bold** are unique for  `AzureClusterConfiguration`. Possible values:
+    * `instanceClass` — partial contents of the [AzureInstanceClass](cr.html#azureinstanceclass) fields.  The parameters in **bold** are unique for  `AzureClusterConfiguration`. Possible values:
         * `machineSize`
         * `diskSizeGb`
         * `urn`

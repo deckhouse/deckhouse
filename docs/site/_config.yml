@@ -46,6 +46,7 @@ feedback_disable: true
 plugins:
   - jekyll-assets
   - jekyll-regex-replace
+  - jekyll_include_plugin
 
 markdown: kramdown
 kramdown:

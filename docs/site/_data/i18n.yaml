@@ -1,0 +1,17 @@
+recommended:
+  en: recommended
+  ru: рекомендованная
+copied_to_clipboard:
+  en: Has been copied to clipboard
+  ru: Скопировано в буфер обмена
+copy_filename:
+  en: Copy filename
+  ru: Скопировать имя файла
+copy_content:
+  en: Copy content
+  ru: Скопировать содержимое
+soon:
+  en: "soon..."
+  ru: "скоро..."
+ce: Community Edition
+ee: Enterprise Edition

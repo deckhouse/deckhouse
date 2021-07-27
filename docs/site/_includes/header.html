@@ -1,50 +1,6 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
 
 <div class="header-container">
-  {% unless site.mode == 'local' %}
-  <div id="notice" class="notice" data-state="expanded">
-    <a href="javascript:void(0)" id="notice-expand" class="notice__expand"></a>
-    <a href="javascript:void(0)" id="notice-collapse" class="notice__collapse"></a>
-    <div class="notice__content notice__content_collapsed container">
-      {%- if page.lang == "ru" %}
-        Внимание! Это <strong>ранняя версия и демо-доступ</strong>.
-        <span class="notice__share_message disabled">Чтобы поделиться им, используйте эту <a href="#">ссылку</a>.</span>
-      {%- else %}
-        Warning! This is <strong>an early version and demo access</strong>.
-        <span class="notice__share_message disabled">To share it, please use this <a href="#">link</a>.</span>
-      {%- endif %}
-    </div>
-    <div class="notice__content notice__content_expanded container">
-      {%- if page.lang == "ru" %}
-        <div class="notice__columns">
-          <div>
-            Внимание! Это <strong>ранняя версия сайта и&nbsp;продукта</strong>,
-            поэтому не&nbsp;всё описанное может соответствовать действительности.
-            <a href="/ru/early_access.html">Подробнее&nbsp;о&nbsp;статусе</a>.
-          </div>
-          <div>
-            Вы вошли на сайт по <strong>демо-доступу</strong>, с которым можно установить EE-версию Deckhouse.
-            Доступ пропадет 31 июля. <span class="notice__share_message disabled">Чтобы поделиться им, используйте эту <a href="#">ссылку</a>.</span>
-          </div>
-        </div>
-      {%- else %}
-        <div class="notice__columns">
-          <div>
-            Warning! This is <strong>an early version of the website and product</strong>.
-            Not everything will work as expected.
-            <a href="/en/early_access.html">More&nbsp;on&nbsp;the&nbsp;current&nbsp;status</a>.
-          </div>
-          <div>
-            You’re using <strong>demo access</strong> to this website which allows you
-            to install the EE version of Deckhouse. It will expire on July 31st.
-            <span class="notice__share_message disabled">To share it, please use this <a href="#">link</a>.</span>
-          </div>
-        </div>
-      {%- endif %}
-    </div>
-  </div>
-  {% endunless %}
-
   <header class="header">
     <div class="header__content container">
       <div class="header__logo">

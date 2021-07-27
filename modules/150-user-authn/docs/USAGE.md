@@ -283,6 +283,21 @@ spec:
 ```
 {% endraw %}
 
+## External access to the Kubernetes API
+
+In the `deckhouse` ConfigMap configure `publishAPI`:
+
+{% raw %}
+```yaml
+  userAuthn: |
+    publishAPI:
+      enable: true
+```
+{% endraw %}
+
+You can access a web interface at `kubeconfig.%publicDomainTemplate%` that allows you to generate `kubeconfig`
+and use it for kubectl or any number of other Kubernetes API clients.
+
 ## Configuring kube-apiserver
 
 You need to configure the kube-apiserver so that dashboard and kubeconfig-generator modules can work in the cluster. A dedicated  [control-plane-manager](../../modules/040-control-plane-manager/) module can help you with this.

@@ -51,7 +51,7 @@
 .cards-item {
     padding: 30px;
     &__title {
-        margin-top: 0px;
+        margin-top: 0px !important;
         margin-bottom: $spacing-m;
         color: $color-alt;
         a {
@@ -65,7 +65,7 @@
 }
 
 .cards-blocks {
-    padding: 100px 0;
+    margin: $spacing-l*2 0;
     &__content {
         box-sizing: border-box;
     }
@@ -78,11 +78,20 @@
         flex-direction: row;
         justify-content: space-between;
         align-items: stretch;
+        flex-wrap: wrap;
     }
     .cards-item {
-        width: 30%;
+        width: 45%;
+        @media (min-width: $container-breakpoint-lg) {
+            width: 30%;
+        }
         box-sizing: border-box;
+        margin-bottom: $spacing-l*2;
         // kostyl
         border: 1px solid #ddd;
+
+        p {
+            font-size: $font-size-base;
+        }
     }
 }

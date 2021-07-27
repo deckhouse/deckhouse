@@ -97,7 +97,7 @@ tags:
   * `region` — имя AWS региона, в котором будут заказываться instances.
 * `masterNodeGroup` — спецификация для описания NodeGroup мастера.
   * `replicas` — сколько мастер-узлов создать.
-  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](../../modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource). Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](cr.html#awsinstanceclass). Допустимые параметры:
     * `instanceType`
     * `ami`
     * `additionalSecurityGroups`
@@ -108,7 +108,7 @@ tags:
 * `nodeGroups` — массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов). Настройки NodeGroup:
   * `name` — имя NodeGroup, будет использоваться для генерации имени узлов.
   * `replicas` — количество узлов.
-  * `instanceClass` — частичное содержимое полей [AWSInstanceClass]({{"/modules/030-cloud-provider-aws/#awsinstanceclass-custom-resource" | true_relative_url }} ). Допустимые параметры:
+  * `instanceClass` — частичное содержимое полей [AWSInstanceClass](cr.html#awsinstanceclass). Допустимые параметры:
     * `instanceType`
     * `ami`
     * `additionalSecurityGroups`

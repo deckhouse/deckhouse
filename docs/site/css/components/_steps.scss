@@ -3,7 +3,7 @@
 .gs-steps {
     position: relative;
     width: 90%;
-    margin: 45px auto 65px;
+    margin: 45px auto 125px;
     &__points {
         position: relative;
         z-index: 2;
@@ -13,6 +13,7 @@
     }
     &__point {
         position: relative;
+        text-decoration: none !important;
         &-num {
             display: flex;
             flex-direction: column;
@@ -26,6 +27,11 @@
 
             background: $color-smooth;
             color: #999;
+            &_future {
+                font-weight: $font-weight-semibold;
+                background: $color-smooth;
+                color: #999 !important;
+            }
             &_active {
                 background: $color-inverse;
                 font-weight: $font-weight-semibold;
@@ -36,27 +42,40 @@
                 font-weight: $font-weight-semibold;
                 background: $color-alt;
                 color: $color-inverse !important;
-                &:hover {
-                    color: $color-inverse !important;
-                    background: $color-main;
-                    border-color: transparent;
-                    text-decoration: none !important;
-                }
             }
-
             span {
                 transform: rotate(-45deg);
             }
         }
         &-title {
-            white-space: nowrap;
             position: absolute;
             left: 50%;
             top: 45px;
             transform: translateX(-50%);
             font-size: $font-size-base;
             font-weight: $font-weight-semibold;
-            color: $color-alt;
+
+            text-align: center;
+            width: 125px;
+            @media (min-width: $container-breakpoint-lg) {
+                width: 150px;
+            }
+
+            color: $color-alt !important;
+
+            &_future {
+                color: #999 !important;
+            }
+        }
+        &:hover &-num_future,
+        &:hover &-num_past {
+            color: $color-inverse !important;
+            background: $color-main;
+            border-color: transparent;
+            text-decoration: none !important;
+        }
+        &:hover &-title:not(.gs-steps__point-title_active) {
+            color: $color-main !important;
         }
     }
     &__sections {

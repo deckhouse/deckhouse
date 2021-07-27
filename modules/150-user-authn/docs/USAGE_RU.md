@@ -284,6 +284,21 @@ spec:
 ```
 {% endraw %}
 
+## Внешний доступ к Kubernetes API
+
+В CM `deckhouse` настройте `publishAPI`:
+
+{% raw %}
+```yaml
+  userAuthn: |
+    publishAPI:
+      enable: true
+```
+{% endraw %}
+
+По адресу `kubeconfig.%publicDomainTemplate%` появится веб-интерфейс, позволяющий сгенерировать `kubeconfig`, который подойдёт
+для kubectl и множества других утилит, работающих с Kubernetes API.
+
 ## Настройка kube-apiserver
 
 Для работы модулей dashboard и kubeconfig-generator в кластере необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-manager](../../modules/040-control-plane-manager/).
