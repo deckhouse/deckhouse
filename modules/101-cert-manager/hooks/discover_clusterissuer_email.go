@@ -86,6 +86,8 @@ func discoverClusterIssuerEmail(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	input.Values.Set("certManager.internal.email", snapshots[0].(*clusterIssuer).Email)
+	if issuerEmail := snapshots[0].(*clusterIssuer).Email; len(issuerEmail) > 0 {
+		input.Values.Set("certManager.internal.email", issuerEmail)
+	}
 	return nil
 }

@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("Cert Manager hooks :: discover email for clusterissuers ::", func() {
 	const (
-		clusterissuer = `
+		clusterissuerWithEmail = `
 ---
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: ClusterIssuer
@@ -34,6 +34,21 @@ metadata:
 spec:
   acme:
     email: test+letsencrypt-test-dev@notice.flant.com
+    http01: {}
+    privateKeySecretRef:
+      name: cert-manager-letsencrypt-private-key
+    server: https://acme-v02.api.letsencrypt.org/directory
+`
+		clusterissuerWithoutEmail = `
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+  labels:
+    heritage: deckhouse
+spec:
+  acme:
     http01: {}
     privateKeySecretRef:
       name: cert-manager-letsencrypt-private-key
@@ -57,7 +72,7 @@ spec:
 
 	Context("Cluster with ClusterIssuer resource, but without set config values", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(clusterissuer)
+			f.KubeStateSet(clusterissuerWithEmail)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -70,7 +85,34 @@ spec:
 
 	Context("Cluster with ClusterIssuer resource, with set config values", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(clusterissuer)
+			f.KubeStateSet(clusterissuerWithEmail)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet("certManager.email", "test@test.com")
+			f.RunHook()
+		})
+
+		It("Hook should run, internal values must be set from config value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("certManager.internal.email").String()).To(Equal("test@test.com"))
+		})
+	})
+
+	Context("Cluster with ClusterIssuer resource without email, but without set config values", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(clusterissuerWithoutEmail)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Hook should run, internal values must be set from clusterissuer", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("certManager.internal.email").String()).Should(BeEmpty())
+		})
+	})
+
+	Context("Cluster with ClusterIssuer resource without email, with set config values", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(clusterissuerWithoutEmail)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("certManager.email", "test@test.com")
 			f.RunHook()
