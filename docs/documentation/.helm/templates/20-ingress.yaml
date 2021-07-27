@@ -19,11 +19,11 @@ metadata:
       ssi on;
       ssi_silent_errors on;
 {{- include "rewrites" . | indent 6 }}
-{{- if or (eq .Values.global.env "web-production") (eq .Values.global.env "web-stage") }}
+{{- if eq .Values.global.env "web-stage" }}
     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
     nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.deckhouse-{{ .Values.global.env }}.svc.cluster.local/dex-authenticator/auth
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-{{- else }}
+{{- else if .Values.global.env "web-test" }}
     nginx.ingress.kubernetes.io/auth-url: http://basic-auth.kube-basic-auth.svc.cluster.local/deckhouse
 {{- end }}
 spec:
