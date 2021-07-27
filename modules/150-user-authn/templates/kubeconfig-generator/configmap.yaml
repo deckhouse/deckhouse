@@ -49,7 +49,7 @@ data:
       k8s_ca_pem: |
 {{ $cluster.masterCA | default $.Values.global.discovery.kubernetesCA | indent 8 }}
       k8s_master_uri: "{{ $cluster.masterURI }}"
-      name: {{ printf "%s.%s" (.Values.global.modules.publicDomainTemplate | replace "%s-" "" | replace "%s." "") $cluster.id | quote }}
+      name: {{ printf "%s.%s" ($.Values.global.modules.publicDomainTemplate | replace "%s-" "" | replace "%s." "") $cluster.id | quote }}
       redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list $ "kubeconfig") }}/callback/{{ $index }}"
       short_description: "{{ $cluster.description }}"
       scopes:
