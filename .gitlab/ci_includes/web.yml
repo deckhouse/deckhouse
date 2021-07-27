@@ -149,6 +149,33 @@ EARLY Doc Deploy :
     url: https://early.deckhouse.io
   when: manual
 
+Prod Main Deploy:
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_DIR: "docs/site"
+    WERF_RELEASE: "deckhouse-site"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+    WERF_ENV: web
+  environment:
+    name: web-production
+    url: https://deckhouse.io
+  when: manual
+
+Prod Doc Deploy :
+  <<: *web_base_deploy
+  variables:
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_DIR: "docs/documentation"
+    WERF_RELEASE: "deckhouse-doc"
+    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
+    WERF_ENV: web
+  environment:
+    name: web-production
+    url: https://deckhouse.io
+  when: manual
+
 Web cleanup:
   stage: cleanup_registry
   variables:
