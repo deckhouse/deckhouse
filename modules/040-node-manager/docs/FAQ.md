@@ -6,7 +6,7 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 ## How do I automatically add a static node to a cluster?
 
 To add a new node to a static cluster, you need to:
-- Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `Hybrid`) or use an existing one. Let's, for example, create a `NodeGroup` called `example`.
+- Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a `NodeGroup` called `example`.
 - Get the script for installing and configuring the node: `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-example -o json | jq '.data."bootstrap.sh"' -r`
 - Before configuring Kubernetes on the node, make sure that you have performed all the necessary actions for the node to work correctly in the cluster:
   - Added all the necessary mount points (nfs, ceph,...) to `/etc/fstab`;
@@ -17,7 +17,7 @@ To add a new node to a static cluster, you need to:
 ## How to put a node under the node-manager's control?
 
 To make a node controllable by `node-manager`, perform the following steps:
-- Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `Hybrid`) or use an existing one. Let's, for example, create a `NodeGroup` called `nodes`.
+- Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a `NodeGroup` called `nodes`.
 - Get the script for installing and configuring the node:  `kubectl -n d8-cloud-instance-manager  get secret manual-bootstrap-for-nodes-o json | jq '.data."adopt.sh"' -r`
 - Connect to the new node over SSH and run the following command using the data from the secret:  `echo <base64> | base64 -d | bash`
 
