@@ -17,11 +17,24 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+func assertCleanMetricsOnly(f *HookExecutionConfig) {
+	ops := f.MetricsCollector.CollectedMetrics()
+	Expect(len(ops)).To(BeEquivalentTo(1))
+
+	// first is expiration
+	Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+		Group:  metricsGroup,
+		Action: "expire",
+	}))
+}
 
 var _ = Describe("Modules :: cert-manager :: hooks :: orphan_secrets_metrics ::", func() {
 	const (
@@ -97,8 +110,28 @@ type: kubernetes.io/tls
 			f.RunHook()
 		})
 
-		It("Hook must not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		It("adds orphan metrics for group", func() {
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(2))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  metricsGroup,
+				Action: "expire",
+			}))
+
+			// second is metrics
+			expectedMetric := operation.MetricOperation{
+				Name:   "d8_orphan_secrets_without_corresponding_certificate_resources",
+				Group:  metricsGroup,
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"namespace":   "d8-dashboard",
+					"secret_name": "ingress-tls",
+				},
+			}
+			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))
 		})
 	})
 
@@ -108,8 +141,19 @@ type: kubernetes.io/tls
 			f.RunHook()
 		})
 
-		It("Hook must not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		It("expire orphan metrics for group only", func() {
+			assertCleanMetricsOnly(f)
+		})
+	})
+
+	Context("Certificate in cluster, secret is not in cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateCertificates))
+			f.RunHook()
+		})
+
+		It("expire orphan metrics for group only", func() {
+			assertCleanMetricsOnly(f)
 		})
 	})
 
