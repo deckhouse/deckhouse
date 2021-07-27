@@ -48,6 +48,7 @@ function config_highlight() {
 function config_update() {
    update_parameter('dhctl-prefix', 'prefix', 'cloud-demo', null ,'[config-yml]');
    update_parameter('dhctl-sshkey', 'sshPublicKey', 'ssh-rsa <SSH_PUBLIC_KEY>',  null ,'[config-yml]');
+   update_parameter('dhctl-sshkey', 'sshKey', 'ssh-rsa <SSH_PUBLIC_KEY>',  null ,'[config-yml]');
    update_parameter('dhctl-layout', 'layout', '<layout>',  null ,'[config-yml]');
    let preset = sessionStorage.getItem('dhctl-preset');
    if ( preset && preset.length > 0 ) {
@@ -61,8 +62,8 @@ function config_update() {
 }
 
 function update_domain_parameters() {
-   var exampleDomainName = '%s\\.example\\.com'
-   var exampleDomainSuffix = exampleDomainName.replace('%s\\.','');
+   const exampleDomainName = /%s\.example\.com/ig
+   const exampleDomainSuffix = /example\.com/ig;
    let dhctlDomain = sessionStorage.getItem('dhctl-domain')
    let dhctlDomainSuffx = dhctlDomain ? sessionStorage.getItem('dhctl-domain').replace('%s\.','') : null;
 
@@ -85,7 +86,8 @@ function update_domain_parameters() {
             $(this)[0].textContent = content.replace(re, dhctlDomainSuffx);
         }
     });
-   update_parameter(dhctlDomainSuffx, '', '@'+exampleDomainSuffix, '@'+dhctlDomainSuffx ,'[resources-yml]');
+
+   update_parameter((sessionStorage.getItem('dhctl-domain')||'example.com').replace('%s.',''), null, 'example.com',  null ,'[resources-yml]');
 }
 
 function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector= '' ) {
