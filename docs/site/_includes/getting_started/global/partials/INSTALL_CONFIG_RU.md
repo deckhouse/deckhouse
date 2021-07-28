@@ -12,7 +12,7 @@
 - <span class="mustChange">обязательные</span> для самостоятельного заполнения параметры.
 - <span class="mightChange">опциональные</span> параметры.
 
-> Полное описание параметров конфигурации cloud-провайдеров вы можете найти [документации](https://early.deckhouse.io/ru/documentation/v1/kubernetes.html).
+> Полное описание параметров конфигурации cloud-провайдеров вы можете найти [документации](https://deckhouse.io/ru/documentation/v1/kubernetes.html).
 >
 > Подробнее о каналах обновления Deckhouse Platform (release channels) можно почитать в [документации](/ru/documentation/v1/deckhouse-release-channels.html).
 

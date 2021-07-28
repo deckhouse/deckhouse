@@ -245,13 +245,13 @@ A particular placement strategy is defined via the `OpenStackClusterConfiguratio
 * `Standard` — settings for the `Standard` layout;
   * `internalNetworkCIDR` — routing for the internal cluster network;
   * `internalNetworkDNSServers` — a list of addresses of the recursive DNSs of the internal cluster network;
-  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://early.deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
+  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
   * `externalNetworkName` — the name of the network for external connections;
 * `StandardWithNoRouter` — settings for the `StandardWithNoRouter` layout;
   * `internalNetworkCIDR` — routing for the internal cluster network;
   * `externalNetworkName` — the name of the network for external connections;
   * `externalNetworkDHCP` — this parameter defines if DHCP is enabled in the external network;
-  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://early.deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
+  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
 * `Simple` — settings for the `Simple` layout;
   * `externalNetworkName` — the name of the network for external connections;
   * `externalNetworkDHCP` — this parameter defines if DHCP is enabled in the external network;

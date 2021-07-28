@@ -41,7 +41,7 @@ properties:
         description: |
           A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -67,7 +67,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
@@ -249,7 +249,7 @@ properties:
     description: |
       The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -278,7 +278,7 @@ properties:
     description: |
       The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   mainMaxDiskSizeGigabytes:
     type: integer
     default: 300

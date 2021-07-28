@@ -9,6 +9,9 @@
       type="text" id="clusterdomain"
       name="domain" placeholder="%s.example.com"
       autocomplete="off" />
+    <span class="info">
+      Используется для формирования доменов системных приложений в кластере. Например, Grafana для шаблона <code>%s.example.com</code> будет доступна как <code>grafana.example.com</code>.
+    </span>
   </div>
   <div class="form__row">
     <label class="label" title="Укажите префикс, который будет использоваться при создании ресурсов в облаке">
@@ -19,6 +22,9 @@
       type="text" id="resourceprefix"
       name="prefix" placeholder="cloud-demo"
       autocomplete="off" />
+    <span class="info">
+       Используется для формирования имен объектов кластера, создаваемых Deckhouse (виртуальные машины, сети, политики безопасности и т.д.).
+    </span>
   </div>
   <div class="form__row">
     <label class="label" title="Укажите SSH-ключ доступа к узлам кластера">
@@ -29,6 +35,9 @@
       type="text" id="sshkey"
       name="sshkey" placeholder="ssh-rsa ..."
       autocomplete="off" />
+    <span class="info">
+       Этот ключ передается cloud-провайдеру в процессе создания виртуальной машины.
+    </span>
   </div>
 </div>
 

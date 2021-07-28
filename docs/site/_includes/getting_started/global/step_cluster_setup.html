@@ -9,6 +9,9 @@
       type="text" id="clusterdomain"
       name="domain" placeholder="%s.example.com"
       autocomplete="off" />
+    <span class="info">
+      This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.example.com</code> will be available as <code>grafana.example.com</code>.
+    </span>
   </div>
   <div class="form__row">
     <label class="label" title="Specify the prefix that will be used when creating resources in the cloud">
@@ -19,7 +22,10 @@
       type="text" id="resourceprefix"
       name="prefix" placeholder="cloud-demo"
       autocomplete="off" />
-  </div>
+      <span class="info">
+       This prefix is used for names of cluster objects created by Deckhouse (virtual machines, networks, security policies, etc.).
+    </span>
+</div>
   <div class="form__row">
     <label class="label" title="Specify public SSH key to access the cluster nodes">
       Public SSH key to access the cluster nodes
@@ -29,6 +35,9 @@
       type="text" id="sshkey"
       name="sshkey" placeholder="ssh-rsa ..."
       autocomplete="off" />
+    <span class="info">
+       This key is passed to the cloud provider during the virtual machine creation process.
+    </span>
   </div>
 </div>
 

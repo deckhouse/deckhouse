@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Параметры группы OpenStack servers, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
+            Параметры группы OpenStack servers, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
@@ -51,7 +51,7 @@ spec:
                     Если параметр присутствует, то инстанс будет использовать заказанный OpenStack'ом Cinder volume (с указанным размером и стандартным для кластера типом) как root-диск.
 
                     > Если в *cloud provider* существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по умолчанию, для этого необходимо в метаданных образа указать имя определённого типа диска.
-                    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://early.deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack)
+                    > Для этого также может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack)
                     >
                     > ```shell
                       openstack volume type list

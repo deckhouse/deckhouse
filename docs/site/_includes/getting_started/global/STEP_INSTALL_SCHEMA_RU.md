@@ -6,7 +6,12 @@
 
 <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRTEsc9r076_R2OZDEI1hY-qpVUc3_t939ATSCyQZbzkQdc1dRmbwsSa8a1LUJoOwEHMDz44w7dIqMM/embed?start=false&loop=true&delayms=9999999" frameborder="0" width="920" height="554" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
-### Рекомендуемая минимальная конфигурация master-узлов
+<p class="text text_alt" style="color: #2A5EFF">
+  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
+  Управляйте презентацией
+</p>
+
+## Рекомендуемая минимальная конфигурация master-узлов
 -   не менее 4 ядер CPU;
 -   не менее 8  ГБ RAM;
 -   не менее 40 ГБ дискового пространства;

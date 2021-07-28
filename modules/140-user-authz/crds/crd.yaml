@@ -89,7 +89,7 @@ spec:
 
                     [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#subject-v1-rbac-authorization-k8s-io)
 
-                    **Caution!** Note that you must use the user's `email` as the username to grant privileges to the specific user if this module is used together with the [user-authn](https://early.deckhouse.io/en/documentation/v1/modules/150-user-authn/) module.
+                    **Caution!** Note that you must use the user's `email` as the username to grant privileges to the specific user if this module is used together with the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module.
                   items:
                     type: object
                     required:
