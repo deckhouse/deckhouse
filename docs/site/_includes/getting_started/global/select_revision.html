@@ -53,6 +53,7 @@
 {% endif %}
 
 {%- for revision in site.data.getting_started.data.global.revisions %}
+{%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
 {% include getting_started/global/partials/INSTALL_OTHER_RU.md revision=revision %}
