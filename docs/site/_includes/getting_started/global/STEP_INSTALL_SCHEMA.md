@@ -6,7 +6,7 @@ Please also note, it's just a brief, rough overview. The actual actions and comm
 
 <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQMLaE1VY5tERT32FRj3kt5WG9q1rf0NL7tf10lhdBWHvhzW-o6gZ8fAryaJy-QUdqlv361q51Ovp4k/embed?start=false&loop=false&delayms=9999999" frameborder="0" width="920" height="554" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
-## Recommended minimum hardware configuration of master nodes:
+### Recommended minimum hardware configuration of master nodes:
 -   at least 4 CPU cores;
 -   at least 8 GB of RAM;
 -   at least 40 GB of disk space for the cluster and etcd data;

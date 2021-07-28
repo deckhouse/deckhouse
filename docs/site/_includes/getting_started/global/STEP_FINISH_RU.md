@@ -83,8 +83,7 @@ Status page
 Настройка CI/CD системы
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/ru/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-и-предоставление-ему-доступа)
-и выделите права ServiceAccount'у, который будет осуществлять деплой в кластер.
+[Создайте](/ru/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-и-предоставление-ему-доступа) и выделите права ServiceAccount'у, который будет осуществлять деплой в кластер.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
 </div>
@@ -191,9 +190,7 @@ Deckhouse поддерживает [множество](/ru/documentation/v1/mod
 Внешняя аутентификация для Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
-Настройте
-[`publishAPI`](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api)
-и создайте `kubeconfig` для внешнего доступа к API в веб интерфейсе `kubeconfig.example.com`.
+Настройте [`publishAPI`](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api) и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
 </div>
 </div>
 
