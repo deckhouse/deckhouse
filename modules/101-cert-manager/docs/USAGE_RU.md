@@ -23,18 +23,18 @@ spec:
   acme:
     config:
     - http01:
-        ingressClass: nginx                  # через какой ingress controller проходить chalenge
+        ingressClass: nginx                  # через какой ingress controller проходить challenge
       domains:
-      - example.com                          # список доменов, для которых проходить chalenge через этот
+      - example.com                          # список доменов, для которых проходить challenge через этот
       - www.example.com                      # ingress controller
     - http01:
         ingressClass: nginx-aws-http
       domains:
-      - admin.example.com                    # проходит chalenge через дополнительный ingress controller
+      - admin.example.com                    # проходит challenge через дополнительный ingress controller
 ```
 
 При этом:
-* создается отдельный Ingress-ресурс на время прохождения chalenge'а (соответственно аутентификация и whitelist основного Ingress не будут мешать),
+* создается отдельный Ingress-ресурс на время прохождения challenge'а (соответственно аутентификация и whitelist основного Ingress не будут мешать),
 * можно заказать один сертификат на несколько Ingress-ресурсов (и он не отвалится при удалении того, в котором была аннотация `tls-acme`),
 * можно заказать сертификат с дополнительными именами (как в примере),
 * можно валидировать разные домены, входящие в один сертификат, через разные Ingress-контроллеры.
@@ -245,12 +245,12 @@ spec:
   acme:
     config:
     - http01:
-        ingressClass: nginx                  # через какой ingress controller проходить chalenge
+        ingressClass: nginx                  # через какой ingress controller проходить challenge
       domains:
-      - example.com                          # список доменов, для которых проходить chalenge через этот
+      - example.com                          # список доменов, для которых проходить challenge через этот
       - www.example.com                      # ingress controller
     - http01:
         ingressClass: nginx-aws-http
       domains:
-      - admin.example.com                    # проходит chalenge через дополнительный ingress controller
+      - admin.example.com                    # проходит challenge через дополнительный ingress controller
 ```
