@@ -1,14 +1,35 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
+# Access cluster Kubernetes API
+Deckhouse have just finished installation process of your cluster. Now you can connect to master via ssh.
+To do, so you need to get master IP either from dhctl logs or from cloud provider web interface/cli tool.
+{% snippetcut %}
+```shell
+ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
+```
+{% endsnippetcut %}
+You can run kubectl on master node from the root user. This is not secure way and we recommend to configure [external access](/en/documentation/v1/modules/150-user-authn/usage.html#external-access-to-the-kubernetes-api) to Kubernetes API later.
+{% snippetcut %}
+```shell
+sudo -i
+kubectl get nodes
+```
+{% endsnippetcut %}
+
+# Access cluster using NGINX Ingress
+[IngressNginxController](/en/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) was created during the installation process of the cluster.
+The only thing left is to configure access to web interfaces of components that are already installed in the cluster (Grafana, Prometheus, Dashboard, etc.).
+LoadBalancer is already created, and you just need to point a DNS domain to it.
+First, you need to connect to your master node as described [previously](#access-cluster-kubernetes-api).
+
 {% if page.platform_type == 'cloud' %}
-Get the IP address of the IP load balancer. Run the following command from the root user:
+Get the IP address of the load balancer. Run the following command from the root user:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}
-```bash
-BALANCER_HOSTNAME=$(kubectl -n d8-ingress-nginx get svc -l app=controller,name=nginx \
--o=go-template='{{ (index (index .items 0).status.loadBalancer.ingress 0).hostname }}') ;\
+```shell
+BALANCER_HOSTNAME=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
 echo "$BALANCER_HOSTNAME"
 ```
 {% endraw %}
@@ -16,9 +37,8 @@ echo "$BALANCER_HOSTNAME"
 {% else %}
 {% snippetcut %}
 {% raw %}
-```bash
-BALANCER_IP=$(kubectl -n d8-ingress-nginx get svc -l app=controller,name=nginx \
--o=go-template='{{ (index (index .items 0).status.loadBalancer.ingress 0).ip }}') ;\
+```shell
+BALANCER_IP=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip')
 echo "$BALANCER_IP"
 ```
 {% endraw %}
@@ -26,16 +46,16 @@ echo "$BALANCER_IP"
 {% endif %}
 {% endif %}
 
-Point a DNS domain for Deckhouse services you specified in the "[Cluster Installation](./step3.html)" step in one of the following ways:
+Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" step to Deckhouse web interfaces in one of the following ways:
 <div markdown="1">
-<ul><li><p>If you have the DNS server and you can add a DNS records, then we recommend using the following option — add
-{%- if page.platform_code == 'aws' %} CNAME wildcard record for the <code>*.example.com</code> name and the hostname of the load balancer (<code>BALANCER_HOSTNAME</code>)
-{%- else %} wildcard record for the <code>*.example.com</code> and the IP of the load balancer (<code>BALANCER_IP</code>)
+<ul><li><p>If you have the DNS server and you can add a DNS records, then add
+{%- if page.platform_code == 'aws' %} wildcard CNAME record for domain <code>*.example.com</code> containing the hostname of load balancer (<code>BALANCER_HOSTNAME</code>)
+{%- else %} wildcard A record for domain <code>*.example.com</code> containing the IP of load balancer (<code>BALANCER_IP</code>)
 {%- endif -%}
-, you've got higher.</p></li>
-  <li><p>If you don't have a DNS server and want to test Deckhouse services, add static records of matching the names of specific services to the IP address of the load balancer in the file <code>/etc/hosts</code> for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
+, you've discovered previously.</p></li>
+  <li><p>If you don't have a DNS server, add static records to the file <code>/etc/hosts</code> on your PC (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
 {% if page.platform_code == 'aws' %}
-    <p>You can determine the IP address of the load balancer using the following command (in the cluster):</p>
+    <p>You can determine the IP address of the AWS load balancer using the following command (in the cluster):</p>
 
 <div markdown="1">
 {% snippetcut %}
@@ -46,7 +66,7 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
 </div>
 {% endif %}
 
-    <p>To add records to the <code>/etc/hosts</code> file locally, for example, follow these steps:</p>
+    <p>To add records to the <code>/etc/hosts</code> file locally, follow these steps:</p>
 
   <ul><li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address you got:</p>
 {% snippetcut %}
