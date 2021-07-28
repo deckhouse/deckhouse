@@ -70,7 +70,7 @@ Notes:
 The `-v "$PWD/dhctl-tmp:/tmp/dhctl"` parameter enables saving the state of the Terraform installer to a temporary directory on the startup host. It allows the installation to continue correctly in case of a failure of the installer's container.
 </div>
 </li>
-<li><p>If any problems {% if page.platform_type="cloud" %}on the cloud provider side {% endif %}occur, you can stop the process of installation using the following command (the configuration file should be the same you’ve used to initiate the installation):</p>
+<li><p>If any problems {% if page.platform_type="cloud" %}on the cloud provider side {% endif %}occur, you can cancel the process of installation and remove all created objects using the following command (the configuration file should be the same you’ve used to initiate the installation):</p>
 <div markdown="0">
 {% snippetcut %}
 ```shell

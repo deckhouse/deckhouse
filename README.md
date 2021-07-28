@@ -1,4 +1,4 @@
-[Deckhouse Platform](https://deckhouse.io/) is an operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all necessary addons to provide observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
+[Deckhouse](https://deckhouse.io/) is a platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all necessary addons to provide observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
 
 # Main features
 - NoOps: system software on the nodes, Kubernetes core software, Kubernetes platform components are automatically managed.
@@ -21,7 +21,7 @@ Deckhouse Platform follows the upstream version of Kubernetes, building all its 
 
 # Current status
 
-Deckhouse Platform has a vast history of being used internally in Flant and is ready for production. Its beta testing started in May'21 when the first public demo tokens were issued. By the end of Jun'21, it was tested by 300+ engineers, and its source code went public via GitHub.
+Deckhouse Platform has a vast history of being used internally in Flant and is ready for production. Its beta testing started in May'21 when the first public demo tokens were issued. By the end of Jun'21, it was tested by 300+ engineers, and its source code went public via GitHub. The formal public announcement [was made](https://blog.flant.com/deckhouse-kubernetes-platform/) in the end of Jul'21.
 
 Deckhouse Platform CE is now freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/). Please, follow our [getting started](https://deckhouse.io/en/gs/) instructions to begin your journey with Deckhouse Platform.
 

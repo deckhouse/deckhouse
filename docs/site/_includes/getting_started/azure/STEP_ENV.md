@@ -4,7 +4,7 @@ Below, we will provide a brief overview of the necessary actions.
 
 Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) and perform a `login`.
 
-Export the environment variable by substituting the Amazon AWS subscription ID instead of the `my-subscription-id`:
+Export the environment variable by substituting the subscription ID instead of the `my-subscription-id`:
 {% snippetcut %}
 ```shell
 export SUBSCRIPTION_ID="my-subscription-id"

@@ -9,7 +9,13 @@
 
 Now that you have installed and properly configured Deckhouse, let's look at what you can do with it.
 
-By default, the [Dex](https://dexidp.io/) is used for accessing all the components. The default username is `admin@example.com` and the default password is `<GENERATED_PASSWORD>`.
+By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
+
+Here are credentials **generated** in the previous steps:
+- Username — `admin@example.com`
+- Password — `<GENERATED_PASSWORD>`
+
+Use them to access the web interface of the Deckhouse components.
 </div>
 
 <section class="cards-blocks">

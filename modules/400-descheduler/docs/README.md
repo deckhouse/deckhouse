@@ -1,5 +1,5 @@
 ---
-title: "Модуль descheduler"
+title: "The descheduler module"
 ---
 
 ## Description
