@@ -6,4 +6,9 @@ Please also note, it's just a brief, rough overview. The actual actions and comm
 
 <iframe src="https://docs.google.com/presentation/d/e/2PACX-1vQqtuPafgQiSpFdLwEmTArrednxROzVUQGAXUYCP3j1asMSkbVD7Xw5oKzuAfas6Eha6ZwPMLdks_dR/embed?start=false&loop=true&delayms=999999" frameborder="0" width="920" height="554" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
+<p class="text text_alt" style="color: #2A5EFF">
+  <img src="/images/icons/arrow-up.svg" alt="" style="width: 25px;margin-left: 59px;position: relative;top: -2px;">
+  Control presentation
+</p>
+
 To start the process of installation of your Kubernetes cluster, please click the "Next" button below.

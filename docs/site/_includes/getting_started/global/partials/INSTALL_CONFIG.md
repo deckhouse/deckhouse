@@ -12,7 +12,7 @@ The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enter
 - <span class="mustChange">highlighted</span> parameters you *must* define.
 - <span class="mightChange">parameters</span> you might want to change.
 
-> The other available cloud provider related options are described in the [documentation](https://early.deckhouse.io/en/documentation/v1/kubernetes.html).
+> The other available cloud provider related options are described in the [documentation](https://deckhouse.io/en/documentation/v1/kubernetes.html).
 >
 > To learn more about the Deckhouse Platform release channels, please see the [relevant documentation](/en/documentation/v1/deckhouse-release-channels.html).
 

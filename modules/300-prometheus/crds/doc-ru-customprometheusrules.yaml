@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Ресурс хранения `PrometheusRule`.  [Подробнее...](https://early.deckhouse.io/ru/documentation/v1/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
+            Ресурс хранения `PrometheusRule`.  [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/300-prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
           properties:
             spec:
               properties:

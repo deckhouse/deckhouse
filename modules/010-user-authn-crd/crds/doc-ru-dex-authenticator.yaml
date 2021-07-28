@@ -87,7 +87,7 @@ spec:
                   description: |
                     Определяет `nodeSelector` для подов `dex-authenticator`.
 
-                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                   type: object
@@ -95,7 +95,7 @@ spec:
                   description: |
                      Определяет `tolerations` для подов `dex-authenticator`.
 
-                     Если ничего не указано или указано `false` — будет [использоваться автоматика](https://early.deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                     Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                      **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:

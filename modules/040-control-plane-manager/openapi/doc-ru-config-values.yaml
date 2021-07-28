@@ -23,7 +23,7 @@ properties:
           * *hostIP*
       authn:
         description: |
-          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://early.deckhouse.io/ru/documentation/v1/modules/modules/150-user-authn/)
+          Опциональные параметры аутентификации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authn`](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/)
         properties:
           oidcIssuerURL:
             description: |
@@ -36,7 +36,7 @@ properties:
               Сетевой адрес OIDC-провайдера.
       authz:
         description: |
-          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://early.deckhouse.io/ru/documentation/v1/modules/modules/140-user-authz/)
+          Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/)
         properties:
           webhookURL:
             description: |

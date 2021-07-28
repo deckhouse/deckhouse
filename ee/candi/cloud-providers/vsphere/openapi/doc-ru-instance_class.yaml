@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Параметры группы vSphere VirtualMachines, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
+            Параметры группы vSphere VirtualMachines, которые будeт использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.io/ru/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           required:
