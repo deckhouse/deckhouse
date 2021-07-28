@@ -16,7 +16,7 @@ spec:
   # [<en>] type of the instance
   # [<ru>] тип используемого инстанса
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
 # [<en>] version of the Deckhouse API
@@ -29,7 +29,7 @@ kind: NodeGroup
 # [<ru>] данные, которые помогают однозначно идентифицировать объект
 metadata:
   # [<en>] node group name
-  # [<ru>] имя группы нод
+  # [<ru>] имя группы узлов
   name: worker
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -92,5 +92,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

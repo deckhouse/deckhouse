@@ -26,13 +26,13 @@ metadata:
   name: system
 spec:
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   cores: 4
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   memory: 8192
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskSizeGb: 30
 ---
 apiVersion: deckhouse.io/v1
@@ -62,7 +62,7 @@ kind: YandexInstanceClass
 metadata:
   name: frontend
 # [<en>] you might consider changing this
-# [<ru>] возможно захотите изменить
+# [<ru>] возможно, захотите изменить
 spec:
   cores: 2
   memory: 4096
@@ -91,7 +91,7 @@ kind: YandexInstanceClass
 metadata:
   name: worker
 # [<en>] you might consider changing this
-# [<ru>] возможно захотите изменить
+# [<ru>] возможно, захотите изменить
 spec:
   cores: 4
   memory: 8192
@@ -118,5 +118,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

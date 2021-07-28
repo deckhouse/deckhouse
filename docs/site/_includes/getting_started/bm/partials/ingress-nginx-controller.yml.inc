@@ -17,9 +17,9 @@ spec:
     httpPort: 80
     httpsPort: 443
   # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает на каких нодах будет находится компонент
+  # [<ru>] описывает, на каких узлах будет находиться компонент
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   nodeSelector:
     node-role.kubernetes.io/master: ""
   tolerations:

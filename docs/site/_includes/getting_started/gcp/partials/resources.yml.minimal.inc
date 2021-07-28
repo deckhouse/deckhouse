@@ -1,7 +1,7 @@
 ---
 # [<en>] section containing the parameters of instance class for worker nodes
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры инстанс-класса для нод c компонентами обеспечивающими рабочую нагрузку
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: GCPInstanceClass
@@ -14,7 +14,7 @@ spec:
   # [<en>] Machine type in use for this instance class
   # [<ru>] используемый Machine type для данного инстанс-класса
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   machineType: n2-standard-4
 ---
 apiVersion: deckhouse.io/v1
@@ -33,7 +33,7 @@ spec:
     # [<ru>] максимальное количество инстансов в зоне
     maxPerZone: 1
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     zones:
     - europe-west3-a
   disruptions:
@@ -61,7 +61,7 @@ spec:
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer
   # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает на каких нодах будет находится компонент
+  # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.deckhouse.io/worker: ""
 ---
@@ -80,5 +80,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

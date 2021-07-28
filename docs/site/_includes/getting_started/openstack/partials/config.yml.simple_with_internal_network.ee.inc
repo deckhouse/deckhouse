@@ -93,11 +93,11 @@ simpleWithInternalNetwork:
 provider:
   authURL: *!CHANGE_MYACCESSKEY*
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   domainName: users
   password: *!CHANGE_MYACCESSKEY*
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   region: RegionOne
   tenantID: *!CHANGE_TENANT_ID*
   username: *!CHANGE_TENANT_ID*
@@ -117,16 +117,16 @@ masterNodeGroup:
     # [<en>] flavor in use
     # [<ru>] используемый flavor
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     flavorName: Standard-2-8-50
     # [<en>] VM image in use
     # [<ru>] используемый образ виртуальной машины
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     imageName: ubuntu-18-04-cloud-amd64
     # [<en>] disk size for the root FS
     # [<ru>] размер диска для корневой ФС
     rootDiskSize: 40
 # [<en>] ssh public key for access to nodes
-# [<ru>] публичный ключ ssh для доступа к нодам
+# [<ru>] публичный ключ ssh для доступа к узлам
 sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>

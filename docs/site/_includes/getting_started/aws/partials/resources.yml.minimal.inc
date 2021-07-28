@@ -1,5 +1,5 @@
 # [<en>] section containing the parameters of instance class for worker nodes
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочей ноды
+# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
@@ -12,26 +12,26 @@ spec:
   # [<en>] VM disk size
   # [<ru>] размер диска для виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskSizeGb: 30
   # [<en>] VM disk type to use
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskType: gp2
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of worker node group
-# [<ru>] секция, описывающая параметры нод-группы worker
+# [<ru>] секция, описывающая параметры группы узлов worker
 # [<en>] version of the Deckhouse API
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   # [<en>] name of node group
-  # [<ru>] имя нод-группы
+  # [<ru>] имя группы узлов
   name: worker
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -51,7 +51,7 @@ spec:
     # [<en>] list of availability zones to create instances in
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     zones:
       - eu-central-1a
   nodeTemplate:
@@ -84,7 +84,7 @@ spec:
       # [<ru>] использовать Network Load Balancer для сервиса Ingress контроллера
       service.beta.kubernetes.io/aws-load-balancer-type: nlb
   # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает на каких нодах будет находится компонент
+  # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.deckhouse.io/worker: ""
 ---
@@ -103,5 +103,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

@@ -79,7 +79,7 @@ provider:
   # [<en>] cluster region
   # [<ru>] регион привязки кластера
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   location: westeurope
 # [<en>] parameters of the master node group
 # [<ru>] параметры группы master-узлов

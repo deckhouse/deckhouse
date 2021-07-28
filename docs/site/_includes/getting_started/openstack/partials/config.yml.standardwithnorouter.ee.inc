@@ -96,12 +96,12 @@ masterNodeGroup:
     # [<en>] flavor in use
     # [<ru>] используемый flavor
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     flavorName: Standard-2-4-50
     # [<en>] VM image in use
     # [<ru>] используемый образ виртуальной машины
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     imageName: ubuntu-18-04-cloud-amd64
     # [<en>] disk size for the root FS
     # [<ru>] размер диска для корневой ФС

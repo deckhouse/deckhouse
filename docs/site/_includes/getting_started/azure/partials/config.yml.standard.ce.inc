@@ -88,12 +88,12 @@ masterNodeGroup:
     # [<en>] type of the instance
     # [<ru>] тип используемого инстанса
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     machineSize: Standard_D4ds_v4
     # [<en>] Azure image URN
     # [<ru>] URN образа виртуальной машины в Azure
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
     # [<en>] order static public IP
     # [<ru>] заказать статический публичный IP
@@ -114,5 +114,5 @@ provider:
   # [<en>] cluster region
   # [<ru>] регион привязки кластера
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   location: westeurope

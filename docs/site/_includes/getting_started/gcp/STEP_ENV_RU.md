@@ -1,4 +1,4 @@
-Чтобы Deckhouse Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-gcp/environment.html). Здесь мы представим краткую последовательность необходимых действий:
+Чтобы Deckhouse Platform смогла управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-gcp/environment.html). Здесь мы представим краткую последовательность необходимых действий:
 
 > Список необходимых ролей:
 > - `roles/compute.admin`

@@ -1,4 +1,4 @@
-Чтобы Deckhouse Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-azure/environment.html).
+Чтобы Deckhouse Platform смогла управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/ru/documentation/v1/modules/030-cloud-provider-azure/environment.html).
 
 Далее представлена краткая последовательность действий, которую необходимо выполнить с помощью консольной утилиты Azure CLI.
 

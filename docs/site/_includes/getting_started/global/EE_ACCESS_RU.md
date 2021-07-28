@@ -1,6 +1,6 @@
 **Введите лицензионный ключ доступа Deckhouse Platform Enterprise Edition**
 
-[Запросить](javascript:raOpen()) демо-доступ к Deckhouse Platform Enterprise Edition.
+[Запросить](javascript:raOpen()) бесплатный 30-дневный демо-доступ к Deckhouse Platform Enterprise Edition.
 
 <div class="form" style="width: 500px;">
   <div class="form__row">

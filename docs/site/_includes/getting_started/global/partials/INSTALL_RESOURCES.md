@@ -5,7 +5,7 @@
 {% endif %}
 
 The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
-- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type etc...){% else %} access parameters{% endif %}, and the initial cluster parameters.
+- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
 - `resources.yml` — вescription of the resources that must be installed after the installation (nodes description, ingress controller description, etc).
 
 **Please pay attention to**:
@@ -111,6 +111,6 @@ dhctl bootstrap-phase abort --config=/config.yml
 
 After the installation is complete, you will be returned to the command line.
 
-Almost everything is ready for a high-grade Deckhouse Platform work!
+Almost everything is ready for a fully-fledged Deckhouse Platform to work!
 
 In order to use any Deckhouse Platform module, you need to add nodes to the cluster.

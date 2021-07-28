@@ -20,7 +20,7 @@ $(document).ready(function() {
 function config_highlight() {
     let matchMustChange = '!CHANGE_';
     let matchMightChangeEN = "# you might consider changing this";
-    let matchMightChangeRU = "# возможно захотите изменить";
+    let matchMightChangeRU = "# возможно, захотите изменить";
 
     $('code span.c1').filter(function () {
         return (this.innerText === matchMightChangeEN) || (this.innerText === matchMightChangeRU);
