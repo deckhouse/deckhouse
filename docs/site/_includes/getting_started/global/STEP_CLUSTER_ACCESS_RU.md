@@ -1,14 +1,35 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
+# Доступ к кластеру через Kubernetes API
+Deckhouse только что завершил процесс установки вашего кластера. Теперь вы можете подключиться к мастер-узлу, используя ssh.
+Для этого необходимо получить IP-адрес мастера либо из логов dhctl, либо из web интерфейса/cli утилиты облачного провайдера.
+{% snippetcut %}
+```shell
+ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
+```
+{% endsnippetcut %}
+Вы можете запускать kubectl на мастере от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api) к Kubernetes API позже.
+{% snippetcut %}
+```shell
+sudo -i
+kubectl get nodes
+```
+{% endsnippetcut %}
+
+# Доступ к кластеру через NGINX Ingress
+[IngressNginxController](/en/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
+Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
+LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.
+В первую очередь необходимо подключиться к мастер-узлу, как это описано [выше](#access-cluster-kubernetes-api).
+
 {% if page.platform_type == 'cloud' %}
-Получите адрес балансировщика. Для этого в кластере от пользователя root выполните команду:
+Получите IP адрес балансировщика. Для этого в кластере от пользователя root выполните команду:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}
-```bash
-BALANCER_HOSTNAME=$(kubectl -n d8-ingress-nginx get svc -l app=controller,name=nginx \
--o=go-template='{{ (index (index .items 0).status.loadBalancer.ingress 0).hostname }}') ;\
+```shell
+BALANCER_HOSTNAME=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname')
 echo "$BALANCER_HOSTNAME"
 ```
 {% endraw %}
@@ -16,9 +37,8 @@ echo "$BALANCER_HOSTNAME"
 {% else %}
 {% snippetcut %}
 {% raw %}
-```bash
-BALANCER_IP=$(kubectl -n d8-ingress-nginx get svc -l app=controller,name=nginx \
--o=go-template='{{ (index (index .items 0).status.loadBalancer.ingress 0).ip }}') ;\
+```shell
+BALANCER_IP=$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip')
 echo "$BALANCER_IP"
 ```
 {% endraw %}
@@ -26,14 +46,14 @@ echo "$BALANCER_IP"
 {% endif %}
 {% endif %}
 
-Подключите домен для сервисов Deckhouse, который вы указали на шаге «[Установка кластера](./step3.html)», одним из следующих способов:
+Настройте домен для сервисов Deckhouse, который вы указали на шаге «[Установка кластера](./step3.html)», одним из следующих способов:
 <div markdown="1">
-<ul><li><p>Если у вас есть возможность добавить DNS-запись используя DNS-сервер, то мы рекомендуем воспользоваться следующим вариантом — добавьте
-{%- if page.platform_code == 'aws' %} CNAME wildcard-запись для <code>*.example.com</code> и адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
-{%- else %} wildcard-запись для <code>*.example.com</code> и IP-адреса балансировщика (<code>BALANCER_IP</code>)
+<ul><li><p>Если у вас есть возможность добавить DNS-запись используя DNS-сервер, то мы рекомендуем добавить
+{%- if page.platform_code == 'aws' %} wildcard CNAME-запись для <code>*.example.com</code> со значением адреса балансировщика (<code>BALANCER_HOSTNAME</code>)
+{%- else %} wildcard A-запись для <code>*.example.com</code> со значением IP-адреса балансировщика (<code>BALANCER_IP</code>)
 {%- endif -%}
   , который вы получили выше.</p></li>
-<li><p>Если вы хотите протестировать работу кластера, но не имеете под управлением DNS-сервер, добавьте статические записи соответствия имен конкретных сервисов IP-адресу балансировщика в файл <code>/etc/hosts</code> для Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows).</p>
+<li><p>Если вы не имеете под управлением DNS-сервер, добавьте статические записи в файл <code>/etc/hosts</code> для Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows).</p>
 {% if page.platform_code == 'aws' %}
   <p>Определить IP-адрес балансировщика можно при помощи следующей команды (также выполняемой в кластере):</p>
 
@@ -55,7 +75,7 @@ export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
 ```
 {% endsnippetcut %}
 </li>
-  <li><p>Добавьте DNS-записи для сервисов Deckhouse:</p>
+  <li><p>Добавьте DNS-записи для веб-интерфейсов Deckhouse:</p>
 {% snippetcut selector="example-hosts" %}
 ```bash
 sudo -E bash -c "cat <<EOF >> /etc/hosts
