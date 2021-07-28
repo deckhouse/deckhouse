@@ -4,7 +4,7 @@
 
 Установите [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) и выполните `login`.
 
-Экспортируйте переменную окружения, подставив вместо значения `my-subscription-id` идентификатор подписки Amazon AWS:
+Экспортируйте переменную окружения, подставив вместо значения `my-subscription-id` идентификатор подписки:
 {% snippetcut %}
 ```shell
 export SUBSCRIPTION_ID="my-subscription-id"

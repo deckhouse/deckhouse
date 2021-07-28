@@ -11,7 +11,7 @@ kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/
 ```
 {% endsnippetcut %}
 </li>
-<li>Если вам требуются дополнительные узлы, добавьте их в кластер согласно <a href="/ru/documentation/v1/modules/040-node-manager/faq.html#%D0%BA%D0%B0%D0%BA-%D0%B0%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8-%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C-%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%BD%D1%8B%D0%B9-%D1%83%D0%B7%D0%B5%D0%BB-%D0%B2-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80>документации</a> модуля управления узлами.
+<li>Если вам требуются дополнительные узлы, добавьте их в кластер согласно <a href="/ru/documentation/v1/modules/040-node-manager/faq.html##как-автоматически-добавить-статичный-узел-в-кластер">документации</a> модуля управления узлами.
 </li></ul>
 
 После — останется ещё три действия.
@@ -28,7 +28,7 @@ kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/
 <li>Создать DNS-записи для организации доступа в веб-интерфейсы кластера:
   <ul><li>Выясните публичный адрес узла, на котором работает Ingress-контроллер в вашем случае.</li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер, то мы рекомендуем добавить wildcard-запись для <code>*.example.com</code> и публичного IP-адреса.</li>
-  <li>Если вы хотите протестировать работу кластера, но не имеете под управлением DNS-сервер, добавьте статические записи соответствия имен конкретных сервисов IP-адресу узла, на котором работает Ingress-контроллер в файл /etc/hosts для Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows):
+  <li>Если вы хотите протестировать работу кластера, но не имеете под управлением DNS-сервер, добавьте статические записи соответствия имен конкретных сервисов IP-адресу узла, на котором работает Ingress-контроллер в файл <code>/etc/hosts</code> для Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows):
 {% snippetcut selector="example-hosts" %}
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
