@@ -11,7 +11,7 @@ kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/
 ```
 {% endsnippetcut %}
 </li>
-<li>If you need additional nodes, add them to the cluster according to [the documentation](/en/documentation/v1/modules/040-node-manager/faq.html#how-do-i-automatically-add-a-static-node-to-a-cluster) of the node-manager module.
+<li>If you need additional nodes, add them to the cluster according to <a href="/en/documentation/v1/modules/040-node-manager/faq.html#how-do-i-automatically-add-a-static-node-to-a-cluster">the documentation</a>) of the node-manager module.
 </li></ul>
 
 After that, there will be three more actions.
@@ -28,7 +28,7 @@ After that, there will be three more actions.
 <li>Create DNS records to organize access to the cluster web-interfaces:
   <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
   <li>If you can add a DNS record using the DNS server, we recommend adding a wildcard record for <code>*.example.com</code> and the public IP.</li>
-  <li>If you want to test the cluster, but do not have a DNS server under control, add static entries that match the names of specific services to the public IP to the /etc/hosts file for Linux (%SystemRoot%\system32\drivers\etc\hosts for Windows):
+  <li>If you want to test the cluster, but do not have a DNS server under control, add static entries that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):
 {% snippetcut selector="example-hosts" %}
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"

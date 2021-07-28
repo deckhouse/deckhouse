@@ -2,7 +2,7 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
 {% if page.platform_type == 'cloud' %}
-Get the IP-address of the IP load balancer. Run the following command from the root user:
+Get the IP address of the IP load balancer. Run the following command from the root user:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}
@@ -26,7 +26,7 @@ echo "$BALANCER_IP"
 {% endif %}
 {% endif %}
 
-Connect a DNS domain for Deckhouse services you specified in the ["Cluster Installation"](./step3.html) step in one of the following ways:
+Point a DNS domain for Deckhouse services you specified in the "[Cluster Installation](./step3.html)" step in one of the following ways:
 <div markdown="1">
 <ul><li><p>If you have the DNS server and you can add a DNS records, then we recommend using the following option — add
 {%- if page.platform_code == 'aws' %} CNAME wildcard record for the <code>*.example.com</code> name and the hostname of the load balancer (<code>BALANCER_HOSTNAME</code>)
@@ -46,16 +46,16 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
 </div>
 {% endif %}
 
-    <p>To add records to the `/etc/hosts` file locally, for example, follow these steps:</p>
+    <p>To add records to the <code>/etc/hosts</code> file locally, for example, follow these steps:</p>
 
-  <ul><li><p>Export the BALANCER_IP variable by specifying IP address you got:</p>
+  <ul><li><p>Export the <code>BALANCER_IP</code> variable by specifying the IP address you got:</p>
 {% snippetcut %}
 ```bash
 export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
 ```
 {% endsnippetcut %}
     </li>
-  <li><p>Add records for the Deckhouse services:</p>
+  <li><p>Add DNS records for the Deckhouse services:</p>
 {% snippetcut selector="example-hosts" %}
 ```bash
 sudo -E bash -c "cat <<EOF >> /etc/hosts

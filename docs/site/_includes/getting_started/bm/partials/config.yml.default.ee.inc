@@ -59,7 +59,7 @@ deckhouse:
       # [<en>] flannel backend, available values are VXLAN (if your servers have L3 connectivity) and HostGW (for L2 networks)
       # [<ru>] режим работы flannel, допустимые значения VXLAN (если ваши сервера имеют связность L3) или HostGW (для L2-сетей)
       # [<en>] you might consider changing this
-      # [<ru>] возможно захотите изменить
+      # [<ru>] возможно, захотите изменить
       podNetworkMode: VXLAN
 ---
 # [<en>] section with the parameters of the bare metal cluster (StaticClusterConfiguration)
@@ -73,6 +73,6 @@ kind: StaticClusterConfiguration
 # [<en>] address space of the cluster's internal network
 # [<ru>] адресное пространство внутренней сети кластера
 # [<en>] you might consider changing this
-# [<ru>] возможно захотите изменить
+# [<ru>] возможно, захотите изменить
 internalNetworkCIDRs:
 - 10.0.4.0/24

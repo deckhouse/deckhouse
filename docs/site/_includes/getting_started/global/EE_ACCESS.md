@@ -1,6 +1,6 @@
 **Enter the Deckhouse Platform Enterprise Edition license key**
 
-[Request](javascript:raOpen()) access to the Deckhouse Platform Enterprise Edition.
+[Request](javascript:raOpen()) 30-day free trial access to the Deckhouse Platform Enterprise Edition.
 
 <div class="form" style="width: 500px;">
   <div class="form__row">

@@ -1,6 +1,6 @@
 # [<en>] section containing the parameters of instance class for system nodes
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры инстанс-класса для нод c системными компонентами
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c системными компонентами
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
@@ -12,26 +12,26 @@ spec:
   # [<en>] VM disk size
   # [<ru>] размер диска для виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskSizeGb: 30
   # [<en>] VM disk type to use
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskType: gp2
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of system node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры нодгруппы system
+# [<ru>] секция, описывающая параметры группы узлов system
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   # [<en>] name of node group
-  # [<ru>] имя нод-группы
+  # [<ru>] имя группы узлов
   name: system
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -51,7 +51,7 @@ spec:
     # [<en>] list of availability zones to create instances in
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     zones:
       - eu-central-1a
       - eu-central-1b
@@ -72,7 +72,7 @@ spec:
 ---
 # [<en>] section containing the parameters of instance class for frontend nodes
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры инстанс-класса для нод c компонентами принимающими трафик
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, принимающими трафик
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
@@ -82,20 +82,20 @@ spec:
   # [<en>] VM disk size
   # [<ru>] размер диска для виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskSizeGb: 30
   # [<en>] VM disk type to use
   # [<ru>] используемый тип диска для виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   diskType: gp2
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   instanceType: c5.large
 ---
 # [<en>] section containing the parameters of frontend node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры нодгруппы frontend
+# [<ru>] секция, описывающая параметры группы узлов frontend
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -121,7 +121,7 @@ spec:
 ---
 # [<en>] section containing the parameters of instance class for worker nodes
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры инстанс-класса для нод c компонентами обеспечивающими рабочую нагрузку
+# [<ru>] секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
@@ -131,18 +131,18 @@ spec:
   diskSizeGb: 30
   diskType: gp2
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   instanceType: c5.xlarge
 ---
 # [<en>] section containing the parameters of worker node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры нодгруппы worker
+# [<ru>] секция, описывающая параметры группы узлов worker
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   # [<en>] name of node group
-  # [<ru>] имя нод-группы
+  # [<ru>] имя группы узлов
   name: worker
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -162,7 +162,7 @@ spec:
     # [<en>] list of availability zones to create instances in
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     zones:
       - eu-central-1a
   nodeTemplate:
@@ -195,7 +195,7 @@ spec:
       # [<ru>] использовать Network Load Balancer для сервиса Ingress контроллера
       service.beta.kubernetes.io/aws-load-balancer-type: nlb
   # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает на каких нодах будет находится компонент
+  # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   # [<en>] maximum replicas count for the controller
@@ -220,5 +220,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

@@ -69,7 +69,7 @@ standard:
   # [<en>] list of static public IP-addresses for `Cloud NAT`
   # [<ru>] список имен публичных статических IP-адресов для `Cloud NAT`
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   cloudNATAddresses: []
 # [<en>] GCP access parameters
 # [<ru>] параметры доступа к облаку GCP
@@ -93,7 +93,7 @@ provider:
   # [<en>] cluster region
   # [<ru>] регион привязки кластера
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   region: europe-west3
 # [<en>] list of labels to attach to cluster resources.
 # [<ru>] список меток ресурсов кластера, используются для идентификации в качестве префиксов ресурсов
@@ -113,12 +113,12 @@ masterNodeGroup:
     # [<en>] type of the instance
     # [<ru>] тип используемого инстанса
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     machineType: n1-standard-4
     # [<en>] Image id
     # [<ru>] используемый образ
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     image: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
     # [<en>] disable public IP assignement for the cluster
     # [<ru>] отключить назначение внешнего IP-адреса для кластера

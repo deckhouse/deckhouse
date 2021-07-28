@@ -38,7 +38,7 @@
 
 Для доступа к Prometheus напрямую: [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/)
 
-[Подробнее](/en/documentation/v1/modules/300-prometheus/) о модуле `monitoring`.
+[Подробнее](/ru/documentation/v1/modules/300-prometheus/) о модуле `monitoring`.
 </div>
 </div>
 
@@ -78,7 +78,7 @@ Status page
 Настройка CI/CD системы
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/en/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-and-granting-it-access)
+[Создайте](/ru/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-и-предоставление-ему-доступа)
 и выделите права ServiceAccount'у, который будет осуществлять деплой в кластер.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
@@ -92,7 +92,7 @@ Status page
 <div class="cards-item__text" markdown="1">
 Создайте `Service` и `Ingress` для вашего приложения.
 
-[Подробнее](/en/documentation/v1/modules/402-ingress-nginx/) о возможностях `ingress-nginx`
+[Подробнее](/ru/documentation/v1/modules/402-ingress-nginx/) о возможностях `ingress-nginx`
 модуля.
 </div>
 </div>
@@ -105,7 +105,7 @@ Status page
 Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
 Service'у.
 
-[Подробнее](/en/documentation/v1/modules/340-monitoring-custom/) в модуле `monitoring-custom`.
+[Подробнее](/ru/documentation/v1/modules/340-monitoring-custom/) в модуле `monitoring-custom`.
 </div>
 </div>
 
@@ -129,13 +129,13 @@ Service'у.
 {% if page.platform_type == 'cloud' %}
 При создании кластера были созданы разные группы узлов. Чтобы увидеть их в кластере, выполните команду `kubectl get
 nodegroups`. Подробнее об этом в
-[документации](/en/documentation/v1/modules/040-node-manager/) по модулю управления узлами.
+[документации](/ru/documentation/v1/modules/040-node-manager/) по модулю управления узлами.
 
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minReplicas` и `maxReplicas`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
 Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/ru/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | downcase }}/cr.html) и
-[NodeGroup](https://early.deckhouse.io/en/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
+[NodeGroup](https://early.deckhouse.io/ru/documentation/v1/modules/040-node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
 # TODO Bare metal!!!
@@ -154,7 +154,7 @@ nodegroups`. Подробнее об этом в
 Внешняя аутентификация
 </h2>
 <div markdown="1">
-Deckhouse поддерживает [множество](/en/documentation/v1/modules/150-user-authn/usage.html)
+Deckhouse поддерживает [множество](/ru/documentation/v1/modules/150-user-authn/usage.html)
 механизмов внешней аутентификации.
 </div>
 <div class="cards-blocks__cards">
@@ -165,7 +165,7 @@ Deckhouse поддерживает [множество](/en/documentation/v1/mod
 </h3>
 <div class="cards-item__text" markdown="1">
 Например, для включения аутентификации через GitHub можно
-[сконфигурировать](/en/documentation/v1/modules/150-user-authn/usage.html) объект
+[сконфигурировать](/ru/documentation/v1/modules/150-user-authn/usage.html) объект
 `DexProvider`. После создания `DexProvider`, при попытке доступа ко всем компонентам Deckhouse (Grafana, Dashboard и
 т.д.) потребуются аутентификации через GitHub
 </div>
@@ -177,7 +177,7 @@ Deckhouse поддерживает [множество](/en/documentation/v1/mod
 </h3>
 <div class="cards-item__text" markdown="1">
 Чтобы включить внешнюю аутентификацию для любого Ingress-ресурса, необходимо создать объект
-[DexAuthenticator](/en/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
+[DexAuthenticator](/ru/documentation/v1/modules/150-user-authn/cr.html#dexauthenticator).
 </div>
 </div>
 
@@ -187,7 +187,7 @@ Deckhouse поддерживает [множество](/en/documentation/v1/mod
 </h3>
 <div class="cards-item__text" markdown="1">
 Настройте
-[`publishAPI`](/en/documentation/v1/modules/150-user-authn/usage.html#external-access-to-the-kubernetes-api)
+[`publishAPI`](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api)
 и создайте `kubeconfig` для внешнего доступа к API в веб интерфейсе `kubeconfig.example.com`.
 </div>
 </div>

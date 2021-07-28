@@ -21,7 +21,7 @@ spec:
       # [<ru>] использовать Network Load Balancer для сервиса Ingress контроллера
       service.beta.kubernetes.io/aws-load-balancer-type: nlb
   # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает на каких нодах будет находится компонент
+  # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.kubernetes.io/master: ""
 ---
@@ -40,5 +40,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

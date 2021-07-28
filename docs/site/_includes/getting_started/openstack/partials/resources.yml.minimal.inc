@@ -1,6 +1,6 @@
 # [<en>] section containing the parameters of instance class for worker nodes
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры инстанс-класса для рабочей ноды
+# [<ru>] секция, описывающая параметры инстанс-класса для рабочего узла
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: OpenStackInstanceClass
@@ -12,24 +12,24 @@ spec:
   # [<en>] flavor in use for this instance class
   # [<ru>] используемый flavor для данного инстанс-класса
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   flavorName: Standard-2-4-50
   rootDiskSize: 30
   # [<en>] VM image in use
   # [<ru>] используемый образ виртуальной машины
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   imageName: ubuntu-18-04-cloud-amd64
 ---
 # [<en>] section containing the parameters of worker node group
 # [<en>] version of the Deckhouse API
-# [<ru>] секция, описывающая параметры нодгруппы worker
+# [<ru>] секция, описывающая параметры группы узлов worker
 # [<ru>] используемая версия API Deckhouse
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   # [<en>] name of node group
-  # [<ru>] имя нод-группы
+  # [<ru>] имя группы узлов
   name: worker
 spec:
   nodeType: CloudEphemeral
@@ -50,7 +50,7 @@ spec:
     # [<en>] list of availability zones to create instances in
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     zones:
     - DP1
   disruptions:
@@ -77,7 +77,7 @@ spec:
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer
   # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает на каких нодах будет находится компонент
+  # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
     node-role.deckhouse.io/worker: ""
 ---
@@ -96,5 +96,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

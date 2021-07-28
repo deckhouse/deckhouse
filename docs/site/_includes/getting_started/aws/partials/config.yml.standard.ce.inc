@@ -73,7 +73,7 @@ provider:
   # [<en>] cluster region
   # [<ru>] регион привязки кластера
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   region: eu-central-1
 # [<en>] the "standard" layout parameters
 # [<ru>] параметры архитектуры "standard"
@@ -95,12 +95,12 @@ masterNodeGroup:
     # [<en>] type of the instance
     # [<ru>] тип используемого инстанса
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     instanceType: c5.large
     # [<en>] Amazon Machine Image id
     # [<ru>] id образа виртуальной машины в Amazon
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     ami: ami-0fee04b212b7499e2
 # [<en>] address space of the AWS cloud
 # [<ru>] адресное пространство облака внутри AWS

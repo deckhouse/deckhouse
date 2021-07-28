@@ -107,7 +107,7 @@ masterNodeGroup:
     # [<ru>] Для её получения можете воспользоваться однострочником:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2004-lts")] | sort_by(.created_at)[-1].id'
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     imageID: fd83klic6c8gfgi40urb
 # [<en>] this subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex.Cloud zones
 # [<ru>] данная подсеть будет разделена на три равных части и использована для создания подсетей в трёх зонах Yandex.Cloud

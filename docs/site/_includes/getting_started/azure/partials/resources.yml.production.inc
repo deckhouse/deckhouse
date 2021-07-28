@@ -16,7 +16,7 @@ spec:
   # [<en>] type of the instance
   # [<ru>] тип используемого инстанса
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
 # [<en>] version of the Deckhouse API
@@ -29,7 +29,7 @@ kind: NodeGroup
 # [<ru>] данные, которые помогают однозначно идентифицировать объект
 metadata:
   # [<en>] node group name
-  # [<ru>] имя группы нод
+  # [<ru>] имя группы узлов
   name: worker
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -75,7 +75,7 @@ spec:
   # [<en>] type of the instance
   # [<ru>] тип используемого инстанса
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
 # [<en>] version of the Deckhouse API
@@ -88,7 +88,7 @@ kind: NodeGroup
 # [<ru>] данные, которые помогают однозначно идентифицировать объект
 metadata:
   # [<en>] node group name
-  # [<ru>] имя группы нод
+  # [<ru>] имя группы узлов
   name: system
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -113,7 +113,7 @@ spec:
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     zones: ["1", "2"]
   # [<en>] specification of some of the fields that will be maintained in all nodes of the group
-  # [<ru>] настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды
+  # [<ru>] настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла
   nodeTemplate:
     # [<en>] similar to the standard metadata.labels field
     # [<ru>] аналогично стандартному полю metadata.labels
@@ -149,7 +149,7 @@ spec:
   # [<en>] type of the instance
   # [<ru>] тип используемого инстанса
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   machineSize: Standard_F4
 ---
 # [<en>] version of the Deckhouse API
@@ -162,7 +162,7 @@ kind: NodeGroup
 # [<ru>] данные, которые помогают однозначно идентифицировать объект
 metadata:
   # [<en>] node group name
-  # [<ru>] имя группы нод
+  # [<ru>] имя группы узлов
   name: frontend
 spec:
   # [<en>] parameters for provisioning the cloud-based VMs
@@ -187,7 +187,7 @@ spec:
     # [<ru>] переопределение перечня зон, в которых создаются инстансы
     zones: ["1", "2"]
   # [<en>] specification of some of the fields that will be maintained in all nodes of the group
-  # [<ru>] настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды
+  # [<ru>] настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла
   nodeTemplate:
     # [<en>] similar to the standard metadata.labels field
     # [<ru>] аналогично стандартному полю metadata.labels
@@ -240,5 +240,5 @@ spec:
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>

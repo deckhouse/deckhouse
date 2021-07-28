@@ -84,4 +84,4 @@ dhctl bootstrap-phase abort --config=/config.yml
 
 After the installation is complete, you will be returned to the command line.
 
-Almost everything is ready for a high-grade Deckhouse Platform work!
+Almost everything is ready for a fully-fledged Deckhouse Platform to work!

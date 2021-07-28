@@ -78,12 +78,12 @@ standard:
   # [<ru>] имя сети для внешнего взаимодействия
   externalNetworkName: *!CHANGE_EXT_NET*
   # [<en>] addressing for the internal network of the cluster nodes
-  # [<ru>] адресация для внутренней сети нод кластера
+  # [<ru>] адресация для внутренней сети узлов кластера
   internalNetworkCIDR: 192.168.198.0/24
   # [<en>] a list of recursive DNS addresses of the internal network
   # [<ru>] список адресов рекурсивных DNS внутренней сети
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   internalNetworkDNSServers:
     - 8.8.8.8
     - 8.8.4.4
@@ -93,11 +93,11 @@ standard:
 provider:
   authURL: *!CHANGE_MYACCESSKEY*
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   domainName: users
   password: *!CHANGE_MYACCESSKEY*
   # [<en>] you might consider changing this
-  # [<ru>] возможно захотите изменить
+  # [<ru>] возможно, захотите изменить
   region: RegionOne
   tenantID: *!CHANGE_TENANT_ID*
   username: *!CHANGE_TENANT_ID*
@@ -117,16 +117,16 @@ masterNodeGroup:
     # [<en>] flavor in use
     # [<ru>] используемый flavor
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     flavorName: Standard-2-8-50
     # [<en>] VM image in use
     # [<ru>] используемый образ виртуальной машины
     # [<en>] you might consider changing this
-    # [<ru>] возможно захотите изменить
+    # [<ru>] возможно, захотите изменить
     imageName: ubuntu-18-04-cloud-amd64
     # [<en>] disk size for the root FS
     # [<ru>] размер диска для корневой ФС
     rootDiskSize: 40
 # [<en>] ssh public key for access to nodes
-# [<ru>] публичный ключ ssh для доступа к нодам
+# [<ru>] публичный ключ ssh для доступа к узлам
 sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
