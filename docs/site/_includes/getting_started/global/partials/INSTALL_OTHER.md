@@ -8,7 +8,7 @@ To install the **Deckhouse Platform**, we will use a prebuilt Docker image. It i
 docker login -u license-token -p <LICENSE_TOKEN> registry.deckhouse.io
 docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
-{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
+{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
 {% endsnippetcut %}
 {% else %}
@@ -16,7 +16,7 @@ docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 ```shell
 docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
-{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
+{% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 {% endsnippetcut %}
 {% endif %}

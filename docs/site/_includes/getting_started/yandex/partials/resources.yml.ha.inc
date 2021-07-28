@@ -45,6 +45,23 @@ spec:
     node-role.deckhouse.io/worker: ""
 ---
 apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  # [<ru>] список учётных записей Kubernetes RBAC
+  # [<en>] Kubernetes RBAC accounts list
+  subjects:
+  - kind: User
+    name: admin@example.com
+  # [<ru>] предустановленный шаблон уровня доступа
+  # [<en>] pre-defined access template
+  accessLevel: SuperAdmin
+  # [<ru>] разрешить пользователю делать kubectl port-forward
+  # [<en>] allow user to do kubectl port-forward
+  portForwarding: true
+---
+apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin

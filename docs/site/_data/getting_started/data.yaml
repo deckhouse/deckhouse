@@ -83,7 +83,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -128,7 +128,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -171,7 +171,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -217,7 +217,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -264,7 +264,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -297,8 +297,8 @@ installTypes:
         name: Default
         recommended: true
     pages_title:
-      en: "Deckhouse Platform in Bare metal"
-      ru: "Deckhouse Platform в Bare metal"
+      en: "Deckhouse Platform for bare metal"
+      ru: "Deckhouse Platform на bare metal"
     type: baremetal
     name:
       en: Bare metal
@@ -307,7 +307,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
         template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step3:
         name:
@@ -348,7 +348,7 @@ installTypes:
       step2:
         name:
           ru: Как будет происходить установка?
-          en: What awaits me?
+          en: A brief overview of installation
       step3:
         name:
           ru: Настройка кластера
