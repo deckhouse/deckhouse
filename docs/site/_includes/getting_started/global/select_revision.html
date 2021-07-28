@@ -12,7 +12,8 @@
     {%- for revision in site.data.getting_started.data.global.revisions %}
     {% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
         <a id='tab_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}', 'dhctl-revision', '{{ revision }}');">
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}', 'dhctl-revision', '{{ revision }}');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');" >
         {{ site.data.i18n[revision] }}
         </a>
     {% endfor %}
@@ -24,7 +25,7 @@
 {% for layout in site.data.getting_started.data.installTypes[page.platform_code].layouts %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout[0] %}
-<div id='block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+<div id='block_{{ layout[1].name | downcase | remove: "_" }}_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" {% if layout[1].recommended %}recommended-layout{% endif %} markdown="1">
     {% if page.lang == 'ru' %}
     {% include getting_started/global/partials/INSTALL_CONFIG_RU.md revision=revision layout=layoutCode %}
     {% else %}
@@ -70,17 +71,22 @@ $(document).ready(function() {
   let layout = sessionStorage.getItem('dhctl-layout') ? sessionStorage.getItem('dhctl-layout').toLowerCase(): null;
   let preset = sessionStorage.getItem('dhctl-preset') ? sessionStorage.getItem('dhctl-preset').toLowerCase(): null;
 
-  $('.tabs__content_revision').filter(function () {
-            return (this.id.match('block_'+layout+'_.+') === null);
-        }).removeClass('active');
-
   if (!preset) {
       $('#block_preset_absent').addClass('active');
   }
 
+  if (!layout) {
+      let recommendedLayout = $('[recommended-layout]').first().attr('id');
+      layout = recommendedLayout ?  recommendedLayout.split('_')[1] : null;
+  }
+
+  $('.tabs__content_revision').filter(function () {
+      return (this.id.match('block_' + layout + '_.+') === null);
+  }).removeClass('active');
+
   $('.tabs__btn_revision').filter(function () {
-            return (this.id.match('tab_'+layout+'_.+') === null);
-        }).removeClass('active').css("display","none");
+      return (this.id.match('tab_' + layout + '_.+') === null);
+  }).removeClass('active').css("display", "none");
 
   // Show preset tab
   if ( preset && preset.length > 0 ) {

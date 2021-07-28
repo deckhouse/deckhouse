@@ -12,6 +12,9 @@ $(document).ready(function() {
         $(this).addClass('active');
         $content.addClass('active');
     })
+
+   set_license_token_cookie();
+
 });
 
 function config_highlight() {
@@ -173,4 +176,13 @@ function replace_snippet_password() {
    update_parameter(    'dhctl-user-password', null, '<GENERATED_PASSWORD>',  null ,'[resources-yml]');
    update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>',  null ,'code span.c1');
    update_parameter('dhctl-domain', null, '<GENERATED_PASSWORD>',  null ,'code span.c1');
+}
+
+// Set license-token cookie if it pass in the license-token GET parameter
+function set_license_token_cookie() {
+    let urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('license-token')) {
+        let token = urlParams.get('license-token');
+        $.cookie('license-token', token, {path: '/' });
+    }
 }
