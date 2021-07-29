@@ -4,6 +4,8 @@ properties:
     type: string
     description: |
       The prefix to use when creating instances via the corresponding cloud provider module.
+
+      The default value can be calculated based on the `ClusterConfiguration` struct if the cluster is installed via the Deckhouse installer.
     x-examples:
       - kube
   mcmEmergencyBrake:
