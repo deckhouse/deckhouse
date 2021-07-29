@@ -2,8 +2,7 @@
 title: "Cloud provider — GCP: Layouts"
 ---
 
-## Layouts
-### Standard
+## Standard
 * A separate VPC with [Cloud NAT](https://cloud.google.com/nat/docs/overview) is created for the cluster.
 * Nodes in the cluster do not have public IP addresses.
 * Public IP addresses can be allocated to master and static nodes.
@@ -70,7 +69,7 @@ provider:
     }
 ```
 
-### WithoutNAT
+## WithoutNAT
 * A dedicated VPC is created for the cluster; all cluster nodes have public IP addresses;
 * Peering can be configured between the cluster VPC and other VPCs;
 
@@ -126,71 +125,3 @@ provider:
       "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/k8s-test%40sandbox.iam.gserviceaccount.com"
     }
 ```
-
-## GCPClusterConfiguration
-A particular placement strategy is defined via the `GCPClusterConfiguration` struct:
-* `layout` — the way resources are located in the cloud;
-    * Possible values: `Standard` or `WithoutNAT` (see the description below);
-* `standard` — settings for the `Standard` layout;
-    * `cloudNATAddresses` — a list of public static IP addresses for `Cloud NAT`. [Learn more about CloudNAT](https://cloud.google.com/nat/docs/overview#benefits);
-        * If this parameter is omitted, Deckhouse will use the [automatic NAT IP address allocation](https://cloud.google.com/nat/docs/ports-and-addresses#addresses) depending on the number of instances and the number of reserved ports per instance;
-        * **CAUTION!** By default, 1024 ports are reserved for each node for outbound connections to a single ip:port pair. There are 64512 TCP / UDP ports available for one external IP. If the automatic NAT IP address allocation is used, Cloud NAT automatically adds another external IP address if there are more nodes than there are ports available. Detailed information is available in the [official documentation](https://cloud.google.com/nat/docs/ports-and-addresses).
-* `sshKey` — a public key to access nodes as `user`;
-* `subnetworkCIDR` — a subnet to use for cluster nodes;
-* `peeredVPCs` — a list of GCP VPC networks to peer with the cluster network. The service account must have access to all the VPCs listed. You have to configure the peering connection [manually](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud) if no access is available;
-* `labels` — a list of labels to attach to cluster resources. Npte that you have to re-create all the machines to add new tags if tags were modified in the running cluster. You can learn more about the labels in the [official documentation](https://cloud.google.com/resource-manager/docs/creating-managing-labels);
-    * Format — `key: value`;
-* `masterNodeGroup` — parameters of the master's NodeGroup;
-    * `replicas` — the number of master nodes to create;
-    * `zones` — a list of zones where master nodes can be created;
-    * `instanceClass` — partial contents of the [GCPInstanceClass](cr.html#gcpinstanceclass) fields.  The parameters in **bold** are unique for `GCPClusterConfiguration`. Possible values:
-        * `machineType`
-        * `image`
-        * `diskSizeGb`
-        * `additionalNetworkTags`
-        * `additionalLabels`
-        * **`disableExternalIP`** — this parameter is only available for the `Standard` layout;
-            * It is set to `true` by default. The nodes do not have public addresses and connect to the Internet over `CloudNAT`;
-            * `false` — static public addresses are created for nodes; the same addresses are also used for one-to-one NAT;
-* `nodeGroups` — an array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways). Each NodeGroup has the following parameters:
-    * `name` — the name of the NodeGroup to use for generating node names;
-    * `replicas` — the number of nodes;
-    * `zones` — a list of zones where static nodes can be created;
-    * `instanceClass` — partial contents of the [GCPInstanceClass](cr.html#gcpinstanceclass) fields.  The parameters in **bold** are unique for  `GCPClusterConfiguration`. Possible values:
-        * `machineType`
-        * `image`
-        * `diskSizeGb`
-        * `additionalNetworkTags`
-        * `additionalLabels`
-        * **`disableExternalIP`** — this parameter is only available for the `Standard` layout;
-            * It is set to `true` by default. The nodes do not have public addresses and connect to the Internet over `CloudNAT`;
-            * `false` — static public addresses are created for nodes; the same addresses are also used for one-to-one NAT;
-    * `nodeTemplate` — parameters of Node objects in Kubernetes to add after registering the node;
-        * `labels` — the same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta);
-          * An example:
-            ```yaml
-            labels:
-              environment: production
-              app: warp-drive-ai
-            ```
-        * `annotations` — the same as the `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta);
-          * An example:
-            ```yaml
-            annotations:
-              ai.fleet.com/discombobulate: "true"
-            ```
-        * `taints` — the same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object. **CAUTION!** Only the `effect`, `key`, `values` fields are available;
-          * An example:
-
-            ```yaml
-            taints:
-            - effect: NoExecute
-              key: ship-class
-              value: frigate
-            ```
-* `provider` — parameters for connecting to the GCP API;
-    * `region` — the name of the region where instances will be provisioned;
-    * `serviceAccountJSON` — `service account key` in the JSON format. [Creating a service account](environment.html)
-* `zones` — a limited set of zones in which nodes can be created;
-  * An optional parameter;
-  * Format — an array of strings;

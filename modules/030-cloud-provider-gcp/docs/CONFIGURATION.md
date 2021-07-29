@@ -2,7 +2,7 @@
 title: "Сloud provider — GCP: configuration"
 ---
 
-The module is configured automatically based on the chosen placement strategy (the `GCPClusterConfiguration` custom resource). In most cases, you do not have to configure the module manually.
+The module is configured automatically based on the chosen placement strategy defined in the [GCPClusterConfiguration](cluster_configuration.html) struct. In most cases, you do not have to configure the module manually.
 
 You can configure the number and parameters of provisioning machines in the cloud via the [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) custom resource of the node-manager module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the GCP cloud provider, the instance class is the [`GCPInstanceClass`](cr.html#awsinstanceclass) custom resource that stores specific parameters of the machines.
 

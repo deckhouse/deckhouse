@@ -212,13 +212,16 @@ module Jekyll
         if name != ""
             result.push('<li>')
             attributes_type = ''
-            if attributes.has_key?('type')
-               attributes_type = attributes["type"]
-            elsif attributes.has_key?('x-kubernetes-int-or-string')
-               attributes_type = "x-kubernetes-int-or-string"
+            if attributes.is_a?(Hash)
+              if attributes.has_key?('type')
+                 attributes_type = attributes["type"]
+              elsif attributes.has_key?('x-kubernetes-int-or-string')
+                 attributes_type = "x-kubernetes-int-or-string"
+              end
             end
+
             if attributes_type != ''
-                if attributes.has_key?("items")
+                if attributes.is_a?(Hash) and attributes.has_key?("items")
                     result.push(format_key_name(name)+ ' (<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)')
                 else
                     result.push(format_key_name(name)+ ' (<i>' +  format_type(attributes_type, nil) + '</i>)')
@@ -228,15 +231,15 @@ module Jekyll
             end
         end
 
-        result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage))
+        result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
 
-        if attributes.has_key?("properties")
+        if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
                 result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key)))
             end
             result.push('</ul>')
-        elsif attributes.has_key?('items')
+        elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
             if get_hash_value(attributes,'items','properties')
                 # object items
                 result.push('<ul>')
@@ -250,6 +253,7 @@ module Jekyll
         else
             # result.push("no properties for #{name}")
         end
+
         if name != ""
             result.push('</li>')
         end
@@ -447,6 +451,23 @@ module Jekyll
                 result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage ))
             end
             result.push('</ul>')
+        end
+        result.push('</div>')
+        result.join
+    end
+
+    def format_cluster_configuration(input)
+        converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
+        result = []
+        result.push('<div markdown="0">')
+        result.push(converter.convert('## '+ input["kind"]))
+
+        for i in 0..(input["apiVersions"].length-1)
+          result.push("<p><font size='-1'>Version: " + input["apiVersions"][i]["apiVersion"] + "</font></p>")
+          item=input["apiVersions"][i]["openAPISpec"]
+          item["i18n"]={}
+          item["i18n"]["ru"]=get_hash_value(input,"i18n","ru","apiVersions",i,"openAPISpec")
+          result.push(format_configuration(item))
         end
         result.push('</div>')
         result.join

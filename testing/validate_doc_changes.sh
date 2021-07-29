@@ -43,7 +43,7 @@ function check_doc() {
         return 0
     fi
 
-    docs_pattern="modules/[^/]+/docs/(CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
+    docs_pattern="modules/[^/]+/docs/(CLUSTER_CONFIGURATION|CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE)(_RU)?.md"
 
     if [[ "$filename" =~ /docs/[^/]+.md ]] && ! [[ "$filename" =~ $docs_pattern ]]; then
         echo "ERROR: $filename is not allowed. You can place it in the 'internal' folder for example."
