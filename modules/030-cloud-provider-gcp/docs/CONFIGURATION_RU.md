@@ -2,7 +2,7 @@
 title: "Сloud provider — GCP: настройки"
 ---
 
-Модуль настраивается автоматически исходя из выбранной схемы размещения (custom resource `GCPClusterConfiguration`). В большинстве случаев нет необходимости ручной конфигурации модуля.
+Модуль настраивается автоматически исходя из выбранной схемы размещения определяемой в параметрах структуры [GCPClusterConfiguration](cluster_configuration.html). В большинстве случаев нет необходимости ручной конфигурации модуля.
 
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/040-node-manager/cr.html#nodegroup) модуля node-manager, в котором также указывается название используемого для этой группы узлов instance-класса (параметр `cloudInstances.classReference` NodeGroup).  Instance-класс для cloud-провайдера GCP — это custom resource [`GCPInstanceClass`](cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 

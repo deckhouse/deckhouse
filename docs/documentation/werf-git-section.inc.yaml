@@ -117,6 +117,14 @@
   to: /src/modules/030-cloud-provider-gcp/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/gcp/openapi
+  to: /src/modules/030-cloud-provider-gcp/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/yandex/openapi

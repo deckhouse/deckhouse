@@ -111,6 +111,10 @@ entries:
                         ru: Схемы размещения
                         en: Layouts
                       url: /modules/030-cloud-provider-gcp/layouts.html
+                    - title:
+                        ru: Настройка провайдера
+                        en: Provider configuration
+                      url: /modules/030-cloud-provider-gcp/cluster_configuration.html
                 - title:
                     ru: Справка
                     en: Reference
