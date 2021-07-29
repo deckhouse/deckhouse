@@ -14,7 +14,7 @@ name: deckhouse
 Assign the `editor` role to the newly created user:
 {% snippetcut %}
 ```yaml
-yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userID>
 ```
 {% endsnippetcut %}
 

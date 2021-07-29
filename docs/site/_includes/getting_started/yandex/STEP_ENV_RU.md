@@ -14,7 +14,7 @@ name: deckhouse
 Назначьте роль `editor` вновь созданному пользователю для своего облака:
 {% snippetcut %}
 ```yaml
-yc resource-manager folder add-access-binding --id <folderID> --role editor --subject serviceAccount:<userID>
+yc resource-manager folder add-access-binding <foldername> --role editor --subject serviceAccount:<userID>
 ```
 {% endsnippetcut %}
 
