@@ -47,3 +47,15 @@ The release channel stabilization script runs every 10 minutes. It implements th
   - When the script reaches the desired release channel (`Alpha` in our example), Deckhouse will switch to it regardless of the results of the digest comparison.
 
 Since the stabilization script runs continuously, Deckhouse will eventually end up in a state where the tag of its Docker image corresponds to the release channel set.
+
+## How do I run Deckhouse on a particular node?
+Set the `nodeSelector` [parameter](modules/020-deckhouse/configuration.html) of the `deckhouse` module and don't set `tolerations`. The necessary values for the `tolerations` parameter will be set automatically.
+
+You should also avoid using **CloudEphemeral** nodes. Otherwise, a situation may occur when the target node is not in the cluster and node ordering for some reason is impossible.
+
+Here is an example of the module configuration:
+```yaml
+deckhouse: |
+  nodeSelector:
+    node-role.deckhouse.io/deckhouse: ""
+```
