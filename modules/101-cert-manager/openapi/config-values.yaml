@@ -6,22 +6,17 @@ properties:
     additionalProperties:
       type: string
     description: |
-      The same as the pods' `spec.nodeSelector` parameter in Kubernetes;
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter isn't set, then the `{"node-role.deckhouse.io/cert-manager":""}` or
-      `{"node-role.deckhouse.io/system":""}` value is used given that such nodes exist in the cluster.
-      Otherwise, the parameter stays empty.
-
-      You can set it to `false` to avoid adding any nodeSelector.
+      If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     x-examples:
     - { "has-gpu": "true" }
 
   tolerations:
     description: |
-      The same as the pods' `spec.tolerations` parameter in Kubernetes.
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter isn't set, then the `[{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"},{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}]` value is used.
-      You can set it to `false` to avoid adding any tolerations.
+      If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     type: array
     items:
       type: object

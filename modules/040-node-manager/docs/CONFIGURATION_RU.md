@@ -10,6 +10,4 @@ nodeManagerEnabled: "false"
 
 ## Параметры
 
-* `instancePrefix` — префикс, который следует использовать при создании instances в cloud provider.
-  * Опциональный параметр.
-  * Значение по умолчанию может вычисляться из custom resource `ClusterConfiguration`, если кластер был установлен инсталлятором Deckhouse.
+<!-- SCHEMA -->
