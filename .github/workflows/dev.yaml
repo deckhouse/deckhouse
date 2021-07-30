@@ -37,6 +37,7 @@ jobs:
     steps:
       - name: run go generate
         run: |
+          echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
           docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
           git diff --exit-code
 
