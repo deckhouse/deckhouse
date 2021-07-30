@@ -18,7 +18,6 @@ env:
   BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
   BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
 
-
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: FE
@@ -45,7 +44,7 @@ jobs:
         run: |
           echo $DEV_REGISTRY_PATH
 
-          echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=true" >> ${GITHUB_ENV}
+          echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=false" >> ${GITHUB_ENV}
 
           # detect git tag for release
           gitTag=${GITHUB_REF#refs/tags/}
@@ -82,7 +81,6 @@ jobs:
 
       - name: run werf bp for modules
         run: |
-          exit 1
           ./modules_images_werf_github bp
 
   go_generate:
