@@ -27,7 +27,6 @@ cleanup:
   {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
   {{- end }}
   {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
-  {{- $ci_job_token := env "CI_JOB_TOKEN" }}
   {{- $_ := set $ctx "CandiVersionMap" $CandiVersionMap }}
   {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
   {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
@@ -56,7 +55,6 @@ args:
   BASE_PYTHON_ALPINE:  {{ env "BASE_PYTHON_ALPINE" }}
   BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
   BASE_UBUNTU: {{ env "BASE_UBUNTU" }}
-  CI_JOB_TOKEN: {{ env "CI_JOB_TOKEN" }}
 {{- else }}
 {{ tpl .ImageBuildData . }}
 {{- end }}
