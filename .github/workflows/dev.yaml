@@ -41,7 +41,7 @@ jobs:
 
       - name: docker login
         run: |
-          echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST}
+          echo ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD}} | docker login --username="${{ secrets.DECKHOUSE_REGISTRY_READ_USER}}" --password-stdin ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST}}
 
       - name: run go generate
         run: |
