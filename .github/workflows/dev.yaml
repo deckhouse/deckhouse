@@ -28,7 +28,7 @@ env:
   WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
   WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
-  DEV_REGISTRY_PATH: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/${{GITHUB_REPOSITORY}}"
+  DEV_REGISTRY_PATH: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/${{envs.GITHUB_REPOSITORY}}"
 
 jobs:
   # jobs for stage 'build_modules_images' from gitlab
