@@ -18,6 +18,18 @@ env:
   BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
   BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
 
+
+  # Don't forget to update .gitlab-ci-simple.yml if necessary
+  WERF_CHANNEL: "ea"
+  WERF_ENV: FE
+  # We use stapel image from own registry due to docker hub pull amount limitation.
+  # To re-push stapel image from docker hub use command:
+  # `skopeo copy docker://flant/werf-stapel:0.6.1 docker://registry-write.deckhouse.io/flant/werf-stapel:0.6.1`
+  WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
+  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
+  TEST_TIMEOUT: "15m"
+  DEV_REGISTRY_PATH: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/${GITHUB_REPOSITORY}"
+
 jobs:
   # jobs for stage 'build_modules_images' from gitlab
 
@@ -26,9 +38,49 @@ jobs:
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
     steps:
-      - name: stub
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: debug envs
         run: |
-          echo Build Modules Images for FE
+          echo $DEV_REGISTRY_PATH
+
+          echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=true" >> ${GITHUB_ENV}
+
+          # for release
+          gitTag=${GITHUB_REF#refs/tags/}
+          echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
+
+      - name: dev registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2.0
+        with:
+          channel: ea
+
+
+      - name: run werf bp for modules
+        run: |
+          ./modules_images_werf_github bp
 
   go_generate:
     name: Go Generate

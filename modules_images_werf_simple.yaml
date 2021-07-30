@@ -1,0 +1,63 @@
+project: deckhouse-modules-images
+configVersion: 1
+cleanup:
+  keepPolicies:
+  - references:
+      tag: /.*/
+  - references:
+      branch: /.*/
+    imagesPerReference:
+      last: 2
+  - references:
+      branch: master
+    imagesPerReference:
+      last: 10
+
+{{- $Root := . }}
+{{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
+
+# Collect EE and FE images if desired
+{{ $files := .Files.Glob "modules/460-log-shipper/images/*/{Dockerfile,werf.inc.yaml}" }}
+
+{{- range $path, $content := $files  }}
+  {{- $ctx := dict }}
+  {{- if regexMatch "/werf.inc.yaml$" $path }}
+  {{- $_ := set $ctx "ImageInstructionType" "Stapel" }}
+  {{- else }}
+  {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
+  {{- end }}
+  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+  {{- $ci_job_token := env "CI_JOB_TOKEN" }}
+  {{- $_ := set $ctx "CandiVersionMap" $CandiVersionMap }}
+  {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
+  {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
+  {{- $_ := set $ctx "ModuleName" $ImageData._2 }}
+  {{- $_ := set $ctx "ImageName" $ImageData._3 }}
+  {{- $_ := set $ctx "ImageBuildData" $content }}
+  {{- $_ := set $ctx "Files" $Root.Files }}
+  {{- $_ := set $ctx "Env" $Root.Env }}
+---
+{{ include "module_image_template" $ctx  }}
+{{- end }}
+
+{{- define "module_image_template" }}
+{{- if  eq .ImageInstructionType "Dockerfile" }}
+image: {{ .ModuleName }}/{{ .ImageName }}
+context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+dockerfile: Dockerfile
+args:
+  BASE_ALPINE: {{ env "BASE_ALPINE" }}
+  BASE_DEBIAN: {{ env "BASE_DEBIAN" }}
+  BASE_GOLANG_ALPINE: {{ env "BASE_GOLANG_ALPINE" }}
+  BASE_GOLANG_16_ALPINE: {{ env "BASE_GOLANG_16_ALPINE" }}
+  BASE_GOLANG_BUSTER: {{ env "BASE_GOLANG_BUSTER" }}
+  BASE_GOLANG_16_BUSTER: {{ env "BASE_GOLANG_16_BUSTER" }}
+  BASE_NGINX_ALPINE:  {{ env "BASE_NGINX_ALPINE" }}
+  BASE_PYTHON_ALPINE:  {{ env "BASE_PYTHON_ALPINE" }}
+  BASE_SHELL_OPERATOR: {{ env "BASE_SHELL_OPERATOR" }}
+  BASE_UBUNTU: {{ env "BASE_UBUNTU" }}
+  CI_JOB_TOKEN: {{ env "CI_JOB_TOKEN" }}
+{{- else }}
+{{ tpl .ImageBuildData . }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,90 @@
+#!/bin/bash
+
+set -o pipefail
+set -e
+
+function bp() {
+  # Set env DECKHOUSE_PULL_MODULES_IMAGES_BEFORE_BUILD=true to pull every image used in modules
+  if [[  "${DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES}" == "true" ]]; then
+    pull
+  fi
+
+  werf build --config modules_images_werf_simple.yaml --report-path images_tags_werf.json
+  if [[ -n ${CI_COMMIT_TAG} ]]; then
+    REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+    werf build --config modules_images_werf_simple.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO}
+  fi
+
+  jq '
+    def to_camel_case:
+      . | ascii_downcase | split("-") | .[0:1] as $first | .[1:] |
+      map(
+        .[1:] as $rest | .[0:1] | ascii_upcase | . + $rest
+      ) |
+      $first + . | join("")
+    ;
+    .Images | to_entries | reduce .[] as $image ({};
+      . * {
+        ($image.key | split("/")[0] | to_camel_case): {
+          ($image.key | split("/")[1] | to_camel_case): $image.value.DockerTag
+        }
+      }
+    )' images_tags_werf.json > modules/images_tags_${WERF_ENV}.json
+
+  rm images_tags_werf.json
+}
+
+function cleanup() {
+  werf cleanup --config modules_images_werf_simple.yaml --without-kube
+}
+
+
+function pull() {
+  >&2 echo "Pulling images..."
+  cat $(find modules -name *Dockerfile -o -name *werf.inc.yaml) \
+    | grep -Eo '^(from\:|FROM)\s(\S+)$' \
+    | cut -d ' ' -f2 | tr -d \" \
+    | sort | uniq \
+    | xargs --no-run-if-empty -n 1 docker pull -q
+}
+
+! read -rd '' HELP_STRING <<"EOF"
+Usage: modules_images SUBCOMMAND [SUBCOMMAND OPTIONS]...
+
+Available subcommands: (for details, modules_images SUBCOMMAND --help)
+
+modules_images bp
+modules_images cleanup
+modules_images pull
+EOF
+
+#type jq &>/dev/null || (echo "Please install jq (https://stedolan.github.io/jq/)"; exit 1)
+
+#if [[ $# -eq 0 ]] ; then
+##  echo "$HELP_STRING"
+#  exit 1
+#fi
+
+SUBCOMMAND=$1
+shift
+
+#echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+#echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+#echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
+
+#type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+
+type werf && source $(werf ci-env github --verbose --as-file)
+
+export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+case "$SUBCOMMAND" in
+  bp )
+    bp $@ ;;
+  cleanup )
+    cleanup $@ ;;
+  pull )
+    pull $@ ;;
+  * )
+    echo "$HELP_STRING"; exit 1 ;;
+esac
