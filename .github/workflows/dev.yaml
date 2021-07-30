@@ -35,10 +35,14 @@ jobs:
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
     steps:
-      - name: run go generate
+      - name: docker login
         run: |
           echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
+      - name: run go generate
+        run: |
           docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+      - name: check generated code
+        run: |
           git diff --exit-code
 
   # jobs for stage 'build' from gitlab
