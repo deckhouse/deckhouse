@@ -1,0 +1,165 @@
+# on every push to dev branches
+name: Build and test
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'release-*'
+
+env:
+  BASE_ALPINE: "registry.deckhouse.io/base_images/alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
+  BASE_DEBIAN: "registry.deckhouse.io/base_images/debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
+  BASE_GOLANG_ALPINE: "registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
+  BASE_GOLANG_16_ALPINE: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
+  BASE_GOLANG_BUSTER: "registry.deckhouse.io/base_images/golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
+  BASE_GOLANG_16_BUSTER: "registry.deckhouse.io/base_images/golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210"
+  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
+  BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
+  BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
+  BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
+
+jobs:
+  # jobs for stage 'build_modules_images' from gitlab
+
+  build_modules_images_fe:
+    name: Build Modules Images FE
+    #runs-on: werf-distributed
+    runs-on: ubuntu-latest
+    steps:
+      - name: stub
+        run: |
+          echo Build Modules Images for FE
+
+  go_generate:
+    name: Go Generate
+    #runs-on: werf-distributed
+    runs-on: ubuntu-latest
+    steps:
+      - name: run go generate
+        run: |
+          docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+          git diff --exit-code
+
+  # jobs for stage 'build' from gitlab
+
+  build_fe:
+    name: Build FE
+    needs:
+      - build_modules_images_fe
+      - go_generate
+    runs-on: ubuntu-latest
+    steps:
+      - name: docker login
+        run: |
+          echo Docker logins
+      - name: werf setup
+        run: |
+          echo setup werf
+      - name: werf build
+        run: |
+          echo werf build
+
+  doc_web_build:
+    name: Doc web build
+    needs:
+      - build_modules_images_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: doc
+        run: |
+          echo Doc web build
+
+  main_web_build:
+    name: Main web build
+    needs:
+      - build_modules_images_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: main
+        run: |
+          echo Main web build
+
+  # jobs for stage 'tests' from gitlab
+
+  # Gitlab use anchors:
+  # needs: &needs
+  # and needs: *needs for below jobs.
+  # Github has no support:
+  # The workflow is not valid. .github/workflows/release.yaml: Anchors are not currently supported. Remove the anchor 'needs'
+  tests:
+    name: Tests
+    needs:
+      - build_modules_images_fe
+      - build_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo go test ./...
+
+  matrix_tests:
+    name: Matrix tests
+    needs:
+      - build_modules_images_fe
+      - build_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo matrix
+
+  dhctl_tests:
+    name: Dhctl Tests
+    needs:
+      - build_modules_images_fe
+      - build_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo Dhctl Tests
+
+  golangci_lint:
+    name: GolangCI Lint
+    needs:
+      - build_modules_images_fe
+      - build_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo GolangCI Lint
+
+  openapi_test_cases:
+    name: OpenAPI Test Cases
+    needs:
+      - build_modules_images_fe
+      - build_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo OpenAPI Test Cases
+
+  hooks_configuration_tests:
+    name: Hooks Configuration Tests
+    needs:
+      - build_modules_images_fe
+      - build_fe
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo Hooks Configuration Tests
+
+  web_links_test:
+    name: Web links test
+    needs:
+      - doc_web_build
+      - main_web_build
+    runs-on: ubuntu-latest
+    steps:
+      - name: run test
+        run: |
+          echo check web links
+
