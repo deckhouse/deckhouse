@@ -28,7 +28,7 @@ env:
   WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
   WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
-  DEV_REGISTRY_PATH: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/${GITHUB_REPOSITORY}"
+  DEV_REGISTRY_PATH: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/${{GITHUB_REPOSITORY}}"
 
 jobs:
   # jobs for stage 'build_modules_images' from gitlab
@@ -47,8 +47,11 @@ jobs:
 
           echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=true" >> ${GITHUB_ENV}
 
-          # for release
+          # detect git tag for release
           gitTag=${GITHUB_REF#refs/tags/}
+          if [[ ${GITHUB_REF} == $gitTag ]] ; then
+            gitTag=
+          fi
           echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
 
       - name: dev registry login
@@ -77,9 +80,9 @@ jobs:
         with:
           channel: ea
 
-
       - name: run werf bp for modules
         run: |
+          exit 1
           ./modules_images_werf_github bp
 
   go_generate:
