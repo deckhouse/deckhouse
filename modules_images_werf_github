@@ -9,7 +9,7 @@ function bp() {
     pull
   fi
 
-  werf build --config modules_images_werf_simple.yaml --report-path images_tags_werf.json
+  werf build --synchronization=https://synchronization.werf.io --config modules_images_werf_simple.yaml --report-path images_tags_werf.json
   if [[ -n ${CI_COMMIT_TAG} ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
     werf build --config modules_images_werf_simple.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO}
@@ -77,6 +77,8 @@ shift
 type werf && source $(werf ci-env github --config modules_images_werf_simple.yaml --verbose --as-file)
 
 export WERF_REPO="${DEV_REGISTRY_PATH}"
+echo ">> Overwrite WERF_REPO"
+echo WERF_REPO="${WERF_REPO}"
 
 case "$SUBCOMMAND" in
   bp )
