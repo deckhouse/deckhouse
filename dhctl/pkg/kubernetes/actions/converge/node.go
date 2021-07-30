@@ -102,8 +102,10 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 				return err
 			}
 			log.InfoLn("OK!")
+			return nil
 		}
-		return nil
+
+		return err
 	})
 }
 
