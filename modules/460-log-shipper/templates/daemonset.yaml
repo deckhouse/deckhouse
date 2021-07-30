@@ -65,18 +65,11 @@ spec:
           env:
 {{- include "vectorEnv" . | indent 10 }}
           volumeMounts:
-            - name: vector-config-dir
-              mountPath: /etc/vector/dynamic
             - name: shell-operator-tmp
               mountPath: /tmp
             - name: shell-operator-run
               mountPath: /var/run
-            - name: vector-sample-config-dir
-              mountPath: /etc/vector/default/defaults.json
-              readOnly: true
-              subPath: defaults.json
-            - name: vector-data-dir
-              mountPath: "/vector-data"
+{{- include "vectorMounts" . | indent 12 }}
         - name: vector
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 10 }}
           image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.logShipper.vector }}
@@ -122,14 +115,7 @@ spec:
             - name: var-lib
               mountPath: /var/lib
               readOnly: true
-            - name: vector-config-dir
-              mountPath: "/vector-data"
-            - name: vector-config-dir
-              mountPath: /etc/vector/dynamic
-            - name: vector-sample-config-dir
-              mountPath: /etc/vector/default/defaults.json
-              readOnly: true
-              subPath: defaults.json
+{{- include "vectorMounts" . | indent 12 }}
         - name: kube-rbac-proxy
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 10 }}
           image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.kubeRbacProxy }}
