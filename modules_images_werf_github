@@ -74,7 +74,7 @@ shift
 
 #type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
 
-type werf && source $(werf ci-env github --verbose --as-file)
+type werf && source $(werf ci-env github --config modules_images_werf_simple.yaml --verbose --as-file)
 
 export WERF_REPO="${DEV_REGISTRY_PATH}"
 
