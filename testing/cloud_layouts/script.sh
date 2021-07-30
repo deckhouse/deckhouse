@@ -146,8 +146,22 @@ fi
 
 >&2 echo "Starting the process, if you'd like to pause the cluster deletion, ssh to cluster \"ssh $ssh_user@$master_ip\" and execute \"kubectl create configmap pause-the-test\""
 
->&2 echo 'Waiting 10 minutes until Machine provisioning finishes'
-sleep 600
+>&2 echo 'Waiting until Machine provisioning finishes'
+for ((i=0; i<10; i++)); do
+  if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+set -Eeuo pipefail
+kubectl -n d8-cloud-instance-manager get machines
+kubectl -n d8-cloud-instance-manager get machine -o json | jq -re '.items | length > 0' >/dev/null
+kubectl -n d8-cloud-instance-manager get machines -o json|jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
+ENDSSH
+    test_failed=""
+    break
+  else
+    test_failed="true"
+    >&2 echo "SSH #$i failed. Sleeping 60 seconds..."
+    sleep 60
+  fi
+done
 
 for ((i=0; i<3; i++)); do
   if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
