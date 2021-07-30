@@ -35,15 +35,14 @@ jobs:
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
     steps:
-
-      - name: Check out shell-operator code
+      - name: git checkout
         uses: actions/checkout@v2.3.4
 
       - name: docker login
         run: |
           echo ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD}} | docker login --username="${{ secrets.DECKHOUSE_REGISTRY_READ_USER}}" --password-stdin ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST}}
 
-      - name: run go generate
+      - name: go generate
         run: |
           docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
 
