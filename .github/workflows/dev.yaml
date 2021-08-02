@@ -40,10 +40,8 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: debug envs
+      - name: setup envs
         run: |
-          echo $DEV_REGISTRY_PATH
-
           echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=false" >> ${GITHUB_ENV}
 
           # detect git tag for release
@@ -52,6 +50,14 @@ jobs:
             gitTag=
           fi
           echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
+
+          # set registry host from secret
+          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+
+          # Support WERF_CHANNEL from secrets?
+          #werf_channel=${{secrets.WERF_CHANNEL}}
+          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
+
 
       - name: dev registry login
         uses: docker/login-action@v1.10.0
@@ -77,7 +83,7 @@ jobs:
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
         with:
-          channel: ea
+          channel: ${{env.WERF_CHANNEL}}
 
       - name: run werf bp for modules
         run: |
