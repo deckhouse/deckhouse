@@ -108,6 +108,8 @@ jobs:
     #needs:
     #  - restore_file
     runs-on: ubuntu-latest
+    outputs:
+      ci_commit_tag: ${{ steps.env.outputs.ci_commit_tag }}
     steps:
 #      - name: Base images versions from file
 #        run: |
@@ -117,7 +119,8 @@ jobs:
 #        run: |
 #          echo ..
 
-      - name: Other environment variables
+      - id: env
+        name: Other environment variables
         run: |
           # Support WERF_CHANNEL from secrets?
           #werf_channel=${{secrets.WERF_CHANNEL}}
@@ -128,7 +131,9 @@ jobs:
           if [[ ${GITHUB_REF} == $gitTag ]] ; then
             gitTag=
           fi
-          echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
+          echo "::set-output name=ci_commit_tag::$gitTag"
+
+          #echo "CI_COMMIT_TAG=$gitTag" >> "${GITHUB_ENV}"
 
   build_modules_images_fe:
     name: Build Modules Images FE
@@ -136,6 +141,8 @@ jobs:
       - setup_envs
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
@@ -216,6 +223,8 @@ jobs:
       - build_modules_images_fe
       - go_generate
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
