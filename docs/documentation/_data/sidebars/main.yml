@@ -544,6 +544,22 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
+            - title: log-shipper
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/460-log-shipper/
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/460-log-shipper/usage.html
+                - title:
+                    ru: Справка
+                    en: Reference
+                  folders:
+                    - title: Custom Resources
+                      url: /modules/460-log-shipper/cr.html
             - title: prometheus-pushgateway
               folders:
                 - title:
@@ -765,23 +781,6 @@ entries:
                 ru: Описание
                 en: Description
               url: /modules/600-secret-copier/
-        - title: log-shipper
-          versionType: experimental
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/460-log-shipper/
-            - title:
-                ru: Примеры
-                en: Usage
-              url: /modules/460-log-shipper/usage.html
-            - title:
-                ru: Справка
-                en: Reference
-              folders:
-                - title: Custom Resources
-                  url: /modules/460-log-shipper/cr.html
     - title: Bare Metal Support
       versionType: ee
       folders:

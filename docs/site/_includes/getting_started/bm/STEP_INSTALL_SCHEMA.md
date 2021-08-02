@@ -11,4 +11,10 @@ Please also note, it's just a brief, rough overview. The actual actions and comm
   Control presentation
 </p>
 
+## Recommended minimum hardware configuration of master nodes:
+-   at least 4 CPU cores;
+-   at least 8 GB of RAM;
+-   at least 40 GB of disk space for the cluster and etcd data;
+-   OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7.
+
 To start the process of installation of your Kubernetes cluster, please click the "Next" button below.
