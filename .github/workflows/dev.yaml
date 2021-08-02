@@ -87,7 +87,7 @@ jobs:
 
       - name: run werf bp for modules
         run: |
-          ./modules_images_werf_github bp
+          ./modules_images_werf bp
 
   go_generate:
     name: Go Generate
