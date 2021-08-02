@@ -54,18 +54,23 @@ env:
 
 jobs:
   # jobs for stage 'build_modules_images' from gitlab
-
-  build_modules_images_fe:
-    name: Build Modules Images FE
-    #runs-on: werf-distributed
+  setup_envs:
+    name: Setup common envs
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
-        uses: actions/checkout@v2.3.4
+#      - name: Base images versions from file
+#        run: |
+#
+#          echo ..
+#      - name: Terraform versions from file
+#        run: |
+#          echo ..
 
-      - name: setup envs
+      - name: Other environment variables
         run: |
-          echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=false" >> ${GITHUB_ENV}
+          # Support WERF_CHANNEL from secrets?
+          #werf_channel=${{secrets.WERF_CHANNEL}}
+          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
 
           # detect git tag for release
           gitTag=${GITHUB_REF#refs/tags/}
@@ -74,15 +79,22 @@ jobs:
           fi
           echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
 
+  build_modules_images_fe:
+    name: Build Modules Images FE
+    needs:
+      - setup_envs
+    #runs-on: werf-distributed
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: setup envs
+        run: |
           # copy some secrets
           echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
           echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
           echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
-
-          # Support WERF_CHANNEL from secrets?
-          #werf_channel=${{secrets.WERF_CHANNEL}}
-          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
-
 
       - name: dev registry login
         uses: docker/login-action@v1.10.0
@@ -110,21 +122,32 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
 
-      - name: run werf bp for modules
+      - name: Run werf bp for modules
         run: |
           ./modules_images_werf bp
 
+      - name: Save images_tags file
+        uses: actions/upload-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules/images_tags_${{env.WERF_ENV}}.json
+
   go_generate:
     name: Go Generate
+    needs:
+      - setup_envs
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: docker login
-        run: |
-          echo ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD}} | docker login --username="${{ secrets.DECKHOUSE_REGISTRY_READ_USER}}" --password-stdin ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
 
       - name: go generate
         run: |
@@ -146,25 +169,17 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+
       - name: setup envs
         run: |
-          echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=false" >> ${GITHUB_ENV}
-
-          # detect git tag for release
-          gitTag=${GITHUB_REF#refs/tags/}
-          if [[ ${GITHUB_REF} == $gitTag ]] ; then
-            gitTag=
-          fi
-          echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
-
           # copy some secrets
-          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
-          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
-
-          # Support WERF_CHANNEL from secrets?
-          #werf_channel=${{secrets.WERF_CHANNEL}}
-          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
+#          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+#          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
+#          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
 
       - name: dev registry login
         uses: docker/login-action@v1.10.0
@@ -280,10 +295,6 @@ jobs:
 
           # copy some secrets
           #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-
-          # Support WERF_CHANNEL from secrets?
-          #werf_channel=${{secrets.WERF_CHANNEL}}
-          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
 
       - name: dev registry login
         uses: docker/login-action@v1.10.0
