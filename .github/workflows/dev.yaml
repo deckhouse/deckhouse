@@ -60,48 +60,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-#  save_file:
-#    name: Save
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: git checkout
-#        uses: actions/checkout@v2.3.4
-#      - name: gen file
-#        run: |
-#          cat <<EOF > ./modules/images_tags_${WERF_ENV}.json
-#            qwd
-#          qwd
-#            qwd
-#          EOF
-#
-#          ls -la ./modules
-#
-#      - name: Save images_tags file
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: images_tags_json
-#          path: modules/images_tags_${{env.WERF_ENV}}.json
-#
-#  restore_file:
-#    name: Restore
-#    needs:
-#      - save_file
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: git checkout
-#        uses: actions/checkout@v2.3.4
-#      - name: Restore images_tags file
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: images_tags_json
-#          path: modules
-#      - name: ls
-#        run: |
-#          ls -la .
-#          ls -la ./modules
-#          cat ./modules/images_tags_${WERF_ENV}.json
-#          exit 1
-
   # jobs for stage 'build_modules_images' from gitlab
   setup_envs:
     name: Setup common envs
@@ -313,9 +271,16 @@ jobs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
-      - name: doc
-        run: |
-          echo Doc web build
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: Run doc web build
+        uses: werf/actions/build@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+        env:
+          WERF_DIR: "docs/documentation"
+          WERF_LOG_VERBOSE: "on"
 
   main_web_build:
     name: Main web build
@@ -323,9 +288,18 @@ jobs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
-      - name: main
-        run: |
-          echo Main web build
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: Run main web build
+        uses: werf/actions/build@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+        env:
+          WERF_DIR: "docs/site"
+          WERF_LOG_VERBOSE: "on"
+          WERF_LOOSE_GITERMINISM: "true"
+          #WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
 
   # jobs for stage 'tests' from gitlab
 
@@ -449,10 +423,54 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: run test
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
+
+      - name: setup envs
         run: |
-          echo Dhctl Tests
+          # copy some secrets
+          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+
+      - name: dev registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Run tests
+        uses: werf/actions/run@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          image: dhctl-tests
+          args: make ci
+        env:
+          WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl"
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+
 
   golangci_lint:
     name: GolangCI Lint
@@ -460,10 +478,53 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: run test
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
+
+      - name: setup envs
         run: |
-          echo GolangCI Lint
+          # copy some secrets
+          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+
+      - name: dev registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Run tests
+        uses: werf/actions/run@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          image: tests
+          args: sh -c "go generate tools/register.go && golangci-lint run"
+        env:
+          WERF_DOCKER_OPTIONS: '-w /deckhouse -e "TERM=xterm-256color"'
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -471,10 +532,53 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: run test
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
+
+      - name: setup envs
         run: |
-          echo OpenAPI Test Cases
+          # copy some secrets
+          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+
+      - name: dev registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Run tests
+        uses: werf/actions/run@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          image: tests
+          args: ginkgo -vet=off ./testing/openapi_cases/
+        env:
+          WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl"
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
 
   hooks_configuration_tests:
     name: Hooks Configuration Tests
@@ -493,8 +597,66 @@ jobs:
       - doc_web_build
       - main_web_build
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
+    outputs:
+      tmpdir: ${{steps.setup.outputs.tmpdir}}
+    continue-on-error: true
     steps:
-      - name: run test
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: setup
         run: |
-          echo check web links
+          echo "BASEDIR=$(pwd)/docs" >> ${GITHUB_ENV}
+          tmpdir=$(mktemp -d -t -p ${BASEDIR})
+          echo "_TMPDIR=$tmpdir" >> ${GITHUB_ENV}
+          echo "::set-output name=tmpdir::$tmpdir"
+
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+
+      - name: run web links test
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+          cd $BASEDIR/site
+          docker pull $(werf stage image web-backend)
+          docker cp $(docker create --rm $(werf stage image web-backend)):/app/root/ ${_TMPDIR}/site/
+          cd $BASEDIR/documentation
+          docker pull $(werf stage image web)
+          docker cp $(docker create --rm $(werf stage image web)):/app/ ${_TMPDIR}/site/doc/
+          touch ${_TMPDIR}/site/index.html
+          rm -Rf ${_TMPDIR}/site/doc/compare/
+          cp -Rf ${_TMPDIR}/site/doc/assets/ ${_TMPDIR}/site/doc/ru/
+          cp -Rf ${_TMPDIR}/site/doc/css/ ${_TMPDIR}/site/doc/ru/
+          cp -Rf ${_TMPDIR}/site/doc/images/ ${_TMPDIR}/site/doc/ru/
+          cp -Rf ${_TMPDIR}/site/doc/js/ ${_TMPDIR}/site/doc/ru/
+          cp -Rf ${_TMPDIR}/site/doc/assets/ ${_TMPDIR}/site/doc/en/
+          cp -Rf ${_TMPDIR}/site/doc/css/ ${_TMPDIR}/site/doc/en/
+          cp -Rf ${_TMPDIR}/site/doc/images/ ${_TMPDIR}/site/doc/en/
+          cp -Rf ${_TMPDIR}/site/doc/js/ ${_TMPDIR}/site/doc/en/
+          docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 --allow-hash-href --check-html --empty-alt-ignore \
+            --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
+
+
+  # after_script for web_links_test
+  web_links_test_clean:
+    needs: web_links_test
+    if: always()
+    env:
+      _TMPDIR: ${{needs.web_links_test.outputs.tmpdir}}
+    run: |
+      if [[ -n $_TMPDIR ]] ; then
+        rm -rf $_TMPDIR
+      fi
+
 
