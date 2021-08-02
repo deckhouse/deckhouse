@@ -92,7 +92,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json
-          if-no-files-found: error
+          path: modules
       - name: ls
         run: |
           ls -la .
