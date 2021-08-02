@@ -52,6 +52,13 @@ env:
   # DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
 
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # jobs for stage 'build_modules_images' from gitlab
   setup_envs:
@@ -173,9 +180,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json
+          path: modules/images_tags_${{env.WERF_ENV}}.json
+          if-no-files-found: error
 
       - name: setup envs
         run: |
+          ls -la .
+          ls -la ./modules
           # copy some secrets
           echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 #          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
