@@ -53,8 +53,8 @@ jobs:
 
           # copy some secrets
           echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${REPO_MCM_USER}"
-          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${REPO_MCM_TOKEN}"
+          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
+          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
 
           # Support WERF_CHANNEL from secrets?
           #werf_channel=${{secrets.WERF_CHANNEL}}
