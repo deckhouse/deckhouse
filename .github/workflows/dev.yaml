@@ -82,6 +82,8 @@ jobs:
 
   restore_file:
     name: Restore
+    needs:
+      - save_file
     runs-on: ubuntu-latest
     steps:
       - name: git checkout
