@@ -177,7 +177,7 @@ jobs:
       - name: setup envs
         run: |
           # copy some secrets
-#          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 #          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
 #          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
 
