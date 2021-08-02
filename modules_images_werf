@@ -9,8 +9,10 @@ function bp() {
     pull
   fi
 
+  # Always push images to "dev" repository.
   werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
-  if [[ -n ${CI_COMMIT_TAG} ]]; then
+  # Push images to "release" repository on git tag.
+  if [[ -n ${GIT_TAG_NAME} ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
     werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO}
   fi
@@ -82,6 +84,7 @@ function setup_werf() {
 
   type werf && source $(werf ci-env $ci_type --config modules_images_werf.yaml --verbose --as-file)
 
+  # There are 3 repositories, overwrite WERF_REPO to push to dev registry.
   export WERF_REPO="${DEV_REGISTRY_PATH}"
 }
 
@@ -95,11 +98,18 @@ function main() {
   type jq &>/dev/null || (echo "Please install jq (https://stedolan.github.io/jq/)"; exit 1)
 
   ci_type=
+  GIT_TAG_NAME=
   if [[ -n $GITLAB_CI ]] ; then
     ci_type=gitlab
+    export GIT_TAG_NAME=${CI_COMMIT_TAG}
   fi
   if [[ -n $GITHUB_REPOSITORY ]] ; then
     ci_type=github
+    gitTag=${GITHUB_REF#refs/tags/}
+    if [[ ${GITHUB_REF} == ${gitTag} ]] ; then
+      gitTag=
+    fi
+    export GIT_TAG_NAME=${gitTag}
   fi
   if [[ -z $ci_type ]] ; then
     echo "CI type is not recognized." && exit 1

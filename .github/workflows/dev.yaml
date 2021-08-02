@@ -48,6 +48,8 @@ env:
   WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
   WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
+  # Use fixed string 'sys/deckhouse-oss' for repo name, CI_PROJECT_PATH not set on Github.
+  # DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
 
 jobs:
@@ -141,15 +143,94 @@ jobs:
       - go_generate
     runs-on: ubuntu-latest
     steps:
-      - name: docker login
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: setup envs
         run: |
-          echo Docker logins
-      - name: werf setup
+          echo "DECKHOUSE_PULL_BASE_IMAGES_BEFORE_BUILD_MODULES=false" >> ${GITHUB_ENV}
+
+          # detect git tag for release
+          gitTag=${GITHUB_REF#refs/tags/}
+          if [[ ${GITHUB_REF} == $gitTag ]] ; then
+            gitTag=
+          fi
+          echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
+
+          # copy some secrets
+          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
+          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
+
+          # Support WERF_CHANNEL from secrets?
+          #werf_channel=${{secrets.WERF_CHANNEL}}
+          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
+
+      - name: dev registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+
+      - name: Build and push
         run: |
-          echo setup werf
-      - name: werf build
-        run: |
-          echo werf build
+          type werf && source $(werf ci-env gitlab --verbose --as-file)
+          export WERF_REPO="${DEV_REGISTRY_PATH}"
+          werf build
+          # Put tags on produced images and push to dev and release repositories.
+          docker pull $(werf stage image dev)
+          docker pull $(werf stage image dev/install)
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+          if [[ -n ${CI_COMMIT_TAG} ]]; then
+            # Copy from dev repo to release repo.
+            werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO};
+            DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${CI_COMMIT_TAG};
+            DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${CI_COMMIT_TAG};
+            DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+            docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
+            docker image tag $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE};
+            docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
+            docker image tag $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+            docker image push ${DESTINATION_IMAGE};
+            docker image push ${DESTINATION_INSTALL_IMAGE};
+            docker image push ${DECKHOUSE_DESTINATION_IMAGE};
+            docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+            docker image rmi ${DESTINATION_IMAGE};
+            docker image rmi ${DESTINATION_INSTALL_IMAGE};
+            docker image rmi ${DECKHOUSE_DESTINATION_IMAGE};
+            docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+          fi
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${CI_COMMIT_BRANCH};
+            DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${CI_COMMIT_BRANCH};
+            docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
+            docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
+            docker image push ${DESTINATION_IMAGE};
+            docker image push ${DESTINATION_INSTALL_IMAGE};
+            docker image rmi ${DESTINATION_IMAGE};
+            docker image rmi ${DESTINATION_INSTALL_IMAGE};
+          fi
 
   doc_web_build:
     name: Doc web build
@@ -185,9 +266,54 @@ jobs:
       - build_fe
     runs-on: ubuntu-latest
     steps:
-      - name: run test
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+
+      - name: setup envs
         run: |
-          echo go test ./...
+          # detect git tag for release
+          #gitTag=${GITHUB_REF#refs/tags/}
+          #if [[ ${GITHUB_REF} == $gitTag ]] ; then
+          #  gitTag=
+          #fi
+          #echo "CI_COMMIT_TAG=$gitTag" >> ${GITHUB_ENV}
+
+          # copy some secrets
+          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
+
+          # Support WERF_CHANNEL from secrets?
+          #werf_channel=${{secrets.WERF_CHANNEL}}
+          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
+
+      - name: dev registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: registry login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Run tests
+        uses: werf/actions/run@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          image: tests
+          args: go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
+        env:
+          WERF_DOCKER_OPTIONS: "-w /deckhouse"
 
   matrix_tests:
     name: Matrix tests
