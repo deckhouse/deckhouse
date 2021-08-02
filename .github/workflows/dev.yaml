@@ -383,7 +383,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: go test -timeout=${TEST_TIMEOUT} -vet=off ./modules/... ./global-hooks/...
+          args: go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
         env:
           WERF_DOCKER_OPTIONS: "-w /deckhouse"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
@@ -437,7 +437,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/matrix/
+          args: ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/matrix/
         env:
           WERF_DOCKER_OPTIONS: "-w /deckhouse"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
