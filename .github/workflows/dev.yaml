@@ -654,9 +654,11 @@ jobs:
     if: always()
     env:
       _TMPDIR: ${{needs.web_links_test.outputs.tmpdir}}
-    run: |
-      if [[ -n $_TMPDIR ]] ; then
-        rm -rf $_TMPDIR
-      fi
+    steps:
+      - name: clean tmpdir
+        run: |
+          if [[ -n $_TMPDIR ]] ; then
+            rm -rf $_TMPDIR
+          fi
 
 
