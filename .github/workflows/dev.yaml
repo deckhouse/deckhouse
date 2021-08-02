@@ -267,12 +267,20 @@ jobs:
 
   doc_web_build:
     name: Doc web build
+    # Just wait for success build of modules.
     needs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
 
       - name: Run doc web build
         uses: werf/actions/build@v1.2.0
@@ -290,6 +298,13 @@ jobs:
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
+
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
 
       - name: Run main web build
         uses: werf/actions/build@v1.2.0
@@ -597,8 +612,6 @@ jobs:
       - doc_web_build
       - main_web_build
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     outputs:
       tmpdir: ${{steps.setup.outputs.tmpdir}}
     continue-on-error: true
@@ -613,11 +626,12 @@ jobs:
           echo "_TMPDIR=$tmpdir" >> ${GITHUB_ENV}
           echo "::set-output name=tmpdir::$tmpdir"
 
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
+      - name: registry readonly login
+        uses: docker/login-action@v1.10.0
         with:
-          name: images_tags_json
-          path: modules
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
 
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
@@ -646,7 +660,6 @@ jobs:
           docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 --allow-hash-href --check-html --empty-alt-ignore \
             --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
             --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
-
 
   # after_script for web_links_test
   web_links_test_clean:
