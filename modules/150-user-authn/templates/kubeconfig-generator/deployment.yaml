@@ -45,6 +45,12 @@ spec:
       - name: config
         configMap:
           name: kubeconfig-generator
+      {{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
+      hostAliases:
+        - ip: {{ .Values.userAuthn.internal.discoveredDexClusterIP }}
+          hostnames:
+            - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+      {{- end }}
       containers:
       - name: kubeconfig-generator
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}

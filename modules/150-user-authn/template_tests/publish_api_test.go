@@ -61,6 +61,24 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		})
 	})
 
+	Context("With discovered dex cluster ip", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.internal.discoveredDexClusterIP", "10.10.10.10")
+			hec.HelmRender()
+		})
+
+		It("Should add dex to hosts aliases", func() {
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
+			kgDeployment := hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator")
+
+			Expect(len(kgDeployment.Field("spec.template.spec.hostAliases").Array())).To(Equal(1))
+			Expect(kgDeployment.Field("spec.template.spec.hostAliases.0.ip").String()).To(Equal("10.10.10.10"))
+
+			Expect(len(kgDeployment.Field("spec.template.spec.hostAliases.0.hostnames").Array())).To(Equal(1))
+			Expect(kgDeployment.Field("spec.template.spec.hostAliases.0.hostnames.0").String()).To(Equal("dex.example.com"))
+		})
+	})
+
 	Context("With publish API global mode", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
