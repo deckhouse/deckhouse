@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant CJSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: nodegroup-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["nodegroups"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+    if context::jq -e -r '.review.request.object.spec.cri.type != "Docker" and .review.request.object.spec.docker != null' >/dev/null 2>&1; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to create NodeGroup resource with set .spec.docker and without .spec.cri.type=\"Docker\""}
+EOF
+      return 0
+    fi
+
+    if context::jq -e -r '.review.request.object.spec.cri.type != "Containerd" and .review.request.object.spec.cri.containerd != null' >/dev/null 2>&1; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to create NodeGroup resource with set .spec.cri.containerd and without .spec.cri.type=\"Containerd\""}
+EOF
+      return 0
+    fi
+
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+hook::run "$@"

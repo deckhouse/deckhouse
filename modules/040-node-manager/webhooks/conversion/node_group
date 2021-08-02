@@ -65,6 +65,7 @@ function __on_conversion::alpha1_to_alpha2() {
        .apiVersion = "deckhouse.io/v1alpha2" |
        if .spec.docker then .spec.cri.docker = .spec.docker end |
        del(.kubernetesVersion) |
+       del(.spec.docker) |
        del(.static)
      else . end
   )')
@@ -83,7 +84,8 @@ function __on_conversion::alpha2_to_alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
-       if .spec.cri.docker then .spec.docker = .spec.cri.docker end
+       if .spec.cri.docker then .spec.docker = .spec.cri.docker end |
+       del(.spec.cri.docker)
      else . end
   )')
   then
