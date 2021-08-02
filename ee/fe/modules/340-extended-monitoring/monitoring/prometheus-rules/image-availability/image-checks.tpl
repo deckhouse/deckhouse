@@ -158,18 +158,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_alert_type: "group"
-      plk_grouped_by__main: "UnavailableImagesInCluster,prometheus=deckhouse"
+      plk_create_group_if_not_exists__main: UnavailableImagesInCluster,prometheus=deckhouse,tier=~tier
+      plk_grouped_by__main: "UnavailableImagesInCluster,prometheus=deckhouse,tier=~tier"
       summary: В Namespace `{{`{{ $labels.namespace }}`}}` наличествует отсутствие образов в container registry.
-      description: Подробнее в связанных алертах.
-
-  - alert: UnavailableImagesInCluster
-    expr: count(ALERTS{alertname=~"UnavailableImagesInNamespace", alertstate="firing"})
-    labels:
-      d8_module: extended-monitoring
-      d8_component: image-availability-exporter
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_alert_type: "group"
-      summary: В кластере наличествует отсутствие образов в container registry.
       description: Подробнее в связанных алертах.
