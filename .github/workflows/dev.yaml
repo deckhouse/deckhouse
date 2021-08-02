@@ -60,9 +60,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  save_file:
+    name: Save
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+      - name: gen file
+        run: |
+          cat <<EOF > ./modules/images_FE.json
+            qwd
+          qwd
+            qwd
+          EOF
+
+      - name: Save images_tags file
+        uses: actions/upload-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules/images_tags_${{env.WERF_ENV}}.json
+
+  restore_file:
+    name: Restore
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v2.3.4
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          if-no-files-found: error
+      - name: ls
+        run: |
+          ls -la .
+          ls -la ./modules
+          cat ./modules/images_FE.json
+          exit 1
+
   # jobs for stage 'build_modules_images' from gitlab
   setup_envs:
     name: Setup common envs
+    needs:
+      - restore_file
     runs-on: ubuntu-latest
     steps:
 #      - name: Base images versions from file
@@ -180,7 +220,6 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json
-          path: modules/images_tags_${{env.WERF_ENV}}.json
           if-no-files-found: error
 
       - name: setup envs
