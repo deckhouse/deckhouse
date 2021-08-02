@@ -6,7 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package madison
 
 import (
+	"bytes"
 	"net"
+	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -39,6 +41,12 @@ func backendsHandler(input *go_hook.HookInput) error {
 	if err != nil {
 		return err
 	}
+
+	// always keep ip address in the same order to prevent rollouts
+	sort.Slice(addresses, func(i, j int) bool {
+		return bytes.Compare(addresses[i], addresses[j]) < 0
+	})
+
 	input.Values.Set(backendsPath, addresses)
 	return nil
 }

@@ -21,9 +21,8 @@ var _ = Describe("Flant integration :: hooks :: madison backends discovery ::", 
     "project": "test-me"
   },
   "flantIntegration": {
-    "internal": {"madison": {"backends":["1.2.3.4"]}},
-    "madisonAuthKey": "abc",
-    "licenseKey": "abc"
+    "internal": {"madison": {"backends":["1.2.3.4"]}, "licenseKey": "abc"},
+    "madisonAuthKey": "abc"
   }
 }`
 
@@ -41,7 +40,7 @@ var _ = Describe("Flant integration :: hooks :: madison backends discovery ::", 
 			Skip("Do not run madison backend test on CI, mock it first")
 
 			Expect(f.ValuesGet("flantIntegration.internal.madison.backends").String()).
-				To(MatchUnorderedJSON(`["54.38.235.70","54.38.235.72","54.38.235.73"]`))
+				To(MatchOrderedJSON(`["54.38.235.70","54.38.235.72","54.38.235.73"]`))
 		})
 	})
 
