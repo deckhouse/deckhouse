@@ -650,8 +650,10 @@ jobs:
 
   # after_script for web_links_test
   web_links_test_clean:
+    name: Cleanup tmpdir for 'web links test'
     needs: web_links_test
     if: always()
+    runs-on: ubuntu-latest
     env:
       _TMPDIR: ${{needs.web_links_test.outputs.tmpdir}}
     steps:
