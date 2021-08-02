@@ -2,10 +2,7 @@
 title: "Модуль log-shipper: примеры конфигурации"
 ---
 
-
-## pipeline
-
-Читать логи из всех pod-ов кластера и направлять их в Loki:
+## Чтение логов из всех pod-ов кластера и направление их в Loki
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
@@ -30,7 +27,10 @@ spec:
       codec: json
 ```
 
+## Чтение логов подов из указанного namespace  с указанным label и перенаправление одновременно в Loki и Elasticsearch
+
 Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
@@ -77,7 +77,7 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
-
+## Создание source в namespace и чтение логов всех pod-ов в этом NS, с направлением их в Loki
 
 Следующий pipeline создает source в namespace: `test-whispers` и читает логи всех pod-ов в этом NS, пишет их в Loki:
 ```yaml
@@ -104,7 +104,8 @@ spec:
       codec: json
 ```
 
-Чтение только pod-ов, имеющих label `app=booking` в namespace `test-whispers`:
+## Чтение только pod-ов в указанном namespace и имеющих определенный label
+Пример чтения только pod-ов имеющих label `app=booking` в namespace `test-whispers`:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: PodLoggingConfig
