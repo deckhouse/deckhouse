@@ -80,7 +80,7 @@ function setup_werf() {
     type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
   fi
 
-  type werf && source $(werf ci-env $ci_type --verbose --as-file)
+  type werf && source $(werf ci-env $ci_type --config modules_images_werf.yaml --verbose --as-file)
 
   export WERF_REPO="${DEV_REGISTRY_PATH}"
 }
