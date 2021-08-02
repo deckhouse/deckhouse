@@ -12,6 +12,7 @@
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
 
 {{- if $loadBalancer }}
+{{ include "ingress-controller-descheduler" (list $context $crd $crd.name) }}
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
@@ -277,11 +278,11 @@ spec:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | indent 12 }}
   {{- if and $loadBalancer (not $resourcesRequests) }}
-            cpu: "500m"
+            cpu: "350m"
             memory: "500Mi"
   {{- else if eq ($resourcesRequests.mode | default "") "Static" }}
     {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
-            cpu: {{ $resourcesRequestsStatic.cpu | default "500m" | quote }}
+            cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
             memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
   {{- end }}
         ports:
