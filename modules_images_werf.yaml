@@ -18,10 +18,10 @@ cleanup:
 
 # Collect EE and FE images if desired
 {{ $files := .Files.Glob "modules/*/images/*/{Dockerfile,werf.inc.yaml}" }}
-{{- if eq .Env "QQEE" }}
+{{- if eq .Env "EE" }}
   {{ $files = merge $files (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
 {{- end }}
-{{- if eq .Env "QQFE" }}
+{{- if eq .Env "FE" }}
   {{ $files = merge $files (.Files.Glob "ee/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
   {{ $files = merge $files (.Files.Glob "ee/fe/modules/*/images/*/{Dockerfile,werf.inc.yaml}") }}
 {{- end }}

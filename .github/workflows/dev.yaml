@@ -617,14 +617,14 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: setup
+      - name: Setup directories
         run: |
           BASEDIR=$(pwd)/docs
           _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
           echo "BASEDIR=${BASEDIR}" >> ${GITHUB_ENV}
           echo "_TMPDIR=$_TMPDIR" >> ${GITHUB_ENV}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -636,15 +636,18 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
 
-      - name: run web links test
+      - name: Preare site structure
         run: |
+          export WERF_DIR=$BASEDIR/site
           type werf && source $(werf ci-env github --verbose --as-file)
-          cd $BASEDIR/site
+          # Extract web-backend content to the tmp directory.
           docker pull $(werf stage image web-backend)
           docker cp $(docker create --rm $(werf stage image web-backend)):/app/root/ ${_TMPDIR}/site/
-          cd $BASEDIR/documentation
+          # Extract web content to the tmp directory.
+          export WERF_DIR=$BASEDIR/documentation
           docker pull $(werf stage image web)
           docker cp $(docker create --rm $(werf stage image web)):/app/ ${_TMPDIR}/site/doc/
+          # Create site structure.
           touch ${_TMPDIR}/site/index.html
           rm -Rf ${_TMPDIR}/site/doc/compare/
           cp -Rf ${_TMPDIR}/site/doc/assets/ ${_TMPDIR}/site/doc/ru/
@@ -655,11 +658,14 @@ jobs:
           cp -Rf ${_TMPDIR}/site/doc/css/ ${_TMPDIR}/site/doc/en/
           cp -Rf ${_TMPDIR}/site/doc/images/ ${_TMPDIR}/site/doc/en/
           cp -Rf ${_TMPDIR}/site/doc/js/ ${_TMPDIR}/site/doc/en/
+
+      - name: Check links with html-proofer
+        run: |
           docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 --allow-hash-href --check-html --empty-alt-ignore \
             --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
             --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
 
-      - name: clean tmpdir
+      - name: Clean TMPDIR
         if: always()
         run: |
           if [[ -n $_TMPDIR ]] ; then
