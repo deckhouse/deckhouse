@@ -16,7 +16,7 @@
 
 set -Eeo pipefail
 
-EE_LICENSE='(?s)Copyright 2021 Flant CJSC.*Licensed under the Deckhouse Platform Enterprise Edition \(EE\) license. See https://github.com/deckhouse/deckhouse/ee/LICENSE'
+EE_LICENSE='(?s)Copyright 2021 Flant CJSC.*Licensed under the Deckhouse Platform Enterprise Edition \(EE\) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE'
 CE_LICENSE="(?s)\
 [/#{-]*(\s)*Copyright 2021 Flant CJSC[-}\n#/]*\
 [/#{-]*(\s)*Licensed under the Apache License, Version 2.0 \(the \"License\"\);[-}\n]*\
