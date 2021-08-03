@@ -592,7 +592,7 @@ jobs:
           image: tests
           args: ginkgo -vet=off ./testing/openapi_cases/
         env:
-          WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl"
+          WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
 
   hooks_configuration_tests:
@@ -612,8 +612,6 @@ jobs:
       - doc_web_build
       - main_web_build
     runs-on: ubuntu-latest
-    outputs:
-      tmpdir: ${{steps.setup.outputs.tmpdir}}
     continue-on-error: true
     steps:
       - name: git checkout
@@ -621,10 +619,10 @@ jobs:
 
       - name: setup
         run: |
-          echo "BASEDIR=$(pwd)/docs" >> ${GITHUB_ENV}
-          tmpdir=$(mktemp -d -t -p ${BASEDIR})
-          echo "_TMPDIR=$tmpdir" >> ${GITHUB_ENV}
-          echo "::set-output name=tmpdir::$tmpdir"
+          BASEDIR=$(pwd)/docs
+          _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
+          echo "BASEDIR=${BASEDIR}" >> ${GITHUB_ENV}
+          echo "_TMPDIR=$_TMPDIR" >> ${GITHUB_ENV}
 
       - name: registry readonly login
         uses: docker/login-action@v1.10.0
@@ -661,19 +659,9 @@ jobs:
             --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
             --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
 
-  # after_script for web_links_test
-  web_links_test_clean:
-    name: Cleanup tmpdir for 'web links test'
-    needs: web_links_test
-    if: always()
-    runs-on: ubuntu-latest
-    env:
-      _TMPDIR: ${{needs.web_links_test.outputs.tmpdir}}
-    steps:
       - name: clean tmpdir
+        if: always()
         run: |
           if [[ -n $_TMPDIR ]] ; then
             rm -rf $_TMPDIR
           fi
-
-
