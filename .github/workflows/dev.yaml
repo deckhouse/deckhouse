@@ -51,6 +51,7 @@ env:
   # Use fixed string 'sys/deckhouse-oss' for repo name, CI_PROJECT_PATH not set on Github.
   # DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
 
 # Analog of Gitlab's "interruptible: true" behaviour.
 # Note: Concurrency is currently in beta and subject to change.
@@ -91,8 +92,6 @@ jobs:
           fi
           echo "::set-output name=ci_commit_tag::$gitTag"
 
-          #echo "CI_COMMIT_TAG=$gitTag" >> "${GITHUB_ENV}"
-
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
@@ -107,26 +106,26 @@ jobs:
 
       - name: setup envs
         run: |
-          # copy some secrets
+          # copy some secrets for build script
           echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
           echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
           echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
 
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to main registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -158,7 +157,7 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -173,15 +172,13 @@ jobs:
         run: |
           git diff --exit-code
 
-  # jobs for stage 'build' from gitlab
+  # Build deckhouse controller with FE hooks.
   build_fe:
     name: Build FE
     needs:
       - build_modules_images_fe
       - go_generate
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
@@ -192,28 +189,21 @@ jobs:
           name: images_tags_json
           path: modules
 
-      - name: setup envs
-        run: |
-          ls -la .
-          ls -la ./modules
-          # copy some secrets
-          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to main registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -226,8 +216,11 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
 
       - name: Build and push
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
         run: |
-          type werf && source $(werf ci-env gitlab --verbose --as-file)
+          type werf && source $(werf ci-env github --verbose --as-file)
           export WERF_REPO="${DEV_REGISTRY_PATH}"
           werf build
           # Put tags on produced images and push to dev and release repositories.
@@ -275,12 +268,19 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Login to flant registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
       - name: Run doc web build
         uses: werf/actions/build@v1.2.0
@@ -289,6 +289,7 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
+          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
 
   main_web_build:
     name: Main web build
@@ -299,12 +300,19 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Login to flant registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
       - name: Run main web build
         uses: werf/actions/build@v1.2.0
@@ -314,11 +322,11 @@ jobs:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
           WERF_LOOSE_GITERMINISM: "true"
-          #WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
 
   # jobs for stage 'tests' from gitlab
 
-  # Gitlab use anchors:
+  # Gitlab config is using anchors:
   # needs: &needs
   # and needs: *needs for below jobs.
   # Github has no support:
@@ -346,21 +354,21 @@ jobs:
           # copy some secrets
           #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -400,21 +408,21 @@ jobs:
           # copy some secrets
           #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -455,21 +463,21 @@ jobs:
           # copy some secrets
           #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -510,21 +518,21 @@ jobs:
           # copy some secrets
           #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -547,8 +555,6 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
       - name: git checkout
         uses: actions/checkout@v2.3.4
@@ -559,26 +565,21 @@ jobs:
           name: images_tags_json
           path: modules
 
-      - name: setup envs
-        run: |
-          # copy some secrets
-          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-
-      - name: dev registry login
+      - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: registry login
+      - name: Login to registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: registry readonly login
+      - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
@@ -594,6 +595,7 @@ jobs:
         env:
           WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
   hooks_configuration_tests:
     name: Hooks Configuration Tests
@@ -617,13 +619,6 @@ jobs:
       - name: git checkout
         uses: actions/checkout@v2.3.4
 
-      - name: Setup directories
-        run: |
-          BASEDIR=$(pwd)/docs
-          _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
-          echo "BASEDIR=${BASEDIR}" >> ${GITHUB_ENV}
-          echo "_TMPDIR=$_TMPDIR" >> ${GITHUB_ENV}
-
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -638,6 +633,13 @@ jobs:
 
       - name: Preare site structure
         run: |
+          BASEDIR=$(pwd)/docs
+          _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
+          # Save TMPDIR to clean it later.
+          echo "_TMPDIR=$_TMPDIR" >> ${GITHUB_ENV}
+
+          export WERF_REPO=${FLANT_REGISTRY_PATH}
+
           export WERF_DIR=$BASEDIR/site
           type werf && source $(werf ci-env github --verbose --as-file)
           # Extract web-backend content to the tmp directory.
