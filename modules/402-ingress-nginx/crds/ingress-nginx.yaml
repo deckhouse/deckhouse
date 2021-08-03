@@ -401,7 +401,7 @@ spec:
                           type: string
                           description: |
                             CPU requests.
-                          default: '500m'
+                          default: '350m'
                         memory:
                           type: string
                           description: |

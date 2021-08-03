@@ -9,12 +9,12 @@ metadata:
 data:
   config.yaml: |-
     listen: "http://0.0.0.0:5555"
-  {{- if .Values.userAuthn.internal.discoveredDexCA }}
     trusted_root_ca: |
-{{ .Values.userAuthn.internal.discoveredDexCA | indent 6 }}
+{{ .Values.global.discovery.kubernetesCA | indent 6 }}
+{{- if .Values.userAuthn.internal.discoveredDexCA }}
     idp_ca_pem: |
 {{ .Values.userAuthn.internal.discoveredDexCA | indent 6 }}
-  {{- end }}
+{{- end }}
     logo_uri: "https://kubernetes.io/images/favicon.png"
     web_path_prefix: /
     debug: false

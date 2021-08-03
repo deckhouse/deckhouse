@@ -131,8 +131,8 @@ set -Eeuo pipefail
 base64 -d <<< "$bootstrap_system" | bash
 ENDSSH
 
->&2 echo 'Waiting 10 minutes until Machine provisioning finishes'
-sleep 600
+>&2 echo 'Waiting 5 minutes until Machine provisioning finishes'
+sleep 300
 
 for ((i=0; i<3; i++)); do
   if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then

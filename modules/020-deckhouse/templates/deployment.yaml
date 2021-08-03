@@ -104,6 +104,8 @@ spec:
                   fieldPath: status.podIP
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
+            - name: HISTFILE
+              value: /tmp/.bash_history
           ports:
             - containerPort: 9650
               name: self
