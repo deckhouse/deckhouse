@@ -73,7 +73,7 @@ kind: YandexClusterConfiguration
 layout: <layout>
 # [<en>] special parameters for WithNATInstance layout
 # [<ru>] специальные параметры для layout'а WithNATInstance
-withNatInstance: {}
+withNATInstance: {}
 # [<en>] Yandex account parameters
 # [<ru>] параметры доступа к облаку Yandex
 provider:
