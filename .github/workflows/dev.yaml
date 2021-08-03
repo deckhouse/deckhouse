@@ -349,11 +349,6 @@ jobs:
           name: images_tags_json
           path: modules
 
-      - name: setup envs
-        run: |
-          # copy some secrets
-          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -625,6 +620,13 @@ jobs:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Login to flant registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
 
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
