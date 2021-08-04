@@ -143,6 +143,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
+	app.DefineDeckhouseFlags(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)

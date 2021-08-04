@@ -39,6 +39,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
+	app.DefineDeckhouseFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)

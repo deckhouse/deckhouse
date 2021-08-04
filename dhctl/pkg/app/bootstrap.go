@@ -14,7 +14,11 @@
 
 package app
 
-import "gopkg.in/alecthomas/kingpin.v2"
+import (
+	"time"
+
+	"gopkg.in/alecthomas/kingpin.v2"
+)
 
 var (
 	InternalNodeIP = ""
@@ -22,6 +26,7 @@ var (
 
 	ResourcesPath    = ""
 	ResourcesTimeout = "15m"
+	DeckhouseTimeout = 10 * time.Minute
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -35,11 +40,18 @@ func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
 		StringVar(&DevicePath)
 }
 
+func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("deckhouse-timeout", "Timeout to install deckhouse. Experimental. This feature may be deleted in the future.").
+		Envar(configEnvName("DECKHOUSE_TIMEOUT")).
+		Default(DeckhouseTimeout.String()).
+		DurationVar(&DeckhouseTimeout)
+}
+
 func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 	cmd.Flag("resources", "Path to a file with declared Kubernetes resources in YAML format.").
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&ResourcesPath)
-	cmd.Flag("resources-timeout", "Timeout to create resources.").
+	cmd.Flag("resources-timeout", "Timeout to create resources. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("RESOURCES_TIMEOUT")).
 		Default(ResourcesTimeout).
 		StringVar(&ResourcesTimeout)
