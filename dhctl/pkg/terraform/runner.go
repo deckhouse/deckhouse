@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -316,22 +318,27 @@ func (r *Runner) Apply() error {
 			)
 		}
 
+		var allErrs *multierror.Error
+
 		_, err = r.execTerraform(args...)
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, err)
+			// yes, no return, we need to add state to cache anyway
 		}
 
 		data, err := r.getState()
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, err)
+			// don't get state - return all errors
+			return allErrs.ErrorOrNil()
 		}
 
 		err = r.stateCache.Save(r.stateName(), data)
 		if err != nil {
-			return err
+			allErrs = multierror.Append(allErrs, err)
 		}
 
-		return nil
+		return allErrs.ErrorOrNil()
 	})
 }
 
