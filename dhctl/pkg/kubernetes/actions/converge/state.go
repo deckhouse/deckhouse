@@ -149,7 +149,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	}
 
 	getTerraformStateManifest := func() interface{} {
-		return manifests.SecretWithNodeTerraformState(nodeName, masterNodeGroupName, tfState, nil)
+		return manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
 	}
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)

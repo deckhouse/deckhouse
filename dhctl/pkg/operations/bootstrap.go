@@ -326,7 +326,7 @@ func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.Met
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
 	return log.Process("bootstrap", "Create master NodeGroup", func() error {
-		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, "master")
+		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName)
 		if err != nil {
 			return err
 		}

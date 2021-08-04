@@ -18,7 +18,7 @@ import "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 
 func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName string) int {
 	replicas := 0
-	if nodeGroupName != masterNodeGroupName {
+	if nodeGroupName != MasterNodeGroupName {
 		for _, group := range metaConfig.GetTerraNodeGroups() {
 			if group.Name == nodeGroupName {
 				replicas = group.Replicas
@@ -33,7 +33,7 @@ func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName str
 
 func getStepByNodeGroupName(nodeGroupName string) string {
 	step := "static-node"
-	if nodeGroupName == masterNodeGroupName {
+	if nodeGroupName == MasterNodeGroupName {
 		step = "master-node"
 	}
 	return step
@@ -45,10 +45,10 @@ func sortNodeGroupsStateKeys(state map[string]NodeGroupTerraformState, sortedNod
 		nodeGroupsFromConfigSet[key] = struct{}{}
 	}
 
-	sortedKeys := append([]string{masterNodeGroupName}, sortedNodeGroupsFromConfig...)
+	sortedKeys := append([]string{MasterNodeGroupName}, sortedNodeGroupsFromConfig...)
 
 	for key := range state {
-		if key == masterNodeGroupName {
+		if key == MasterNodeGroupName {
 			continue
 		}
 

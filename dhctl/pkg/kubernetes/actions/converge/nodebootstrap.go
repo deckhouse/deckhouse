@@ -23,14 +23,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, intermediateStateSave bool) error {
-	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
+func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
+	return fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
+}
 
-	nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
-	if err != nil {
-		return err
-	} else if nodeExists {
-		return fmt.Errorf("node with name %s exists in cluster", nodeName)
+func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool) error {
+	nodeName := NodeName(cfg, nodeGroupName, index)
+
+	if isConverge {
+		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+		if err != nil {
+			return err
+		} else if nodeExists {
+			return fmt.Errorf("node with name %s exists in cluster", nodeName)
+		}
 	}
 
 	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
@@ -42,7 +48,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		WithAutoApprove(true)
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
-	if intermediateStateSave {
+	if isConverge {
 		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
 	}
 
@@ -63,17 +69,19 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, intermediateStateSave bool) (*terraform.PipelineOutputs, error) {
-	nodeName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, masterNodeGroupName, index)
+func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool) (*terraform.PipelineOutputs, error) {
+	nodeName := NodeName(cfg, MasterNodeGroupName, index)
 
-	nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
-	if existsErr != nil {
-		return nil, existsErr
-	} else if nodeExists {
-		return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
+	if isConverge {
+		nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
+		if existsErr != nil {
+			return nil, existsErr
+		} else if nodeExists {
+			return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
+		}
 	}
 
-	nodeConfig := cfg.NodeGroupConfig(masterNodeGroupName, index, cloudConfig)
+	nodeConfig := cfg.NodeGroupConfig(MasterNodeGroupName, index, cloudConfig)
 
 	runner := terraform.NewRunnerFromConfig(cfg, "master-node").
 		WithVariables(nodeConfig).
@@ -82,8 +90,8 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
 
 	// Node group settings are not required for master node secret.
-	if intermediateStateSave {
-		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, masterNodeGroupName, nil))
+	if isConverge {
+		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil))
 	}
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)

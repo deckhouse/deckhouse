@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	masterNodeGroupName = "master"
+	MasterNodeGroupName = "master"
 
 	noNodesConfirmationMessage = `Cluster has no nodes created by Terraform. Do you want to continue and create nodes?`
 )
@@ -392,7 +392,7 @@ func (c *Controller) addNewNodesToGroup(nodeGroup *NodeGroupGroupOptions) error 
 
 		if _, ok := nodeGroup.State[candidateName]; !ok {
 			var err error
-			if nodeGroup.Name == masterNodeGroupName {
+			if nodeGroup.Name == MasterNodeGroupName {
 				_, err = BootstrapAdditionalMasterNode(c.client, c.config, index, nodeGroup.CloudConfig, true)
 			} else {
 				err = BootstrapAdditionalNode(c.client, c.config, index, nodeGroup.Step, nodeGroup.Name, nodeGroup.CloudConfig, true)
@@ -439,7 +439,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 	var nodeGroupSettingsFromConfig []byte
 	if pipelineForMaster {
 		extractOutputFunc = terraform.GetMasterNodeResult
-		nodeGroupName = masterNodeGroupName
+		nodeGroupName = MasterNodeGroupName
 	} else {
 		// Node group settings are only for the static node.
 		nodeGroupSettingsFromConfig = c.config.FindTerraNodeGroup(nodeGroup.Name)
