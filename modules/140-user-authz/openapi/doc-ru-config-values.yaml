@@ -1,0 +1,14 @@
+properties:
+  enableMultiTenancy:
+    description: |
+      включить авторизацию по namespace.
+        * Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](usage.html#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-manager](../../modules/040-control-plane-manager/).
+        * **Доступно только в версии Enterprise Edition.**
+  controlPlaneConfigurator:
+    description: |
+      настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-manager](../../modules/040-control-plane-manager/).
+    properties:
+      enabled:
+        description: |
+          передавать ли в control-plane-manager параметры для настройки authz-webhook (см. [параметры control-plane-manager'а](../../modules/040-control-plane-manager/configuration.html#параметры)).
+            * При выключении этого параметра, модуль control-plane-manager будет считать, что по умолчанию Webhook-авторизация выключена и, соответственно, если не будет дополнительных настроек, то control-plane-manager будет стремиться вычеркнуть упоминания Webhook-плагина из манифеста. Даже если вы настроите манифест вручную.

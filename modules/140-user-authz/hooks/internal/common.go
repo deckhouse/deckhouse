@@ -14,27 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package module
+package internal
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"fmt"
+
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 )
 
-func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
-	var (
-		modulePath = moduleName + ".https.mode"
-		globalPath = "global.modules.https.mode"
-	)
+const Namespace = "d8-user-authz"
 
-	v, ok := input.Values.GetOk(modulePath)
-	if ok {
-		return v.String()
+func Queue(name string) string {
+	return fmt.Sprintf("/modules/user-authz/%s", name)
+}
+
+func NsSelector() *types.NamespaceSelector {
+	return &types.NamespaceSelector{
+		NameSelector: &types.NameSelector{
+			MatchNames: []string{Namespace},
+		},
 	}
-
-	v, ok = input.Values.GetOk(globalPath)
-	if ok {
-		return v.String()
-	}
-
-	panic("https mode is not defined")
 }

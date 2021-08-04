@@ -31,14 +31,14 @@ func Test(t *testing.T) {
 }
 
 const customClusterRolesFlat = `---
-master:
+admin:
   - cert-manager:user-authz:user
 `
 
 const testCRDsWithLimitNamespaces = `---
 - name: testenev
   spec:
-    accessLevel: Master
+    accessLevel: Admin
     allowScale: true
     limitNamespaces:
     - default
@@ -55,9 +55,9 @@ const testCRDsWithLimitNamespaces = `---
 const testCRDsWithAllowAccessToSystemNamespaces = `---
 - name: testenev
   spec:
-    accessLevel: Master
+    accessLevel: Admin
     allowScale: true
-    allowAccessToSystemNamespaces: trus
+    allowAccessToSystemNamespaces: true
     subjects:
     - kind: User
       name: Efrem Testenev
@@ -71,7 +71,7 @@ const testCRDsWithCRDsKey = `---
 crds:
   - name: testenev
     spec:
-      accessLevel: Master
+      accessLevel: Admin
       allowScale: true
       limitNamespaces:
       - default
@@ -123,15 +123,15 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 
 		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:master")
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin")
 			Expect(crb.Exists()).To(BeTrue())
 
-			Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:master"))
+			Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:admin"))
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
 		It("Should create additional ClusterBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:master:custom-cluster-role:cert-manager:user-authz:user")
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user")
 			Expect(crb.Exists()).To(BeTrue())
 
 			Expect(crb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:user"))

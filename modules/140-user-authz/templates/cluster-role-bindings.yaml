@@ -15,7 +15,7 @@ subjects:
   {{- end }}
 
   {{- if hasKey $crd.spec "accessLevel" }}
-    {{- if not (list "User" "Master" "PrivilegedUser" "Deploy" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel) }}
+    {{- if not (list "User" "PrivilegedUser" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel) }}
       {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
     {{- end }}
 ---
