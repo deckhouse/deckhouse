@@ -106,8 +106,6 @@ jobs:
 
   no_cyrillic_validation:
     name: No Cyrillic Validation
-    needs:
-      - setup_envs
     runs-on: ubuntu-latest
     steps:
       - name: validate
@@ -116,8 +114,6 @@ jobs:
 
   doc_validation:
     name: Doc Validation
-    needs:
-      - setup_envs
     runs-on: ubuntu-latest
     steps:
       - name: validate
@@ -126,8 +122,6 @@ jobs:
 
   copyright_validation:
     name: Copyright Validation
-    needs:
-      - setup_envs
     runs-on: ubuntu-latest
     steps:
       - name: validate

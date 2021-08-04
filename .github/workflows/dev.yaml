@@ -388,20 +388,6 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
@@ -651,7 +637,8 @@ jobs:
   openapi_validation:
     name: OpenAPI Validation
     needs:
-      - setup_envs
+      - build_modules_images_fe
+      - build_fe
     runs-on: werf-distributed
     steps:
       - name: Checkout sources
