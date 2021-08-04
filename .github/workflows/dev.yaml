@@ -137,8 +137,8 @@ jobs:
     name: Go Generate
     needs:
       - setup_envs
-    #runs-on: werf-distributed
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
+    #runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
