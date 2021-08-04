@@ -64,22 +64,12 @@ jobs:
   # jobs for stage 'build_modules_images' from gitlab
   setup_envs:
     name: Setup common envs
-    #needs:
-    #  - restore_file
     runs-on: ubuntu-latest
     outputs:
       ci_commit_tag: ${{ steps.env.outputs.ci_commit_tag }}
     steps:
-#      - name: Base images versions from file
-#        run: |
-#
-#          echo ..
-#      - name: Terraform versions from file
-#        run: |
-#          echo ..
-
       - id: env
-        name: Other environment variables
+        name: Calculate common environment variables
         run: |
           # Support WERF_CHANNEL from secrets?
           #werf_channel=${{secrets.WERF_CHANNEL}}
@@ -98,18 +88,9 @@ jobs:
       - setup_envs
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      - name: setup envs
-        run: |
-          # copy some secrets for build script
-          echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
-          echo "REPO_MCM_USER=${{secrets.REPO_MCM_USER}}" >> "${GITHUB_ENV}"
-          echo "REPO_MCM_TOKEN=${{secrets.REPO_MCM_TOKEN}}" >> "${GITHUB_ENV}"
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -138,6 +119,11 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
 
       - name: Run werf bp for modules
+        env:
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
+          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
         run: |
           ./modules_images_werf bp
 
@@ -154,7 +140,7 @@ jobs:
     #runs-on: werf-distributed
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Login to readonly registry
@@ -164,11 +150,11 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
 
-      - name: go generate
+      - name: Run go generate
         run: |
           docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
 
-      - name: check generated code
+      - name: Check generated code
         run: |
           git diff --exit-code
 
@@ -180,7 +166,7 @@ jobs:
       - go_generate
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Restore images_tags file
@@ -265,7 +251,7 @@ jobs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Login to readonly registry
@@ -297,7 +283,7 @@ jobs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Login to readonly registry
@@ -337,10 +323,8 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Restore images_tags file
@@ -379,6 +363,7 @@ jobs:
         env:
           WERF_DOCKER_OPTIONS: "-w /deckhouse"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
   matrix_tests:
     name: Matrix tests
@@ -386,10 +371,8 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Restore images_tags file
@@ -397,11 +380,6 @@ jobs:
         with:
           name: images_tags_json
           path: modules
-
-      - name: setup envs
-        run: |
-          # copy some secrets
-          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -433,7 +411,7 @@ jobs:
         env:
           WERF_DOCKER_OPTIONS: "-w /deckhouse"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
   dhctl_tests:
     name: Dhctl Tests
@@ -441,10 +419,8 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Restore images_tags file
@@ -452,11 +428,6 @@ jobs:
         with:
           name: images_tags_json
           path: modules
-
-      - name: setup envs
-        run: |
-          # copy some secrets
-          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -488,7 +459,7 @@ jobs:
         env:
           WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl"
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
-
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
   golangci_lint:
     name: GolangCI Lint
@@ -496,10 +467,8 @@ jobs:
       - build_modules_images_fe
       - build_fe
     runs-on: ubuntu-latest
-    env:
-      CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Restore images_tags file
@@ -507,11 +476,6 @@ jobs:
         with:
           name: images_tags_json
           path: modules
-
-      - name: setup envs
-        run: |
-          # copy some secrets
-          #echo "DECKHOUSE_REGISTRY_HOST=${{secrets.DECKHOUSE_REGISTRY_HOST}}" >> "${GITHUB_ENV}"
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -543,6 +507,7 @@ jobs:
         env:
           WERF_DOCKER_OPTIONS: '-w /deckhouse -e "TERM=xterm-256color"'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
   openapi_test_cases:
     name: OpenAPI Test Cases
@@ -551,7 +516,7 @@ jobs:
       - build_fe
     runs-on: ubuntu-latest
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Restore images_tags file
@@ -611,7 +576,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - name: git checkout
+      - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
       - name: Login to readonly registry
@@ -633,7 +598,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
 
-      - name: Preare site structure
+      - name: Prepare site structure
         run: |
           BASEDIR=$(pwd)/docs
           _TMPDIR=$(mktemp -d -t -p ${BASEDIR})
