@@ -1,6 +1,6 @@
 # Validations are independent from build process.
 # Run them in parallel on every push to dev branches.
-name: Build and test
+name: Validation
 on:
   push:
     branches-ignore:
@@ -53,6 +53,8 @@ jobs:
 
   openapi_validation:
     name: OpenAPI Validation
+    needs:
+      - setup_envs
     runs-on: werf-distributed
     steps:
       - name: Checkout sources
@@ -92,6 +94,8 @@ jobs:
 
   no_cyrillic_validation:
     name: No Cyrillic Validation
+    needs:
+      - setup_envs
     runs-on: ubuntu-latest
     steps:
       - name: validate
@@ -100,6 +104,8 @@ jobs:
 
   doc_validation:
     name: Doc Validation
+    needs:
+      - setup_envs
     runs-on: ubuntu-latest
     steps:
       - name: validate
@@ -108,6 +114,8 @@ jobs:
 
   copyright_validation:
     name: Copyright Validation
+    needs:
+      - setup_envs
     runs-on: ubuntu-latest
     steps:
       - name: validate
