@@ -609,13 +609,16 @@ jobs:
 
           export WERF_DIR=$BASEDIR/site
           type werf && source $(werf ci-env github --verbose --as-file)
+
           # Extract web-backend content to the tmp directory.
           docker pull $(werf stage image web-backend)
           docker cp $(docker create --rm $(werf stage image web-backend)):/app/root/ ${_TMPDIR}/site/
+
           # Extract web content to the tmp directory.
           export WERF_DIR=$BASEDIR/documentation
           docker pull $(werf stage image web)
           docker cp $(docker create --rm $(werf stage image web)):/app/ ${_TMPDIR}/site/doc/
+
           # Create site structure.
           touch ${_TMPDIR}/site/index.html
           rm -Rf ${_TMPDIR}/site/doc/compare/

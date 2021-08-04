@@ -1,0 +1,115 @@
+# Validations are independent from build process.
+# Run them in parallel on every push to dev branches.
+name: Build and test
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'release-*'
+
+env:
+  # Don't forget to update .gitlab-ci-simple.yml if necessary
+  WERF_CHANNEL: "ea"
+  WERF_ENV: FE
+  # We use stapel image from own registry due to docker hub pull amount limitation.
+  # To re-push stapel image from docker hub use command:
+  # `skopeo copy docker://flant/werf-stapel:0.6.1 docker://registry-write.deckhouse.io/flant/werf-stapel:0.6.1`
+  WERF_STAPEL_IMAGE_NAME: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}/flant/werf-stapel"
+  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
+  TEST_TIMEOUT: "15m"
+  # Use fixed string 'sys/deckhouse-oss' for repo name, CI_PROJECT_PATH not set on Github.
+  # DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
+  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # jobs for stage 'build_modules_images' from gitlab
+  setup_envs:
+    name: Setup common envs
+    runs-on: ubuntu-latest
+    outputs:
+      ci_commit_tag: ${{ steps.env.outputs.ci_commit_tag }}
+    steps:
+      - id: env
+        name: Calculate common environment variables
+        run: |
+          # Support WERF_CHANNEL from secrets?
+          #werf_channel=${{secrets.WERF_CHANNEL}}
+          echo "WERF_CHANNEL=${WERF_CHANNEL:-ea}" >> "${GITHUB_ENV}"
+
+          # detect git tag for release
+          gitTag=${GITHUB_REF#refs/tags/}
+          if [[ ${GITHUB_REF} == $gitTag ]] ; then
+            gitTag=
+          fi
+          echo "::set-output name=ci_commit_tag::$gitTag"
+
+  openapi_validation:
+    name: OpenAPI Validation
+    runs-on: werf-distributed
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: Login to registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Run tests
+        uses: werf/actions/run@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          image: tests
+          args: ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/openapi_validation/
+        env:
+          WERF_DOCKER_OPTIONS: "-w /deckhouse"
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
+
+  no_cyrillic_validation:
+    name: No Cyrillic Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate
+        run: |
+          echo validate cyrillic
+
+  doc_validation:
+    name: Doc Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate
+        run: |
+          echo validate docs
+
+  copyright_validation:
+    name: Copyright Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate
+        run: |
+          echo validate copyrights
