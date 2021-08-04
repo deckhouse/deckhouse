@@ -597,21 +597,31 @@ You can find a relevant example in the [prometheus](https://fox.flant.com/sys/de
 
 CRDs must be stored in the `crds` directory in the module's root.
 
-The module must contain a dedicated hook called `ensure_crds` with the following content:
-```bash
-#!/bin/bash
+The module must contain a dedicated hook called `ensure_crds.go` with the following content:
+```go
+/*
+Copyright 2021 Flant CJSC
 
-source /deckhouse/shell_lib.sh
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-function __config__() {
-  common_hooks::https::ensure_crds::config
-}
+    http://www.apache.org/licenses/LICENSE-2.0
 
-function __main__() {
-  common_hooks::https::ensure_crds::main $(module::path)/crds/*
-}
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
-hook::run "$@"
+package hooks
+
+import (
+	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+)
+
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/MODULE_NAME/crds/*.yaml")
 ```
 
 If resources described via CRDs are used in other modules, you need to make a separate module for those CRDs.

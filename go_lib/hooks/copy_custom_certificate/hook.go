@@ -1,0 +1,123 @@
+/*
+Copyright 2021 Flant CJSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package copy_custom_certificate
+
+import (
+	"fmt"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/module"
+)
+
+type CustomCertificate struct {
+	Name string
+	Data []byte
+}
+
+func applyCustomCertificateFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	cs := &CustomCertificate{}
+
+	cs.Name = secret.GetName()
+	cs.Data, err = yaml.Marshal(secret.Data)
+	if err != nil {
+		return nil, err
+	}
+	return cs, nil
+}
+
+func RegisterCopyCustomCertificateHook(moduleName string) bool {
+	return sdk.RegisterFunc(&go_hook.HookConfig{
+		OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:              "custom_certificates",
+				ApiVersion:        "v1",
+				Kind:              "Secret",
+				NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}}},
+				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "owner",
+						Operator: "NotIn",
+						Values:   []string{"helm"},
+					},
+				}},
+				FilterFunc: applyCustomCertificateFilter,
+			},
+		},
+	}, copyCustomCertificatesHandler(moduleName))
+}
+
+func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookInput) error {
+
+	return func(input *go_hook.HookInput) error {
+		snapshots, ok := input.Snapshots["custom_certificates"]
+		if !ok {
+			input.LogEntry.Info("No custom certificates received, skipping setting values")
+			return nil
+		}
+
+		customCertificates := make(map[string][]byte, len(snapshots))
+		for _, snapshot := range snapshots {
+			cs := snapshot.(*CustomCertificate)
+			customCertificates[cs.Name] = cs.Data
+		}
+
+		httpsMode := module.GetHTTPSMode(moduleName, input)
+
+		if httpsMode != "CustomCertificate" && input.Values.Exists(fmt.Sprintf("%s.internal.customCertificateData", moduleName)) {
+			input.Values.Remove(fmt.Sprintf("%s.internal.customCertificateData", moduleName))
+			return nil
+		}
+
+		var secretName string
+		if input.Values.Exists(fmt.Sprintf("%s.https.customCertificate.secretName", moduleName)) {
+			secretName = input.Values.Get(fmt.Sprintf("%s.https.customCertificate.secretName", moduleName)).String()
+		} else if input.Values.Exists("global.modules.https.customCertificate.secretName") {
+			httpsMode = input.Values.Get("global.modules.https.customCertificate.secretName").String()
+		}
+
+		if secretName == "" {
+			return nil
+		}
+
+		secretData, ok := customCertificates[secretName]
+		if !ok {
+			return fmt.Errorf("custom certificate secret name is configured, but secret with this name doesn't exist")
+		}
+
+		storeData := make(map[string][]byte)
+		err := yaml.Unmarshal(secretData, &storeData)
+		if err != nil {
+			return err
+		}
+		input.Values.Set(fmt.Sprintf("%s.internal.customCertificateData", moduleName), storeData)
+		return nil
+	}
+}

@@ -24,55 +24,6 @@ import (
 )
 
 const (
-	stateCCRs = `
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr-without-annotation0
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr0
-  annotations:
-    user-authz.deckhouse.io/access-level: User
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr1
-  annotations:
-    user-authz.deckhouse.io/access-level: PrivilegedUser
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr2
-  annotations:
-    user-authz.deckhouse.io/access-level: Editor
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr3
-  annotations:
-    user-authz.deckhouse.io/access-level: Admin
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr4
-  annotations:
-    user-authz.deckhouse.io/access-level: ClusterEditor
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ccr5
-  annotations:
-    user-authz.deckhouse.io/access-level: ClusterAdmin
-`
 	stateCARs = `
 ---
 apiVersion: deckhouse.io/v1
@@ -81,6 +32,9 @@ metadata:
   name: car0
 spec:
   accessLevel: ClusterEditor
+  subjects:
+  - kind: Group
+    name: NotEveryone
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -88,10 +42,13 @@ metadata:
   name: car1
 spec:
   accessLevel: ClusterAdmin
+  subjects:
+  - kind: Group
+    name: Everyone
 `
 )
 
-var _ = Describe("User Authz hooks :: stores handler ::", func() {
+var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "ClusterAuthorizationRule", false)
 
@@ -101,41 +58,21 @@ var _ = Describe("User Authz hooks :: stores handler ::", func() {
 			f.RunHook()
 		})
 
-		It("userAuthz.internal.customClusterRoles must be dict of empty arrays and CAR must empty list", func() {
-			ccrExpectation := `
-			{
-			  "user":[],
-			  "privilegedUser":[],
-			  "editor":[],
-			  "admin":[],
-			  "clusterEditor":[],
-			  "clusterAdmin":[]
-			}`
+		It("CAR must be empty list", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(ccrExpectation))
 			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[]`))
 		})
 	})
 
-	Context("Cluster with pile of CCRs and two CARs", func() {
+	Context("Cluster with two CARs", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCCRs + stateCARs))
+			f.BindingContexts.Set(f.KubeStateSet(stateCARs))
 			f.RunHook()
 		})
 
-		It("CCR and CAR must be stored in values", func() {
-			ccrExpectation := `
-{
-  "user":["ccr0"],
-  "privilegedUser":["ccr0","ccr1"],
-  "editor":["ccr0","ccr1","ccr2"],
-  "admin":["ccr0","ccr1","ccr2","ccr3"],
-  "clusterEditor":["ccr0","ccr1","ccr2","ccr4"],
-  "clusterAdmin":["ccr0","ccr1","ccr2","ccr3","ccr4","ccr5"]
-}`
+		It("CAR must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(ccrExpectation))
-			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor"}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin"}}]`))
+			Expect(f.ValuesGet("userAuthz.internal.crds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor", "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin", "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
 		})
 	})
 })

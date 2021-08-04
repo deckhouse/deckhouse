@@ -1,0 +1,204 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customClusterRoles:
+        type: object
+        properties:
+          user:
+            type: array
+            items:
+              type: string
+            default: []
+          privilegedUser:
+            type: array
+            items:
+              type: string
+            default: []
+          editor:
+            type: array
+            items:
+              type: string
+            default: []
+          admin:
+            type: array
+            items:
+              type: string
+            default: []
+          clusterEditor:
+            type: array
+            items:
+              type: string
+            default: []
+          clusterAdmin:
+            type: array
+            items:
+              type: string
+            default: []
+        default: {}
+      webhookCA:
+        type: string
+      webhookServerCrt:
+        type: string
+      webhookServerKey:
+        type: string
+      crds:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            spec:
+              type: object
+              required:
+                - subjects
+              properties:
+                accessLevel:
+                  type: string
+                  enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin]
+                portForwarding:
+                  type: boolean
+                allowScale:
+                  type: boolean
+                allowAccessToSystemNamespaces:
+                  type: boolean
+                limitNamespaces:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                subjects:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - kind
+                      - name
+                    properties:
+                      kind:
+                        type: string
+                        enum: [User,Group,ServiceAccount]
+                      name:
+                        type: string
+                        minLength: 1
+                      namespace:
+                        type: string
+                        minLength: 1
+                  x-examples:
+                  - kind: User
+                    name: Everyone
+                  - kind: Group
+                    name: Everyone
+                  - kind: ServiceAccount
+                    name: Everyone
+                additionalRoles:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - apiGroup
+                      - kind
+                      - name
+                    properties:
+                      apiGroup:
+                        type: string
+                        minLength: 1
+                      kind:
+                        type: string
+                        enum: [ClusterRole, Role]
+                      name:
+                        type: string
+                        minLength: 1
+        default: []
+    x-examples:
+    - webhookServerCrt: certificatestring
+      webhookServerKey: keystring
+      webhookCA: castring
+      customClusterRoles:
+        admin:
+          - d8:user-authz:cert-manager:admin
+          - d8:user-authz:cert-manager:editor
+          - d8:user-authz:cert-manager:user
+          - d8:user-authz:cloud-provider-openstack:user
+          - d8:user-authz:ingress-nginx:editor
+          - d8:user-authz:node-manager:user
+          - d8:user-authz:prometheus-metrics-adapter:editor
+          - d8:user-authz:prometheus-metrics-adapter:user
+          - d8:user-authz:prometheus:editor
+        clusterAdmin:
+          - d8:user-authz:cert-manager:admin
+          - d8:user-authz:cert-manager:cluster-editor
+          - d8:user-authz:cert-manager:editor
+          - d8:user-authz:cert-manager:user
+          - d8:user-authz:cloud-provider-openstack:cluster-admin
+          - d8:user-authz:cloud-provider-openstack:user
+          - d8:user-authz:ingress-nginx:cluster-editor
+          - d8:user-authz:ingress-nginx:editor
+          - d8:user-authz:node-manager:cluster-admin
+          - d8:user-authz:node-manager:cluster-editor
+          - d8:user-authz:node-manager:user
+          - d8:user-authz:prometheus-metrics-adapter:cluster-editor
+          - d8:user-authz:prometheus-metrics-adapter:editor
+          - d8:user-authz:prometheus-metrics-adapter:user
+          - d8:user-authz:prometheus:cluster-editor
+          - d8:user-authz:prometheus:editor
+        clusterEditor:
+          - d8:user-authz:cert-manager:cluster-editor
+          - d8:user-authz:cert-manager:editor
+          - d8:user-authz:cert-manager:user
+          - d8:user-authz:cloud-provider-openstack:user
+          - d8:user-authz:ingress-nginx:cluster-editor
+          - d8:user-authz:ingress-nginx:editor
+          - d8:user-authz:node-manager:cluster-editor
+          - d8:user-authz:node-manager:user
+          - d8:user-authz:prometheus-metrics-adapter:cluster-editor
+          - d8:user-authz:prometheus-metrics-adapter:editor
+          - d8:user-authz:prometheus-metrics-adapter:user
+          - d8:user-authz:prometheus:cluster-editor
+          - d8:user-authz:prometheus:editor
+        editor:
+          - d8:user-authz:cert-manager:editor
+          - d8:user-authz:cert-manager:user
+          - d8:user-authz:cloud-provider-openstack:user
+          - d8:user-authz:ingress-nginx:editor
+          - d8:user-authz:node-manager:user
+          - d8:user-authz:prometheus-metrics-adapter:editor
+          - d8:user-authz:prometheus-metrics-adapter:user
+          - d8:user-authz:prometheus:editor
+        privilegedUser:
+          - d8:user-authz:cert-manager:user
+          - d8:user-authz:cloud-provider-openstack:user
+          - d8:user-authz:node-manager:user
+          - d8:user-authz:prometheus-metrics-adapter:user
+        user:
+          - d8:user-authz:cert-manager:user
+          - d8:user-authz:cloud-provider-openstack:user
+          - d8:user-authz:node-manager:user
+          - d8:user-authz:prometheus-metrics-adapter:user
+      crds:
+      - name: editor-crd
+        spec:
+          accessLevel: Editor
+          subjects:
+          - kind: Group
+            name: Editors
+      - name: user-crd
+        spec:
+          accessLevel: User
+          subjects:
+          - kind: Group
+            name: Everyone
+      - name: admin-crd
+        spec:
+          accessLevel: Admin
+          allowScale: false
+          portForwarding: true
+          subjects:
+          - kind: Group
+            name: NotEveryone

@@ -14,27 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package module
+package hooks
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
-	var (
-		modulePath = moduleName + ".https.mode"
-		globalPath = "global.modules.https.mode"
-	)
-
-	v, ok := input.Values.GetOk(modulePath)
-	if ok {
-		return v.String()
-	}
-
-	v, ok = input.Values.GetOk(globalPath)
-	if ok {
-		return v.String()
-	}
-
-	panic("https mode is not defined")
-}
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/040-node-manager/candi/openapi/node_group.yaml")
