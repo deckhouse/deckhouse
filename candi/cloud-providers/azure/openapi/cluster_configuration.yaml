@@ -13,95 +13,219 @@ apiVersions:
         type: string
         enum: [AzureClusterConfiguration]
       layout:
+        description: |
+          The way resources are located in the cloud.
+
+          Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
       standard:
+        description: |
+          Settings for the [`Standard`](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
         type: object
         properties:
           natGatewayPublicIpCount:
+            description: |
+              The number of IP addresses for the [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([pricing](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
+              `NAT Gateway` is not used if the value is `0`.
             type: integer
+            x-doc-default: 0
       sshPublicKey:
+        description: |
+          Public key to access nodes as `azureuser`.
         type: string
       vNetCIDR:
+        description: |
+          An address space of the virtual network in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.0.0.0/16
       subnetCIDR:
+        description: |
+          A subnet from the `vNetCIDR` address space for cluster nodes.
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.1.2.0/24
       peeredVNets:
+        description: |
+          An array of `VNets` to merge with the cluster network.
+
+          The service account must have access to all the `VNets` listed above. You have to configure the peering connection [manually ](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview) if no access is available.
         type: array
         items:
           type: object
           required: [resourceGroupName, vnetName]
           properties:
             resourceGroupName:
+              description: |
+                The name of the resource group with the VNet.
               type: string
             vnetName:
+              description: |
+                The name of the VNet.
               type: string
       masterNodeGroup:
+        description: |
+          The definition of the master's NodeGroup.
         required: [replicas, instanceClass]
         properties:
           replicas:
+            description: |
+              The number of master nodes to create.
             type: integer
             minimum: 1
           zones:
+            description: |
+              A list of zones where master nodes can be created.
+
+              You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              ```shell
+              az vm list-skus -l westeurope -o table
+              ```
+            x-doc-default: [1,2,3]
             type: array
             items:
               type: string
             minItems: 1
             uniqueItems: true
           instanceClass:
+            description: |
+              Partial contents of the [AzureInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
-            properties:
+            properties: &instanceClassProperties
               machineSize:
+                description: |
+                  The type of instances to provision.
+
+                  You can view a list of available types for the specific region using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  ```shell
+                  az vm list-sizes --location westeurope -o table
+                  ```
                 type: string
                 example: Standard_F4
               urn:
+                description: |
+                  The VM image to use for an instance.
+
+                  More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                  You can get the latest version of an image using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
+                  - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+
+                  **By default:** The image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
+
+                  **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
                 type: string
               enableExternalIP:
+                description: |
+                  Only available for the `Standard` layout.
+                  * `false` — the nodes do not have public addresses and access the Internet over NAT.
+                  * `true` — static public addresses are created for nodes.
                 type: boolean
                 enum: [true, false]
+                x-doc-default: false
               diskSizeGb:
-                description: Instance disk size in gigabytes.
+                description: |
+                  Instance root disk size in gigabytes.
                 example: 40
                 type: integer
               diskType:
+                description: |
+                  The type of the volume to create.
+
+                  You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  ```shell
+                  az vm list-skus -l westeurope --zone`
+                  ```
                 example: StandardSSD_LRS
                 type: string
               additionalTags:
+                description: |
+                  The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+                x-doc-example: |
+                  ```yaml
+                  project: cms-production
+                  severity: critical
+                  ```
                 type: object
                 additionalProperties:
                   type: string
       nodeGroups:
+        description: |
+          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
         type: array
         items:
           type: object
           required: [name, replicas, instanceClass]
           properties:
             name:
+              description: |
+                The name of the NodeGroup to use for generating node names.
               type: string
             replicas:
+              description: The number of nodes to create.
               type: integer
             zones:
+              description: |
+                A list of zones where static nodes can be created;
+
+                You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                ```shell
+                az vm list-skus -l westeurope -o table
+                ```
+              x-doc-default: [1,2,3]
               type: array
               items:
                 type: string
               minItems: 1
               uniqueItems: true
             nodeTemplate:
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
               properties:
                 labels:
+                  description: |
+                    A list of labels to attach to cluster resources.
+
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+
+                    Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
+
+                    Format — `key: value`.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
                   type: object
                   additionalProperties:
                     type: string
                 annotations:
+                  description: |
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
                   type: object
                   additionalProperties:
                     type: string
                 taints:
+                  description: |
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
+
+                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
                   type: array
                   items:
                     type: object
@@ -114,48 +238,49 @@ apiVersions:
                       value:
                         type: string
             instanceClass:
+              description: |
+                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:
-                machineSize:
-                  type: string
-                  example: Standard_F4
-                urn:
-                  type: string
-                enableExternalIP:
-                  type: boolean
-                  enum: [true, false]
-                diskSizeGb:
-                  description: Instance disk size in gigabytes.
-                  example: 40
-                  type: integer
-                diskType:
-                  example: StandardSSD_LRS
-                  type: string
-                additionalTags:
-                  type: object
-                  additionalProperties:
-                    type: string
+                <<: *instanceClassProperties
       tags:
+        description: |
+          A list of tags in the `key: value` format to attach to all cluster resources.
+
+          You have to re-create all the machines to add new tags if tags were modified in the running cluster.
         type: object
         additionalProperties:
           type: string
       provider:
+        description: |
+          [Parameters](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-azure/environment.html) for connecting to the Azure API.
         type: object
         additionalProperties: false
         required: [subscriptionId, clientId, clientSecret, tenantId, location]
         properties:
           location:
+            description: |
+              The name of the region to create all the resources.
             type: string
           subscriptionId:
+            description: |
+              The ID of the subscription.
             type: string
           clientId:
+            description: |
+              The client ID.
             type: string
           clientSecret:
+            description: |
+              The client's secret.
             type: string
           tenantId:
+            description: |
+              The ID of the tenant.
             type: string
       zones:
+        description: The globally restricted set of zones that this Cloud Provider works with.
         type: array
         items:
           type: string

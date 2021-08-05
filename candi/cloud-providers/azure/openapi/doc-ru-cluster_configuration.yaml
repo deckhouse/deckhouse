@@ -1,0 +1,259 @@
+kind: AzureClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, layout, provider, vNetCIDR, subnetCIDR, masterNodeGroup, sshPublicKey]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [AzureClusterConfiguration]
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
+        type: string
+        enum: [Standard]
+      standard:
+        description: |
+          Настройки для схемы размещения [`Standard`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard).
+        type: object
+        properties:
+          natGatewayPublicIpCount:
+            description: |
+              Количество IP-адресов для [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([тарификация](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
+              `NAT Gateway` не используется если установлено `0`.
+            type: integer
+      sshPublicKey:
+        description: |
+          Публичный ключ для доступа на узлы под пользователем `azureuser`.
+        type: string
+      vNetCIDR:
+        description: |
+          Адресное пространство виртуальной сети в формате [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing).
+        type: string
+      subnetCIDR:
+        description: |
+          Подсеть из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
+        type: string
+      peeredVNets:
+        description: |
+          Массив `VNet's`, с которыми будет объединена сеть кластера.
+
+          Сервис-аккаунт должен иметь доступ ко всем перечисленным `VNet`. Если доступа нет, то пиринг необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
+        type: array
+        items:
+          type: object
+          required: [resourceGroupName, vnetName]
+          properties:
+            resourceGroupName:
+              description: |
+                Имя группы ресурсов, в которой находится VNet.
+              type: string
+            vnetName:
+              description: |
+                Имя VNet.
+              type: string
+      masterNodeGroup:
+        description: Спецификация для описания NodeGroup master-узлов.
+        required: [replicas, instanceClass]
+        properties:
+          replicas:
+            description: |
+              Сколько мастер-узлов создать.
+            type: integer
+            minimum: 1
+          zones:
+            description: |
+              Список зон, в которых допустимо создавать мастер-узлы.
+
+              Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              ```shell
+              az vm list-skus -l westeurope -o table
+              ```
+            type: array
+            items:
+              type: string
+            minItems: 1
+            uniqueItems: true
+          instanceClass:
+            description: |
+              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+            type: object
+            required: [machineSize, urn]
+            properties: &instanceClassProperties_ru
+              machineSize:
+                description: |
+                  Тип заказываемых инстансов.
+
+                  Список всех доступных типов в регионе, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  ```shell
+                  az vm list-sizes --location westeurope -o table
+                  ```
+                type: string
+                example: Standard_F4
+              urn:
+                description: |
+                  Образ виртуальной машины, который будет использоваться для инстанса.
+
+                  Подробнее про образы виртуальных машин можно посмотреть в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                  Последнюю доступную версию образа можно получить c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`
+                  - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`
+
+                  **По умолчанию:** образ из `AzureCloudDiscoveryData` (образ из которого был создан мастер при развертывании кластера).
+
+                  **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
+                type: string
+              enableExternalIP:
+                description: |
+                  Доступен только для layout `Standard`.
+                  * `false` —  узлы не имеют публичных адресов, доступ в интернет осуществляется через NAT.
+                  * `true` — для узлов создаются статические публичные адреса.
+                type: boolean
+              diskSizeGb:
+                description: |
+                  Размер root-диска. Значение указывается в гигабайтах.
+                example: 40
+                type: integer
+              diskType:
+                description: |
+                  Тип созданного диска.
+
+                  Список доступных типов дисков, можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  ```shell
+                  az vm list-skus -l westeurope --zone`
+                  ```
+                example: StandardSSD_LRS
+                type: string
+              additionalTags:
+                description: |
+                  Список дополнительных тегов в формате `key: value`, которые будут назначены инстансам.
+                type: object
+                additionalProperties:
+                  type: string
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных forntend-узлов или шлюзов).
+        type: array
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              description: Имя NodeGroup, будет использоваться для генерации имен узлов.
+              type: string
+            replicas:
+              description: Количество узлов.
+              type: integer
+            zones:
+              description: |
+                Список зон, в которых допустимо создавать статичные-узлы.
+
+                Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                ```shell
+                az vm list-skus -l westeurope -o table
+                ```
+              type: array
+              items:
+                type: string
+              minItems: 1
+              uniqueItems: true
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+
+                    Формат — `key: value`.
+                  type: object
+                  additionalProperties:
+                    type: string
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
+                  type: object
+                  additionalProperties:
+                    type: string
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
+
+                    **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+            instanceClass:
+              description: |
+                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+              required: [machineSize, urn]
+              type: object
+              properties:
+                <<: *instanceClassProperties_ru
+      tags:
+        description: |
+          Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
+
+          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+        type: object
+        additionalProperties:
+          type: string
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
+        type: object
+        additionalProperties: false
+        required: [subscriptionId, clientId, clientSecret, tenantId, location]
+        properties:
+          location:
+            description: |
+              Имя региона, в котором будут созданы все ресурсы.
+            type: string
+          subscriptionId:
+            description: |
+              Идентификатор подписки.
+            type: string
+          clientId:
+            description: |
+              Идентификатор клиента.
+            type: string
+          clientSecret:
+            description: |
+              Секрет клиента.
+            type: string
+          tenantId:
+            description: |
+              Идентификатор тенанта.
+            type: string
+      zones:
+        description: Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
+    oneOf:
+    - required: [layout]
+      properties:
+        layout:
+          enum: [Standard]
