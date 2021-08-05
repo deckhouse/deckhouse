@@ -114,7 +114,11 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
                 }
                 if (objectToModify && (objectToModify.innerText.length > 0)) {
                     let innerText = objectToModify.innerText;
-                    objectToModify.innerText = innerText.replace(replacePattern, value ? value : sourceData);
+                    if ( replacePattern === '<GENERATED_PASSWORD_HASH>' ) {
+                        objectToModify.innerText = innerText.replace(replacePattern, "'" + (value ? value : sourceData) + "'");
+                    } else {
+                        objectToModify.innerText = innerText.replace(replacePattern, value ? value : sourceData);
+                    }
                 }
             });
         }
@@ -124,7 +128,11 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
                 let content = ($(this)[0]) ? $(this)[0].textContent : null ;
                 if (content && content.length > 0) {
                     let re = new RegExp(replacePattern, "g");
-                    $(this)[0].textContent = content.replace(re, value ? value : sourceData);
+                    if ( replacePattern === '<GENERATED_PASSWORD_HASH>' ) {
+                        $(this)[0].textContent = content.replace(re, "'" + (value ? value : sourceData) + "'");
+                    } else {
+                        $(this)[0].textContent = content.replace(re, value ? value : sourceData);
+                    }
                 }
             });
         }
