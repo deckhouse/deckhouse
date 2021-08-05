@@ -23,11 +23,11 @@ metadata:
   namespace: d8-system
 data:
   global: |          # <--- note the vertical bar!!!
-    # Section of the Yaml file with global settings
+    # Section of the YAML file with global settings
     modules:
       publicDomainTemplate: "%s.kube.company.my"
   nginxIngress: |
-    # nginx-ingress-related section of the Yaml file
+    # nginx-ingress-related section of the YAML file
     config:
       hsts: true
   someModuleName: |  # <--- the module name in the camelCase
