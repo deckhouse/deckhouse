@@ -77,7 +77,7 @@
   to: /src/modules/030-cloud-provider-aws/docs
   owner: jekyll
   group: jekyll
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/azure/docs
@@ -98,7 +98,7 @@
   to: /src/modules/030-cloud-provider-yandex/docs
   owner: jekyll
   group: jekyll
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /ee/candi/cloud-providers/openstack/docs
@@ -112,7 +112,7 @@
   to: /src/ee/modules/030-cloud-provider-vsphere/docs
   owner: jekyll
   group: jekyll
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/azure/openapi
