@@ -12,7 +12,7 @@
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
 
 {{- if $loadBalancer }}
-{{ include "ingress-controller-descheduler" (list $context $crd $crd.name) }}
+{{- if gt ($crd.spec.maxReplicas | int) ($crd.spec.minReplicas | int)  }}
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
@@ -28,6 +28,8 @@ spec:
     kind: Deployment
     name: controller-{{ $name }}
   targetCPUUtilizationPercentage: 50
+{{- end }}
+{{- if gt ($crd.spec.minReplicas | int) 1 }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -36,11 +38,12 @@ metadata:
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | indent 2 }}
 spec:
-  maxUnavailable: 1
+  maxUnavailable: 50%
   selector:
     matchLabels:
       app: controller
       name: {{ $name }}
+{{- end }}
 {{- else }}
 
   {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -115,6 +118,9 @@ metadata:
     ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
 spec:
 {{- if $loadBalancer }}
+  {{- if le ($crd.spec.maxReplicas | int) ($crd.spec.minReplicas | int)  }}
+  replicas: {{ $crd.spec.minReplicas }}
+  {{- end }}
   minReadySeconds: 5
   strategy:
     type: RollingUpdate
@@ -181,7 +187,7 @@ spec:
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: ScheduleAnyway
+        whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchExpressions:
           - key: app
@@ -325,6 +331,8 @@ spec:
         name: protobuf-exporter
         resources:
           requests:
+            memory: 20Mi
+            cpu: 10m
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
       - name: kube-rbac-proxy
         image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.common.kubeRbacProxy }}

@@ -44,8 +44,6 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
 		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.25")
-
-		hec.ValuesSet("global.modulesImages.tags.descheduler.descheduler", "tag")
 	})
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {
@@ -70,9 +68,6 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     ingressClass: nginx
     controllerVersion: "0.26"
     inlet: LoadBalancer
-    nodeSelector:
-      node-role.deckhouse.io/frontend: ""
-      node-role.kubernetes.io/frontend: ""
     hsts: true
     hstsOptions:
       maxAge: "123456789123456789"
@@ -164,7 +159,7 @@ memory: 200Mi`))
 			Expect(testD.Field("spec.template.spec.topologySpreadConstraints").String()).To(MatchYAML(`
 - maxSkew: 1
   topologyKey: kubernetes.io/hostname
-  whenUnsatisfiable: ScheduleAnyway
+  whenUnsatisfiable: DoNotSchedule
   labelSelector:
     matchExpressions:
     - key: app
@@ -176,29 +171,6 @@ memory: 200Mi`))
       values:
       - test
 `))
-
-			testDeschedulerConfigMap := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "descheduler-config-test")
-			Expect(testDeschedulerConfigMap.Exists()).To(BeTrue())
-			testDeschedulerConfigMapData := testDeschedulerConfigMap.Field("data")
-			Expect(testDeschedulerConfigMapData.Get("policy\\.yaml").String()).To(MatchYAML(`
-apiVersion: "descheduler/v1alpha1"
-kind: "DeschedulerPolicy"
-nodeSelector: node-role.deckhouse.io/frontend=,node-role.kubernetes.io/frontend=
-evictLocalStoragePods: true
-evictSystemCriticalPods: true
-strategies:
-  "RemovePodsViolatingTopologySpreadConstraint":
-    enabled: true
-    params:
-      includeSoftConstraints: true
-      labelSelector:
-        matchLabels:
-          app: controller
-          name: test
-      namespaces:
-        include:
-          - "d8-ingress-nginx"`))
-
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
