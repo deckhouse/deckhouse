@@ -144,15 +144,15 @@ spec:
       labels:
         app: controller
         name: {{ $name }}
-  {{- if include "is_istio_in_use" $context }}
+      {{- if include "is_istio_in_use" $context }}
       annotations:
-    {{- if $crd.spec.enableIstioSidecar }}
+      {{- if $crd.spec.enableIstioSidecar }}
         sidecar.istio.io/inject: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
-    {{- else }}
+      {{- else }}
         sidecar.istio.io/inject: "false"
-    {{- end }}
-  {{- end }}
+      {{- end }}
+      {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
       nodeSelector:
@@ -253,6 +253,12 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=false
+        {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
+{{/*        we don't disable it if validation is disabled because it will lead to deployment rollout*/}}
+        - --validating-webhook=:8443
+        - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
+        - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
+        {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
@@ -314,6 +320,11 @@ spec:
           hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
     {{- end }}
   {{- end }}
+  {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
+        - containerPort: 8443
+          protocol: TCP
+          name: webhook
+  {{- end }}
         volumeMounts:
         - mountPath: /var/lib/nginx/body
           name: client-body-temp-path
@@ -327,6 +338,9 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /etc/nginx/ssl/
           name: secret-nginx-auth-tls
+        - mountPath: /etc/nginx/webhook-ssl/
+          name: webhook-cert
+          readOnly: true
       - image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.ingressNginx.protobufExporter }}
         name: protobuf-exporter
         resources:
@@ -392,6 +406,9 @@ spec:
       - name: secret-nginx-auth-tls
         secret:
           secretName: ingress-nginx-{{ $crd.name }}-auth-tls
+      - name: webhook-cert
+        secret:
+          secretName: ingress-admission-certificate
 {{- end }}
 
 {{- $context := . }}
