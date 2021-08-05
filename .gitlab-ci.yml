@@ -213,30 +213,10 @@ Cloud layouts Tests Static containerd (manual):
   when: manual
   needs: *needs
 
-Cloud layouts Tests for docker (scheduled):
-  extends: .Cloud layouts Tests template for docker
-  tags:
-    - cloud-layouts
-  only:
-    variables:
-    - $CLOUD_LAYOUTS_SCHEDULE
-  when: always
-  needs: *needs
-
 Cloud layouts Tests for containerd (scheduled):
-  extends: .Cloud layouts Tests template for containerd
+  extends: .Cloud layouts Tests template for containerd scheduled
   tags:
     - cloud-layouts
-  only:
-    variables:
-      - $CLOUD_LAYOUTS_SCHEDULE
-  when: always
-  needs: *needs
-
-Cloud layouts Tests vSphere for docker (scheduled):
-  extends: .Cloud layouts Tests vSphere template for docker
-  tags:
-    - cloud-layouts-vsphere
   only:
     variables:
     - $CLOUD_LAYOUTS_SCHEDULE
@@ -244,7 +224,7 @@ Cloud layouts Tests vSphere for docker (scheduled):
   needs: *needs
 
 Cloud layouts Tests vSphere for containerd (scheduled):
-  extends: .Cloud layouts Tests vSphere template for containerd
+  extends: .Cloud layouts Tests vSphere template for containerd scheduled
   tags:
     - cloud-layouts-vsphere
   only:
@@ -253,18 +233,8 @@ Cloud layouts Tests vSphere for containerd (scheduled):
   when: always
   needs: *needs
 
-Cloud layouts Tests Static for docker (scheduled):
-  extends: .Cloud layouts Tests Static template for docker
-  tags:
-    - cloud-layouts
-  only:
-    variables:
-      - $CLOUD_LAYOUTS_SCHEDULE
-  when: always
-  needs: *needs
-
 Cloud layouts Tests Static for containerd (scheduled):
-  extends: .Cloud layouts Tests Static template for containerd
+  extends: .Cloud layouts Tests Static template for containerd scheduled
   tags:
     - cloud-layouts
   only:
