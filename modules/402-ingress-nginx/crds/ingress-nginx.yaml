@@ -76,6 +76,10 @@ spec:
                   default: false
                   description: |
                     The instrument for unexpected and random termination of ingress controller Pods in a systemic manner. Chaos Monkey tests the resilience of ingress controller.
+                validationEnabled:
+                  type: boolean
+                  default: true
+                  description: Enable ingress validation admission
                 nodeSelector:
                   type: object
                   additionalProperties:
