@@ -180,7 +180,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 ## How do I create an image in OpenStack?
 
-1. Download the latest stable ubuntu 18.04 image: 
+1. Download the latest stable Ubuntu 18.04 image:
 
     ```shell
     curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64

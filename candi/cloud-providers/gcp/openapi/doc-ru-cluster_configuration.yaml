@@ -22,7 +22,7 @@ apiVersions:
       labels:
         type: object
         description: |
-          Список лейблов, которые будут прикреплены ко всем ресурсам (которые это поддерживают) кластера.
+          Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
 
           Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
 
@@ -33,7 +33,10 @@ apiVersions:
           type: string
       peeredVPCs:
         type: array
-        description: Список GCP VPC networks, с которыми будет объединена сеть кластера. Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
+        description: |
+          Список GCP VPC networks, с которыми будет объединена сеть кластера.
+
+          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, то пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
         items:
           type: string
       masterNodeGroup:
@@ -44,7 +47,7 @@ apiVersions:
           replicas:
             type: integer
             minimum: 1
-            description: Сколько master-узлов создать.
+            description: Сколько master-узлов создавать.
           additionalNetworkTags:
             type: array
             items:

@@ -23,7 +23,7 @@ standard:
 subnetworkCIDR: 10.0.0.0/24                                  # required
 peeredVPCs:                                                  # optional, list of GCP VPC Networks with which Kubernetes VPC Network will be peered
 - default
-sshKey: "ssh-rsa ..."                                        # required
+sshKey: "ssh-rsa <SSH_PUBLIC_KEY>"                           # required
 labels:
   kube: example
 masterNodeGroup:

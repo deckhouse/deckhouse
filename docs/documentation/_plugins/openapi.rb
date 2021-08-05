@@ -179,7 +179,11 @@ module Jekyll
                             if attributes['type'] == 'string'
                                 "`\"#{exampleObject}\"`"
                             else
+                              if exampleObject =~ /\`\`\`|\n/
+                                "\n\n#{exampleObject}"
+                              else
                                 "`#{exampleObject}`"
+                              end
                             end
                         end
             result.push(converter.convert(example.to_s))
