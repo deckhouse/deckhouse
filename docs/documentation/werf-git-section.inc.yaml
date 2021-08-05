@@ -26,6 +26,14 @@
   to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/openstack/openapi
+  to: /src/ee/modules/030-cloud-provider-openstack/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 - add: /ee/candi/cloud-providers/vsphere/openapi
@@ -83,7 +91,7 @@
   to: /src/modules/030-cloud-provider-gcp/docs
   owner: jekyll
   group: jekyll
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/yandex/docs
@@ -97,7 +105,7 @@
   to: /src/ee/modules/030-cloud-provider-openstack/docs
   owner: jekyll
   group: jekyll
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /ee/candi/cloud-providers/vsphere/docs

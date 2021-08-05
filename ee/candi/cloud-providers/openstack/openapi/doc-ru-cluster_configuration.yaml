@@ -1,0 +1,359 @@
+kind: OpenStackClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [OpenStackClusterConfiguration]
+      sshPublicKey:
+        type: string
+        description: Публичный ключ для доступа на узлы.
+        x-doc-required: true
+      tags:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
+
+          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+        x-doc-required: false
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
+        description: Глобальное ограничение набора зон, с которыми работает данный cloud-provider.
+        x-doc-required: false
+      masterNodeGroup:
+        description: Спецификация для описания NodeGroup master-узлов.
+        x-doc-required: true
+        additionalProperties: false
+        required: [replicas, instanceClass, volumeTypeMap]
+        properties:
+          replicas:
+            type: integer
+            minimum: 1
+            description: Сколько master-узлов создавать.
+            x-doc-required: true
+          instanceClass:
+            description: |
+              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+            x-doc-required: true
+            type: object
+            required: [flavorName, imageName]
+            additionalProperties: false
+            properties: &instanceClassProperties_ru
+              flavorName:
+                description: |
+                  Тип заказываемых виртуальных машин.
+
+                  Получить список всех доступных flavor: `openstack flavor list`.
+                type: string
+                x-doc-required: true
+              imageName:
+                description: |
+                  Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                  Получить список всех доступных образов: `openstack image list`.
+
+                  **Внимание!** Сейчас поддерживается и тестируется только `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7`.
+                type: string
+                x-doc-required: true
+              rootDiskSize:
+                description: |
+                  Размер root-диска. Значение указывается в гигабайтах.
+
+                  Если параметр не указан, то для инстанса используется локальный диск с размером указанным в flavor.
+                  Если параметр присутствует, то инстанс будет использовать заказанный OpenStack Cinder volume (с указанным размером и стандартным для кластера типом) как root-диск.
+
+                  > Если в cloud-провайдере существует несколько типов дисков, то для выбора конкретного типа диска виртуальной машины у используемого образа можно установить тип диска по умолчанию. Для этого необходимо в метаданных образа указать имя определённого типа диска.
+                  > Может понадобиться создать свой собственный image в OpenStack, как это сделать описано в разделе ["Загрузка image в OpenStack"](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-загрузить-image-в-openstack).
+                  >
+                  > ```shell
+                  > openstack volume type list
+                  > openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
+                  > ```
+                type: integer
+              additionalSecurityGroups:
+                description: |
+                  Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud-провайдера.
+
+                  Используется для задания правил firewall по отношению к заказываемым инстансам.
+
+                  `SecurityGroups` могут не поддерживаться провайдером.
+                type: array
+                items:
+                  type: string
+                uniqueItems: true
+              additionalTags:
+                type: object
+                description: |
+                  Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud-провайдера.
+                additionalProperties:
+                  type: string
+          volumeTypeMap:
+            description: |
+              Словарь типов дисков для хранения данных etcd и конфигурационных файлов Kubernetes.
+
+              Если указан параметр `rootDiskSize`, то этот же тип диска будет использован в качестве загрузочного диска виртуальной машины.
+
+              Всегда рекомендуется использовать самые быстрые диски, предоставляемые провайдером.
+
+              Формат — словарь (ключ - имя зоны, значение - тип диска).
+
+              Если значение указанное в `replicas` превышает количество элементов в словаре, то master-узлы, чьи номера превышают
+              длину словаря, получают значения начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, то с типом
+              диска `ru-1a` будут master-0, master-2, master-4, а с типом диска `ru-1b` будут master-1, master-3.
+            type: object
+            minProperties: 1
+            additionalProperties:
+              type: string
+              minLength: 1
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных forntend-узлов или шлюзов).
+        type: array
+        items:
+          additionalProperties: false
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              type: string
+              description: Имя NodeGroup, будет использоваться для генерации имен узлов.
+              x-doc-required: true
+            replicas:
+              type: integer
+              description: Количество узлов.
+              x-doc-required: true
+            nodeTemplate:
+              description: Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+
+                    Формат — `key: value`.
+                  type: object
+                  additionalProperties:
+                    type: string
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
+                  type: object
+                  additionalProperties:
+                    type: string
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
+
+                    **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+            instanceClass:
+              description: |
+                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+              required: [flavorName, imageName, mainNetwork]
+              additionalProperties: false
+              type: object
+              properties:
+                <<: *instanceClassProperties_ru
+                configDrive:
+                  type: boolean
+                  default: false
+                  x-doc-required: false
+                  description: |
+                    Флаг, указывающий будет ли монтироваться на узел дополнительный диск, содержащий конфигурацию для узла.
+
+                    Параметр необходимо устанавливать, если в сети, указанной в качестве `mainNetwork` отключен DHCP.
+                mainNetwork:
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине, как основная (шлюз по умолчанию).
+
+                    **По умолчанию:** значение из `OpenStackCloudDiscoveryData`.
+                  type: string
+                  x-doc-required: true
+                additionalNetworks:
+                  type: array
+                  description: |
+                    Список сетей, которые будут подключены к инстансу.
+
+                    **По умолчанию:** значение из `OpenStackCloudDiscoveryData`.
+                  items:
+                    type: string
+                networksWithSecurityDisabled:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    Список сетей из параметров `mainNetwork` и `additionalNetworks`, в которых **НЕЛЬЗЯ** настраивать `SecurityGroups` и `AllowedAddressPairs` на портах.
+                floatingIPPools:
+                  type: array
+                  items:
+                    type: string
+                  description: Список сетей, в которых заказывать Floating IP для узлов.
+            zones:
+              type: array
+              items:
+                type: string
+              minItems: 1
+              uniqueItems: true
+              description: Список зон, в которых допустимо создавать статичные узлы.
+              x-doc-required: false
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html) о возможных схемах размещения провайдера.
+        type: string
+      standard:
+        description: Настройки для схемы размещения [`Standard`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standard).
+        type: object
+        additionalProperties: false
+        required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
+        properties:
+          internalNetworkCIDR: &internalNetworkCIDR_ru
+            description: Адресация для внутренней сети узлов кластера.
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+          internalNetworkDNSServers:
+            description: Список адресов рекурсивных DNS внутренней сети.
+            type: array
+            items:
+              type: string
+              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+          internalNetworkSecurity: &internalNetworkSecurity_ru
+            description: |
+              Флаг, который определяет необходимо ли настраивать [SecurityGroups](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
+          externalNetworkName: &externalNetworkName_ru
+            description: Имя сети для внешнего взаимодействия.
+      standardWithNoRouter:
+        description: Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter).
+        type: object
+        additionalProperties: false
+        required: [internalNetworkCIDR, externalNetworkName]
+        properties:
+          internalNetworkCIDR:
+            <<: *internalNetworkCIDR_ru
+          internalNetworkSecurity:
+            <<: *internalNetworkSecurity_ru
+          externalNetworkName:
+            <<: *externalNetworkName_ru
+          externalNetworkDHCP: &externalNetworkDHCP_ru
+            description: Флаг, который указывает включен ли DHCP в сети, указанной в качестве внешней.
+            type: boolean
+            default: true
+      simple:
+        type: object
+        description: Настройки для схемы размещения [`Simple`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simple).
+        additionalProperties: false
+        required: [externalNetworkName]
+        properties:
+          externalNetworkName:
+            <<: *externalNetworkName_ru
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP_ru
+          podNetworkMode:
+            description: |
+              Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это internal-сеть, но бывают исключения).
+
+              * `DirectRouting` – между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
+              * `VXLAN` – между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+            type: string
+            enum: [VXLAN, DirectRouting]
+            default: VXLAN
+      simpleWithInternalNetwork:
+        description: Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
+        type: object
+        additionalProperties: false
+        required: [internalSubnetName]
+        properties:
+          internalSubnetName:
+            type: string
+          podNetworkMode:
+            description: |
+              Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это internal-сеть, но бывают исключения).
+
+              * `DirectRouting` — между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
+              * `DirectRoutingWithPortSecurityEnabled` — между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на портах диапазон адресов используемых во внутренней сети.
+                * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование `AllowedAddressPairs` на портах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
+              * `VXLAN` — между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+            type: string
+            enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+            default: DirectRoutingWithPortSecurityEnabled
+          externalNetworkName:
+            <<: *externalNetworkName_ru
+          masterWithExternalFloatingIP:
+            description: Флаг, который указывает создавать ли floating IP на master-узлах.
+            type: boolean
+            default: true
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/environment.html) к API OpenStack.
+
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/configuration.html#параметры).
+        type: object
+        additionalProperties: false
+        properties:
+          authURL:
+            type: string
+          caCert:
+            type: string
+          domainName:
+            type: string
+          tenantName:
+            type: string
+          tenantID:
+            type: string
+          username:
+            type: string
+          password:
+            type: string
+          region:
+            type: string
+        oneOf:
+        - required: [authURL, domainName, tenantName, username, password, region]
+        - required: [authURL, domainName, tenantID, username, password, region]
+    oneOf:
+    - required: [layout, standard]
+      properties:
+        layout:
+          enum: [Standard]
+          type: string
+    - required: [layout, standardWithNoRouter]
+      properties:
+        layout:
+          enum: [StandardWithNoRouter]
+          type: string
+    - required: [layout, simple]
+      properties:
+        layout:
+          enum: [Simple]
+          type: string
+    - required: [layout, simpleWithInternalNetwork]
+      properties:
+        layout:
+          enum: [SimpleWithInternalNetwork]
+          type: string

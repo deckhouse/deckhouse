@@ -108,8 +108,8 @@ Hybrid-кластер представляет собой объединённы
   * Допустимые значение:
     * `DirectRouting` – между узлами работает прямая маршрутизация.
     * `DirectRoutingWithPortSecurityEnabled` - между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на Port'ах диапазон адресов используемых во внутренней сети.
-      * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование AllowedAddressPairs на Port'ах, подключенных в сеть `internalNetworkName`. Обычно, в OpenStack, такого доступа нет, если сеть имеет флаг `shared`.
-    * `VXLAN` – между узлами НЕ работает прямая маршрутизация, необходимо использовать VXLAN.
+      * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование AllowedAddressPairs на Port'ах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
+    * `VXLAN` – между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN.
   * Опциональный параметр. По умолчанию `DirectRoutingWithPortSecurityEnabled`.
 * `instances` — параметры instances, которые используются при создании виртуальных машин:
   * `sshKeyPairName` — имя OpenStack ресурса `keypair`, который будет использоваться при заказе instances.
@@ -186,7 +186,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 ## Как загрузить image в OpenStack?
 
-1. Скачиваем последний стабильный образ ubuntu 18.04
+1. Скачиваем последний стабильный образ Ubuntu 18.04
 
     ```shell
     curl -L https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img --output ~/ubuntu-18-04-cloud-amd64

@@ -2,8 +2,7 @@
 title: "Cloud provider - Openstack: Layouts"
 ---
 
-## Layouts
-### Standard
+## Standard
 In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
 
 **Caution**
@@ -62,7 +61,7 @@ nodeGroups:
   zones:
   - ru-1a
   - ru-1b
-sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 tags:
   project: cms
   owner: default
@@ -70,7 +69,7 @@ provider:
   ...
 ```
 
-### StandardWithNoRouter
+## StandardWithNoRouter
 An internal cluster network is created that does not have access to the public network. All nodes (including master ones) have two interfaces: the first one to the public network, the second one to the internal network. This layout should be used if you want all nodes in the cluster to be directly accessible.
 
 **Caution**
@@ -119,12 +118,12 @@ nodeGroups:
     additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
-sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 provider:
   ...
 ```
 
-### Simple
+## Simple
 
 The master node and cluster nodes are connected to the existing network. This placement strategy might come in handy if you need to merge a Kubernetes cluster with existing VMs.
 
@@ -174,12 +173,12 @@ nodeGroups:
     additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
-sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 provider:
   ...
 ```
 
-### SimpleWithInternalNetwork
+## SimpleWithInternalNetwork
 
 The master node and cluster nodes are connected to the existing network. This placement strategy might come in handy if you need to merge a Kubernetes cluster with existing VMs.
 
@@ -233,110 +232,7 @@ nodeGroups:
     additionalSecurityGroups:                             # optional, additional security groups
     - sec_group_1
     - sec_group_2
-sshPublicKey: "ssh-rsa ewasfef3wqefwefqf43qgqwfsd"
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 provider:
   ...
 ```
-
-## OpenStackClusterConfiguration
-A particular placement strategy is defined via the `OpenStackClusterConfiguration` struct. It has the following fields:
-* `layout` - the way resources are located in the cloud;
-  * Possible values: `Standard`, `StandardWithNoRouter`, `Simple`, `SimpleWithInternalNetwork` (see the description below);
-* `Standard` — settings for the `Standard` layout;
-  * `internalNetworkCIDR` — routing for the internal cluster network;
-  * `internalNetworkDNSServers` — a list of addresses of the recursive DNSs of the internal cluster network;
-  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
-  * `externalNetworkName` — the name of the network for external connections;
-* `StandardWithNoRouter` — settings for the `StandardWithNoRouter` layout;
-  * `internalNetworkCIDR` — routing for the internal cluster network;
-  * `externalNetworkName` — the name of the network for external connections;
-  * `externalNetworkDHCP` — this parameter defines if DHCP is enabled in the external network;
-  * `internalNetworkSecurity` — this parameter defines whether [SecurityGroups](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network;
-* `Simple` — settings for the `Simple` layout;
-  * `externalNetworkName` — the name of the network for external connections;
-  * `externalNetworkDHCP` — this parameter defines if DHCP is enabled in the external network;
-  * `podNetworkMode` — sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
-    * Possible values:
-      * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode);
-      * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode);
-* `SimpleWithInternalNetwork` — settings for the `SimpleWithInternalNetwork` layout;
-  * `internalSubnetName` — a subnet to use for cluster nodes;
-  * `podNetworkMode` — sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
-    * Possible values:
-      * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode);
-      * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports;
-        * **Caution!** Make sure that the `username` can edit AllowedAddressPairs on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set;
-      * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode);
-  * `externalNetworkName` — the name of the network for external connections;
-  * `masterWithExternalFloatingIP` — this parameter defines if floatingIP must be assigned to master nodes;
-* `provider` — this parameter contains settings to connect to the OpenStack API; these settings are the same as those in the  `connection` field of the [cloud-provider-openstack](/en/documentation/v1/modules/030-cloud-provider-openstack/configuration.html) module;
-* `masterNodeGroup` — the definition of the master's NodeGroup;
-  * `replicas` — the number of master nodes to create;
-  * `instanceClass` — partial contents of the fields of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) CR. Required parameters: `flavorName`, `imageName`. Possible parameters:
-    * `flavorName`
-    * `imageName`
-    * `rootDiskSize`
-    * `additionalSecurityGroups`
-    * `additionalTags`
-  * `volumeTypeMap` — a dictionary of disk types for storing etcd data and kubernetes configuration files. If the `rootDiskSize` parameter is specified, the same disk type will be used for the VM's boot drive. We recommend using the fastest disks provided by the provider in all cases;
-    * A mandatory parameter;
-    * A dictionary where the key is the name of the zone, value - disk type;
-    * An example:
-      ```yaml
-      ru-1a: fast-ru-1a
-      ru-1b: fast-ru-1b
-      ```
-      If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `ru-1a` disk type, while master-1, master-3 will have the `ru-1b` disk type;
-* `nodeGroups` — an array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways). NodeGroup parameters:
-  * `name` — the name of the NodeGroup to use for generating node names;
-  * `replicas` — the number of nodes to create;
-  * `instanceClass` — partial contents of the fields of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) CR. Required parameters:  `flavorName`, `imageName`, `mainNetwork`. The parameters in **bold** are unique for `OpenStackClusterConfiguration`. Possible parameters:
-    * `flavorName`
-    * `imageName`
-    * `rootDiskSize`
-    * `mainNetwork`
-    * `additionalSecurityGroups`
-    * `additionalTags`
-    * `additionalNetworks`
-    * **`networksWithSecurityDisabled`** — this parameter contains a list of `mainNetwork` and `additionalNetworks` in which `SecurityGroups` and `AllowedAddressPairs` on ports **CANNOT** be configured;
-      * Format — an array of strings;
-    * **`floatingIPPools`** — a list of networks to assign Floating IPs to nodes;
-      * Format — an array of strings;
-    * **`configDrive`** — this flag specifies whether an additional disk containing the bootstrapping configuration will be mounted to the node. You must set it if DHCP is disabled in the `mainNetwork`.
-      * An optional parameter;
-      * It is set to `false` by default;
-  * `zones` — a limited set of zones in which nodes can be created;
-    * An optional parameter;
-    * Format — an array of strings;
-  * `nodeTemplate` — parameters of Node objects in Kubernetes to add after registering the node;
-    * `labels` — the same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta);
-      * An example:
-        ```yaml
-        labels:
-          environment: production
-          app: warp-drive-ai
-        ```
-    * `annotations` — the same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta);
-      * An example:
-        ```yaml
-        annotations:
-          ai.fleet.com/discombobulate: "true"
-        ```
-    * `taints` — the same as the .spec.taints field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object. **Caution!** Only the `effect`, `key`, `values`  fields are available;
-      * An example:
-
-        ```yaml
-        taints:
-        - effect: NoExecute
-          key: ship-class
-          value: frigate
-        ```
-* `sshPublicKey` — a public key for accessing nodes;
-  * A mandatory parameter;
-  * Fprmat — a string;
-* `tags` — a dictionary of tags to create on all resources that support this feature. You have to re-create all the machines to add new tags if tags were modified in the running cluster;
-  * An optional parameter;
-  * Format — key-value pairs;
-* `zones` — the globally restricted set of zones that this Cloud Provider works with.
-  * An optional parameter;
-  * Format — an array of strings;
