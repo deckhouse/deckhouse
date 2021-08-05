@@ -127,7 +127,8 @@ spec:
 					  "pod_labels": "pod_labels",
 					  "pod_name": "pod",
 					  "pod_namespace": "namespace",
-					  "pod_node_name": "node"
+					  "pod_node_name": "node",
+					  "pod_owner": "pod_owner"
 					}
 				  },
 				  "d8_cluster_test-source_test-logstash-dest": {
@@ -141,7 +142,8 @@ spec:
 					  "pod_labels": "pod_labels",
 					  "pod_name": "pod",
 					  "pod_namespace": "namespace",
-					  "pod_node_name": "node"
+					  "pod_node_name": "node",
+					  "pod_owner": "pod_owner"
 					}
 				  },
 				  "d8_cluster_test-source_test-loki-dest": {
@@ -155,7 +157,8 @@ spec:
 					  "pod_labels": "pod_labels",
 					  "pod_name": "pod",
 					  "pod_namespace": "namespace",
-					  "pod_node_name": "node"
+					  "pod_node_name": "node",
+					  "pod_owner": "pod_owner"
 					}
 				  }
 				},
@@ -347,7 +350,8 @@ spec:
 					  "pod": "{{ pod }}",
 					  "pod_ip": "{{ pod_ip }}",
 					  "stream": "{{ stream }}",
-					  "pod_labels": "{{ pod_labels }}"
+					  "pod_labels": "{{ pod_labels }}",
+					  "pod_owner": "{{ pod_owner }}"
 					},
 					"remove_label_fields": true,
 					"out_of_order_action": "rewrite_timestamp"
@@ -435,7 +439,8 @@ spec:
 					  "pod_labels": "pod_labels",
 					  "pod_name": "pod",
 					  "pod_namespace": "namespace",
-					  "pod_node_name": "node"
+					  "pod_node_name": "node",
+					  "pod_owner": "pod_owner"
 					}
 				  },
 				  "d8_namespaced_tests-whispers_whispers-logs_test-es-dest": {
@@ -449,7 +454,8 @@ spec:
 					  "pod_labels": "pod_labels",
 					  "pod_name": "pod",
 					  "pod_namespace": "namespace",
-					  "pod_node_name": "node"
+					  "pod_node_name": "node",
+					  "pod_owner": "pod_owner"
 					}
 				  }
 				},
@@ -541,7 +547,8 @@ spec:
 					  "pod_ip": "{{ pod_ip }}",
 					  "stream": "{{ stream }}",
 					  "foo": "bar",
-					  "pod_labels": "{{ pod_labels }}"
+					  "pod_labels": "{{ pod_labels }}",
+					  "pod_owner": "{{ pod_owner }}"
 					},
 					"remove_label_fields": true,
 					"out_of_order_action": "rewrite_timestamp"

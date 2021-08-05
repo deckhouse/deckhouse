@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM flant/vector:0.14.0-alpine AS vector
+FROM flant/vector:0.15.1-alpine AS vector
 
 FROM $BASE_ALPINE
 COPY --from=vector /usr/local/bin/vector /usr/local/bin/vector
