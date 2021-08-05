@@ -99,13 +99,6 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to main registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -117,6 +110,13 @@ jobs:
         uses: werf/actions/install@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
+
+      - name: Login to main registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
       - name: Run werf bp for modules
         env:
@@ -169,12 +169,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
-
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -200,6 +194,12 @@ jobs:
         uses: werf/actions/install@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
+
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
 
       - name: Build and push
         env:
@@ -322,7 +322,7 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
@@ -370,7 +370,7 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
@@ -404,7 +404,7 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
@@ -452,7 +452,7 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
@@ -500,7 +500,7 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
@@ -548,7 +548,7 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     steps:
       - name: run test
         run: |
@@ -559,7 +559,7 @@ jobs:
     needs:
       - doc_web_build
       - main_web_build
-    runs-on: ubuntu-latest
+    runs-on: werf-distributed
     continue-on-error: true
     steps:
       - name: Checkout sources
@@ -643,6 +643,13 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
+
+      # images_tags file is required in werf.yaml
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
