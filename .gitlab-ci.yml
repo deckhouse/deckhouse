@@ -307,8 +307,6 @@ Copyright Validation:
 .base_deploy: &base_deploy
   extends: .base_deploy_template
   after_script:
-    - docker image rmi $DESTINATION_IMAGE
-    - docker image rmi $DESTINATION_INSTALL_IMAGE
     - git checkout ${CI_JOB_NAME} && git reset ${CI_COMMIT_SHA}
     - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
   needs:
