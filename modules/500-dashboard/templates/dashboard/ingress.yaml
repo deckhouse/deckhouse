@@ -1,11 +1,14 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: {{ include "helm_lib_module_ingress_class" . | quote }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-name: d8-dashboard-affinity
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.dashboard.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.dashboard.auth.externalAuthentication.authURL | quote }}
