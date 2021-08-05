@@ -4,7 +4,7 @@ title: "The secret-copier module"
 
 This module copies secrets to all namespaces.
 
-It facilitates the copying of secrets required to pull images and to provision Seph's RBDs as part of the CI process.
+It facilitates the copying of secrets required to pull images and to provision Ceph's RBDs as part of the CI process.
 
 ### How does it work?
 
