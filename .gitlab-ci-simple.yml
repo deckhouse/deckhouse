@@ -1,3 +1,10 @@
+variables:
+  WERF_CHANNEL: "ea"
+  WERF_ENV: FE
+  WERF_STAPEL_IMAGE_NAME: "flant/werf-stapel"
+  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
+  TEST_TIMEOUT: "15m"
+
 include:
   - '.gitlab/ci_includes/terraform_versions.yml'
   - '.gitlab/ci_includes/image_versions.yml'
@@ -13,14 +20,6 @@ stages:
   - deploy
   - cleanup_registry
   - cleanup_builder
-
-variables:
-  WERF_CHANNEL: "ea"
-  WERF_ENV: FE
-  WERF_STAPEL_IMAGE_NAME: "${DECKHOUSE_READ_REGISTRY}/flant/stapel"
-  WERF_STAPEL_IMAGE_VERSION: "0.6.1"
-  TEST_TIMEOUT: "15m"
-  DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
 
 Build Modules Images:
   extends: .Build Modules Images template

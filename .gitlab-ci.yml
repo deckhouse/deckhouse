@@ -1,13 +1,3 @@
-include:
-  - '.gitlab/ci_includes/web.yml'
-  - '.gitlab/ci_includes/terraform_versions.yml'
-  - '.gitlab/ci_includes/image_versions.yml'
-  - '.gitlab/ci_templates/build.yml'
-  - '.gitlab/ci_templates/cleanup.yml'
-  - '.gitlab/ci_templates/tests.yml'
-  - '.gitlab/ci_templates/cloud_tests.yml'
-  - '.gitlab/ci_templates/deploy.yml'
-
 variables:
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
@@ -19,6 +9,17 @@ variables:
   WERF_STAPEL_IMAGE_VERSION: "0.6.1"
   TEST_TIMEOUT: "15m"
   DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${CI_PROJECT_PATH}"
+  BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+
+include:
+  - '.gitlab/ci_includes/web.yml'
+  - '.gitlab/ci_includes/terraform_versions.yml'
+  - '.gitlab/ci_includes/image_versions.yml'
+  - '.gitlab/ci_templates/build.yml'
+  - '.gitlab/ci_templates/cleanup.yml'
+  - '.gitlab/ci_templates/tests.yml'
+  - '.gitlab/ci_templates/cloud_tests.yml'
+  - '.gitlab/ci_templates/deploy.yml'
 
 stages:
   - build_modules_images
