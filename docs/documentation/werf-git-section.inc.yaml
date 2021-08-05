@@ -84,7 +84,7 @@
   to: /src/modules/030-cloud-provider-azure/docs
   owner: jekyll
   group: jekyll
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md']
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/gcp/docs
@@ -119,6 +119,14 @@
   to: /src/modules/030-cloud-provider-azure/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/azure/openapi
+  to: /src/modules/030-cloud-provider-azure/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/gcp/openapi
