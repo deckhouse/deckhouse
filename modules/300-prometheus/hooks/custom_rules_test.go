@@ -186,7 +186,7 @@ metadata:
     heritage: deckhouse
     app: prometheus
     prometheus: main
-    component: rules
+    component: custom_rules
 `))
 			f.RunHook()
 		})

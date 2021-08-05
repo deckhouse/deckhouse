@@ -52,14 +52,8 @@ func filterCustomRule(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	return cr, nil
 }
 
-type InternalRule struct {
-	Name string
-}
-
 func filterInternalRule(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	ir := new(InternalRule)
-	ir.Name = obj.GetName()
-	return ir, nil
+	return obj.GetName(), nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -69,7 +63,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "rules",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "CustomPrometheusRules",
-			FilterFunc: filterCustomRule, // jqFilter: '{"name": .metadata.name, "groups": .spec.groups}'
+			FilterFunc: filterCustomRule,
 		},
 		{
 			Name:       "internal_rules",
@@ -86,10 +80,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"heritage":   "deckhouse",
 					"app":        "prometheus",
 					"prometheus": "main",
-					"component":  "rules",
+					"component":  "custom_rules",
 				},
 			},
-			FilterFunc: filterInternalRule, //  jqFilter: '.metadata.name'
+			FilterFunc: filterInternalRule,
 		},
 	},
 }, customRulesHandler)
@@ -114,9 +108,9 @@ func customRulesHandler(input *go_hook.HookInput) error {
 
 	// delete absent prometheus rules
 	for _, sn := range internalRulesSnap {
-		inRule := sn.(*InternalRule)
-		if _, ok := tmpMap[inRule.Name]; !ok {
-			err := input.ObjectPatcher.DeleteObject("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", inRule.Name, "")
+		internalRuleName := sn.(string)
+		if _, ok := tmpMap[internalRuleName]; !ok {
+			err := input.ObjectPatcher.DeleteObject("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", internalRuleName, "")
 			if err != nil {
 				return err
 			}
@@ -127,21 +121,6 @@ func customRulesHandler(input *go_hook.HookInput) error {
 }
 
 func createPrometheusRule(name string, groups []interface{}) unstructured.Unstructured {
-	// apiVersion: monitoring.coreos.com/v1
-	// kind: PrometheusRule
-	// metadata:
-	//  name: d8-custom-${name}
-	//  namespace: d8-monitoring
-	//  labels:
-	//    module: prometheus
-	//    heritage: deckhouse
-	//    app: prometheus
-	//    prometheus: main
-	//    component: rules
-	// spec:
-	//  groups:
-	// $(echo "$rule" | yq r - | sed 's/^/  /')
-
 	customName := fmt.Sprintf("d8-custom-%s", name)
 
 	un := unstructured.Unstructured{Object: map[string]interface{}{
@@ -155,7 +134,7 @@ func createPrometheusRule(name string, groups []interface{}) unstructured.Unstru
 				"heritage":   "deckhouse",
 				"app":        "prometheus",
 				"prometheus": "main",
-				"component":  "rules",
+				"component":  "custom_rules",
 			},
 		},
 		"spec": map[string]interface{}{
