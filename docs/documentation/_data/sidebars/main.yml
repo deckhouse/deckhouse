@@ -77,6 +77,10 @@ entries:
                         ru: Схемы размещения
                         en: Layouts
                       url: /modules/030-cloud-provider-aws/layouts.html
+                    - title:
+                        ru: Настройка провайдера
+                        en: Provider configuration
+                      url: /modules/030-cloud-provider-aws/cluster_configuration.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -225,6 +229,10 @@ entries:
                         ru: Схемы размещения
                         en: Layouts
                       url: /modules/030-cloud-provider-vsphere/layouts.html
+                    - title:
+                        ru: Настройка провайдера
+                        en: Provider configuration
+                      url: /modules/030-cloud-provider-vsphere/cluster_configuration.html
                 - title:
                     ru: Справка
                     en: Reference
@@ -259,6 +267,10 @@ entries:
                         ru: Схемы размещения
                         en: Layouts
                       url: /modules/030-cloud-provider-yandex/layouts.html
+                    - title:
+                        ru: Настройка провайдера
+                        en: Provider configuration
+                      url: /modules/030-cloud-provider-yandex/cluster_configuration.html
                 - title:
                     ru: Справка
                     en: Reference
