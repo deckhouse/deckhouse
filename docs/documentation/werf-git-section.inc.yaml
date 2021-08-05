@@ -147,6 +147,14 @@
   to: /src/modules/030-cloud-provider-yandex/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/yandex/openapi
+  to: /src/modules/030-cloud-provider-yandex/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 - add: /modules/010-prometheus-crd/crds

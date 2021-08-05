@@ -214,6 +214,7 @@ module Jekyll
         result = Array.new()
 
         if name != ""
+            name_text = ''
             result.push('<li>')
             attributes_type = ''
             if attributes.is_a?(Hash)
@@ -226,13 +227,19 @@ module Jekyll
 
             if attributes_type != ''
                 if attributes.is_a?(Hash) and attributes.has_key?("items")
-                    result.push(format_key_name(name)+ ' (<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)')
+                    name_text = format_key_name(name)+ ' (<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)'
                 else
-                    result.push(format_key_name(name)+ ' (<i>' +  format_type(attributes_type, nil) + '</i>)')
+                    name_text = format_key_name(name)+ ' (<i>' +  format_type(attributes_type, nil) + '</i>)'
                 end
             else
-                result.push(format_key_name(name))
+                name_text = format_key_name(name)
             end
+
+            if attributes['x-doc-deprecated']
+                name_text = name_text + ' <span class="deprecated">' + get_i18n_term('deprecated').upcase + '!</span>'
+            end
+
+            result.push(name_text)
         end
 
         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)

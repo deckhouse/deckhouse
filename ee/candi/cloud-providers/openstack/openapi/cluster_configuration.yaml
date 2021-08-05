@@ -167,7 +167,6 @@ apiVersions:
                 annotations:
                   description: |
                     The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
-
                   x-doc-example: |
                       ```yaml
                       annotations:
@@ -251,9 +250,7 @@ apiVersions:
               minItems: 1
               uniqueItems: true
               description: |
-                Specifies whether an additional disk containing the bootstrapping configuration will be mounted to the node.
-
-                You must set it if DHCP is disabled in the `mainNetwork`.
+                A limited set of zones in which nodes can be created.
               x-doc-required: false
       layout:
         description: |
