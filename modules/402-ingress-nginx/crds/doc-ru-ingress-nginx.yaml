@@ -73,6 +73,10 @@ spec:
                   default: false
                   description: |
                     Инструмент, позволяющий систематически вызывать случайные прерывания работы Pod'ов контроллера. Предназначен для проверки ingress контроллера на реальную работу отказоустойчивости.
+                validationEnabled:
+                  type: boolean
+                  default: true
+                  description: Включить валидацию ingress правил
                 nodeSelector:
                   type: object
                   additionalProperties:

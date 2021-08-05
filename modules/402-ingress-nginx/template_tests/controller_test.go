@@ -44,6 +44,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
 		hec.ValuesSet("ingressNginx.defaultControllerVersion", "0.25")
+
+		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
+		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
+		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
 	})
 	Context("With ingress nginx controller in values", func() {
 		BeforeEach(func() {
@@ -66,6 +70,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       use-proxy-protocol: true
       load-balance: ewma
     ingressClass: nginx
+    validationEnabled: true
     controllerVersion: "0.26"
     inlet: LoadBalancer
     hsts: true
@@ -176,6 +181,8 @@ memory: 200Mi`))
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-admission").Exists()).To(BeTrue())
+			Expect(hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-ingress-nginx-admission").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Field("metadata.annotations")).To(MatchJSON(`{"my":"annotation", "second": "true"}`))
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-load-balancer").Field("spec.loadBalancerSourceRanges")).To(MatchJSON(`["1.1.1.1","2.2.2.2"]`))
 

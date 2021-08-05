@@ -8,6 +8,23 @@ properties:
     x-required-for-helm:
     - ingressControllers
     properties:
+      admissionCertificate:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - ca
+          - key
+          - cert
+        properties:
+          ca:
+            type: string
+            x-examples: [ "testca" ]
+          key:
+            type: string
+            x-examples: [ "testkey" ]
+          cert:
+            type: string
+            x-examples: [ "testcrt" ]
       webhookCertificates:
         type: object
         default: {}
@@ -76,6 +93,8 @@ properties:
                 waitLoadBalancerOnTerminating:
                   type: integer
                 chaosMonkey:
+                  type: boolean
+                validationEnabled:
                   type: boolean
                 nodeSelector:
                     type: object
