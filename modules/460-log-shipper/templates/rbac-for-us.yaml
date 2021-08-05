@@ -39,11 +39,10 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - secrets
+      - jobs
+      - replicasets
     verbs:
-      - watch
       - get
-      - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -54,7 +53,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: d8:{{ $.Chart.Name }}
+  name: {{ $.Chart.Name }}
 subjects:
   - kind: ServiceAccount
     name: {{ $.Chart.Name }}

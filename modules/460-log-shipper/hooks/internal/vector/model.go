@@ -146,6 +146,7 @@ type kubeAnnotationFields struct {
 	PodName        string `json:"pod_name,omitempty"`
 	PodNamespace   string `json:"pod_namespace,omitempty"`
 	PodNodeName    string `json:"pod_node_name,omitempty"`
+	PodOwner       string `json:"pod_owner,omitempty"`
 }
 
 type lokiDestination struct {

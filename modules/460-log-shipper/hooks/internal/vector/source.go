@@ -82,6 +82,7 @@ func NewKubernetesLogSource(name string, spec v1alpha1.KubernetesPodsSpec, names
 		ContainerImage: "image",
 		ContainerName:  "container",
 		PodNodeName:    "node",
+		PodOwner:       "pod_owner",
 	}
 
 	return kubernetesLogSource{

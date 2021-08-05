@@ -136,7 +136,8 @@ func TestConfig_1(t *testing.T) {
 		"pod": "{{ pod }}",
 		"pod_ip": "{{ pod_ip }}",
 		"stream": "{{ stream }}",
-		"pod_labels": "{{ pod_labels }}"
+		"pod_labels": "{{ pod_labels }}",
+		"pod_owner": "{{ pod_owner }}"
 	  },
 	  "remove_label_fields": true,
 	  "out_of_order_action": "rewrite_timestamp"

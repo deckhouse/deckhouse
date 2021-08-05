@@ -121,6 +121,7 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 		"pod_ip":     "{{ pod_ip }}",
 		"stream":     "{{ stream }}",
 		"pod_labels": "{{ pod_labels }}",
+		"pod_owner":  "{{ pod_owner }}",
 	}
 
 	for k, v := range cspec.ExtraLabels {

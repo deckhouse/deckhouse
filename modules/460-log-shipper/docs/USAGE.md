@@ -2,10 +2,8 @@
 title: "Module log-shipper: usage"
 ---
 
+## Getting logs from all cluster pods and sending them to Loki
 
-## pipeline
-
-This pipeline get logs from all cluster pods and store them to Loki:
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
@@ -24,13 +22,12 @@ spec:
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
-    healthcheck:
-      enabled: true
-    encoding:
-      codec: json
 ```
 
+## Reading pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
+
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
@@ -41,7 +38,7 @@ spec:
   kubernetesPods:
     namespaceSelector:
       matchNames:
-      - whispers
+        - whispers
     labelSelector:
       matchLabels:
         app: booking
@@ -57,10 +54,6 @@ spec:
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
-    healthcheck:
-      enabled: true
-    encoding:
-      codec: json
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -77,7 +70,10 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
+## Creating a source in namespace and reading logs of all pods in that NS with forwarding them to Loki
+
 Namespaced pipeline - reading logs from `test-whispers` namespace (all pods):
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: PodLoggingConfig
@@ -96,13 +92,12 @@ spec:
   type: Loki
   loki:
     endpoint: http://loki.loki:3100
-    healthcheck:
-      enabled: true
-    encoding:
-      codec: json
 ```
 
+## Reading only pods in the specified namespace and having a certain label
+
 Read logs from pods with label `app=booking` in namespace `test-whispers`:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: PodLoggingConfig
@@ -115,4 +110,13 @@ spec:
       app: booking
   clusterDestinationRefs:
     - loki-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
 ```
