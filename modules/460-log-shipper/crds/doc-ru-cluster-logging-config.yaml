@@ -20,7 +20,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          required: ['spec']
+          required: ["spec"]
           description: |
             CustomResource для описания источника логов в log-pipeline.
 
@@ -32,17 +32,17 @@ spec:
                 - type
                 - destinationRefs
               anyOf:
-              - oneOf:
-                - properties:
-                    type:
-                      enum: [ "KubernetesPods" ]
-                    kubernetesPods: {}
-                  required: ['kubernetesPods']
-                - properties:
-                    type:
-                      enum: [ "File" ]
-                    file: {}
-                  required: ['file']
+                - oneOf:
+                    - properties:
+                        type:
+                          enum: ["KubernetesPods"]
+                        kubernetesPods: {}
+                      required: ["kubernetesPods"]
+                    - properties:
+                        type:
+                          enum: ["File"]
+                        file: {}
+                      required: ["file"]
               properties:
                 type:
                   type: string
@@ -55,6 +55,7 @@ spec:
                     `File` позволяет читать локальные файлы, доступыне на ноде.
                 kubernetesPods:
                   type: object
+                  default: {}
                   properties:
                     namespaceSelector:
                       type: object
@@ -80,13 +81,14 @@ spec:
                     include:
                       type: array
                       description: Список путей и паттернов для чтения. Поддеживаются wildcards.
-                      example: ['/var/log/*.log', '/var/log/nginx/*.log']
+                      example: ["/var/log/*.log", "/var/log/nginx/*.log"]
                       items:
                         type: string
                     exclude:
                       type: array
                       description: Список путей и паттернов файлов, которые читать не требуется. Поддеживаются wildcards.
-                      example: ['/var/log/nginx/error.log', '/var/log/audit.log']
+                      example:
+                        ["/var/log/nginx/error.log", "/var/log/audit.log"]
                       items:
                         type: string
                     lineDelimiter:

@@ -1,4 +1,4 @@
-FROM flant/vector:0.14.0-alpine AS vector
+FROM flant/vector:0.15.1-alpine AS vector
 
 FROM flant/shell-operator:v1.0.1
 COPY --from=vector /usr/local/bin/vector /usr/local/bin/vector
