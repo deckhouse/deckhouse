@@ -370,6 +370,13 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
+      - name: Login to readonly registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
