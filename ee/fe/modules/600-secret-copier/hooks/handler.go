@@ -207,7 +207,7 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 		Type: secret.Type,
 	}
 	if _, err := k8.CoreV1().Secrets(secret.Namespace).Create(context.TODO(), s, metav1.CreateOptions{}); err != nil {
-		return fmt.Errorf("can't create secret object: %v", err)
+		return formatSecretOperationError(secret, err, "create")
 	}
 
 	return nil
@@ -215,7 +215,7 @@ func createSecret(k8 k8s.Client, secret *Secret) error {
 
 func deleteSecret(k8 k8s.Client, secret *Secret) error {
 	if err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{}); err != nil {
-		return fmt.Errorf("can't delete secret object: %v", err)
+		return formatSecretOperationError(secret, err, "delete")
 	}
 
 	return nil
@@ -242,13 +242,20 @@ func updateSecret(k8 k8s.Client, secret *Secret) error {
 		if errors.IsInvalid(err) {
 			err := deleteSecret(k8, secret)
 			if err != nil {
-				return err
+				return formatSecretOperationError(secret, err, "delete on recreate")
 			}
 			err = createSecret(k8, secret)
-			return err
+			if err != nil {
+				return formatSecretOperationError(secret, err, "create after delete on recreate")
+			}
+			return nil
 		}
-		return fmt.Errorf("can't update secret object: %v", err)
+		return formatSecretOperationError(secret, err, "update")
 	}
 
 	return nil
+}
+
+func formatSecretOperationError(secret *Secret, err error, op string) error {
+	return fmt.Errorf("can't %s secret object `%s/%s`: %v", op, secret.Namespace, secret.Name, err)
 }
