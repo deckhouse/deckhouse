@@ -26,9 +26,13 @@
 {% asset font-awesome.min.css %}
 
 <!-- scripts -->
-{% unless site.mode == "local" %}
-<script src="https://embed.small.chat/T037FSPS9C01V5672DPV.js" async></script>
-{% endunless %}
+<!-- {% unless site.mode == "local" %} -->
+{%- if page.lang == "ru" %}
+    <script src="https://embed.small.chat/T037FSPS9C02AE1YJWQ2.js" async></script>
+{%- else %}
+    <script src="https://embed.small.chat/T037FSPS9C01V5672DPV.js" async></script>
+{%- endif %}
+<!-- {% endunless %} -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
