@@ -33,6 +33,7 @@
       docker image push ${DESTINATION_INSTALL_IMAGE};
       echo "Delete local image ${DESTINATION_IMAGE}" && docker image rmi ${DESTINATION_IMAGE};
       echo "Delete local image ${DESTINATION_INSTALL_IMAGE}" && docker image rmi ${DESTINATION_INSTALL_IMAGE};
+    fi
 # prod images
   - if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
       DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
