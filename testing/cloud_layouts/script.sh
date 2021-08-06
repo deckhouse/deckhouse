@@ -194,6 +194,8 @@ fi
 
 if ! ingress_inlet=$(kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq -re '.items[0] | .spec.inlet // empty'); then
   ingress="ok"
+else
+  ingress=""
 fi
 
 for ((i=0; i<10; i++)); do
@@ -211,16 +213,22 @@ EOF
 
   if [[ -n "$ingress_inlet" ]]; then
     if [[ "$ingress_inlet" == "LoadBalancer" ]]; then
-      ingress_lb="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson | jq -re '.status.loadBalancer.ingress[0].hostname')"
-      if [[ -n "$ingress_lb" ]]; then
-        ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb")"
-        if [[ "$ingress_lb_code" == "404" ]]; then
-          ingress="ok"
+      if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
+        if ingress_lb="$(jq -re '.status.loadBalancer.ingress[0].hostname' <<< "$ingress_service")"; then
+          if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb")"; then
+            if [[ "$ingress_lb_code" == "404" ]]; then
+              ingress="ok"
+            else
+              >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404."
+            fi
+          else
+            >&2 echo "Failed curl request to the LB hostname: $ingress_lb."
+          fi
         else
-          >&2 echo "Got code $ingress_lb_code from LB $ingress_lb, waiting for 404."
+          >&2 echo "Can't get svc/nginx-load-balancer LB hostname."
         fi
       else
-        >&2 echo "Can't get svc/nginx-load-balancer LB hostname."
+        >&2 echo "Can't get svc/nginx-load-balancer."
       fi
     else
       >&2 echo "Ingress controller with inlet $ingress_inlet found in the cluster. But I have no instructions how to test it."
