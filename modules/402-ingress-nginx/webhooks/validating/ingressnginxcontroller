@@ -46,9 +46,9 @@ EOF
 
 
   # Don't allow VPA mode for LoadBalancer ingress controller
-  if context::jq -e -r '.review.request.object | ((.spec.inlet == "LoadBalancer" or .spec.inlet == "LoadBalancerWithProxyProtocol" ) and (.spec.resourcesRequests.mode != "Static"))' >/dev/null 2>&1; then
+  if context::jq -e -r '.review.request.object | ((.spec.inlet == "LoadBalancer" or .spec.inlet == "LoadBalancerWithProxyProtocol" ) and (.spec.resourcesRequests.mode == "VPA"))' >/dev/null 2>&1; then
     cat <<EOF > $VALIDATING_RESPONSE_PATH
-{"allowed":false, "message":"only 'Static' resource requests managing (.spec.resourcesRequests.mode) is available for LoadBalancer IngressNginxController"}
+{"allowed":false, "message":"'VPA' resource requests managing (.spec.resourcesRequests.mode) is not allowed for LoadBalancer IngressNginxController"}
 EOF
   else
     cat <<EOF > $VALIDATING_RESPONSE_PATH
