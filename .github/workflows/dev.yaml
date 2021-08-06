@@ -7,7 +7,9 @@ on:
       - 'release-*'
 
 env:
-  # ci_includes/image_versions.yml
+
+  # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
+  # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
   BASE_ALPINE: "registry.deckhouse.io/base_images/alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
   BASE_DEBIAN: "registry.deckhouse.io/base_images/debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
   BASE_GOLANG_ALPINE: "registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
@@ -18,7 +20,8 @@ env:
   BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
   BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
   BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
-  # ci_includes/terraform_versions.yml
+
+  # Terraform settings
   TF_VERSION: 0.13.4
   TF_AWS_NAMESPACE: hashicorp
   TF_AWS_TYPE: aws
@@ -61,7 +64,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # jobs for stage 'build_modules_images' from gitlab
+
   setup_envs:
     name: Setup common envs
     runs-on: ubuntu-latest
@@ -82,13 +85,15 @@ jobs:
           fi
           echo "::set-output name=ci_commit_tag::$gitTag"
 
+
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
       - setup_envs
-    #runs-on: werf-distributed
+
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -106,17 +111,17 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
 
-      - name: Install werf CLI
-        uses: werf/actions/install@v1.2.0
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-
-      - name: Login to main registry
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
 
       - name: Run werf bp for modules
         env:
@@ -133,12 +138,13 @@ jobs:
           name: images_tags_json
           path: modules/images_tags_${{env.WERF_ENV}}.json
 
+
   go_generate:
     name: Go Generate
     needs:
       - setup_envs
-    runs-on: werf-distributed
-    #runs-on: ubuntu-latest
+
+    runs-on: self-hosted
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
@@ -158,14 +164,16 @@ jobs:
         run: |
           git diff --exit-code
 
-  # Build deckhouse controller with FE hooks.
+
   build_fe:
     name: Build FE
     needs:
       - build_modules_images_fe
       - go_generate
+
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -176,19 +184,19 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to main registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+
+      - name: Login to rw registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
@@ -244,13 +252,15 @@ jobs:
             docker image rmi ${DESTINATION_INSTALL_IMAGE};
           fi
 
+
   doc_web_build:
     name: Doc web build
-    # Just wait for success build of modules.
+    # Wait for success build of modules.
     needs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -279,10 +289,12 @@ jobs:
 
   main_web_build:
     name: Main web build
+    # Wait for success build of modules.
     needs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -310,28 +322,17 @@ jobs:
           WERF_LOOSE_GITERMINISM: "true"
           WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
 
-  # jobs for stage 'tests' from gitlab
-
-  # Gitlab config is using anchors:
-  # needs: &needs
-  # and needs: *needs for below jobs.
-  # Github has no support:
-  # The workflow is not valid. .github/workflows/release.yaml: Anchors are not currently supported. Remove the anchor 'needs'
   tests:
     name: Tests
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -340,28 +341,20 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to registry
-        uses: docker/login-action@v1.10.0
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          name: images_tags_json
+          path: modules
 
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...
+          args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
         env:
-          WERF_DOCKER_OPTIONS: "-w /deckhouse"
+          WERF_DOCKER_OPTIONS: '-w /deckhouse'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
@@ -370,16 +363,12 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -388,14 +377,20 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
+
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/matrix/
+          args: 'ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/matrix/'
         env:
-          WERF_DOCKER_OPTIONS: "-w /deckhouse"
+          WERF_DOCKER_OPTIONS: '-w /deckhouse'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
@@ -404,16 +399,12 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -422,28 +413,20 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to registry
-        uses: docker/login-action@v1.10.0
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          name: images_tags_json
+          path: modules
 
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: dhctl-tests
-          args: make ci
+          args: 'make ci'
         env:
-          WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl"
+          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
@@ -452,16 +435,12 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -470,26 +449,18 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to registry
-        uses: docker/login-action@v1.10.0
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          name: images_tags_json
+          path: modules
 
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: sh -c "go generate tools/register.go && golangci-lint run"
+          args: 'sh -c "go generate tools/register.go && golangci-lint run"'
         env:
           WERF_DOCKER_OPTIONS: '-w /deckhouse -e "TERM=xterm-256color"'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
@@ -500,16 +471,12 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -518,28 +485,20 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 
-      - name: Login to registry
-        uses: docker/login-action@v1.10.0
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          name: images_tags_json
+          path: modules
 
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: ginkgo -vet=off ./testing/openapi_cases/
+          args: 'ginkgo -vet=off ./testing/openapi_cases/'
         env:
-          WERF_DOCKER_OPTIONS: "-v ${{github.workspace}}:/deckhouse -w /deckhouse"
+          WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
@@ -548,20 +507,46 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
-      - name: run test
-        run: |
-          echo Hooks Configuration Tests
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Login to dev registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
+        with:
+          name: images_tags_json
+          path: modules
+
+      - name: Run tests
+        uses: werf/actions/run@v1.2.0
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          image: tests
+          args: 'ginkgo -timeout=${TEST_TIMEOUT} -vet=off --slowSpecThreshold=30 ./testing/hooks_configuration/'
+        env:
+          WERF_DOCKER_OPTIONS: '-w /deckhouse'
+          WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+          CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
 
   web_links_test:
     name: Web links test
     needs:
       - doc_web_build
       - main_web_build
-    runs-on: werf-distributed
     continue-on-error: true
+    runs-on: ubuntu-latest
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -639,17 +624,12 @@ jobs:
     needs:
       - build_modules_images_fe
       - build_fe
-    runs-on: werf-distributed
+
+    runs-on: self-hosted
     steps:
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
-      # images_tags file is required in werf.yaml
-      - name: Restore images_tags file
-        uses: actions/download-artifact@v2
-        with:
-          name: images_tags_json
-          path: modules
 
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
@@ -657,28 +637,60 @@ jobs:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-#
-#      - name: Login to registry
-#        uses: docker/login-action@v1.10.0
-#        with:
-#          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-#          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-#          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 
-      - name: Login to readonly registry
-        uses: docker/login-action@v1.10.0
+      - name: Restore images_tags file
+        uses: actions/download-artifact@v2
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          name: images_tags_json
+          path: modules
 
       - name: Run tests
         uses: werf/actions/run@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
           image: tests
-          args: ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/openapi_validation/
+          args: 'ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/openapi_validation/'
         env:
-          WERF_DOCKER_OPTIONS: "-w /deckhouse"
+          WERF_DOCKER_OPTIONS: '-w /deckhouse'
           WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
+
+  no_cyrillic_validation:
+    name: No Cyrillic Validation
+
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Run check
+        run: |
+          echo Cyrillic validation fetch MR labels via Gitlab API, not implemented on Github yet.
+
+  doc_validation:
+    name: Documentation Validation
+
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Run check
+        run: |
+          echo Documentation validation not implemented on Github yet.
+
+  copyright_validation:
+    name: Copyright Validation
+
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.3.4
+
+      - name: Run check
+        run: |
+          echo Copyright validation not implemented on Github yet.
+
