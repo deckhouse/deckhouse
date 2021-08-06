@@ -20,6 +20,11 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -31,18 +36,60 @@ const (
 )
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
-	ca := input.Values.Get("controlPlaneManager.internal.etcdCerts.ca").String()
-	crt := input.Values.Get("controlPlaneManager.internal.etcdCerts.crt").String()
-	key := input.Values.Get("controlPlaneManager.internal.etcdCerts.key").String()
-
-	if ca == "" || crt == "" || key == "" {
+	snap := input.Snapshots["etcd-certificate"]
+	if len(snap) == 0 {
 		return nil, fmt.Errorf("etcd credentials not found")
 	}
 
-	caCert, clientCert, err := certificate.ParseCertificatesFromBase64(ca, crt, key)
+	cert := snap[0].(certificate.Certificate)
+
+	if cert.CA == "" || cert.Cert == "" || cert.Key == "" {
+		return nil, fmt.Errorf("etcd credentials not found")
+	}
+
+	caCert, clientCert, err := certificate.ParseCertificatesFromPEM(cert.CA, cert.Cert, cert.Key)
 	if err != nil {
 		return nil, err
 	}
 
 	return dc.GetEtcdClient(endpoints, etcd.WithClientCert(clientCert, caCert), etcd.WithInsecureSkipVerify())
+}
+
+var (
+	etcdSecretK8sConfig = go_hook.KubernetesConfig{
+		Name:       "etcd-certificate",
+		ApiVersion: "v1",
+		Kind:       "Secret",
+		NamespaceSelector: &types.NamespaceSelector{
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"kube-system"},
+			},
+		},
+		NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-pki"}},
+		ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+		ExecuteHookOnEvents:          pointer.BoolPtr(false),
+		FilterFunc:                   syncEtcdFilter,
+	}
+)
+
+func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var sec corev1.Secret
+
+	err := sdk.FromUnstructured(unstructured, &sec)
+	if err != nil {
+		return nil, err
+	}
+
+	var cert certificate.Certificate
+
+	if ca, ok := sec.Data["etcd-ca.crt"]; ok {
+		cert.CA = string(ca)
+		cert.Cert = string(ca)
+	}
+
+	if key, ok := sec.Data["etcd-ca.key"]; ok {
+		cert.Key = string(key)
+	}
+
+	return cert, nil
 }

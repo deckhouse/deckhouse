@@ -51,6 +51,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: reconcicleEtcdFilterNode,
 		},
+		// common etcd certificate snapshot
+		etcdSecretK8sConfig,
 	},
 }, dependency.WithExternalDependencies(handleRecicleEtcdMembers))
 

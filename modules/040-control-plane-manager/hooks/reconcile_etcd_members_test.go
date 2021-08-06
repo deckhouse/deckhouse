@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -30,9 +29,8 @@ import (
 )
 
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: reconcile-etcd-members ::", func() {
-	ca, pk := generateTestCert()
 	var (
-		initValuesString = fmt.Sprintf(`{"controlPlaneManager":{"internal": {"etcdCerts": {"ca": "%s","crt": "%s","key": "%s"}}, "apiserver": {"authn": {}, "authz": {}}}}`, ca, ca, pk)
+		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 	)
 	const (
 		initConfigValuesString = ``
@@ -105,7 +103,7 @@ status:
 	Context("Multimaster cluster set", func() {
 		BeforeEach(func() {
 			setEtcdMembers()
-			f.BindingContexts.Set(f.KubeStateSet(reconcileStartState))
+			f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileStartState))
 			f.RunHook()
 		})
 
@@ -116,7 +114,7 @@ status:
 		Context("main-master-2 was removed", func() {
 			BeforeEach(func() {
 				setEtcdMembers()
-				f.BindingContexts.Set(f.KubeStateSet(reconcileChangedState))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileChangedState))
 				f.RunHook()
 			})
 
@@ -131,7 +129,7 @@ status:
 			BeforeEach(func() {
 				setEtcdMembers()
 				f.ValuesSet("controlPlaneManager.etcd.externalMembersNames", []string{"main-master-2"})
-				f.BindingContexts.Set(f.KubeStateSet(reconcileChangedState))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileChangedState))
 				f.RunHook()
 			})
 
@@ -145,7 +143,7 @@ status:
 		Context("All old masters were removed", func() {
 			BeforeEach(func() {
 				setEtcdMembers()
-				f.BindingContexts.Set(f.KubeStateSet(`
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + `
 ---
 apiVersion: v1
 kind: Node
@@ -167,5 +165,4 @@ status:
 			})
 		})
 	})
-
 })

@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,9 +28,8 @@ import (
 )
 
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: check_etcd_peer_urls ::", func() {
-	ca, priv := generateTestCert()
 	var (
-		initValuesString = fmt.Sprintf(`{"controlPlaneManager":{"internal": {"etcdCerts": {"ca": "%s","crt": "%s","key": "%s"}}, "apiserver": {"authn": {}, "authz": {}}}}`, ca, ca, priv)
+		initValuesString = `{"controlPlaneManager":{"internal": {}, "apiserver": {"authn": {}, "authz": {}}}}`
 	)
 	const (
 		initConfigValuesString = ``
@@ -106,7 +104,7 @@ status:
 	Context("Cluster started with etcd Pod and single master", func() {
 		BeforeEach(func() {
 			setEtcdMembers()
-			f.BindingContexts.Set(f.KubeStateSet(etcdPod))
+			f.BindingContexts.Set(f.KubeStateSet(etcdPod + testETCDSecret))
 			f.ValuesSet("global.discovery.clusterMasterCount", 1)
 			f.RunHook()
 		})
@@ -123,7 +121,7 @@ status:
 	Context("Cluster started with etcd Pod and multiple masters", func() {
 		BeforeEach(func() {
 			setEtcdMembers()
-			f.BindingContexts.Set(f.KubeStateSet(etcdPod))
+			f.BindingContexts.Set(f.KubeStateSet(etcdPod + testETCDSecret))
 			f.ValuesSet("global.discovery.clusterMasterCount", 2)
 			f.RunHook()
 		})
@@ -140,7 +138,7 @@ status:
 	Context("Cluster started with etcd Pod with proper peer-urls and single master", func() {
 		BeforeEach(func() {
 			setEtcdMembers()
-			f.BindingContexts.Set(f.KubeStateSet(etcdPodLocalhostPeer))
+			f.BindingContexts.Set(f.KubeStateSet(etcdPodLocalhostPeer + testETCDSecret))
 			f.ValuesSet("global.discovery.clusterMasterCount", 1)
 			f.RunHook()
 		})

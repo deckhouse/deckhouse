@@ -18,13 +18,6 @@ package hooks
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/base64"
-	"encoding/pem"
-	"math/big"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -38,31 +31,6 @@ import (
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
-}
-
-func generateTestCert() (string, string) {
-	priv, _ := rsa.GenerateKey(rand.Reader, 1024)
-	keyUsage := x509.KeyUsageDigitalSignature
-	template := x509.Certificate{
-		SerialNumber: new(big.Int).Lsh(big.NewInt(1), 128),
-		Subject: pkix.Name{
-			Organization: []string{"Deckhouse test"},
-		},
-		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
-	if err != nil {
-		panic(err)
-	}
-
-	b := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-
-	pp := x509.MarshalPKCS1PrivateKey(priv)
-	p := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: pp})
-
-	return base64.StdEncoding.EncodeToString(b), base64.StdEncoding.EncodeToString(p)
 }
 
 // test helpers
@@ -116,3 +84,16 @@ func testHelperRegisterEtcdMemberUpdate() {
 
 	dependency.TestDC.EtcdClient.CloseMock.Return(nil)
 }
+
+const testETCDSecret = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-pki
+  namespace: kube-system
+data:
+  etcd-ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJiRENDQVJhZ0F3SUJBZ0lSQVFBQUFBQUFBQUFBQUFBQUFBQUFBQUF3RFFZSktvWklodmNOQVFFTEJRQXcKR1RFWE1CVUdBMVVFQ2hNT1JHVmphMmh2ZFhObElIUmxjM1F3SWhnUE1EQXdNVEF4TURFd01EQXdNREJhR0E4dwpNREF4TURFd01UQXdNREF3TUZvd0dURVhNQlVHQTFVRUNoTU9SR1ZqYTJodmRYTmxJSFJsYzNRd1hEQU5CZ2txCmhraUc5dzBCQVFFRkFBTkxBREJJQWtFQW0wTmNCTlFOaWJocFExSnJkelBJbFd0OXJ0dTNCRlF6aEpMZm93TkkKUDBzb0RudThOajVwT0dPODQxSmRJei9OaExDdE4xY0RUb29ZUFUvSVBpOEZOd0lEQVFBQm96VXdNekFPQmdOVgpIUThCQWY4RUJBTUNCNEF3RXdZRFZSMGxCQXd3Q2dZSUt3WUJCUVVIQXdFd0RBWURWUjBUQVFIL0JBSXdBREFOCkJna3Foa2lHOXcwQkFRc0ZBQU5CQUl2eXBSM2xIemxBRm9VT2xxNkU2WkZ4YnVneWhqbjF3R21yYlZLUGFWSEwKM2xrdTcyUjlMcS9PaXhFd0hXaHFpZFVqbmg1TTdBOEhxZjVQNytrZW1hVT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  etcd-ca.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlCT1FJQkFBSkJBSnREWEFUVURZbTRhVU5TYTNjenlKVnJmYTdidHdSVU00U1MzNk1EU0Q5TEtBNTd2RFkrCmFUaGp2T05TWFNNL3pZU3dyVGRYQTA2S0dEMVB5RDR2QlRjQ0F3RUFBUUpBRjJJSG83cUQ1Mi9jZW9VWkpqU28KU3NpTGZ5QWI2Z3o4VFVVSlpUV0RWZlN4b0I1aTNBSllNTkFXd0FRZHJLdENiaTQwSWI5TFhzZm54Zks5dGN5ZQo0UUloQU1YVWI0K3BwWHBDSXRFY3FGblFMdExyU2pWS1B5cGc4ZHh5YzB3Y29FRzVBaUVBeU9xN09ZSHVrcVc4CndhYTlLYU9ucFRxQmIxNCsrOGtsVVVXdnVlWkJ0bThDSUdXZU9iQVI5RzVZaW9uZnJwcHoxWm1DUXh3Y2gxVzkKZG45R1N2Tk53UVFCQWlCNHlSenJNcUNoU3NBU1QxSXpRUzZjMTNKTzZJTEd6YU1BbS90THNCQmJRd0lnZEpNZAo1bUREVFZ1L3FDVHFUTldqUFRucDhpNXJUVytPZUdLL240MDRnM0k9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+
+`
