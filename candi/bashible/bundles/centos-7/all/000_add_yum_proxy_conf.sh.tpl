@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if .packagesProxy.uri }}
-yum-config-manager --save --setopt=proxy={{ .packagesProxy.url }} main
+yum-config-manager --save --setopt=proxy={{ .packagesProxy.uri }} main
 {{- else }}
 yum-config-manager --save --setopt=proxy=_none_
 {{- end }}
