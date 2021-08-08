@@ -80,7 +80,7 @@ func (c *podLifecycleChecker) Check() check.Error {
 /*
 1. check control-plane
 2. collect garbage
-2. crate pod                    (podCreationTimeout)
+2. create pod                   (podCreationTimeout)
 3. see the pod is scheduled     (podScheduledTimeout)
 4. delete the pod               (podDeletionTimeout)
 	+ensure the pod is not listed
