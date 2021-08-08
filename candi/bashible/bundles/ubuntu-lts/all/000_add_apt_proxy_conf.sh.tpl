@@ -22,9 +22,9 @@ authstring="{{ .packagesProxy.username }}"
 authstring="${authstring}:{{ .packagesProxy.password }}"
   {{- end }}
 if [[ -n $authstring ]]; then
- proxy="$(echo "{{ .packagesProxy.url }}" | sed "s/:\/\//:\/\/${authstring}@/")"
+ proxy="$(echo "{{ .packagesProxy.uri }}" | sed "s/:\/\//:\/\/${authstring}@/")"
 else
- proxy="{{ .packagesProxy.url }}"
+ proxy="{{ .packagesProxy.uri }}"
 fi
 {{- end }}
 
