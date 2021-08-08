@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if .packagesProxy.url }}
+{{- if .packagesProxy.uri }}
 yum-config-manager --save --setopt=proxy={{ .packagesProxy.url }} main
 {{- else }}
 yum-config-manager --save --setopt=proxy=_none_
