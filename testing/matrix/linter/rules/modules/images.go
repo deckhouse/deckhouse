@@ -22,12 +22,21 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
 )
 
 func skipModuleImageNameIfNeeded(filePath string) bool {
-	return filePath == "/deckhouse/modules/040-control-plane-manager/images/kube-apiserver/werf.inc.yaml"
+	switch filePath {
+	case
+		// Following images will be removed soon
+		"/deckhouse/modules/110-istio/images/operator-v1x9x1trustca/Dockerfile",
+		"/deckhouse/modules/110-istio/images/pilot-v1x9x1trustca/Dockerfile",
+		"/deckhouse/modules/110-istio/images/proxyv2-v1x9x1trustca/Dockerfile":
+		return true
+	}
+	return false
 }
 
 var regexPatterns = map[string]string{
@@ -122,6 +131,12 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 		)
 	}
 
+	var (
+		dockerfileFromInstructions []string
+		lastWerfImagePos           int
+	)
+	isWerfYAML := filepath.Base(filePath) == "werf.inc.yaml"
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		linePos++
@@ -134,7 +149,66 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 				"Please use %s as an image name", ciVariable,
 			)
 		}
+
+		if isWerfYAML {
+			if strings.HasPrefix(line, "image: ") {
+				lastWerfImagePos = linePos
+			} else if strings.HasPrefix(line, "from: ") {
+				fromTrimmed := strings.TrimPrefix(line, "from: ")
+				// "from:" right after "image:"
+				if linePos-lastWerfImagePos == 1 {
+					result, message := isWerfInstructionUnacceptable(fromTrimmed)
+					if result {
+						return errors.NewLintRuleError(
+							"MODULE001",
+							fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
+							fromTrimmed,
+							message,
+						)
+					}
+				}
+			}
+			continue
+		}
+		if strings.HasPrefix(line, "FROM ") {
+			fromTrimmed := strings.TrimPrefix(line, "FROM ")
+			dockerfileFromInstructions = append(dockerfileFromInstructions, fromTrimmed)
+		}
+	}
+
+	for i, fromInstruction := range dockerfileFromInstructions {
+		lastInstruction := i == len(fromInstruction)-1
+		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
+		if result {
+			return errors.NewLintRuleError(
+				"MODULE001",
+				fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
+				fromInstruction,
+				message,
+			)
+		}
 	}
 
 	return errors.EmptyRuleError
+}
+
+func isWerfInstructionUnacceptable(from string) (bool, string) {
+	if !strings.HasPrefix(from, `{{ env "BASE_`) {
+		return true, "`from:` parameter for `image:` should be one of our BASE_ images"
+	}
+	return false, ""
+}
+
+func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string) {
+	if final {
+		if !strings.HasPrefix(from, "$BASE_") {
+			return true, "Last `FROM` instruction should use one of our $BASE_ images"
+		}
+	} else {
+		matched, _ := regexp.MatchString("@sha256:[A-Fa-f0-9]{64}", from)
+		if !strings.HasPrefix(from, "$BASE_") && !matched {
+			return true, "Intermediate `FROM` instructions should use one of our $BASE_ images or have `@sha526:` checksum specified"
+		}
+	}
+	return false, ""
 }

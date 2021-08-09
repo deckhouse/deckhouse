@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends git mercurial p
     patch -p1 < /lua-info.patch && \
     patch -p1 < /reason.patch && \
     patch -p1 < /omit-helm-secrets.patch && \
-    # todo: Разобраться, почему игнорируется vendor
     make GO111MODULE=on build
 
 # luarocks assets for luajit artifact
