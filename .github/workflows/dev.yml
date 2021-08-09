@@ -733,7 +733,11 @@ jobs:
 
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-
+      - name: Checkout main
+        uses: actions/checkout@v2
+        with:
+          ref: 'origin/main'
+          clean: false
       - name: Run check
         run: |
           ./testing/validate_doc_changes.sh
