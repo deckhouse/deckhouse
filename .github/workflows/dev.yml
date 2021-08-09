@@ -126,13 +126,13 @@ jobs:
         uses: werf/actions/install@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
-ыы
+
       - name: Run werf bp for modules
         env:
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPOооо_MCM_TOKEN}}
+          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
         run: |
           ./modules_images_werf bp
 
@@ -144,7 +144,7 @@ jobs:
 
 
   go_generate:
-    name: Go Generateеее
+    name: Go Generate
     needs:
       - setup_envs
 
@@ -719,8 +719,11 @@ jobs:
         uses: actions/checkout@v2.3.4
 
       - name: Run check
+        env:
+          VALIDATE_TITLE: ${{github.event.title}}
+          VALIDATE_DESCRIPTION: ${{github.event.body}}
         run: |
-          echo Cyrillic validation fetch MR labels via Gitlab API, not implemented on Github yet.
+          ./testing/validate_no_cyrillic.sh
 
   doc_validation:
     name: Documentation Validation
@@ -733,7 +736,7 @@ jobs:
 
       - name: Run check
         run: |
-          echo Documentation validation not implemented on Github yet.
+          ./testing/validate_doc_changes.sh
 
   copyright_validation:
     name: Copyright Validation
@@ -746,5 +749,5 @@ jobs:
 
       - name: Run check
         run: |
-          echo Copyright validation not implemented on Github yet.
+          ./testing/validate_copyright.sh
 
