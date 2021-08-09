@@ -55,10 +55,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
-{{/* ### Migration 19.02.2021: Remove following statement after this commit reached RockSolid */}}
-{{- if not .Values.kubeDns.internal.migration }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
-{{- end }}
       shareProcessNamespace: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -82,10 +79,7 @@ spec:
         value: master
       containers:
       - name: coredns
-{{/* ### Migration 19.02.2021: Remove following statement after this commit reached RockSolid */}}
-{{- if not .Values.kubeDns.internal.migration }}
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-{{- end }}
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.kubeDns.coredns }}
         args: [ "-conf", "/etc/coredns/Corefile", "-dns.port", "5353" ]
         volumeMounts:
@@ -99,15 +93,6 @@ spec:
         - containerPort: 5353
           name: dns-tcp
           protocol: TCP
-{{/* ### Migration 19.02.2021: Remove following statement with code after this commit reached RockSolid */}}
-{{- if .Values.kubeDns.internal.migration }}
-        - containerPort: 53
-          name: dns-old
-          protocol: UDP
-        - containerPort: 53
-          name: dns-tcp-old
-          protocol: TCP
-{{- end }}
         livenessProbe:
           httpGet:
             path: /health
