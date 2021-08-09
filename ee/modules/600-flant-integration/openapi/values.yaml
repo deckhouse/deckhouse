@@ -33,6 +33,10 @@ properties:
       cloudProvider:
         type: string
         x-examples: ["AWS"]
+      cloudLayout:
+        type: string
+        x-examples: ["withoutNAT"]
+        default: "none"
       controlPlaneVersion:
         type: [number, string]
         x-examples: ["1.19"]

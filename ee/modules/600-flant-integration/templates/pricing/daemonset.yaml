@@ -65,6 +65,8 @@ spec:
           value: {{ .Values.flantIntegration.internal.bundle | quote }}
         - name: FP_CLOUD_PROVIDER
           value: {{ .Values.flantIntegration.internal.cloudProvider | quote }}
+        - name: FP_CLOUD_LAYOUT
+          value: {{ .Values.flantIntegration.internal.cloudLayout | quote }}
         - name: FP_CONTROL_PLANE_VERSION
           value: {{ .Values.flantIntegration.internal.controlPlaneVersion | quote }}
         - name: FP_MINIMAL_KUBELET_VERSION
