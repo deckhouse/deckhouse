@@ -97,45 +97,45 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-      
+
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
-
+ыы
       - name: Run werf bp for modules
         env:
           CI_COMMIT_TAG: ${{needs.setup_envs.outputs.ci_commit_tag}}
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
-          REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
+          REPO_MCM_TOKEN: ${{secrets.REPOооо_MCM_TOKEN}}
         run: |
           ./modules_images_werf bp
-      
+
       - name: Save images_tags file
         uses: actions/upload-artifact@v2
         with:
@@ -144,16 +144,16 @@ jobs:
 
 
   go_generate:
-    name: Go Generate
+    name: Go Generateеее
     needs:
       - setup_envs
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -178,36 +178,36 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-      
+
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
         with:
           channel: ${{env.WERF_CHANNEL}}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -265,17 +265,17 @@ jobs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -299,17 +299,17 @@ jobs:
       - build_modules_images_fe
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -335,24 +335,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -378,24 +378,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -421,24 +421,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -464,24 +464,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -507,24 +507,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -550,24 +550,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -593,24 +593,24 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.FLANT_REGISTRY_HOST }}
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-      
+
       - name: Install werf CLI
         uses: werf/actions/install@v1.2.0
         with:
@@ -674,24 +674,24 @@ jobs:
 
     runs-on: self-hosted
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
-      
+
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-      
+
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-      
+
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
@@ -714,7 +714,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -727,7 +727,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
@@ -740,7 +740,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      
+
       - name: Checkout sources
         uses: actions/checkout@v2.3.4
 
