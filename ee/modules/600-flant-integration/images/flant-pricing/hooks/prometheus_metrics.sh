@@ -354,6 +354,32 @@ function node_cri_metrics() {
     ' <<< "$prom_result" >> $METRICS_PATH
 }
 
+# The following metric will be exposed only after the first deckhouse
+# converges are completed (on the next run of this hook).
+# Because during the first run of this hook converge is still running and
+# there would be no converge metric available in Prometheus.
+function deckhouse_startup_converge_duration_seconds_metric() {
+  metric_name="flant_pricing_deckhouse_startup_converge_duration_seconds"
+  group="group_deckhouse_metrics"
+  jq -c --arg group "$group" '.group = $group' <<< '{"action":"expire"}' >> $METRICS_PATH
+
+  prom_result="$(prometheus_query 'max(deckhouse_convergence_seconds{activation="OperatorStartup"})')"
+
+  if [[ -z "$prom_result" ]]; then
+    >&2 echo "INFO: Skipping metric $metric_name, got empty Prometheus query result."
+    return 0
+  fi
+
+  jq --arg metric_name $metric_name --arg group "$group" '.data.result[] |
+    {
+      "name": $metric_name,
+      "group": $group,
+      "set": (.value[1] | tonumber | floor),
+      "labels": {}
+    }
+    ' <<< "$prom_result" >> $METRICS_PATH
+}
+
 function __main__() {
   terraform_state_metrics
   helm_releases_metrics
@@ -363,6 +389,7 @@ function __main__() {
   prometheus_series_metrics
   node_os_image_metrics
   node_cri_metrics
+  deckhouse_startup_converge_duration_seconds_metric
 }
 
 hook::run "$@"

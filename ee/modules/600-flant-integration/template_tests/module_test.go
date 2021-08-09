@@ -64,6 +64,7 @@ internal:
   releaseChannel: Alpha
   bundle: Default
   cloudProvider: AWS
+  cloudLayout: withoutNAT
   controlPlaneVersion: 1.19
   clusterType: Hybrid
   nodeStats:
@@ -120,6 +121,8 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
   value: Default
 - name: FP_CLOUD_PROVIDER
   value: AWS
+- name: FP_CLOUD_LAYOUT
+  value: withoutNAT
 - name: FP_CONTROL_PLANE_VERSION
   value: "1.19"
 - name: FP_MINIMAL_KUBELET_VERSION

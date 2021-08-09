@@ -40,6 +40,7 @@ function __main__() {
       "release_channel": "'$FP_RELEASE_CHANNEL'",
       "bundle": "'$FP_BUNDLE'",
       "cloud_provider": "'$FP_CLOUD_PROVIDER'",
+      "cloud_layout": "'$FP_CLOUD_LAYOUT'",
       "control_plane_version": "'$FP_CONTROL_PLANE_VERSION'",
       "minimal_kubelet_version": "'$FP_MINIMAL_KUBELET_VERSION'",
       "deckhouse_version": "'$FP_DECKHOUSE_VERSION'",

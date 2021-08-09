@@ -53,6 +53,33 @@ function __config__() {
           "controllerInlet": .metadata.annotations."ingress-nginx-controller.deckhouse.io/inlet",
           "readyPodCount": .status.numberReady
         }
+    - name: deployments
+      group: main
+      queue: /ingress_controller_metrics
+      apiVersion: apps/v1
+      kind: Deployment
+      keepFullObjectsInMemory: false
+      namespace:
+        nameSelector:
+          matchNames: [d8-ingress-nginx]
+      labelSelector:
+        matchExpressions:
+        - key: heritage
+          operator: In
+          values: ["deckhouse"]
+        - key: module
+          operator: In
+          values: ["ingress-nginx"]
+        - key: app
+          operator: In
+          values: ["controller"]
+      jqFilter: |
+        {
+          "controllerName": .metadata.labels.name,
+          "controllerVersion": .metadata.annotations."ingress-nginx-controller.deckhouse.io/controller-version",
+          "controllerInlet": .metadata.annotations."ingress-nginx-controller.deckhouse.io/inlet",
+          "readyPodCount": .status.readyReplicas
+        }
 EOF
 }
 
@@ -82,15 +109,17 @@ function __main__() {
   for controller in $controllers; do
     controller_name="$(jq -r '.name' <<< "$controller")"
     controller_version="$(jq -r '.version' <<< "$controller")"
-    ds_controller_version="$(context::jq -r --arg controller_name "$controller_name" '
-      .snapshots.daemonsets // [] | .[] |
-       select(.filterResult.controllerName == $controller_name) |
-        .filterResult.controllerVersion // ""')"
+    controller_inlet="$(jq -r '.inlet' <<< "$controller")"
+
+    deployed_controller_version="$(context::jq -r --arg controller_name "$controller_name" '
+      (.snapshots.daemonsets // []) + (.snapshots.deployments // []) | .[] |
+      select(.filterResult.controllerName == $controller_name) |
+      .filterResult.controllerVersion // ""')"
     if [[ "$controller_version" == "default" ]]; then
-      default_controller_version="$ds_controller_version"
+      default_controller_version="$deployed_controller_version"
     fi
     jq -c --arg metric_name "$controllers_count_metric_name" --arg group "$group" \
-      --arg ds_controller_version "$ds_controller_version" '
+      --arg deployed_controller_version "$deployed_controller_version" '
       {
         "name": $metric_name,
         "group": $group,
@@ -98,7 +127,7 @@ function __main__() {
         "labels":
         {
           "inlet": .inlet,
-          "version": (if $ds_controller_version == "" then .version else $ds_controller_version end),
+          "version": (if $deployed_controller_version == "" then .version else $deployed_controller_version end),
           "default": (.version == "default") | tostring
         }
       }
@@ -106,23 +135,23 @@ function __main__() {
   done
 
   # Set versions from IngressNginxController to figure out
-  # which DaemonSet uses the default version.
-  daemonsets_with_default_version="$(context::jq -c '
-    .snapshots as $snapshots | $snapshots.daemonsets // [] |
+  # which deployed controller uses the default version.
+  deployed_controllers_with_default_version="$(context::jq -c '
+    .snapshots as $snapshots | ($snapshots.daemonsets // []) + ($snapshots.deployments // []) |
     map({
         "controllerVersion": (
-          .filterResult as $ds |
+          .filterResult as $deployed_controller |
           [
             $snapshots.controllers // [] | .[] |
-            select(.filterResult.name == $ds.controllerName) |
+            select(.filterResult.name == $deployed_controller.controllerName) |
             .filterResult.version
-          ] | first // $ds.controllerVersion
+          ] | first // $deployed_controller.controllerVersion
         ),
         "controllerInlet": .filterResult.controllerInlet,
         "readyPodCount": .filterResult.readyPodCount
     })')"
 
-  daemonsets="$(jq -c '
+  deployed_controllers="$(jq -c '
     map({
         "controllerVersion": .controllerVersion,
         "controllerInlet": .controllerInlet,
@@ -134,8 +163,8 @@ function __main__() {
       "controllerVersion": .[0].controllerVersion,
       "controllerInlet": .[0].controllerInlet,
       "readyPodCount": [.[].readyPodCount] | add
-    }) | .[]' <<< "$daemonsets_with_default_version")"
-  for daemonset in $daemonsets; do
+    }) | .[]' <<< "$deployed_controllers_with_default_version")"
+  for deployed_controller in $deployed_controllers; do
     jq -c --arg metric_name "$pod_count_metric_name" --arg group "$group" \
       --arg default_controller_version "$default_controller_version" '
       {
@@ -149,7 +178,7 @@ function __main__() {
           "default": (.controllerVersion == "default") | tostring
         }
       }
-      ' <<< "$daemonset" >> $METRICS_PATH
+      ' <<< "$deployed_controller" >> $METRICS_PATH
   done
 }
 
