@@ -1,3 +1,4 @@
+{{- if ne .nodeGroup.nodeType "Static" }}
 # Copyright 2021 Flant CJSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,4 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-yum-install jq curl wget virt-what yum-plugin-versionlock inotify-tools bash-completion bash-completion-extras lvm2 parted
+bb-yum-install cloud-utils-growpart
+{{- end }}

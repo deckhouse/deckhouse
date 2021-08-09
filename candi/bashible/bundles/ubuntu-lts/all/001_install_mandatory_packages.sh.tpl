@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-apt-install jq curl wget virt-what inotify-tools bash-completion
+bb-apt-install jq curl wget virt-what inotify-tools bash-completion lvm2 parted
