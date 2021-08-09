@@ -80,10 +80,10 @@ Status page
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-Настройка CI/CD системы
+Настройка CI/CD-системы
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/ru/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-и-предоставление-ему-доступа) и выделите права ServiceAccount'у, который будет осуществлять деплой в кластер.
+[Создайте](/ru/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
 
 Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
 </div>
