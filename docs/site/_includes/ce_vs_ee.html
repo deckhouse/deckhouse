@@ -4,8 +4,8 @@
         Deckhouse Platform CE vs. EE
       </h2>
       <p class="text text_big">
-        Compared to <a href="/{{ page.lang }}/community/community_edition.html">Community Edition</a> of Deckhouse Platform, which is available for free,<br>
-        <a href="/{{ page.lang }}/products/enterprise_edition.html">Enterprise Edition</a> provides you many additional features:
+        Compared to the <a href="/{{ page.lang }}/community/community_edition.html">Deckhouse Platform Community Edition</a>, which is available for free,<br>
+        <a href="/{{ page.lang }}/products/enterprise_edition.html">Enterprise Edition</a> comes with a broad range of additional features:
       </p>
       <table class="table table_big">
         <tbody>
@@ -20,7 +20,7 @@
           </tr>
           <tr>
             <td class="table__cell_separator-title" colspan="3">
-              Supported infractructure
+              Supported infrastructure
             </td>
           </tr>
           <tr>
@@ -224,11 +224,13 @@
             <td class="table__cell_default">
               <div>
                 <img src="{{ site.baseurl }}/images/icons/supported.svg" />
+                <br><small>(limitations are applied)</small>
               </div>
             </td>
             <td class="table__cell_default">
               <div>
-                <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+                <img src="{{ site.baseurl }}/images/icons/supported.svg" /><img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
+                <br><small>(limitations are applied)</small>
               </div>
             </td>
           </tr>
@@ -239,7 +241,7 @@
             <td class="table__cell_default">
               <div>
                 <img src="{{ site.baseurl }}/images/icons/not_supported.svg" />
-                <br><small>(from community only)</small>
+                <br><small>(from the community only)</small>
               </div>
             </td>
             <td class="table__cell_default">
@@ -251,7 +253,7 @@
           </tr>
           <tr>
             <td class="table__cell_left-title">
-              <div>Training &amp; consulting</div>
+              <div>Training &amp; Consulting</div>
             </td>
             <td class="table__cell_default">
               <div>
@@ -268,10 +270,10 @@
       </table>
 
       <p class="text" style="max-width: 740px; margin-top: 25px;">
-        <em>* You still can install Deckhouse Platform CE on OpenStack and vSphere, however these platforms will function as regular bare metal servers in this case. There will be no integration with clouds, i.e. VMs are added manually, no autoscaling provided, etc.</em><br />
+        <em>* You can still install Deckhouse Platform CE on OpenStack and vSphere; however, in that case those platforms will function as regular bare metal servers. There won't be any cloud integration, i.e. the VMs are added manually, no autoscaling is provided, etc.</em><br />
         <em>** Including Vault integration and encrypted secrets in etcd.</em><br />
-        <em>*** Adding new pods/nodes is accelerated thanks to fully prebuilt images.</em><br />
-        <em>**** Selectable timeframe for automatic upgrades of the platform.</em>
+        <em>*** Accelerated new pods/nodes adding thanks to fully prebuilt images.</em><br />
+        <em>**** Selectable timeframe for automatic platform upgrades.</em>
       </p>
     </div>
   </section>
