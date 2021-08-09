@@ -554,4 +554,67 @@ spec:
 		})
 	})
 
+	Context("Update NG: set empty nodeTemplate", func() {
+		BeforeEach(func() {
+
+			state := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: wor-ker
+spec:
+  nodeType: Static
+  nodeTemplate: {}
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wor-ker
+  annotations:
+    a: a
+    node-manager.deckhouse.io/last-applied-node-template: '{"annotations":{"a":"a"},"labels":{"a":"a"},"taints":[{"key":"a","effect":"NoSchedule"}]}'
+  labels:
+    a: a
+    node.deckhouse.io/group: wor-ker
+    node-role.kubernetes.io/wor-ker: ''
+    node.deckhouse.io/type: Static
+spec:
+  taints:
+  - key: a
+    effect: NoSchedule
+  - key: node.deckhouse.io/uninitialized
+    effect: NoSchedule
+`
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully; labels and annotations must be removed", func() {
+			expectedLastApplied := `
+				{
+					"labels": {},
+					"annotations": {},
+					"taints": []
+				}
+			`
+			lastApplied := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations.node-manager\.deckhouse\.io/last-applied-node-template`).String()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(lastApplied).To(MatchJSON(expectedLastApplied))
+
+			labels := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.labels`).Map()
+			Expect(labels).ToNot(HaveKey("a"), "label 'a' should be removed")
+
+			annotations := f.KubernetesGlobalResource("Node", "wor-ker").Field(`metadata.annotations`).Map()
+			Expect(annotations).ToNot(HaveKey("a"), "annotation 'a' should be removed")
+
+			taints := f.KubernetesGlobalResource("Node", "wor-ker").Field(`spec.taints`).Array()
+			taintKeys := make(map[string]struct{})
+			for _, taint := range taints {
+				taintKeys[taint.Get(`key`).String()] = struct{}{}
+			}
+			Expect(taintKeys).ToNot(HaveKey("a"), "taint with key 'a' should be removed")
+		})
+	})
+
 })

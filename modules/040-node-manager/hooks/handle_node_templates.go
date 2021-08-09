@@ -339,14 +339,11 @@ func ApplyTemplateMap(actual, template, lastApplied map[string]string) (map[stri
 // ExcessMapKeys returns keys from a without keys from b.
 func ExcessMapKeys(a, b map[string]string) map[string]struct{} {
 	res := make(map[string]struct{})
-	if len(b) == 0 {
-		return res
-	}
 	for k := range a {
-		if _, ok := b[k]; ok {
-			continue
-		}
 		res[k] = struct{}{}
+	}
+	for k := range b {
+		delete(res, k)
 	}
 	return res
 }
