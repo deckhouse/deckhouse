@@ -30,7 +30,7 @@ Essentials
 Up-to-date Deckhouse documentation in your cluster
 </h3>
 <div class="cards-item__text" markdown="1">
-The in-cluster documentation for a specific version of Deckhouse used in your cluster is available at [deckhouse.example.com](https://deckhouse.example.com)
+The in-cluster documentation for a specific version of Deckhouse used in your cluster is available at [deckhouse.example.com](https://deckhouse.example.com).
 </div>
 </div>
 
@@ -39,9 +39,9 @@ The in-cluster documentation for a specific version of Deckhouse used in your cl
 Monitoring
 </h3>
 <div class="cards-item__text" markdown="1">
-Explore Grafana dashboards bundled with Deckhouse at [grafana.example.com](https://grafana.example.com)
+Explore Grafana dashboards bundled with Deckhouse at [grafana.example.com](https://grafana.example.com).
 
-Go to [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/) to access Prometheus directly
+Go to [grafana.example.com/prometheus/](https://grafana.example.com/prometheus/) to access Prometheus directly.
 
 [Learn more](/en/documentation/v1/modules/300-prometheus/) about the `monitoring` module.
 </div>
@@ -61,9 +61,9 @@ The Kubernetes Dashboard is available at: [dashboard.example.com](https://dashbo
 Status page
 </h3>
 <div class="cards-item__text" markdown="1">
-Visit [status.example.com](https://status.example.com) to get information about the overall status of Deckhouse and its components
+Visit [status.example.com](https://status.example.com) to get information about the overall status of Deckhouse and its components.
 
-The [upmeter.example.com](https://upmeter.example.com) page provides detailed SLA statistics for each component and time frame
+The [upmeter.example.com](https://upmeter.example.com) page provides detailed SLA statistics for each component and time frame.
 </div>
 </div>
 
