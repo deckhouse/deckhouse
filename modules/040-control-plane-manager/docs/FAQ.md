@@ -8,49 +8,36 @@ All you need to do is to attach the `node-role.kubernetes.io/master: ""` label t
 
 ## How do I delete the master node?
 
-* You can delete the master node as follows (if the deletion does not lead to the etcd cluster losing its quorum; in the cluster operating correctly, the 2 -> 1 migration is the only situation when etcd may lose its quorum):
-    1. Drain the master node;
-    2. If the deletion of the master is agreed, then you can delete the VM the usual way.
-       If you can't delete the master right away (for example, it is used for backups or it is involved in the deployment process), then you have to stop the Container Runtime on the node:
-       
-       In the case of Docker:
-       ```
-       systemctl stop docker
-       systemctl disable docker
-       ```
-       In the case of Containerd:
-       ```
-       systemctl stop containerd
-       systemctl disable containerd
-       ```
-* If the deletion may result in etcd losing its quorum (the 2 -> 1 mirgation):
-    1. Drain the master node;
-    2. Stop kubelet on the node (without stopping the etcd container):
-       ```
-       systemctl stop kubelet
-       systemctl stop bashible.timer
-       systemctl stop bashible
-       systemctl disable kubelet
-       systemctl disable bashible.timer
-       systemctl disable bashible
-       ```
-    3. Delete the Node object from Kubernetes;
-    4. [Wait](#how-do-i-view-the-list-of-etcd-members) until the etcd member is automatically deleted;
-    5. If the deletion of the master is agreed, then you can delete the VM the usual way;
-       If you can't delete the master right away (for example, it is used for backups or it is involved in the deployment process), then you have to stop the Container Runtime on the node:
-       
-       In the case of Docker:
-       ```
-       systemctl stop docker
-       systemctl disable docker
-       ```
-       In the case of Containerd:
-       ```
-       systemctl stop containerd
-       systemctl disable containerd
-       ```
+1. Does the deletion lead to the etcd cluster losing its quorum?
+   * If the deletion does not lead to the etcd cluster losing its quorum:
+     * If a virtual machine with a master node can be deleted (there are no other necessary services on it), then you can delete the virtual machine in the usual way.
+     * If you can't delete the master right away (for example, it is used for backups or it is involved in the deployment process), then you have to stop the Container Runtime on the node:
+      In the case of Docker:
+      ```shell
+      systemctl stop docker
+      systemctl disable docker
+      ```
+      In the case of Containerd:
+      ```shell
+      systemctl stop containerd
+      systemctl disable containerd
+      ```
 
-## How do I dismiss the master status while keeping the node?
+   * If the deletion may result in etcd losing its quorum (the 2 -> 1 mirgation), stop kubelet on the node (without stopping the etcd container):
+        
+      ```shell
+      systemctl stop kubelet
+      systemctl stop bashible.timer
+      systemctl stop bashible
+      systemctl disable kubelet
+      systemctl disable bashible.timer
+      systemctl disable bashible
+      ```
+
+2. Delete the Node object from Kubernetes;
+3. [Wait](#how-do-i-view-the-list-of-etcd-members) until the etcd member is automatically deleted;
+
+## How do I dismiss the master role while keeping the node?
 
 1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/master: ""` labels, then wait for the etcd member to be automatically deleted.
 2. Exec to the node and run the following commands:
@@ -162,7 +149,7 @@ By default, a node is marked as unavailable if it does not report its state for 
 
 In specific cases, if an application cannot run in multiple instances, there is a way to lower its unavailability time: 
 
-1. Reduce the period required for the `Node` to become `Unreachable` if the connection to it is lost by setting the `nodeMonitorGracePeriodSeconds` parameter.
+1. Reduce the period required for the node to become `Unreachable` if the connection to it is lost by setting the `nodeMonitorGracePeriodSeconds` parameter.
 1. Set a lower timeout for evicting pods on a failed node using the `failedNodePodEvictionTimeoutSeconds` parameter.
 
 ### An example:
