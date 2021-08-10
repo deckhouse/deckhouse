@@ -62,7 +62,7 @@ The architecture of the demo service is as follows:
 * Ingress exposes the foo service via the example.com domain.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTAPfksFCdlppvmwwRrdlPpeceFEikTfv9aOW3h8YrnRpV5dyKIKMAJeUlRjzsb-0i3Ur388OLcD5Ud/pub?w=1162&h=234)
-<!--- Исходник: https://docs.google.com/drawings/d/1JsYtXCl8zbOdZct3SJyQTGC9VuM8kwHjqhlr7J42Uo4/edit --->
+<!--- Source: https://docs.google.com/drawings/d/1JsYtXCl8zbOdZct3SJyQTGC9VuM8kwHjqhlr7J42Uo4/edit --->
 
 1. First, the user sends a request to example.com and that request gets directly to the ingress controller container. The controller:
 
@@ -117,7 +117,7 @@ The cluster components are divided into two categories:
 * data plane — the application part of Istio; consists of sidecar-proxy containers.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vRt0avuNi0cC_PiZmzuvbuYnFbx8rEyi4lUqB2l4pDIq2j1b3MY3HUeNHKhT3S9EeFC0tQdcY3Q8ydw/pub?w=1314&h=702)
-<!--- Исходник: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
+<!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
 
 All data plane services are grouped into a mesh with the following features:
 * It has a common namespace for generating service ID in the form <TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>. Each mesh has a TrustDomain ID (in our case, it is the same as the cluster's domain), e.g., mycluster.local/ns/myns/sa/myapp.
@@ -189,7 +189,7 @@ Here are some of their principal differences:
 #### Before you begin
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQj76KcY7cqhX_cHscCXdPqzrZk_nip-5vvEeRpB_1A9AXjc64uMq6uEhILn5iw8aUbLQERx1jV1yfp/pub?w=1087&h=626)
-<!--- Исходник: https://docs.google.com/drawings/d/1VQ4yZl_39j2WSi7Iif5jn-ItWkjD3_W8uqNPULqEz4A/edit --->
+<!--- Source: https://docs.google.com/drawings/d/1VQ4yZl_39j2WSi7Iif5jn-ItWkjD3_W8uqNPULqEz4A/edit --->
 
 * Federation requires establishing mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. Technically, this is achieved by exchanging root certificates.
 * You also need to share information about public services to use federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
@@ -206,7 +206,7 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 #### Managing federation
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vT9c5TGwE4MQHxO548h8nrZ8SicSXWNX9KlFl5RmD2BoDce1pnxWj9ZSxZUydOa-9Z7kJMt8WLsdjgZ/pub?w=1393&h=937)
-<!--- Исходник: https://docs.google.com/drawings/d/1qNyGLyPUFR2E6qLkDLnqN42sWZzPZ5u782NJJxe-7r8/edit --->
+<!--- Source: https://docs.google.com/drawings/d/1qNyGLyPUFR2E6qLkDLnqN42sWZzPZ5u782NJJxe-7r8/edit --->
 
 The dedicated deckhouse controller automates the federation management. An instance of this controller runs in each member cluster. The trusts algorithm works as follows:
 * The cluster to be trusted (cluster-b):
@@ -232,7 +232,7 @@ This algorithm must be implemented in both directions to build mutual trust betw
 #### Before you begin
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vQj76KcY7cqhX_cHscCXdPqzrZk_nip-5vvEeRpB_1A9AXjc64uMq6uEhILn5iw8aUbLQERx1jV1yfp/pub?w=1087&h=626)
-<!--- Исходник: https://docs.google.com/drawings/d/1VQ4yZl_39j2WSi7Iif5jn-ItWkjD3_W8uqNPULqEz4A/edit --->
+<!--- Source: https://docs.google.com/drawings/d/1VQ4yZl_39j2WSi7Iif5jn-ItWkjD3_W8uqNPULqEz4A/edit --->
 
 * Multicluster requires establishing mutual trust between clusters. Thereby, to implement the multicluster model, you have to make sure that both clusters (say, A and B) trust each other. Technically, this is achieved by exchanging root certificates.
 * To collect information about neighboring services, Istio connects directly to the apiserver of the neighboring cluster. This module implements the corresponding communication channel.
@@ -250,7 +250,7 @@ Enabling the multicluster mode (via the `istio.multicluster.enabled = true` modu
 #### Managing multicluster
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vTLsBzlI4m9g0BZL13XWHlhUtgSJp7TEEvUuvzYNd_7H-HGz1hSw3CbfC5OR5EyAKppD-g1wMWoeglT/pub?w=1393&h=937)
-<!--- Исходник: https://docs.google.com/drawings/d/1aF9BXxQFQpuCj_j3wmMdsVz8vuDOkvQQQ_8UsOmRaGo/edit --->
+<!--- Source: https://docs.google.com/drawings/d/1aF9BXxQFQpuCj_j3wmMdsVz8vuDOkvQQQ_8UsOmRaGo/edit --->
 
 The dedicated deskhouse controller automates the process of implementing a multicluster. The trust algorithm works as follows::
 * The cluster to be trusted (cluster-b):
