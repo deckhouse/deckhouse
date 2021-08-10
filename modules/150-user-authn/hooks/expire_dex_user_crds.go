@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 )
 
 type DexUserExpire struct {
@@ -65,10 +66,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "users",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "User",
-			FilterFunc: applyDexUserExpireFilter,
+			Name:                         "users",
+			ApiVersion:                   "deckhouse.io/v1",
+			Kind:                         "User",
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   applyDexUserExpireFilter,
 		},
 	},
 }, expireDexUsers)
