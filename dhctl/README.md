@@ -220,7 +220,7 @@ You cannot observe these changes, react to them. Every Kubernetes cluster become
 To destroy a Kubernetes cluster from a cloud, execute `destroy` command.
 During execution, dhctl will:
 * Connect to the cluster
-* Delete Kubernetes resources bound to the cloud objects, e.g., services with type LoadBalancer, PV, PVC и Machines (dhctl will wait until resources become deleted).
+* Delete Kubernetes resources bound to the cloud objects, e.g., services with type LoadBalancer, PV, PVC, and Machines (dhctl will wait until resources become deleted).
 * Download terraform state for base infrastructure and nodes from the cluster
 * Sequentially call terraform destroy for downloaded states
 

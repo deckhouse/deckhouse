@@ -23,7 +23,7 @@ The module supports multiple controllers — **one** primary controller and **an
     * This parameter is determined automatically based on the cluster type (GCE & ACS — LoadBalancer, AWS — AWSClassicLoadBalancer, Manual — Direct; learn more [here](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/templates/_helpers.tpl#L22-30))!
     * The following inlets are supported:
         * `LoadBalancer` (set automatically for `GCE` & `ACS`) — provisions the LoadBalancer automatically;
-        * `AWSClassicLoadBalancer` (set automatically for`AWS`) — зprovisions the LoadBalancer and enables the proxy protocol; this inlet is the default one for AWS;
+        * `AWSClassicLoadBalancer` (set automatically for`AWS`) — provisions the LoadBalancer and enables the proxy protocol; this inlet is the default one for AWS;
         * `Direct` (set automatically for  `Manual`) — pods are running in the host network, nginx listens on ports 80 & 443; also, a direct-fallback scheme is implemented for this mode;
         * `NodePort` — the NodePort service; this mode is suitable for situations where you need to configure a third-party load balancer (such as AWS Application Load Balancer, Qrator or CloudFlare). The acceptable range of ports is 30000-32767 (it is set using the `kube-apiserver --service-node-port-range` parameter);
     * This [file](https://github.com/deckhouse/deckhouse/blob/main/ee/fe/modules/400-nginx-ingress/templates/controller.yaml) clearly demonstrates the differences between the four types of inlets;

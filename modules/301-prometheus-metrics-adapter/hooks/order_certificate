@@ -29,7 +29,7 @@ function __main__() {
     ca=$(jo CN=prometheus-metrics-adapter key="$(jo algo=ecdsa size=256)" ca="$(jo expiry=87600h)" | cfssl gencert -initca -)
     ca_cert=$(echo "$ca" | jq .cert -r)
 
-    # Создадим конфиг для cfssl gencert
+    # Create config for cfssl gencert
     config='{"signing":{"default":{"expiry":"87600h","usages":["signing","key encipherment","requestheader-client"]}}}'
 
     cert=$(jo CN=prometheus-metrics-adapter hosts="$(jo -a prometheus-metrics-adapter.d8-monitoring prometheus-metrics-adapter.d8-monitoring.svc)" key="$(jo algo=ecdsa size=256)" | cfssl gencert -ca=<(echo "$ca" | jq .cert -r) -ca-key=<(echo "$ca" | jq .key -r) -config=<(echo "$config") -)

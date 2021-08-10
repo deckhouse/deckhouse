@@ -1,53 +1,26 @@
 # Bashible apiserver
 
-## Что делает
+## What is it for
 
-Генерирует скрипты для bashible, отдает их через апи куба.
+Bashible apiserver serves the bashible script and its step scripts through Kubernetes API.
 
-## Зачем этот API-сервер?
+## Usage
 
-Количество комбинаций шагов в bashible множится такими факторами:
-
-* количество шагов в бандле для ОС
-* количество версий куба
-* количество поддерживаемых дистрибутивов на узлах
-* количество групп узлов (`NodeGroup`)
-
-Раньше скрипты хранились в сгенерированном виде в секретах. Содержание этих секретов дополнительно копилось в едином
-секрете хелма. Секрет хелма подобрался к лимиту объекта в etcd (2 Mi). То есть этот способ больше не масштабируется.
-
-Теперь скрипты обслуживаются не секретами чарта, а отдельным сервером. Так можно растить объем и количество скриптов и
-экономить время на генерации шаблонов в декхаусе при конверже.
-
-## Как API-сервер работает
-
-Bashible раньше обращался к апи куба за секретами по имени.
-
-```
-GET /api/v1/namespaces/d8-cloud-instance-manager/secrets/bashible-bundle-ubuntu-lts-1.19
-```
-
-Теперь bashible по имени обращается за бандлами (наборами шагов). Данные бандлов не секретные, поэтому они не кодируются
-в base64. Объекты api-сервера существуют вне namespace.
-
-API-сервер реализует только операцию `Get`, то есть можно взять бандл по имени, список бандлов не реализован. Новый
-башибл берет объекты с помощью kubectl:
+Call bashible script or a bundle for a pair of OS and node group:
 
 ```shell
 kubectl get -o json  bashibles         ubuntu-lts.master    # <os>.<nodegroup>
 kubectl get -o json  nodegroupbundles  ubuntu-lts.master    # <os>.<nodegroup>
 ```
 
-Объекты доступны напрямую в апи так:
+or
 
 ```
 GET /api/bashible.deckhouse.io/v1alpha1/bashibles/ubuntu-lts.master
 GET /api/bashible.deckhouse.io/v1alpha1/nodegroupbundles/ubuntu-lts.master
 ```
 
-API-сервер генерирует содержание на лету для запрошенного бандла. Шаблоны находятся в контейнере сервера. Все объекты
-содержат поле `data map[string]string`, внутри которого карта скриптов, где ключ — имя скрипта, а значение — содержание.
-Поле `metadata.creationTimestamp` генерируется на лету из текущего времени. Пример для `bashible`:
+Example:
 
 ```shell
 kubectl get -o json bashibles ubuntu-lts.master
@@ -63,38 +36,48 @@ kubectl get -o json bashibles ubuntu-lts.master
 }
 ```
 
-## Как устроен код
+## How it works
 
-Код основан на репозитории [sample-apiserver](https://https://github.com/kubernetes/sample-apiserver).
+Bashible apiserver generates bash scripts on the fly for a requested bundle. Templates of bashible steps are located in
+the container of the server. The context for these templates is mounted from `bashible-apiserver-context` configmap. All
+objects returned by the apiserver contain a map where keys are script file names, and values are rendered bash scripts.
 
-Чтобы генерировать бойлерплейт для объектов в апи, используется пакет `code-generator`. Сгенерированный код коммитят в
-репозиторий, потому что он используется в коде, который пишут люди сами (как в кубе). Чтобы перегенерировать код, нужно
-вызывать скрипт
+`metadata.creationTimestamp` is generated in the request time.
+
+## Motivation
+
+The number of combinations of bashible steps is the product of four factors:
+
+* \# of supported Kubernetes versions
+* \# of supported Linux distributions on nodes
+* \# of steps in a bundle for a specific Linux distribution
+* \# of node groups
+
+All the scripts cannot be stored pre-rendered because of Etcd limitations. Helm release secret would have to keep them
+all at once. Generating steps with an extension apiserver scales better.
+
+## Code
+
+The code is based on [sample-apiserver](https://https://github.com/kubernetes/sample-apiserver).
+
+Code generation is provided by the `code-generator` package. The generated code is commited to the repo. To re-generate
+code, run in the project root
 
 ```shell
 ./hack/update-codegen.sh
 ```
 
-### Версии библиотек могут обгонять целевой кластер
+### Templates
 
-Среди прочего скрипт кодогенерации отвечает за спецификацию Openapi для сущностей API-сервера. В версии пакетов 0.19.*
-эта генерация сломана, в 0.20.* она работает. Поэтому сервер использует версии библиотек 0.20+, которые могут обгонять
-совместимость с текущим кластером. (Эту ситуацию, возможно, можно решить и без использования несовместимых библиотек).
+Templates of bashible and bundle steps are added to the container from `candi/bashible` on building.
 
-Например, фича [API Priority and Fairness](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/),
-появилась в 1.20. Поэтому в Kubernetes 1.19 и более ранних версий этот API-сервер будет писать в выводе ошибок сообщения
-о недоступности группы API `flowcontrol.apiserver.k8s.io` ( `flowschemas` и `PriorityLevelConfiguration`).
-
-### Шаблоны
-
-Шаблоны bashible и его шагов добавляются в контейнер на стадии сборки из каталога `candi/bashible`. Контекст для этих
-шаблонов собирается в конфигмап и монтируется файлом в поде:
+The file structure in the container:
 
 ```shell
 tree /bashible
 /bashible
-├── context.yaml   # монтируется из конфигмапа
-└── templates      # добавляется во время сборки
+├── context.yaml   # mounted from `bashible-apiserver-context` configmap
+└── templates      # added on container building
     ├── bashible
     │   ├── bashible.sh.tpl
     │   ├── bundles
