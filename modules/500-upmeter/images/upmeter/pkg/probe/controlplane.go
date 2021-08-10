@@ -88,7 +88,7 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 				Node:                     os.Getenv("NODE_NAME"),
 				CreationTimeout:          5 * time.Second,
 				SchedulingTimeout:        20 * time.Second,
-				DeletionTimeout:          5 * time.Second,
+				DeletionTimeout:          20 * time.Second,
 				GarbageCollectionTimeout: gcTimeout,
 			},
 		},
