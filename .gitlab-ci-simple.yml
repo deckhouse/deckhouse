@@ -63,6 +63,15 @@ OpenAPI Validation:
     - "Build Modules Images"
     - "Go Generate"
 
+beta:
+  <<: *base_deploy
+  environment:
+    name: beta
+  only:
+  - tags
+  - master
+  - /^release-.*$/
+
 early-access:
   <<: *base_deploy
   environment:
