@@ -1,6 +1,8 @@
 .base_deploy_template:
   stage: deploy
   before_script:
+  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  - type werf && source $(werf ci-env gitlab --verbose --as-file)
   # Variables
   #   1. CE/EE/FE -> ce/ee/fe
   - REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
