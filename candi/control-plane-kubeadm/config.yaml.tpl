@@ -21,6 +21,7 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -82,6 +83,7 @@ controllerManager:
   extraArgs:
     profiling: "true"
     terminated-pod-gc-threshold: "10"
+    feature-gates: "EndpointSliceTerminatingCondition=true"
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
 {{- if hasKey . "nodeIP" }}
     bind-address: {{ .nodeIP | quote }}
@@ -108,6 +110,7 @@ scheduler:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "true"
+    feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- if hasKey . "nodeIP" }}
     bind-address: {{ .nodeIP | quote }}
 {{- end }}
