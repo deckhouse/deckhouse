@@ -109,8 +109,7 @@ spec:
                   type: object
                   description: |
                     Дополнительные label'ы, которые будут присвоены созданным инстансам.
-
-                    Пример:
+                  x-doc-example: |
                     ```yaml
                     project: cms-production
                     severity: critical
@@ -226,8 +225,7 @@ spec:
                   type: object
                   description: |
                     Дополнительные label'ы, которые будут присвоены созданным инстансам.
-
-                    Пример:
+                  x-doc-example: |
                     ```yaml
                     project: cms-production
                     severity: critical

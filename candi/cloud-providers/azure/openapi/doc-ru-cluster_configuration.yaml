@@ -140,7 +140,7 @@ apiVersions:
                   type: string
       nodeGroups:
         description: |
-          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных forntend-узлов или шлюзов).
+          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных frontend-узлов или шлюзов).
         type: array
         items:
           type: object

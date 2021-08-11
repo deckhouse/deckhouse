@@ -120,7 +120,7 @@ apiVersions:
               minLength: 1
       nodeGroups:
         description: |
-          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных forntend-узлов или шлюзов).
+          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных frontend-узлов или шлюзов).
         type: array
         items:
           additionalProperties: false
@@ -147,12 +147,23 @@ apiVersions:
                     Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
 
                     Формат — `key: value`.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
                   type: object
                   additionalProperties:
                     type: string
                 annotations:
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
                   type: object
                   additionalProperties:
                     type: string
@@ -161,6 +172,13 @@ apiVersions:
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
                     **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
                   type: array
                   items:
                     type: object
