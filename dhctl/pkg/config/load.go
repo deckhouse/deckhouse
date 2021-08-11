@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/go-openapi/spec"
@@ -47,15 +46,18 @@ func newSchemaStore(candiDir string) *SchemaStore {
 	once.Do(func() {
 		store = &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
 		err := filepath.Walk(candiDir, func(path string, info os.FileInfo, err error) error {
-			switch {
-			case strings.HasSuffix(path, providerSchemaFilenameSuffix):
-				fallthrough
-			case info != nil && info.Name() == "cloud_discovery_data.yaml":
+			if info == nil {
+				return nil
+			}
+
+			switch info.Name() {
+			case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml":
 				uploadError := store.UploadByPath(path)
 				if uploadError != nil {
 					return uploadError
 				}
 			}
+
 			return nil
 		})
 		if err != nil {

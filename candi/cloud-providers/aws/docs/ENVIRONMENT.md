@@ -347,7 +347,7 @@ EOF
 
 ## Configuring IAM via Terraform
 
-```json
+```hcl
 resource "aws_iam_user" "user" {
   name = "deckhouse"
 }

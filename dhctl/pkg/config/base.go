@@ -33,8 +33,6 @@ import (
 
 const (
 	candiDir = "/deckhouse/candi"
-
-	providerSchemaFilenameSuffix = "_configuration.yaml"
 )
 
 func numerateManifestLines(manifest []byte) string {
