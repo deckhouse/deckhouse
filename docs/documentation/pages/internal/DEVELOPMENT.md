@@ -30,7 +30,7 @@ When you commit changes to git, a new Deckhouse docker-image gets built.
 
 A copy of Deckhouse running in the cluster regularly checks if a new image is available in the docker registry (if there is a new digest for the same image tag).
 If the digest for the tag in the registry does not match the one for the image in the cluster, Deckhouse modifies its deployment manifest and shuts down.
-The new image is pulled from the registry when a new Deckhouse pod is being created.
+The new image is pulled from the registry when a new Deckhouse Pod is being created.
 
 ## The process of releasing new versions and changing versions in the update channels
 Getting information about the versions (releases) that are currently available in the update channels:
@@ -246,7 +246,7 @@ To include your module in the specific bundle by default, add the following line
 ### Helm
 
 * `helm upgrade --install` is invoked if the `/modules/<module-name>/Chart.yaml` file is present.
-* A separate helm release is created for each module. Tiller is responsible for creating resources in the cluster. It is running in the Deckhouse pod as a separate process.
+* A separate helm release is created for each module. Tiller is responsible for creating resources in the cluster. It is running in the Deckhouse Pod as a separate process.
 This command outputs the list of helm release:
   ```bash
   kubectl -n d8-system exec deploy/deckhouse -- helm list
@@ -401,7 +401,7 @@ The high availability (HA) mode protects crucial modules against possible downti
 
 The rules below ensure the correct operation and update of module components (Deployment or StatefulSet):
 
-* Always set podAntiAffinity for a Deployment and StatefulSet to ensure that the pods are not run on the same node. Below is an example for prometheus:
+* Always set podAntiAffinity for a Deployment and StatefulSet to ensure that the Pods are not run on the same node. Below is an example for prometheus:
 
   ```yaml
   {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deployment-label")) | indent 6 }}
@@ -412,7 +412,7 @@ The rules below ensure the correct operation and update of module components (De
     ```yaml
     {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | indent 2 }}
     ```
-    It prevents blocking updates when the number of Deployment pods is equal to the number of nodes, and nodeSelector and podAntiAffinity parameters are set.
+    It prevents blocking updates when the number of Deployment Pods is equal to the number of nodes, and nodeSelector and podAntiAffinity parameters are set.
   * If the Deployment is running on master nodes (on each master node!):
 
     ```yaml
