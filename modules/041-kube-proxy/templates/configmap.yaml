@@ -4,6 +4,9 @@ config.conf: |
   kind: KubeProxyConfiguration
   clusterCIDR: {{ .Values.global.discovery.podSubnet | quote }}
   mode: "iptables"
+  featureGates:
+    EndpointSliceTerminatingCondition: true
+    ProxyTerminatingEndpoints: true
   nodePortAddresses: ["__node_address__"]
   clientConnection:
     acceptContentTypes: ""

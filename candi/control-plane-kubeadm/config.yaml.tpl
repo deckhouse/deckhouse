@@ -21,6 +21,7 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -62,6 +63,9 @@ apiServer:
     audit-log-maxsize: "100"
     audit-log-maxbackup: "10"
   {{- end }}
+    profiling: "true"
+    request-timeout: "300s"
+    tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
   {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}
@@ -77,6 +81,9 @@ controllerManager:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
+    profiling: "true"
+    terminated-pod-gc-threshold: "10"
+    feature-gates: "EndpointSliceTerminatingCondition=true"
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
 {{- if hasKey . "nodeIP" }}
     bind-address: {{ .nodeIP | quote }}
@@ -102,6 +109,8 @@ scheduler:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
+    profiling: "true"
+    feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- if hasKey . "nodeIP" }}
     bind-address: {{ .nodeIP | quote }}
 {{- end }}
