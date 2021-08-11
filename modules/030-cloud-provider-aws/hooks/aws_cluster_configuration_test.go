@@ -110,7 +110,7 @@ vpcNetworkCIDR: 1.1.1.1.1.1/16
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cluster-configuration
+  name: d8-provider-cluster-configuration
   namespace: kube-system
 data:
   "cloud-provider-cluster-configuration.yaml": %s
@@ -121,7 +121,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cluster-configuration
+  name: d8-provider-cluster-configuration
   namespace: kube-system
 data:
   "cloud-provider-cluster-configuration.yaml": %s
@@ -132,7 +132,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cluster-configuration
+  name: d8-provider-cluster-configuration
   namespace: kube-system
 data:
   "cloud-provider-cluster-configuration.yaml": %s

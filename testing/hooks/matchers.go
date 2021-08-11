@@ -56,7 +56,7 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 
 func (matcher *successfulExecutionMatcher) FailureMessage(actual interface{}) (message string) {
 	hec := actual.(*HookExecutionConfig)
-	if hec.GoHookError != nil {
+	if hec.GoHook != nil && hec.GoHookError != nil {
 		return fmt.Sprintf("Expected\n\t%v\n to be nil", hec.GoHookError)
 	}
 
@@ -65,7 +65,7 @@ func (matcher *successfulExecutionMatcher) FailureMessage(actual interface{}) (m
 
 func (matcher *successfulExecutionMatcher) NegatedFailureMessage(actual interface{}) (message string) {
 	hec := actual.(*HookExecutionConfig)
-	if hec.GoHookError == nil {
+	if hec.GoHook != nil && hec.GoHookError == nil {
 		return fmt.Sprintf("Expected\n\t%v\nnot to be nil", hec.GoHookError)
 	}
 
