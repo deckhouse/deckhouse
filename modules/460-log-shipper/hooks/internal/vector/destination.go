@@ -128,10 +128,18 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 		labels[k] = v
 	}
 
+	ctls := CommonTLS{
+		CAFile:         spec.TLS.CAFile,
+		CertFile:       spec.TLS.CertFile,
+		KeyFile:        spec.TLS.KeyFile,
+		KeyPass:        spec.TLS.KeyPass,
+		VerifyHostname: spec.TLS.VerifyHostname,
+	}
+
 	return &lokiDestination{
 		commonDestinationSettings: common,
 		Auth:                      spec.Auth,
-		TLS:                       CommonTLS(spec.TLS),
+		TLS:                       ctls,
 		Labels:                    labels,
 		Endpoint:                  spec.Endpoint,
 		Encoding:                  LokiENC,
@@ -215,17 +223,27 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		Region: spec.Auth.AwsRegion,
 	}
 
+	ctls := CommonTLS{
+		CAFile:         spec.TLS.CAFile,
+		CertFile:       spec.TLS.CertFile,
+		KeyFile:        spec.TLS.KeyFile,
+		KeyPass:        spec.TLS.KeyPass,
+		VerifyHostname: spec.TLS.VerifyHostname,
+	}
+
 	return &elasticsearchDestination{
 		commonDestinationSettings: common,
 		Auth:                      EsAuth,
 		Encoding:                  EsEnc,
-		TLS:                       CommonTLS(spec.TLS),
+		TLS:                       ctls,
 		AWS:                       AwsRegion,
 		Batch:                     ESBatch,
 		Endpoint:                  spec.Endpoint,
 		Compression:               "gzip",
 		Index:                     spec.Index,
+		Pipeline:                  spec.Pipeline,
 		BulkAction:                "index",
+		Mode:                      "normal",
 	}
 }
 
@@ -268,7 +286,7 @@ func NewLogstashDestination(name string, cspec v1alpha1.ClusterLogDestinationSpe
 	} else {
 		enabledTLS = false
 	}
-	CTLS := CommonTLS{
+	ctls := CommonTLS{
 		CAFile:         spec.TLS.CAFile,
 		CertFile:       spec.TLS.CertFile,
 		KeyFile:        spec.TLS.KeyFile,
@@ -276,7 +294,7 @@ func NewLogstashDestination(name string, cspec v1alpha1.ClusterLogDestinationSpe
 		VerifyHostname: spec.TLS.VerifyHostname,
 	}
 	LSTLS := LogstashTLS{
-		CommonTLS:         CTLS,
+		CommonTLS:         ctls,
 		VerifyCertificate: spec.TLS.VerifyCertificate,
 		Enabled:           enabledTLS,
 	}

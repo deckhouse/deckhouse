@@ -37,12 +37,19 @@ rules:
       - get
       - list
   - apiGroups:
-      - ""
+      - apps
     resources:
-      - jobs
       - replicasets
     verbs:
       - get
+      - list
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

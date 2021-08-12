@@ -74,6 +74,49 @@ func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) (transforms []
 		},
 	}
 
+	// default logstash & elasticsearch dedot transform
+	// Related issue https://github.com/timberio/vector/issues/3588
+	var deDotTransform DynamicTransform = DynamicTransform{
+		CommonTransform: CommonTransform{
+			Type: "lua",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"version": "2",
+			"hooks": map[string]interface{}{
+				"process": "process",
+			},
+			"source": `
+function process(event, emit)
+	if event.log.pod_labels == nil then
+		return
+	end
+	dedot(event.log.pod_labels)
+	emit(event)
+end
+function dedot(map)
+	if map == nil then
+		return
+	end
+	local new_map = {}
+	local changed_keys = {}
+	for k, v in pairs(map) do
+		local dedotted = string.gsub(k, "%.", "_")
+		if dedotted ~= k then
+			new_map[dedotted] = v
+			changed_keys[k] = true
+		end
+	end
+	for k in pairs(changed_keys) do
+		map[k] = nil
+	end
+	for k, v in pairs(new_map) do
+		map[k] = v
+	end
+end
+`,
+		},
+	}
+
 	// default logstash & elasticsearch json parser transform
 	var JSONParseTransform DynamicTransform = DynamicTransform{
 		CommonTransform: CommonTransform{
@@ -103,6 +146,7 @@ func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) (transforms []
 			extraFieldsTransform := GenExtraFieldsTransform(dest.Spec.ExtraLabels)
 			transforms = append(transforms, &extraFieldsTransform)
 		}
+		transforms = append(transforms, &deDotTransform)
 		transforms = append(transforms, &JSONParseTransform)
 	}
 

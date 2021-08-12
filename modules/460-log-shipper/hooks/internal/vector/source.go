@@ -115,9 +115,10 @@ func (cs kubernetesLogSource) BuildSources() []impl.LogSource {
 
 	for _, ns := range cs.namespaces {
 		k := kubernetesLogSource{
-			commonSource: commonSource{Name: fmt.Sprintf("d8_clusterns_%s_%s", ns, cs.Name), Type: cs.Type},
-			namespaces:   []string{ns},
-			labels:       cs.labels,
+			commonSource:     commonSource{Name: fmt.Sprintf("d8_clusterns_%s_%s", ns, cs.Name), Type: cs.Type},
+			namespaces:       []string{ns},
+			labels:           cs.labels,
+			annotationFields: cs.annotationFields,
 		}
 
 		res = append(res, k)

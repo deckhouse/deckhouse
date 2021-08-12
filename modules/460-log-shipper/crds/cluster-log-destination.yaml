@@ -20,7 +20,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          required: ['spec']
+          required: ["spec"]
           description: |
             CustomResource for storage in log-pipeline.
 
@@ -73,30 +73,58 @@ spec:
                         user:
                           type: string
                           description: The basic authentication user name.
+                      oneOf:
+                        - properties:
+                            strategy:
+                              enum: ["Basic"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - token
+                            - required:
+                                - user
+                                - password
+                        - properties:
+                            strategy:
+                              enum: ["Bearer"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - user
+                                  - required:
+                                      - password
+                            - required:
+                                - token
                     endpoint:
                       type: string
                       description: The base URL of the Loki instance.
                     tls:
                       type: object
-                      required:
-                        - crtFile
-                        - keyFile
-                      description: Configures the TLS options for incoming connections.
+                      description: Configures the TLS options for outgoing connections.
                       properties:
                         caFile:
                           type: string
                           description: Base64 encoded CA certificate in PEM format.
-                        crtFile:
-                          type: string
-                          description: Base64 encoded certificate in PEM format. keyFile Must also be set.
-                        keyFile:
-                          type: string
-                          format: password
-                          description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
-                        keyPass:
-                          type: string
-                          format: string
-                          description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        clientCrt:
+                          type: object
+                          description: Configures client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64 encoded pass phrase used to unlock the encrypted key file.
                         verifyHostname:
                           type: boolean
                           default: true
@@ -133,40 +161,71 @@ spec:
                         awsRegion:
                           type: string
                           description: AWS region for aws authentication.
+                      oneOf:
+                        - properties:
+                            strategy:
+                              enum: ["Basic"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - awsAccessKey
+                                  - required:
+                                      - awsSecretKey
+                                  - required:
+                                      - awsAssumeRole
+                                  - required:
+                                      - awsRegion
+                            - required:
+                                - user
+                                - password
+                        - properties:
+                            strategy:
+                              enum: ["AWS"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - user
+                                  - required:
+                                      - password
+                            - required:
+                                - awsAccessKey
+                                - awsSecretKey
                     index:
                       type: string
                       description: Index name to write events to.
+                    pipeline:
+                      type: string
+                      description: Name of the pipeline to apply.
                     endpoint:
                       type: string
                       description: The base URL of the Elasticsearch instance.
-                    extraLabels:
-                      type: object
-                      description: A set of labels that will be attached to each batch of events.
-                      example: {"forwarder" : "vector", "key": "value"}
-                      additionalProperties:
-                        type: string
-                        pattern: '^[a-zA-Z0-9_]+$'
                     tls:
                       type: object
-                      required:
-                        - crtFile
-                        - keyFile
-                      description: Configures the TLS options for incoming connections.
+                      description: Configures the TLS options for outgoing connections.
                       properties:
                         caFile:
                           type: string
                           description: Base64 encoded CA certificate in PEM format.
-                        crtFile:
-                          type: string
-                          description: Base64 encoded certificate in PEM format. keyFile Must also be set.
-                        keyFile:
-                          type: string
-                          format: password
-                          description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
-                        keyPass:
-                          type: string
-                          format: string
-                          description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        clientCrt:
+                          type: object
+                          description: Configures client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64 encoded pass phrase used to unlock the encrypted key file.
                         verifyHostname:
                           type: boolean
                           default: true
@@ -181,25 +240,29 @@ spec:
                       description: The base URL of the Loki instance.
                     tls:
                       type: object
-                      required:
-                        - crtFile
-                        - keyFile
-                      description: Configures the TLS options for incoming connections.
+                      description: Configures the TLS options for outgoing connections.
                       properties:
                         caFile:
                           type: string
                           description: Base64 encoded CA certificate in PEM format.
-                        crtFile:
-                          type: string
-                          description: Base64 encoded certificate in PEM format. keyFile Must also be set.
-                        keyFile:
-                          type: string
-                          format: password
-                          description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
-                        keyPass:
-                          type: string
-                          format: string
-                          description: Base64 encoded pass phrase used to unlock the encrypted key file.
+                        clientCrt:
+                          type: object
+                          description: Configures client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: Base64 encoded certificate in PEM format. keyFile Must also be set.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: Base64 encoded private key in PEM format (PKCS#8). If this is set, crtFile must also be set.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64 encoded pass phrase used to unlock the encrypted key file.
                         verifyHostname:
                           type: boolean
                           default: true
@@ -211,7 +274,7 @@ spec:
                 extraLabels:
                   type: object
                   description: A set of labels that will be attached to each batch of events.
-                  example: {"forwarder" : "vector", "key": "value"}
+                  example: { "forwarder": "vector", "key": "value" }
                   additionalProperties:
                     type: string
                     pattern: '^[a-zA-Z0-9_\-]+$'
