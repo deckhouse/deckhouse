@@ -62,6 +62,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: etcdPeersFilter,
 		},
+		// common etcd certificate snapshot
+		etcdSecretK8sConfig,
 	},
 }, dependency.WithExternalDependencies(handleCheckEtcdPeers))
 
