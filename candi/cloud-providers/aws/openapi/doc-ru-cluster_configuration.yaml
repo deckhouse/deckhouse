@@ -4,36 +4,55 @@ apiVersions:
   openAPISpec:
     properties:
       masterNodeGroup:
-        description: |
-          Спецификация для описания NodeGroup мастера.
+        description: Спецификация для описания NodeGroup master-узлов.
         properties:
           replicas:
-            description: |
-              Сколько мастер-узлов создать.
+            description: Сколько master-узлов создавать.
           instanceClass:
             description: |
-              Частичное содержимое полей [AWSInstanceClass]({{"/modules/030-cloud-provider-aws/cr.html#awsinstanceclass" | true_relative_url }}).
+              Частичное содержимое полей [AWSInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+            properties: &instanceClassProperties_ru
+              instanceType:
+                type: string
+                description: |
+                  Тип заказываемых инстансов.
 
-              Допустимые параметры:
-              * `instanceType`
-              * `ami`
-              * `additionalSecurityGroups`
-              * `diskType`
-              * `diskSizeGb`
+                  **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, указанных в `zones`.
+              ami:
+                type: string
+                description: |
+                  Образ (AMI ID), который будет использоваться в заказанных инстансах.
+
+                  Как найти нужный AMI (в каждом регионе AMI разные):
+                  ```shell
+                  aws ec2 --region <REGION> describe-images \
+                  --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                  jq '.Images[].ImageId'
+                  ```
+              additionalSecurityGroups:
+                type: array
+                description: |
+                  Дополнительные теги, которые будут присвоены созданным инстансам.
+                items:
+                  type: string
+              diskType:
+                description: Тип созданного диска.
+              diskSizeGb:
+                description: Размер root-диска. Значение указывается в гигабайтах.
           zones:
             description: |
-              Ограниченный набор зон, в которых разрешено создавать master-узлы. Опциональный параметр.
+              Список зон, в которых допустимо создавать master-узлы.
           additionalTags:
             description: |
-              Дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
+              Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud-провайдера.
       nodeGroups:
         description: |
-          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных фронтов или шлюзов).
+          Массив дополнительных NodeGroup для создания статичных узлов (например, для выделенных frontend-узлов или шлюзов).
         items:
           properties:
             name:
               description: |
-                Имя NodeGroup, будет использоваться для генерации имени узлов.
+                Имя NodeGroup, будет использоваться для генерации имен узлов.
             replicas:
               description: |
                 Количество узлов.
@@ -43,61 +62,60 @@ apiVersions:
               properties:
                 labels:
                   description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
 
-                    * Пример:
+                    Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
 
-                      ```yaml
-                      labels:
-                        environment: production
-                        app: warp-drive-ai
-                      ```
+                    Формат — `key: value`.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
                 annotations:
                   description: |
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
-
-                    * Пример:
-
-                      ```yaml
-                      annotations:
-                        ai.fleet.com/discombobulate: "true"
-                      ```
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
                 taints:
                   description: |
-                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
-                    * Пример:
-
-                      ```yaml
-                      taints:
-                      - effect: NoExecute
-                        key: ship-class
-                        value: frigate
-                      ```
+                    **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
             instanceClass:
               description: |
-                Частичное содержимое полей [AWSInstanceClass]({{"/modules/030-cloud-provider-aws/cr.html#awsinstanceclass" | true_relative_url }}).
-
-                Допустимые параметры:
-                * `instanceType`
-                * `ami`
-                * `additionalSecurityGroups`
-                * `diskType`
-                * `diskSizeGb`
+                Частичное содержимое полей [AWSInstanceClass](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+              properties:
+                <<: *instanceClassProperties_ru
             zones:
               description: |
-                Ограниченный набор зон, в которых разрешено создавать узлы. Опциональный параметр.
+                Список зон, в которых допустимо создавать узлы.
             additionalTags:
               description: |
                 Дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
       layout:
         description: |
-          Название схемы размещения
+          Название схемы размещения.
+
+          [Подробнее...](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
       vpcNetworkCIDR:
         description: |
           Подсеть, которая будет указана в созданном VPC.
 
-          * обязательный параметр если не указан параметр для развёртывания в уже созданном VPC `existingVPCID`.
+          **Обязательный параметр** если не указан параметр для развёртывания в уже созданном VPC `existingVPCID`.
       nodeNetworkCIDR:
         description: |
           Подсеть, в которой будут работать узлы кластера.
@@ -115,17 +133,19 @@ apiVersions:
         description: |
           ID существующего VPC, в котором будет развёрнута схема.
 
-          * Обязательный параметр если не указан `vpcNetworkCIDR`.
+          * **Обязательный параметр** если не указан `vpcNetworkCIDR`.
           * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадёт с ошибкой. На данный момент адоптнуть Internet Gateway нельзя.
       sshPublicKey:
         description: |
           Публичный ключ для доступа на узлы
       tags:
         description: |
-          Теги, которые будут присвоены всем созданным ресурсам. Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
+          Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
+
+          Если поменять теги в рабочем кластере, то после конвержа необходимо пересоздать все машины, чтобы теги применились.
       provider:
         description: |
-          Параметры подключения к API AWS.
+          [Параметры подключения](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-aws/environment.html) к API AWS.
         properties:
           providerAccessKeyId:
             description: |
@@ -135,7 +155,7 @@ apiVersions:
               Access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
           region:
             description: |
-              Имя AWS региона, в котором будут заказываться instances.
+              Имя AWS региона, в котором будут заказываться инстансы.
       zones:
         description: |
-          Ограничение набора зон, в которых разрешено создавать узлы. Опциональный параметр.
+          Глобальное ограничение набора зон, с которыми работает данный cloud-provider.

@@ -189,7 +189,7 @@ apiVersions:
                     `false` — для узлов создаются статические публичные адреса, они же используются для One-to-one NAT.
             zones:
               type: array
-              description: Список зон, в которых допустимо создавать статичные-узлы.
+              description: Список зон, в которых допустимо создавать узлы.
               items:
                 type: string
               minItems: 1
@@ -234,7 +234,7 @@ apiVersions:
             description: Значение `service account key` в JSON-формате.
       zones:
         type: array
-        description: Список зон, в которых допустимо создавать статичные-узлы.
+        description: Список зон, в которых допустимо создавать узлы.
         items:
           type: string
         minItems: 1

@@ -26,21 +26,31 @@ apiVersions:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass) CR.
-
-              Possible values:
-              * `instanceType`
-              * `ami`
-              * `additionalSecurityGroups`
-              * `diskType`
-              * `diskSizeGb`
-            properties:
+              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+            properties: &instanceClassProperties
               instanceType:
                 type: string
+                description: |
+                  Instance type of AWS instance.
+
+                  **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
+                example: t3.large
               ami:
                 type: string
+                description: |
+                  The Amazon Machine Image (AMI ID) to use in provisioned instances.
+
+                  Here is how you can find the required AMI (each region has its own set of AMIs):
+                  ```shell
+                  aws ec2 --region <REGION> describe-images \
+                  --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                  jq '.Images[].ImageId'
+                  ```
+                example: ami-040a1551f9c9d11ad
               additionalSecurityGroups:
                 type: array
+                description: |
+                  The additional security groups to add to provisioned instances of the specific InstanceClass.
                 items:
                   type: string
               diskType:
@@ -59,13 +69,19 @@ apiVersions:
             minItems: 1
             uniqueItems: true
             description: |
-              A limited set of zones in which master nodes can be createed. An optional parameter.
+              A limited set of zones in which master nodes can be created.
+            x-doc-required: false
           additionalTags:
             type: object
             additionalProperties:
               type: string
             description: |
-              Tags to attach to instances being created in addition to the main ones (`AWSClusterConfiguration.tags`).
+              The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+            x-doc-example: |
+              ```yaml
+              project: cms-production
+              severity: critical
+              ```
       nodeGroups:
         type: array
         description: |
@@ -91,41 +107,43 @@ apiVersions:
                   additionalProperties:
                     type: string
                   description: |
+                    A list of labels to attach to cluster resources.
+
                     The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
 
-                    * An example:
+                    Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
 
-                      ```yaml
-                      labels:
-                        environment: production
-                        app: warp-drive-ai
-                      ```
+                    Format — `key: value`.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
                 annotations:
                   type: object
                   additionalProperties:
                     type: string
                   description: |
-                    The same as the `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
-
-                    * An example:
-
-                      ```yaml
-                      annotations:
-                        ai.fleet.com/discombobulate: "true"
-                      ```
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
                 taints:
                   type: array
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object. **Caution!** Only the `effect`, `key`, `values` are available.
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
-                    * An example:
-
-                      ```yaml
-                      taints:
-                      - effect: NoExecute
-                        key: ship-class
-                        value: frigate
-                      ```
+                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
                   items:
                     type: object
                     properties:
@@ -140,32 +158,9 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass) CR.
-
-                Possible values:
-                * `instanceType`
-                * `ami`
-                * `additionalSecurityGroups`
-                * `diskType`
-                * `diskSizeGb`
+                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
-                instanceType:
-                  type: string
-                ami:
-                  type: string
-                additionalSecurityGroups:
-                  type: array
-                  items:
-                    type: string
-                diskType:
-                  description: Instance EBS disk type.
-                  example: "gp2"
-                  type: string
-                  enum: [gp2, io2, io1, st1, sc1]
-                diskSizeGb:
-                  description: Instance disk size in gigabytes.
-                  example: 20
-                  type: integer
+                <<: *instanceClassProperties
             zones:
               type: array
               items:
@@ -173,17 +168,25 @@ apiVersions:
               minItems: 1
               uniqueItems: true
               description: |
-                A limited set of zones in which nodes can be createed. An optional parameter.
+                A limited set of zones in which master nodes can be created.
+              x-doc-required: false
             additionalTags:
               type: object
               additionalProperties:
                 type: string
               description: |
-                Tags to attach to instances being created in addition to the main ones (`AWSClusterConfiguration.tags`).
+                The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+              x-doc-example: |
+                ```yaml
+                project: cms-production
+                severity: critical
+                ```
       layout:
         type: string
         description: |
-          The name of the layout.
+          The way resources are located in the cloud.
+
+          Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
         enum: ['WithoutNAT', 'Standard']
       withoutNAT:
         type: object
@@ -196,7 +199,7 @@ apiVersions:
         description: |
           A subnet to use in the VPC being created.
 
-          * a mandatory parameter if the `existingVPCID` parameter is omitted.
+          **A mandatory parameter** if the `existingVPCID` parameter is omitted.
       nodeNetworkCIDR:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -217,7 +220,7 @@ apiVersions:
         description: |
           ID of the existing VPC to use for deploying.
 
-          * A mandatory parameter if the `vpcNetworkCIDR` is omitted.
+          * **A mandatory parameter** if the `vpcNetworkCIDR` is omitted.
           * **Caution!** If there is an Internet Gateway in the target VPC, the deployment of the basic infrastructure will fail with an error. Currently, an Internet Gateway cannot be adopted.
       sshPublicKey:
         type: string
@@ -228,13 +231,16 @@ apiVersions:
         additionalProperties:
           type: string
         description: |
-          Tags to attach to newly created resources. You have to re-create all the machines to add new tags if tags were modified in the running cluster.
+          A dictionary of tags to create on all resources that support this feature.
+
+          You have to re-create all the machines to add new tags if tags were modified in the running cluster.
+        x-doc-required: false
       provider:
         type: object
         additionalProperties: false
         required: [providerAccessKeyId, providerSecretAccessKey, region]
         description: |
-          Parameters for connecting to the AWS API.
+          Contains [settings to connect](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/environment.html) to the AWS API.
         properties:
           providerAccessKeyId:
             type: string
@@ -254,8 +260,7 @@ apiVersions:
           type: string
         minItems: 1
         uniqueItems: true
-        description: |
-          A limited set of zones in which nodes can be created.
+        description: The globally restricted set of zones that this Cloud Provider works with.
     allOf:
     - oneOf:
       - required: [layout]

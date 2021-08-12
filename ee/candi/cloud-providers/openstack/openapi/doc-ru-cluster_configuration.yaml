@@ -238,7 +238,7 @@ apiVersions:
                 type: string
               minItems: 1
               uniqueItems: true
-              description: Список зон, в которых допустимо создавать статичные узлы.
+              description: Список зон, в которых допустимо создавать узлы.
               x-doc-required: false
       layout:
         description: |
