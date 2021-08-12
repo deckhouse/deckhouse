@@ -84,7 +84,7 @@ apiVersions:
                 description: |
                   При указании данной опции к узлу будет подключен дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
 
-                  Также будет добавлен маршрут для internal интерфейса ноды на всю подсеть, указанную в `nodeNetworkCIDR`.
+                  Также будет добавлен маршрут для internal-интерфейса узла на всю подсеть, указанную в `nodeNetworkCIDR`.
 
                   Количество элементов массива должно соответствовать `replicas`.
                 items:
@@ -131,7 +131,7 @@ apiVersions:
                 - ru-central1-c
               uniqueItems: true
             nodeTemplate:
-              description: Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              description: Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
               properties:
                 labels:
                   type: object
@@ -211,7 +211,7 @@ apiVersions:
       dhcpOptions:
         type: object
         description: |
-          Cписок DHCP опций, которые будут установлены на все подсети.
+          Cписок DHCP-опций, которые будут установлены на все подсети.
 
           [Возможные проблемы](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
@@ -264,7 +264,7 @@ apiVersions:
             description: Идентификатор директории.
             type: string
           serviceAccountJSON:
-            description: JSON, выдаваемый [yc iam key create](environment.html).
+            description: JSON, выдаваемый [yc iam key create](environment.html) (отформатированный в одну строку).
             type: string
         required:
         - cloudID
