@@ -21,7 +21,9 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
@@ -83,7 +85,9 @@ controllerManager:
   extraArgs:
     profiling: "true"
     terminated-pod-gc-threshold: "10"
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
 {{- if hasKey . "nodeIP" }}
     bind-address: {{ .nodeIP | quote }}
@@ -110,7 +114,9 @@ scheduler:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "true"
+{{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
+{{- end }}
 {{- if hasKey . "nodeIP" }}
     bind-address: {{ .nodeIP | quote }}
 {{- end }}
