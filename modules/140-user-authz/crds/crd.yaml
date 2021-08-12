@@ -47,7 +47,7 @@ spec:
 
                       **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
                     * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` (see below) restrictions remain valid).
-                  enum: [User,Master,PrivilegedUser,Deploy,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
+                  enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
                   example: 'PrivilegedUser'
                 portForwarding:
                   type: boolean
