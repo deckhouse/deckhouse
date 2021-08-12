@@ -70,7 +70,7 @@ apiVersions:
             minimum: 1
           zones:
             description: |
-              Список зон, в которых допустимо создавать мастер-узлы.
+              Список зон, в которых допустимо создавать master-узлы.
 
               Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
               ```shell
@@ -154,7 +154,7 @@ apiVersions:
               type: integer
             zones:
               description: |
-                Список зон, в которых допустимо создавать статичные-узлы.
+                Список зон, в которых допустимо создавать узлы.
 
                 Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
                 ```shell

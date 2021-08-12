@@ -43,11 +43,9 @@ apiVersions:
             type: integer
             minimum: 1
             description: The number of master nodes to create.
-            x-doc-required: true
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
-            x-doc-required: true
             type: object
             required: [flavorName, imageName]
             additionalProperties: false

@@ -71,6 +71,14 @@
   to: /src/modules/030-cloud-provider-aws/crds
   owner: jekyll
   group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/cloud-providers/aws/openapi
+  to: /src/modules/030-cloud-provider-aws/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
 - add: /candi/cloud-providers/aws/docs

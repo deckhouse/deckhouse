@@ -123,7 +123,7 @@ apiVersions:
               type: integer
             zones:
               type: array
-              description: Список зон, в которых допустимо создавать статичные узлы.
+              description: Список зон, в которых допустимо создавать узлы.
               items:
                 enum:
                 - ru-central1-a
