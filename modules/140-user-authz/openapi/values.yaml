@@ -61,7 +61,7 @@ properties:
               properties:
                 accessLevel:
                   type: string
-                  enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin]
+                  enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
                 portForwarding:
                   type: boolean
                 allowScale:
