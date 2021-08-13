@@ -24,9 +24,15 @@ spec:
     subnetwork: {{ .Values.nodeManager.internal.cloudProvider.gcp.subnetworkName }}
     disableExternalIP: {{ .Values.nodeManager.internal.cloudProvider.gcp.disableExternalIP }}
   scheduling:
+    {{- if .nodeGroup.instanceClass.preemptible | default false }}
+    automaticRestart: false
+    onHostMaintenance: TERMINATE
+    preemptible: true
+    {{- else }}
     automaticRestart: true
     onHostMaintenance: MIGRATE
-    preemptible: {{ .nodeGroup.instanceClass.preemptible | default false }}
+    preemptible: false
+    {{- end }}
 {{- $labels := merge dict .Values.nodeManager.internal.cloudProvider.gcp.labels }}
 {{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
   {{- $labels :=  mergeOverwrite $labels .nodeGroup.instanceClass.additionalLabels }}
