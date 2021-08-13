@@ -37,20 +37,20 @@ type PrometheusApiAvailable struct {
 
 func (c PrometheusApiAvailable) Checker() check.Checker {
 	verifier := prometheusAPIVerifier{
-		endpoint:     c.Endpoint,
-		kubeAccessor: c.Access,
+		endpoint: c.Endpoint,
+		access:   c.Access,
 	}
 	checker := newHTTPChecker(insecureClient, verifier)
 	return withTimeout(checker, c.Timeout)
 }
 
 type prometheusAPIVerifier struct {
-	endpoint     string
-	kubeAccessor kubernetes.Access
+	endpoint string
+	access   kubernetes.Access
 }
 
 func (v prometheusAPIVerifier) Request() *http.Request {
-	req, err := newGetRequest(v.endpoint, v.kubeAccessor.ServiceAccountToken())
+	req, err := newGetRequest(v.endpoint, v.access.ServiceAccountToken())
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +58,7 @@ func (v prometheusAPIVerifier) Request() *http.Request {
 }
 
 /*
-	Expecting JSON like this
+	Expected JSON
 
 	{
 	  "status": "success",

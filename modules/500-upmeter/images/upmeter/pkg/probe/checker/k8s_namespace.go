@@ -30,18 +30,20 @@ import (
 
 // NamespaceLifecycle is a checker constructor and configurator
 type NamespaceLifecycle struct {
-	Access                   k8s.Access
-	CreationTimeout          time.Duration
-	DeletionTimeout          time.Duration
-	GarbageCollectionTimeout time.Duration
+	Access                    k8s.Access
+	CreationTimeout           time.Duration
+	DeletionTimeout           time.Duration
+	GarbageCollectionTimeout  time.Duration
+	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c NamespaceLifecycle) Checker() check.Checker {
 	return &namespaceLifeCycleChecker{
-		access:                  c.Access,
-		creationTimeout:         c.CreationTimeout,
-		deletionTimeout:         c.DeletionTimeout,
-		garbageCollectorTimeout: c.GarbageCollectionTimeout,
+		access:                    c.Access,
+		creationTimeout:           c.CreationTimeout,
+		deletionTimeout:           c.DeletionTimeout,
+		garbageCollectorTimeout:   c.GarbageCollectionTimeout,
+		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
 	}
 }
 
@@ -50,7 +52,8 @@ type namespaceLifeCycleChecker struct {
 	creationTimeout time.Duration
 	deletionTimeout time.Duration
 
-	garbageCollectorTimeout time.Duration
+	garbageCollectorTimeout   time.Duration
+	controlPlaneAccessTimeout time.Duration
 
 	// inner state
 	checker check.Checker
@@ -77,23 +80,33 @@ func (c *namespaceLifeCycleChecker) new(namespace *v1.Namespace) check.Checker {
 	name := namespace.GetName()
 	labels := namespace.GetLabels()
 
-	notListedChecker := withRetryEachSeconds(
+	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
+	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, kind, "", labels, c.garbageCollectorTimeout)
+
+	createNamespace := withTimeout(
+		&namespaceCreationChecker{access: c.access, namespace: namespace},
+		c.creationTimeout)
+
+	deleteNamespace := withTimeout(
+		&namespaceDeletionChecker{access: c.access, namespace: namespace},
+		c.deletionTimeout)
+
+	verifyDeletion := withRetryEachSeconds(
 		&objectIsNotListedChecker{
 			access:   c.access,
 			kind:     kind,
 			listOpts: listOptsByName(name),
 		},
-		c.deletionTimeout)
-
-	check := sequence(
-		&controlPlaneChecker{c.access},
-		newGarbageCollectorCheckerByLabels(c.access, kind, "", labels, c.garbageCollectorTimeout),
-		withTimeout(&namespaceCreationChecker{access: c.access, namespace: namespace}, c.creationTimeout),
-		withTimeout(&namespaceDeletionChecker{access: c.access, namespace: namespace}, c.deletionTimeout),
-		notListedChecker,
+		c.garbageCollectorTimeout,
 	)
 
-	return withTimeout(check, c.deletionTimeout)
+	return sequence(
+		pingControlPlane,
+		collectGarbage,
+		createNamespace,
+		deleteNamespace,
+		verifyDeletion,
+	)
 }
 
 // namespaceCreationChecker creates namespace

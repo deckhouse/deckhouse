@@ -34,9 +34,11 @@ import (
 // DaemonSetPodsReady is a checker constructor and configurator
 type DaemonSetPodsReady struct {
 	Access    kubernetes.Access
-	Timeout   time.Duration
 	Namespace string
 	Name      string
+
+	Timeout                   time.Duration
+	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c DaemonSetPodsReady) Checker() check.Checker {
@@ -46,12 +48,10 @@ func (c DaemonSetPodsReady) Checker() check.Checker {
 		daemonSetName: c.Name,
 	}
 
-	checker := sequence(
-		&controlPlaneChecker{c.Access},
-		dsChecker,
+	return sequence(
+		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		withTimeout(dsChecker, c.Timeout),
 	)
-
-	return withTimeout(checker, c.Timeout)
 }
 
 // dsPodsReadinessChecker checks that all daemonset pods are ready

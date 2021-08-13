@@ -30,8 +30,7 @@ type ControlPlaneAvailable struct {
 }
 
 func (c ControlPlaneAvailable) Checker() check.Checker {
-	checker := failOnError(&controlPlaneChecker{c.Access})
-	return withTimeout(checker, c.Timeout)
+	return failOnError(newControlPlaneChecker(c.Access, c.Timeout))
 }
 
 // controlPlaneChecker checks the availability of API server. It reports Unknown status if cannot access the
@@ -50,4 +49,9 @@ func (c *controlPlaneChecker) Check() check.Error {
 
 func (c *controlPlaneChecker) BusyWith() string {
 	return "fetching kubernetes /version"
+}
+
+// newControlPlaneChecker returns the checker wrapped with timeout to be use it in other checkers as precondition
+func newControlPlaneChecker(access kubernetes.Access, timeout time.Duration) check.Checker {
+	return withTimeout(&controlPlaneChecker{access}, timeout)
 }
