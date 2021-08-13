@@ -107,6 +107,9 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        - name: resolv-conf-volume
+          mountPath: /etc/resolv.conf
+          readOnly: true
         resources:
           requests:
 {{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -120,6 +123,9 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        - name: resolv-conf-volume
+          mountPath: /etc/resolv.conf
+          readOnly: true
         resources:
           requests:
 {{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -133,6 +139,9 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        - name: resolv-conf-volume
+          mountPath: /etc/resolv.conf
+          readOnly: true
         resources:
           requests:
 {{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -150,6 +159,9 @@ spec:
         volumeMounts:
         - name: socket-dir
           mountPath: /csi
+        - name: resolv-conf-volume
+          mountPath: /etc/resolv.conf
+          readOnly: true
         {{- /* For an unknown reason vSphere csi-controller won't start without `/tmp` directory */ -}}
         {{- if eq $context.Chart.Name "cloud-provider-vsphere" }}
         - name: tmp
@@ -164,6 +176,10 @@ spec:
       volumes:
       - name: socket-dir
         emptyDir: {}
+      - name: resolv-conf-volume
+        hostPath:
+          path: /var/lib/bashible/resolv/resolv.conf
+          type: File
       {{- /* For an unknown reason vSphere csi-controller won't start without `/tmp` directory */ -}}
       {{- if eq $context.Chart.Name "cloud-provider-vsphere" }}
       - name: tmp
