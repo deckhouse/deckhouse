@@ -26,6 +26,7 @@ import (
 func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 	const (
 		groupName = "monitoring-and-autoscaling"
+		cpTimeout = 5 * time.Second
 	)
 
 	return []runnerConfig{
@@ -35,10 +36,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "pods",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "d8-monitoring",
-				LabelSelector: "app=prometheus",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "d8-monitoring",
+				LabelSelector:             "app=prometheus",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -56,10 +58,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "pods",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "d8-monitoring",
-				LabelSelector: "app=trickster",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "d8-monitoring",
+				LabelSelector:             "app=trickster",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -77,10 +80,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "pods",
 			period: 5 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "d8-monitoring",
-				LabelSelector: "app=prometheus-metrics-adapter",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "d8-monitoring",
+				LabelSelector:             "app=prometheus-metrics-adapter",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -98,10 +102,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "vpa-updater",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "kube-system",
-				LabelSelector: "app=vpa-updater",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "kube-system",
+				LabelSelector:             "app=vpa-updater",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -109,10 +114,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "vpa-recommender",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "kube-system",
-				LabelSelector: "app=vpa-recommender",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "kube-system",
+				LabelSelector:             "app=vpa-recommender",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -120,10 +126,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "vpa-admission-controller",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "kube-system",
-				LabelSelector: "app=vpa-admission-controller",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "kube-system",
+				LabelSelector:             "app=vpa-admission-controller",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -131,10 +138,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "node-exporter",
 			period: 10 * time.Second,
 			config: checker.DaemonSetPodsReady{
-				Access:    access,
-				Timeout:   5 * time.Second,
-				Namespace: "d8-monitoring",
-				Name:      "node-exporter",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "d8-monitoring",
+				Name:                      "node-exporter",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -142,10 +150,11 @@ func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			check:  "kube-state-metrics",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
-				Access:        access,
-				Timeout:       5 * time.Second,
-				Namespace:     "d8-monitoring",
-				LabelSelector: "app=kube-state-metrics",
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 "d8-monitoring",
+				LabelSelector:             "app=kube-state-metrics",
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,

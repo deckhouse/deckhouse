@@ -29,6 +29,7 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 		groupName = "control-plane"
 		namespace = "d8-upmeter"
 		gcTimeout = 10 * time.Second
+		cpTimeout = 5 * time.Second
 	)
 
 	return []runnerConfig{
@@ -39,7 +40,7 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 			period: 5 * time.Second,
 			config: checker.ControlPlaneAvailable{
 				Access:  access,
-				Timeout: 5 * time.Second,
+				Timeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -47,10 +48,11 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: 5 * time.Second,
 			config: checker.ConfigMapLifecycle{
-				Access:                   access,
-				Timeout:                  5 * time.Second,
-				Namespace:                namespace,
-				GarbageCollectionTimeout: gcTimeout,
+				Access:                    access,
+				Timeout:                   5 * time.Second,
+				Namespace:                 namespace,
+				GarbageCollectionTimeout:  gcTimeout,
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -58,10 +60,11 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: time.Minute,
 			config: checker.NamespaceLifecycle{
-				Access:                   access,
-				CreationTimeout:          5 * time.Second,
-				DeletionTimeout:          time.Minute,
-				GarbageCollectionTimeout: gcTimeout,
+				Access:                    access,
+				CreationTimeout:           5 * time.Second,
+				DeletionTimeout:           time.Minute,
+				GarbageCollectionTimeout:  gcTimeout,
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -76,6 +79,7 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 				PodAppearTimeout:          10 * time.Second,
 				PodDisappearTimeout:       10 * time.Second,
 				GarbageCollectionTimeout:  gcTimeout,
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
 			group:  groupName,
@@ -83,13 +87,14 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 			check:  "_",
 			period: time.Minute,
 			config: checker.PodLifecycle{
-				Access:                   access,
-				Namespace:                namespace,
-				Node:                     os.Getenv("NODE_NAME"),
-				CreationTimeout:          5 * time.Second,
-				SchedulingTimeout:        20 * time.Second,
-				DeletionTimeout:          20 * time.Second,
-				GarbageCollectionTimeout: gcTimeout,
+				Access:                    access,
+				Namespace:                 namespace,
+				Node:                      os.Getenv("NODE_NAME"),
+				CreationTimeout:           5 * time.Second,
+				SchedulingTimeout:         20 * time.Second,
+				DeletionTimeout:           20 * time.Second,
+				GarbageCollectionTimeout:  gcTimeout,
+				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		},
 	}

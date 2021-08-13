@@ -37,18 +37,21 @@ type PodLifecycle struct {
 	DeletionTimeout   time.Duration
 	Node              string
 
-	GarbageCollectionTimeout time.Duration
+	GarbageCollectionTimeout  time.Duration
+	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c PodLifecycle) Checker() check.Checker {
 	return &podLifecycleChecker{
-		access:                   c.Access,
-		namespace:                c.Namespace,
-		creationTimeout:          c.CreationTimeout,
-		schedulingTimeout:        c.SchedulingTimeout,
-		deletionTimeout:          c.DeletionTimeout,
-		node:                     c.Node,
-		garbageCollectionTimeout: c.GarbageCollectionTimeout,
+		access:            c.Access,
+		namespace:         c.Namespace,
+		creationTimeout:   c.CreationTimeout,
+		schedulingTimeout: c.SchedulingTimeout,
+		deletionTimeout:   c.DeletionTimeout,
+		node:              c.Node,
+
+		garbageCollectionTimeout:  c.GarbageCollectionTimeout,
+		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
 	}
 }
 
@@ -61,7 +64,8 @@ type podLifecycleChecker struct {
 	deletionTimeout   time.Duration
 	node              string
 
-	garbageCollectionTimeout time.Duration
+	garbageCollectionTimeout  time.Duration
+	controlPlaneAccessTimeout time.Duration
 
 	// inner state
 	checker check.Checker
@@ -86,6 +90,9 @@ func (c *podLifecycleChecker) Check() check.Error {
 	+ensure the pod is not listed
 */
 func (c *podLifecycleChecker) new(pod *v1.Pod) check.Checker {
+	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
+	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, pod.Kind, c.namespace, pod.Labels, c.garbageCollectionTimeout)
+
 	listOpts := listOptsByLabels(pod.GetLabels())
 
 	createPod := withTimeout(
@@ -96,27 +103,22 @@ func (c *podLifecycleChecker) new(pod *v1.Pod) check.Checker {
 		&podScheduledChecker{access: c.access, namespace: c.namespace, listOpts: listOpts},
 		c.schedulingTimeout)
 
-	deletePod := &podDeletionChecker{access: c.access, namespace: c.namespace, listOpts: listOpts}
+	deletePod := withTimeout(
+		&podDeletionChecker{access: c.access, namespace: c.namespace, listOpts: listOpts},
+		c.deletionTimeout)
+
 	verifyNoPod := withRetryEachSeconds(
 		&objectIsNotListedChecker{access: c.access, namespace: c.namespace, kind: pod.Kind, listOpts: listOpts},
-		c.deletionTimeout)
+		c.garbageCollectionTimeout)
 
-	deletePodAndVerify := withTimeout(
-		sequence(deletePod, verifyNoPod),
-		c.deletionTimeout)
-
-	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, pod.Kind, c.namespace, pod.Labels, c.garbageCollectionTimeout)
-
-	timeout := c.creationTimeout + c.schedulingTimeout + c.deletionTimeout
-	checker := sequence(
-		&controlPlaneChecker{c.access},
+	return sequence(
+		pingControlPlane,
 		collectGarbage,
 		createPod,
 		waitForScheduling,
-		deletePodAndVerify,
+		deletePod,
+		verifyNoPod,
 	)
-
-	return withTimeout(checker, timeout)
 }
 
 type podCreationChecker struct {
@@ -282,9 +284,11 @@ func createNodeAffinityObject(nodeName string) *v1.NodeAffinity {
 // AtLeastOnePodReady is a checker constructor and configurator
 type AtLeastOnePodReady struct {
 	Access        kubernetes.Access
-	Timeout       time.Duration
 	Namespace     string
 	LabelSelector string
+
+	Timeout                   time.Duration
+	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c AtLeastOnePodReady) Checker() check.Checker {
@@ -294,19 +298,17 @@ func (c AtLeastOnePodReady) Checker() check.Checker {
 		labelSelector: c.LabelSelector,
 	}
 
-	checker := sequence(
-		&controlPlaneChecker{c.Access},
-		podsChecker,
+	return sequence(
+		newControlPlaneChecker(c.Access, c.ControlPlaneAccessTimeout),
+		withTimeout(podsChecker, c.Timeout),
 	)
-
-	return withTimeout(checker, c.Timeout)
 }
 
 // podReadinessChecker defines the information that lets check at least one ready pod
 type podReadinessChecker struct {
-	access        kubernetes.Access
 	namespace     string
 	labelSelector string
+	access        kubernetes.Access
 }
 
 func (c *podReadinessChecker) Check() check.Error {
