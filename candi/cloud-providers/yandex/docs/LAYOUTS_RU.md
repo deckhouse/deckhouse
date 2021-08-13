@@ -132,15 +132,6 @@ dhcpOptions:
 Если `withNATInstance.externalSubnetID` не задан, а `withNATInstance.internalSubnetID` задан — NAT instance создастся в зоне этого subnet.
 Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT instance создастся в зоне `ru-central1-c`.
 
-**Внимание!** Сразу же (в течение 3х минут) после создания базовых сетевых ресурсов, нужно вручную прописать маршрут к созданному NAT instance. Если этого не сделать, то bootstrap процесс не сможет завершиться.
-
-```text
-$ yc compute instance list | grep nat
-| ef378c62hvqi075cp57j | kube-yc-nat | ru-central1-c | RUNNING | 130.193.44.28   | 192.168.178.22 |
-
-$ yc vpc route-table update --name kube-yc --route destination=0.0.0.0/0,next-hop=192.168.178.22
-```
-
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSnNqebgRdwGP8lhKMJfrn5c0QXDpe9YdmIlK4eDberysLLgYiKNuwaPLHcyQhJigvQ21SANH89uipE/pub?w=812&h=655)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
