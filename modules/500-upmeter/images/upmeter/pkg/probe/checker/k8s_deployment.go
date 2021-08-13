@@ -38,6 +38,7 @@ type DeploymentLifecycle struct {
 	PodAppearTimeout          time.Duration
 	PodDisappearTimeout       time.Duration
 	GarbageCollectionTimeout  time.Duration
+	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c DeploymentLifecycle) Checker() check.Checker {
@@ -49,6 +50,7 @@ func (c DeploymentLifecycle) Checker() check.Checker {
 		podAppearTimeout:          c.PodAppearTimeout,
 		podDisappearTimeout:       c.PodDisappearTimeout,
 		garbageCollectionTimeout:  c.GarbageCollectionTimeout,
+		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
 	}
 }
 
@@ -59,7 +61,9 @@ type deploymentLifecycleChecker struct {
 	deploymentDeletionTimeout time.Duration
 	podAppearTimeout          time.Duration
 	podDisappearTimeout       time.Duration
+
 	garbageCollectionTimeout  time.Duration
+	controlPlaneAccessTimeout time.Duration
 
 	// inner state
 	checker check.Checker
@@ -84,7 +88,10 @@ func (c *deploymentLifecycleChecker) Check() check.Error {
  6. wait for the pod to disappear       (podDisappearTimeout, retry each 1 sec)
 */
 func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Checker {
-	deploymentCreated := withTimeout(
+	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
+	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, deployment.Kind, c.namespace, deployment.Labels, c.garbageCollectionTimeout)
+
+	createDeployment := withTimeout(
 		&deploymentCreationChecker{
 			access:     c.access,
 			namespace:  c.namespace,
@@ -93,7 +100,7 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 		c.deploymentCreationTimeout,
 	)
 
-	deploymentDeleted := withTimeout(
+	deleteDeployment := withTimeout(
 		&deploymentDeletionChecker{
 			access:     c.access,
 			namespace:  c.namespace,
@@ -104,7 +111,7 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 
 	podListOptions := listOptsByLabels(map[string]string{"app": deployment.Name})
 
-	podAppeared := withRetryEachSeconds(
+	verifyPodExists := withRetryEachSeconds(
 		&pendingPodChecker{
 			access:    c.access,
 			namespace: c.namespace,
@@ -112,7 +119,7 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 		},
 		c.podAppearTimeout)
 
-	podDisappeared := withRetryEachSeconds(
+	verifyNoPod := withRetryEachSeconds(
 		&objectIsNotListedChecker{
 			access:    c.access,
 			namespace: c.namespace,
@@ -121,19 +128,14 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 		},
 		c.podDisappearTimeout)
 
-	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, deployment.Kind, c.namespace, deployment.Labels, c.garbageCollectionTimeout)
-
-	checker := sequence(
-		&controlPlaneChecker{c.access},
+	return sequence(
+		pingControlPlane,
 		collectGarbage,
-		deploymentCreated,
-		podAppeared,
-		deploymentDeleted,
-		podDisappeared,
+		createDeployment,
+		verifyPodExists,
+		deleteDeployment,
+		verifyNoPod,
 	)
-
-	timeout := c.deploymentCreationTimeout + c.deploymentDeletionTimeout + c.podAppearTimeout + c.podDisappearTimeout
-	return withTimeout(checker, timeout)
 }
 
 type deploymentCreationChecker struct {

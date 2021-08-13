@@ -30,18 +30,20 @@ import (
 
 // ConfigMapLifecycle is a checker constructor and configurator
 type ConfigMapLifecycle struct {
-	Access                   kubernetes.Access
-	Timeout                  time.Duration
-	Namespace                string
-	GarbageCollectionTimeout time.Duration
+	Access                    kubernetes.Access
+	Timeout                   time.Duration
+	Namespace                 string
+	GarbageCollectionTimeout  time.Duration
+	ControlPlaneAccessTimeout time.Duration
 }
 
 func (c ConfigMapLifecycle) Checker() check.Checker {
 	return &configMapLifecycleChecker{
-		access:                  c.Access,
-		timeout:                 c.Timeout,
-		namespace:               c.Namespace,
-		garbageCollectorTimeout: c.GarbageCollectionTimeout,
+		access:                    c.Access,
+		timeout:                   c.Timeout,
+		namespace:                 c.Namespace,
+		garbageCollectorTimeout:   c.GarbageCollectionTimeout,
+		controlPlaneAccessTimeout: c.ControlPlaneAccessTimeout,
 	}
 }
 
@@ -50,7 +52,8 @@ type configMapLifecycleChecker struct {
 	namespace string
 	timeout   time.Duration
 
-	garbageCollectorTimeout time.Duration
+	garbageCollectorTimeout   time.Duration
+	controlPlaneAccessTimeout time.Duration
 
 	// inner state
 	checker check.Checker
@@ -73,14 +76,7 @@ func (c *configMapLifecycleChecker) Check() check.Error {
  4. ensure it does not exist (with retries)
 */
 func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
-	verifyNotListed := withRetryEachSeconds(
-		&objectIsNotListedChecker{
-			access:    c.access,
-			namespace: c.namespace,
-			kind:      configMap.Kind,
-			listOpts:  listOptsByName(configMap.Name),
-		},
-		c.timeout)
+	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
 
 	collectGarbage := newGarbageCollectorCheckerByLabels(
 		c.access,
@@ -89,18 +85,32 @@ func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
 		configMap.GetLabels(),
 		c.garbageCollectorTimeout)
 
-	create := &configMapCreationChecker{access: c.access, configMap: configMap, namespace: c.namespace}
-	delete := &configMapDeletionChecker{access: c.access, configMap: configMap, namespace: c.namespace}
-
-	check := sequence(
-		&controlPlaneChecker{c.access},
-		collectGarbage,
-		create,
-		delete,
-		verifyNotListed,
+	createAndDeleteConfigMap := withTimeout(
+		sequence(
+			// create
+			&configMapCreationChecker{access: c.access, configMap: configMap, namespace: c.namespace},
+			// delete
+			&configMapDeletionChecker{access: c.access, configMap: configMap, namespace: c.namespace},
+		),
+		// common timeout
+		c.timeout,
 	)
 
-	return withTimeout(check, c.timeout)
+	verifyNotListed := withRetryEachSeconds(
+		&objectIsNotListedChecker{
+			access:    c.access,
+			namespace: c.namespace,
+			kind:      configMap.Kind,
+			listOpts:  listOptsByName(configMap.Name),
+		},
+		c.garbageCollectorTimeout)
+
+	return sequence(
+		pingControlPlane,
+		collectGarbage,
+		createAndDeleteConfigMap,
+		verifyNotListed,
+	)
 }
 
 type configMapCreationChecker struct {
