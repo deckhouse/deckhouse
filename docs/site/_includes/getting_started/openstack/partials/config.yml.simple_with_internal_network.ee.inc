@@ -18,8 +18,8 @@ cloud:
   # [<en>] prefix to differentiate cluster objects (can be used, e.g., in routing)
   # [<ru>] префикс для объектов кластера для их отличия (используется, например, при маршрутизации)
   prefix: "cloud-demo"
-# [<en>] address space of the cluster's pods
-# [<ru>] адресное пространство pod’ов кластера
+# [<en>] address space of the cluster's Pods
+# [<ru>] адресное пространство Pod’ов кластера
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] address space of the cluster's services
 # [<ru>] адресное пространство для service’ов кластера
@@ -77,7 +77,7 @@ simpleWithInternalNetwork:
   # [<en>] the name of the subnet in which the cluster nodes will run
   # [<ru>] имя подсети, в которой будут работать узлы кластера
   internalSubnetName: *!CHANGE_INTERNAL_NET*
-  # [<en>] defines the way traffic is organized on the network that is used for communication between pods
+  # [<en>] defines the way traffic is organized on the network that is used for communication between Pods
   # [<en>] direct routing works between nodes, SecurityGroups are disabled in this mode.
   # [<ru>] определяет способ организации трафика в той сети, которая используется для коммуникации между подами
   # [<ru>] между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.

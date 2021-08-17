@@ -40,7 +40,7 @@ The following Managed Kubernetes services are also supported (not all service fu
 - Amazon Elastic Kubernetes Service (EKS)
 
 ## Node grouping and group management
-Grouping and managing nodes as a related group mean that all nodes in the group will have the same metadata derived from the [`NodeGroup`](cr.html#nodegroup) custom resource.
+Grouping and managing nodes as a related group mean that all nodes in the group will have the same metadata derived from the [`NodeGroup`](cr.html#nodegroup) Custom Resource.
 
 The group monitoring is available for nodes combined into a group:
 - Grouping node parameters on group-related graphs;

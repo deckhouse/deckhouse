@@ -50,9 +50,9 @@ spec:
                   description: |
                     Возможные источники логов.
 
-                    `KubernetesPods` собирает логи с подов.
+                    `KubernetesPods` собирает логи с Pod'ов.
 
-                    `File` позволяет читать локальные файлы, доступыне на ноде.
+                    `File` позволяет читать локальные файлы, доступные на узле.
                 kubernetesPods:
                   type: object
                   default: {}

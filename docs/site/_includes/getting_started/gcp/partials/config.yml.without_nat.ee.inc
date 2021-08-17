@@ -18,8 +18,8 @@ cloud:
   # [<en>] prefix to differentiate cluster objects (can be used, e.g., in routing)
   # [<ru>] префикс для объектов кластера для их отличия (используется, например, при маршрутизации)
   prefix: "cloud-demo"
-# [<en>] address space of the cluster's pods
-# [<ru>] адресное пространство pod’ов кластера
+# [<en>] address space of the cluster's Pods
+# [<ru>] адресное пространство Pod’ов кластера
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] address space of the cluster's services
 # [<ru>] адресное пространство для service’ов кластера

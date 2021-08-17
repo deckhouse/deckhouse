@@ -5,7 +5,7 @@ search: autoscaler
 
 По умолчанию — **включен** в кластерах начиная с версии 1.11. В общем случае конфигурации не требуется.
 
-VPA работает не с контроллером пода, а с самим подом — измеряя и изменяя параметры его контейнеров. Вся настройка происходит с помощью custom resource [`VerticalPodAutoscaler`](cr.html#verticalpodautoscaler).
+VPA работает не с контроллером Pod'а, а с самим Pod'ом — измеряя и изменяя параметры его контейнеров. Вся настройка происходит с помощью Custom Resource'а [`VerticalPodAutoscaler`](cr.html#verticalpodautoscaler).
 
 ## Параметры
 

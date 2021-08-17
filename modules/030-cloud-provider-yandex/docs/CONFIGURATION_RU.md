@@ -44,13 +44,13 @@ cloudProviderYandex: |
 
 Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и Yandex.Cloud API, после увеличения размера PVC нужно:
 
-1. Выполнить `kubectl cordon нода_где_находится_pod`;
+1. Выполнить `kubectl cordon узел_где_находится_pod`;
 2. Удалить Pod;
 3. Убедиться, что ресайз произошёл успешно. В объекте PVC *не будет* condition `Resizing`. **Внимание!** `FileSystemResizePending` не является проблемой;
-4. Выполнить `kubectl uncordon нода_где_находится_pod`.
+4. Выполнить `kubectl uncordon узел_где_находится_pod`.
 
 ## LoadBalancer
 
-Модуль подписывается на Service объекты с типом LoadBalancer и создаёт соответствующие NetworkLoadBalancer и TargetGroup в Yandex.Cloud.
+Модуль подписывается на объекты Service с типом LoadBalancer и создаёт соответствующие NetworkLoadBalancer и TargetGroup в Yandex.Cloud.
 
 Больше информации в [документации](https://github.com/flant/yandex-cloud-controller-manager) CCM.

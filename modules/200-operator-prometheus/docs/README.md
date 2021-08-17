@@ -62,7 +62,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
       # Service discovery settings
       kubernetes_sd_configs:                # means that Kubernetes supplies targets
-      - api_server: null                    # use environment variables (which are present in every pod) to get the API server address
+      - api_server: null                    # use environment variables (which are present in every Pod) to get the API server address
         role: endpoints                     # endpoints supply targets
         namespaces:
           names:                            # search for endpoints in these namespaces only
@@ -101,7 +101,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
         target_label: service
         replacement: $1
         action: replace
-      # Add the instance label (contains the pod's name)
+      # Add the instance label (contains the Pod's name)
       - source_labels: [__meta_kubernetes_pod_name]
         regex: (.*)
         target_label: instance
@@ -109,7 +109,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
         action: replace
     ```
 * This way, Prometheus tracks:
-    * the addition of pods and deletion of them (Kubernetes changes the endpoints when adding/deleting pods; Prometheus notices this and adds/deletes *targets*);
+    * the addition of Pods and deletion of them (Kubernetes changes the endpoints when adding/deleting Pods; Prometheus notices this and adds/deletes *targets*);
     * the addition of services (or rather endpoints) and deletion of them in the specified namespaces.
 * The change of the configuration is necessary in the following cases:
     * if you need to add a new scrape config (usually, it is due to adding a new type of services that need to be monitored);
@@ -129,16 +129,16 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
     * Secret containing `prometheus.yaml` (the Prometheus config) and `configmaps.json` (the `prometheus-config-reloader` config);
 * Monitors `servicemonitor` and `prometheusrule`  resources and updates the config files (`prometheus.yaml` and `configmaps.json` stored in the secret) based on them.
 
-### What does the Prometheus pod contain?
+### What does the Prometheus Pod contain?
 
 ![](../../images/200-operator-prometheus/pod.png)
 
-* The Prometheus pod has two containers inside:
+* The Prometheus Pod has two containers inside:
     * `prometheus` —  the container with the Prometheus itself;
     * `prometheus-config-reloader` — a [wrapping](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that:
         * monitors `prometheus.yaml` for changes and, if necessary, reloads the Prometheus configuration (via a dedicated HTTP request, see more [below](#how-are-service-monitors-handled));
         * monitors PrometheusRules (see more [below](#как-обрабатываются-custome-resources-с-ruleами)) and, if necessary, pulls them and restarts Prometheus.
-* The pod uses three volumes:
+* The Pod uses three volumes:
     * config —  the secret (it contains `prometheus.yaml` and `configmaps.json`). It is mounted to both containers.
     * rules — an `emptyDir` volume that reads the `prometheus` container and supplies data to the `prometheus-config-reloader` container. It is mounted to both containers (in read-only mode in the case of the Prometheus container).
     * data — a Prometheus data volume. This one mounted to `prometheus` only.
@@ -150,7 +150,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 * **(1)** Prometheus Operator reads Service Monitors (and tracks their addition/removal/modification). The list of Service Monitors to follow is specified in the `prometheus`; see the [official documentation](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)) for more details.
 * **(2)** For each Service Monitor (if it doesn't have a specific list of namespaces, i.e., `any: true` is set), Prometheus Operator determines (using the Kubernetes API) a list of namespaces where Services matching the Service Monitor's labels are running.
 * **(3)** Based on the `servicemonitor` resources read (see the [official documentation)](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) and a list of namespaces determined, Prometheus Operator generates the `scrape_configs` config section and saves it to the corresponding Secret.
-* **(4)** The Secret's data then passed to the pod using standard Kubernetes mechanisms (the `prometheus.yaml` file gets updated).
+* **(4)** The Secret's data then passed to the Pod using standard Kubernetes mechanisms (the `prometheus.yaml` file gets updated).
 * **(5)** `prometheus-config-reloader` notices the change and sends an HTTP request to Prometheus to reload.
 * **(6)** Prometheus rereads the config and notices changes in the scrape_configs section, which it processes according to internal logic (you can find more details above).
 
@@ -161,7 +161,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 * **(1)** Prometheus Operator monitors PrometheusRules that match the `ruleSelector` defined in the `prometheus` resource.
 * **(2)** If a new PrometheusRule is created (or the existing one is deleted), Prometheus Operator updates `prometheus.yaml` (and then the logic for Service Monitors described above comes into play).
 * **(3)** Prometheus Operator updates the `prometheus-main-rulefiles-0` ConfigMap in response to the addition/deletiion/modification of the PrometheusRule.
-* **(4)** The ConfigMap data are passed to the pod using standard Kubernetes mechanisms.
+* **(4)** The ConfigMap data are passed to the Pod using standard Kubernetes mechanisms.
 * `prometheus-config-reloader` notices that the file is changed and:
     * **(5)** pulls the modified ConfigMaps to the rules directory (of an `emptyDir` type);
     * **(6)** sends a reboot request to Prometheus over HTTP;

@@ -21,7 +21,7 @@
     {
       "columns": [],
       "datasource": "$ds_prometheus",
-      "description": "Очень важный момент, в данной таблице показываются средние данные за весь выбранный период в dashboard. Из-за этого в ней может быть информация о подах, неймспейсах, которые были изменены, удалены за выбранный период",
+      "description": "Очень важный момент, в данной таблице показываются средние данные за весь выбранный период в dashboard. Из-за этого в ней может быть информация о Pod'ах, namespace'ах, которые были изменены, удалены за выбранный период",
       "fontSize": "100%",
       "gridPos": {
         "h": 8,
@@ -751,7 +751,7 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "decimals": 0,
-      "description": "Количество подов в каждом контроллере",
+      "description": "Количество Pod'ов в каждом контроллере",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -863,7 +863,7 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "decimals": 0,
-      "description": "Количество рестартов подов",
+      "description": "Количество рестартов Pod'ов",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -8531,7 +8531,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображены Network Recieve, за исключением подов в hostNetwork.",
+      "description": "На данном графике отображены Network Receive, за исключением Pod'ов в hostNetwork.",
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -8635,7 +8635,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображены Network Transmit, за исключением подов в hostNetwork.",
+      "description": "На данном графике отображены Network Transmit, за исключением Pod'ов в hostNetwork.",
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -9190,7 +9190,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в Rook нет поддержки метрик, то на данных графиках не отображается информация о дисках, созданных Rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -9596,7 +9596,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Так как в rook нет поддержки метрик, то на данных графиках не отображается информация о дисках созданных rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+          "description": "Так как в Rook нет поддержки метрик, то на данных графиках не отображается информация о дисках, созданных Rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
           "fill": 1,
           "gridPos": {
             "h": 7,

@@ -48,5 +48,5 @@ $ tree
 .
 ├── README.md
 ├── migrate.sh   # migration: main runner
-└── __pod.sh     # migration: heavy-lifting in the pod
+└── __pod.sh     # migration: heavy-lifting in the Pod
 ```

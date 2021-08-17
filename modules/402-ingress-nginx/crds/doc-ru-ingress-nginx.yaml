@@ -42,15 +42,15 @@ spec:
                     Способ поступления трафика из внешнего мира.
                     * `LoadBalancer` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`.
                     * `LoadBalancerWithProxyProtocol` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`. Ingress controller использует proxy-protocol для получения настоящего IP-адреса клиента.
-                    * `HostPort` — устанавливается Ingress controller, который доступен на портах нод через `hostPort`.
+                    * `HostPort` — устанавливается Ingress controller, который доступен на портах узлов через `hostPort`.
                     * `HostPortWithProxyProtocol` — устанавливается Ingress controller, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента.
 
                       **Внимание!** При использовании этого inlet вы должны быть уверены, что запросы к Ingress направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
-                    * `HostWithFailover` — устанавливаются два Ingress controller'а - основной и резервный. Основной контроллер запускается в hostNetwork. Если поды основного контроллера не доступны, трафик уходит в резервный контроллер.
+                    * `HostWithFailover` — устанавливаются два Ingress controller'а - основной и резервный. Основной контроллер запускается в hostNetwork. Если Pod'ы основного контроллера недоступны, трафик уходит в резервный контроллер.
 
                       **Внимание!** На одном хосте может быть только один controller с данным типом inlet'а.
 
-                      **Внимание!** Необходимо, чтобы на ноде были свободные порты: 80, 81, 443, 444, 10354, 10355.
+                      **Внимание!** Необходимо, чтобы на узле были свободные порты: 80, 81, 443, 444, 10354, 10355.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -62,7 +62,7 @@ spec:
                 enableIstioSidecar:
                   type: boolean
                   description: |
-                    Добавить к подам контроллера аннотации для автоматического инжекта istio-сайдкаров. С данным флагом контроллер сможет обслуживать только сервисы, которые подконтрольны Istio.
+                    Добавить к Pod'ам контроллера аннотации для автоматического инжекта istio-сайдкаров. С данным флагом контроллер сможет обслуживать только сервисы, которые подконтрольны Istio.
                 waitLoadBalancerOnTerminating:
                   x-kubernetes-int-or-string: true
                   default: 60
@@ -83,19 +83,19 @@ spec:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Как в `spec.nodeSelector` у подов.
+                    Как в `spec.nodeSelector` у Pod'ов.
 
                     Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
                 tolerations:
                   type: array
                   description: |
-                    Как в `spec.tolerations` у подов.
+                    Как в `spec.tolerations` у Pod'ов.
 
                     Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
                   items:
                     type: object
                     properties:
@@ -342,7 +342,7 @@ spec:
                   required: ['mode']
                   type: object
                   description: |
-                    Настройки максимальных значений CPU и memory, которые может запросить под при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).
+                    Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).
                   properties:
                     mode:
                       type: string

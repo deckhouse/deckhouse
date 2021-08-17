@@ -33,7 +33,7 @@ Using DNS servers that differ from those provided by yandex cloud in the DHCP se
 ### Editing parameters
 
 1. When changing parameters, you need to invoke `netplan apply` or a similar command that forces the update of the DHCP lease.
-2. You will need to restart all hostNetwork pods (especially `kube-dns`) for the new `resolv.conf` settings to take effect.
+2. You will need to restart all hostNetwork Pods (especially `kube-dns`) for the new `resolv.conf` settings to take effect.
 
 ### Aspects of the use
 

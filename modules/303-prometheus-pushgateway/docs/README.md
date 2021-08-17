@@ -32,5 +32,5 @@ test_metric{instance="10.244.1.155:9091",job="app",pushgateway="first"} 3.14
 # curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/app/instance/10.244.1.155:9091
 ```
 
-Since PushGateway stores the scraped metrics in memory, **all metrics will be lost when the pod is restarted**.
+Since PushGateway stores the scraped metrics in memory, **all metrics will be lost when the Pod is restarted**.
 {% endraw %}

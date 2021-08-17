@@ -1,4 +1,4 @@
----
+po---
 title: "Разработка правил Prometheus"
 type:
   - instruction
@@ -13,7 +13,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
     * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
 * Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/300-prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
     * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
-    * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (pod'ы, cronjob'ы, место на диске и пр.).
+    * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, nginx ingress, prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
     * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
 * Изменения этих файлов (в том числе и создание новых) должно автоматически показываться на странице `/prometheus/rules` (требуется подождать около минуты после деплоя deckhouse, пока отработает Prometheus Operator и компания).
 * Если вы вносите изменение, а оно не показывается, путь диагностики следующий (подробнее см. в документации модуля [Prometheus Operator](../../modules/200-operator-prometheus/)):
@@ -30,11 +30,11 @@ search: Разработка правил Prometheus, prometheus alerting rules
                 ts=2018-04-12T12:10:24Z caller=main.go:209 component=volume-watcher msg="Rule files updated."
 
           * Если `prometheus-config-reloader` не видит изменений, то надо проверить prometheus-operator:
-              * `kubectl -n d8-operator-prometheus get pod` — посмотреть, что pod запущен
+              * `kubectl -n d8-operator-prometheus get pod` — посмотреть, что Pod запущен
               * `kubectl -n d8-operator-prometheus logs -f deploy/prometheus-operator --tail=50` — посмотреть, что в логе нет ошибок
           * Если `prometheus-config-reloader` не может релоаднуть prometheus, значит в правилах ошибка и надо смотреть лог Prometheus:
               * `kubectl -n d8-monitoring logs prometheus-main-0 prometheus -f`
-          * **Важно!** Бывает так, что `prometheus-config-reloader` "зависает" на какой-то ошибке и перестает видеть новые изменения, а продолжает пытаться релоаднуть Prometheus со старой ошибочной конфигурацией. В этом случае единственное, что можно сделать — зайти в pod и прибить процесс `prometheus-config-reloader` (kubernetes перезапустит контейнер).
+          * **Важно!** Бывает так, что `prometheus-config-reloader` "зависает" на какой-то ошибке и перестает видеть новые изменения, а продолжает пытаться релоаднуть Prometheus со старой ошибочной конфигурацией. В этом случае единственное, что можно сделать, — зайти в Pod и прибить процесс `prometheus-config-reloader` (Kubernetes перезапустит контейнер).
 
 Лучшие практики
 ---------------

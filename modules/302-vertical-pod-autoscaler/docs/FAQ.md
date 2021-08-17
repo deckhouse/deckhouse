@@ -10,7 +10,7 @@ kubectl describe vpa my-app-vpa
 ```
 
 The `status` will have the following parameters:
-- `Target` — the optimal amount of resources for the pod (within the resourcePolicy).
+- `Target` — the optimal amount of resources for the Pod (within the resourcePolicy).
 - `Lower Bound` — the minimum recommended amount of resources for the regular operation of the application.
 - `Upper Bound` — the maximum recommended amount of resources. Most likely, the resources above this upper bound will never be used by the application.
 - `Uncapped Target` — the recommended amount of resources based on the latest metrics (the history of resource usage is ignored).
@@ -36,7 +36,7 @@ spec:
     updateMode: "Initial"
 ```
 
-Also, there is a pod with the following resource configuration:
+Also, there is a Pod with the following resource configuration:
 ```yaml
 resources:
   limits:
@@ -46,7 +46,7 @@ resources:
 ```
 
 If the container consumes, say, 1 CPU and VPA recommendation for this container is 1.168 CPU, the module will calculate the ration between requests and limits. In our case, the ratio equals 100%.
-Thus, VPA will modify the pod's resource configuration when the pod is recreated:
+Thus, VPA will modify the Pod's resource configuration when the Pod is recreated:
 ```yaml
 resources:
   limits:
@@ -73,7 +73,7 @@ spec:
     updateMode: "Initial"
 ```
 
-Also, there is a pod with the following resource configuration:
+Also, there is a Pod with the following resource configuration:
 ```yaml
 resources:
   limits:

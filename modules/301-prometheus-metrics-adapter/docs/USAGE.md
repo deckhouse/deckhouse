@@ -26,7 +26,7 @@ There are three types of metrics in terms of an HPA:
 
 ## Classic resource consumption-based scaling
 
-Below is an example of the HPA for scaling based on standard `metrics.k8s.io`metrics (CPU and memory of the pods). Please, take special note of the `averageUtulization` — this value reflects the target percentage of resources that have been **requested**.
+Below is an example of the HPA for scaling based on standard `metrics.k8s.io`metrics (CPU and memory of the Pods). Please, take special note of the `averageUtulization` — this value reflects the target percentage of resources that have been **requested**.
 
 {% raw %}
 ```yaml
@@ -50,16 +50,16 @@ spec:
     resource:
       name: cpu
       target:
-        # сscale up if the average CPU utilization by all the pods in scaleTargetRef exceeds the specified value
+        # сscale up if the average CPU utilization by all the Pods in scaleTargetRef exceeds the specified value
         type: Utilization      # for type: Resource metrics only the type: Utilization parameter is available
-        averageUtilization: 70 # scale up if all the deployment pods have requested 1 CPU core and consumed more than 700m on average
+        averageUtilization: 70 # scale up if all the Deployment's Pods have requested 1 CPU core and consumed more than 700m on average
   - type: Resource
     resource:
       name: memory
       target:
-        # scale up if the average Memory utilization by all the pods in scaleTargetRef exceeds the specified value
+        # scale up if the average Memory utilization by all the Pods in scaleTargetRef exceeds the specified value
         type: Utilization
-        averageUtilization: 80 # scale up if all the deployment pods have requested 1 GB and consumed more than 800MB on average
+        averageUtilization: 80 # scale up if all the Deployment's Pods have requested 1 GB and consumed more than 800MB on average
 ```
 {% endraw %}
 
@@ -120,7 +120,7 @@ spec:
 ```
 {% endraw %}
 
-In the case of the `Pods` metric type, the process is more complex. First, metrics with the appropriate labels (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...) will be collected for all the pods of the resource to scale. Next, HPA will calculate the average value based on these metrics and will use it for scaling. See the example [below](#examples-of-using-custom-metrics-of-the-pods-type).
+In the case of the `Pods` metric type, the process is more complex. First, metrics with the appropriate labels (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...) will be collected for all the Pods of the resource to scale. Next, HPA will calculate the average value based on these metrics and will use it for scaling. See the example [below](#examples-of-using-custom-metrics-of-the-pods-type).
 
 ## Example of using RabbitMQ queue size-based custom metrics
 
@@ -189,13 +189,13 @@ spec:
   minReplicas: 1
   maxReplicas: 5
   metrics:
-  - type: Pods # HPA must go through all the pods in the deployment and collect metrics from them.
+  - type: Pods # HPA must go through all the Pods in the Deployment and collect metrics from them.
     pods:      # You do not need to specify descripedObject (in contrast to type: Object).
       metric:
         name: php-fpm-active-workers # We registered this custom metric using the PodMetric CR.
       target:
         type: AverageValue # For type: Pods metrics, the AverageValue can only be used.
-        averageValue: 5   # Scale up if the average metric value for all the pods of the myworker deployment is greater than 5.
+        averageValue: 5   # Scale up if the average metric value for all the Pods of the myworker Deployment is greater than 5.
 ```
 {% endraw %}
 

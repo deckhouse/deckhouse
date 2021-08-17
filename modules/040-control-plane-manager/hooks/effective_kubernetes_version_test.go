@@ -17,9 +17,9 @@ limitations under the License.
 package hooks
 
 /*
-1. Нет нод в кластере;
-2. Есть ноды
-3. Есть контролплейн поды
+1. No nodes in the cluster;
+2. Some nodes exist;
+3. There are Pods with control-plane.
 */
 
 import (

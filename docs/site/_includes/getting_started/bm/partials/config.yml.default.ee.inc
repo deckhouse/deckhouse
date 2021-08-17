@@ -9,8 +9,8 @@ kind: ClusterConfiguration
 # [<en>] type of the infrastructure: bare metal (Static) or Cloud (Cloud)
 # [<ru>] тип инфраструктуры: bare metal (Static) или облако (Cloud)
 clusterType: Static
-# [<en>] address space of the cluster's pods
-# [<ru>] адресное пространство pod’ов кластера
+# [<en>] address space of the cluster's Pods
+# [<ru>] адресное пространство Pod’ов кластера
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] address space of the cluster's services
 # [<ru>] адресное пространство для service’ов кластера
