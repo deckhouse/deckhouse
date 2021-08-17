@@ -349,7 +349,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 			lastMachineFailures,
 		)
 
-		err := input.ObjectPatcher.MergePatchObject(patchData,
+		err := input.ObjectPatcher().MergePatchObject(patchData,
 			"deckhouse.io/v1", "NodeGroup",
 			"", ngName,
 			"/status",

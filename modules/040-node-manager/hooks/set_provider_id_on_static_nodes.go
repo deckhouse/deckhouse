@@ -81,7 +81,7 @@ func handleSetProviderID(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err := input.ObjectPatcher.MergePatchObject(staticPatch, "v1", "Node", "", node.Name, "")
+		err := input.ObjectPatcher().MergePatchObject(staticPatch, "v1", "Node", "", node.Name, "")
 		if err != nil {
 			return err
 		}

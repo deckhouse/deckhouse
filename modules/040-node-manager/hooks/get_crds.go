@@ -316,7 +316,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.ObjectPatcher, nodeGroup.Name, errorMsg)
+				setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, errorMsg)
 				continue
 			}
 
@@ -344,7 +344,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.ObjectPatcher, nodeGroup.Name, errorMsg)
+				setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, errorMsg)
 				continue
 			}
 
@@ -365,7 +365,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
 					input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 
-					setNodeGroupErrorStatus(input.ObjectPatcher, nodeGroup.Name, errorMsg)
+					setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, errorMsg)
 					continue
 				}
 			}
@@ -445,7 +445,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		ngForValues["updateEpoch"] = updateEpoch
 
 		// Reset status error for current NodeGroup.
-		setNodeGroupErrorStatus(input.ObjectPatcher, nodeGroup.Name, "")
+		setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, "")
 
 		ngBytes, _ := cljson.Marshal(ngForValues)
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))

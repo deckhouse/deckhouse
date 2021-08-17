@@ -188,7 +188,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 
 		// Ignore node groups without standby settings.
 		if ng.Standby == nil {
-			err := setNodeGroupStandbyStatus(input.ObjectPatcher, ng.Name, nil)
+			err := setNodeGroupStandbyStatus(input.ObjectPatcher(), ng.Name, nil)
 			if err != nil {
 				return err
 			}
@@ -203,7 +203,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 				actualStandby++
 			}
 		}
-		err := setNodeGroupStandbyStatus(input.ObjectPatcher, ng.Name, &actualStandby)
+		err := setNodeGroupStandbyStatus(input.ObjectPatcher(), ng.Name, &actualStandby)
 		if err != nil {
 			return err
 		}

@@ -28,12 +28,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func enableExtendedMonitoring(input *go_hook.HookInput) error {
 	jsonPatch := []byte(`{"metadata":{"annotations":{"extended-monitoring.flant.com/enabled": ""}}}`)
 
-	err := input.ObjectPatcher.MergePatchObject(jsonPatch, "v1", "namespace", "", "d8-system", "")
+	err := input.ObjectPatcher().MergePatchObject(jsonPatch, "v1", "namespace", "", "d8-system", "")
 	if err != nil {
 		return err
 	}
 
-	err = input.ObjectPatcher.MergePatchObject(jsonPatch, "v1", "namespace", "", "kube-system", "")
+	err = input.ObjectPatcher().MergePatchObject(jsonPatch, "v1", "namespace", "", "kube-system", "")
 	if err != nil {
 		return err
 	}

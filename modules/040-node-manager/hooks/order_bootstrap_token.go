@@ -172,7 +172,7 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 
 	// Remove all expired tokens
 	for _, token := range expiredTokens {
-		err := input.ObjectPatcher.DeleteObjectInBackground("v1", "Secret", "kube-system", token.Name, "")
+		err := input.ObjectPatcher().DeleteObjectInBackground("v1", "Secret", "kube-system", token.Name, "")
 		if err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
-			err = input.ObjectPatcher.CreateObject(obj, "")
+			err = input.ObjectPatcher().CreateObject(obj, "")
 			if err != nil {
 				return err
 			}

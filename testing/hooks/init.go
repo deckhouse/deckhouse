@@ -593,10 +593,11 @@ func (hec *HookExecutionConfig) RunHook() {
 	Expect(values_validation.ValidateValues(hec.ValuesValidator, moduleName, string(hec.configValues.JSONRepr))).To(Succeed())
 
 	if len(kubernetesPatchBytes) != 0 {
-		kubePatch := NewKubernetesPatch(hec.getFakeClient())
+		operations, err := object_patch.ParseOperations(kubernetesPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		err := kubePatch.Apply(kubernetesPatchBytes)
+		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
+		err = patcher.ExecuteOperations(operations)
 		Expect(err).ToNot(HaveOccurred())
 	}
 }
@@ -691,7 +692,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,
 		LogEntry:         logger.WithField("output", "gohook"),
-		ObjectPatcher:    patchCollector,
+		PatchCollector:   patchCollector,
 		BindingActions:   &bindingActions,
 	}
 
@@ -724,8 +725,8 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	}
 
 	if operations := patchCollector.Operations(); len(operations) > 0 {
-		objectPatcher := NewKubernetesPatch(hec.getFakeClient())
-		err := objectPatcher.GenerateFromJSONAndExecuteOperations(operations)
+		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
+		err := patcher.ExecuteOperations(operations)
 		Expect(err).ShouldNot(HaveOccurred())
 	}
 

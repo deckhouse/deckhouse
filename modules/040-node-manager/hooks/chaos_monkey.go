@@ -131,11 +131,11 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err = input.ObjectPatcher.MergePatchObject(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
+		err = input.ObjectPatcher().MergePatchObject(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
 		if err != nil {
 			return err
 		}
-		err = input.ObjectPatcher.DeleteObjectInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
+		err = input.ObjectPatcher().DeleteObjectInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
 		if err != nil {
 			return err
 		}

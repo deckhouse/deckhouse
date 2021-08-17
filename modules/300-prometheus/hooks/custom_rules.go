@@ -97,7 +97,7 @@ func customRulesHandler(input *go_hook.HookInput) error {
 	for _, ruleF := range rulesSnap {
 		rule := ruleF.(*CustomRule)
 		internalRule := createPrometheusRule(rule.Name, rule.Groups)
-		err := input.ObjectPatcher.CreateOrUpdateObject(&internalRule, "")
+		err := input.ObjectPatcher().CreateOrUpdateObject(&internalRule, "")
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func customRulesHandler(input *go_hook.HookInput) error {
 	for _, sn := range internalRulesSnap {
 		internalRuleName := sn.(string)
 		if _, ok := tmpMap[internalRuleName]; !ok {
-			err := input.ObjectPatcher.DeleteObject("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", internalRuleName, "")
+			err := input.ObjectPatcher().DeleteObject("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", internalRuleName, "")
 			if err != nil {
 				return err
 			}
