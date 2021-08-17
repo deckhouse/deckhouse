@@ -83,9 +83,7 @@ func discoverDexCA(input *go_hook.HookInput) error {
 
 	configuratorEnabled := input.Values.Get(configuratorEnabledPath).Bool()
 	if !configuratorEnabled {
-		if input.ConfigValues.Exists(dexCAPath) {
-			input.Values.Remove(dexCAPath)
-		}
+		input.Values.Remove(dexCAPath)
 		return nil
 	}
 
@@ -95,9 +93,7 @@ func discoverDexCA(input *go_hook.HookInput) error {
 
 	switch dexCAModeFromConfig {
 	case doNotNeedCAMode:
-		if input.ConfigValues.Exists(dexCAPath) {
-			input.Values.Remove(dexCAPath)
-		}
+		input.Values.Remove(dexCAPath)
 	case fromIngressSecretCAMode:
 		dexCASnapshots := input.Snapshots["secret"]
 		if len(dexCASnapshots) > 0 {
@@ -111,9 +107,7 @@ func discoverDexCA(input *go_hook.HookInput) error {
 
 		if dexCA == "" {
 			input.LogEntry.Warnln("cannot get ca.crt or tls.crt from secret, his is ok for first run")
-			if input.ConfigValues.Exists(dexCAPath) {
-				input.Values.Remove(dexCAPath)
-			}
+			input.Values.Remove(dexCAPath)
 			return nil
 		}
 	case customCAMode:

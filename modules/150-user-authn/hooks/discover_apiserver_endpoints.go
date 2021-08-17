@@ -106,13 +106,8 @@ func discoverApiserverEndpoints(input *go_hook.HookInput) error {
 
 	publishAPIEnabled := input.Values.Get("userAuthn.publishAPI.enable").Bool()
 	if !publishAPIEnabled {
-		if input.Values.Exists(addressesPath) {
-			input.Values.Remove(addressesPath)
-		}
-
-		if input.Values.Exists(targetPortPath) {
-			input.Values.Remove(targetPortPath)
-		}
+		input.Values.Remove(addressesPath)
+		input.Values.Remove(targetPortPath)
 		return nil
 	}
 

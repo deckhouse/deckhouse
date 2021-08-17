@@ -36,9 +36,7 @@ func kubeconfigNamesHandler(input *go_hook.HookInput) error {
 	)
 
 	if !input.ConfigValues.Exists(kubeconfigsPath) {
-		if input.ConfigValues.Exists(encodedNamesPath) {
-			input.Values.Remove(encodedNamesPath)
-		}
+		input.Values.Remove(encodedNamesPath)
 		return nil
 	}
 
