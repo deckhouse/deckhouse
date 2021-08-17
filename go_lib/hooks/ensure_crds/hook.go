@@ -156,7 +156,7 @@ func putCRDToCluster(input *go_hook.HookInput, dc dependency.Container, crdYAML 
 		return err
 	}
 
-	err = input.ObjectPatcher.CreateOrUpdateObject(res, "")
+	err = input.ObjectPatcher().CreateOrUpdateObject(res, "")
 	return err
 }
 

@@ -185,7 +185,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 
 	if generatedPipelines == 0 {
 		input.Values.Set("logShipper.internal.activated", false)
-		return input.ObjectPatcher.DeleteObjectInBackground("v1", "Secret", "d8-log-shipper", "d8-log-shipper-config", "")
+		return input.ObjectPatcher().DeleteObjectInBackground("v1", "Secret", "d8-log-shipper", "d8-log-shipper-config", "")
 	}
 
 	config, err := generator.GenerateConfig()
@@ -219,7 +219,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 		return err
 	}
 
-	return input.ObjectPatcher.CreateOrUpdateObject(un, "")
+	return input.ObjectPatcher().CreateOrUpdateObject(un, "")
 }
 
 func pipelinePartsFromClusterSource(generator *vector.LogConfigGenerator, destMap map[string]v1alpha1.ClusterLogDestination, sourceConfig *vector.ClusterLoggingConfig) (source impl.LogSource, transforms []impl.LogTransform, destinations []impl.LogDestination, err error) {

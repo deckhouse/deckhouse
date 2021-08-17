@@ -86,7 +86,7 @@ func expireDexUsers(input *go_hook.HookInput) error {
 		}
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {
-			err := input.ObjectPatcher.DeleteObject(
+			err := input.ObjectPatcher().DeleteObject(
 				/*apiVersion*/ "deckhouse.io/v1",
 				/*kind*/ "User",
 				/*namespace*/ "",

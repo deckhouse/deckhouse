@@ -142,7 +142,7 @@ func handleChallenge(input *go_hook.HookInput) error {
 			return err
 		}
 
-		err = input.ObjectPatcher.CreateOrUpdateObject(un, "")
+		err = input.ObjectPatcher().CreateOrUpdateObject(un, "")
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func handleChallenge(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err := input.ObjectPatcher.DeleteObject("v1", "Secret", ns, solverSecretName, "")
+		err := input.ObjectPatcher().DeleteObject("v1", "Secret", ns, solverSecretName, "")
 		if err != nil {
 			return err
 		}

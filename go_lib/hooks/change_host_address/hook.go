@@ -103,7 +103,7 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 				return fmt.Errorf("cannot convert patch to json: %v", err)
 			}
 
-			err = input.ObjectPatcher.MergePatchObject(
+			err = input.ObjectPatcher().MergePatchObject(
 				/*patch*/ jsonMergePatch,
 				/*apiVersion*/ "v1",
 				/*kind*/ "Pod",
@@ -118,7 +118,7 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 		}
 
 		if podAddress.InitialHost != podAddress.Host {
-			err := input.ObjectPatcher.DeleteObject(
+			err := input.ObjectPatcher().DeleteObject(
 				/*apiVersion*/ "v1",
 				/*kind*/ "Pod",
 				/*namespace*/ namespace,

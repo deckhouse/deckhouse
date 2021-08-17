@@ -18,6 +18,9 @@ package hooks
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -27,30 +30,85 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calculation and assignment ::", func() {
-	const valuesRoot = "nodeManager.internal.machineDeployments"
+	var RequireCloudProvider = newCloudProviderAvailabilityChecker()
 
-	const workerNodeGroupValues = `[{
-                          "name": "worker",
-                          "nodeType": "CloudEphemeral",
-                          "cloudInstances": {
-                              "classReference": { "kind": "OpenStackInstanceClass", "name": "worker-small" },
-                              "maxPerZone": 3,
-                              "minPerZone": 3,
-                              "zones": [ "nova" ]
-                          },
-                          "cri": { "type": "Docker" },
-                          "disruptions": { "approvalMode": "Automatic" },
-                          "instanceClass": {
-                              "flavorName": "m1.small",
-                              "imageName": "ubuntu-18-04-cloud-amd64",
-                              "mainNetwork": "dev2"
-                          },
-                          "kubernetesVersion": "1.21",
-                          "manualRolloutID": "",
-                          "updateEpoch": "112714"
-			}]`
+	const (
+		mdGroup      = "machine.sapcloud.io"
+		mdVersion    = "v1alpha1"
+		mdKind       = "MachineDeployment"
+		mdNamespaced = true
+	)
+	var registerCrd = func(f *HookExecutionConfig) {
+		f.RegisterCRD(mdGroup, mdVersion, mdKind, mdNamespaced)
+	}
 
-	const state = `
+	const mdValuesPath = "nodeManager.internal.machineDeployments"
+	const nodeGroupsPath = "nodeManager.internal.nodeGroups"
+	const cloudProviderTypePath = "nodeManager.internal.cloudProvider.type"
+
+	When("Execute in empty cluster", func() {
+		const cloudProviderType = "aws"
+
+		f := HookExecutionConfigInit(`{}`, `{}`)
+		registerCrd(f)
+
+		BeforeEach(func() {
+			RequireCloudProvider(cloudProviderType)
+
+			// Ensure cloudProvider.type.
+			f.ValuesSet(cloudProviderTypePath, cloudProviderType)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	When("Execute with unknown and missing MachineDeployment objects", func() {
+		// There is item in machineDeployments and corresponding item in nodeGroups
+		// but no MachineDeployment object in cluster.
+		// Hook should not fail.
+		const (
+			cloudProviderType = "aws"
+			nodeGroupsValues  = `
+- name: worker
+  nodeType: CloudEphemeral
+  cri:
+    type: Docker
+  kubernetesVersion: "1.21"
+  manualRolloutID: ""
+  updateEpoch: "112714"
+  disruptions:
+    approvalMode: Automatic
+  instanceClass:
+    ami: myami
+    diskSizeGb: 50
+    diskType: gp2
+    iops: 42
+    instanceType: t2.medium
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-small
+    maxPerZone: 3
+    minPerZone: 3
+    zones:
+    - zonea
+`
+			mdValues = `
+aaa:
+  checksum: SOME_CHECKSUM
+  nodeGroup: worker
+  name: aaa
+ccc:
+  checksum: SOME_CHECKSUM
+  nodeGroup: worker
+  name: ccc
+`
+			expectedChecksum = "21b7f37222f1cbad6c644c0aa4eef85aa309b874ec725dc0cdc087ca06fc6c19"
+			mdObject         = `
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
@@ -60,6 +118,8 @@ metadata:
   labels:
     node-group: worker
 spec: {}
+`
+			mdUnknown = `
 ---
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
@@ -70,82 +130,169 @@ metadata:
     node-group: worker
 spec: {}
 `
+		)
 
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"cloudProvider":{"type":"openstack"}}}}`, `{}`)
-	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
+		f := HookExecutionConfigInit(`{}`, `{}`)
+		registerCrd(f)
 
-	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			RequireCloudProvider(cloudProviderType)
+
+			// Ensure cloudProvider.type value.
+			f.ValuesSet(cloudProviderTypePath, cloudProviderType)
+			// Set machineDeployments values.
+			f.ValuesSetFromYaml(mdValuesPath, []byte(mdValues))
+			f.ValuesSetFromYaml(nodeGroupsPath, []byte(nodeGroupsValues))
+
+			f.KubeStateSet(mdObject + mdUnknown)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
 
-		It("Does not fail", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-	})
-
-	Context("Single checksum", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml(valuesRoot, []byte(`{
-				"aaa": {
-					"checksum": "NONSENSE",
-					"nodeGroup": "worker",
-					"name": "aaa"
-				}
-			}`))
-			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(workerNodeGroupValues))
-
-			f.KubeStateSet(state)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-
-		It("Does not fail", func() {
+		It("should not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Assigns the checksum to MachineDeployments from values", func() {
+		It("should assign the checksum to existing MachineDeployment 'aaa'", func() {
 			machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "aaa")
 			Expect(machineDeployment.Exists()).To(BeTrue())
-
-			Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").String()).To(Equal("b94a18d06cc6cb58ac397ae6b671dbb666744ee06da8ce42a56e58db56ecd4a0"))
+			checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class")
+			Expect(checksum.String()).To(Equal(expectedChecksum))
 		})
 
-		It("Does not assign the checksum to MachineDeployments that is absent in values", func() {
+		It("should not assign the checksum to unknown MachineDeployment", func() {
 			machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "bbb")
 			Expect(machineDeployment.Exists()).To(BeTrue())
-
-			Expect(machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class").Exists()).To(BeFalse())
+			checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class")
+			Expect(checksum.Exists()).To(BeFalse())
 		})
 	})
 
-	Context("No matching nodegroup", func() {
-		f := HookExecutionConfigInit(`{"nodeManager":{"internal":{"cloudProvider":{"type":"openstack"}}}}`, `{}`)
-		f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
+	When("Execute with a single checksum", func() {
+		const (
+			cloudProviderType = "openstack"
+			nodeGroupsValues  = `[{
+            "name": "worker",
+            "nodeType": "CloudEphemeral",
+            "cloudInstances": {
+                "classReference": { "kind": "OpenStackInstanceClass", "name": "worker-small"},
+                "maxPerZone": 3,
+                "minPerZone": 3,
+                "zones": [ "nova" ]
+            },
+            "cri": { "type": "Docker" },
+            "disruptions": { "approvalMode": "Automatic" },
+            "instanceClass": {
+                "flavorName": "m1.small",
+                "imageName": "ubuntu-18-04-cloud-amd64",
+                "mainNetwork": "dev2"
+            },
+            "kubernetesVersion": "1.21",
+            "manualRolloutID": "",
+            "updateEpoch": "112714"
+        }]`
+			expectedChecksum = "b94a18d06cc6cb58ac397ae6b671dbb666744ee06da8ce42a56e58db56ecd4a0"
+			mdInValues       = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: aaa
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: worker
+spec: {}
+`
+			mdNotInValues = `
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: bbb
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: worker
+spec: {}
+`
+		)
+
+		f := HookExecutionConfigInit(`{}`, `{}`)
+		registerCrd(f)
 
 		BeforeEach(func() {
-			// No MachineDeployment state here. We should not touch a MachineDeployment if there is
-			// no nodegroup for it. The hook should fail in this test if we do.
+			RequireCloudProvider(cloudProviderType)
 
-			f.ValuesSetFromYaml(valuesRoot, []byte(`{
+			// Ensure cloudProvider.type value.
+			f.ValuesSet("nodeManager.internal.cloudProvider.type", cloudProviderType)
+			// Set machineDeployments values.
+			f.ValuesSetFromYaml(mdValuesPath, []byte(`{
 				"aaa": {
 					"checksum": "NONSENSE",
 					"nodeGroup": "worker",
 					"name": "aaa"
 				}
 			}`))
-			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`[]`))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(nodeGroupsValues))
+
+			f.KubeStateSet(mdInValues + mdNotInValues)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 			f.RunHook()
 		})
 
-		It("Does not fail", func() {
+		It("should not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("Cleans machineDeployment value", func() {
-			Expect(f.ValuesGet(valuesRoot).String()).To(Equal("{}"))
+		It("should assign the checksum to MachineDeployments from values", func() {
+			machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "aaa")
+			Expect(machineDeployment.Exists()).To(BeTrue())
+			checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class")
+			Expect(checksum.String()).To(Equal(expectedChecksum))
+		})
+
+		It("should not assign the checksum to MachineDeployments that are not in values", func() {
+			machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "bbb")
+			Expect(machineDeployment.Exists()).To(BeTrue())
+			checksum := machineDeployment.Field("spec.template.metadata.annotations.checksum/machine-class")
+			Expect(checksum.Exists()).To(BeFalse())
+		})
+	})
+
+	When("Execute with no matching nodeGroup", func() {
+		const cloudProviderType = "aws"
+		const mdValues = `
+aaa:
+  checksum: NO-CHECKSUM
+  nodeGroup: worker
+  name: aaa
+`
+		const nodeGroupsValues = "[]"
+
+		f := HookExecutionConfigInit(`{}`, `{}`)
+		registerCrd(f)
+
+		BeforeEach(func() {
+			RequireCloudProvider(cloudProviderType)
+
+			// Ensure cloudProvider.type.
+			f.ValuesSet(cloudProviderTypePath, cloudProviderType)
+			// TODO what is this comment about?
+			// No MachineDeployment state here. We should not touch a MachineDeployment if there is
+			// no nodegroup for it. The hook should fail in this test if we do.
+			f.ValuesSetFromYaml(mdValuesPath, []byte(mdValues))
+			f.ValuesSetFromYaml(nodeGroupsPath, []byte(nodeGroupsValues))
+
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should not fail", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("should remove value for existing object MachineDeployment/aaa", func() {
+			Expect(f.ValuesGet(mdValuesPath + ".aaa").Exists()).To(BeFalse())
+			Expect(f.ValuesGet(mdValuesPath).String()).To(Equal("{}"))
 		})
 	})
 
@@ -463,16 +610,20 @@ spec: {}
 			assertions []nameSum
 		}
 
-		f := HookExecutionConfigInit(``, `{}`)
-		f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
+		f := HookExecutionConfigInit(`{}`, `{}`)
+		registerCrd(f)
 
 		// Important! If checksum changes, the MachineDeployments will re-deploy!
 		// All nodes in MD will reboot! If you're not sure, don't change it.
 		table.DescribeTable("Checksums",
 			func(data entryData) {
+				// Get cloud provider type from values fixture to skip tests for unavailable providers.
+				f.ValuesSetFromYaml("nodeManager", []byte(data.moduleValues))
+				cloudProviderType := f.ValuesGet("nodeManager.internal.cloudProvider.type").String()
+				RequireCloudProvider(cloudProviderType)
+
 				f.KubeStateSet(data.k8sState)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.ValuesSetFromYaml("nodeManager", []byte(data.moduleValues))
 
 				if data.manualRolloutID != "" {
 					// Set manualRolloutID in all nodegroups
@@ -501,12 +652,12 @@ spec: {}
 
 				for _, md := range data.assertions {
 					// MachineDeployment must be filled in values by the hook
-					mdKey := fmt.Sprintf("%s.%s", valuesRoot, md.name)
+					mdKey := fmt.Sprintf("%s.%s", mdValuesPath, md.name)
 					Expect(f.ValuesGet(mdKey).Exists()).To(BeTrue(), mdKey+" should be present in values")
 
 					// MachineClass checksum is calculated in the hook and saved to the values.
 					// It must have fixed expected value.
-					checksumKey := fmt.Sprintf("%s.%s.%s", valuesRoot, md.name, "checksum")
+					checksumKey := fmt.Sprintf("%s.%s.%s", mdValuesPath, md.name, "checksum")
 					checksum := f.ValuesGet(checksumKey).String()
 					Expect(checksum).To(Equal(md.checksum), checksumKey+" should be of expected value "+checksum)
 				}
@@ -775,3 +926,44 @@ spec: {}
 		)
 	})
 })
+
+// Get available cloud providers to check if test can run on CE codebase.
+func newCloudProviderAvailabilityChecker() func(tYpE string) {
+	availTypes := getAvailableCloudProviderTypes()
+	return func(tYpE string) {
+		_, has := availTypes[tYpE]
+		if has {
+			return
+		}
+		Skip(fmt.Sprintf("'%s' cloud provider templates are not available. It is OK for CE codebase.", tYpE))
+	}
+}
+
+// getAvailableCloudProviderTypes returns all cloud providers
+// with a checksum template in cloud-providers directory.
+func getAvailableCloudProviderTypes() map[string]struct{} {
+	res := make(map[string]struct{})
+
+	modulesDir, ok := os.LookupEnv("MODULES_DIR")
+	if !ok {
+		modulesDir = "../.."
+	}
+	dir := filepath.Join(modulesDir, "040-node-manager", "cloud-providers")
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return res
+	}
+
+	for _, f := range files {
+		tmplBytes, err := readChecksumTemplate(f.Name())
+		if err != nil {
+			continue
+		}
+		if len(tmplBytes) > 0 {
+			res[f.Name()] = struct{}{}
+		}
+	}
+
+	return res
+}

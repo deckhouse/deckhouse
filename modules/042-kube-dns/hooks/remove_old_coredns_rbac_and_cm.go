@@ -26,19 +26,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeKubeDNSRBACAndConfigMap)
 
 func removeKubeDNSRBACAndConfigMap(input *go_hook.HookInput) error {
-	err := input.ObjectPatcher.DeleteObject("rbac.authorization.k8s.io/v1", "ClusterRole", "", "system:coredns", "")
+	err := input.ObjectPatcher().DeleteObject("rbac.authorization.k8s.io/v1", "ClusterRole", "", "system:coredns", "")
 	if err != nil {
 		input.LogEntry.Errorln(err)
 	}
-	err = input.ObjectPatcher.DeleteObject("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", "system:coredns", "")
+	err = input.ObjectPatcher().DeleteObject("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", "system:coredns", "")
 	if err != nil {
 		input.LogEntry.Errorln(err)
 	}
-	err = input.ObjectPatcher.DeleteObject("v1", "ServiceAccount", "kube-system", "coredns", "")
+	err = input.ObjectPatcher().DeleteObject("v1", "ServiceAccount", "kube-system", "coredns", "")
 	if err != nil {
 		input.LogEntry.Errorln(err)
 	}
-	err = input.ObjectPatcher.DeleteObject("v1", "ConfigMap", "kube-system", "coredns", "")
+	err = input.ObjectPatcher().DeleteObject("v1", "ConfigMap", "kube-system", "coredns", "")
 	if err != nil {
 		input.LogEntry.Errorln(err)
 	}

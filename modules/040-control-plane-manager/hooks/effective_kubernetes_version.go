@@ -237,7 +237,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 			},
 		}
 		data, _ := json.Marshal(patch)
-		err := input.ObjectPatcher.MergePatchObject(
+		err := input.ObjectPatcher().MergePatchObject(
 			data,
 			"v1", "Secret",
 			"kube-system",

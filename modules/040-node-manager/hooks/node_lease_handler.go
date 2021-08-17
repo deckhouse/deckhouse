@@ -93,7 +93,7 @@ func handleNodeLease(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err := input.ObjectPatcher.FilterObject(leaseNodeFilterFunc, "v1", "Node", "", node.Name, "status")
+		err := input.ObjectPatcher().FilterObject(leaseNodeFilterFunc, "v1", "Node", "", node.Name, "status")
 		if err != nil {
 			return err
 		}

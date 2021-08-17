@@ -61,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeKubeDNSDeployAndService)
 
 func removeKubeDNSDeployAndService(input *go_hook.HookInput) error {
-	err := input.ObjectPatcher.DeleteObjectNonCascading("apps/v1", "Deployment", "kube-system", "coredns", "")
+	err := input.ObjectPatcher().DeleteObjectNonCascading("apps/v1", "Deployment", "kube-system", "coredns", "")
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func removeKubeDNSDeployAndService(input *go_hook.HookInput) error {
 	kubeDNSSVCIsClusterIPTypeSnap := input.Snapshots["kube_dns_svc"]
 	if len(kubeDNSSVCIsClusterIPTypeSnap) > 0 {
 		if kubeDNSSVCIsClusterIPTypeSnap[0].(bool) {
-			err = input.ObjectPatcher.DeleteObject("v1", "Service", "kube-system", "kube-dns", "")
+			err = input.ObjectPatcher().DeleteObject("v1", "Service", "kube-system", "kube-dns", "")
 			if err != nil {
 				return err
 			}

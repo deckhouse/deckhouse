@@ -67,7 +67,7 @@ func removePDBHandler(input *go_hook.HookInput) error {
 	snap := input.Snapshots["pdb"]
 	for _, sn := range snap {
 		pdbName := sn.(string)
-		err := input.ObjectPatcher.DeleteObject("policy/v1beta1", "PodDisruptionBudget", "d8-monitoring", pdbName, "")
+		err := input.ObjectPatcher().DeleteObject("policy/v1beta1", "PodDisruptionBudget", "d8-monitoring", pdbName, "")
 		if err != nil {
 			return err
 		}
