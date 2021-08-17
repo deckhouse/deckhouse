@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 
 # Copyright 2021 Flant CJSC
-# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+# See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+from concurrent.futures.thread import ThreadPoolExecutor
+from itertools import chain
+from threading import Thread
+from time import sleep
+import logging
 
 import kubernetes
 import copy
@@ -13,13 +19,18 @@ from socketserver import ThreadingMixIn
 
 kubernetes.config.load_incluster_config()
 
+logging.basicConfig(format='[%(asctime)s] - %(message)s', level=logging.INFO)
+
 EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX = "threshold.extended-monitoring.flant.com/"
 EXTENDED_MONITORING_ENABLED_ANNOTATION = "extended-monitoring.flant.com/enabled"
 
 DEFAULT_SERVER_ADDRESS = '0.0.0.0'
+DEFAULT_PORT = 8080
+
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
+
 
 class Annotated(ABC):
     default_thresholds = {}
@@ -43,11 +54,8 @@ class Annotated(ABC):
 
     @classmethod
     def list_threshold_annotated_objects(cls, namespace):
-        exported = []
         for kube_object in cls.list(namespace):
-            exported.append(cls(namespace, kube_object.metadata.name, kube_object.metadata.annotations))
-
-        return exported
+            yield cls(namespace, kube_object.metadata.name, kube_object.metadata.annotations)
 
     @property
     def formatted(self):
@@ -193,58 +201,117 @@ class AnnotatedCronJob(Annotated):
         return cls.api.list_namespaced_cron_job(namespace).items
 
 
-KUBERNETES_OBJECTS = (AnnotatedNode,)
+KUBERNETES_OBJECTS = (
+  AnnotatedNode,
+)
 KUBERNETES_NAMESPACED_OBJECTS = (
-    AnnotatedDeployment, AnnotatedStatefulSet, AnnotatedDaemonSet, AnnotatedPod, AnnotatedIngress, AnnotatedCronJob)
+    AnnotatedDeployment,
+    AnnotatedStatefulSet,
+    AnnotatedDaemonSet,
+    AnnotatedPod,
+    AnnotatedIngress,
+    AnnotatedCronJob,
+)
 
 corev1 = kubernetes.client.CoreV1Api()
 apis = kubernetes.client.ApisApi()
 
+
+def _list_objects(executor, objects, namespace):
+    yield from chain.from_iterable(executor.map(lambda k: k.list_threshold_annotated_objects(namespace), objects))
+
+
+def _get_metrics():
+    enabled_nses = []
+    quantity = 0
+
+    # iterate over namespaced objects in explicitly enabled via annotation Namespaces
+    ns_list = (
+        ns.metadata.name for ns in corev1.list_namespace().items
+        if ns.metadata.annotations
+        and EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()
+    )
+
+    response = """# HELP extended_monitoring_annotations Extended monitoring annotations
+      # TYPE extended_monitoring_annotations gauge\n"""
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        def _list_in_ns(ns):
+            enabled_nses.append('\nextended_monitoring_enabled{{namespace="{}"}} 1'.format(ns))
+            yield from _list_objects(executor, KUBERNETES_NAMESPACED_OBJECTS, ns)
+
+        for annotated_object in chain.from_iterable(executor.map(_list_in_ns, ns_list)):
+            response += annotated_object.formatted
+            quantity += 1
+
+        for annotated_object in _list_objects(executor, KUBERNETES_OBJECTS, None):
+            response += annotated_object.formatted
+            quantity += 1
+
+    response += '\n'.join(enabled_nses)
+    quantity += len(enabled_nses)
+    return response, quantity
+
+
 class GetHandler(BaseHTTPRequestHandler):
+    _response = ""
+
+    @classmethod
+    def get_metrics(cls):
+        # setting string variable is atomic in Python
+        cls._response, quantity = _get_metrics()
+        logging.info('Metrics are collected successfully. Batches quantity: {}'.format(quantity))
+
+    @classmethod
+    def loop_get_metrics(cls):
+        while 1:
+            cls.get_metrics()
+            sleep(30)
 
     def do_GET(self):
         if self.path == "/ready":
             apis.get_api_versions()
             self.send_response(200)
             self.end_headers()
-        elif self.path == "/healthz":
+            return
+
+        if self.path == "/healthz":
             self.send_response(200)
             self.end_headers()
-        else:
-            exported = []
-            enabled_nses = []
+            return
 
-            # iterate over namespaced objects in explicitly enabled via annotation Namespaces
-            ns_list = corev1.list_namespace()
-            for namespace in (ns for ns in ns_list.items if ns.metadata.annotations and
-                                                            EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations.keys()):
-                enabled_nses.append('extended_monitoring_enabled{{namespace="{}"}} 1'.format(namespace.metadata.name))
-
-                for kube_object in KUBERNETES_NAMESPACED_OBJECTS:
-                    exported.extend(kube_object.list_threshold_annotated_objects(namespace.metadata.name))
-
-            for kube_object in KUBERNETES_OBJECTS:
-                exported.extend(kube_object.list_threshold_annotated_objects(None))
-
-            response = """# HELP extended_monitoring_annotations Extended monitoring annotations
-            # TYPE extended_monitoring_annotations gauge\n"""
-            for annotated_object in exported:
-                response += annotated_object.formatted
-
-            response += '\n'.join(enabled_nses)
-
+        if self.path == "/metrics":
             self.send_response(200)
             self.send_header('Content-Type',
                              'text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write(response.encode(encoding="utf-8"))
+            self.wfile.write(self.__class__._response.encode(encoding="utf-8"))
+            return
+
+        self.send_response(404)
+        self.end_headers()
 
 
 if __name__ == '__main__':
     server_address = DEFAULT_SERVER_ADDRESS
-    if len(sys.argv) == 2:
-      server_address = sys.argv[1]
+    server_port = DEFAULT_PORT
 
-    server = ThreadingHTTPServer((server_address, 8080), GetHandler)
-    print('Starting server...')
-    server.serve_forever()
+    # Parse host and port
+    if len(sys.argv) >= 2:
+        server_address = sys.argv[1]
+    if len(sys.argv) == 3:
+        server_port = int(sys.argv[2])
+
+    # Get metrics once synchronously before starting web server
+    GetHandler.get_metrics()
+    server = ThreadingHTTPServer((server_address, server_port), GetHandler)
+
+    try:
+        # Run metrics renew in background (daemon thread is canceled on the script exit)
+        Thread(target=GetHandler.loop_get_metrics, daemon=True).start()
+
+        logging.info('Starting server')
+        server.serve_forever()
+    except Exception as err:
+        logging.info('Shutting down server')
+        raise err
