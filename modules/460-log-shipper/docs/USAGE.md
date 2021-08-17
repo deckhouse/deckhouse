@@ -2,7 +2,7 @@
 title: "Module log-shipper: usage"
 ---
 
-## Getting logs from all cluster pods and sending them to Loki
+## Getting logs from all cluster Pods and sending them to Loki
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -24,7 +24,7 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Reading pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
+## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
 
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:
 
@@ -70,9 +70,9 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
-## Creating a source in namespace and reading logs of all pods in that NS with forwarding them to Loki
+## Creating a source in namespace and reading logs of all Pods in that NS with forwarding them to Loki
 
-Namespaced pipeline - reading logs from `test-whispers` namespace (all pods):
+Namespaced pipeline - reading logs from `test-whispers` namespace (all Pods):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -94,9 +94,9 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Reading only pods in the specified namespace and having a certain label
+## Reading only Pods in the specified namespace and having a certain label
 
-Read logs from pods with label `app=booking` in namespace `test-whispers`:
+Read logs from Pods with label `app=booking` in namespace `test-whispers`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

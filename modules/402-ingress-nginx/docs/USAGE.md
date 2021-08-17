@@ -71,7 +71,7 @@ spec:
   inlet: "LoadBalancer"
 ```
 
-## An example for Openstack
+## An example for OpenStack
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

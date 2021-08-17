@@ -23,7 +23,7 @@ title: "The user-authn module: usage"
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
-  name: my-cool-app # the authenticator's pods will be prefixed with my-cool-app
+  name: my-cool-app # the authenticator's Pods will be prefixed with my-cool-app
   namespace: my-cool-namespace # the namespace where the dex-authenticator will be deployed
 spec:
   applicationDomain: "my-app.kube.my-domain.com" # the domain used for your app
@@ -309,7 +309,7 @@ You need to configure the kube-apiserver so that dashboard and kubeconfig-genera
 * --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
 * --oidc-username-claim=email
 
-If self-signed certificates are used, dex will get one more argument. At the same time, the CA file will be mounted to the apiserver's pod:
+If self-signed certificates are used, dex will get one more argument. At the same time, the CA file will be mounted to the apiserver's Pod:
 
 * --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
 {% endofftopic %}

@@ -18,8 +18,8 @@ All the configuration of access rights is performed using [Custom Resources](cr.
 
 ## Role model
 In addition to the RBAC, you can use a set of high-level roles in the module:
-- `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
-- `PrivilegedUser` — the same as User + can exec into containers, read secrets, and delete pods (and thus, restart them);
+- `User` — has access to information about all objects (including viewing Pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
+- `PrivilegedUser` — the same as User + can exec into containers, read secrets, and delete Pods (and thus, restart them);
 - `Editor` — the same as `PrivilegedUser` + can create and edit namespaces and all objects that are usually required for application tasks. **Note** that since `Editor` can edit `RoleBindings`, he can **broaden his privileges within the namespace**;
 - `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` & `certmanager.k8s.io/orders`);
 - `ClusterEditor` — the same as `Editor`+ can manage a limited set of `cluster-wide` objects that can be used in application tasks (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators. **Note** that since `ClusterEditor` can edit `ClusterRoleBindings`, he can **broaden his privileges within the cluster**;

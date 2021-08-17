@@ -41,9 +41,9 @@ data:
   * By default, it is set to 10 minutes;
   * An example: `1h`
 * `highAvailability` — manually manage the high availability mode. By default, the HA mode gets enabled/disabled automatically. Read [more](../../deckhouse-configure-global.html#parameters) about the HA mode for modules;
-* `nodeSelector` — the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
+* `nodeSelector` — the same as in the Pod's `spec.nodeSelector` parameter in Kubernetes;
     * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling);
-* `tolerations` — the same as in the pods' `spec.tolerations` parameter in Kubernetes;
+* `tolerations` — the same as in the Pod's `spec.tolerations` parameter in Kubernetes;
     * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling);
 * `ingressClass` — the Ingress controller class used for dex and kubeconfig-generator;
   * An optional parameter; by default, the `modules.ingressClass` global value is used;

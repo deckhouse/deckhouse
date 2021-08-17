@@ -49,7 +49,7 @@ All graphs are conveniently grouped by Grafana dashboards; also, you can do a dr
 
 1. Our module is called for each request (at the `log_by_lua_block` stage). It calculates the necessary data and forwards it to the buffer (each nginx worker has its own buffer).
 2. For every nginx worker at the `init_by_lua_block` stage), the process is run that asynchronously sends data in the `protobuf` format over a tcp socket to `protobuf_exporter` (our in-house development) once a second. 
-3. `protobuf_exporter` runs as a sidecar container in the ingress-controller's pod. It receives messages in the protobuf format, parses them, aggregates them according to the specified rules, and exports them in the Prometheus format.
+3. `protobuf_exporter` runs as a sidecar container in the ingress-controller's Pod. It receives messages in the protobuf format, parses them, aggregates them according to the specified rules, and exports them in the Prometheus format.
 4. Every 30 seconds, Prometheus scrapes both the ingress-controller (since it exports some of the required metrics) and protobuf_exporter. Then these data are used for stats.
 
 ### What information does Prometheus collect, and in what form?

@@ -53,7 +53,7 @@ All you need to do is to attach the `node-role.kubernetes.io/master: ""` label t
 
 ## How do I view the list of etcd members?
 
-1. Exec to the etcd pod:
+1. Exec to the etcd Pod:
   ```shell
   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) sh
   ```
@@ -143,14 +143,14 @@ Delete a `Secret` from the cluster:
 kubectl -n kube-system delete secret audit-policy
 ```
 
-## How do I speed up the restart of pods if the connection to the node has been lost?
+## How do I speed up the restart of Pods if the connection to the node has been lost?
 
-By default, a node is marked as unavailable if it does not report its state for 40 seconds. After another 5 minutes, its pods will be rescheduled to other nodes. Thus, the overall application unavailability lasts approximately 6 minutes.
+By default, a node is marked as unavailable if it does not report its state for 40 seconds. After another 5 minutes, its Pods will be rescheduled to other nodes. Thus, the overall application unavailability lasts approximately 6 minutes.
 
 In specific cases, if an application cannot run in multiple instances, there is a way to lower its unavailability time: 
 
 1. Reduce the period required for the node to become `Unreachable` if the connection to it is lost by setting the `nodeMonitorGracePeriodSeconds` parameter.
-1. Set a lower timeout for evicting pods on a failed node using the `failedNodePodEvictionTimeoutSeconds` parameter.
+1. Set a lower timeout for evicting Pods on a failed node using the `failedNodePodEvictionTimeoutSeconds` parameter.
 
 ### An example:
 ```yaml

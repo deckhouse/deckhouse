@@ -53,7 +53,7 @@ data:
 
 The following general strategy is used for making scheduling decisions:
 1. If the `nodeSelector` module parameter is not set, Deckhouse looks for nodes with the specific labels in the cluster. If there are any, then the corresponding nodeSelectors are automatically applied. Below you may find the list of specific labels and the description of the discovery process.
-1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's pods (see the list below).
+1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
 1. You can set both parameters to `false` to disable their automatic calculation..
 
 **Caution!** Note that you cannot set `nodeSelector` and `tolerations` for modules that involve running a DaemonSet on all cluster nodes (e.g., `ping-exporter` and `node-problem-detector`) or modules designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).

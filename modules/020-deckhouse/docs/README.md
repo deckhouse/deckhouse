@@ -3,7 +3,7 @@ title: "The deckhouse module"
 search: releaseChannel, release channel stabilization, auto-switching the release channel
 ---
 
-In **Deckhose**, this module sets up:
+In **Deckhouse**, this module sets up:
 - The logging level;
 - The set of features;
 - The desirable release channel.

@@ -85,19 +85,19 @@ spec:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Определяет `nodeSelector` для подов `dex-authenticator`.
+                    Определяет `nodeSelector` для Pod'ов `dex-authenticator`.
 
                     Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
                   type: object
                 tolerations:
                   description: |
-                     Определяет `tolerations` для подов `dex-authenticator`.
+                     Определяет `tolerations` для Pod'ов `dex-authenticator`.
 
                      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
-                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
                   items:
                     properties:
                       effect:
@@ -115,17 +115,17 @@ spec:
                         description: |
                           Определяет отношение ключа (key) к значению (value) — должен ли ключ быть равен (`Equal`) значению, или допустимо существование ключа с любым значением.
 
-                          Указание `Exists` равносильно допуску любого значения (для value), чтобы под с указанным toleration удовлетворял соответствующему taint.
+                          Указание `Exists` равносильно допуску любого значения (для value), чтобы Pod с указанным toleration удовлетворял соответствующему taint.
 
                           **По умолчанию**: `Equal`.
                         type: string
                         enum: ["Exists", "Equal"]
                       tolerationSeconds:
                         description: |
-                          Определяет период времени в секундах, в течении которого планировщик должен ждать, прежде чем выгнать (evict) Pod с узла, если
+                          Определяет период времени в секундах, в течении которого планировщик должен ждать, прежде чем вытеснить (evict) Pod с узла, если
                           toleration перестал удовлетворять taint (справедливо **только** для effect `NoExecute`, иначе игнорируется).
 
-                          Если **не установлено**, то Pod не будет выгнан с узла, если toleration перестал удовлетворять taint. Если **установлен в ноль** (или отрицателен), то Pod будет выгнан с узла немедленно, если  toleration перестал удовлетворять taint.
+                          Если **не установлено**, то Pod не будет вытеснен с узла, если toleration перестал удовлетворять taint. Если **установлен в ноль** (или отрицателен), то Pod будет вытеснен с узла немедленно, если toleration перестал удовлетворять taint.
 
                           **По умолчанию**: не установлено.
                         format: int64

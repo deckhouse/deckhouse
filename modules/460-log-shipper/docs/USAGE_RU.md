@@ -2,7 +2,7 @@
 title: "Модуль log-shipper: примеры конфигурации"
 ---
 
-## Чтение логов из всех pod-ов кластера и направление их в Loki
+## Чтение логов из всех Pod'ов кластера и направление их в Loki
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -24,9 +24,9 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
+## Чтение логов Pod'ов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
 
-Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
+Чтение логов Pod'ов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -70,9 +70,9 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
-## Создание source в namespace и чтение логов всех pod-ов в этом NS, с направлением их в Loki
+## Создание source в namespace и чтение логов всех Pod'ов в этом NS, с направлением их в Loki
 
-Следующий pipeline создает source в namespace: `test-whispers` и читает логи всех pod-ов в этом NS, пишет их в Loki:
+Следующий pipeline создает source в namespace: `test-whispers` и читает логи всех Pod'ов в этом NS, пишет их в Loki:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -94,9 +94,9 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Чтение только pod-ов в указанном namespace и имеющих определенный label
+## Чтение только Pod'ов в указанном namespace и имеющих определенный label
 
-Пример чтения только pod-ов имеющих label `app=booking` в namespace `test-whispers`:
+Пример чтения только Pod'ов, имеющих label `app=booking` в namespace `test-whispers`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

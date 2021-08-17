@@ -5,7 +5,7 @@ type:
 search: grafana разработка графиков
 ---
 
-1. Для создания dashboard'ов в Grafana реализован ресурс [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition). У пода с Grafana работает sidecar-контейнер с [shell-operator](https://github.com/flant/shell-operator), у которого есть хук, который следит за данным ресурсом. При соответствующем событии, хук создаёт/удаляет/правит соответствующий dashboard через специальный механизм.
+1. Для создания dashboard'ов в Grafana реализован ресурс [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition). У Pod'а с Grafana работает sidecar-контейнер с [shell-operator](https://github.com/flant/shell-operator), у которого есть хук, который следит за данным ресурсом. При соответствующем событии, хук создаёт/удаляет/правит соответствующий dashboard через специальный механизм.
 2. В модулях манифесты dashboard лежат в директории `<module_root>/monitoring/grafana-dashboards/`. Они автоматически преобразуются в ресурсы [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition), при этом:
     * каждая поддиректория в этой директории соответствует Folder'у в Grafana,
     * а каждый файл — Dashboard'у в Grafana.
@@ -219,6 +219,6 @@ done
 * Указывать верхнюю границу у оси Y для графиков 0-100%.
 * Как рисовать графики процентные (bars, вместо stepped lines).
 * Трюк с использованием стекирования и показом Total.
-* Не забывать ставить "On time range change", когда переменная получает значения, которые могут поменяться (например имена подов).
+* Не забывать ставить "On time range change", когда переменная получает значения, которые могут поменяться (например, имена Pod'ов).
 * Цвета у CPU указывать как в okmeter.
 * Когда использовать какой режим отрисовки и чем хорош staircase.

@@ -4,7 +4,7 @@ title: "The ingress-nginx module: FAQ"
 
 ## How do I limit access to the application in the cluster to ingress controllers only?
 
-Add the  kube-rbac-proxy container to the application pod to allow only ingress pods to access your application in the cluster:
+Add the  kube-rbac-proxy container to the application Pod to allow only ingress Pods to access your application in the cluster:
 
 ### An example of the corresponding Kubernetes Deployment
 {% raw %}
@@ -41,7 +41,7 @@ spec:
         - "--secure-listen-address=0.0.0.0:443"
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
         # User verification certificate, refers to the standard Kubernetes client CA
-        # (available in every pod)
+        # (available in every Pod)
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
@@ -61,8 +61,8 @@ spec:
 ```
 {% endraw %}
 
-The application only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the pod.
-At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the pod.
+The application only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the Pod.
+At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the Pod.
 
 ## How do I provide minimum rights to the Service Account?
 

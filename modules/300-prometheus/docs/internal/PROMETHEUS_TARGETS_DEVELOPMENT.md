@@ -15,17 +15,17 @@ General information
 Best practices
 ---------------
 
-### Set labels for pod-oriented mertics
+### Set labels for Pod-oriented mertics
 
-Most metrics stored in Prometheus either contain pod-related data or information about the parameters of the application running in the pod. We call these metrics ~pod-oriented~. They include (predominantly but not exclusively) the following metric varieties:
-* system metrics that reflect the performance parameters of the pod (these are exported by kubelet);
+Most metrics stored in Prometheus either contain Pod-related data or information about the parameters of the application running in the Pod. We call these metrics ~Pod-oriented~. They include (predominantly but not exclusively) the following metric varieties:
+* system metrics that reflect the performance parameters of the Pod (these are exported by kubelet);
 * application metrics:
     * metrics of supported applications (redis, rabbitmq, etc.);
     * custom metrics.
 
-All pod-oriented labels have a label with the pod name (generally, it is called `instance`; for the kubelet-generated metrics, this label is called `pod_name`, and `pod` - for kube-state-metrics-generated ones). However, pod names are not convenient to work with, and we prefer to use `service` and `namespace` parameters. Thus:
-* all pod-oriented metrics have a `namespace` label;
-* application and custom pod-oriented metrics also have a `service` label that unites a group of pods under one clear name.
+All Pod-oriented labels have a label with the Pod name (generally, it is called `instance`; for the kubelet-generated metrics, this label is called `pod_name`, and `pod` - for kube-state-metrics-generated ones). However, Pod names are not convenient to work with, and we prefer to use `service` and `namespace` parameters. Thus:
+* all Pod-oriented metrics have a `namespace` label;
+* application and custom Pod-oriented metrics also have a `service` label that unites a group of Pods under one clear name.
 
 ### Authorize access to the exported metrics
 
@@ -63,7 +63,7 @@ spec:
         - "--secure-listen-address=0.0.0.0:8080"
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
         # The certificate to verify the user; in this case, the regular Kubernetes client CA is used
-        # (it exists in every pod)
+        # (it exists in every Pod)
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
@@ -81,8 +81,8 @@ spec:
         configMap:
           name: kube-rbac-proxy
 ```
-The metric exporter only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the pod.
-At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the pod.
+The metric exporter only accepts localhost (127.0.0.1) requests. That means that an unsecured connection can only be established to it from within the Pod.
+At the same time, the proxy listens on 0.0.0.0 and intercepts all external traffic to the Pod.
 
 ### Eliminate unnecessary rights for Service Accounts
 
@@ -162,4 +162,4 @@ subjects:
   name: my-user
 ```
 
-Now the `my-user` user can collect metrics from your pod.
+Now the `my-user` user can collect metrics from your Pod.

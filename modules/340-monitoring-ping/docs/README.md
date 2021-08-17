@@ -1,4 +1,4 @@
----
+p---
 title: "The monitoring-ping module"
 ---
 
@@ -11,4 +11,4 @@ It is bundled with a dashboard for `Grafana` that displays the corresponding gra
 
 ## How does it work?
 
-The module tracks the node's `.status.addresses` field for changes. Upon detecting changes, it invokes a hook that collects a complete list of node names/addresses and passes it to a daemonSet (the latter recreates the pods). As a result, ping checks the always up-to-date list of nodes.
+The module tracks the node's `.status.addresses` field for changes. Upon detecting changes, it invokes a hook that collects a complete list of node names/addresses and passes it to a DaemonSet (the latter recreates the Pods). As a result, ping checks the always up-to-date list of nodes.

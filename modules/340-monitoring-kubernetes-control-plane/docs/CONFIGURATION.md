@@ -11,17 +11,17 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
   * `accessType` — specifies the way Prometheus accesses metrics;
     * Possible values:
       * `DefaultService` — the most common option suitable for 99% of clusters; kube-apiserver is available via the `kubernetes` service in the `default` namespace;
-      * `Pod` — kube-apiserver runs in a pod, and the metrics port is accessible in the cluster via Kubernetes tools. (See the additional parameters in the `pod` section below);
+      * `Pod` — kube-apiserver runs in a Pod, and the metrics port is accessible in the cluster via Kubernetes tools. (See the additional parameters in the `pod` section below);
       * `ThroughNode` — kube-apiserver runs on one or several nodes and is accessible on the local port. In this case, a proxy runs on nodes to connect to Prometheus. (See the additional parameters in the `throughNode` section below);
     * Set to `DefaultService` by default;
   * `pod` — additional parameters for the `Pod` accessType;
     * `port` — the port at which metrics are exposed;
       * By default:
-        * It is calculated automatically using arguments derived from the kube-apiserver pod;
+        * It is calculated automatically using arguments derived from the kube-apiserver Pod;
         * If the calculation fails, the port is set to `6443`;
-    * `podSelector` — a parameter to select service pods (mandatory);
+    * `podSelector` — a parameter to select service Pods (mandatory);
       * Format — a label dictionary;
-    * `podNamespace` — namespace where the component's pods are running (mandatory);
+    * `podNamespace` — namespace where the component's Pods are running (mandatory);
     * `authenticationMethod` —  the authentication method (mandatory);
       * Possible values:
         * `Certificate` — specify a custom certificate. (See the `certificateSecret` parameter below);
@@ -52,9 +52,9 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
   * `pod` — additional parameters for the `Pod` accessType;
     * `port` — the port at which metrics are exposed (mandatory);
     * `scheme` — the HTTP scheme the metrics http-port uses;
-    * `podSelector` — a parameter for selecting service pods (mandatory);
+    * `podSelector` — a parameter for selecting service Pods (mandatory);
       * Format — a label dictionary;
-    * `podNamespace` — the namespace where kube-controller-manager pods are running (mandatory);
+    * `podNamespace` — the namespace where kube-controller-manager Pods are running (mandatory);
     * `authenticationMethod` —  the authentication method (mandatory);
       * Possible values:
         * `None` — do not authenticate;
@@ -87,15 +87,15 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
   * `metricsPath` — path to metrics (`/metrics` by default);
   * `accessType` — specifies the way Prometheus accesses metrics;
     * Possible values:
-      * `Pod` — kube-scheduler runs in a pod, and the metrics port is accessible in the cluster via Kubernetes tools. (See the additional parameters in the `pod` section below);
+      * `Pod` — kube-scheduler runs in a Pod, and the metrics port is accessible in the cluster via Kubernetes tools. (See the additional parameters in the `pod` section below);
       * `ThroughNode` — kube-scheduler runs on one or several nodes and is accessible from these nodes on the local port. In this case, a proxy runs on nodes to connect to Prometheus. (See the additional parameters in the `throughNode` section below);
     * The default value is `ThroughNode`;
   * `pod` — additional parameters for the `Pod` accessType;
     * `port` — the port at which metrics are exposed (mandatory);
     * `scheme` — the HTTP scheme the metrics http-port uses;
-    * `podSelector` — a parameter to select service pods (mandatory);
+    * `podSelector` — a parameter to select service Pods (mandatory);
       * Format — a label dictionary;
-    * `podNamespace` — namespace where kube-scheduler pods are running (mandatory);
+    * `podNamespace` — namespace where kube-scheduler Pods are running (mandatory);
     * `authenticationMethod` —  the authentication method (mandatory);
       * Possible values:
         * `None` — do not authenticate;
@@ -135,9 +135,9 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
     * `port` — the port at which metrics are exposed (mandatory);
     * `scheme` — the HTTP scheme the metrics http-port uses;
       * The default scheme is `https`;
-    * `podSelector` — a parameter to select service pods (mandatory);
+    * `podSelector` — a parameter to select service Pods (mandatory);
       * Format — a label dictionary;
-    * `podNamespace` — the namespace where kube-etcd pods are running (mandatory);
+    * `podNamespace` — the namespace where kube-etcd Pods are running (mandatory);
     * `authenticationMethod` — the authentication method;
       * Possible values:
         * `Certificate` — specify a custom certificate. (See the `certificateSecret` parameter below).
@@ -191,9 +191,9 @@ The `monitoring-kubernetes-control-plane` module is configured automatically and
       * `port` — the port at which metrics are exposed (mandatory);
       * `scheme` — the HTTP scheme the metrics http-port uses;
         * The default scheme is `https`;
-      * `podSelector` — a parameter to select service pods (mandatory);
+      * `podSelector` — a parameter to select service Pods (mandatory);
         * Format — a label dictionary;
-      * `podNamespace` — a namespace where additional kube-etcd pods are running. A mandatory parameter;
+      * `podNamespace` — a namespace where additional kube-etcd Pods are running (mandatory);
       * `authenticationMethod` — the authentication method;
         * Possible values:
           * `Certificate` — specify a custom certificate. (See the `certificateSecret` parameter below);

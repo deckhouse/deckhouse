@@ -41,7 +41,7 @@ spec:
 ```
 ## Пример для AWS (Network Load Balancer), Ingress-узлы находятся не во всех зонах
 
-В таком случае нужно указать аннотацию, в которой перечислены все идентификаторы подсетей, где необходимо создать Listener'ы. Подсети должны соответствовать зонам, где находятся Ingress ноды.
+В таком случае нужно указать аннотацию, в которой перечислены все идентификаторы подсетей, где необходимо создать Listener'ы. Подсети должны соответствовать зонам, где находятся Ingress-узлы.
 Список текущих подсетей, которые используются для конкретной инсталляции можно получить так: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
 
 **Внимание!** Добавление аннотации на существующий Service не сработает, необходимо будет его пересоздать.
@@ -71,7 +71,7 @@ spec:
   inlet: "LoadBalancer"
 ```
 
-## Пример для Openstack
+## Пример для OpenStack
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

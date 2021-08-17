@@ -13,4 +13,4 @@ It safely collects metrics and provides a basic set of rules for monitoring of:
 - The state of time synchronization between nodes;
 - The cases of the prolonged CPU stealing;
 - The state of the Conntrack table on nodes;
-- The pods that report an incorrect state (due to kubelet-related or other issues), etc.
+- The Pods that report an incorrect state (due to kubelet-related or other issues), etc.

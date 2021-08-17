@@ -50,16 +50,16 @@ spec:
     resource:
       name: cpu
       target:
-        # скейлимся, когда среднее использование CPU всех подов в scaleTargetRef превышает заданное значение
+        # скейлимся, когда среднее использование CPU всех Pod'ов в scaleTargetRef превышает заданное значение
         type: Utilization      # для метрики с type: Resource доступен только type: Utilization
-        averageUtilization: 70 # если все поды из деплоймента реквестировали по 1 ядру и в среднем съели более 700m, — скейлимся
+        averageUtilization: 70 # если все Pod'ы из деплоймента реквестировали по 1 ядру и в среднем съели более 700m, — скейлимся
   - type: Resource
     resource:
       name: memory
       target:
-        # скейлимся, когда среднее использование Memory всех подов в scaleTargetRef превышает заданное значение
+        # скейлимся, когда среднее использование Memory всех Pod'ов в scaleTargetRef превышает заданное значение
         type: Utilization
-        averageUtilization: 80 # если поды реквестировали по 1GB памяти и в среднем съели более 800MB, — скейлимся
+        averageUtilization: 80 # если Pod'ы реквестировали по 1GB памяти и в среднем съели более 800MB, — скейлимся
 ```
 {% endraw %}
 
@@ -120,7 +120,7 @@ spec:
 ```
 {% endraw %}
 
-C `Pods` сложнее — из ресурса, который скейлит HPA, будут извлечены все pod-ы и по каждому будет собраны метрики с соответствующими лейблами (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...). Из этих метрик HPA посчитает среднее и использует для скейлинга. См. [пример ниже](#примеры-с-использованием-кастомных-метрик-типа-pods).
+C `Pods` сложнее — из ресурса, который скейлит HPA, будут извлечены все Pod'ы и по каждому будет собраны метрики с соответствующими лейблами (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...). Из этих метрик HPA посчитает среднее и использует для скейлинга. См. [пример ниже](#примеры-с-использованием-кастомных-метрик-типа-pods).
 
 ## Пример использования кастомных метрик с размером очереди RabbitMQ
 
@@ -189,13 +189,13 @@ spec:
   minReplicas: 1
   maxReplicas: 5
   metrics:
-  - type: Pods # Просим HPA самому обойти все поды нашего деплоймента и собрать с них метрики.
+  - type: Pods # Просим HPA самому обойти все Pod'ы нашего Deployment'а и собрать с них метрики.
     pods:      # Указывать describedObject в отличие от type: Object не надо.
       metric:
         name: php-fpm-active-workers # Кастомная метрика, которую мы зарегистрировали с помощью CR PodMetric.
       target:
         type: AverageValue # Для метрик с type: Pods можно использовать только AverageValue.
-        averageValue: 5   # Если среднее значение метрики у всех подов деплоя myworker больше 5, то скейлимся.
+        averageValue: 5   # Если среднее значение метрики у всех Pod'ов Deployment'а myworker больше 5, то скейлимся.
 ```
 {% endraw %}
 
@@ -239,7 +239,7 @@ spec:
 
 ### Регистрируем внешние метрики в Kubernetes API
 
-Prometheus-metrics-adapter поддерживает механизм `externalRules`, с помощью которого можно определять кастомные PromQL-запросы и регистрировать их как метрики. В наших инсталляциях мы добавили универсальное правило, которое позволяет создавать свои метрики без внесения настроек в prometheus-metrics-adapter — "любая метрика в Prometheus с именем `kube_adapter_metric_<name>` будет зарегистрирована в API под именем `<name>`". То есть, остаётся либо написать exporter, который будет экспортировать подобную метрику, либо создать [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) в Prometheus, которое будет аггрегировать вашу метрику на основе других метрик.
+Prometheus-metrics-adapter поддерживает механизм `externalRules`, с помощью которого можно определять кастомные PromQL-запросы и регистрировать их как метрики. В наших инсталляциях мы добавили универсальное правило, которое позволяет создавать свои метрики без внесения настроек в prometheus-metrics-adapter — "любая метрика в Prometheus с именем `kube_adapter_metric_<name>` будет зарегистрирована в API под именем `<name>`". То есть, остаётся либо написать exporter, который будет экспортировать подобную метрику, либо создать [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) в Prometheus, которое будет агрегировать вашу метрику на основе других метрик.
 
 Пример PrometheusRule:
 

@@ -23,7 +23,7 @@ title: "Модуль user-authn: примеры конфигурации"
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
 metadata:
-  name: my-cool-app # поды аутентификатора будут иметь префикс my-cool-app
+  name: my-cool-app # Pod'ы аутентификатора будут иметь префикс my-cool-app
   namespace: my-cool-namespace # namespace, в котором будет развернут dex-authenticator
 spec:
   applicationDomain: "my-app.kube.my-domain.com" # домен, на котором висит ваше приложение
@@ -310,7 +310,7 @@ spec:
 * --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
 * --oidc-username-claim=email
 
-В случае использования самоподписанных сертификатов для dex будет добавлен ещё один аргумент, а так же в под с apiserver будет смонтирован файл с CA:
+В случае использования самоподписанных сертификатов для dex будет добавлен ещё один аргумент, а также в Pod с apiserver будет смонтирован файл с CA:
 
 * --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
 {% endofftopic %}

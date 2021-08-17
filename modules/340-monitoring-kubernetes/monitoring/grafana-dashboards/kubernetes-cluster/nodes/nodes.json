@@ -561,7 +561,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображается нагрузка в % от количества ядер на ноде.",
+      "description": "На данном графике отображается нагрузка в % от количества ядер на узле.",
       "editable": true,
       "error": false,
       "fill": 1,
