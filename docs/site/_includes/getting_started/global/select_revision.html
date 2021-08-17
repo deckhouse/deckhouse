@@ -2,6 +2,8 @@
 <script type="text/javascript" src='{{ assets["getting-started-install.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
+<span style="display: none" id="platform_code">{{page.platform_code}}</span>
+
 {% unless page.ee_only == true -%}
 {% if page.lang == 'ru' %}
 #### Выберите редакцию Deckhouse Platform
