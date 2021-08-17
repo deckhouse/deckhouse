@@ -116,7 +116,7 @@ func migrateControllerAfterHelm(input *go_hook.HookInput) (err error) {
 			continue
 		}
 
-		err := input.ObjectPatcher.DeleteObject("apps/v1", "DaemonSet", namespace, "controller-"+daemonset.Name, "")
+		err := input.ObjectPatcher().DeleteObject("apps/v1", "DaemonSet", namespace, "controller-"+daemonset.Name, "")
 		if err != nil {
 			return err
 		}

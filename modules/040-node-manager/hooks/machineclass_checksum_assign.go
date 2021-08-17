@@ -25,6 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -100,19 +101,26 @@ func assignMachineClassChecksum(input *go_hook.HookInput) error {
 
 	// Update the checksums in machine deployments
 	const (
-		apiVersion  = "machine.sapcloud.io/v1alpha1"
-		kind        = "MachineDeployment"
-		namespace   = "d8-cloud-instance-manager"
-		subresource = ""
+		apiVersion = "machine.sapcloud.io/v1alpha1"
+		kind       = "MachineDeployment"
+		namespace  = "d8-cloud-instance-manager"
 	)
 
-	const machineClassChecksumMergePatchTemplate = `{ "spec": { "template": { "metadata" : { "annotations" : { "checksum/machine-class": %q }}}}}`
 	for _, md := range mdsToUpdate {
-		patch := []byte(fmt.Sprintf(machineClassChecksumMergePatchTemplate, md.Checksum))
-		err := input.ObjectPatcher.MergePatchObject(patch, apiVersion, kind, namespace, md.Name, subresource)
-		if err != nil {
-			return fmt.Errorf("cannot patch MachineDeployment %q: %v", md.Name, err)
+		patch := map[string]interface{}{
+			"spec": map[string]interface{}{
+				"template": map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]string{
+							"checksum/machine-class": md.Checksum,
+						},
+					},
+				},
+			},
 		}
+		input.PatchCollector.MergePatch(patch,
+			apiVersion, kind, namespace, md.Name,
+			object_patch.IgnoreMissingObject())
 	}
 
 	return nil
@@ -145,6 +153,10 @@ func getChecksumTemplate(values *go_hook.PatchableValues) ([]byte, error) {
 		return nil, fmt.Errorf("cloud type not set")
 	}
 
+	return readChecksumTemplate(cloudType)
+}
+
+func readChecksumTemplate(cloudType string) ([]byte, error) {
 	path := getChecksumTemplatePath(cloudType)
 	content, err := ioutil.ReadFile(path)
 	if err != nil {

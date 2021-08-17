@@ -152,7 +152,7 @@ func handleSetReplicas(input *go_hook.HookInput) error {
 		}
 		data, _ := json.Marshal(patch)
 
-		err := input.ObjectPatcher.MergePatchObject(data, "machine.sapcloud.io/v1alpha1", "MachineDeployment", "d8-cloud-instance-manager", md.Name, "")
+		err := input.ObjectPatcher().MergePatchObject(data, "machine.sapcloud.io/v1alpha1", "MachineDeployment", "d8-cloud-instance-manager", md.Name, "")
 		if err != nil {
 			return err
 		}

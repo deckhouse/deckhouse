@@ -106,7 +106,7 @@ func migrateControllerBeforeHelm(input *go_hook.HookInput, dc dependency.Contain
 		}
 		data, _ := json.Marshal(patch)
 
-		err := input.ObjectPatcher.MergePatchObject(data, "deckhouse.io/v1", "IngressNginxController", "", controller.Name, "")
+		err := input.ObjectPatcher().MergePatchObject(data, "deckhouse.io/v1", "IngressNginxController", "", controller.Name, "")
 		if err != nil {
 			return fmt.Errorf("patch IngressNginxController %q failed: %v", controller.Name, err)
 		}

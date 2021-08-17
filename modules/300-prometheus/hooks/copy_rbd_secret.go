@@ -154,7 +154,7 @@ func copyRBDSecretHandler(input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
-		err = input.ObjectPatcher.CreateObject(
+		err = input.ObjectPatcher().CreateObject(
 			&unstructured.Unstructured{Object: unst},
 			"",
 		)

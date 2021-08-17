@@ -137,7 +137,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 
 		}
 
-		err = input.ObjectPatcher.MergePatchObject(
+		err = input.ObjectPatcher().MergePatchObject(
 			/*patch*/ jsonMergePatch,
 			/*apiVersion*/ "deckhouse.io/v1",
 			/*kind*/ "User",

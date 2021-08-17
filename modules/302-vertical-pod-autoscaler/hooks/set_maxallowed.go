@@ -183,7 +183,7 @@ func updateVpaResources(input *go_hook.HookInput) error {
 		}
 		v := snapshot.(*VPA)
 
-		err = input.ObjectPatcher.FilterObject(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		err = input.ObjectPatcher().FilterObject(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var (
 				recommendationsMilliCPU int64
 				recommendationsMemory   int64

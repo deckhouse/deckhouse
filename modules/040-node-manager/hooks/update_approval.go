@@ -197,7 +197,7 @@ ngLoop:
 			continue
 		}
 
-		err := input.ObjectPatcher.MergePatchObject(approvedPatch, "v1", "Node", "", approvedNodeName, "")
+		err := input.ObjectPatcher().MergePatchObject(approvedPatch, "v1", "Node", "", approvedNodeName, "")
 		if err != nil {
 			return err
 		}
@@ -281,7 +281,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		}
 
 		patchData, _ := json.Marshal(patch)
-		err := input.ObjectPatcher.MergePatchObject(patchData, "v1", "Node", "", node.Name, "")
+		err := input.ObjectPatcher().MergePatchObject(patchData, "v1", "Node", "", node.Name, "")
 		if err != nil {
 			return err
 		}
@@ -335,7 +335,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 			}
 		}
 		data, _ := json.Marshal(patch)
-		err := input.ObjectPatcher.MergePatchObject(data, "v1", "Node", "", node.Name, "")
+		err := input.ObjectPatcher().MergePatchObject(data, "v1", "Node", "", node.Name, "")
 		if err != nil {
 			return err
 		}

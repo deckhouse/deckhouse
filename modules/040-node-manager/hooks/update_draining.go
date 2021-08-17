@@ -114,7 +114,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
 			continue
 		}
-		err = input.ObjectPatcher.MergePatchObject(drainAnnotationsPatch, "v1", "Node", "", drainedNode.Name, "")
+		err = input.ObjectPatcher().MergePatchObject(drainAnnotationsPatch, "v1", "Node", "", drainedNode.Name, "")
 		if err != nil {
 			input.LogEntry.Errorf("node drain patch failed: %s", err)
 			continue

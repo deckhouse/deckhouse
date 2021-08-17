@@ -66,7 +66,7 @@ func removeProblemRoleBinding(input *go_hook.HookInput) error {
 	roleBindingTypeSnap := input.Snapshots["log_shipper_rolebinding"]
 	if len(roleBindingTypeSnap) > 0 {
 		if roleBindingTypeSnap[0].(bool) {
-			err := input.ObjectPatcher.DeleteObject("rbac.authorization.k8s.io/v1", "RoleBinding", "d8-log-shipper", "log-shipper", "")
+			err := input.ObjectPatcher().DeleteObject("rbac.authorization.k8s.io/v1", "RoleBinding", "d8-log-shipper", "log-shipper", "")
 			if err != nil {
 				return err
 			}

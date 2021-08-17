@@ -168,7 +168,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 			continue
 		}
 		if node.IsApproved {
-			err := input.ObjectPatcher.MergePatchObject(
+			err := input.ObjectPatcher().MergePatchObject(
 				removeApprovedPatch,
 				"v1",
 				"Node",
@@ -194,7 +194,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	for _, node := range nodeMap {
 		// Approve one node
 		if node.IsWaitingForApproval && node.IsReady && !node.IsUnschedulable {
-			err := input.ObjectPatcher.MergePatchObject(approvedPatch, "v1", "Node", "", node.Name, "")
+			err := input.ObjectPatcher().MergePatchObject(approvedPatch, "v1", "Node", "", node.Name, "")
 			if err != nil {
 				return err
 			}
