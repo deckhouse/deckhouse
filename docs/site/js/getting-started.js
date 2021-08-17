@@ -58,6 +58,9 @@ function config_update() {
       if ( ['production','ha'].includes(preset)) {
           update_parameter('dhctl-preset', 'replicas', '1', 3  );
           update_parameter('dhctl-preset', '', 'replicas: 1', 'replicas: 3',  '[config-yml]');
+          if ($('#platform_code') && $('#platform_code').text() === 'yandex') {
+              magic4yandex();
+          }
       }
    }
    update_license_parameters();
@@ -193,4 +196,20 @@ function set_license_token_cookie() {
         let token = urlParams.get('license-token');
         $.cookie('license-token', token, {path: '/' });
     }
+}
+
+function magic4yandex() {
+    $('code span').filter(function () {
+        return this.innerText === 'externalIPAddresses';
+    }).each(function (index) {
+        $(this).next().append("\n    <span class=\"pi\">-</span> <span class=\"s2\">\"</span><span class=\"s\">Auto\"</span>");
+        $(this).next().append("\n    <span class=\"pi\">-</span> <span class=\"s2\">\"</span><span class=\"s\">Auto\"</span>");
+    })
+
+    $('[config-yml]').each(function (index) {
+        let content = ($(this)[0]) ? $(this)[0].textContent : null ;
+        if (content && content.length > 0) {
+            $(this)[0].textContent = content.replace("    externalIPAddresses:\n    - \"Auto\"\n", "    externalIPAddresses:\n    - \"Auto\"\n    - \"Auto\"\n    - \"Auto\"\n");
+        }
+    });
 }
