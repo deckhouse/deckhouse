@@ -58,7 +58,7 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["secrets", "configmaps"]
-  verbs: ["get", "list", "patch", "update", "create"]
+  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -83,10 +83,10 @@ metadata:
 rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodegroups"]
-  verbs: ["get", "list", "watch"]
+  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
 - apiGroups: [""]
   resources: ["nodes"]
-  verbs: ["get", "list", "watch"]
+  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["get", "list"]
