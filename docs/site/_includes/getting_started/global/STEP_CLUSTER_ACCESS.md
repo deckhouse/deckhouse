@@ -81,9 +81,11 @@ export BALANCER_IP="<PUT_BALANCER_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $BALANCER_IP dashboard.example.com
 $BALANCER_IP deckhouse.example.com
-$BALANCER_IP kubeconfig.example.com
-$BALANCER_IP grafana.example.com
 $BALANCER_IP dex.example.com
+$BALANCER_IP grafana.example.com
+$BALANCER_IP kubeconfig.example.com
+$BALANCER_IP status.example.com
+$BALANCER_IP upmeter.example.com
 EOF
 "
 ```

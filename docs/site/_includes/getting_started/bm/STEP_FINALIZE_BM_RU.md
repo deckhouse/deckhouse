@@ -34,9 +34,11 @@ export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP deckhouse.example.com
-$PUBLIC_IP kubeconfig.example.com
-$PUBLIC_IP grafana.example.com
 $PUBLIC_IP dex.example.com
+$PUBLIC_IP grafana.example.com
+$PUBLIC_IP kubeconfig.example.com
+$PUBLIC_IP status.example.com
+$PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
