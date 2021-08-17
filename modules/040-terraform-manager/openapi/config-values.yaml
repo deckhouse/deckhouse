@@ -1,0 +1,41 @@
+type: object
+properties:
+  autoConvergerEnabled:
+    type: boolean
+    default: true
+    description: |
+      Disables auto-applying of the terraform state.
+  autoConvergerPeriod:
+    type: string
+    default: "1h"
+    pattern: '^\d+(?:m|h)$'
+    description: |
+      After what period of time check the terraform state and apply it.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
