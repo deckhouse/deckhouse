@@ -71,13 +71,8 @@ func generateSelfSignedCA(input *go_hook.HookInput) error {
 	publishAPIMode := input.Values.Get("userAuthn.publishAPI.https.mode").String()
 
 	if !publishAPIEnabled && publishAPIMode != "SelfSigned" {
-		if input.Values.Exists(certPath) {
-			input.Values.Remove(certPath)
-		}
-
-		if input.Values.Exists(keyPath) {
-			input.Values.Remove(keyPath)
-		}
+		input.Values.Remove(certPath)
+		input.Values.Remove(keyPath)
 		return nil
 	}
 
