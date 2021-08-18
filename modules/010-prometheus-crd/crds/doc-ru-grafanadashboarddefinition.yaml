@@ -1,44 +1,17 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: grafanadashboarddefinitions.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: prometheus
-    app: grafana
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: grafanadashboarddefinitions
-    singular: grafanadashboarddefinition
-    kind: GrafanaDashboardDefinition
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema: &schema
         openAPIV3Schema:
-          type: object
           description: |
             Ресурс хранения и управления Dashboard в Grafana.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - folder
-                - definition
               properties:
                 folder:
-                  type: string
                   description: |
                     В какую папку попадёт данный dashboard. Если такой папки нет, она будет создана.
-                  example: 'My Folder'
                 definition:
-                  type: string
                   description: |
                     JSON-манифест dashboard.
 
@@ -46,10 +19,7 @@ spec:
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.folder
           name: Folder
-          description: 'Folder in Grafana.'
-          type: string
+          description: 'Папка в Grafana.'
     - name: v1
-      served: true
-      storage: false
       schema: *schema
       additionalPrinterColumns: *additionalPrinterColumns

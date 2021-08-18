@@ -62,16 +62,15 @@ spec:
                     User session will be kept for specified amount of time even if user will not log in.
 
                     Specified with  s, m or h suffix.
-
-                    **Default:** `168h` (7 days).
                   example: '24h'
+                  x-doc-default: '168h'
                 allowedGroups:
                   type: array
                   description: |
                     Groups that the user should be in to authenticate successfully.
-                    Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).'
 
-                    All groups are allowed **by default**.
+                    Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).
+                  x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
                 whitelistSourceRanges:
@@ -126,6 +125,7 @@ spec:
                       tolerationSeconds:
                         description: |
                           TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint.
+
                           By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
                         format: int64
                         type: integer

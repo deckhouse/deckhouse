@@ -1,74 +1,36 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: users.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: user-authn
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: users
-    singular: user
-    kind: User
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema: &schema
         openAPIV3Schema:
-          type: object
           description: |
             Содержит информацию о статическом пользователе.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - email
-                - password
               properties:
                 email:
-                  type: string
                   description: |
                     E-mail пользователя.
 
                     **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
-                  x-description: 'Static user email.'
-                  example: 'user@domain.com'
                 password:
-                  type: string
                   description: |
                     Хэшированный пароль пользователя.
-                    * Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`.
-                    * Или с помощью [онлайн-сервиса](https://bcrypt-generator.com/).
-                  x-description: 'Hashed user password.'
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
+
+                    Для получения хэшированного пароля можно воспользоваться командой `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Или воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
                 userID:
-                  type: string
                   description: |
                     Уникальное имя (ID) пользователя.
-                  x-description: 'Unique issuer user ID. It equals to .metadata.name by default.'
-                  example: '08a8684b-db88-4b73-90a9-3cd1661f5466'
                 groups:
-                  type: array
                   description: |
                     Список групп, в которых у пользователя есть членство.
-                  x-description: 'Static user groups.'
-                  items:
-                    type: string
                 ttl:
-                  type: string
-                  pattern: '^\d+(?:m|h)$'
                   description: |
                     Время жизни учетной записи пользователя (TTL).
-                    * Задается в виде строки с указанием time unit: 30m | 24h.
-                    * Указать TTL можно только 1 раз. При повторном изменении TTL, дата `expireAt` не обновляется.
-                  x-description: 'Static user TTL.'
-                  example: '24h'
+
+                    Задается в виде строки с указанием time unit: 30m | 24h.
+
+                    Указать TTL можно только 1 раз. При повторном изменении TTL, дата `expireAt` не обновляется.
             status:
               type: object
               properties:
@@ -79,22 +41,5 @@ spec:
                     * Появляется только при заполнении поля `.spec.ttl`.
                     * При достижении этой даты учетная запись будет удалена.
                     * Синхронизируется раз в 5 минут. Возможен временной лаг между датой в этом поле и датой фактического удаления пользователя.
-      subresources: &subresources
-        status: {}
-      additionalPrinterColumns: &additionalPrinterColumns
-        - jsonPath: .spec.email
-          name: Email
-          type: string
-        - jsonPath: .spec.groups
-          name: Groups
-          type: string
-        - jsonPath: .status.expireAt
-          name: Expire_at
-          type: string
-          format: date-time
     - name: v1
-      served: true
-      storage: false
       schema: *schema
-      subresources: *subresources
-      additionalPrinterColumns: *additionalPrinterColumns

@@ -176,11 +176,11 @@ module Jekyll
                         elsif exampleObject.is_a?(Array) || exampleObject.is_a?(Hash)
                             '`' + exampleObject.map { |e| "`#{e.to_json}`" }.join('`, `') + '`'
                         else
-                            if attributes['type'] == 'string'
-                                "`\"#{exampleObject}\"`"
-                            else
-                              if exampleObject =~ /\`\`\`|\n/
+                            if exampleObject =~ /\`\`\`|\n/
                                 "\n\n#{exampleObject}"
+                            else
+                              if attributes['type'] == 'string'
+                                "`\"#{exampleObject}\"`"
                               else
                                 "`#{exampleObject}`"
                               end
