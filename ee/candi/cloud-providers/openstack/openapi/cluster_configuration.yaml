@@ -323,6 +323,7 @@ apiVersions:
         properties:
           internalSubnetName:
             type: string
+            description: The name of the subnet in which the cluster nodes will run.
           podNetworkMode:
             description: |
               Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
@@ -350,20 +351,34 @@ apiVersions:
         properties:
           authURL:
             type: string
+            description: An OpenStack Identity API URL.
           caCert:
             type: string
+            description: Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate.
           domainName:
             type: string
+            description: The domain name.
           tenantName:
             type: string
+            description: |
+              The project name.
+
+              Cannot be used together with `tenantID`.
           tenantID:
             type: string
+            description: |
+              The project id.
+
+              Cannot be used together with `tenantName`.
           username:
             type: string
+            description: The name of the user that has full project privileges.
           password:
             type: string
+            description: The user's password.
           region:
             type: string
+            description: The OpenStack region where the cluster will be deployed.
         oneOf:
         - required: [authURL, domainName, tenantName, username, password, region]
         - required: [authURL, domainName, tenantID, username, password, region]

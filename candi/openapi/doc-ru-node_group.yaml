@@ -1,24 +1,10 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
-metadata:
-  name: nodegroups.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: node-manager
 spec:
   group: deckhouse.io
   scope: Cluster
-  preserveUnknownFields: false
-  names:
-    plural: nodegroups
-    singular: nodegroup
-    kind: NodeGroup
-    shortNames:
-      - ng
   versions:
     - name: v1alpha1
-      served: true
-      storage: false
       additionalPrinterColumns: &additionalPrinterColumns
         - name: Type
           type: string
@@ -75,57 +61,39 @@ spec:
                 ready:
                   description: "Number of ready Kubernetes nodes in the group."
                 nodes:
-                  type: integer
                   description: "Number of Kubernetes nodes (in any state) in the group."
                 instances:
-                  type: integer
                   description: "Number of instances (in any state) in the group."
                 desired:
-                  type: integer
                   description: "Number of desired machines in the group."
                 min:
-                  type: integer
                   description: "Minimal amount of instances in the group."
                 max:
-                  type: integer
                   description: "Maximum amount of instances in the group."
                 upToDate:
-                  type: integer
                   description: "Number of up-to-date nodes in the group."
                 standby:
-                  type: integer
                   description: "Number of overprovisioned instances in the group."
                 error:
-                  type: string
                   description: "Error message about possible problems with the group handling."
                 lastMachineFailures:
-                  type: array
                   items:
-                    type: object
                     properties:
                       name:
-                        type: string
                         description: "Machine's name."
                       providerID:
-                        type: string
                         description: "Machine's ProviderID."
                       ownerRef:
-                        type: string
                         description: "Machine owner's name."
                       lastOperation:
-                        type: object
                         properties:
                           description:
-                            type: string
                             description: "Last operation's description."
                           lastUpdateTime:
-                            type: string
                             description: "Timestamp of last status update for operation."
                           state:
-                            type: string
                             description: "Machine's operation state."
                           type:
-                            type: string
                             description: "Type of operation."
                 conditionSummary:
                   properties:
@@ -134,9 +102,6 @@ spec:
                     ready:
                       description: "Status of the condition summary."
             spec:
-              type: object
-              required:
-                - nodeType
               properties:
                 nodeType: &nodeType
                   description: |
@@ -165,10 +130,6 @@ spec:
                         Если не указан, используется значение `defaultCRI` из первичной конфигурации кластера (параметр `cluster-configuration.yaml` секрета `d8-cluster-configuration` в namespace `kube-system`), которая создается при инсталляции.
 
                         **Необязательный параметр.**
-                      enum:
-                        - "Docker"
-                        - "Containerd"
-                        - "NotManaged"
                     containerd: &criContainerd
                       description: |
                         Параметры работы Containerd.
@@ -189,13 +150,6 @@ spec:
                         Переопределение перечня зон, в которых создаются инстансы.
 
                         Значение по умолчанию зависит от выбранного облачного провайдера и обычно соответствует всем зонам используемого региона.
-
-                        Пример:
-                        ```yaml
-                        - Helsinki
-                        - Espoo
-                        - Tampere
-                        ```
                     minPerZone:
                       description: |
                         Минимальное количество инстансов в зоне. Проставляется в объект MachineDeployment и в качестве нижней границы в cluster-autoscaler.
@@ -244,52 +198,18 @@ spec:
                 nodeTemplate: &nodeTemplate
                   description: |
                     Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
-
-                    Пример:
-                    ```yaml
-                    labels:
-                      environment: production
-                      app: warp-drive-ai
-                    annotations:
-                      ai.fleet.com/discombobulate: "true"
-                    taints:
-                    - effect: NoExecute
-                      key: ship-class
-                      value: frigate
-                    ```
                   properties:
                     labels:
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.labels`.
-
-                        Пример:
-                        ```yaml
-                        labels:
-                          environment: production
-                          app: warp-drive-ai
-                        ```
                     annotations:
                       description: |
                         Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta) `metadata.annotations`.
-
-                        Пример:
-                        ```yaml
-                        annotations:
-                          ai.fleet.com/discombobulate: "true"
-                        ```
                     taints:
                       description: |
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core).
 
                         **Внимание!** Доступны только поля `effect`, `key`, `value`.
-
-                        Пример:
-                        ```yaml
-                        taints:
-                        - effect: NoExecute
-                          key: ship-class
-                          value: frigate
-                        ```
                 static:
                   description: Параметры статического узла.
                   properties:
@@ -298,12 +218,6 @@ spec:
                 chaos: &chaos
                   description: |
                     Настройки chaos monkey.
-
-                    Пример:
-                    ```yaml
-                    mode: DrainAndReboot
-                    period: 24h
-                    ```
                   properties:
                     mode:
                       description: |
@@ -347,7 +261,6 @@ spec:
                       description: |
                         Максимальное количество потоков одновременного скачивания docker образов.
                     manage:
-                      type: boolean
                       description: |
                         Автоматическое управление версией и параметрами Docker.
                 kubelet: &kubelet
@@ -361,8 +274,6 @@ spec:
                       description: |
                         Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
     - name: v1alpha2
-      served: true
-      storage: true
       additionalPrinterColumns: *additionalPrinterColumns
       schema:
         openAPIV3Schema:
@@ -396,24 +307,14 @@ spec:
                 disruptions: *disruptions
                 kubelet: *kubelet
     - name: v1
-      served: true
-      storage: false
       additionalPrinterColumns: *additionalPrinterColumns
-      subresources:
-        status: { }
       schema:
         openAPIV3Schema:
-          type: object
           description: |
             Describes the runtime parameters of the node group.
-          required:
-            - spec
           properties:
             status: *status
             spec:
-              type: object
-              required:
-                - nodeType
               properties:
                 nodeType:
                   description: |
@@ -445,25 +346,9 @@ spec:
                       description: Параметры настройки Docker.
                       properties:
                         maxConcurrentDownloads:
-                          type: integer
                           description: Максимальное количество потоков одновременного скачивания docker образов.
-                          x-doc-default: 3
                         manage:
-                          type: boolean
-                          x-doc-default: true
                           description: Автоматическое управление версией и параметрами Docker.
-                  oneOf:
-                    - properties:
-                        type:
-                          enum: [ "Docker" ]
-                        docker: { }
-                    - properties:
-                        type:
-                          enum: [ "Containerd" ]
-                        containerd: { }
-                    - properties:
-                        type:
-                          enum: [ "NotManaged" ]
                 cloudInstances: *cloudInstances
                 nodeTemplate: *nodeTemplate
                 chaos: *chaos

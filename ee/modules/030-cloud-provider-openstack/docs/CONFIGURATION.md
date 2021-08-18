@@ -12,18 +12,89 @@ The module settings are set automatically based on the placement strategy chosen
 
 If you need to configure a module because, say, you have a bare metal cluster and you need to enable additional instances from vSphere, then refer to the [How to configure a Hybrid cluster in vSphere](faq.html#how-do-i-create-a-hybrid-cluster) section.
 
-If you have instances in the cluster that use External Networks (other than those set out in the placement strategy), you must pass them via the:
+> **Note (!)** that if the parameters provided below are changed (i.e., the parameters specified in the deckhouse ConfigMap), the **existing Machines are NOT redeployed** (new machines will be created with the updated parameters). Redeployment is only performed when `NodeGroup` and `OpenStackInstanceClass` parameters are changed. You can learn more in the [node-manager](../../modules/040-node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration). module's documentation.
+To authenticate using the `user-authn` module, you need to create a new `Generic` application in the project's Crowd.
 
-* `additionalExternalNetworkNames` — parameter. It specifies additional networks that can be connected to the VM. `cloud-controller-manager` uses them to insert `ExternalIP` to `.status.addresses` field in the Node API object;
+* `connection` — this section contains parameters required to connect to the cloud provider's API;
+  * `authURL` — an OpenStack Identity API URL.
+  * `caCert` — specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate;
+    * Format — a string; The certificate must have a PEM format.
+    * An optional parameter;
+  * `domainName` — the domain name;
+  * `tenantName` — the project name;
+    * Cannot be used together with `tenantID`;
+  * `tenantID` — the project id;
+    * Cannot be used together with `tenantName`;
+  * `username` — the name of the user that has full project privileges;
+  * `password` — the user's password;
+  * `region` — the OpenStack region where the cluster will be deployed;
+* `internalNetworkNames` — additional networks that are connected to the VM. cloud-controller-manager uses them to insert InternalIPs into `.status.addresses` in the Node API object.
+  * Format — an array of strings.
+
+  Example:
+  ```yaml
+  internalNetworkNames:
+  - KUBE-3
+  - devops-internal
+  ```
+
+* `externalNetworkNames` — additional networks that are connected to the VM. cloud-controller-manager uses them to insert ExternalIPs into `.status.addresses` in the Node API object;
+  * Format — an array of strings.
+
+  Example:
+  ```yaml
+  externalNetworkNames:
+  - KUBE-3
+  - devops-internal
+  ```
+
+* `additionalExternalNetworkNames` — specifies additional networks that can be connected to the VM. `cloud-controller-manager` uses them to insert `ExternalIP` to `.status.addresses` field in the Node API object;
   * Format — an array of strings;
 
-### An example
+  Example:
+  ```yaml
+  cloudProviderOpenstack: |
+    additionalExternalNetworkNames:
+    - some-bgp-network
+  ```
 
-```yaml
-cloudProviderOpenstack: |
-  additionalExternalNetworkNames:
-  - some-bgp-network
-```
+* `podNetworkMode` — sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions).
+  * Possible values:
+    * `DirectRouting` — means that there is a direct routing between the nodes;
+    * `DirectRoutingWithPortSecurityEnabled` - direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports;
+      * **Caution!** Make sure that the `username` can edit AllowedAddressPairs on Ports connected to the `internalNetworkName` network. Generally, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set;
+    * `VXLAN` — direct routing between the nodes isn't available; VXLAN should be used;
+  * An optional parameter; By default, it is set to `DirectRoutingWithPortSecurityEnabled`;
+* `instances` — instance parameters that are used when creating virtual machines:
+  * `sshKeyPairName` — the name of the OpenStack `keypair` resource; it is used for provisioning instances;
+    * A mandatory parameter;
+    * Format — a string;
+  * `securityGroups` — a list of securityGroups to assign to the provisioned instances. Defines firewall rules for the provisioned instances;
+    * An optional parameter;
+    * Format — an array of strings;
+  * `imageName` — the name of the image;
+    * An optional parameter;
+    * Format — a string;
+  * `mainNetwork` — the path to the network that will serve as the primary network (the default gateway) for connecting to the VM;
+    * An optional parameter;
+    * Format — a string;
+  * `additionalNetworks` — a list of networks to connect to the instance;
+    * An optional parameter;
+    * Format — an array of strings;
+* `loadBalancer` — Load Balancer parameters:
+  * `subnetID` — an ID of the Neutron subnet to create the load balancer virtual IP in;
+    * Format — a string;
+    * An optional parameter;
+  * `floatingNetworkID` — an ID of the external network for floating IPs;
+    * Format — a string;
+    * An optional parameter;
+* `zones` — the default list of zones for provisioning instances. Can be redefined for each NodeGroup individually;
+  * Format — an array of strings;
+* `tags` — a dictionary of tags that will be available on all provisioned instances;
+  * An optional parameter;
+  * Format — key-value pairs;
+
+If you have instances in the cluster that use External Networks (other than those set out in the placement strategy), you must pass them via the `additionalExternalNetworkNames` parameter.
 
 ## Storage
 

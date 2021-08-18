@@ -49,18 +49,31 @@ apiVersions:
             minimum: 1
             description: The number of master nodes to create.
           additionalNetworkTags:
+            description: |
+              The list of additional tags.
+
+              For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
             type: array
             items:
               type: string
           additionalLabels:
             type: object
+            description: |
+              Additional labels.
+
+              [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+            x-doc-example: |
+              ```yaml
+              project: cms-production
+              severity: critical
+              ```
             additionalProperties:
               type: string
           instanceClass:
             type: object
             required: [machineType, image]
             description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
-            properties:
+            properties: &instanceClassProperties
               machineType:
                 type: string
                 example: n1-standard-4
@@ -156,38 +169,7 @@ apiVersions:
               type: object
               description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
-                machineType:
-                  type: string
-                  description: |
-                    Machine type of GCP instance.
-
-                    **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
-
-                    GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
-                image:
-                  type: string
-                  description: |
-                    Image to use while provisioning GCP servers.
-
-                    You can find a list of images in the [documentation](https://cloud.google.com/compute/docs/images#ubuntu).
-
-                    **Caution!** Currently, only `Ubuntu 18.04`, `Ubuntu 20.04`, `Centos 7` are supported and tested to work.
-                diskSizeGb:
-                  description: Instance disk size in gigabytes.
-                  example: 20
-                  type: integer
-                disableExternalIP:
-                  type: boolean
-                  enum: [true, false]
-                  x-doc-default: true
-                  description: |
-                    Defines whether to disable external IP for an instance or not.
-
-                    This parameter is only available for the `Standard` layout.
-
-                    True means that nodes do not have public addresses and connect to the Internet over `CloudNAT`;
-
-                    False means that static public addresses are created for nodes, they are also used for One-to-one NAT.;
+                <<: *instanceClassProperties
             zones:
               type: array
               description: A limited set of zones in which nodes can be created.
@@ -232,7 +214,10 @@ apiVersions:
             description: The name of the region where instances will be provisioned.
           serviceAccountJSON:
             type: string
-            description: The `service account key` in the JSON format.
+            description: |
+              A key to the Service Account with Project Admin privileges (`service account key`) in the JSON format.
+
+              [How to create it](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) a `service account key`.
       zones:
         type: array
         description: A limited set of zones in which nodes can be created.

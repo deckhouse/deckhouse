@@ -26,33 +26,31 @@ IPv4 CIDR must be unique for each VPC.
 
 * Bootstrap the base-infrastructure of the cluster:
 
-```
-dhctl bootstrap-phase base-infra --config config
-```
+  ```shell
+  dhctl bootstrap-phase base-infra --config config
+  ```
 
 * Set up a peering connection using the instructions [above](#how-do-i-create-a-peering-connection-between-vpcs).
 * Continue installing the cluster, enter "y" when asked about the terraform cache:
 
-```
-dhctl bootstrap --config config --ssh-...
-
-```
+  ```shell
+  dhctl bootstrap --config config --ssh-...
+  ```
 
 ## How do I create a cluster in a new VPC and set up bastion host to access the nodes?
 
 * Bootstrap the base-infrastructure of the cluster:
 
-```
-dhctl bootstrap-phase base-infra --config config
-```
+  ```shell
+  dhctl bootstrap-phase base-infra --config config
+  ```
 
 * Manually set up the bastion host in the subnet <prefix>-public-0.
 * Continue installing the cluster, enter "y" when asked about the terraform cache:
 
-```
-dhctl bootstrap --config config --ssh-...
-
-```
+  ```shell
+  dhctl bootstrap --config config --ssh-...
+  ```
 
 ## Configuring a bastion host
 
@@ -65,4 +63,3 @@ There are two possible cases:
   * Create a basic infrastructure: `dhctl bootstrap-phase base-infra`;
   * Manually run a bastion in the <prefix>-public-0 subnet;
   * Continue the installation by specifying the bastion: `dhctl bootstrap --ssh-bastion...`
-
