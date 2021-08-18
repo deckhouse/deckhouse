@@ -192,3 +192,11 @@ In short, different scrapeIntervals are likely to cause the following complicati
 * Short intervals are more like profiling an app, and Prometheus isn't the best tool to do this in most cases.
 
 The most appropriate value for scrapeInterval is in the range of 10-60s.
+
+## How do I limit Prometheus resource consumption?
+
+To avoid situations when VPA requests more resources for Prometheus or Longterm Prometheus than those available on the corresponding node, you can explicitly limit VPA using [module parameters](configuration.html):
+- `vpa.longtermMaxCPU`
+- `vpa.longtermMaxMemory`
+- `vpa.maxCPU`
+- `vpa.maxMemory`
