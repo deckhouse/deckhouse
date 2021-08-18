@@ -2,7 +2,7 @@
 # [<en>] version of the Deckhouse API
 # [<ru>] секция с общими параметрами кластера (ClusterConfiguration)
 # [<ru>] используемая версия API Deckhouse Platform
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: ClusterConfiguration
@@ -35,7 +35,7 @@ clusterDomain: "cluster.local"
 # [<en>] version of the Deckhouse API
 # [<ru>] секция первичной инициализации кластера Deckhouse (InitConfiguration)
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: InitConfiguration
@@ -64,7 +64,7 @@ deckhouse:
 # [<en>] version of the Deckhouse API
 # [<ru>] секция, описывающая параметры облачного провайдера
 # [<ru>] используемая версия API Deckhouse
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: YandexClusterConfiguration
@@ -112,6 +112,8 @@ masterNodeGroup:
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     imageID: fd83klic6c8gfgi40urb
+    externalIPAddresses:
+    - "Auto"
 # [<en>] this subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex.Cloud zones
 # [<ru>] данная подсеть будет разделена на три равных части и использована для создания подсетей в трёх зонах Yandex.Cloud
 nodeNetworkCIDR: "10.241.32.0/20"
