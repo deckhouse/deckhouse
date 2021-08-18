@@ -9,6 +9,10 @@ spec:
       name: worker
     maxPerZone: 1
     minPerZone: 1
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    zones:
+    - ru-central1-a
   disruptions:
     approvalMode: Automatic
   nodeTemplate:

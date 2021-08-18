@@ -7,8 +7,13 @@ spec:
     classReference:
       kind: YandexInstanceClass
       name: system
-    maxPerZone: 2
-    minPerZone: 2
+    maxPerZone: 1
+    minPerZone: 1
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    zones:
+    - ru-central1-a
+    - ru-central1-b
   disruptions:
     approvalMode: Automatic
   nodeTemplate:
@@ -17,7 +22,7 @@ spec:
     taints:
       - effect: NoExecute
         key: dedicated.deckhouse.io
-        value: frontend
+        value: system
   nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
@@ -45,7 +50,7 @@ spec:
       kind: YandexInstanceClass
       name: frontend
     maxPerZone: 2
-    minPerZone: 3
+    minPerZone: 1
   disruptions:
     approvalMode: Automatic
   nodeTemplate:
@@ -79,6 +84,10 @@ spec:
       name: worker
     maxPerZone: 1
     minPerZone: 1
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    zones:
+    - ru-central1-c
   disruptions:
     approvalMode: Automatic
   nodeTemplate:

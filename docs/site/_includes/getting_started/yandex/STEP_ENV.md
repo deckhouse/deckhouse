@@ -24,3 +24,23 @@ Create a JSON file containing the parameters for user authorization in the cloud
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 {% endsnippetcut %}
+
+<div id="standard-layout-notes" style="display:none" markdown="1">
+**Caution!**
+
+When using the **Standard** resource layout, you must enable `Cloud NAT` within 3 minutes of creating the primary network resources for all subnets. Otherwise, the bootstrap process will fail.
+
+You can enable `Cloud NAT` manually using the WEB interface.
+
+Example:
+
+![Enabling NAT](/ru/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat.png)
+</div>
+
+<script>
+$(document).ready(function() {
+    if (sessionStorage.getItem('dhctl-layout').toLowerCase() === 'standard') {
+        $('#standard-layout-notes').css('display', 'block');
+    }
+})
+</script>

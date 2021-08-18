@@ -24,3 +24,23 @@ yc resource-manager folder add-access-binding <foldername> --role editor --subje
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
 {% endsnippetcut %}
+
+<div id="standard-layout-notes" style="display:none" markdown="1">
+**Внимание!**
+
+При использовании схемы расположения ресурсов **Standard**, в течение 3х минут после создания базовых сетевых ресурсов для всех подсетей необходимо включить `Cloud NAT`. Если этого не сделать, то процесс bootstrap'а **не сможет завершиться успешно**.
+
+Включить Cloud NAT можно вручную через WEB-интерфейс.
+
+Пример:
+
+![Включение NAT](/ru/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat_ru.png)
+</div>
+
+<script>
+$(document).ready(function() {
+    if (sessionStorage.getItem('dhctl-layout').toLowerCase() === 'standard') {
+        $('#standard-layout-notes').css('display', 'block');
+    }
+})
+</script>

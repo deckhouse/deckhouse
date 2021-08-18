@@ -7,8 +7,12 @@ spec:
     classReference:
       kind: YandexInstanceClass
       name: worker
-    maxPerZone: 1
-    minPerZone: 1
+    maxPerZone: 2
+    minPerZone: 2
+    # [<en>] you might consider changing this
+    # [<ru>] возможно, захотите изменить
+    zones:
+    - ru-central1-a
   disruptions:
     approvalMode: Automatic
   nodeTemplate:
