@@ -1,22 +1,6 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: nodeusers.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: node-manager
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: nodeusers
-    singular: nodeuser
-    kind: NodeUser
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -24,68 +8,29 @@ spec:
             Описывает linux-пользователей, которые будут созданы на всех узлах.
 
             Домашний каталог пользователя создается в директории `/home/deckhouse/`.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - uid
-                - sshPublicKey
-                - passwordHash
               properties:
                 uid:
-                  type: number
                   description: |
                     User ID пользователя на узлах.
 
                     Неизменяемый в течение жизни ресурса параметр.
-                  example: '1001'
-                  minimum: 1001
                 sshPublicKey:
-                  type: string
                   description: |
                     Публичный ssh ключ пользователя.
-                  example: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ'
                 passwordHash:
-                  type: string
                   description: |
                     Хеш пароля пользователя.
 
                     Формат соответствует хешам паролей, содержащихся в `/etc/shadow`. Его можно получить при помощи команды `openssl passwd -6`.
-                  example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
                 isSudoer:
-                  type: boolean
                   description: |
                     Определяет, будет ли пользователю разрешено sudo.
-                  example: 'true'
-                  x-doc-default: false
                 extraGroups:
-                  type: array
                   description: |
                     Список дополнительных групп, в которые должен быть включен пользователь.
-                  items:
-                    type: string
-      additionalPrinterColumns: &additionalPrinterColumns
-        - name: Uid
-          jsonPath: .spec.uid
-          type: number
-          description: User ID
-        - name: IsSudoer
-          jsonPath: .spec.isSudoer
-          type: boolean
-          description: Can user run commands as root
-        - name: ExtraGroups
-          jsonPath: .spec.extraGroups
-          type: string
-          description: extra groups for user
-        - name: Age
-          jsonPath: .metadata.creationTimestamp
-          type: date
-          description: >
-            CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
     - name: v1
       served: true
       storage: false
       schema: *schema
-      additionalPrinterColumns: *additionalPrinterColumns

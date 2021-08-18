@@ -42,8 +42,8 @@ spec:
                   type: string
                   description: |
                     Hashed user password.
-                    * You can use the following command to encrypt the user password: `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`.
-                    * Also, you can use the [online service](https://bcrypt-generator.com/).
+
+                    You can use the following command to encrypt the user password: `echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'`. Also, you can use the [online service](https://bcrypt-generator.com/).
                   example: '$2a$10$F9ey7zW.sVliT224RFxpWeMsgzO.D9YRG54a8T36/K2MCiT41nzmC'
                 userID:
                   type: string

@@ -149,8 +149,11 @@ spec:
                       default: false
                       description: |
                         Optional parameter to include team groups.
+
                         If enabled, the groups claim of dex id_token will looks like this:
+                        ```yaml
                         ["my_team", "my_team/administrators", "my_team/members"]
+                        ```
                 crowd: &crowd
                   type: object
                   required: ['clientID', 'clientSecret', 'baseURL']
@@ -287,7 +290,7 @@ spec:
                       type: string
                       description: |
                         A raw certificate file can also be provided inline.
-                        Example:
+                      x-doc-example: |
                         ```
                         -----BEGIN CERTIFICATE-----
                         MIIFaDC...

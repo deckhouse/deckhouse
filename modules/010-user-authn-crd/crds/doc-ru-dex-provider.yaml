@@ -1,60 +1,34 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: dexproviders.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: user-authn
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: dexproviders
-    singular: dexprovider
-    kind: DexProvider
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
-          required: ['spec']
           description: |
-            Описывает конфигурацию подключения стороннего провайдера. С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
+            Описывает конфигурацию подключения стороннего провайдера.
+
+            С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
           properties:
             spec:
-              type: object
-              required: ['displayName', 'type']
               properties:
                 type:
-                  type: string
                   description: |
                     Тип внешнего провайдера.
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
                 displayName:
-                  type: string
                   description: |
-                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации. Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
+                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации.
+
+                    Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
                 github:
-                  type: object
-                  required: ['clientID', 'clientSecret']
                   description: |
                     Параметры провайдера GitHub (можно указывать только если `type: Github`).
                   properties:
                     clientID:
-                      type: string
                       description: |
                         ID организации на GitHub.
                     clientSecret:
-                      type: string
                       description: |
                         Secret организации на GitHub.
                     teamNameField:
-                      type: string
-                      enum: ['name', 'slug', 'both']
-                      default: 'name'
                       description: |
                         Формат команд, которые будут получены из GitHub.
 
@@ -63,88 +37,64 @@ spec:
                         * `slug` будет получена группа с именем `['acme:site-reliability-engineers']`;
                         * `both` будут получены группы с именами `['acme:Site Reliability Engineers', 'acme:site-reliability-engineers']`.
                     useLoginAsID:
-                      type: boolean
                       description: |
                         Позволяет вместо использования внутреннего GitHub ID, использовать имя пользователя.
                     orgs:
-                      type: array
                       description: |
                         Массив названий организаций в GitHub.
                       items:
-                        type: object
-                        required: ['name']
                         properties:
                           name:
-                            type: string
                             description: |
                               Название организации.
                           teams:
-                            type: array
                             description: |
                               Список команд, допустимых для приема из GitHub.
+
                               Токен пользователя будет содержать объединенное множество команд из GitHub и команд из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
 
                               Если параметр не указан, токен пользователя будет содержать все команды из GitHub.
-                            items:
-                              type: string
                 gitlab: &gitlab
-                  type: object
-                  required: ['clientID', 'clientSecret']
                   description: |
                     Параметры провайдера GitLab (можно указывать только если `type: Gitlab`).
                   properties:
                     clientID:
-                      type: string
                       description: |
                         ID приложения созданного в GitLab (Application ID).
                     clientSecret:
-                      type: string
                       description: |
                         Secret приложения созданного в GitLab (Secret).
                     baseURL:
-                      type: string
-                      example: 'https://gitlab.example.com'
                       description: |
                         Адрес GitLab.
                     groups:
-                      type: array
                       description: |
                         Список групп (**пути групп — path**, а не имена), допустимых для приема из GitLab.
+
                         Токен пользователя будет содержать объединенное множество групп из GitLab и групп из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
 
-                        Если параметр не указан, токен пользователя будет содержать все группы из GitLab'а;
-                      items:
-                        type: string
+                        Если параметр не указан, токен пользователя будет содержать все группы из GitLab'а.
                     useLoginAsID:
-                      type: boolean
                       description: |
                         Позволяет вместо использования внутреннего GitLab ID, использовать имя пользователя.
                 bitbucketCloud: &bitbucketCloud
-                  type: object
-                  required: ['clientID', 'clientSecret']
                   description: |
                     Параметры провайдера Bitbucket Cloud (можно указывать только если `type: BitbucketCloud`).
                   properties:
                     clientID:
-                      type: string
                       description: |
                         ID приложения созданного в Bitbucket Cloud (Key).
                     clientSecret:
-                      type: string
                       description: |
                         Secret приложения созданного в Bitbucket Cloud (Secret).
                     teams:
-                      type: array
                       description: |
                         Список команд, допустимых для приема из Bitbucket Cloud'а.
+
                         Токен пользователя будет содержать объединенное множество команд из Bitbucket Cloud и команд из этого списка. Если если множество окажется пустым, авторизация не будет считаться не успешной
 
                         Токен будет содержать команды пользователя в claim `groups`, как и у других провайдеров.
-                      items:
-                        type: string
                     includeTeamGroups:
-                      type: boolean
-                      default: false
                       description: |
                         Включает в список команд все группы команды, в которых состоит пользователь.
 
@@ -153,165 +103,109 @@ spec:
                         groups=["my_team", "my_team/administrators", "my_team/members"]
                         ```
                 crowd: &crowd
-                  type: object
-                  required: ['clientID', 'clientSecret', 'baseURL']
                   description: |
                     Параметры провайдера Crowd (можно указывать только если `type: Crowd`).
                   properties:
                     clientID:
-                      type: string
                       description: |
                         ID приложения созданного в Crowd (Application Name).
                     clientSecret:
-                      type: string
                       description: |
                         Пароль приложения созданного в Crowd (Password).
                     baseURL:
-                      type: string
-                      example: 'https://crowd.example.com/crowd'
                       description: |
                         Адрес Crowd.
                     groups:
-                      type: array
                       description: |
                         Список групп, допустимых для приема из Crowd.
+
                         Токен пользователя будет содержать объединенное множество групп из Crowd и групп из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
 
                         Если параметр не указан, токен пользователя будет содержать все группы из Crowd.
-                      items:
-                        type: string
                     usernamePrompt:
-                      type: string
                       description: |
                         Строка, которая будет отображаться возле поля для имени пользователя в форме ввода логина и пароля.
                       default: 'Crowd username'
                     enableBasicAuth:
-                      type: boolean
                       description: |
                         Включает возможность basic-авторизации для Kubernetes API server.
 
                         В качестве credentials для basic-авторизации указываются логин и пароль пользователя из приложения, созданного в Crowd (возможно включить при указании только одного провайдера с типом Crowd).
+
                         Работает **только** при включенном `publishAPI`.
 
                         Полученные от Crowd данные авторизации и групп сохраняются в кэш на 10 секунд.
                 oidc: &oidc
-                  type: object
-                  required: ['clientID', 'clientSecret', 'issuer']
                   description: |
                     Параметры провайдера OIDC (можно указывать только если `type: OIDC`).
                   properties:
                     clientID:
-                      type: string
                       description: |
                         ID приложения, созданного в OIDC провайдере.
                     clientSecret:
-                      type: string
                       description: |
                         Пароль приложения, созданного в OIDC провайдере.
                     issuer:
-                      type: string
-                      example: 'https://accounts.google.com'
                       description: |
                         Адрес OIDC-провайдера.
                     insecureSkipEmailVerified:
-                      type: boolean
                       description: |
                         Игнорировать информацию о статусе подтверждения e-mail пользователя.
+
                         Как именно подтверждается e-mail решает сам провайдер. В ответе от провайдера приходит лишь информация — подтвержден e-mail или нет.
-                      default: false
                     basicAuthUnsupported:
-                      type: boolean
                       description: |
                         Использовать POST-запросы для общения с провайдером, вместо добавления токена в Basic Authorization header.
+
                         В большинстве случаев dex сам определяет, какой запрос ему нужно сделать, но иногда включение этого параметра может помочь.
-                      default: false
                     getUserInfo:
-                      type: boolean
                       description: |
                         Запрашивать дополнительные данные об успешно подключенном пользователе.
 
-                        [Подробнее](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)...
-                      default: false
+                        [Подробнее...](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
                     userIDKey:
-                      type: string
-                      default: 'sub'
                       description: |
                         [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения ID пользователя.
                     userNameKey:
-                      type: string
-                      default: 'name'
                       description: |
                         [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения имени пользователя.
                     scopes:
-                      type: array
-                      default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
                         Список [полей](https://github.com/dexidp/website/blob/main/content/docs/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
-                      items:
-                        type: string
                     promptType:
-                      type: string
-                      default: 'consent'
                       description: |
                         Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
 
                         По умолчанию будет запрошено подтверждение при первой аутентификации. Допустимые значения могут изменяться в зависимости от Issuer.
                 ldap: &ldap
-                  type: object
-                  required: ['host', 'userSearch']
                   description: |
                     Параметры провайдера LDAP.
                   properties:
                     host:
-                      type: string
-                      example: ldap.example.com:636
                       description: |
                         Адрес и порт (опционально) LDAP-сервера.
                     insecureNoSSL:
-                      type: boolean
-                      default: false
                       description: |
                         Подключаться к каталогу LDAP не по защищенному порту.
                     startTLS:
-                      type: boolean
-                      default: false
                       description: |
                         Использовать [STARTTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) для шифрования.
                     usernamePrompt:
-                      type: string
-                      default: 'LDAP username'
                       description: |
                         Строка, которая будет отображаться возле поля для имени пользователя в форме ввода логина и пароля.
-                      example: SSO Username
                     rootCAData:
-                      type: string
                       description: |
                         CA, используемый для валидации TLS.
-
-                        Пример:
-                        ```
-                        -----BEGIN CERTIFICATE-----
-                        MIIFaDC...
-                        -----END CERTIFICATE-----
-                        ```
                     insecureSkipVerify:
-                      type: boolean
-                      default: false
                       description: |
                         Не производить проверку подлинности ответа от провайдера с помощью `rootCAData`.
                     bindDN:
-                      type: string
-                      example: 'uid=serviceaccount,cn=users,dc=example,dc=com'
                       description: |
                         Путь до сервис-аккаунта приложения в LDAP.
                     bindPW:
-                      type: string
-                      example: password
                       description: |
                         Пароль для сервис-аккаунта приложения в LDAP.
                     userSearch:
-                      type: object
-                      required: ['baseDN', 'username', 'idAttr', 'emailAttr']
                       description: |
                         Настройки фильтров пользователей, которые помогают сначала отфильтровать директории, в которых будет производиться поиск пользователей,
                         а затем найти пользователя по полям (его имени, адресу электронной почты или отображаемому имени).
@@ -319,155 +213,76 @@ spec:
                         [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
                       properties:
                         baseDN:
-                          type: string
-                          example: 'cn=users,dc=example,dc=com'
                           description: 'Откуда будет начат поиск пользователей.'
                         filter:
-                          type: string
-                          example: '(objectClass=person)'
                           description: |
                             Позволяет добавить фильтр для директории с пользователями.
                         username:
-                          type: string
-                          example: 'uid'
                           description: |
                             Имя атрибута из которого будет получен username пользователя.
                         idAttr:
-                          type: string
-                          example: 'uid'
                           description: |
                             Имя атрибута из которого будет получен идентификатор пользователя.
                         emailAttr:
-                          type: string
-                          example: 'mail'
                           description: |
                             Имя атрибута из которого будет получен email пользователя.
                         nameAttr:
-                          type: string
-                          example: 'name'
                           description: |
                             Атрибут отображаемого имени пользователя.
                     groupSearch:
-                      type: object
-                      required: ['baseDN', 'userMatchers', 'nameAttr']
                       description: |
                         Настройки фильтра для поиска групп для указанного пользователя.
 
                         [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
                       properties:
                         baseDN:
-                          type: string
-                          example: 'cn=users,dc=example,dc=com'
                           description: 'Откуда будет начат поиск групп'
                         filter:
-                          type: string
-                          example: '(objectClass=person)'
                           description: |
                             Фильтр для директории с группами.
                         nameAttr:
-                          type: string
-                          example: 'name'
                           description: |
                             Имя атрибута, в котором хранится уникальное имя группы.
                         userMatchers:
-                          type: array
                           description: |
                             Список сопоставлений атрибута имени юзера с именем группы.
                           items:
-                            type: object
-                            required: ['userAttr', 'groupAttr']
                             properties:
                               userAttr:
-                                type: string
-                                example: uid
                                 description: |
                                   Имя атрибута, в котором хранится имя пользователя.
                               groupAttr:
-                                type: string
-                                example: member
                                 description: |
                                   Имя атрибута, в котором хранятся имена пользователей, состоящих в группе.
-              oneOf:
-                - properties:
-                    inlet:
-                      enum: ['Github']
-                    github: {}
-                  required: ['github']
-                - properties:
-                    inlet:
-                      enum: ['Gitlab']
-                    gitlab: {}
-                  required: ['gitlab']
-                - properties:
-                    inlet:
-                      enum: ['BitbucketCloud']
-                    bitbucketCloud: {}
-                  required: ['bitbucketCloud']
-                - properties:
-                    inlet:
-                      enum: ['Crowd']
-                    crowd: {}
-                  required: ['crowd']
-                - properties:
-                    inlet:
-                      enum: ['OIDC']
-                    oidc: {}
-                  required: ['oidc']
-                - properties:
-                    inlet:
-                      enum: ['LDAP']
-                    ldap: {}
-                  required: ['ldap']
-      additionalPrinterColumns: &additionalPrinterColumns
-        - jsonPath: .spec.type
-          name: Type
-          description: 'Type of authentication provider.'
-          type: string
-        - jsonPath: .spec.displayName
-          name: Display Name
-          description: 'Name that will be displayed on the providers selection screen.'
-          type: string
     - name: v1
-      served: true
-      storage: false
       schema:
         openAPIV3Schema:
-          type: object
-          required: ['spec']
           description: |
-            Описывает конфигурацию подключения стороннего провайдера. С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
+            Описывает конфигурацию подключения стороннего провайдера.
+
+            С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
           properties:
             spec:
-              type: object
-              required: ['displayName', 'type']
               properties:
                 type:
-                  type: string
                   description: |
                     Тип внешнего провайдера.
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
                 displayName:
-                  type: string
                   description: |
-                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации. Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
+                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации.
+
+                    Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
                 github:
-                  type: object
-                  required: ['clientID', 'clientSecret']
                   description: |
                     Параметры провайдера GitHub (можно указывать только если `type: Github`).
                   properties:
                     clientID:
-                      type: string
                       description: |
                         ID организации на GitHub.
                     clientSecret:
-                      type: string
                       description: |
                         Secret организации на GitHub.
                     teamNameField:
-                      type: string
-                      enum: ['Name', 'Slug', 'Both']
-                      default: 'Name'
                       description: |
                         Формат команд, которые будут получены из GitHub.
 
@@ -476,65 +291,26 @@ spec:
                         * `Slug` будет получена группа с именем `['acme:site-reliability-engineers']`;
                         * `Both` будут получены группы с именами `['acme:Site Reliability Engineers', 'acme:site-reliability-engineers']`.
                     useLoginAsID:
-                      type: boolean
                       description: |
                         Позволяет вместо использования внутреннего GitHub ID, использовать имя пользователя.
                     orgs:
-                      type: array
                       description: |
                         Массив названий организаций в GitHub.
                       items:
-                        type: object
-                        required: ['name']
                         properties:
                           name:
-                            type: string
                             description: |
                               Название организации.
                           teams:
-                            type: array
                             description: |
                               Список команд, допустимых для приема из GitHub.
+
                               Токен пользователя будет содержать объединенное множество команд из GitHub и команд из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
 
                               Если параметр не указан, токен пользователя будет содержать все команды из GitHub.
-                            items:
-                              type: string
                 gitlab: *gitlab
                 bitbucketCloud: *bitbucketCloud
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
-              oneOf:
-                - properties:
-                    inlet:
-                      enum: ['Github']
-                    github: {}
-                  required: ['github']
-                - properties:
-                    inlet:
-                      enum: ['Gitlab']
-                    gitlab: {}
-                  required: ['gitlab']
-                - properties:
-                    inlet:
-                      enum: ['BitbucketCloud']
-                    bitbucketCloud: {}
-                  required: ['bitbucketCloud']
-                - properties:
-                    inlet:
-                      enum: ['Crowd']
-                    crowd: {}
-                  required: ['crowd']
-                - properties:
-                    inlet:
-                      enum: ['OIDC']
-                    oidc: {}
-                  required: ['oidc']
-                - properties:
-                    inlet:
-                      enum: ['LDAP']
-                    ldap: {}
-                  required: ['ldap']
-      additionalPrinterColumns: *additionalPrinterColumns
 
