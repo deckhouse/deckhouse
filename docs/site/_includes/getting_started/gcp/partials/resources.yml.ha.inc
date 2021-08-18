@@ -28,10 +28,10 @@ spec:
       name: worker
     # [<en>] the minimum number of instances for the group in each zone
     # [<ru>] минимальное количество инстансов в зоне
-    minPerZone: 1
+    minPerZone: 2
     # [<en>] the maximum number of instances for the group in each zone
     # [<ru>] максимальное количество инстансов в зоне
-    maxPerZone: 1
+    maxPerZone: 2
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     zones:

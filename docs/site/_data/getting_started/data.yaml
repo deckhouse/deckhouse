@@ -36,16 +36,16 @@ presets:
     description:
       en: |
         - Highly Available Kubernetes Control Plane.
-        - The cluster consists of three master nodes and one worker node.
+        - The cluster consists of three master nodes and two worker nodes.
         - Kubernetes Control Plane and Deckhouse controller run on master nodes.
-        - Deckhouse deploys other components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
-        - Your applications should run on the worker node.
+        - Deckhouse deploys other components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker nodes.
+        - Your applications should run on the worker nodes.
       ru: |
         - Управляющие компоненты кластера работают в режиме высокой доступности.
-        - Кластер состоит из трёх мастер-узлов и одного worker-узла.
+        - Кластер состоит из трёх мастер-узлов и двух worker-узлов.
         - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на мастер-узлах.
-        - Deckhouse запускает другие компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
-        - Ваши приложения должны работать на worker-узле.
+        - Deckhouse запускает другие компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узлах.
+        - Ваши приложения должны работать на worker-узлах.
   production:
     name:
       en: Recommended for production
