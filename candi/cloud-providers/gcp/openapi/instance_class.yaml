@@ -80,8 +80,7 @@ spec:
                     Additional labels.
 
                     [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
-
-                    An example:
+                  x-doc-example: |
                     ```yaml
                     project: cms-production
                     severity: critical

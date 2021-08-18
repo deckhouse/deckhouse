@@ -99,7 +99,7 @@ spec:
                   description: |
                     The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
 
-                    An example:
+                  x-doc-example: |
                     ```yaml
                     project: cms-production
                     severity: critical

@@ -27,33 +27,31 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 * Выполнить бутстрап base-infrastructure кластера:
 
-```
-dhctl bootstrap-phase base-infra --config config
-```
+  ```shell
+  dhctl bootstrap-phase base-infra --config config
+  ```
 
 * Поднять пиринг по инструкции [выше](#как-поднять-пиринг-между-vpc).
 * Продолжить установку кластера, на вопрос про кеш терраформа нужно ответить "y":
 
-```
-dhctl bootstrap --config config --ssh-...
-
-```
+  ```shell
+  dhctl bootstrap --config config --ssh-...
+  ```
 
 ## Как создать кластер в новом VPC и развернуть bastion для доступа к узлам?
 
 * Выполнить бутстрап base-infrastructure кластера:
 
-```
-dhctl bootstrap-phase base-infra --config config
-```
+  ```shell
+  dhctl bootstrap-phase base-infra --config config
+  ```
 
 * Запустить вручную bastion в subnet <prefix>-public-0.
 * Продолжить установку кластера, на вопрос про кеш терраформа нужно ответить "y":
 
-```
-dhctl bootstrap --config config --ssh-...
-
-```
+  ```shell
+  dhctl bootstrap --config config --ssh-...
+  ```
 
 ## Особенности настройки bastion
 

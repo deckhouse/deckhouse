@@ -227,8 +227,7 @@ spec:
                         List of availability zones to create instances in.
 
                         The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-
-                        Example:
+                      x-doc-example: |
                         ```yaml
                         - Helsinki
                         - Espoo
@@ -318,8 +317,7 @@ spec:
                 nodeTemplate: &nodeTemplate
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
-
-                    Example:
+                  x-doc-example: |
                     ```yaml
                     labels:
                       environment: production
@@ -340,8 +338,7 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
-
-                        Example:
+                      x-doc-example: |
                         ```yaml
                         labels:
                           environment: production
@@ -354,8 +351,7 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta).
-
-                        Example:
+                      x-doc-example: |
                         ```yaml
                         annotations:
                           ai.fleet.com/discombobulate: "true"
@@ -366,8 +362,7 @@ spec:
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#taint-v1-core) object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
-
-                        Example:
+                      x-doc-example: |
                         ```yaml
                         taints:
                         - effect: NoExecute
@@ -399,8 +394,7 @@ spec:
                 chaos: &chaos
                   description: |
                     Chaos monkey settings.
-
-                    Example:
+                  x-doc-example: |
                     ```yaml
                     mode: DrainAndReboot
                     period: 24h
