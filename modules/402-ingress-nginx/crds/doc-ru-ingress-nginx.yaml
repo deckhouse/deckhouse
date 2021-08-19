@@ -1,45 +1,21 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: ingressnginxcontrollers.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: ingress-nginx
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: ingressnginxcontrollers
-    singular: ingressnginxcontroller
-    kind: IngressNginxController
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema: &schema
         openAPIV3Schema:
-          type: object
-          required: ['spec']
           properties:
             spec:
-              type: object
-              required: ['ingressClass', 'inlet']
               properties:
                 ingressClass:
-                  type: string
                   description: |
                     Имя Ingress-класса для обслуживания Ingress NGINX controller.
 
                     Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
 
                     **Важно!** Если указать значение "nginx", то дополнительно будут обрабатываться Ingress-ресурсы без аннотации `kubernetes.io/ingress.class`.
-                  example: 'nginx'
-                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
                 inlet:
-                  type: string
                   description: |
-                    Способ поступления трафика из внешнего мира.
+                    Способ поступления трафика из внешнего мира:
                     * `LoadBalancer` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`.
                     * `LoadBalancerWithProxyProtocol` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`. Ingress controller использует proxy-protocol для получения настоящего IP-адреса клиента.
                     * `HostPort` — устанавливается Ingress controller, который доступен на портах узлов через `hostPort`.
@@ -51,37 +27,27 @@ spec:
                       **Внимание!** На одном хосте может быть только один controller с данным типом inlet'а.
 
                       **Внимание!** Необходимо, чтобы на узле были свободные порты: 80, 81, 443, 444, 10354, 10355.
-                  enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
-                  type: string
                   description: |
                     Версия Ingress NGINX-контроллера.
 
                     **По умолчанию:** версия из настроек модуля.
-                  enum: ['0.25', '0.26', '0.33', '0.46']
                 enableIstioSidecar:
-                  type: boolean
                   description: |
-                    Добавить к Pod'ам контроллера аннотации для автоматического инжекта istio-сайдкаров. С данным флагом контроллер сможет обслуживать только сервисы, которые подконтрольны Istio.
+                    Добавить к Pod'ам контроллера аннотации для автоматического инжекта istio-сайдкаров.
+
+                    С данным флагом контроллер сможет обслуживать только сервисы, которые подконтрольны Istio.
                 waitLoadBalancerOnTerminating:
-                  x-kubernetes-int-or-string: true
-                  default: 60
                   description: |
                     Количество секунд до того, как /healthz начнет возвращать код 500, когда Pod перейдет в статус Terminating.
                 chaosMonkey:
-                  type: boolean
-                  default: false
                   description: |
-                    Инструмент, позволяющий систематически вызывать случайные прерывания работы Pod'ов контроллера. Предназначен для проверки ingress контроллера на реальную работу отказоустойчивости.
+                    Инструмент, позволяющий систематически вызывать случайные прерывания работы Pod'ов контроллера.
+
+                    Предназначен для проверки ingress контроллера на реальную работу отказоустойчивости.
                 validationEnabled:
-                  type: boolean
-                  default: true
-                  description: Включить валидацию ingress правил
+                  description: Включить валидацию Ingress-правил.
                 nodeSelector:
-                  type: object
-                  additionalProperties:
-                    type: string
-                  x-kubernetes-preserve-unknown-fields: true
                   description: |
                     Как в `spec.nodeSelector` у Pod'ов.
 
@@ -89,140 +55,82 @@ spec:
 
                     **Формат**: стандартный список `nodeSelector`. Pod'ы инстанса унаследуют это поле как есть.
                 tolerations:
-                  type: array
                   description: |
                     Как в `spec.tolerations` у Pod'ов.
 
                     Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Pod'ы инстанса унаследуют это поле как есть.
-                  items:
-                    type: object
-                    properties:
-                      effect:
-                        type: string
-                        enum: ["NoSchedule","PreferNoSchedule","NoExecute"]
-                      operator:
-                        type: string
-                        default: "Equal"
-                        enum: ["Exists","Equal"]
-                      key:
-                        type: string
-                      tolerationSeconds:
-                        format: int64
-                        type: integer
-                      value:
-                        type: string
                 loadBalancer:
-                  type: object
-                  x-doc-required: false
                   description: |
                     Секция настроек для inlet'а `LoadBalancer`.
                   properties:
                     sourceRanges:
-                      type: array
                       description: |
                         Список CIDR, которым разрешен доступ на балансировщик.
 
                         Облачный провайдер может не поддерживать данную опцию и игнорировать её.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
                       description: |
                         Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
 
-                        **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках.
+                        **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках.
                         Если аннотации для заказа load balancer'а применяются только при создании сервиса, то для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
-                      additionalProperties:
-                        type: string
                     behindL7Proxy:
-                      type: boolean
                       description: |
                         Включает обработку и передачу `X-Forwarded-*` заголовков.
 
                         **Внимание!** При использовании этой опции вы должны быть уверены, что запросы к Ingress направляются только от доверенных источников.
                     realIPHeader:
-                      type: string
                       description: |
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         Работает только при включении `behindL7Proxy`.
-                      example: 'CF-Connecting-IP'
-                      default: 'X-Forwarded-For'
                 loadBalancerWithProxyProtocol:
-                  type: object
-                  x-doc-required: false
                   description: |
                     Секция настроек для inlet `LoadBalancerWithProxyProtocol`.
                   properties:
                     sourceRanges:
-                      type: array
                       description: |
                         Список CIDR, которым разрешен доступ на балансировщик.
 
                         Облачный провайдер может не поддерживать данную опцию и игнорировать её.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
-                      type: object
                       description: |
                         Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
 
                         **Внимание!** модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа load balancer применяются только при создании сервиса, то для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
-                      additionalProperties:
-                        type: string
-                      x-kubernetes-preserve-unknown-fields: true
                 hostPort:
-                  type: object
                   description: |
                     Секция настроек для inlet `HostPort`.
-                  anyOf:
-                  - {required: ["httpPort"]}
-                  - {required: ["httpsPort"]}
                   properties:
                     httpPort:
-                      type: integer
                       description: |
                         Порт для небезопасного подключения по HTTP.
 
                         Если параметр не указан – возможность подключения по HTTP отсутствует.
 
                         **Обязательный параметр**, если не указан `httpsPort`.
-                      example: '80'
                     httpsPort:
-                      type: integer
                       description: |
                         Порт для безопасного подключения по HTTPS.
 
                         Если параметр не указан – возможность подключения по HTTPS отсутствует.
 
                         **Обязательный параметр**, если не указан `httpPort`.
-                      example: '443'
                     behindL7Proxy:
-                      type: boolean
                       description: |
                         Включает обработку и передачу `X-Forwarded-*` заголовков.
 
                         **Внимание!** При использовании этой опции необходимо быть увереным, что запросы к Ingress направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
                     realIPHeader:
-                      type: string
                       description: |
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         Работает **только** при включении `behindL7Proxy`.
-                      default: 'X-Forwarded-For'
-                      example: 'CF-Connecting-IP'
                 hostPortWithProxyProtocol:
-                  type: object
                   description: |
                     Секция настроек для inlet `HostPortWithProxyProtocol`.
-                  anyOf:
-                  - {required: ['httpPort']}
-                  - {required: ['httpsPort']}
                   properties:
                     httpPort:
                       type: integer
@@ -232,18 +140,14 @@ spec:
                         Если параметр не указан – возможность подключения по HTTP отсутствует.
 
                         **Обязательный параметр**, если не указан `httpsPort`.
-                      example: '80'
                     httpsPort:
-                      type: integer
                       description: |
                         Порт для безопасного подключения по HTTPS.
 
                         Если параметр не указан – возможность подключения по HTTPS отсутствует.
 
                         **Обязательный параметр**, если не указан `httpPort`.
-                      example: '443'
                 acceptRequestsFrom:
-                  type: array
                   description: |
                     Список CIDR, которым разрешено подключаться к контроллеру.
 
@@ -252,79 +156,47 @@ spec:
                     Параметр реализован при помощи [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html) и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 
                     **По умолчанию**: к контроллеру можно подключаться с любых адресов.
-                  items:
-                    type: string
-                    pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 hsts:
-                  type: boolean
                   description: |
-                    Bool, включен ли `hsts` ([подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
-                  default: false
+                    Включен ли `hsts` ([подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
                 hstsOptions:
-                  type: object
                   description: |
                     Параметры HTTP Strict Transport Security.
                   properties:
                     maxAge:
-                      type: string
                       description: |
                         Время в секундах, которое браузер должен помнить, что сайт доступен только с помощью HTTPS.
-                      pattern: '^[1-9][0-9]*$'
-                      example: "31536000"
-                      x-doc-default: "31536000"
                     preload:
-                      type: boolean
                       description: |
-                        Добавлять ли сайт в список предзагрузки. Эти списки используются современными браузерами и разрешают подключение к сайту только по HTTPS.
-                      default: false
+                        Добавлять ли сайт в список предзагрузки.
+
+                        Эти списки используются современными браузерами и разрешают подключение к сайту только по HTTPS.
                     includeSubDomains:
-                      type: boolean
                       description: |
                         Применять ли настройки `hsts` ко всем поддоменам сайта.
-                      default: false
                 geoIP2:
-                  type: object
                   description: |
                     Опции для включения GeoIP2 (работают только для версии контроллера `"0.33"` и выше).
                   properties:
                     maxmindLicenseKey:
-                      type: string
                       description: |
-                        Лицензионный ключ для скачивания базы данных GeoIP2. Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
+                        Лицензионный ключ для скачивания базы данных GeoIP2.
+
+                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
                     maxmindEditionIDs:
-                      type: array
                       description: |
                         Список ревизий баз данных, которые будут скачаны при старте.
 
                         Чем отличаются, например, `GeoIP2-City` от `GeoLite2-City` можно ознакомиться [в этой статье](https://support.maxmind.com/geolite-faq/general/what-is-the-difference-between-geoip2-and-geolite2/).
-                      default: ["GeoLite2-City", "GeoLite2-ASN"]
-                      items:
-                        type: string
-                        enum:
-                        - GeoIP2-Anonymous-IP
-                        - GeoIP2-Country
-                        - GeoIP2-City
-                        - GeoIP2-Connection-Type
-                        - GeoIP2-Domain
-                        - GeoIP2-ISP
-                        - GeoIP2-ASN
-                        - GeoLite2-ASN
-                        - GeoLite2-Country
-                        - GeoLite2-City
                 legacySSL:
-                  type: boolean
                   description: |
                     Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
 
                     **По умолчанию:** включён только TLSv1.2 и самые новые cipher suites.
                 disableHTTP2:
-                  type: boolean
                   description: |
                     Выключить ли HTTP/2.
-                  default: false
                 config:
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true
                   description: |
                     Секция настроек Ingress controller, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
 
@@ -332,152 +204,82 @@ spec:
 
                     **Внимание!** Не рекомендуется использовать данную опцию, т.к. не гарантируется обратная совместимость или работоспособность Ingress controller.
                 additionalHeaders:
-                  type: object
                   description: |
                     Дополнительные header'ы, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
-                  additionalProperties:
-                    type: string
-                  x-kubernetes-preserve-unknown-fields: true
                 resourcesRequests:
-                  required: ['mode']
-                  type: object
                   description: |
                     Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).
                   properties:
                     mode:
-                      type: string
                       description: |
                         Режим управления реквестами ресурсов.
-                      enum: ['VPA', 'Static']
-                      default: 'VPA'
                     vpa:
-                      type: object
                       description: |
                         Настройки VPA режима управления.
                       properties:
                         mode:
-                          type: string
                           description: |
                             Режим работы VPA.
-                          enum: ['Initial', 'Auto']
-                          default: 'Initial'
                         cpu:
-                          type: object
                           description: |
                             Настройки для CPU.
                           properties:
                             max:
                               description: |
                                 Максимальное значение, которое может выставить VPA для запроса cpu.
-                              default: '50m'
-                              type: string
                             min:
                               description: |
                                 Минимальное значение, которое может выставить VPA для запроса cpu.
-                              default: '10m'
-                              type: string
                         memory:
-                          type: object
                           description: |
                             Значение для запроса memory.
                           properties:
                             max:
                               description: |
                                 Максимальное значение, которое может выставить VPA для запроса memory.
-                              default: '200Mi'
-                              type: string
                             min:
                               description: |
                                 Минимальное значение, которое может выставить VPA для запроса memory.
-                              default: '50Mi'
-                              type: string
                     static:
-                      type: object
                       description: |
                         Настройки статического режима управления.
                       properties:
                         cpu:
-                          type: string
                           description: |
                             Значение для запроса CPU.
-                          default: '500m'
                         memory:
-                          type: string
                           description: |
                             Значение для запроса memory.
-                          default: '500Mi'
                 customErrors:
-                  type: object
                   description: |
                     Секция с настройкой кастомизации HTTP-ошибок (если секция определена, то все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех Ingress NGINX контроллеров**).
                     * `serviceName` — имя сервиса, который будет использоваться, как custom default backend.
                     * `namespace` — имя namespace, в котором будет находиться сервис, используемый, как custom default backend.
                     * `codes` — список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
-                  required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:
-                      type: string
                       description: |
                         Имя сервиса, который будет использоваться, как custom default backend.
-                      example: 'custom-errors-backend-service'
                     namespace:
-                      type: string
                       description: |
                         Имя namespace, в котором будет находиться сервис, используемый, как custom default backend.
-                      example: 'default'
                     codes:
-                      type: array
                       description: |
                         Список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
-                      items:
-                        type: string
-                        name: 'Error code.'
-                        pattern: '^[1-5][0-9][0-9]$'
                 underscoresInHeaders:
-                  type: boolean
                   description: |
-                    Разрешены ли нижние подчеркивания в заголовках. [Подробнее...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    Разрешены ли нижние подчеркивания в заголовках.
+
+                    [Подробнее...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
 
                     [Почему](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers) не стоит бездумно включать.
-                  default: false
-              oneOf:
-                - properties:
-                    inlet:
-                      enum: ['LoadBalancer']
-                    loadBalancer: {}
-                - properties:
-                    inlet:
-                      enum: ['LoadBalancerWithProxyProtocol']
-                    loadBalancerWithProxyProtocol: {}
-                - properties:
-                    inlet:
-                      enum: ['HostPort']
-                    hostPort: {}
-                  required: ['hostPort']
-                - properties:
-                    inlet:
-                      enum: ['HostPortWithProxyProtocol']
-                    hostPortWithProxyProtocol: {}
-                  required: ['hostPortWithProxyProtocol']
-                - properties:
-                    inlet:
-                      enum: ['HostWithFailover']
-                    hostWithFailover: {}
-      additionalPrinterColumns: &additionalPrinterColumns
-        - jsonPath: .spec.ingressClass
-          name: Ingress Class
-          description: 'Name of served ingress class.'
-          type: string
-        - jsonPath: .spec.inlet
-          name: Inlet
-          description: 'The way traffic goes to current Ingress Controller from the outer network.'
-          type: string
-        - jsonPath: .spec.controllerVersion
-          name: Controller Version
-          description: 'Current NGINX Ingress Controller version.'
-          type: string
+                minReplicas:
+                  description: |
+                    Минимальное количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
+                maxReplicas:
+                  description: |
+                    Максимально количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
     - name: v1
       served: true
       storage: false
       schema: *schema
-      additionalPrinterColumns: *additionalPrinterColumns

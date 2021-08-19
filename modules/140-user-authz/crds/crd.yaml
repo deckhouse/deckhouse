@@ -117,7 +117,7 @@ spec:
 
                     This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
 
-                    Example:
+                  x-doc-example: |
                     ```yaml
                     additionalRoles:
                     - apiGroup: rbac.authorization.k8s.io
