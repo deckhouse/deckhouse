@@ -49,6 +49,7 @@ spec:
         args:
         - "/app/extended-monitoring.py"
         - "127.0.0.1"
+        - "8080"
         env:
         - name: "PYTHONUNBUFFERED"
           value: "1"
@@ -57,12 +58,17 @@ spec:
             path: /healthz
             scheme: HTTPS
             port: 8081
+          timeoutSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /ready
             scheme: HTTPS
             port: 8081
           timeoutSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
