@@ -59,7 +59,7 @@ spec:
                   pattern: '^\d+(?:m|h)$'
                   description: |
                     Static user TTL.
-                    * It is specified as a string containing the time unit: 30m | 24h.
+                    * It is specified as a string containing the time unit: 30m, 1h, 24h. Either in minutes or hours.
                     * You can only set the TTL once. The `expireAt` date will not be updated if you change it again.
                   example: '24h'
             status:
