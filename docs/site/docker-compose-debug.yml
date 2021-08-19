@@ -3,13 +3,20 @@ version: "3.9"
 services:
   site:
     image: $WERF_WEB_BACKEND_DOCKER_IMAGE_NAME
-    command: "/app/server"
+#    command: "/app/server"
+    command: "dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./server"
     environment:
       WERF_LOG_VERBOSE: "on"
-      LOG_LEVEL: "trace"
+      LOG_LEVEL: "debug"
       URL_VALIDATION: "false"
     networks:
       - deckhouse
+    cap_add:
+      - ALL
+    security_opt:
+      - apparmor:unconfined
+    ports:
+      - "2345:2345"
     volumes:
       - ".helm/releasechannels.json:/app/releasechannels/releasechannels.json:ro"
   front:

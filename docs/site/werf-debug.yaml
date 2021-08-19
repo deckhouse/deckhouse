@@ -35,7 +35,7 @@ git:
   excludePaths:
   - '**/*.sh'
   - werf*.yaml
-  - docker-compose.yml
+  - docker-compose*.yml
   - .werf
   - .helm
   - backend
@@ -43,36 +43,29 @@ git:
     install: ['Gemfile','Gemfile.lock']
     beforeSetup: '**/*'
 ---
-artifact: web-backend-srv
+image: web-backend
 from: {{ $BASE_GOLANG }}
 fromCacheVersion: 20210701
-ansible:
-  install:
-    - name: Build apis
-      shell: |
-        go get -d -v ./
-        go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/
-      args:
-        executable: /bin/bash
-        chdir: /go/src/app
-git:
-  - add: /docs/site/backend
-    to: /go/src/app
-    stageDependencies:
-      install: '**/*'
----
-image: web-backend
 docker:
   WORKDIR: /app
-from: {{ $BASE_DEBIAN }}
 ansible:
   install:
     - shell: apt update && apt install -yq git curl jq
+    - shell: |
+        go get -d -v ./
+        go get github.com/go-delve/delve/cmd/dlv
+  setup:
+    - shell: |
+        go build -gcflags "all=-N -l" -v -o /app/server /app/
+      args:
+        executable: /bin/bash
+        chdir: /app
+git:
+  - add: /docs/site/backend
+    to: /app
+    stageDependencies:
+      setup: '**/*'
 import:
-  - artifact: web-backend-srv
-    add: /go/src/app/server
-    to: /app/server
-    before: setup
   - artifact: web-static
     add: /app/_site
     to: /app/root
