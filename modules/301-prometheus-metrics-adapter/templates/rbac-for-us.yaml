@@ -28,13 +28,20 @@ metadata:
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 rules:
 - apiGroups:
-  - ""
+  - apps
   - extensions
   resources:
-  - ingresses
   - deployments
   - daemonsets
   - statefulsets
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - namespaces
   - pods
   - services
@@ -45,9 +52,9 @@ rules:
   - list
   - watch
 - apiGroups:
-  - extensions
+  - networking.k8s.io
   resources:
-  - deployments
+  - ingresses
   verbs:
   - get
   - list
