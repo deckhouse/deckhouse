@@ -20,6 +20,8 @@ properties:
       kubernetesVersion: "1.19"
       clusterDomain: test
       clusterType: "Cloud"
+      cloud:
+        provider: OpenStack
   highAvailability:
     type: boolean
     x-examples: [true, false]
