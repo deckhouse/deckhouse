@@ -1,88 +1,41 @@
-type: object
 description: Обязательных настроек нет.
 properties:
   nodeSelector:
-    type: object
-    additionalProperties:
-      type: string
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-    x-examples:
-    - { "has-gpu": "true" }
-    properties: {}
   tolerations:
     description: |
       Структура, аналогичная  `spec.tolerations` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-    type: array
-    items:
-      type: object
-      properties:
-        effect:
-          type: string
-        key:
-          type: string
-        operator:
-          type: string
-        tolerationSeconds:
-          format: int64
-          type: integer
-        value:
-          type: string
-    x-examples:
-    - [{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}]
-
   cloudflareGlobalAPIKey:
-    type: string
     description: |
-      Cloudflare Global API key для управления DNS записями
-      (Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат,
-      находятся под управлением `cert-manager` у DNS провайдера Cloudflare.
-      Проверка происходит добавлением специальных TXT записей для домена
-      [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/))
-    x-examples: ["key"]
+      Cloudflare Global API key для управления DNS записями.
 
+      Способ проверки того, что домены указанные в ресурсе Certificate, для которых заказывается сертификат,
+      находятся под управлением `cert-manager` у DNS провайдера Cloudflare. Проверка происходит добавлением специальных
+      TXT записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
   cloudflareEmail:
-    type: string
-    format: email
     description: |
-      Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare
-    x-examples: ["example@example.com"]
-
+      Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare.
   route53AccessKeyID:
-    type: string
     description: |
-      Access Key ID пользователя с необходимыми правами
+      Access Key ID пользователя с необходимыми правами.
+
       [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/)
-      для управления доменными записями домена
-    x-examples: ["key_id"]
-
+      для управления доменными записями домена.
   route53SecretAccessKey:
-    type: string
     description: |
-      Secret Access Key пользователя с необходимыми правами для управления доменными записями домена
-    x-examples: ["secret"]
-
+      Secret Access Key пользователя с необходимыми правами для управления доменными записями домена.
   digitalOceanCredentials:
-    type: string
     description: |
-      Access Token от Digital Ocean API, который можно создать в разделе `API`
-    x-examples: ["creds"]
-
+      Access Token от Digital Ocean API, который можно создать в разделе `API`.
   cloudDNSServiceAccount:
-    type: string
-    format: byte
     description: |
       Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google)
-      из того-же проекта с ролью Администратора DNS
-    x-examples: ["eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="]
-
+      из того-же проекта с ролью Администратора DNS.
   email:
-    type: string
-    format: email
     description: |
-      Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления
-    x-examples: ["example@example.com"]
+      Почтовый ящик проекта, на который LetsEncrypt будет слать уведомления.

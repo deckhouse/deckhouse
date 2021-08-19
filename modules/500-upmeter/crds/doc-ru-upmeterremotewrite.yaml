@@ -1,66 +1,30 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: upmeterremotewrites.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: upmeter
-    app: upmeter
 spec:
   versions:
     - name: v1alpha1
       schema: &schema
         openAPIV3Schema:
-          type: object
           description: Конфигурация отправки результатов проб модуля upmeter по протоколу `remote_write`.
-          required:
-            - spec
           properties:
             spec:
-              type: object
-              required:
-                - config
               properties:
                 config:
-                  type: object
                   description: Конфигурация протокола Prometheus `remote_write`.
-                  required:
-                    - url
                   properties:
                     url:
-                      type: string
                       description: URL endpoint'а для отправки данных.
                     basicAuth:
-                      type: object
                       description: Параметры Basic-авторизации для endpoint.
-                      required:
-                        - password
-                        - username
                       properties:
                         username:
-                          type: string
                           description: Имя для аутентификации.
-                          minLength: 1
                         password:
-                          type: string
                           description: Пароль для аутентификации.
-                          minLength: 1
                     bearerToken:
-                      type: string
                       description: Токен для аутентификации.
-                      minLength: 1
                 additionalLabels:
-                  type: object
                   description: Дополнительные метки для добавления ко всем метрикам.
-                  additionalProperties:
-                    type: string
                 intervalSeconds:
-                  type: number
                   description: Временной интервал между точками (в секундах).
-                  default: 300
-                  enum:
-                    - 30
-                    - 300
     - name: v1
       served: true
       storage: false

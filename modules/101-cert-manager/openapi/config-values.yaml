@@ -14,7 +14,7 @@ properties:
 
   tolerations:
     description: |
-      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes.
 
       If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
     type: array
@@ -38,8 +38,11 @@ properties:
   cloudflareGlobalAPIKey:
     type: string
     description: |
-      the Cloudflare Global API key for managing DNS records (it allows you to verify that domains specified
+      The Cloudflare Global API key for managing DNS records
+
+      It allows you to verify that domains specified
       in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
+
       Verification is performed by adding special TXT records for
       the [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/) domain.
     x-examples: ["key"]
@@ -68,7 +71,7 @@ properties:
   digitalOceanCredentials:
     type: string
     description: |
-      The Access Token for the Digital Ocean API (you can create it in the  `API` section)
+      The Access Token for the Digital Ocean API (you can create it in the  `API` section).
     x-examples: ["creds"]
 
   cloudDNSServiceAccount:

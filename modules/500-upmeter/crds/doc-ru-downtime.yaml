@@ -1,44 +1,24 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: downtimes.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: upmeter
-    app: upmeter
 spec:
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
-          description: Описание интервалов недоступности системы. Используется для корректировки уровня SLA.
-          required:
-            - spec
+          description: |
+            Описание интервалов недоступности системы.
+
+            Используется для корректировки уровня SLA.
           properties:
             spec:
-              type: array
               items:
-                type: object
                 description: Интервал недоступности системы.
                 properties:
                   startDate:
-                    type: string
-                    description: Время начала (в формате Unix time или RFC3339, например 2020-09-07T17:24:55Z)
+                    description: Время начала (в формате Unix time или RFC3339, например `2020-09-07T17:24:55Z`)
                   endDate:
-                    type: string
-                    description: Время окончания (в формате Unix time или RFC3339, например 2020-09-07T17:24:55Z)
+                    description: Время окончания (в формате Unix time или RFC3339, например `2020-09-07T17:24:55Z`)
                   type:
-                    type: string
                     description: Тип.
-                    enum: ["Accident", "Maintenance", "InfrastructureMaintenance", "InfrastructureAccident"]
                   description:
-                    type: string
                     description: Подробное описание.
                   affected:
-                    type: array
                     description: Список групп проб модуля, которые были недоступны.
-                    items:
-                      type: string

@@ -15,13 +15,6 @@ data:
 
 ## Parameters
 
-* `enableMultiTenancy` — enable namespace-based authorization.
-  * Since this option is implemented via the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), you will need to perform an additional configuration of [kube-apiserver](usage.html#configuring-kube-apiserver). You can use the [control-plane-manager](../../modules/040-control-plane-manager/) module to automate this process.
-  * The default value is `false` (i.e., multi-tenancy is disabled).
-  * **Available in Enterprise Edition only.**
-* `controlPlaneConfigurator` — parameters of the [control-plane-manager](../../modules/040-control-plane-manager/) module.
-  * `enabled` — passes parameters for configuring authz-webhook to the control-plane-manager module (see the parameters of the [control-plane-manager](../../modules/040-control-plane-manager/configuration.html#parameters) module).
-    * If this parameter is disabled, the control-plane-manager module assumes that Webhook-based authorization is disabled by default. In this case (if no additional settings are provided), the control-plane-manager module will try to delete all references to the Webhook plugin from the manifest (even if you configure the manifest manually).
-    * It is set to `true` by default.
+<!-- SCHEMA -->
 
 All access rights are configured using [Custom Resources](cr.html).

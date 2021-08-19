@@ -1,4 +1,3 @@
-type: object
 properties:
   retentionDays:
     description: Сколько дней хранить данные.
@@ -62,6 +61,7 @@ properties:
       customPlugins:
         description: |
           Список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana.
+
           Необходимо указать в качестве значения список имен плагинов из официального репозитория.
 
           Пример добавления plug-in'ов для возможности указания clickhouse в качестве datasource и панели flow-chart:
@@ -85,7 +85,7 @@ properties:
     properties:
       mode:
         description: |
-          Режим работы HTTPS
+          Режим работы HTTPS:
           - `Disabled` — в данном Grafana/Prometheus будут работать только по HTTP.
           - `CertManager` — Grafana/Prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Grafana/Prometheus будут работать по https используя сертификат из namespace `d8-system`.
@@ -94,7 +94,7 @@ properties:
         properties:
           clusterIssuerName:
             description: |
-              ClusterIssuer, используемый для Grafana/Prometheus
+              ClusterIssuer, используемый для Grafana/Prometheus.
 
               Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
       customCertificate:

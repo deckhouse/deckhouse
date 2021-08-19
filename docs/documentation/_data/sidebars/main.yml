@@ -578,6 +578,10 @@ entries:
                     ru: Справка
                     en: Reference
                   folders:
+                    - title:
+                        ru: Настройки
+                        en: Configuration
+                      url: /modules/460-log-shipper/configuration.html
                     - title: Custom Resources
                       url: /modules/460-log-shipper/cr.html
             - title: prometheus-pushgateway

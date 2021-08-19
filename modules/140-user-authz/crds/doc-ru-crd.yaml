@@ -65,17 +65,6 @@ spec:
                     Дополнительные роли, которые необходимо выдать для заданных `subjects`.
 
                     Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
-
-                    Пример:
-                    ```yaml
-                    additionalRoles:
-                    - apiGroup: rbac.authorization.k8s.io
-                      kind: ClusterRole
-                      name: cluster-write-all
-                    - apiGroup: rbac.authorization.k8s.io
-                      kind: ClusterRole
-                      name: cluster-read-all
-                    ```
                   items:
                     properties:
                       apiGroup:

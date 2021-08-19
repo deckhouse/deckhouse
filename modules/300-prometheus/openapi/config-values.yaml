@@ -99,6 +99,7 @@ properties:
           - ["agenty-flowcharting-panel", "vertamedia-clickhouse-datasource"]
         description: |
           A list of custom Grafana [plugins](https://grafana.com/grafana/plugins). Contains plugin names from the official repository.
+
           Here is how you can add custom plugins (in this case, clickhouse-datasource and flowcharting-panel plugins are used):
 
           ```yaml
