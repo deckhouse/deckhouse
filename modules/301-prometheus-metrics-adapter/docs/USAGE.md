@@ -315,7 +315,7 @@ spec:
   groups:
   - name: prometheus-metrics-adapter.sqs_messages_visible # the recommended template
     rules:
-    - record: kube_adapter_metric_sqs_messages_visible
+    - record: kube_adapter_metric_sqs_messages_visible # Pay attention! The 'kube_adapter_metric_' prefix is required.
       expr: sum (sqs_messages_visible) by (queue)
 ---
 kind: HorizontalPodAutoscaler
@@ -334,7 +334,7 @@ spec:
   - type: External
     external:
       metric:
-        name: sqs_messages_visible
+        name: sqs_messages_visible # Must match PrometheusRule record name without 'kube_adapter_metric_' prefix.
         selector:
           matchLabels:
             queue: send_forum_messages
