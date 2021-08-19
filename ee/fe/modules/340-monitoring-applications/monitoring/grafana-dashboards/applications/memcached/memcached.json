@@ -486,7 +486,7 @@
         }
       ],
       "thresholds": "",
-      "title": "Total",
+      "title": "Memory limit",
       "type": "singlestat",
       "valueFontSize": "50%",
       "valueMaps": [
@@ -544,7 +544,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (memcached_commands_total{job=\"memcached\",status=\"hit\",command=\"get\",pod=\"$pod\",namespace=\"$namespace\"}) / sum (memcached_commands_total{job=\"memcached\",command=\"get\",pod=\"$pod\",namespace=\"$namespace\"})",
+          "expr": "sum (rate (memcached_commands_total{job=\"memcached\", status=\"hit\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -553,7 +553,7 @@
           "step": 5
         },
         {
-          "expr": "sum (memcached_commands_total{job=\"memcached\",status=\"miss\",command=\"get\",pod=\"$pod\",namespace=\"$namespace\"}) / sum (memcached_commands_total{job=\"memcached\",command=\"get\",pod=\"$pod\",namespace=\"$namespace\"})",
+          "expr": "sum (rate (memcached_commands_total{job=\"memcached\", status=\"miss\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4])) / sum (rate (memcached_commands_total{job=\"memcached\", command=\"get\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "miss",
