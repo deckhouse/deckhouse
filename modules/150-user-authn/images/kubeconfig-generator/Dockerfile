@@ -26,7 +26,12 @@ COPY --from=artifact /app/html /app/html
 COPY --from=artifact /app/templates /app/templates
 COPY --from=artifact /app/entrypoint.sh /
 
-RUN mkdir -p /certs && chmod a+x /entrypoint.sh
+RUN mkdir -p /certs \
+  # set up nsswitch.conf for Go's "netgo" implementation
+  # Go stdlib completely ignores /etc/hosts file without it
+  # https://github.com/moby/moby/issues/34544
+  && echo "hosts: files dns" > /etc/nsswitch.conf \
+  && chmod a+x /entrypoint.sh
 
 WORKDIR /app
 
