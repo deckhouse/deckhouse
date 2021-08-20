@@ -1,42 +1,17 @@
-type: object
-required: [instances]
 properties:
   autoConvergerEnabled:
-    type: boolean
-    default: true
     description: |
       Включает проверку состояния Terraform'а и примененине недеструктивных изменений.
   autoConvergerPeriod:
-    type: string
-    default:
-    pattern: '^\d+(?:m|h)$'
     description: |
       Через какой промежуток времени проверять состояние Terraform'а.
   nodeSelector:
-    type: object
-    additionalProperties:
-      type: string
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
-    type: array
     description: |
       Структура, аналогичная  `spec.tolerations` Kubernetes pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
-    items:
-      type: object
-      properties:
-        effect:
-          type: string
-        key:
-          type: string
-        operator:
-          type: string
-        tolerationSeconds:
-          type: integer
-          format: int64
-        value:
-          type: string

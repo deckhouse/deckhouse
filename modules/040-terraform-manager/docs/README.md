@@ -1,7 +1,6 @@
 ---
 title: "The terraform-manager module"
 ---
-## Description
 
 The module provide tools for working with Terraform in the Kubernetes cluster.
 

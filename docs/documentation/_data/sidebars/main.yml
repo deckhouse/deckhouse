@@ -390,6 +390,10 @@ entries:
                     ru: Описание
                     en: Description
                   url: /modules/040-terraform-manager/
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/040-terraform-manager/configuration.html
     - title:
         en: Accessing cluster
         ru: Доступ к кластеру
