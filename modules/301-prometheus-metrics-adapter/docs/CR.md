@@ -33,7 +33,7 @@ You can globally define a metric using the Cluster resource, while the Namespace
 ### `NamespaceMetric`
 {{ cr_spec }}
 
-### `DaemonsetMetric` (not available to users)
+### `DaemonSetMetric` (not available to users)
 {{ cr_spec }}
 
 ## Cluster Custom resources
@@ -55,7 +55,7 @@ You can globally define a metric using the Cluster resource, while the Namespace
 {{ cr_spec }}
 #### Пример
 
-### `ClusterDaemonsetMetric` (not available to users)
+### `ClusterDaemonSetMetric` (not available to users)
 {{ cr_spec }}
 
 ## PrometheusRule

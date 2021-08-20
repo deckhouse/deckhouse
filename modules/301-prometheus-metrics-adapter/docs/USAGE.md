@@ -75,14 +75,14 @@ Custom metrics must be registered with the `/apis/custom.metrics.k8s.io/` API. I
     * `DeploymentMetric`
     * `StatefulsetMetric`
     * `NamespaceMetric`
-    * `DaemonsetMetric` (not available to users)
+    * `DaemonSetMetric` (not available to users)
 * Cluster:
     * `ClusterServiceMetric` (not available to users)
     * `ClusterIngressMetric` (not available to users)
     * `ClusterPodMetric` (not available to users)
     * `ClusterDeploymentMetric` (not available to users)
     * `ClusterStatefulsetMetric` (not available to users)
-    * `ClusterDaemonsetMetric` (not available to users)
+    * `ClusterDaemonSetMetric` (not available to users)
 
 You can globally define a metric using the Cluster-scoped resource, while the Namespaced resource allows you to redefine it locally. All CRs have the same [format](cr.html).
 
@@ -257,7 +257,7 @@ spec:
   groups:
   - name: prometheus-metrics-adapter.mymetric # recommended template
     rules:
-    - record: kube_adapter_metric_mymetric # the name of the new metric
+    - record: kube_adapter_metric_mymetric # the name of the new metric. Pay attention! The 'kube_adapter_metric_' prefix is required.
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress) # The results of this request will be passed to the final metric; there is no reason to include excess labels into it.
 ```
 {% endraw %}
@@ -284,7 +284,7 @@ spec:
   - type: External
     external:
       metric:
-        name: mymetric  # The metric that we registered by creating a metric in Prometheus's kube_adapter_metric_mymetric.
+        name: mymetric  # The metric that we registered by creating a metric in Prometheus's kube_adapter_metric_mymetric but without 'kube_adapter_metric_' prefix
         selector:
           matchLabels:  # For external metrics, you can and should specify matching labels.
             namespace: mynamespace

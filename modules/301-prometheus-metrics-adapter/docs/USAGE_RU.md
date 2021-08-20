@@ -75,14 +75,14 @@ spec:
     * `DeploymentMetric`
     * `StatefulsetMetric`
     * `NamespaceMetric`
-    * `DaemonsetMetric` (недоступен пользователям)
+    * `DaemonSetMetric` (недоступен пользователям)
 * Cluster:
     * `ClusterServiceMetric` (недоступен пользователям)
     * `ClusterIngressMetric` (недоступен пользователям)
     * `ClusterPodMetric` (недоступен пользователям)
     * `ClusterDeploymentMetric` (недоступен пользователям)
     * `ClusterStatefulsetMetric` (недоступен пользователям)
-    * `ClusterDaemonsetMetric` (недоступен пользователям)
+    * `ClusterDaemonSetMetric` (недоступен пользователям)
 
 С помощью Cluster-scoped ресурса можно определить метрику глобально, а с помощью Namespaced-ресурса можно её локально переопределять. [Формат](cr.html) у всех CR одинаковый.
 
@@ -257,7 +257,7 @@ spec:
   groups:
   - name: prometheus-metrics-adapter.mymetric # Рекомендованный шаблон.
     rules:
-    - record: kube_adapter_metric_mymetric # Как ваша новая метрика будет называться
+    - record: kube_adapter_metric_mymetric # Как ваша новая метрика будет называться. Важно! Префикс 'kube_adapter_metric_' обязателен
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress) # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в неё лишние лейблы.
 ```
 {% endraw %}
@@ -284,7 +284,7 @@ spec:
   - type: External
     external:
       metric:
-        name: mymetric  # Метрика, которую мы зарегистрировали с помощью создания метрики в Prometheus kube_adapter_metric_mymetric.
+        name: mymetric  # Метрика, которую мы зарегистрировали с помощью создания метрики в Prometheus kube_adapter_metric_mymetric, но без префикса 'kube_adapter_metric_'
         selector:
           matchLabels:  # Для внешних метрик можно и нужно уточнять запрос с помощью лейблов.
             namespace: mynamespace
