@@ -102,12 +102,32 @@ func TestConfig_1(t *testing.T) {
     "d8_clusterns_baar_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
-      "extra_field_selector": "metadata.namespace=baar"
+      "extra_field_selector": "metadata.namespace=baar",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      }
     },
     "d8_clusterns_foot_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
-      "extra_field_selector": "metadata.namespace=foot"
+      "extra_field_selector": "metadata.namespace=foot",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      }
     }
   },
   "sinks": {
@@ -179,12 +199,32 @@ func TestConfig_2(t *testing.T) {
     "d8_clusterns_baar_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
-      "extra_field_selector": "metadata.namespace=baar"
+      "extra_field_selector": "metadata.namespace=baar",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      }
     },
     "d8_clusterns_foot_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
-      "extra_field_selector": "metadata.namespace=foot"
+      "extra_field_selector": "metadata.namespace=foot",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      }
     }
   },
   "sinks": {
@@ -231,6 +271,7 @@ func TestConfig_3(t *testing.T) {
 		Elasticsearch: v1alpha1.ElasticsearchSpec{
 			Endpoint: "https://192.168.0.1:9200",
 			Index:    "{{ kubernetes.namespace }}-%F",
+			Pipeline: "test-pipe",
 			TLS:      v1alpha1.CommonTLSSpec{VerifyHostname: true},
 		},
 	}
@@ -281,7 +322,9 @@ func TestConfig_3(t *testing.T) {
       },
 	  "compression": "gzip",
     "bulk_action": "index",
-    "index": "{{ kubernetes.namespace }}-%F"
+    "mode": "normal",
+    "index": "{{ kubernetes.namespace }}-%F",
+    "pipeline": "test-pipe"
     }
   }
 }
