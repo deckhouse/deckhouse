@@ -25,12 +25,14 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 ```
 {% endsnippetcut %}
 
+Please note that when you need to use the contents of this file during the next step — adding it to your YAML manifest (in the `serviceAccountJSON` parameter) — you will need to make it compact via `cat deckhouse-sa-key.json | jq -c`.
+
 <div id="standard-layout-notes" style="display:none" markdown="1">
 **Caution!**
 
 When using the **Standard** resource layout, you must enable `Cloud NAT` within 3 minutes of creating the primary network resources for all subnets. Otherwise, the bootstrap process will fail.
 
-You can enable `Cloud NAT` manually using the WEB interface.
+You can enable `Cloud NAT` manually using the web interface.
 
 Example:
 
