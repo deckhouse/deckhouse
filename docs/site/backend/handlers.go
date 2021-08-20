@@ -214,23 +214,46 @@ func rootDocHandler(w http.ResponseWriter, r *http.Request) {
 
 // Redirect to root documentation if request not matches any location (override 404 response)
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	lang := "en"
+
+	re := regexp.MustCompile(`^/(ru|en)/.*$`)
+	res := re.FindStringSubmatch(r.URL.RequestURI())
+	if res != nil {
+		lang = res[1]
+	}
+
 	w.WriteHeader(http.StatusNotFound)
-	page404File, err := os.Open(getRootFilesPath() + "/404.html")
+	page404File, err := os.Open(fmt.Sprintf("%s/%s/404.html",getRootFilesPath(), lang ))
 	defer page404File.Close()
 	if err != nil {
 		// 404.html file not found!
 		log.Error("404.html file not found")
-		http.Error(w, `<html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Page Not Found | werf</title><meta name="title" content="Page Not Found | werf">
+        http.Error(w, `<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Not Found | Deckhouse</title>
+    <meta name="title" content="Page Not Found | Deckhouse">
 </head>
-<body>
-		<h1 class="docs__title">Page Not Found</h1>
-		<p>Sorry, the page you were looking for does not exist.<br>
-Try searching for it or check the URL to see if it looks correct.</p>
-<div class="error-image">
-    <img src="https://werf.io/images/404.png" alt="">
+<body style="
+    display: flex;
+    flex-direction: column;
+    height: -webkit-fill-available;
+    justify-content: space-between;
+">
+<div class="content">
+    <a href="/en"><img src="/images/logos/deckhouse-platform.svg" alt="Deckhouse"></a>
+    <div style="margin-top: 100px; width: 100%; width: 80%; margin-left: 50px;">
+        <h1 class="docs__title">Page not found</h1>
+        <div class="post-content">
+            <p>Sorry, the page you were looking for does not exist.</p>
+            <p>Try searching for it or check the URL to see if it looks correct.</p>
+        </div>
+    </div>
 </div>
-</body></html>`, 404)
+<footer style="background-color: #02003E; padding:50px 0;"><a href="/"><img src="/images/logos/deckhouse-platform-white.svg" alt="Deckhouse Kubernetes Platform"></a></footer>
+</body>
+</html>`, 404)
 		return
 	}
 	io.Copy(w, page404File)
