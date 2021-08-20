@@ -33,7 +33,7 @@ search: autoscaler, HorizontalPodAutoscaler
 ### `NamespaceMetric`
 {{ cr_spec }}
 
-### `DaemonsetMetric` (недоступен пользователям)
+### `DaemonSetMetric` (недоступен пользователям)
 {{ cr_spec }}
 
 ## Cluster Custom resources
@@ -55,7 +55,7 @@ search: autoscaler, HorizontalPodAutoscaler
 {{ cr_spec }}
 #### Пример
 
-### `ClusterDaemonsetMetric` (недоступен пользователям)
+### `ClusterDaemonSetMetric` (недоступен пользователям)
 {{ cr_spec }}
 
 ## PrometheusRule
