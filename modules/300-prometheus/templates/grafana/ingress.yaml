@@ -31,6 +31,12 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+    # In Deckhouse, Grafana is an "IAC" configured platform.
+    # This rewrite forbids users to log in and get higher privileges.
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /login {
+        rewrite ^ {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }} permanent;
+      }
     nginx.ingress.kubernetes.io/affinity: cookie
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
