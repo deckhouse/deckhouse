@@ -139,7 +139,7 @@ data:
     "connection_from": "$realip_remote_addr",
     {{- end }}
   {{- else if eq $crd.spec.inlet "HostPort" }}
-    {{- if $hostPort.behindL7Proxy }}hostPort
+    {{- if $hostPort.behindL7Proxy }}
     "connection_from": "$realip_remote_addr",
     {{- end }}
   {{- else if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
