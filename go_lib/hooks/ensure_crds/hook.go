@@ -199,6 +199,9 @@ func splitYAML(resources []byte) ([][]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		if value == nil {
+			continue
+		}
 		valueBytes, err := yamlv3.Marshal(value)
 		if err != nil {
 			return nil, err
