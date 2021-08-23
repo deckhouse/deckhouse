@@ -148,7 +148,7 @@ func (c *namespaceDeletionChecker) Check() check.Error {
 }
 
 func createNamespaceObject() *v1.Namespace {
-	name := util.RandomIdentifier("upmeter-control-plane-namespace")
+	name := util.AgentIdentifier("upmeter-control-plane-namespace")
 
 	return &v1.Namespace{
 		TypeMeta: metav1.TypeMeta{

@@ -31,6 +31,10 @@ func RandomIdentifier(prefix string) string {
 	return prefix + "-" + AgentUniqueId() + "-" + RndAlphaNum(5)
 }
 
+func AgentIdentifier(prefix string) string {
+	return prefix + "-" + AgentUniqueId()
+}
+
 var uniqIdSeed uint32 = 0xa5
 
 func AgentUniqueId() string {
