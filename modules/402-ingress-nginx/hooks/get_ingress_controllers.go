@@ -93,6 +93,7 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 func setInternalValues(input *go_hook.HookInput) error {
 	controllersFilterResult := input.Snapshots["controller"]
 	defaultControllerVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
+	input.MetricsCollector.Expire("")
 
 	var controllers []Controller
 
@@ -103,13 +104,20 @@ func setInternalValues(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("cannot get controllerVersion from ingress controller spec: %v", err)
 		}
+		resultVersion := version
 		if len(version) == 0 || !found {
 			err := unstructured.SetNestedField(controller.Spec, defaultControllerVersion, "controllerVersion")
 			if err != nil {
 				return fmt.Errorf("cannot set controllerVersion for ingress controller spec: %v", err)
 			}
+			resultVersion = defaultControllerVersion
 		}
 		controllers = append(controllers, controller)
+
+		input.MetricsCollector.Set("d8_ingress_nginx_controller", 1, map[string]string{
+			"controller_name":    controller.Name,
+			"controller_version": resultVersion,
+		})
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)

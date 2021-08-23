@@ -17,14 +17,8 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-	"io/ioutil"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -33,20 +27,23 @@ var _ = Describe("ingress-nginx :: hooks :: migrate_load_balancer_before ::", fu
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": 0.25, "internal": {"webhookCertificates":{}}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
-	dsControllerMainYAML := `
+	dControllerMainYAML := `
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   name: controller-main
   namespace: d8-ingress-nginx
   labels:
     name: main
     app: controller
+    app.kubernetes.io/managed-by: Helm
   annotations:
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
+    meta.helm.sh/release-name: foo
+    meta.helm.sh/release-namespace: d8-ingress-nginx
 status:
-  desiredNumberScheduled: 2
+  replicas: 6
 `
 	ingressControllerMainYAML := `
 ---
@@ -58,28 +55,27 @@ spec:
   ingressClass: nginx
   inlet: LoadBalancer
 `
-	dsControllerOtherYAML := `
+	dControllerOtherYAML := `
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   name: controller-other
   namespace: d8-ingress-nginx
+  annotations:
+    ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
+    meta.helm.sh/release-name: foo
+    meta.helm.sh/release-namespace: d8-ingress-nginx
+    ingress-nginx-controller.deckhouse.io/inlet: HostPort
   labels:
     name: main
     app: controller
-  annotations:
-    ingress-nginx-controller.deckhouse.io/inlet: HostPort
+    app.kubernetes.io/managed-by: Helm
 `
-	testdata, _ := ioutil.ReadFile("testdata/controller-release-secret-with-ds.yaml")
-	var secretRelease *corev1.Secret
-	_ = yaml.Unmarshal(testdata, &secretRelease)
-
-	Context("Cluster with ingress controller and its DaemonSet", func() {
+	Context("Cluster with ingress controller and its Deployment", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(dsControllerMainYAML + ingressControllerMainYAML))
+			f.BindingContexts.Set(f.KubeStateSet(dControllerMainYAML + ingressControllerMainYAML))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			_, _ = f.KubeClient().CoreV1().Secrets("d8-system").Create(context.TODO(), secretRelease, metav1.CreateOptions{})
 
 			f.RunHook()
 		})
@@ -89,29 +85,22 @@ metadata:
 
 			ingressControllerMain := f.KubernetesResource("IngressNginxController", "", "main")
 			Expect(ingressControllerMain.Exists()).To(BeTrue())
-			Expect(ingressControllerMain.Field("spec.minReplicas").Int()).To(Equal(int64(4)))
-			Expect(ingressControllerMain.Field("spec.maxReplicas").Int()).To(Equal(int64(12)))
+			Expect(ingressControllerMain.Field("spec.minReplicas").Int()).To(Equal(int64(3)))
+			Expect(ingressControllerMain.Field("spec.maxReplicas").Int()).To(Equal(int64(3)))
 
-			releaseSecret, _ := f.KubeClient().CoreV1().Secrets("d8-system").Get(context.TODO(), "sh.helm.release.v1.ingress-nginx.v66", metav1.GetOptions{})
-			Expect(releaseSecret).ToNot(Equal(secretRelease))
+			dep := f.KubernetesResource("Deployment", "d8-ingress-nginx", "controller-main")
+			Expect(dep.Exists()).To(BeTrue())
+			Expect(dep.Field("metadata.annotations.meta\\.helm\\.sh/release-name").Exists()).To(BeFalse())
+			Expect(dep.Field("metadata.annotations.meta\\.helm\\.sh/release-namespace").Exists()).To(BeFalse())
+			Expect(dep.Field("metadata.labels.app\\.kubernetes\\.io/managed-by").Exists()).To(BeFalse())
 
-			initialRelease, _ := ParseReleaseSecretToJSON(secretRelease)
-			finalRelease, _ := ParseReleaseSecretToJSON(releaseSecret)
-
-			initialManifest := initialRelease["manifest"]
-			finalManifest := finalRelease["manifest"]
-
-			delete(initialRelease, "manifest")
-			delete(finalRelease, "manifest")
-
-			Expect(initialRelease).To(Equal(finalRelease))
-			Expect(initialManifest).ToNot(Equal(finalManifest))
+			Expect(dep.Field("metadata.annotations.helm\\.sh/resource-policy").String()).To(BeEquivalentTo("keep"))
 		})
 	})
 
 	Context("Cluster with ingress controller DaemonSet, not suitable for migration", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(dsControllerOtherYAML))
+			f.BindingContexts.Set(f.KubeStateSet(dControllerOtherYAML))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 
 			f.RunHook()
@@ -119,6 +108,11 @@ metadata:
 
 		It("must be execute successfully, set replicas and chang helm release secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			dep := f.KubernetesResource("Deployment", "d8-ingress-nginx", "controller-other")
+			Expect(dep.Exists()).To(BeTrue())
+
+			Expect(dep.Field("metadata.labels.app\\.kubernetes\\.io/managed-by").Exists()).To(BeTrue())
+			Expect(dep.Field("metadata.annotations.helm\\.sh/resource-policy").Exists()).To(BeFalse())
 		})
 	})
 
