@@ -18,7 +18,6 @@ require (
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.3
-	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758

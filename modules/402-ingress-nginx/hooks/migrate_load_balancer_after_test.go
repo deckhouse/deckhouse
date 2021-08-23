@@ -39,7 +39,8 @@ metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
 status:
-  desiredNumberScheduled: 2
+  numberReady: 1
+  desiredNumberScheduled: 1
 `
 	dControllerMainYAML := `
 ---
@@ -53,14 +54,11 @@ metadata:
     app: controller
   annotations:
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
-status:
-  readyReplicas: 2
-  replicas: 2
 `
-	dNotReadyControllerMainYAML := `
+	dsNotReadyControllerMainYAML := `
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: controller-main
   namespace: d8-ingress-nginx
@@ -70,8 +68,8 @@ metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
 status:
-  readyReplicas: 1
-  replicas: 2
+  numberReady: 1
+  desiredNumberScheduled: 2
 `
 	dsControllerOtherYAML := `
 ---
@@ -100,7 +98,7 @@ metadata:
 		})
 	})
 
-	Context("Cluster with ingress controller DaemonSet and ready Deployment", func() {
+	Context("Cluster with ingress controller Deployment and ready DaemonSet", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(dsControllerMainYAML + dControllerMainYAML))
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
@@ -108,31 +106,31 @@ metadata:
 			f.RunHook()
 		})
 
-		It("must be execute successfully, and delete DaemonSet", func() {
+		It("must be execute successfully, and delete Deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			dsControllerMain := f.KubernetesResource("DaemonSet", namespace, "controller-main")
+			dsControllerMain := f.KubernetesResource("Deployment", namespace, "controller-main")
 			Expect(dsControllerMain.Exists()).To(BeFalse())
 		})
 	})
 
-	Context("Cluster with ingress controller DaemonSet and not ready Deployment", func() {
+	Context("Cluster with ingress controller Deployment and not ready DaemonSet", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(dsControllerMainYAML + dNotReadyControllerMainYAML))
+			f.BindingContexts.Set(f.KubeStateSet(dControllerMainYAML + dsNotReadyControllerMainYAML))
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
 
 			f.RunHook()
 		})
 
-		It("must be execute successfully, and keep DaemonSet", func() {
+		It("must be execute successfully, and keep Deployment", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			dsControllerMain := f.KubernetesResource("DaemonSet", namespace, "controller-main")
+			dsControllerMain := f.KubernetesResource("Deployment", namespace, "controller-main")
 			Expect(dsControllerMain.Exists()).To(BeTrue())
 		})
 	})
 
-	Context("Cluster with ingress controller DaemonSet, not suitable for migration", func() {
+	Context("Cluster with ingress controller Deployment, not suitable for migration", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(dsControllerOtherYAML))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

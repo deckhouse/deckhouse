@@ -86,3 +86,18 @@
         * По окончании миграции отключите модуль nginxIngress в configmap deckhouse `nginxIngressEnabled: "false"`
       summary: |
         В кластере используется устаревший модуль nginx-ingress
+  - alert: D8IngressNginxControllerVersionDeprecated
+    expr: sum by (controller_name, controller_version) (d8_ingress_nginx_controller{controller_version=~"0.25|0.26"})
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_incident_initial_status: "todo"
+      description: |-
+        Found deprecated Ingress Nginx controller version: {{`{{$labels.controller_version}}`}}
+        Please upgrade {{`{{$labels.controller_name}}`}} IngressNginxController
+        This version deprecated and does not have newest improvements and patches
+      summary: >
+        Deprecated version of IngressNginxController {{`{{$labels.controller_version}}`}} found

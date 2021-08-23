@@ -5,11 +5,13 @@ FROM $BASE_GOLANG_BUSTER as artifact
 WORKDIR /src/
 COPY lua-info.patch /
 COPY makefile.patch /
+COPY healthcheck.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-v0.46.0 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
+    patch -p1 < /healthcheck.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # luarocks assets for luajit artifact
