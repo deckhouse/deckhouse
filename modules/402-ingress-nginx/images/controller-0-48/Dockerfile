@@ -4,13 +4,13 @@ ARG BASE_GOLANG_BUSTER
 FROM $BASE_GOLANG_BUSTER as artifact
 WORKDIR /src/
 COPY lua-info.patch /
-COPY omit-helm-secrets.patch /
+COPY makefile.patch /
 COPY healthcheck.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
-    git clone --branch controller-0.33.0 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
+    git clone --branch controller-v0.48.1 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
-    patch -p1 < /omit-helm-secrets.patch && \
+    patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
@@ -23,12 +23,12 @@ RUN apt-get update \
   && luarocks install lua-iconv 7-3
 
 # IngressNginxController docker image
-FROM quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.33.0@sha256:fc650620719e460df04043512ec4af146b7d9da163616960e58aceeaf4ea5ba1 as controller_0_33_0
+FROM k8s.gcr.io/ingress-nginx/controller:v0.48.1@sha256:e9fb216ace49dfa4a5983b183067e97496e7a8b307d2093f4278cd550c303899 as controller_0_48_1
 
 # Final image
 FROM $BASE_ALPINE
-# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-0.33.0/images/nginx/rootfs/Dockerfile
-# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-0.33.0/rootfs/Dockerfile
+# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v0.48.1/images/nginx/rootfs/Dockerfile
+# Based on https://github.com/kubernetes/ingress-nginx/blob/controller-v0.48.1/rootfs/Dockerfile
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
 
 ENV LUA_PATH="/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
@@ -42,13 +42,12 @@ RUN addgroup -Sg 101 www-data \
   && adduser -S -D -H -u 101 -h /usr/local/nginx \
     -s /sbin/nologin -G www-data -g www-data www-data
 
-COPY --from=controller_0_33_0 /usr/local /usr/local
-COPY --from=controller_0_33_0 /opt /opt
-COPY --from=controller_0_33_0 --chown=www-data:www-data /etc /etc
-COPY --from=controller_0_33_0 --chown=www-data:www-data /ingress-controller /ingress-controller
-COPY --from=controller_0_33_0 --chown=www-data:www-data /dbg /dbg
-COPY --from=controller_0_33_0 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
-COPY --from=controller_0_33_0 --chown=www-data:www-data /wait-shutdown /wait-shutdown
+COPY --from=controller_0_48_1 /usr/local /usr/local
+COPY --from=controller_0_48_1 /opt /opt
+COPY --from=controller_0_48_1 --chown=www-data:www-data /etc /etc
+COPY --from=controller_0_48_1 --chown=www-data:www-data /dbg /dbg
+COPY --from=controller_0_48_1 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
+COPY --from=controller_0_48_1 --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
 COPY balancer-lua.patch /

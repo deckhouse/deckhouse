@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Migration from deployment to daemonset(25.08.2021
+// can be deleted after getting to 'rock-solid' (~01.12.2021)
+
 package hooks
 
 import (
@@ -21,6 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-ingress-nginx"},
@@ -46,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "controller",
 				},
 			},
-			FilterFunc: ApplyDaemonSetControllerFilter,
+			FilterFunc: applyDaemonSetControllerFilter,
 		},
 		{
 			Name:                         "deployment",
@@ -68,22 +73,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, migrateControllerAfterHelm)
 
-type DeploymentController struct {
-	Name   string                  `json:"name"`
-	Status appsv1.DeploymentStatus `json:"status"`
+type daemonSetController struct {
+	CRDName string                 `json:"crd_name"`
+	Status  appsv1.DaemonSetStatus `json:"status"`
 }
 
-func applyDeploymentControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	d := &appsv1.Deployment{}
+func applyDaemonSetControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	d := &appsv1.DaemonSet{}
 
 	err := sdk.FromUnstructured(obj, d)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	return DeploymentController{
-		Name:   d.Labels["name"],
-		Status: d.Status,
+	return daemonSetController{
+		CRDName: d.Labels["name"],
+		Status:  d.Status,
 	}, nil
 }
 
@@ -91,35 +96,37 @@ func migrateControllerAfterHelm(input *go_hook.HookInput) (err error) {
 	daemonsets := input.Snapshots["daemonset"]
 	deployments := input.Snapshots["deployment"]
 
+	daemonsetReadinessMap := make(map[string]bool)
 	for _, ds := range daemonsets {
 		if ds == nil {
 			continue
 		}
-		daemonset := ds.(DaemonSetController)
-
-		var deploymentReady bool
-		for _, d := range deployments {
-			if d == nil {
-				continue
-			}
-			deployment := d.(DeploymentController)
-			if daemonset.Name == deployment.Name {
-				if deployment.Status.Replicas == deployment.Status.ReadyReplicas {
-					deploymentReady = true
-					break
-				}
-			}
+		var daemonsetReady bool
+		daemonset := ds.(daemonSetController)
+		if daemonset.Status.NumberReady == daemonset.Status.DesiredNumberScheduled {
+			daemonsetReady = true
 		}
+		daemonsetReadinessMap[daemonset.CRDName] = daemonsetReady
+	}
 
-		if !deploymentReady {
-			input.LogEntry.Infof("Deployment is not yet ready, skipping controller %s", daemonset.Name)
+	for _, d := range deployments {
+		if d == nil {
+			continue
+		}
+		deployment := d.(deploymentController)
+
+		daemonsetReady, ok := daemonsetReadinessMap[deployment.CRDName]
+		if !ok {
+			input.LogEntry.Infof("DaemonSet is not found, skipping controller %s", deployment.CRDName)
 			continue
 		}
 
-		err := input.ObjectPatcher().DeleteObject("apps/v1", "DaemonSet", namespace, "controller-"+daemonset.Name, "")
-		if err != nil {
-			return err
+		if !daemonsetReady {
+			input.LogEntry.Infof("DaemonSet is not yet ready, skipping controller %s", deployment.CRDName)
+			continue
 		}
+
+		input.PatchCollector.Delete("apps/v1", "Deployment", namespace, deployment.Name, object_patch.InBackground())
 	}
 
 	return nil

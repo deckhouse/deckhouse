@@ -141,41 +141,13 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 		It("Should add desired objects", func() {
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
-			testD := hec.KubernetesResource("Deployment", "d8-ingress-nginx", "controller-test")
+			testD := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test")
 			Expect(testD.Exists()).To(BeTrue())
 			Expect(testD.Field("spec.template.spec.containers.0.resources.requests").String()).To(MatchYAML(`
 cpu: 100m
 ephemeral-storage: 150Mi
 memory: 200Mi`))
-			Expect(testD.Field("spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution").String()).To(MatchYAML(`
-- weight: 100
-  podAffinityTerm:
-    labelSelector:
-      matchExpressions:
-      - key: app
-        operator: In
-        values:
-        - controller
-      - key: name
-        operator: In
-        values:
-        - test
-    topologyKey: kubernetes.io/hostname`))
-			Expect(testD.Field("spec.template.spec.topologySpreadConstraints").String()).To(MatchYAML(`
-- maxSkew: 1
-  topologyKey: kubernetes.io/hostname
-  whenUnsatisfiable: DoNotSchedule
-  labelSelector:
-    matchExpressions:
-    - key: app
-      operator: In
-      values:
-      - controller
-    - key: name
-      operator: In
-      values:
-      - test
-`))
+
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
@@ -196,7 +168,9 @@ memory: 200Mi`))
 			Expect(configMapData.Get("body-size").Raw).To(Equal(`"64m"`))
 			Expect(configMapData.Get("load-balance").Raw).To(Equal(`"ewma"`))
 
-			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "prometheus-metrics-adapter-d8-ingress-nginx-cpu-utlization-for-hpa").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-lbwpp-auth-tls").Exists()).To(BeTrue())
@@ -232,7 +206,7 @@ memory: 200Mi`))
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "test-next-load-balancer").Exists()).ToNot(BeTrue())
 
-			hpaTest := hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "controller-test")
+			hpaTest := hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "hpa-scaler-test")
 			Expect(hpaTest.Exists()).To(BeTrue())
 			Expect(hpaTest.Field("spec.maxReplicas").Int()).To(Equal(int64(6)))
 			Expect(hpaTest.Field("spec.minReplicas").Int()).To(Equal(int64(2)))
