@@ -452,11 +452,13 @@ spec:
                   description: |
                     LoadBalancer and LoadBalancerWithProxyProtocol controller's Horizontal Pod Autoscaler minimum replicas count.
                   default: 1
+                  minimum: 1
                 maxReplicas:
                   type: integer
                   description: |
                     LoadBalancer and LoadBalancerWithProxyProtocol controller's Horizontal Pod Autoscaler maximum replicas count.
-                  default: 6
+                  default: 1
+                  minimum: 1
               oneOf:
                 - properties:
                     inlet:

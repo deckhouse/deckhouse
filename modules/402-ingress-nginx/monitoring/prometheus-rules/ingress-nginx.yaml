@@ -98,6 +98,6 @@
       description: |-
         Found deprecated Ingress Nginx controller version: {{`{{$labels.controller_version}}`}}
         Please upgrade {{`{{$labels.controller_name}}`}} IngressNginxController
-        This version deprecated and does not have newest improvements and patches
+        This version is deprecated and does not have the newest improvements and patches
       summary: >
         Deprecated version of IngressNginxController {{`{{$labels.controller_version}}`}} found
