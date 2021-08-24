@@ -161,7 +161,10 @@ Prod Main Deploy:
   environment:
     name: web-production
     url: https://deckhouse.io
-  when: manual
+  only:
+    - master
+  except:
+    - schedules
 
 Prod Doc Deploy :
   <<: *web_base_deploy
@@ -174,7 +177,10 @@ Prod Doc Deploy :
   environment:
     name: web-production
     url: https://deckhouse.io
-  when: manual
+  only:
+    - master
+  except:
+    - schedules
 
 Web cleanup:
   stage: cleanup_registry
