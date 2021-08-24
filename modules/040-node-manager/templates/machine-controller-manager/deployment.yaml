@@ -62,6 +62,7 @@ spec:
           - --bootstrap-token-auth-extra-groups=system:bootstrappers:d8-node-manager
           - --address=127.0.0.1
           - --port=10258
+          - --machine-drain-delay=1m
           - -v=2
           livenessProbe:
             failureThreshold: 3
