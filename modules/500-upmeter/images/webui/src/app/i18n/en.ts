@@ -78,7 +78,7 @@ const langPack: LangPack = {
             title: "Kubernetes Control Plane",
             description: `
             <p>Control Plane is available. Self-healing is working.</p>
-            <p>Group result is a combination of probe results with priority of the worst results.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
         },
         "synthetic": {
@@ -86,7 +86,7 @@ const langPack: LangPack = {
             title: "Synthetic",
             description: `
             <p>Checks the availability of sample application running in the cluster.</p>
-            <p>Group result is a combination of probe results with priority of the worst results.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
 
         },
@@ -95,9 +95,17 @@ const langPack: LangPack = {
             title: "Monitoring and Autoscaling",
             description: `
             <p>Checks the availability of monitoring and autoscaling applications in the cluster.</p>
-            <p>Group result is a combination of probe results with priority of the worst results.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
         },
+        scaling: {
+            ...GROUP_DEFAULT_TOOLTIP,
+            title: "Scaling",
+            description: `
+            <p>Checks the availability of cluster scaling and autoscaling controllers and controller managers.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
+            `,
+        }
     },
     probe: {
         "control-plane": {
@@ -220,6 +228,24 @@ const langPack: LangPack = {
                 ...SYNTHETIC_REASONS,
                 title: "Neighbor via Service",
                 description: "Every 5 seconds resolve sample application IPs and request <code>/neighbor-via-service</code> endpoint until first success",
+            }
+        },
+        scaling: {
+            "cluster-scaling": {
+                title: "Cluster Scaling",
+                description: "Cluster scaling is provided by Machine Controller Manager (MCM), Cloud Contoller Manager (CCM), and bashible apiserver",
+                reasonUp: "at least one Pod of each of MCM, CCM, and bashible apiserver is in <code>Ready</code> state",
+                reasonDown: "there are no pods of any of MCM, CCM, or bashible apiserver in <code>Ready</code> state",
+                reasonUnknown: "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+                reasonNodata: REASON_AGENTS_STOPPED,
+            },
+            "cluster-autoscaler": {
+                title: "Cluster Autoscaler",
+                description: "Cluster Autoscaler automatically adds and removes cluster nodes",
+                reasonUp: "at least one Pod of cluster-autoscaler is in <code>Ready</code> state",
+                reasonDown: "there are no pods of cluster-autoscaler in <code>Ready</code> state",
+                reasonUnknown: "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+                reasonNodata: REASON_AGENTS_STOPPED,
             }
         }
     },

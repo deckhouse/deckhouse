@@ -31,6 +31,10 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+clusterConfiguration:
+  clusterType: "Cloud"
+  cloud:
+    provider: "OpenStack"
 enabledModules: ["vertical-pod-autoscaler-crd", "upmeter"]
 modulesImages:
   registry: registry.deckhouse.io

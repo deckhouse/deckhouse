@@ -76,7 +76,7 @@ func (c *podLifecycleChecker) BusyWith() string {
 }
 
 func (c *podLifecycleChecker) Check() check.Error {
-	pod := createPodObject(c.node, c.access.CpSchedulerImage())
+	pod := createPodObject(c.node, c.access.SchedulerProbeImage())
 	c.checker = c.new(pod)
 	return c.checker.Check()
 }
@@ -241,11 +241,11 @@ func createPodObject(nodeName string, image *kubernetes.ProbeImage) *v1.Pod {
 			},
 		},
 		Spec: v1.PodSpec{
-			ImagePullSecrets: image.GetPullSecrets(),
+			ImagePullSecrets: image.PullSecrets(),
 			Containers: []v1.Container{
 				{
 					Name:            "pause",
-					Image:           image.GetImageName(),
+					Image:           image.Name(),
 					ImagePullPolicy: v1.PullIfNotPresent,
 					Command: []string{
 						"true",

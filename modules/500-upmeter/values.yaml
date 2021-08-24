@@ -1,5 +1,6 @@
 upmeter:
   internal:
+    disabledProbes: []
     smokeMini:
       sts:
         a: {}

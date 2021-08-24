@@ -49,8 +49,16 @@ func (a *FakeAccess) ServiceAccountToken() string {
 	return "pewpew"
 }
 
-func (a *FakeAccess) CpSchedulerImage() *k8saccess.ProbeImage {
+func (a *FakeAccess) SchedulerProbeImage() *k8saccess.ProbeImage {
 	return createTestProbeImage("test-image:latest", nil)
+}
+
+func (a *FakeAccess) SchedulerProbeNode() string {
+	return ""
+}
+
+func (a *FakeAccess) CloudControllerManagerNamespace() string {
+	return ""
 }
 
 func getTestDsPodsReadinessChecker() (*fake.FakeCluster, *dsPodsReadinessChecker) {

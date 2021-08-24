@@ -123,15 +123,25 @@ func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {
 		Default("10"). // DefaultBurst from k8s.io/client-go/rest/config.go
 		IntVar(&config.ClientBurst)
 
-	cmd.Flag("cp-scheduler-image", "Image for control plane scheduler probe").
-		Envar("UPMETER_CP_SCHEDULER_IMAGE").
+	cmd.Flag("scheduler-probe-image", "Image for control plane scheduler probe").
+		Envar("UPMETER_SCHEDULER_PROBE_IMAGE").
 		Default(kubernetes.DefaultAlpineImage).
-		StringVar(&config.CpSchedulerImage.Name)
+		StringVar(&config.SchedulerProbeImage.Name)
 
-	cmd.Flag("cp-scheduler-pull-secrets", "Image pull secrets names for control plane scheduler image").
-		Envar("UPMETER_CP_SCHEDULER_IMAGE_PULL_SECRETS").
+	cmd.Flag("scheduler-probe-pull-secrets", "Image pull secrets names for control plane scheduler image").
+		Envar("UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS").
 		Default("").
-		StringsVar(&config.CpSchedulerImage.PullSecrets)
+		StringsVar(&config.SchedulerProbeImage.PullSecrets)
+
+	cmd.Flag("scheduler-probe-node", "Node to schedule the pod to").
+		Envar("UPMETER_SCHEDULER_PROBE_NODE").
+		Default("").
+		StringVar(&config.SchedulerProbeNode)
+
+	cmd.Flag("ccm-namespace", "Cloud Controller Manager namespace").
+		Envar("UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE").
+		Default("").
+		StringVar(&config.CloudControllerManagerNamespace)
 }
 
 type loggerConfig struct {

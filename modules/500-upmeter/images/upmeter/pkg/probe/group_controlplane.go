@@ -17,14 +17,13 @@ limitations under the License.
 package probe
 
 import (
-	"os"
 	"time"
 
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func ControlPlane(access kubernetes.Access) []runnerConfig {
+func initControlPlane(access kubernetes.Access) []runnerConfig {
 	const (
 		groupName = "control-plane"
 		namespace = "d8-upmeter"
@@ -89,7 +88,7 @@ func ControlPlane(access kubernetes.Access) []runnerConfig {
 			config: checker.PodLifecycle{
 				Access:                    access,
 				Namespace:                 namespace,
-				Node:                      os.Getenv("NODE_NAME"),
+				Node:                      access.SchedulerProbeNode(),
 				CreationTimeout:           5 * time.Second,
 				SchedulingTimeout:         20 * time.Second,
 				DeletionTimeout:           20 * time.Second,

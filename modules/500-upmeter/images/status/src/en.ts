@@ -21,6 +21,10 @@ const known: { [name: string]: IGroupData } = {
 		name: "Monitoring and Autoscaling",
 		description: "Availability of monitoring and autoscaling applications in the cluster.",
 	},
+	"scaling": {
+		name: "Cluster scaling",
+		description: "Availability of cluster scaling controllers and controller managers.",
+	},
 };
 
 export function getGroupData(name: string): IGroupData {
