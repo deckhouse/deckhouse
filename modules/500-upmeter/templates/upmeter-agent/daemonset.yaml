@@ -71,9 +71,9 @@ spec:
             name: data
             readOnly: false
           env:
-          - name: UPMETER_CP_SCHEDULER_IMAGE
+          - name: UPMETER_SCHEDULER_PROBE_IMAGE
             value: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.alpine }}"
-          - name: UPMETER_CP_SCHEDULER_IMAGE_PULL_SECRETS
+          - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
             value: "deckhouse-registry"
           - name: UPMETER_TLS
             value: "true"
@@ -85,31 +85,16 @@ spec:
             value: "/db/db.sqlite"
           - name: UPMETER_DB_MIGRATIONS_PATH
             value: "/data/migrations/agent"
-          - name: NODE_NAME
+          {{- if eq $.Values.global.clusterConfiguration.clusterType "Cloud" }}
+          - name: UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE
+            value: "d8-cloud-provider-{{ $.Values.global.clusterConfiguration.cloud.provider | lower }}"
+          {{- end }}
+          - name: UPMETER_SCHEDULER_PROBE_NODE
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_DISABLED_PROBES
-            {{- $disabledProbes := .Values.upmeter.disabledProbes }}
-            {{- if eq .Values.upmeter.smokeMiniDisabled true }}
-              {{- $disabledProbes = append $disabledProbes "synthetic/" }}
-            {{- end }}
-            {{- if (not (.Values.global.enabledModules | has "prometheus")) }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/prometheus" }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/trickster" }}
-            {{ end }}
-            {{- if (not (.Values.global.enabledModules | has "prometheus-metrics-adapter")) }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/prometheus-metrics-adapter" }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/horizontal-pod-autoscaler" }}
-            {{ end }}
-            {{- if (not (.Values.global.enabledModules | has "vertical-pod-autoscaler")) }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/vertical-pod-autoscaler" }}
-            {{ end }}
-            {{- if (not (.Values.global.enabledModules | has "monitoring-kubernetes")) }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/metrics-sources" }}
-              {{- $disabledProbes = append $disabledProbes "monitoring-and-autoscaling/key-metrics-present" }}
-            {{ end }}
-            value: {{ $disabledProbes | join "," | quote }}
+            value: {{ .Values.upmeter.internal.disabledProbes | join "," | quote }}
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}

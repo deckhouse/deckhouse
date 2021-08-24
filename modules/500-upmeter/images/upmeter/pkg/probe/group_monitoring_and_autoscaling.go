@@ -23,7 +23,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func MonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
+func initMonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 	const (
 		groupName = "monitoring-and-autoscaling"
 		cpTimeout = 5 * time.Second

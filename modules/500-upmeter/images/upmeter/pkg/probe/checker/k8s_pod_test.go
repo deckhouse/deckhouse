@@ -31,21 +31,18 @@ func createTestProbeImage(name string, secrets []string) *kubernetes.ProbeImage 
 
 func Test_GettingWithDefaultImage(t *testing.T) {
 	nodeName := "test1"
+	initialImageName := "anyof:3.14"
 
-	image := createTestProbeImage("", nil)
+	image := createTestProbeImage(initialImageName, nil)
 	pod := createPodObject(nodeName, image)
 
 	if len(pod.Spec.ImagePullSecrets) != 0 {
-		t.Errorf("pod without image env vars has none empty ImagePullSecrets. Got %v", pod.Spec.ImagePullSecrets)
+		t.Errorf("expected empty pull secrets, got %v", pod.Spec.ImagePullSecrets)
 	}
 
 	imageName := pod.Spec.Containers[0].Image
-	if imageName != kubernetes.DefaultAlpineImage {
-		t.Errorf(
-			"container pod without image env vars must be alpine(%s). Got: %v",
-			kubernetes.DefaultAlpineImage,
-			image,
-		)
+	if imageName != initialImageName {
+		t.Errorf("expected image to fallback to %q, got %q", initialImageName, image)
 	}
 }
 

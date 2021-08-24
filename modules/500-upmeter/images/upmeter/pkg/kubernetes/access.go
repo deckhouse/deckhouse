@@ -32,7 +32,13 @@ const DefaultAlpineImage = "alpine:3.12"
 type Access interface {
 	Kubernetes() kubernetes.Interface
 	ServiceAccountToken() string
-	CpSchedulerImage() *ProbeImage
+
+	// probe-specific
+
+	SchedulerProbeImage() *ProbeImage
+	SchedulerProbeNode() string
+
+	CloudControllerManagerNamespace() string
 }
 
 type ProbeImageConfig struct {
@@ -46,26 +52,23 @@ type ProbeImage struct {
 }
 
 func NewProbeImage(cfg *ProbeImageConfig) *ProbeImage {
-	name := cfg.Name
-	if name == "" {
-		name = DefaultAlpineImage
-	}
-
 	return &ProbeImage{
-		name:        name,
+		name:        cfg.Name,
 		pullSecrets: cfg.PullSecrets,
 	}
 }
 
-func (p *ProbeImage) GetImageName() string {
+func (p *ProbeImage) Name() string {
 	return p.name
 }
 
-// Accessor provides Kubernetes access in pod
-type Accessor struct {
-	client          kube.KubernetesClient
-	saToken         string
-	cpPodProbeImage *ProbeImage
+func (p *ProbeImage) PullSecrets() []v1.LocalObjectReference {
+	// Copy to guarantee immutability
+	secrets := make([]v1.LocalObjectReference, len(p.pullSecrets))
+	for i, name := range p.pullSecrets {
+		secrets[i] = v1.LocalObjectReference{Name: name}
+	}
+	return secrets
 }
 
 type Config struct {
@@ -75,20 +78,21 @@ type Config struct {
 	ClientQps   float32
 	ClientBurst int
 
-	CpSchedulerImage ProbeImageConfig
+	SchedulerProbeImage ProbeImageConfig
+	SchedulerProbeNode  string
+
+	CloudControllerManagerNamespace string
 }
 
-func (p *ProbeImage) GetPullSecrets() []v1.LocalObjectReference {
-	// yes, always make copy
-	// with copy ProbeImage always immutable
-	// because slice is reference type and may changed outside ProbeImage
-	pullSecrets := make([]v1.LocalObjectReference, 0)
-	for _, s := range p.pullSecrets {
-		pullSecrets = append(pullSecrets, v1.LocalObjectReference{
-			Name: s,
-		})
-	}
-	return pullSecrets
+// Accessor provides Kubernetes access in pod
+type Accessor struct {
+	client  kube.KubernetesClient
+	saToken string
+
+	schedulerProbeImage *ProbeImage
+	schedulerProbeNode  string
+
+	cloudControllerManagerNamespace string
 }
 
 func (a *Accessor) Init(config *Config) error {
@@ -109,7 +113,11 @@ func (a *Accessor) Init(config *Config) error {
 		return fmt.Errorf("pod expected, cannot read service account token: %v", err)
 	}
 	a.saToken = string(token)
-	a.cpPodProbeImage = NewProbeImage(&config.CpSchedulerImage)
+
+	a.schedulerProbeImage = NewProbeImage(&config.SchedulerProbeImage)
+	a.schedulerProbeNode = config.SchedulerProbeNode
+
+	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
 	return nil
 }
@@ -122,6 +130,14 @@ func (a *Accessor) ServiceAccountToken() string {
 	return a.saToken
 }
 
-func (a *Accessor) CpSchedulerImage() *ProbeImage {
-	return a.cpPodProbeImage
+func (a *Accessor) SchedulerProbeImage() *ProbeImage {
+	return a.schedulerProbeImage
+}
+
+func (a *Accessor) SchedulerProbeNode() string {
+	return a.schedulerProbeNode
+}
+
+func (a *Accessor) CloudControllerManagerNamespace() string {
+	return a.cloudControllerManagerNamespace
 }

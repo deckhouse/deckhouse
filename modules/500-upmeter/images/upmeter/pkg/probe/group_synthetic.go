@@ -22,7 +22,7 @@ import (
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func Synthetic() []runnerConfig {
+func initSynthetic() []runnerConfig {
 	const (
 		groupName = "synthetic"
 	)
