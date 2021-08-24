@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/go-openapi/spec"
@@ -39,13 +40,23 @@ var once sync.Once
 var store *SchemaStore
 
 func NewSchemaStore() *SchemaStore {
-	return newSchemaStore(candiDir)
+	paths := []string{candiDir}
+
+	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
+	if pathsStr != "" {
+		pathsNoTrimmed := strings.Split(pathsStr, ",")
+		for _, p := range pathsNoTrimmed {
+			paths = append(paths, strings.TrimSpace(p))
+		}
+	}
+
+	return newSchemaStore(paths)
 }
 
-func newSchemaStore(candiDir string) *SchemaStore {
+func newSchemaStore(schemasDir []string) *SchemaStore {
 	once.Do(func() {
 		store = &SchemaStore{make(map[SchemaIndex]*spec.Schema)}
-		err := filepath.Walk(candiDir, func(path string, info os.FileInfo, err error) error {
+		walkFunc := func(path string, info os.FileInfo, err error) error {
 			if info == nil {
 				return nil
 			}
@@ -59,9 +70,13 @@ func newSchemaStore(candiDir string) *SchemaStore {
 			}
 
 			return nil
-		})
-		if err != nil {
-			panic(err)
+		}
+
+		for _, d := range schemasDir {
+			err := filepath.Walk(d, walkFunc)
+			if err != nil {
+				panic(err)
+			}
 		}
 	})
 	return store

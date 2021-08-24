@@ -30,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -49,30 +48,15 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 )
 
 type k8sClientGetter struct {
-	convergeLock *client.LeaseLock
-	sshClient    *ssh.Client
-	kubeCl       *client.KubernetesClient
+	convergeUnlocker func(fullUnlock bool)
+	sshClient        *ssh.Client
+	kubeCl           *client.KubernetesClient
 }
 
 func newK8sClientGetter(sshClient *ssh.Client) *k8sClientGetter {
 	return &k8sClientGetter{
 		sshClient: sshClient,
 	}
-}
-
-func (g *k8sClientGetter) convergeUnlock(stopAutoRenewOnly bool) {
-	if g.convergeLock == nil {
-		return
-	}
-
-	if stopAutoRenewOnly {
-		g.convergeLock.StopAutoRenew()
-		g.convergeLock = nil
-		return
-	}
-
-	g.convergeLock.Unlock()
-	g.convergeLock = nil
 }
 
 func (g *k8sClientGetter) get() (*client.KubernetesClient, error) {
@@ -85,18 +69,22 @@ func (g *k8sClientGetter) get() (*client.KubernetesClient, error) {
 		return nil, err
 	}
 
-	destroyerIdentity := config.GetLocalConvergeLockIdentity("local-destroyer")
-	leaseConfig := config.GetConvergeLockLeaseConfig(destroyerIdentity)
-	convergeLock := client.NewLeaseLock(kubeCl, leaseConfig)
-	err = convergeLock.Lock()
+	unlockConverge, err := converge.LockConvergeFromLocal(kubeCl, "local-destroyer")
 	if err != nil {
 		return nil, err
 	}
 
 	g.kubeCl = kubeCl
-	g.convergeLock = convergeLock
+	g.convergeUnlocker = unlockConverge
 
 	return kubeCl, err
+}
+
+func (g *k8sClientGetter) unlockConverge(fullUnlock bool) {
+	if g.convergeUnlocker != nil {
+		g.convergeUnlocker(fullUnlock)
+		g.convergeUnlocker = nil
+	}
 }
 
 func deleteResources(k8sCliGetter *k8sClientGetter) error {
@@ -159,7 +147,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 
 	runFunc := func(sshClient *ssh.Client) error {
 		k8sCliGetter := newK8sClientGetter(sshClient)
-		defer k8sCliGetter.convergeUnlock(false)
+		defer k8sCliGetter.unlockConverge(true)
 
 		var err error
 
@@ -230,7 +218,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		// user may not delete resources and converge still working in cluster
 		// all node groups removing may still in long time run and
 		// we get race (destroyer destroy node group, auto applayer create nodes)
-		k8sCliGetter.convergeUnlock(true)
+		// if need we can remove lease manually with dhctl lock release
+		// or wit flag --converge-lock-force
+		k8sCliGetter.unlockConverge(false)
 		// Stop proxy because we have already gotten all info from kubernetes-api
 		if kubeCl != nil {
 			kubeCl.KubeProxy.Stop()
@@ -301,11 +291,8 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			log.WarnLn(destroyApprovalsMessage)
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
-			return err
-		}
-		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
 

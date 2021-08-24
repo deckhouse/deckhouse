@@ -105,14 +105,6 @@ func loadConfigFromFile(path string) (*config.MetaConfig, error) {
 }
 
 func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string) error {
-	bootstrapIdentity := config.GetLocalConvergeLockIdentity("local-bootstraper")
-	leaseLock := client.NewLeaseLock(kubeCl, config.GetConvergeLockLeaseConfig(bootstrapIdentity))
-	err := leaseLock.Lock()
-	if err != nil {
-		return err
-	}
-	defer leaseLock.Unlock()
-
 	if err := operations.BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH); err != nil {
 		return err
 	}
@@ -264,7 +256,10 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		if metaConfig.ClusterType == config.CloudClusterType {
-			err := bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
+			err := converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(func() error {
+				return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH)
+			})
+
 			if err != nil {
 				return err
 			}

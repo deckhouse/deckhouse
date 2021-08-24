@@ -38,7 +38,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		StringVar(&Name)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return err
 		}

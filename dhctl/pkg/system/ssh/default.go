@@ -15,6 +15,8 @@
 package ssh
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
@@ -35,6 +37,22 @@ func NewClientFromFlags() *Client {
 	return &Client{
 		Settings: settings,
 	}
+}
+
+func NewClientFromFlagsWithHosts() (*Client, error) {
+	if len(app.SSHHosts) == 0 {
+		return nil, fmt.Errorf("Hosts not passed")
+	}
+
+	return NewClientFromFlags(), nil
+}
+
+func NewInitClientFromFlagsWithHosts(askPassword bool) (*Client, error) {
+	if len(app.SSHHosts) == 0 {
+		return nil, fmt.Errorf("Hosts not passed")
+	}
+
+	return NewInitClientFromFlags(askPassword)
 }
 
 func NewInitClientFromFlags(askPassword bool) (*Client, error) {

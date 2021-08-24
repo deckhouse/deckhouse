@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -39,6 +40,7 @@ var globalCache state.Cache = &cache.DummyCache{}
 
 func choiceCache(identity string) (state.Cache, error) {
 	tmpDir := filepath.Join(app.CacheDir, util.Sha256Encode(identity))
+	log.DebugF("Cache dir %s\n", tmpDir)
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, fmt.Errorf("can't create cache directory: %w", err)
 	}

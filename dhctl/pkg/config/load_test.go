@@ -22,7 +22,7 @@ import (
 )
 
 func TestVersionBackwardCompatibility(t *testing.T) {
-	newStore := newSchemaStore("/tmp")
+	newStore := newSchemaStore([]string{"/tmp"})
 
 	schema := []byte(`
 kind: ClusterConfiguration
@@ -64,7 +64,7 @@ clusterType: Cloud
 }
 
 func TestSchemaStore(t *testing.T) {
-	newStore := newSchemaStore("/tmp")
+	newStore := newSchemaStore([]string{"/tmp"})
 
 	err := newStore.upload([]byte(`
 kind: TestKind

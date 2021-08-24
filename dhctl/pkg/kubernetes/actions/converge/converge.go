@@ -34,6 +34,8 @@ const (
 	MasterNodeGroupName = "master"
 
 	noNodesConfirmationMessage = `Cluster has no nodes created by Terraform. Do you want to continue and create nodes?`
+
+	AutoConvergerIdentity = "terraform-auto-converger"
 )
 
 type Phase string
@@ -48,17 +50,17 @@ var ErrConvergeInterrupted = errors.New("Interrupted.")
 type Runner struct {
 	kubeCl         *client.KubernetesClient
 	changeSettings *terraform.ChangeActionSettings
-	leaseConfig    client.LeaseLockConfig
+	lockRunner     *InLockRunner
 
 	excludedNodes map[string]bool
 	skipPhases    map[Phase]bool
 }
 
-func NewRunner(kubeCl *client.KubernetesClient, leaseConfig client.LeaseLockConfig) *Runner {
+func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner) *Runner {
 	return &Runner{
 		kubeCl:         kubeCl,
 		changeSettings: &terraform.ChangeActionSettings{},
-		leaseConfig:    leaseConfig,
+		lockRunner:     lockRunner,
 
 		excludedNodes: make(map[string]bool),
 		skipPhases:    make(map[Phase]bool),
@@ -102,22 +104,10 @@ func (r *Runner) isSkip(phase Phase) bool {
 }
 
 func (r *Runner) RunConverge() error {
-	leaseLock := client.NewLeaseLock(r.kubeCl, r.leaseConfig)
-	err := leaseLock.Lock()
-	if err != nil {
-		return err
-	}
+	return r.lockRunner.Run(r.converge)
+}
 
-	// TODO remove after tomb shutdown fix
-	unlockConverge := func() {
-		if leaseLock != nil {
-			leaseLock.Unlock()
-			leaseLock = nil
-		}
-	}
-	defer unlockConverge()
-	tomb.RegisterOnShutdown("unlock converge", unlockConverge)
-
+func (r *Runner) converge() error {
 	metaConfig, err := GetMetaConfig(r.kubeCl)
 	if err != nil {
 		return err

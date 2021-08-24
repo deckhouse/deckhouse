@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -34,7 +33,11 @@ func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClaus
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlags().Start()
+		sshCl, err := ssh.NewClientFromFlagsWithHosts()
+		if err != nil {
+			return err
+		}
+		sshCl, err = sshCl.Start()
 		if err != nil {
 			return err
 		}
@@ -68,7 +71,11 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.DebugLn("scp: start ssh-agent")
-		sshCl, err := ssh.NewClientFromFlags().Start()
+		sshCl, err := ssh.NewClientFromFlagsWithHosts()
+		if err != nil {
+			return err
+		}
+		sshCl, err = sshCl.Start()
 		if err != nil {
 			return err
 		}
@@ -129,14 +136,9 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		BoolVar(&Sudo)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return nil
-		}
-
-		err = terminal.AskBecomePassword()
-		if err != nil {
-			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptPath)
@@ -174,14 +176,9 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		StringVar(&ScriptName)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlags().Start()
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return nil
-		}
-
-		err = terminal.AskBecomePassword()
-		if err != nil {
-			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptName).Sudo()

@@ -20,10 +20,10 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
@@ -40,8 +40,13 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		convIdentity := config.GetLocalConvergeLockIdentity("local-converger")
-		runner := converge.NewRunner(kubeCl, config.GetConvergeLockLeaseConfig(convIdentity))
+		err = cache.Init(sshClient.Check().String())
+		if err != nil {
+			return err
+		}
+		inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
+
+		runner := converge.NewRunner(kubeCl, inLockRunner)
 		runner.WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: false,
 		})
@@ -55,7 +60,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
 		if err != nil {
 			return err
 		}
@@ -87,7 +92,11 @@ func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		runner := converge.NewRunner(kubeCl, config.GetConvergeLockLeaseConfig("terraform-auto-converger")).
+		inLockRunner := converge.NewInLockRunner(kubeCl, converge.AutoConvergerIdentity).
+			// never force lock
+			WithForceLock(false)
+
+		runner := converge.NewRunner(kubeCl, inLockRunner).
 			WithChangeSettings(&terraform.ChangeActionSettings{
 				AutoDismissDestructive: true,
 				AutoApprove:            true,

@@ -30,10 +30,13 @@ ifndef OS
 	endif
 endif
 
+INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:main
 
 .PHONY : deps fmt lint build test all ci devenv devstop
 
 all: deps fmt build test
+
+all-dev: deps fmt build-dev test
 
 deps:
 	go mod tidy
@@ -69,7 +72,7 @@ ci: deps lint
 # Shell script within makefile https://stackoverflow.com/a/29085760
 devenv:
 	@set -e ;\
-	docker pull dev-registry.deckhouse.io/sys/deckhouse-oss/dev/install:main ;\
+	docker pull $(INSTALLER_IMAGE_URL) ;\
 	CONTAINER_ID=$$(docker ps -aqf "name=$(DEV_CONTAINER_NAME)") ;\
 	echo ;\
 	test -n "$$CONTAINER_ID" && echo "Container $$CONTAINER_ID exists, entering." || echo "Creating container..." ;\
@@ -78,12 +81,14 @@ devenv:
 			--name "$(DEV_CONTAINER_NAME)" \
 			--detach \
 			--rm \
-			-v $(HOME)/.ssh/:/root/.ssh/ \
+			-v $(HOME)/.ssh/tfadm-id-rsa/:/root/.ssh/tfadm-id-rsa \
 			-v $$(pwd)/.state/:/.state/ \
 			--mount type=tmpfs,destination=/tmp:exec \
 			-v "$$(pwd):/dhctl" \
 			-v "$$(pwd)/../candi:/deckhouse/candi" \
-			dev-registry.deckhouse.io/dev/install:master \
+			-v "$$(pwd)/../ee/candi/cloud-providers/openstack:/deckhouse/candi/cloud-providers/openstack" \
+			-v "$$(pwd)/../ee/candi/cloud-providers/vsphere:/deckhouse/candi/cloud-providers/vsphere" \
+			$(INSTALLER_IMAGE_URL) \
 			tail -f /dev/null) \
 		&& docker exec    "$$CONTAINER_ID" apk add go curl make musl\
 		&& docker exec -i "$$CONTAINER_ID" sh -c "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b \"$$(go env GOPATH)\" /bin v$(GOLANGCI_LINT_VERSION)" \

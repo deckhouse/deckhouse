@@ -16,7 +16,10 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/user"
 	"strings"
 	"sync"
 	"time"
@@ -30,17 +33,45 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+const lockUserInfoAnnotKey = "dhctl.deckhouse.io/lock-user-info"
+
 type LeaseLockConfig struct {
 	Name      string
 	Namespace string
 	Identity  string
 
-	LeaseDurationSeconds         int32
-	RenewDurationSeconds         int64
-	TolerableExpiredLeaseSeconds int64
-	RetryDuration                time.Duration
+	LeaseDurationSeconds int32
+	RenewDurationSeconds int64
+	RetryDuration        time.Duration
 
 	OnRenewError func(err error)
+
+	AdditionalUserInfo string
+}
+
+type LockUserInfo struct {
+	Name       string `json:"name,omitempty"`
+	Host       string `json:"host,omitempty"`
+	Additional string `json:"additional,omitempty"`
+}
+
+func NewLockUserInfo(additional string) *LockUserInfo {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+
+	userName := "unknown"
+	userOs, err := user.Current()
+	if err == nil {
+		userName = userOs.Username
+	}
+
+	return &LockUserInfo{
+		Name:       userName,
+		Host:       hostname,
+		Additional: additional,
+	}
 }
 
 type LeaseLock struct {
@@ -60,11 +91,11 @@ func NewLeaseLock(kubeCl *KubernetesClient, config LeaseLockConfig) *LeaseLock {
 	}
 }
 
-func (l *LeaseLock) Lock() error {
+func (l *LeaseLock) Lock(force bool) error {
 	l.lockLease.Lock()
 	defer l.lockLease.Unlock()
 
-	lease, err := l.tryAcquire()
+	lease, err := l.tryAcquire(force)
 	if err != nil {
 		return err
 	}
@@ -130,7 +161,7 @@ func (l *LeaseLock) startAutoRenew() {
 	}
 }
 
-func (l *LeaseLock) tryAcquire() (*coordinationv1.Lease, error) {
+func (l *LeaseLock) tryAcquire(force bool) (*coordinationv1.Lease, error) {
 	var lease *coordinationv1.Lease
 
 	prefix := "Don't acquire lease lock."
@@ -151,9 +182,9 @@ func (l *LeaseLock) tryAcquire() (*coordinationv1.Lease, error) {
 				return fmt.Errorf("%s Don't get current lease %v", prefix, err)
 			}
 
-			lease, err = l.tryRenew(lease, false)
+			lease, err = l.tryRenew(lease, force)
 			if err != nil {
-				return fmt.Errorf("%s %v", prefix, err)
+				return fmt.Errorf("%s \n%v", prefix, err)
 			}
 		}
 
@@ -164,9 +195,18 @@ func (l *LeaseLock) tryAcquire() (*coordinationv1.Lease, error) {
 }
 
 func (l *LeaseLock) createLease() (lease *coordinationv1.Lease, err error) {
+	userInfo := NewLockUserInfo(l.config.AdditionalUserInfo)
+	userInfoStr, err := json.Marshal(userInfo)
+	if err != nil {
+		userInfoStr = nil
+	}
+
 	lease = &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: l.config.Name,
+			Annotations: map[string]string{
+				lockUserInfoAnnotKey: string(userInfoStr),
+			},
 		},
 		Spec: coordinationv1.LeaseSpec{
 			HolderIdentity:       &l.config.Identity,
@@ -214,9 +254,8 @@ func (l *LeaseLock) isStillLocked(lease *coordinationv1.Lease) bool {
 	}
 
 	leaseDuration := time.Duration(l.config.LeaseDurationSeconds) * time.Second
-	tolerable := time.Duration(l.config.TolerableExpiredLeaseSeconds) * time.Second
 	renewTime := renewTimeMicro.Time
-	endLeaseTime := renewTime.Add(leaseDuration).Add(tolerable)
+	endLeaseTime := renewTime.Add(leaseDuration)
 
 	return time.Now().Before(endLeaseTime)
 }
@@ -226,16 +265,74 @@ func now() *metav1.MicroTime {
 }
 
 func getCurrentLockerError(lease *coordinationv1.Lease) error {
+	info, _ := LockInfo(lease)
+	return fmt.Errorf(info)
+}
+
+func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
 	holder := "unknown"
 	acquireTime := time.Time{}
 	lastRenew := time.Time{}
 	leaseDurationSec := int32(-1)
+	zeroUserInfo := LockUserInfo{
+		Name:       "unknown",
+		Host:       "unknown",
+		Additional: "Info does not set",
+	}
+	userInfo := zeroUserInfo
 	if lease != nil {
 		holder = *lease.Spec.HolderIdentity
 		acquireTime = lease.Spec.AcquireTime.Time
 		lastRenew = lease.Spec.RenewTime.Time
 		leaseDurationSec = *lease.Spec.LeaseDurationSeconds
+
+		infoJSON, ok := lease.Annotations[lockUserInfoAnnotKey]
+		if ok && infoJSON != "" {
+			err := json.Unmarshal([]byte(infoJSON), &userInfo)
+			if err != nil {
+				userInfo = zeroUserInfo
+			}
+		}
 	}
-	format := "Locked by %v acquireTime %v lastRenewTime %v leaseDuration %vs"
-	return fmt.Errorf(format, holder, acquireTime, lastRenew, leaseDurationSec)
+
+	format := `Locker ID: %v
+  acquireTime: %v
+  lastRenewTime: %v
+  leaseDuration: %vs
+  user: %s@%s
+    %s
+`
+	return fmt.Sprintf(format,
+		holder,
+		acquireTime,
+		lastRenew,
+		leaseDurationSec,
+		userInfo.Name,
+		userInfo.Host,
+		userInfo.Additional,
+	), &userInfo
+}
+
+func RemoveLease(kubeCl *KubernetesClient, config *LeaseLockConfig, confirm func(lease *coordinationv1.Lease) error) error {
+	leasesCl := kubeCl.CoordinationV1().Leases(config.Namespace)
+	lease, err := leasesCl.Get(context.TODO(), config.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if err := confirm(lease); err != nil {
+		return err
+	}
+
+	log.Infof("Starting remove lease lock")
+
+	err = retry.NewSilentLoop("release lease", 5, config.RetryDuration).Run(func() error {
+		err := leasesCl.Delete(context.TODO(), lease.Name, metav1.DeleteOptions{})
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	})
+
+	return err
 }
