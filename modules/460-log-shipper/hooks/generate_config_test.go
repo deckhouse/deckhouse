@@ -47,6 +47,10 @@ spec:
     labelSelector:
       matchLabels:
         app: test
+      matchExpressions:
+        - key: "tier"
+          operator: "In"
+          values: ["cache"]
   destinationRefs:
     - test-es-dest
 ---
@@ -90,7 +94,7 @@ spec:
 				"sources": {
 				  "d8_cluster_test-source": {
 					"type": "kubernetes_logs",
-					"extra_label_selector": "app=test",
+					"extra_label_selector": "app=test,tier in (cache)",
 					"extra_field_selector": "metadata.namespace=tests-whispers",
 					"annotation_fields": {
 					  "container_image": "image",

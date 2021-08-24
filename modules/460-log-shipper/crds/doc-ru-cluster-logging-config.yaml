@@ -70,11 +70,51 @@ spec:
                       description: |
                         Настройка `labelSelector` позволяет задать фильтр по Pod Labels.
                         Подробнее про выражения можно узнать в [документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      anyOf:
+                        - required:
+                            - matchLabels
+                        - required:
+                            - matchExpressions
                       properties:
                         matchLabels:
                           type: object
+                          description: Список label, которые должен иметь pod
+                          example: { "foo": "bar", "baz": "whooo" }
                           additionalProperties:
                             type: string
+                        matchExpressions:
+                          type: array
+                          items:
+                            type: object
+                            description: Список выражений для label, которые должн иметь pod
+                            example:
+                              {
+                                "matchExpressions":
+                                  [
+                                    {
+                                      "key": "tier",
+                                      "operator": "In",
+                                      "values": ["production", "staging"],
+                                    },
+                                  ],
+                              }
+                            required:
+                              - key
+                              - operator
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string
                 file:
                   type: object
                   properties:

@@ -172,6 +172,11 @@ func TestConfig_2(t *testing.T) {
 		NamespaceSelector: types.NameSelector{MatchNames: []string{"foot", "baar"}},
 		LabelSelector: metav1.LabelSelector{
 			MatchLabels: map[string]string{"aaaa": "bbbb"},
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      "baz",
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{"qux", "norf"},
+			}},
 		},
 	}, false)
 
@@ -198,7 +203,7 @@ func TestConfig_2(t *testing.T) {
   "sources": {
     "d8_clusterns_baar_testsource": {
       "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb",
+      "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
       "extra_field_selector": "metadata.namespace=baar",
       "annotation_fields": {
         "container_image": "image",
@@ -213,7 +218,7 @@ func TestConfig_2(t *testing.T) {
     },
     "d8_clusterns_foot_testsource": {
       "type": "kubernetes_logs",
-      "extra_label_selector": "aaaa=bbbb",
+      "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
       "extra_field_selector": "metadata.namespace=foot",
       "annotation_fields": {
         "container_image": "image",
