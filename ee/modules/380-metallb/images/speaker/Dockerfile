@@ -1,7 +1,16 @@
-# Based on https://github.com/metallb/metallb/blob/v0.8.2/speaker/Dockerfile
 ARG BASE_ALPINE
-FROM metallb/speaker:v0.8.2@sha256:f1941498a28cdb332429e25d18233683da6949ecfc4f6dacf12b1416d7d38263 as artifact
+ARG BASE_GOLANG_ALPINE
+
+FROM $BASE_GOLANG_ALPINE as artifact
+WORKDIR /src/
+RUN apk add git patch
+RUN git clone -b "v0.10.2" --single-branch https://github.com/metallb/metallb
+WORKDIR /src/metallb
+COPY dont-announce-from-annotated-nodes.patch ./
+
+RUN patch -p1 < dont-announce-from-annotated-nodes.patch
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o speaker-bin ./speaker
 
 FROM $BASE_ALPINE
-COPY --from=artifact /speaker /
+COPY --from=artifact /src/metallb/speaker-bin /speaker
 ENTRYPOINT ["/speaker"]
