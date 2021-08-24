@@ -138,6 +138,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: POD_IP
+          value: "127.0.0.1"
   {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
     {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
@@ -146,18 +148,18 @@ spec:
   {{- end }}
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: 10254
-            scheme: HTTP
+            path: /controller/healthz
+            port: 10354
+            scheme: HTTPS
           initialDelaySeconds: 30
           timeoutSeconds: 5
           periodSeconds: 10
           failureThreshold: 10
         readinessProbe:
           httpGet:
-            path: /healthz
-            port: 10254
-            scheme: HTTP
+            path: /controller/healthz
+            port: 10354
+            scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 2
           timeoutSeconds: 5
@@ -284,9 +286,11 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /controller/healthz
             upstreams:
-            - upstream: http://127.0.0.1:10254/metrics
-              path: /controller/metrics
+            - upstream: http://127.0.0.1:10254/
+              path: /controller/
               authorization:
                 resourceAttributes:
                   namespace: d8-ingress-nginx

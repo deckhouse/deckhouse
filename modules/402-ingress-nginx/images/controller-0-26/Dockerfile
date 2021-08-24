@@ -3,14 +3,16 @@ ARG BASE_DEBIAN
 ARG BASE_GOLANG_BUSTER
 FROM $BASE_GOLANG_BUSTER as artifact
 WORKDIR /src/
-COPY lua-info.patch /
-COPY reason.patch /
-COPY omit-helm-secrets.patch /
+COPY patches/lua-info.patch /
+COPY patches/reason.patch /
+COPY patches/omit-helm-secrets.patch /
+COPY patches/pod-ip.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch nginx-0.26.1 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /reason.patch && \
+    patch -p1 < /pod-ip.patch && \
     patch -p1 < /omit-helm-secrets.patch && \
     make GO111MODULE=on build
 
@@ -47,8 +49,8 @@ COPY --from=controller_0_26_1 --chown=www-data:www-data /wait-shutdown /wait-shu
 
 COPY --from=artifact /src/bin/amd64/nginx-ingress-controller /src/bin/amd64/dbg /
 COPY --from=controller_lua /usr/local/openresty/luajit /usr/local/openresty/luajit
-COPY balancer-lua.patch /
-COPY nginx-tpl.patch /
+COPY patches/balancer-lua.patch /
+COPY patches/nginx-tpl.patch /
 
 COPY rootfs /
 
