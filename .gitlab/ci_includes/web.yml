@@ -162,7 +162,7 @@ Prod Main Deploy:
     name: web-production
     url: https://deckhouse.io
   only:
-    - master
+    - main
   except:
     - schedules
 
@@ -178,7 +178,7 @@ Prod Doc Deploy :
     name: web-production
     url: https://deckhouse.io
   only:
-    - master
+    - main
   except:
     - schedules
 
