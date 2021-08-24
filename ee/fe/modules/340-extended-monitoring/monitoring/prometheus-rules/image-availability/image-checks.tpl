@@ -20,7 +20,7 @@
     description: >
       Следует проверить наличие образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
+      в {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
     summary: Образ `{{`{{ $labels.image }}`}}` отсутствует в registry.
 
@@ -43,7 +43,7 @@
     description: >
       Следует формат имени образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
+      в {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
     summary: Некорректный формат имени образа `{{`{{ $labels.image }}`}}`.
 
@@ -66,7 +66,7 @@
     description: >
       Container registry недоступен для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
+      в {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
     summary: Container registry недоступен для образа `{{`{{ $labels.image }}`}}`.
 
@@ -89,7 +89,7 @@
     description: >
       Невозможно аутентифицироваться в container registry с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
+      в {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
     summary: Невозможно аутентифицироваться в container registry с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`.
 
@@ -112,7 +112,7 @@
     description: >
       Не хватает прав для загрузки с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
+      в {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }}{{` }}`}}`
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
     summary: Не хватает прав для загрузки с указанными `imagePullSecrets` для образа `{{`{{ $labels.image }}`}}`.
 
@@ -135,7 +135,7 @@
     description: >
       Произошла неизвестная ошибка для образа `{{`{{ $labels.image }}`}}`
       в Namespace `{{`{{ $labels.namespace }}`}}`
-      в {{ $controllerKind }} {{`{{ $labels.`}}{{ $controllerKind | lower }} {{` }}`}}`
+      в {{ $controllerKind }} `{{`{{ $labels.`}}{{ $controllerKind | lower }} {{` }}`}}`
       в контейнере `{{`{{ $labels.container }}`}}` в registry.
 
       Подробнее в логах экспортера: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`

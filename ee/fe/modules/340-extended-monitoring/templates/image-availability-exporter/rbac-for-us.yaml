@@ -20,6 +20,11 @@ rules:
   - list
   - watch
   - get
+- apiGroups: [""]
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
 - apiGroups:
   - extensions
   - apps
