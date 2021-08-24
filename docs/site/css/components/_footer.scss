@@ -28,8 +28,9 @@ body {
   }
 
   &__navigation {
-    margin-left: auto;
+    margin-left: 50px;
     display: flex;
+    flex: 1;
     flex-direction: row;
     justify-content: flex-start;
     align-items: flex-start;
@@ -59,6 +60,7 @@ body {
 
       li {
         margin-bottom: $spacing-m;
+        white-space: nowrap;
       }
 
       a {

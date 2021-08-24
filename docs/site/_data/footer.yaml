@@ -27,6 +27,12 @@ columns:
         url: '/about_us.html#open-source'
       - title: Clients
         url: '/about_us.html#clients'
+      - title: Cookie policy
+        url: '/cookie-policy.html'
+      - title: Privacy policy
+        url: '/privacy-policy.html'
+      - title: Terms of Service
+        url: '/terms-of-service.html'
   ru:
   - items:
       - title: GitHub
@@ -55,3 +61,5 @@ columns:
         url: '/about_us.html#open-source'
       - title: Клиенты
         url: '/about_us.html#clients'
+      - title: Политика конфиденциальности
+        url: '/security-policy.html'
