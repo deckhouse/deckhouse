@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/clarketm/json"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
@@ -59,7 +61,7 @@ func (fs fileLogSource) BuildSources() []impl.LogSource {
 type kubernetesLogSource struct {
 	commonSource
 
-	labels []string
+	labels labels.Selector
 	fields []string
 
 	namespaced bool // namespace or cluster Scope
@@ -69,9 +71,10 @@ type kubernetesLogSource struct {
 }
 
 func NewKubernetesLogSource(name string, spec v1alpha1.KubernetesPodsSpec, namespaced bool) impl.LogSource {
-	labels := make([]string, 0, len(spec.LabelSelector.MatchLabels))
-	for k, v := range spec.LabelSelector.MatchLabels {
-		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
+	labelsSelector, err := metav1.LabelSelectorAsSelector(&spec.LabelSelector)
+	if err != nil {
+		// LabelSelector valideted by OpenApi. Error in this place is very strange. We should panic.
+		panic(err)
 	}
 
 	FormatFields := kubeAnnotationFields{
@@ -88,7 +91,7 @@ func NewKubernetesLogSource(name string, spec v1alpha1.KubernetesPodsSpec, names
 	return kubernetesLogSource{
 		commonSource:     commonSource{Name: name, Type: "kubernetes_logs"},
 		namespaces:       spec.NamespaceSelector.MatchNames,
-		labels:           labels,
+		labels:           labelsSelector,
 		fields:           make([]string, 0),
 		namespaced:       namespaced,
 		annotationFields: FormatFields,
@@ -140,7 +143,7 @@ func (cs kubernetesLogSource) MarshalJSON() ([]byte, error) {
 		AnnotationFields kubeAnnotationFields `json:"annotation_fields,omitempty"`
 	}{
 		Type:             cs.Type,
-		Labels:           strings.Join(cs.labels, ","),
+		Labels:           cs.labels.String(),
 		Fields:           strings.Join(cs.fields, ","),
 		AnnotationFields: cs.annotationFields,
 	}
