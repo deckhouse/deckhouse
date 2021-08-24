@@ -192,3 +192,20 @@ $(document).ready(function(){
   });
 
 });
+
+// GDPR
+
+$(document).ready(function(){
+    var $gdpr = $('.gdpr');
+    var $gdpr_button = $('.gdpr__button');
+    var gdpr_status = $.cookie('gdpr-status');
+
+    if (!gdpr_status || gdpr_status != 'accepted') {
+        $gdpr.show();
+    }
+
+    $gdpr_button.on('click', function() {
+        $gdpr.hide();
+        $.cookie('gdpr-status', 'accepted', {path: '/' });
+    })
+});

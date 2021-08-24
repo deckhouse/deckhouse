@@ -1,6 +1,7 @@
 @import "components/common/_variables.scss";
 
 .button {
+    cursor: pointer;
     display: inline-block;
     text-decoration: none !important;
     box-sizing: border-box;

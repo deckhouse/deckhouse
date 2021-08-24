@@ -1,0 +1,22 @@
+@import "components/common/_variables.scss";
+
+.gdpr {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    bottom: 20px;
+    left: 20px;
+    width: 400px;
+    background: $color-inverse;
+    color: $color-main;
+    padding: 30px;
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.25);
+    &__title {
+        margin-bottom: $spacing-m;
+    }
+    &__message {
+        margin-bottom: $spacing-m;
+    }
+    &__button {
+    }
+}
