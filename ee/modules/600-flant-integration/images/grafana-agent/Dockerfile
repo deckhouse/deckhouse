@@ -1,6 +1,6 @@
 # Based on https://github.com/grafana/agent/blob/v0.13.0/cmd/agent/Dockerfile
 ARG BASE_DEBIAN
-FROM grafana/agent:v0.13.0@sha256:8966ef0189cf1829191206bd30342b06420c3689377256946225bb30a1feede6 as artifact
+FROM grafana/agent:v0.18.2@sha256:26018914a1853017acfe5332c8c2639abf7118cead1f383636bd91900ea50b97 as artifact
 
 FROM $BASE_DEBIAN
 # Backports repo required to get a libsystemd version 246 or newer which is required to handle journal +ZSTD compression
