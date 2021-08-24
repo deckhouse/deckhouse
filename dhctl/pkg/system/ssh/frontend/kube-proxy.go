@@ -115,7 +115,7 @@ func (k *KubeProxy) Restart() error {
 }
 
 func (k *KubeProxy) tryToRestartFully() {
-	log.InfoF("Try restart kubeproxy fully\n")
+	log.DebugF("Try restart kubeproxy fully\n")
 	for {
 		err := k.Restart()
 		if err == nil {
@@ -144,7 +144,7 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error) {
 		log.DebugF("Kubeproxy Monitor step\n")
 		select {
 		case err := <-proxyErrorCh:
-			log.InfoF("Proxy failed %v\n", err)
+			log.DebugF("Proxy failed %v\n", err)
 			// if proxy crushed, we need to restart kube-proxy fully
 			// with proxy and tunnel (tunnel depends on proxy)
 			k.tryToRestartFully()
@@ -153,7 +153,7 @@ func (k *KubeProxy) healthMonitor(proxyErrorCh, tunnelErrorCh chan error) {
 			return
 
 		case err := <-tunnelErrorCh:
-			log.InfoF("Tunnel failed %v\n Try to up tunnel\n", err)
+			log.DebugF("Tunnel failed %v\n Try to up tunnel\n", err)
 			// we need fully stop tunnel because
 			k.tunnel.Stop()
 			k.tunnel, _, err = k.upTunnel(k.port, k.localPort, tunnelErrorCh)

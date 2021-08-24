@@ -64,6 +64,11 @@ func main() {
 	commands.DefineConvergeCommand(kpApp)
 	commands.DefineAutoConvergeCommand(kpApp)
 
+	lockCmd := kpApp.Command("lock", "Converge cluster lock")
+	{
+		commands.DefineReleaseConvergeLockCommand(lockCmd)
+	}
+
 	commands.DefineDestroyCommand(kpApp)
 
 	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
@@ -115,7 +120,7 @@ func main() {
 		return nil
 	})
 
-	kpApp.Version("v0.1.0").Author("Flant")
+	kpApp.Version("v0.0.0").Author("Flant")
 
 	go func() {
 		command, err := kpApp.Parse(os.Args[1:])
