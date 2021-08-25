@@ -91,7 +91,8 @@
 .top-tick-left {
   height: 32px;
   display: table-cell;
-  width: 180px;
+  width: 13em;
+  min-width: 13em;
 }
 .top-tick-left-spacer{
   display: block;
