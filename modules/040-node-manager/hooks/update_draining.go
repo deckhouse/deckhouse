@@ -18,10 +18,12 @@ package hooks
 
 import (
 	"encoding/json"
+	"io"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -84,7 +86,16 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-	drainHelper := drain.NewDrainer(k8sCli)
+
+	errOut := input.LogEntry.WriterLevel(logrus.WarnLevel)
+	defer func(errOut *io.PipeWriter) {
+		err := errOut.Close()
+		if err != nil {
+			input.LogEntry.Warningf("error closing logrus PipeWriter: %s", err)
+		}
+	}(errOut)
+
+	drainHelper := drain.NewDrainer(k8sCli, errOut)
 
 	var wg = &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
