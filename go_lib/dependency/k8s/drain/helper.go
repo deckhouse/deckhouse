@@ -17,12 +17,14 @@ limitations under the License.
 package drain
 
 import (
+	"io"
+	"io/ioutil"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
 )
 
-func NewDrainer(kubeClient kubernetes.Interface) *Helper {
+func NewDrainer(kubeClient kubernetes.Interface, errOut io.Writer) *Helper {
 	drainer := &Helper{
 		Client:              kubeClient,
 		Force:               true,
@@ -32,8 +34,8 @@ func NewDrainer(kubeClient kubernetes.Interface) *Helper {
 		// If a pod is not evicted in 20 seconds, retry the eviction next time the
 		// machine gets reconciled again (to allow other machines to be reconciled).
 		Timeout: 30 * time.Second,
-		// Out:    writer{klog.Info},
-		// ErrOut: writer{klog.Error},
+		Out:     ioutil.Discard,
+		ErrOut:  errOut,
 	}
 
 	return drainer
