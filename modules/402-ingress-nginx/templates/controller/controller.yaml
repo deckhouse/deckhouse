@@ -171,11 +171,11 @@ spec:
         - --https-port=443
         - --update-status=true
         {{- if semverCompare ">=0.46" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-{{/*        sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully. This period is hardcoded for v0.33*/}}
+        # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully. This period is hardcoded for v0.33
         - --shutdown-grace-period=120
         {{- end }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
-{{/*        we don't disable it if validation is disabled because it will lead to deployment rollout*/}}
+        # we don't disable it if validation is disabled because it will lead to deployment rollout
         - --validating-webhook=:8443
         - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
         - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
@@ -193,7 +193,7 @@ spec:
   {{- end }}
   {{- if semverCompare ">=0.26" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
         lifecycle:
-  {{- if eq $crd.spec.inlet "HostPort"}}
+  {{- if or (eq $crd.spec.inlet "HostPort")  (eq $crd.spec.inlet "HostPortWithProxyProtocol") }}
           postStart:
             exec:
               command: [ "/bin/bash", "-c", "echo -n ok > /tmp/healthz" ]

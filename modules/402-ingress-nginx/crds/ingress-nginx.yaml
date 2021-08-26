@@ -40,10 +40,10 @@ spec:
                   type: string
                   description: |
                     The way traffic goes to cluster from the outer network.
-                    * `LoadBalancer` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`.
-                    * `LoadBalancerWithProxyProtocol` — устанавливается Ingress controller и заказывается сервис с типом `LoadBalancer`. Ingress controller использует proxy-protocol для получения настоящего IP-адреса клиента.
-                    * `HostPort` — устанавливается Ingress controller, который доступен на портах нод через `hostPort`.
-                    * `HostPortWithProxyProtocol` — устанавливается Ingress controller, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента.
+                    * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
+                    * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
+                    * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
+                    * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client.
 
                       **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
@@ -79,7 +79,10 @@ spec:
                 validationEnabled:
                   type: boolean
                   default: true
-                  description: Enable ingress validation admission
+                  description: |
+                    Enable ingress validation admission.
+
+                    **Attention!**: This feature doesn't work for controllers of <0.33 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -88,7 +91,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -96,7 +99,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted of `false`, it will be determined [automatically](https://early.deckhouse.io/en/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted of `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
