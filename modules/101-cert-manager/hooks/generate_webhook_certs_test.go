@@ -94,6 +94,5 @@ data:
 			Expect(f.ValuesGet("certManager.internal.webhookCrt").String()).To(Equal("testTls"))
 			Expect(f.ValuesGet("certManager.internal.webhookKey").String()).To(Equal("testTls"))
 		})
-
 	})
 })

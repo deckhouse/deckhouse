@@ -21,6 +21,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
@@ -31,20 +32,6 @@ const (
 type CustomClusterRole struct {
 	Name string
 	Role string
-}
-
-type roleNamesSet map[string]struct{}
-
-func (r roleNamesSet) setRole(roleName string) {
-	r[roleName] = struct{}{}
-}
-
-func (r roleNamesSet) convertToSlice() []string {
-	v := make([]string, 0, len(r))
-	for k := range r {
-		v = append(v, k)
-	}
-	return v
 }
 
 func applyCustomClusterRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -83,12 +70,14 @@ func customClusterRolesHandler(input *go_hook.HookInput) error {
 		ClusterAdmin   []string `json:"clusterAdmin"`
 	}
 
-	userRoleNames := &roleNamesSet{}
-	privilegedUserRoleNames := &roleNamesSet{}
-	editorRoleNames := &roleNamesSet{}
-	adminRoleNames := &roleNamesSet{}
-	clusterEditorRoleNames := &roleNamesSet{}
-	clusterAdminRoleNames := &roleNamesSet{}
+	var (
+		userRoleNames           = set.New()
+		privilegedUserRoleNames = set.New()
+		editorRoleNames         = set.New()
+		adminRoleNames          = set.New()
+		clusterEditorRoleNames  = set.New()
+		clusterAdminRoleNames   = set.New()
+	)
 
 	snapshots := input.Snapshots[ccrSnapshot]
 
@@ -99,32 +88,32 @@ func customClusterRolesHandler(input *go_hook.HookInput) error {
 		customClusterRole := snapshot.(*CustomClusterRole)
 		switch customClusterRole.Role {
 		case "User":
-			userRoleNames.setRole(customClusterRole.Name)
+			userRoleNames.Add(customClusterRole.Name)
 			fallthrough
 		case "PrivilegedUser":
-			privilegedUserRoleNames.setRole(customClusterRole.Name)
+			privilegedUserRoleNames.Add(customClusterRole.Name)
 			fallthrough
 		case "Editor":
-			editorRoleNames.setRole(customClusterRole.Name)
+			editorRoleNames.Add(customClusterRole.Name)
 			fallthrough
 		case "Admin":
-			adminRoleNames.setRole(customClusterRole.Name)
+			adminRoleNames.Add(customClusterRole.Name)
 			fallthrough
 		case "ClusterEditor":
-			clusterEditorRoleNames.setRole(customClusterRole.Name)
+			clusterEditorRoleNames.Add(customClusterRole.Name)
 			fallthrough
 		case "ClusterAdmin":
-			clusterAdminRoleNames.setRole(customClusterRole.Name)
+			clusterAdminRoleNames.Add(customClusterRole.Name)
 		}
 	}
 
 	input.Values.Set("userAuthz.internal.customClusterRoles", internalValuesCustomClusterRoles{
-		User:           userRoleNames.convertToSlice(),
-		PrivilegedUser: privilegedUserRoleNames.convertToSlice(),
-		Editor:         editorRoleNames.convertToSlice(),
-		Admin:          adminRoleNames.convertToSlice(),
-		ClusterEditor:  clusterEditorRoleNames.convertToSlice(),
-		ClusterAdmin:   clusterAdminRoleNames.convertToSlice(),
+		User:           userRoleNames.Slice(),
+		PrivilegedUser: privilegedUserRoleNames.Slice(),
+		Editor:         editorRoleNames.Slice(),
+		Admin:          adminRoleNames.Slice(),
+		ClusterEditor:  clusterEditorRoleNames.Slice(),
+		ClusterAdmin:   clusterAdminRoleNames.Slice(),
 	})
 
 	return nil

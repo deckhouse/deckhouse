@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 type storageClassObject struct {
@@ -101,13 +103,13 @@ func copyRBDSecretHandler(input *go_hook.HookInput) error {
 	}
 
 	secretsToCopy := make(map[string]*v1.Secret)
-	d8Secrets := make(map[string]struct{})
+	d8Secrets := set.New()
 
 	for _, secret := range secretSnap {
 		secret := secret.(*v1.Secret)
 
 		if secret.Namespace == "d8-monitoring" {
-			d8Secrets[secret.Name] = struct{}{}
+			d8Secrets.Add(secret.Name)
 			continue
 		}
 		v, ok := secretsToCopy[secret.Name]
@@ -129,7 +131,7 @@ func copyRBDSecretHandler(input *go_hook.HookInput) error {
 		if userSecret == "" {
 			continue // non-rbd StorageClass
 		}
-		if _, ok := d8Secrets[userSecret]; ok {
+		if d8Secrets.Has(userSecret) {
 			continue
 		}
 

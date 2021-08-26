@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -609,9 +610,9 @@ spec:
 			Expect(annotations).ToNot(HaveKey("a"), "annotation 'a' should be removed")
 
 			taints := f.KubernetesGlobalResource("Node", "wor-ker").Field(`spec.taints`).Array()
-			taintKeys := make(map[string]struct{})
+			taintKeys := set.New()
 			for _, taint := range taints {
-				taintKeys[taint.Get(`key`).String()] = struct{}{}
+				taintKeys.Add(taint.Get(`key`).String())
 			}
 			Expect(taintKeys).ToNot(HaveKey("a"), "taint with key 'a' should be removed")
 		})

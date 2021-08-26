@@ -13,6 +13,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 func nameFromService(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -73,30 +75,14 @@ func discoverApps(input *go_hook.HookInput) error {
 		enabledApplicationsPath        = "monitoringApplications.enabledApplications"
 	)
 
-	enabledApplications := make(map[string]struct{})
+	enabledApps := set.NewFromSnapshot(input.Snapshots["service-old"])
 
-	for _, app := range input.Snapshots["service-old"] {
-		convertedApp := app.(string)
-		enabledApplications[convertedApp] = struct{}{}
-	}
+	input.MetricsCollector.Set("d8_monitoring_applications_old_prometheus_target_total", float64(len(enabledApps)), nil)
 
-	input.MetricsCollector.Set("d8_monitoring_applications_old_prometheus_target_total", float64(len(enabledApplications)), nil)
+	enabledApps.
+		AddSet(set.NewFromSnapshot(input.Snapshots["service"])).
+		AddSet(set.NewFromValues(input.Values, enabledApplicationsPath))
 
-	for _, app := range input.Snapshots["service"] {
-		convertedApp := app.(string)
-		enabledApplications[convertedApp] = struct{}{}
-	}
-
-	appsFromConfig := input.Values.Get(enabledApplicationsPath).Array()
-	for _, app := range appsFromConfig {
-		enabledApplications[app.String()] = struct{}{}
-	}
-
-	result := make([]string, 0, len(enabledApplications))
-	for app := range enabledApplications {
-		result = append(result, app)
-	}
-
-	input.Values.Set(enabledApplicationsSummaryPath, result)
+	input.Values.Set(enabledApplicationsSummaryPath, enabledApps.Slice())
 	return nil
 }

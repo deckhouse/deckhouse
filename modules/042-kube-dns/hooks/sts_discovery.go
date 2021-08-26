@@ -20,6 +20,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -39,17 +41,7 @@ func ObjFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 }
 
 func foundStsInNamespaces(input *go_hook.HookInput) error {
-	uniqNamespaces := make([]string, 0)
-	namespaces := make(map[string]struct{})
-	for _, o := range input.Snapshots["statefulsets"] {
-		namespace := o.(string)
-		if _, has := namespaces[namespace]; !has {
-			namespaces[namespace] = struct{}{}
-			uniqNamespaces = append(uniqNamespaces, namespace)
-		}
-	}
-
-	input.Values.Set("kubeDns.internal.stsNamespaces", uniqNamespaces)
-
+	namespaces := set.NewFromSnapshot(input.Snapshots["statefulsets"]).Slice()
+	input.Values.Set("kubeDns.internal.stsNamespaces", namespaces)
 	return nil
 }

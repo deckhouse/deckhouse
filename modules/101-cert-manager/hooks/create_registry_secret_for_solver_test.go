@@ -26,8 +26,10 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const testDockerCfg = `YQ==`
-const testDockerCfgDecoded = `a`
+const (
+	testDockerCfg        = `YQ==`
+	testDockerCfgDecoded = `a`
+)
 
 var testInitClusterConfigForSolverSecret = fmt.Sprintf(`
 {
@@ -84,7 +86,6 @@ func assertRegistrySecretExists(f *HookExecutionConfig, nss ...string) {
 		// yes decoded, because we use SecretTypeDockerConfigJson
 		Expect(config).To(BeEquivalentTo(testDockerCfgDecoded))
 	}
-
 }
 
 func assertRegistrySecretNotExists(f *HookExecutionConfig, nss ...string) {
@@ -211,5 +212,4 @@ var _ = Describe("Cert Manager hooks :: generate registry secret for http challe
 			})
 		})
 	})
-
 })

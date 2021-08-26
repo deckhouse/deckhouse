@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -59,7 +60,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 		DescribeTable("disabled modules",
 			func(module, probeRef string) {
 				// Module is off, probe is off, the probe ref should be in the disabled list
-				f.ValuesSet("global.enabledModules", allModules().delete(module).slice())
+				f.ValuesSet("global.enabledModules", allModules().Delete(module).Slice())
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -69,7 +70,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 					"we should have probe disabled (in the list) because the module is off")
 
 				// Module is on, probe is on, the probe ref should NOT be in the disabled list
-				f.ValuesSet("global.enabledModules", allModules().slice())
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -108,7 +109,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(``))
-				f.ValuesSet("global.enabledModules", allModules().slice())
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 			})
@@ -126,7 +127,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(deploymentInCloudInstanceManager("cluster-autoscaler")))
-				f.ValuesSet("global.enabledModules", allModules().slice())
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 			})
@@ -149,7 +150,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 						deploymentInCloudInstanceManager("bashible-apiserver") +
 						deploymentCCM("openstack"),
 				))
-				f.ValuesSet("global.enabledModules", allModules().slice())
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 			})
@@ -173,7 +174,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 						deploymentInCloudInstanceManager("bashible-apiserver") +
 						deploymentCCM("openstack"),
 				))
-				f.ValuesSet("global.enabledModules", allModules().slice())
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 			})
@@ -212,9 +213,9 @@ metadata:
 	return fmt.Sprintf(format, provider)
 }
 
-// allModules returns the set of all possibly affected modules to test against the filled list
-func allModules() set {
-	return newSet(
+// allModules returns the Set of all possibly affected modules to test against the filled list
+func allModules() set.Set {
+	return set.New(
 		"monitoring-kubernetes",
 		"node-manager",
 		"prometheus",

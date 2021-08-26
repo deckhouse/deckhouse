@@ -26,6 +26,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 const (
@@ -60,19 +62,7 @@ func filterNamespace(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return obj.GetNamespace(), nil
 }
 
-func namespacesFromSnapshot(name string, input *go_hook.HookInput) map[string]struct{} {
-	res := map[string]struct{}{}
-
-	snap := input.Snapshots[name]
-	for _, n := range snap {
-		ns := n.(string)
-		res[ns] = struct{}{}
-	}
-
-	return res
-}
-
-func prepareSolverRegistrySecret(namespace string, dockerCfg string) *v1.Secret {
+func prepareSolverRegistrySecret(namespace, dockerCfg string) *v1.Secret {
 	return &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -126,13 +116,15 @@ func handleChallenge(input *go_hook.HookInput) error {
 	}
 	registryCfg := string(registryCfgBytes)
 
-	challengesNss := namespacesFromSnapshot(challengesSnapshot, input)
-	secretsNss := namespacesFromSnapshot(secretsSnapshot, input)
+	var (
+		challengesNss = set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
+		secretsNss    = set.NewFromSnapshot(input.Snapshots[secretsSnapshot])
+	)
 
 	// create secrets
 	for ns := range challengesNss {
 		// secret already exists in namespace. do not create or patch
-		if _, ok := secretsNss[ns]; ok {
+		if secretsNss.Has(ns) {
 			continue
 		}
 
@@ -150,7 +142,7 @@ func handleChallenge(input *go_hook.HookInput) error {
 
 	// gc secrets
 	for ns := range secretsNss {
-		if _, ok := challengesNss[ns]; ok {
+		if challengesNss.Has(ns) {
 			// a secret exists in namespace, and exists one more challenges. do not delete secret
 			continue
 		}
