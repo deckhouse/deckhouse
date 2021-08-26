@@ -79,7 +79,10 @@ spec:
                 validationEnabled:
                   type: boolean
                   default: true
-                  description: Enable ingress validation admission
+                  description: |
+                    Enable ingress validation admission.
+
+                    **Attention!**: This feature doesn't work for controllers of <0.33 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
