@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/101-cert-manager/hooks/internal"
 )
 
@@ -115,7 +116,7 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 
 	// in jq filter we see diff secret wit certs
 	// so, we need iterate over certs and check key in certs map
-	certs := map[string]struct{}{}
+	certs := set.New()
 
 	for _, sm := range input.Snapshots[certsMetricSnapshot] {
 		meta := sm.(secretMeta)
@@ -123,13 +124,13 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 		// we do not need to store meta
 		// cert meta and secret meta must equal
 		// here we need store only (hash-)key
-		certs[key] = struct{}{}
+		certs.Add(key)
 	}
 
 	for _, sm := range input.Snapshots[secretsMetricsSnapshot] {
 		secretMetaVal := sm.(secretMeta)
 		key := secretsMetricKeyFun(&secretMetaVal)
-		if _, exists := certs[key]; exists {
+		if certs.Has(key) {
 			continue
 		}
 

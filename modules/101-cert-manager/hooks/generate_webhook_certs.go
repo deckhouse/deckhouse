@@ -52,7 +52,7 @@ func applyWebhookSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	var certField string
 	var keyField string
-	var name = secret.Name
+	name := secret.Name
 
 	switch name {
 	case webhookSecretCa:
@@ -102,7 +102,6 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 			{O: "cert-manager.system"},
 		}
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate CA: %v", err)
 	}

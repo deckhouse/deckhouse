@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/go_lib/taints"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -313,17 +314,18 @@ func applyNodeTemplate(nodeObj *v1.Node, node NodeSettings, nodeGroup NodeSettin
 // ApplyTemplateMap return actual merged with template without excess keys.
 func ApplyTemplateMap(actual, template, lastApplied map[string]string) (map[string]string, bool) {
 	changed := false
-
 	excess := ExcessMapKeys(lastApplied, template)
 	newLabels := map[string]string{}
+
 	for k, v := range actual {
 		// Ignore keys removed from template.
-		if _, ok := excess[k]; ok {
+		if excess.Has(k) {
 			changed = true
 			continue
 		}
 		newLabels[k] = v
 	}
+
 	// Merge with values from template.
 	for k, v := range template {
 		oldVal, ok := newLabels[k]
@@ -337,13 +339,13 @@ func ApplyTemplateMap(actual, template, lastApplied map[string]string) (map[stri
 }
 
 // ExcessMapKeys returns keys from a without keys from b.
-func ExcessMapKeys(a, b map[string]string) map[string]struct{} {
-	res := make(map[string]struct{})
+func ExcessMapKeys(a, b map[string]string) set.Set {
+	onlyA := set.New()
 	for k := range a {
-		res[k] = struct{}{}
+		onlyA.Add(k)
 	}
 	for k := range b {
-		delete(res, k)
+		onlyA.Delete(k)
 	}
-	return res
+	return onlyA
 }

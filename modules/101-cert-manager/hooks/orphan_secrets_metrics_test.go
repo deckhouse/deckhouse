@@ -156,5 +156,4 @@ type: kubernetes.io/tls
 			assertCleanMetricsOnly(f)
 		})
 	})
-
 })

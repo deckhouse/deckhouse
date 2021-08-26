@@ -67,7 +67,6 @@ spec:
 		It("Hook should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
-
 	})
 
 	Context("Cluster with ClusterIssuer resource, but without set config values", func() {
@@ -123,5 +122,4 @@ spec:
 			Expect(f.ValuesGet("certManager.internal.email").String()).To(Equal("test@test.com"))
 		})
 	})
-
 })

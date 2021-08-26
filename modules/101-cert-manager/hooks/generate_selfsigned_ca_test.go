@@ -69,6 +69,5 @@ data:
 			Expect(f.ValuesGet("certManager.internal.selfSignedCA.cert").String()).To(Equal("test"))
 			Expect(f.ValuesGet("certManager.internal.selfSignedCA.key").String()).To(Equal("test"))
 		})
-
 	})
 })

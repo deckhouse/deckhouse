@@ -26,11 +26,12 @@ import (
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calculation and assignment ::", func() {
-	var RequireCloudProvider = newCloudProviderAvailabilityChecker()
+	RequireCloudProvider := newCloudProviderAvailabilityChecker()
 
 	const (
 		mdGroup      = "machine.sapcloud.io"
@@ -38,7 +39,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calc
 		mdKind       = "MachineDeployment"
 		mdNamespaced = true
 	)
-	var registerCrd = func(f *HookExecutionConfig) {
+	registerCrd := func(f *HookExecutionConfig) {
 		f.RegisterCRD(mdGroup, mdVersion, mdKind, mdNamespaced)
 	}
 
@@ -931,8 +932,7 @@ spec: {}
 func newCloudProviderAvailabilityChecker() func(tYpE string) {
 	availTypes := getAvailableCloudProviderTypes()
 	return func(tYpE string) {
-		_, has := availTypes[tYpE]
-		if has {
+		if availTypes.Has(tYpE) {
 			return
 		}
 		Skip(fmt.Sprintf("'%s' cloud provider templates are not available. It is OK for CE codebase.", tYpE))
@@ -940,9 +940,9 @@ func newCloudProviderAvailabilityChecker() func(tYpE string) {
 }
 
 // getAvailableCloudProviderTypes returns all cloud providers
-// with a checksum template in cloud-providers directory.
-func getAvailableCloudProviderTypes() map[string]struct{} {
-	res := make(map[string]struct{})
+// containing corresponding checksum template in cloud-providers directory.
+func getAvailableCloudProviderTypes() set.Set {
+	ptypes := set.New()
 
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
@@ -952,7 +952,7 @@ func getAvailableCloudProviderTypes() map[string]struct{} {
 
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return res
+		return ptypes
 	}
 
 	for _, f := range files {
@@ -961,9 +961,9 @@ func getAvailableCloudProviderTypes() map[string]struct{} {
 			continue
 		}
 		if len(tmplBytes) > 0 {
-			res[f.Name()] = struct{}{}
+			ptypes.Add(f.Name())
 		}
 	}
 
-	return res
+	return ptypes
 }

@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -235,39 +236,26 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	// Default zones. Take them from input.Snapshots["machine_deployments"]
 	// and from input.Snapshots["cloud_provider_secret"].zones
-	defaultZones := make([]string, 0)
-	defaultZonesMap := make(map[string]struct{})
+	defaultZones := set.New()
 	for _, machineInfoItem := range input.Snapshots["machine_deployments"] {
 		machineInfo := machineInfoItem.(MachineDeploymentCrdInfo)
-		if _, has := defaultZonesMap[machineInfo.Zone]; !has {
-			defaultZonesMap[machineInfo.Zone] = struct{}{}
-			defaultZones = append(defaultZones, machineInfo.Zone)
-		}
+		defaultZones.Add(machineInfo.Zone)
 	}
 	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
 		secretInfo := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{})
 		zonesUntyped := secretInfo["zones"]
 
-		zonesTyped := make([]string, 0)
-
 		switch v := zonesUntyped.(type) {
 		case []string:
-			zonesTyped = append(zonesTyped, v...)
+			defaultZones.Add(v...)
 		case []interface{}:
 			for _, zoneUntyped := range v {
 				if s, ok := zoneUntyped.(string); ok {
-					zonesTyped = append(zonesTyped, s)
+					defaultZones.Add(s)
 				}
 			}
 		case string:
-			zonesTyped = append(zonesTyped, v)
-		}
-
-		for _, zoneStr := range zonesTyped {
-			if _, has := defaultZonesMap[zoneStr]; !has {
-				defaultZonesMap[zoneStr] = struct{}{}
-				defaultZones = append(defaultZones, zoneStr)
-			}
+			defaultZones.Add(v)
 		}
 	}
 
@@ -349,13 +337,13 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 
 			// check #3 — zones should be valid
-			if len(defaultZonesMap) > 0 {
+			if len(defaultZones) > 0 {
 				// All elements in nodeGroup.Spec.CloudInstances.Zones
 				// should contain in defaultZonesMap.
 				containCount := 0
 				unknownZones := make([]string, 0)
 				for _, zone := range nodeGroup.Spec.CloudInstances.Zones {
-					if _, has := defaultZonesMap[zone]; has {
+					if defaultZones.Has(zone) {
 						containCount++
 					} else {
 						unknownZones = append(unknownZones, zone)
@@ -378,7 +366,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				zones = nodeGroup.Spec.CloudInstances.Zones
 			}
 			if zones == nil {
-				zones = defaultZones
+				zones = defaultZones.Slice()
 			}
 
 			if ngForValues["cloudInstances"] == nil {
