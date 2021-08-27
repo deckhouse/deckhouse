@@ -51,7 +51,7 @@ metadata:
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 			f.RunHook()
 		})
 
@@ -62,7 +62,7 @@ metadata:
 
 	Context("Both lease and node in cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateLeases + stateNodes))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateLeases+stateNodes, 2))
 			f.RunHook()
 		})
 
@@ -72,7 +72,7 @@ metadata:
 
 		Context("Lease was deleted", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(stateNodes))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNodes, 1))
 				f.RunHook()
 			})
 
@@ -94,7 +94,7 @@ metadata:
 
 	Context("Only lease cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateLeases))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateLeases, 1))
 			f.RunHook()
 		})
 
@@ -104,7 +104,7 @@ metadata:
 
 		Context("Lease was deleted", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(``))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 				f.RunHook()
 			})
 

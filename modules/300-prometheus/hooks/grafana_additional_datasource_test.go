@@ -35,7 +35,7 @@ var _ = Describe("Prometheus hooks :: grafana additional datasource ::", func() 
 
 		Context("After adding GrafanaAdditionalDatasource", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(`
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -45,7 +45,7 @@ spec:
   url: /abc
   type: test
   access: Proxy
-`))
+`, 1))
 				f.RunHook()
 			})
 
@@ -67,7 +67,7 @@ spec:
 
 			Context("And after deleting GrafanaAdditionalDatasource", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(``))
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 					f.RunHook()
 				})
 
@@ -79,7 +79,7 @@ spec:
 
 			Context("And after updating GrafanaAdditionalDatasource", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(`
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -89,7 +89,7 @@ spec:
   url: /def
   type: test
   access: Direct
-`))
+`, 1))
 					f.RunHook()
 				})
 
@@ -114,7 +114,7 @@ spec:
 
 	Context("Cluster with GrafanaAdditionalDatasource", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -133,7 +133,7 @@ spec:
   url: /def
   type: test-next
   access: Direct
-`))
+`, 2))
 			f.RunHook()
 		})
 
