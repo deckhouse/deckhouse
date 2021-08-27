@@ -20,8 +20,12 @@ package http
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -43,10 +47,25 @@ func NewClient(options ...Option) Client {
 		Timeout: opts.timeout,
 	}
 
+	tlsConf := &tls.Config{
+		InsecureSkipVerify: opts.insecure,
+	}
+
+	if !opts.insecure {
+		caPool, err := x509.SystemCertPool()
+		if err != nil {
+			panic(fmt.Errorf("cannot get system cert pool: %v", err))
+		}
+
+		for _, ca := range opts.additionalTLSCA {
+			caPool.AppendCertsFromPEM(ca)
+		}
+
+		tlsConf.RootCAs = caPool
+	}
+
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: opts.insecure,
-		},
+		TLSClientConfig:       tlsConf,
 		IdleConnTimeout:       5 * time.Minute,
 		TLSHandshakeTimeout:   5 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
@@ -61,8 +80,9 @@ func NewClient(options ...Option) Client {
 }
 
 type httpOptions struct {
-	timeout  time.Duration
-	insecure bool
+	timeout         time.Duration
+	insecure        bool
+	additionalTLSCA [][]byte
 }
 
 type Option func(options *httpOptions)
@@ -79,4 +99,38 @@ func WithInsecureSkipVerify() Option {
 	return func(options *httpOptions) {
 		options.insecure = true
 	}
+}
+
+func WithAdditionalCACerts(certs [][]byte) Option {
+	return func(options *httpOptions) {
+		options.additionalTLSCA = append(options.additionalTLSCA, certs...)
+	}
+}
+
+func SetBearerToken(req *http.Request, token string) {
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+}
+
+func GetKubeToken() (string, error) {
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "true" {
+		return "kube-auth-test-token", nil
+	}
+
+	content, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return "", err
+	}
+
+	return string(content), nil
+}
+
+func SetKubeAuthToken(req *http.Request) error {
+	token, err := GetKubeToken()
+	if err != nil {
+		return err
+	}
+
+	SetBearerToken(req, token)
+
+	return nil
 }
