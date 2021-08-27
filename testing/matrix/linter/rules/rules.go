@@ -243,6 +243,8 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 	if !skipObjectIfNeeded(&object) {
 		l.ErrorsList.Add(objectSecurityContext(object))
 	}
+
+	l.ErrorsList.Add(objectHostNetworkPorts(object))
 }
 
 func objectRecommendedLabels(object storage.StoreObject) errors.LintRuleError {
@@ -436,6 +438,59 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 				fmt.Sprintf("%d:%d", *securityContext.RunAsUser, *securityContext.RunAsGroup),
 				"Object's SecurityContext has `RunAsNonRoot: false`, but RunAsUser:RunAsGroup differs from 0:0",
 			)
+		}
+	}
+
+	return errors.EmptyRuleError
+}
+
+func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
+	switch object.Unstructured.GetKind() {
+	case "Deployment", "DaemonSet", "StatefulSet", "Pod", "Job", "CronJob":
+	default:
+		return errors.EmptyRuleError
+	}
+
+	hostNetworkUsed, err := object.IsHostNetwork()
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			fmt.Sprintf("IsHostNetwork failed: %v", err),
+		)
+	}
+	if !hostNetworkUsed {
+		return errors.EmptyRuleError
+	}
+
+	containers, err := object.GetContainers()
+	if err != nil {
+		return errors.NewLintRuleError(
+			"MANIFEST003",
+			object.Identity(),
+			nil,
+			fmt.Sprintf("GetContainers failed: %v", err),
+		)
+	}
+	for _, c := range containers {
+		for _, p := range c.Ports {
+			if hostNetworkUsed && p.ContainerPort >= 10500 {
+				return errors.NewLintRuleError(
+					"CONTAINER007",
+					object.Identity()+"; container = "+c.Name,
+					p.ContainerPort,
+					"Pod running in hostNetwork and it's container uses port >= 10500",
+				)
+			}
+			if p.HostPort >= 10500 {
+				return errors.NewLintRuleError(
+					"CONTAINER007",
+					object.Identity()+"; container = "+c.Name,
+					p.HostPort,
+					"Container uses hostPort >= 10500",
+				)
+			}
 		}
 	}
 

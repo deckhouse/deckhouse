@@ -56,10 +56,10 @@ spec:
         - --run-firewall=true
         - --run-service-proxy=false
         - --metrics-path=/metrics
-        - --metrics-port=20245
-        - --health-port=20244
+        - --metrics-port=10445
+        - --health-port=10444
         ports:
-        - containerPort: 20245
+        - containerPort: 10445
           name: http-metrics
         env:
         - name: NODE_NAME
@@ -69,7 +69,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 20244
+            port: 10444
           initialDelaySeconds: 10
           periodSeconds: 3
         volumeMounts:
