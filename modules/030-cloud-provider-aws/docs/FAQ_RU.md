@@ -64,3 +64,25 @@ IPv4 CIDR у обоих VPC должен различаться.
   * Создать базовую инфраструктуру — `dhctl bootstrap-phase base-infra`.
   * Запустить вручную bastion в subnet <prefix>-public-0.
   * Продолжить инсталляцию с указанием bastion — `dhctl bootstrap --ssh-bastion...`
+
+## Особенности добавления предварительно созданных инстансов в кластер
+
+Для добавления инстанса в кластер требуется:
+  * Прикрепить группу безопасности `<prefix>-node`
+  * Прописать теги (чтобы cloud-controller-manager мог найти инстансы в облаке):
+
+  ```
+  "kubernetes.io/cluster/<cluster_uuid>" = "shared"
+  "kubernetes.io/cluster/<prefix>" = "shared"
+  ```
+
+  * Узнать `cluster_uuid` можно с помощью команды:
+
+    ```shell
+    kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
+    ```
+
+  * Узнать `prefix` можно с помощью команды:
+    ```shell
+    kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+    ```
