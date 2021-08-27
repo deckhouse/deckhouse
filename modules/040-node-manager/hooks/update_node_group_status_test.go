@@ -278,7 +278,7 @@ status:
 
 	Context("A NG1 and zones Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCloudNG1 + stateCloudProviderSecret))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateCloudNG1+stateCloudProviderSecret, 1))
 			f.RunHook()
 		})
 
@@ -290,7 +290,7 @@ status:
 
 	Context("NGs MD, Machines, Nodes and zones Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCloudNG1 + stateCloudNG2 + stateMDs + stateMachines + stateNodes + stateCloudProviderSecret + configurationChecksums))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateCloudNG1+stateCloudNG2+stateMDs+stateMachines+stateNodes+stateCloudProviderSecret+configurationChecksums, 2))
 			f.RunHook()
 		})
 
@@ -303,7 +303,7 @@ status:
 
 	Context("NGs MD, Machines, Nodes and zones Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNG1 + stateNG2 + stateMDs + stateMachines + stateNodes + stateCloudProviderSecret + configurationChecksums))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNG1+stateNG2+stateMDs+stateMachines+stateNodes+stateCloudProviderSecret+configurationChecksums, 2))
 			f.RunHook()
 		})
 
@@ -320,7 +320,7 @@ status:
 
 	Context("One failed NG MD, Machines, Nodes and zones Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCloudNG2 + stateNodes + stateCloudProviderSecret + configurationChecksums + failedMachineDeployment))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateCloudNG2+stateNodes+stateCloudProviderSecret+configurationChecksums+failedMachineDeployment, 1))
 			f.RunHook()
 		})
 
@@ -332,7 +332,7 @@ status:
 
 	Context("One failed NG from two failed MDs, Machines, Nodes and zones Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateCloudNG2 + stateNodes + stateCloudProviderSecret + configurationChecksums + failedMachineDeployment + secondFailedMachineDeployment))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateCloudNG2+stateNodes+stateCloudProviderSecret+configurationChecksums+failedMachineDeployment+secondFailedMachineDeployment, 1))
 			f.RunHook()
 		})
 

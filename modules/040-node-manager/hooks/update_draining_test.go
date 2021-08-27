@@ -31,7 +31,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 			f.RunHook()
 		})
 
@@ -42,7 +42,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::
 
 	Context("Cluster node is draining", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: v1
 kind: Node
@@ -52,7 +52,7 @@ metadata:
     node.deckhouse.io/group: "master"
   annotations:
     update.node.deckhouse.io/draining: ""
-`))
+`, 1))
 			f.RunHook()
 		})
 
@@ -105,7 +105,7 @@ data:
 					draining := gDraining
 					unschedulable := gUnschedulable
 					BeforeEach(func() {
-						f.BindingContexts.Set(f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable)))
+						f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(initialState+generateStateToTestDrainingNodes(nodeNames, draining, unschedulable), 4))
 						f.RunHook()
 					})
 

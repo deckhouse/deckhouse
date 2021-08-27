@@ -97,7 +97,7 @@ metadata:
 
 	Context("Cluster with CloudPermanent NG only", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeGroupCloudPermanent))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(nodeGroupCloudPermanent, 1))
 			f.RunHook()
 		})
 
@@ -109,7 +109,7 @@ metadata:
 
 	Context("Cluster with CloudEphemeral NG only", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(nodeGroupCloudEphemeral))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(nodeGroupCloudEphemeral, 1))
 			f.RunHook()
 		})
 

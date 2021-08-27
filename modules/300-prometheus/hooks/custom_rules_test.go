@@ -30,13 +30,13 @@ var _ = Describe("Prometheus hooks :: custom rules ::", func() {
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 			f.RunHook()
 		})
 
 		Context("After adding CustomPrometheusRules", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(`
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -52,7 +52,7 @@ spec:
     rules:
     - alert: Rule2
       expr: testit
-`))
+`, 1))
 				f.RunHook()
 			})
 
@@ -73,22 +73,9 @@ spec:
 `))
 			})
 
-			Context("And after deleting CustomPrometheusRules", func() {
-				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(``))
-					f.RunHook()
-				})
-
-				It("Should delete PrometheusRule", func() {
-					Expect(f).To(ExecuteSuccessfully())
-
-					Expect(f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test").Exists()).ToNot(BeTrue())
-				})
-			})
-
 			Context("And after updating CustomPrometheusRules", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(`
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -100,7 +87,7 @@ spec:
     rules:
     - alert: updateRule1
       expr: testit
-`))
+`, 2))
 					f.RunHook()
 				})
 
@@ -116,13 +103,26 @@ spec:
       expr: testit
 `))
 				})
+
+				Context("And after deleting CustomPrometheusRules", func() {
+					BeforeEach(func() {
+						f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+						f.RunHook()
+					})
+
+					It("Should delete PrometheusRule", func() {
+						Expect(f).To(ExecuteSuccessfully())
+
+						Expect(f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test").Exists()).ToNot(BeTrue())
+					})
+				})
 			})
 		})
 	})
 
 	Context("Cluster with rules", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
@@ -145,7 +145,7 @@ spec:
     rules:
     - alert: Rule1
       expr: testit
-`))
+`, 2))
 			f.RunHook()
 		})
 
@@ -174,7 +174,7 @@ spec:
 
 	Context("Cluster with prometheus rule but without custom prometheus rules", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -188,7 +188,7 @@ metadata:
     prometheus: main
     component: rules
     origin: custom
-`))
+`, 1))
 			f.RunHook()
 		})
 

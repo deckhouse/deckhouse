@@ -92,7 +92,7 @@ metadata:
 
 	Context("Cluster with defaultStorageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(defaultStorageClass))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultStorageClass, 1))
 
 			f.RunHook()
 		})
@@ -132,7 +132,7 @@ metadata:
 
 	Context("Cluster with PVCs and settings up global.discovery.defaultStorageClass|global.storageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvcLongterm + pvcGrafana))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(pvcLongterm+pvcGrafana, 2))
 			f.ConfigValuesSet("global.storageClass", "global-sc")
 			f.RunHook()
 		})
@@ -145,7 +145,7 @@ metadata:
 
 	Context("Cluster with StatefullSets, PVCs and settings up prometheus.longtermStorageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvcLongterm + pvcGrafana + longtermStatefullSet))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(pvcLongterm+pvcGrafana+longtermStatefullSet, 3))
 			f.ConfigValuesSet("prometheus.longtermStorageClass", "prometheus-longterm-sc")
 			f.RunHook()
 		})

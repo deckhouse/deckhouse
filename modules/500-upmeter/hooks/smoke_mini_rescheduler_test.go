@@ -36,8 +36,8 @@ var _ = Describe("Modules :: upmeter :: hooks :: smoke_mini_rescheduler ::", fun
 }}`, `{}`)
 
 		DescribeTable("version change",
-			func(state string) {
-				f.BindingContexts.Set(f.KubeStateSet(state))
+			func(state string, quantity int) {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(state, quantity))
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
 			},
@@ -53,7 +53,7 @@ status:
   conditions:
   - status: "True"
     type: Ready
-`),
+`, 1),
 			Entry("One node and a pod on it", `
 ---
 apiVersion: v1
@@ -129,7 +129,7 @@ spec:
             operator: In
             values:
             - node-a-1
-`),
+`, 3),
 			Entry("Two nodes and a pod", `
 ---
 apiVersion: v1
@@ -216,7 +216,7 @@ spec:
             operator: In
             values:
             - node-a-1
-`),
+`, 4),
 			Entry("Unscheduled pod", `
 ---
 apiVersion: v1
@@ -292,14 +292,14 @@ spec:
             operator: In
             values:
             - node-a-1
-`))
+`, 3))
 	})
 
 	Context("Empty cluster", func() {
 		f := HookExecutionConfigInit(`{"upmeter":{"smokeMiniDisabled": true}}`, `{}`)
 
 		It("Should execute successfully", func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: v1
 kind: Node
@@ -311,7 +311,7 @@ status:
   conditions:
   - status: "True"
     type: Ready
-`))
+`, 1))
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 		})

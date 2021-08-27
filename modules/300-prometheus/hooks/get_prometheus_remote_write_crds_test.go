@@ -60,7 +60,7 @@ spec:
 
 	Context("Synchronization", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(firstPrometheusRemoteWrite))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(firstPrometheusRemoteWrite, 1))
 			f.RunHook()
 		})
 
@@ -104,7 +104,7 @@ spec:
 
 		Context("PrometheusRemoteWrite CR created", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(firstPrometheusRemoteWrite))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(firstPrometheusRemoteWrite, 1))
 				f.RunHook()
 			})
 			It("Should fill internal values", func() {
@@ -137,7 +137,9 @@ spec:
 
 			Context("Apply second PrometheusRemoteWrite CR", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(firstPrometheusRemoteWrite + secondPrometheusRomteWrite))
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						firstPrometheusRemoteWrite+secondPrometheusRomteWrite, 1,
+					))
 					f.RunHook()
 				})
 

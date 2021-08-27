@@ -108,7 +108,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(``))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -126,7 +126,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(deploymentInCloudInstanceManager("cluster-autoscaler")))
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(deploymentInCloudInstanceManager("cluster-autoscaler"), 1))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -145,10 +145,10 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(
-					deploymentInCloudInstanceManager("machine-controller-manager") +
-						deploymentInCloudInstanceManager("bashible-apiserver") +
-						deploymentCCM("openstack"),
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					deploymentInCloudInstanceManager("machine-controller-manager")+
+						deploymentInCloudInstanceManager("bashible-apiserver")+
+						deploymentCCM("openstack"), 3,
 				))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()
@@ -168,11 +168,11 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			f := HookExecutionConfigInit(initValues, `{}`)
 
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(
-					deploymentInCloudInstanceManager("cluster-autoscaler") +
-						deploymentInCloudInstanceManager("machine-controller-manager") +
-						deploymentInCloudInstanceManager("bashible-apiserver") +
-						deploymentCCM("openstack"),
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					deploymentInCloudInstanceManager("cluster-autoscaler")+
+						deploymentInCloudInstanceManager("machine-controller-manager")+
+						deploymentInCloudInstanceManager("bashible-apiserver")+
+						deploymentCCM("openstack"), 3,
 				))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
 				f.RunHook()

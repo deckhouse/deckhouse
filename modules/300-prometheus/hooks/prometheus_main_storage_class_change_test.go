@@ -103,7 +103,7 @@ metadata:
 
 	Context("Cluster with defaultStorageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(defaultStorageClass))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultStorageClass, 1))
 			f.RunHook()
 		})
 
@@ -142,7 +142,7 @@ metadata:
 
 	Context("Cluster with PVCs and settings up global.discovery.defaultStorageClass|global.storageClass", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(pvcMain + pvcGrafana))
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(pvcMain+pvcGrafana, 2))
 			f.ConfigValuesSet("global.storageClass", "global-sc")
 			f.RunHook()
 		})

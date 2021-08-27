@@ -33,7 +33,7 @@ prometheus:
 	Context("1 node clustaer", func() {
 		BeforeEach(func() {
 
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 apiVersion: v1
 kind: Node
 metadata:
@@ -43,7 +43,7 @@ spec:
 status:
   capacity:
     pods: "110"
-`))
+`, 1))
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/10 * * * *"))
 			f.RunHook()
 		})
