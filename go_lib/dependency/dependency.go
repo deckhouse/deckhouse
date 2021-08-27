@@ -18,6 +18,7 @@ package dependency
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"sync"
@@ -59,13 +60,14 @@ func NewDependencyContainer() Container {
 }
 
 type dependencyContainer struct {
-	httpClient http.Client
 	etcdClient etcd.Client
 	k8sClient  k8s.Client
 	crClient   cr.Client
 
-	m         sync.RWMutex
-	isTestEnv *bool
+	m             sync.RWMutex
+	isTestEnv     *bool
+	httpClient    http.Client
+	kubeAuthToken *string
 }
 
 func (dc *dependencyContainer) isTestEnvironment() bool {
@@ -90,9 +92,25 @@ func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client
 		return TestDC.GetHTTPClient(options...)
 	}
 
-	if dc.httpClient == nil {
-		dc.httpClient = http.NewClient(options...)
+	dc.m.RLock()
+	if dc.httpClient != nil {
+		defer dc.m.RUnlock()
+		return dc.httpClient
 	}
+	dc.m.RUnlock()
+
+	dc.m.Lock()
+	defer dc.m.Unlock()
+
+	var opts []http.Option
+	opts = append(opts, options...)
+
+	contentCA, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	if err == nil {
+		opts = append(opts, http.WithAdditionalCACerts([][]byte{contentCA}))
+	}
+
+	dc.httpClient = http.NewClient(opts...)
 
 	return dc.httpClient
 }
