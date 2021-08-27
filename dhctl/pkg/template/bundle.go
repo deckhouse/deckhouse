@@ -16,13 +16,13 @@ package template
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 const (
@@ -143,13 +143,13 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
 	log.InfoF("Create %q\n", firstRunFileFlag)
-	if err := createEmptyFile(firstRunFileFlag); err != nil {
+	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
 	log.InfoF("Create %q\n", devicePathFile)
-	if err := createFileWithContent(devicePathFile, devicePath); err != nil {
+	if err := fs.CreateFileWithContent(devicePathFile, devicePath); err != nil {
 		return err
 	}
 
@@ -176,26 +176,6 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		}
 	}
 	return nil
-}
-
-func createFileWithContent(path, content string) error {
-	newFile, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create file %s: %v", path, err)
-	}
-	defer newFile.Close()
-
-	if content != "" {
-		_, err = newFile.WriteString(content)
-		if err != nil {
-			return fmt.Errorf("create file with content %s: %v", path, err)
-		}
-	}
-	return nil
-}
-
-func createEmptyFile(path string) error {
-	return createFileWithContent(path, "")
 }
 
 func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
