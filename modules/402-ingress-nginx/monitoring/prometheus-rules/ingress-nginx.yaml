@@ -96,8 +96,8 @@
       plk_markup_format: markdown
       plk_incident_initial_status: "todo"
       description: |-
-        Found deprecated Ingress Nginx controller version: {{`{{$labels.controller_version}}`}}
-        Please upgrade {{`{{$labels.controller_name}}`}} IngressNginxController
+        Found deprecated Ingress Nginx controller version: {{ $labels.controller_version }}
+        Please upgrade {{ $labels.controller_name }} IngressNginxController
         This version is deprecated and does not have the newest improvements and patches
       summary: >
-        Deprecated version of IngressNginxController {{`{{$labels.controller_version}}`}} found
+        Deprecated version of IngressNginxController {{ $labels.controller_version }} found
