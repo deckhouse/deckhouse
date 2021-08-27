@@ -63,3 +63,26 @@ There are two possible cases:
   * Create a basic infrastructure: `dhctl bootstrap-phase base-infra`;
   * Manually run a bastion in the <prefix>-public-0 subnet;
   * Continue the installation by specifying the bastion: `dhctl bootstrap --ssh-bastion...`
+
+## Adding pre-created instances to a cluster
+
+To add a pre-created instance to the cluster, you need:
+  * Attach a security group `<prefix>-node`
+  * Add tags:
+
+  ```
+  "kubernetes.io/cluster/<cluster_uuid>" = "shared"
+  "kubernetes.io/cluster/<prefix>" = "shared"
+  ```
+
+    * You can find out the `cluster_uuid` using the command:
+
+      ```shell
+      kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
+      ```
+
+    * You can find out `prefix` using the command:
+
+      ```shell
+      kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+      ```
