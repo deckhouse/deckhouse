@@ -73,7 +73,7 @@ spec:
           - --configure-cloud-routes=true
           - --route-reconciliation-period=10s
           - --bind-address=$(HOST_IP)
-          - --secure-port=10871
+          - --secure-port=10471
           env:
           - name: HOST_IP
             valueFrom:

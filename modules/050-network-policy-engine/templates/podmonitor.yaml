@@ -8,7 +8,7 @@ metadata:
 spec:
   jobLabel: app
   podMetricsEndpoints:
-  - targetPort: 20245
+  - targetPort: 10445
     relabelings:
     - regex: endpoint|namespace
       action: labeldrop
