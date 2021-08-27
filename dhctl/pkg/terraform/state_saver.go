@@ -56,6 +56,10 @@ func (s *StateSaver) Start(runner *Runner) error {
 	}
 	s.runner = runner
 
+	if err := fs.TouchFile(s.runner.statePath); err != nil {
+		return err
+	}
+
 	var err error
 	s.doneCh = make(chan struct{})
 	s.watcher, err = fs.StartFileWatcher(s.runner.statePath, s.FsEventHandler, s.doneCh)

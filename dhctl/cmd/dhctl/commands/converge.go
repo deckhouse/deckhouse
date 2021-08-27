@@ -40,7 +40,20 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return err
 		}
 
-		err = cache.Init(sshClient.Check().String())
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+
+		if sshClient != nil {
+			cacheIdentity = sshClient.Check().String()
+		}
+
+		if cacheIdentity == "" {
+			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster")
+		}
+
+		err = cache.Init(cacheIdentity)
 		if err != nil {
 			return err
 		}
@@ -60,7 +73,7 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
