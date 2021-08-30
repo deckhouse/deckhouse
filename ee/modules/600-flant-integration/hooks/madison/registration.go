@@ -37,11 +37,6 @@ const (
 )
 
 func registrationHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	data, err := createMadisonPayload(input.Values, dc)
-	if err != nil {
-		return err
-	}
-
 	_, ok := input.Values.GetOk(madisonKeyPath)
 	if ok {
 		return nil
@@ -52,6 +47,14 @@ func registrationHandler(input *go_hook.HookInput, dc dependency.Container) erro
 		return nil
 	}
 
+	var (
+		domainTemplate  = input.Values.Get("global.modules.publicDomainTemplate").String()
+		globalHTTPSMode = input.Values.Get("global.modules.https.mode").String()
+	)
+	data, err := createMadisonPayload(domainTemplate, getPrometheusURLSchema(dc, globalHTTPSMode))
+	if err != nil {
+		return err
+	}
 	data.Type = "prometheus"
 
 	// form request to d8-connect proxy
@@ -87,50 +90,77 @@ type extraData struct {
 	Labels map[string]string `json:"labels"`
 }
 
-func createMadisonPayload(values *go_hook.PatchableValues, dc dependency.Container) (madisonRequestData, error) {
-	data := madisonRequestData{}
-
-	schema := "http"
-	publicDomain := values.Get("global.modules.publicDomainTemplate").String()
-
-	if publicDomain != "" {
-		globalHTTPSMode := values.Get("global.modules.https.mode").String()
-
-		kubeCl, err := dc.GetK8sClient()
-		if err != nil {
-			return madisonRequestData{}, fmt.Errorf("cannot init Kubernetes client: %v", err)
-		}
-
-		cm, err := kubeCl.CoreV1().
-			ConfigMaps("d8-system").
-			Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-		if err != nil {
-			return madisonRequestData{}, fmt.Errorf("cannot get configmap deckhouse")
-		}
-
-		prometheusHTTPSMode := ""
-		prometheusData, ok := cm.Data["prometheus"]
-		if ok {
-			var prometheus struct{ HTTPS struct{ Mode string } }
-			err := yaml.Unmarshal([]byte(prometheusData), &prometheus)
-			if err == nil {
-				prometheusHTTPSMode = prometheus.HTTPS.Mode
-			}
-		}
-
-		if prometheusHTTPSMode == "" {
-			if globalHTTPSMode != "Disabled" {
-				schema = "https"
-			}
-		} else if prometheusHTTPSMode != "Disabled" {
-			schema = "https"
-		}
+func createMadisonPayload(domainTemplate string, getSchema func() (string, error)) (madisonRequestData, error) {
+	data := madisonRequestData{
+		PrometheusURL: "-",
+		GrafanaURL:    "-",
+	}
+	if domainTemplate == "" {
+		return data, nil
 	}
 
-	data.GrafanaURL = schema + "://" + fmt.Sprintf(publicDomain, "grafana")
+	schema, err := getSchema()
+	if err != nil {
+		return data, err
+	}
+
+	data.GrafanaURL = schema + "://" + fmt.Sprintf(domainTemplate, "grafana")
 	data.PrometheusURL = data.GrafanaURL + "/prometheus"
 
 	return data, nil
+}
+
+// getPrometheusURLSchema wraps calling apiserver for configmap and HTTPS mode setting along with the schema calculation
+func getPrometheusURLSchema(dc dependency.Container, globalHTTPSMode string) func() (string, error) {
+	return func() (string, error) {
+		prometheusHTTPSMode, err := getPrometheusHTTPSMode(dc)
+		if err != nil {
+			return "", err
+		}
+		schema := calculatePromentheusURLSchema(globalHTTPSMode, prometheusHTTPSMode)
+		return schema, nil
+	}
+}
+
+func calculatePromentheusURLSchema(globalHTTPSMode, prometheusHTTPSMode string) string {
+	schema := "http"
+	if prometheusHTTPSMode == "" {
+		if globalHTTPSMode != "Disabled" {
+			schema = "https"
+		}
+	} else if prometheusHTTPSMode != "Disabled" {
+		schema = "https"
+	}
+	return schema
+}
+
+// getPrometheusHTTPSMode fetches prometheus HTTPS mode parameter from deckhouse configmap
+func getPrometheusHTTPSMode(dc dependency.Container) (string, error) {
+	kubeCl, err := dc.GetK8sClient()
+	if err != nil {
+		return "", fmt.Errorf("cannot init Kubernetes client: %v", err)
+	}
+
+	cm, err := kubeCl.CoreV1().
+		ConfigMaps("d8-system").
+		Get(context.TODO(), "deckhouse", metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("cannot get configmap deckhouse")
+	}
+
+	prometheusData, ok := cm.Data["prometheus"]
+	if !ok {
+		return "", nil
+	}
+
+	var prometheus struct{ HTTPS struct{ Mode string } }
+	err = yaml.Unmarshal([]byte(prometheusData), &prometheus)
+	if err != nil {
+		// ignoring the error and falling back to undeclared value
+		return "", nil
+	}
+	return prometheus.HTTPS.Mode, nil
+
 }
 
 type madisonAuthKeyResp struct {
