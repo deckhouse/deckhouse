@@ -22,7 +22,7 @@ func Test(t *testing.T) {
 
 const globalValues = `
 deckhouseVersion: dev
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd"]
+enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "flant-integration", "operator-prometheus-crd", "log-shipper"]
 modulesImages:
   registry: registry.deckhouse.io
   registryDockercfg: cfg
@@ -60,6 +60,44 @@ kubeall:
   kubectl: "sudo kubectl"
   kubeconfig: "/root/.kube/config"
   context: ""
+logs:
+  url: "https://example.com/loki"
+internal:
+  releaseChannel: Alpha
+  bundle: Default
+  cloudProvider: AWS
+  cloudLayout: withoutNAT
+  controlPlaneVersion: 1.19
+  clusterType: Hybrid
+  nodeStats:
+    minimalKubeletVersion: 1.19
+    staticNodesCount: 1
+    mastersCount: 3
+    masterIsDedicated: true
+    masterMinCPU: 4
+    masterMinMemory: 800000
+  prometheusAPIClientTLS:
+    certificate: string
+    key: string
+  terraformManagerEnabled: true
+`
+
+const moduleValuesNoLogs = `
+contacts: 10
+doNotChargeForRockSolid: false
+plan: "Standard"
+planIsBoughtAsBundle: false
+auxiliaryCluster: false
+clusterType: Hybrid
+nodesDiscount: 10
+metrics: {}
+kubeall:
+  team: ""
+  host: ""
+  kubectl: "sudo kubectl"
+  kubeconfig: "/root/.kube/config"
+  context: ""
+logs: false
 internal:
   releaseChannel: Alpha
   bundle: Default
@@ -104,6 +142,8 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			pm := f.KubernetesResource("PodMonitor", nsName, "pricing")
 			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":pricing")
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":pricing")
+			cld := f.KubernetesGlobalResource("ClusterLogDestination", "flant-integration-loki-storage")
+			clc := f.KubernetesGlobalResource("ClusterLoggingConfig", "flant-integration-d8-logs")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -111,6 +151,8 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			Expect(pm.Exists()).To(BeTrue())
 			Expect(cr.Exists()).To(BeTrue())
 			Expect(crb.Exists()).To(BeTrue())
+			Expect(cld.Exists()).To(BeTrue())
+			Expect(clc.Exists()).To(BeTrue())
 
 			// user story #1
 			Expect(ds.Exists()).To(BeTrue())
@@ -173,6 +215,39 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			config, err := base64.StdEncoding.DecodeString(s.Field(`data.agent-scraping-service\.yaml`).String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(config)).To(ContainSubstring("remote_write"))
+		})
+	})
+
+	Context("Cluster", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("flantIntegration", moduleValuesNoLogs)
+			f.HelmRender()
+		})
+		nsName := "d8-flant-integration"
+		chartName := "flant-integration"
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", nsName)
+			registrySecret := f.KubernetesResource("Secret", nsName, "deckhouse-registry")
+
+			sa := f.KubernetesResource("ServiceAccount", nsName, "pricing")
+			pm := f.KubernetesResource("PodMonitor", nsName, "pricing")
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":pricing")
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":pricing")
+			cld := f.KubernetesGlobalResource("ClusterLogDestination", "flant-integration-loki-storage")
+			clc := f.KubernetesGlobalResource("ClusterLoggingConfig", "flant-integration-d8-logs")
+
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(registrySecret.Exists()).To(BeTrue())
+			Expect(sa.Exists()).To(BeTrue())
+			Expect(pm.Exists()).To(BeTrue())
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(crb.Exists()).To(BeTrue())
+			Expect(cld.Exists()).To(BeFalse())
+			Expect(clc.Exists()).To(BeFalse())
 		})
 	})
 })
