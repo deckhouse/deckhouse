@@ -55,6 +55,17 @@ properties:
     type: string
     description: |
       Client license key.
+  logs:
+    oneOf:
+      - type: object
+      - type: boolean
+    default: {}
+    properties:
+      url:
+        type: string
+        default: "https://connect.flant.com/v1/loki_push"
+        description: |
+          URL for sending logs in Loki compatible storage.
   kubeall:
     type: object
     default: {}
