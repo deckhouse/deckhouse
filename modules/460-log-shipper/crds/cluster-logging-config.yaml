@@ -70,11 +70,51 @@ spec:
                       description: |
                         Specifies the label selector to filter Pods with.
                         You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      anyOf:
+                        - required:
+                            - matchLabels
+                        - required:
+                            - matchExpressions
                       properties:
                         matchLabels:
                           type: object
+                          description: List of labels which pod should have
+                          example: { "foo": "bar", "baz": "whooo" }
                           additionalProperties:
                             type: string
+                        matchExpressions:
+                          type: array
+                          description: List of label expressions for pods
+                          example:
+                            {
+                              "matchExpressions":
+                                [
+                                  {
+                                    "key": "tier",
+                                    "operator": "In",
+                                    "values": ["production", "staging"],
+                                  },
+                                ],
+                            }
+                          items:
+                            type: object
+                            required:
+                              - key
+                              - operator
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string
                 file:
                   type: object
                   properties:

@@ -20,7 +20,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          required: ['spec']
+          required: ["spec"]
           description: |
             CustomResource for namespaced kubernetes source in log-pipeline.
 
@@ -36,11 +36,51 @@ spec:
                   description: |
                     Specifies the label selector to filter Pods with.
                     You can get more info [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                  anyOf:
+                    - required:
+                        - matchLabels
+                    - required:
+                        - matchExpressions
                   properties:
                     matchLabels:
                       type: object
+                      description: List of labels which pod should have
+                      example: { "foo": "bar", "baz": "whooo" }
                       additionalProperties:
                         type: string
+                    matchExpressions:
+                      type: array
+                      description: List of label expressions for pods
+                      example:
+                        {
+                          "matchExpressions":
+                            [
+                              {
+                                "key": "tier",
+                                "operator": "In",
+                                "values": ["production", "staging"],
+                              },
+                            ],
+                        }
+                      items:
+                        type: object
+                        required:
+                          - key
+                          - operator
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            items:
+                              type: string
                 clusterDestinationRefs:
                   type: array
                   description: Array of ClusterLogDestination CR names which this source will output with.
