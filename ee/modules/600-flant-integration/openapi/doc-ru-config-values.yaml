@@ -26,12 +26,17 @@ properties:
         description: |
           URL для отправки метрик в формате Prometheus remote_write.
   madisonAuthKey:
-      description: |
-        Ключ для доступа в алертменеджер Madison.
+    description: |
+      Ключ для доступа в алертменеджер Madison.
   licenseKey:
     type: string
     description: |
       Ключ для доступа к сервисам Фланта.
+  logs:
+    properties:
+      url:
+        description: |
+          URL для отправки логов в совместимое с Loki хранилище.
   kubeall:
     description: |
       Параметры для формирования kubeall реестра.
