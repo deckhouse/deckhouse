@@ -64,7 +64,7 @@ There are two possible cases:
   * Manually run a bastion in the <prefix>-public-0 subnet;
   * Continue the installation by specifying the bastion: `dhctl bootstrap --ssh-bastion...`
 
-## Adding pre-created instances to a cluster
+## Adding CloudStatic nodes to a cluster
 
 To add a pre-created instance to the cluster, you need:
   * Attach a security group `<prefix>-node`
