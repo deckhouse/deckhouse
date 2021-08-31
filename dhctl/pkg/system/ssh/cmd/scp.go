@@ -106,7 +106,9 @@ func (s *SCP) SCP() *SCP {
 			bastion = bastion + " -p" + s.Session.BastionPort
 		}
 		args = append(args, []string{
-			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p", bastion), // note that single quotes is not needed here
+			// 1. Note that single quotes is not needed here
+			// 2. Add all arguments to the proxy command so the connection to bastion has the same args
+			"-o", fmt.Sprintf("ProxyCommand=ssh %s -W %%h:%%p %s", bastion, strings.Join(args, " ")),
 			"-o", "ExitOnForwardFailure=yes",
 		}...)
 	}
