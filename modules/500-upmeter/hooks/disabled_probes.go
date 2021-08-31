@@ -80,6 +80,7 @@ func collectDisabledProbes(input *go_hook.HookInput) error {
 	disableSyntheticProbes(input.Values, disabledProbes)
 	disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes)
 	disableScalingProbes(presence, enabledModules, disabledProbes)
+	disableLoadBalancingProbes(presence, enabledModules, disabledProbes)
 
 	// Update the combined value of disabled probes
 	input.Values.Set("upmeter.internal.disabledProbes", disabledProbes.Slice())
@@ -89,6 +90,15 @@ func collectDisabledProbes(input *go_hook.HookInput) error {
 func disableSyntheticProbes(values *go_hook.PatchableValues, disabledProbes set.Set) {
 	if values.Get("upmeter.smokeMiniDisabled").Bool() {
 		disabledProbes.Add("synthetic/")
+	}
+}
+
+func disableLoadBalancingProbes(presence deploymentPresence, enabledModules, disabledProbes set.Set) {
+	if !enabledModules.Has("metallb") {
+		disabledProbes.Add("load-balancing/metallb")
+	}
+	if !presence.ccm {
+		disabledProbes.Add("load-balancing/load-balancer-configuration")
 	}
 }
 

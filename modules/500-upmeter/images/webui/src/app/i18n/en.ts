@@ -105,6 +105,14 @@ const langPack: LangPack = {
             <p>Checks the availability of cluster scaling and autoscaling controllers and controller managers.</p>
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
+        },
+        "load-balancing": {
+            ...GROUP_DEFAULT_TOOLTIP,
+            title: "Load balancing",
+            description: `
+            <p>Checks the availability of load balancer configuration controller.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
+            `,
         }
     },
     probe: {
@@ -244,6 +252,24 @@ const langPack: LangPack = {
                 description: "Cluster Autoscaler automatically adds and removes cluster nodes",
                 reasonUp: "at least one Pod of cluster-autoscaler is in <code>Ready</code> state",
                 reasonDown: "there are no pods of cluster-autoscaler in <code>Ready</code> state",
+                reasonUnknown: "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+                reasonNodata: REASON_AGENTS_STOPPED,
+            }
+        },
+        "load-balancing": {
+            "load-balancer-configuration": {
+                title: "Load Balancer Configuration",
+                description: "Load balancer configuration is provided by Cloud Controller Manager (CCM)",
+                reasonUp: "at least one Pod of CCM is in <code>Ready</code> state",
+                reasonDown: "there are no pods of CCM in <code>Ready</code> state",
+                reasonUnknown: "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+                reasonNodata: REASON_AGENTS_STOPPED,
+            },
+            "metallb": {
+                title: "MetalLB",
+                description: "Metal Load Balancer provides traffic load balancing feature independently from a cloud provider",
+                reasonUp: "at least one Pod of each of controller and speaker is in <code>Ready</code> state",
+                reasonDown: "there are no pods of any of controller or speaker in <code>Ready</code> state",
                 reasonUnknown: "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
                 reasonNodata: REASON_AGENTS_STOPPED,
             }

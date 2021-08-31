@@ -31,6 +31,7 @@ func Load(access kubernetes.Access) []*check.Runner {
 	runConfigs = append(runConfigs, initControlPlane(access)...)
 	runConfigs = append(runConfigs, initMonitoringAndAutoscaling(access)...)
 	runConfigs = append(runConfigs, initScaling(access)...)
+	runConfigs = append(runConfigs, initLoadBalancing(access)...)
 
 	runners := make([]*check.Runner, 0)
 	for _, rc := range runConfigs {

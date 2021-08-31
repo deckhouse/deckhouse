@@ -25,7 +25,11 @@ const known: { [name: string]: IGroupData } = {
 		name: "Cluster scaling",
 		description: "Availability of cluster scaling controllers and controller managers.",
 	},
-};
+	"load-balancing": {
+		name: "Load Balancing",
+		description: "Availability of traffic load balancing and its configuration controllers.",
+	},
+}
 
 export function getGroupData(name: string): IGroupData {
 	const data = known[name];

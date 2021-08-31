@@ -100,6 +100,9 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			Entry("Scaling group",
 				"node-manager",
 				"scaling/"),
+			Entry("MetalLB probe",
+				"metallb",
+				"load-balancing/metallb"),
 		)
 	})
 
@@ -187,6 +190,42 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			})
 		})
 	})
+
+	Context("load-balancing probes depending on deployed apps", func() {
+		Context("no apps", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(``))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("load-balancer-configuration is disabled", func() {
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+
+				Expect(disabledProbes).To(ContainElement("load-balancing/load-balancer-configuration"))
+			})
+		})
+
+		Context("with CCM", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(deploymentCCM("openstack")))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+			})
+
+			It("load-balancer-configuration is enabled", func() {
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+
+				Expect(disabledProbes).NotTo(ContainElement("load-balancing/load-balancer-configuration"))
+			})
+		})
+	})
 })
 
 func deploymentInCloudInstanceManager(name string) string {
@@ -216,6 +255,7 @@ metadata:
 // allModules returns the Set of all possibly affected modules to test against the filled list
 func allModules() set.Set {
 	return set.New(
+		"metallb",
 		"monitoring-kubernetes",
 		"node-manager",
 		"prometheus",
