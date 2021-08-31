@@ -155,8 +155,6 @@ class AnnotatedPod(Annotated):
         "disk-inodes-critical": 90,
         "container-throttling-warning": 25,
         "container-throttling-critical": 50,
-        "container-restarts-1h": 5,
-        "container-restarts-24h": 5,
     }
 
 
