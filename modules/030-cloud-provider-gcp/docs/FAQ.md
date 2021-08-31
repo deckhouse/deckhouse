@@ -8,3 +8,13 @@ title: "Сloud provider — GCP: FAQ"
 2. Enable the module or pass the `--extra-config-map-data base64_encoding_of_custom_config` flag with the [module parameters](configuration.html) to the `install.sh` script.
 3. Create one or more [GCPInstanceClass](cr.html#gcpinstanceclass) custom resources.
 4. Create one or more [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup) custom resources for managing the number and the process of provisioning machines in the cloud.
+
+## Adding CloudStatic nodes to a cluster
+
+Add Network Tag that is equal to the cluster `prefix` to instances that you'd manually join to the cluster.
+
+You can find out `prefix` using the command:
+
+```shell
+kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
+```
