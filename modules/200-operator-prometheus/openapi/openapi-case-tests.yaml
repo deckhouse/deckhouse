@@ -1,0 +1,10 @@
+positive:
+  configValues:
+  - {}
+  values:
+  - {}
+negative:
+  configValues:
+  - anything: one
+  values:
+  - anything: one

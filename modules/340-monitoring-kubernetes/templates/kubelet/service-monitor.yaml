@@ -72,4 +72,4 @@ spec:
       k8s-app: kubelet
   namespaceSelector:
     matchNames:
-    - kube-system
+    - d8-monitoring
