@@ -265,7 +265,10 @@ class GetHandler(BaseHTTPRequestHandler):
     @classmethod
     def loop_get_metrics(cls):
         while 1:
-            cls.get_metrics()
+            try:
+                cls.get_metrics()
+            except Exception as loop_err:
+                logging.info(str(loop_err))
             sleep(30)
 
     def do_GET(self):
