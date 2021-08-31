@@ -15,9 +15,8 @@
 /*
 
 User-stories:
-1. There is file /deckhouse/modules/images_tags.json in deckhouse image with tags of builded images. Hook must store it to `global.modulesImages.tags`
-2. There is Deployment 'deckhouse' in ns 'd8-system'. Hook must parse registry url from `.spec.template.spec.containers[0].image` and store it to `global.modulesImages.registry`.
-3. There is Secret 'deckhouse-registry' in ns 'd8-system'. Hook must parse `.data.".dockerconfigjson"` and store it to `global.modulesImages.registryDockercfg`.
+1. There is Deployment 'deckhouse' in ns 'd8-system'. Hook must parse registry url from `.spec.template.spec.containers[0].image` and store it to `global.modulesImages.registry`.
+2. There is Secret 'deckhouse-registry' in ns 'd8-system'. Hook must parse `.data.".dockerconfigjson"` and store it to `global.modulesImages.registryDockercfg`.
 
 */
 
@@ -30,7 +29,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: module_images ::", func() {
+var _ = Describe("Global hooks :: discovery :: deckhouse_registry ::", func() {
 	const (
 		initValuesString       = `{"global": {"modulesImages": {}}}`
 		initConfigValuesString = `{}`
