@@ -33,7 +33,7 @@ const (
 	initConfigValuesString = `{}`
 )
 
-var _ = Describe("Global hooks :: discovery/cluster_dns_address ::", func() {
+var _ = Describe("Global hooks :: discovery :: cluster_dns_address ::", func() {
 	const (
 		stateA = `
 ---
