@@ -110,10 +110,16 @@ const langPack: LangPack = {
             ...GROUP_DEFAULT_TOOLTIP,
             title: "Load balancing",
             description: `
-            <p>Checks the availability of load balancer configuration controller.</p>
+            <p>Checks the availability of load balancer configuration controller.</p>`
+        },
+        deckhouse: {
+            ...GROUP_DEFAULT_TOOLTIP,
+            title: "Deckhouse",
+            description: `
+            <p>Checks the availability of deckhouse and working hook.</p>
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
-        }
+        },
     },
     probe: {
         "control-plane": {
@@ -271,6 +277,16 @@ const langPack: LangPack = {
                 reasonUp: "at least one Pod of each of controller and speaker is in <code>Ready</code> state",
                 reasonDown: "there are no pods of any of controller or speaker in <code>Ready</code> state",
                 reasonUnknown: "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
+                reasonNodata: REASON_AGENTS_STOPPED,
+            },
+        },
+        deckhouse: {
+            "cluster-configuration": {
+                title: "Cluster Configuration",
+                description: "Cluster configurations is contolled by Deckhouse",
+                reasonUp: "Deckhouse pod is <code>Ready</code> state in 20 minutes, and test hook reacts on custom resourse changes",
+                reasonDown: "Deckhouse pod is not in <code>Ready</code> state for more than 20 minutes, or hook does not react to custom resource",
+                reasonUnknown: "error occurred during pod fetching, or pod is terminating, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
                 reasonNodata: REASON_AGENTS_STOPPED,
             }
         }

@@ -19,12 +19,14 @@ package probe
 import (
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func Load(access kubernetes.Access) []*check.Runner {
+func Load(access kubernetes.Access, logger *logrus.Logger) []*check.Runner {
 	runConfigs := make([]runnerConfig, 0)
 
 	runConfigs = append(runConfigs, initSynthetic()...)
@@ -32,10 +34,16 @@ func Load(access kubernetes.Access) []*check.Runner {
 	runConfigs = append(runConfigs, initMonitoringAndAutoscaling(access)...)
 	runConfigs = append(runConfigs, initScaling(access)...)
 	runConfigs = append(runConfigs, initLoadBalancing(access)...)
+	runConfigs = append(runConfigs, initDeckhouse(access, logger)...)
 
 	runners := make([]*check.Runner, 0)
 	for _, rc := range runConfigs {
-		runner := check.NewRunner(rc.group, rc.probe, rc.check, rc.period, rc.config.Checker())
+		runnerLogger := logger.WithFields(map[string]interface{}{
+			"group": rc.group,
+			"probe": rc.probe,
+			"check": rc.check,
+		})
+		runner := check.NewRunner(rc.group, rc.probe, rc.check, rc.period, rc.config.Checker(), runnerLogger)
 		runners = append(runners, runner)
 	}
 	return runners

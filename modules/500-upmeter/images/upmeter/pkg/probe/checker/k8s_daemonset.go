@@ -113,8 +113,11 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 		}
 
 		// The node is ok, so the pod should be ok too.
-		if !isPodReady(&pod) {
+		if !isPodRunning(&pod) {
 			return check.ErrFail("not all pods are running in daemonset %s/%s", c.namespace, c.daemonSetName)
+		}
+		if !isPodReady(&pod) {
+			return check.ErrFail("not all pods are ready in daemonset %s/%s", c.namespace, c.daemonSetName)
 		}
 
 		// Seen nodes are of no interest anymore, but we want to know about unseen ones.

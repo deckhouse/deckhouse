@@ -26,7 +26,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/yaml"
 
 	"d8.io/upmeter/pkg/check"
@@ -41,7 +40,7 @@ type FakeAccess struct {
 	client kube.KubernetesClient
 }
 
-func (a *FakeAccess) Kubernetes() kubernetes.Interface {
+func (a *FakeAccess) Kubernetes() kube.KubernetesClient {
 	return a.client
 }
 

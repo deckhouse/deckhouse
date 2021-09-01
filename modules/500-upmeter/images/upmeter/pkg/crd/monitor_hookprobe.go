@@ -30,22 +30,22 @@ import (
 	v1 "d8.io/upmeter/pkg/crd/v1"
 )
 
-type RemoteWriteMonitor struct {
+type HookProbeMonitor struct {
 	monitor kube_events_manager.Monitor
 	logger  *log.Entry
 }
 
-func NewRemoteWriteMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *RemoteWriteMonitor {
+func NewHookProbeMonitor(kubeClient kube.KubernetesClient, logger *log.Entry) *HookProbeMonitor {
 	monitor := kube_events_manager.NewMonitor()
 	monitor.WithKubeClient(kubeClient)
 
-	return &RemoteWriteMonitor{
+	return &HookProbeMonitor{
 		monitor: monitor,
 		logger:  logger,
 	}
 }
 
-func (m *RemoteWriteMonitor) Start(ctx context.Context) error {
+func (m *HookProbeMonitor) Start(ctx context.Context) error {
 	config := &kube_events_manager.MonitorConfig{
 		Metadata: struct {
 			MonitorId    string
@@ -53,8 +53,8 @@ func (m *RemoteWriteMonitor) Start(ctx context.Context) error {
 			LogLabels    map[string]string
 			MetricLabels map[string]string
 		}{
-			"upmeterremotewrite-crd",
-			"upmeterremotewrite-crd",
+			"upmeterhookprobe-crd",
+			"upmeterhookprobe-crd",
 			map[string]string{},
 			map[string]string{},
 		},
@@ -64,8 +64,8 @@ func (m *RemoteWriteMonitor) Start(ctx context.Context) error {
 			types.WatchEventDeleted,
 		},
 		ApiVersion:              "deckhouse.io/v1",
-		Kind:                    "UpmeterRemoteWrite",
-		LogEntry:                m.logger.WithField("component", "upmeterremotewrite-monitor"),
+		Kind:                    "UpmeterHookProbe",
+		LogEntry:                m.logger.WithField("component", "upmeterhookprobe-monitor"),
 		KeepFullObjectsInMemory: true,
 	}
 
@@ -82,23 +82,23 @@ func (m *RemoteWriteMonitor) Start(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (m *RemoteWriteMonitor) Stop() {
+func (m *HookProbeMonitor) Stop() {
 	m.monitor.Stop()
 }
 
-func (m *RemoteWriteMonitor) getLogger() *log.Entry {
+func (m *HookProbeMonitor) getLogger() *log.Entry {
 	return m.monitor.GetConfig().LogEntry
 }
 
-func (m *RemoteWriteMonitor) Subscribe(handler RemoteWriteChangeHandler) {
+func (m *HookProbeMonitor) Subscribe(handler HookProbeChangeHandler) {
 	m.monitor.WithKubeEventCb(func(ev types.KubeEvent) {
 		// One event and one object per change, we always have single item in these lists.
 		evType := ev.WatchEvents[0]
 		raw := ev.Objects[0].Object
 
-		obj, err := convertRemoteWrite(raw)
+		obj, err := convertHookProbe(raw)
 		if err != nil {
-			m.getLogger().Errorf("cannot convert UpmeterRemoteWrite object: %v", err)
+			m.getLogger().Errorf("cannot convert UpmeterHookProbe object: %v", err)
 			return
 		}
 
@@ -113,10 +113,10 @@ func (m *RemoteWriteMonitor) Subscribe(handler RemoteWriteChangeHandler) {
 	})
 }
 
-func (m *RemoteWriteMonitor) List() ([]*v1.RemoteWrite, error) {
-	res := make([]*v1.RemoteWrite, 0)
+func (m *HookProbeMonitor) List() ([]*v1.HookProbe, error) {
+	res := make([]*v1.HookProbe, 0)
 	for _, obj := range m.monitor.GetExistedObjects() {
-		rw, err := convertRemoteWrite(obj.Object)
+		rw, err := convertHookProbe(obj.Object)
 		if err != nil {
 			return nil, err
 		}
@@ -125,17 +125,17 @@ func (m *RemoteWriteMonitor) List() ([]*v1.RemoteWrite, error) {
 	return res, nil
 }
 
-func convertRemoteWrite(o *unstructured.Unstructured) (*v1.RemoteWrite, error) {
-	var rw v1.RemoteWrite
+func convertHookProbe(o *unstructured.Unstructured) (*v1.HookProbe, error) {
+	var rw v1.HookProbe
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(o.UnstructuredContent(), &rw)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert unstructured to v1.RemoteWrite: %v", err)
+		return nil, fmt.Errorf("cannot convert unstructured to v1.HookProbe: %v", err)
 	}
 	return &rw, nil
 }
 
-type RemoteWriteChangeHandler interface {
-	OnAdd(*v1.RemoteWrite)
-	OnModify(*v1.RemoteWrite)
-	OnDelete(*v1.RemoteWrite)
+type HookProbeChangeHandler interface {
+	OnAdd(*v1.HookProbe)
+	OnModify(*v1.HookProbe)
+	OnDelete(*v1.HookProbe)
 }

@@ -17,6 +17,8 @@ limitations under the License.
 package manager
 
 import (
+	"github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe"
@@ -28,9 +30,9 @@ type Manager struct {
 	calculators []*calculated.Probe
 }
 
-func New(access kubernetes.Access) *Manager {
+func New(access kubernetes.Access, logger *logrus.Logger) *Manager {
 	m := &Manager{}
-	m.runners = filterRunners(probe.Load(access))
+	m.runners = filterRunners(probe.Load(access, logger))
 	m.calculators = filterCalculators(calculated.Load())
 	return m
 }

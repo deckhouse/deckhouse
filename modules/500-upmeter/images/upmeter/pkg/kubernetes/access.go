@@ -23,14 +23,13 @@ import (
 	"github.com/flant/shell-operator/pkg/kube"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const DefaultAlpineImage = "alpine:3.12"
 
 // Access provides Kubernetes access
 type Access interface {
-	Kubernetes() kubernetes.Interface
+	Kubernetes() kube.KubernetesClient
 	ServiceAccountToken() string
 
 	// probe-specific
@@ -122,7 +121,7 @@ func (a *Accessor) Init(config *Config) error {
 	return nil
 }
 
-func (a *Accessor) Kubernetes() kubernetes.Interface {
+func (a *Accessor) Kubernetes() kube.KubernetesClient {
 	return a.client
 }
 

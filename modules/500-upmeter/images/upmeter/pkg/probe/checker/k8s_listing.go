@@ -67,7 +67,7 @@ func listOptsByLabels(lbl map[string]string) *metav1.ListOptions {
 func listObjects(client kubernetes.Interface, kind, namespace string, listOpts metav1.ListOptions) ([]string, error) {
 	fn, ok := listFns[strings.ToLower(kind)]
 	if !ok {
-		return nil, fmt.Errorf("Possible bug!!! No list function for kind='%s'", kind)
+		return nil, fmt.Errorf("no list function for kind=%q, must be coding error", kind)
 	}
 	return fn(client, namespace, listOpts)
 }
@@ -75,7 +75,7 @@ func listObjects(client kubernetes.Interface, kind, namespace string, listOpts m
 func deleteObjects(client kubernetes.Interface, kind, namespace string, names []string) error {
 	fn, ok := delFns[strings.ToLower(kind)]
 	if !ok {
-		return fmt.Errorf("Possible bug!!! No delete function for kind='%s'", kind)
+		return fmt.Errorf("no delete function for kind=%q, must be coding error", kind)
 	}
 	for _, name := range names {
 		err := fn(client, namespace, name)
