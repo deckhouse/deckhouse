@@ -409,6 +409,12 @@ metadata:
 				]
 `
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
+
+			// node_group_info metric should be set
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(3))
+			Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{"name": "proper1", "cri_type": "Docker"}))
+			Expect(metrics[2].Labels).To(BeEquivalentTo(map[string]string{"name": "proper2", "cri_type": "Docker"}))
 		})
 	})
 

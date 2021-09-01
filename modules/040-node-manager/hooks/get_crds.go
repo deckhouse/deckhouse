@@ -264,6 +264,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	finalNodeGroups := make([]interface{}, 0)
 
+	// Expire node_group_info metric.
+	input.MetricsCollector.Expire("")
+
 	for _, v := range input.Snapshots["ngs"] {
 		nodeGroup := v.(NodeGroupCrdInfo)
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
@@ -437,6 +440,11 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 		ngBytes, _ := cljson.Marshal(ngForValues)
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))
+
+		input.MetricsCollector.Set("node_group_info", 1, map[string]string{
+			"name":     nodeGroup.Name,
+			"cri_type": newCRIType,
+		})
 	}
 
 	if !input.Values.Exists("nodeManager.internal") {
