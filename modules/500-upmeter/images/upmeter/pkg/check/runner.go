@@ -25,18 +25,18 @@ import (
 // Runner is a glue between the executor and a check.
 type Runner struct {
 	// defined by check
-
 	ref       *ProbeRef
 	CheckName string
 	checker   Checker
 	period    time.Duration
 
 	// defined by lifecycle
-
 	state *state
+
+	logger *log.Entry
 }
 
-func NewRunner(groupName, probeName, checkName string, period time.Duration, checker Checker) *Runner {
+func NewRunner(groupName, probeName, checkName string, period time.Duration, checker Checker, logger *log.Entry) *Runner {
 	ref := &ProbeRef{
 		Group: groupName,
 		Probe: probeName,
@@ -47,6 +47,7 @@ func NewRunner(groupName, probeName, checkName string, period time.Duration, che
 		checker:   checker,
 		period:    period,
 		state:     &state{},
+		logger:    logger,
 	}
 }
 
@@ -61,8 +62,8 @@ func (r *Runner) Run(start time.Time) Result {
 	status := Up
 	err := r.checker.Check()
 	if err != nil {
-		r.Logger().Errorf(err.Error())
 		status = err.Status()
+		r.logger.WithField("status", status).Errorf(err.Error())
 	}
 
 	return NewResult(*r.ref, r.CheckName, status)
@@ -74,12 +75,6 @@ func (r *Runner) Period() time.Duration {
 
 func (r *Runner) ShouldRun(when time.Time) bool {
 	return r.state.shouldRun(when, r.period)
-}
-
-func (r *Runner) Logger() *log.Entry {
-	return log.
-		WithField("group", r.ref.Group).
-		WithField("probe", r.ref.Probe)
 }
 
 type state struct {

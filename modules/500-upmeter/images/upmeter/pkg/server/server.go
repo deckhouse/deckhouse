@@ -23,9 +23,7 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/kube"
-	"github.com/flant/shell-operator/pkg/metric_storage"
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 
@@ -33,6 +31,7 @@ import (
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/db/dao"
 	"d8.io/upmeter/pkg/db/migrations"
+	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/server/api"
 	"d8.io/upmeter/pkg/server/remotewrite"
 )
@@ -74,7 +73,7 @@ func New(config *Config, logger *log.Logger) *server {
 func (s *server) Start(ctx context.Context) error {
 	var err error
 
-	kubeClient, err := initKubeClient()
+	kubeClient, err := kubernetes.InitKubeClient()
 	if err != nil {
 		return fmt.Errorf("init kubernetes client: %v", err)
 	}
@@ -194,17 +193,4 @@ func initDowntimeMonitor(ctx context.Context, kubeClient kube.KubernetesClient) 
 	m := crd.NewMonitor(ctx)
 	m.Monitor.WithKubeClient(kubeClient)
 	return m, m.Start()
-}
-
-func initKubeClient() (kube.KubernetesClient, error) {
-	client := kube.NewKubernetesClient()
-
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
-	client.WithMetricStorage(metric_storage.NewMetricStorage())
-
-	// FIXME: Kubernetes client is configured successfully with 'out-of-cluster' config
-	//      operator.component=KubernetesAPIClient
-	return client, client.Init()
 }

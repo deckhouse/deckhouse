@@ -36,7 +36,10 @@ type sequenceChecker struct {
 	current  int
 }
 
-func sequence(checkers ...check.Checker) check.Checker {
+func sequence(first check.Checker, others ...check.Checker) check.Checker {
+	checkers := make([]check.Checker, 1+len(others))
+	checkers[0] = first
+	copy(checkers[1:], others)
 	return &sequenceChecker{checkers: checkers}
 }
 
@@ -137,6 +140,7 @@ func (c *retryChecker) Check() check.Error {
 
 		err = c.checker.Check()
 		if err == nil {
+			// success achieved, stop retrying
 			break
 		}
 	}

@@ -20,32 +20,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RemoteWriteConfig is the config for sending metrics used while exporting. Refer to cortex.Config.
-type RemoteWriteConfig struct {
-	Endpoint    string            `json:"url"`
-	BasicAuth   map[string]string `json:"basicAuth"`
-	BearerToken string            `json:"bearerToken"`
+// HookProbeSpec is the spec in the HookProbe CRD
+type HookProbeSpec struct {
+	Inited string `json:"inited"`
+	Mirror string `json:"mirror"`
 }
 
-// RemoteWriteSpec is the spec in the RemoteWrite CRD
-type RemoteWriteSpec struct {
-	Config           RemoteWriteConfig `json:"config"`
-	AdditionalLabels map[string]string `json:"additionalLabels"`
-	IntervalSeconds  int64             `json:"intervalSeconds"`
-}
-
-// RemoteWrite is the Schema for the remote_write options
-type RemoteWrite struct {
+// HookProbe is the Schema for the remote_write options
+type HookProbe struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec RemoteWriteSpec `json:"spec,omitempty"`
+	Spec HookProbeSpec `json:"spec,omitempty"`
 }
 
-// RemoteWriteList contains a list of RemoteWrite objects
-type RemoteWriteList struct {
+// HookProbeList contains a list of HookProbe objects
+type HookProbeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 
-	Items []RemoteWrite `json:"items"`
+	Items []HookProbe `json:"items"`
 }

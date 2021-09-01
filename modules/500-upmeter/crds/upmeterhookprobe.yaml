@@ -1,0 +1,53 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: upmeterhookprobes.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: upmeter
+    app: upmeter
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: upmeterhookprobes
+    singular: upmeterhookprobe
+    kind: UpmeterHookProbe
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Upmeter CRD for deckhouse-configuration probe.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - inited
+                - mirror
+              properties:
+                # Field names "inited" and "mirror" are chosen to have the same length
+                # to align these values in YAML.
+                inited:
+                  type: string
+                  description: The initial value set by upmeter agent
+                mirror:
+                  type: string
+                  description: The mirrored value set by hook
+      additionalPrinterColumns:
+        - name: Inited
+          type: string
+          description: The initial value set by upmeter agent
+          jsonPath: .spec.inited
+        - name: Mirror
+          type: string
+          description: The mirrored value set by hook
+          jsonPath: .spec.mirror
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

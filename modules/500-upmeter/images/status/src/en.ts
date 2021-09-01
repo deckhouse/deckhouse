@@ -29,7 +29,11 @@ const known: { [name: string]: IGroupData } = {
 		name: "Load Balancing",
 		description: "Availability of traffic load balancing and its configuration controllers.",
 	},
-}
+	"deckhouse": {
+		name: "Deckhouse",
+		description: "The availability of deckhouse and working hook.",
+	}
+};
 
 export function getGroupData(name: string): IGroupData {
 	const data = known[name];

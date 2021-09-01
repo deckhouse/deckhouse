@@ -70,7 +70,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	// Probe registry
-	registry := manager.New(kubeAccess)
+	registry := manager.New(kubeAccess, a.logger)
 	for _, probe := range registry.Runners() {
 		a.logger.Infof("Register probe %s", probe.ProbeRef().Id())
 	}
