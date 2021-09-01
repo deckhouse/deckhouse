@@ -22,9 +22,10 @@ User-stories:
 package hooks
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -104,8 +105,9 @@ status:
   - status: "True"
     type: Ready
 `
+)
 
-	stateMasterAndCM = `
+var stateMasterAndCM = fmt.Sprintf(`
 apiVersion: v1
 kind: Node
 metadata:
@@ -122,12 +124,11 @@ status:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: d8-cluster-is-bootstraped
+  name: %s
   namespace: kube-system
-`
-)
+`, clusterBootstrappedConfigMap)
 
-var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
+var _ = Describe("Global hooks :: cluster_is_bootstrapped ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	Context("Cluster has no nodes except master", func() {
@@ -136,7 +137,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 			f.RunHook()
 		})
 
-		It("filterResult must be 'false'; `global.clusterIsBootstrapped` must not exist", func() {
+		It("`global.clusterIsBootstrapped` must not exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 		})
@@ -147,7 +148,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 				f.RunHook()
 			})
 
-			It("'filterResult' must be false; `global.clusterIsBootstrapped` must not exist", func() {
+			It("`global.clusterIsBootstrapped` must not exist", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 			})
@@ -158,15 +159,19 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 					f.RunHook()
 				})
 
-				It("filterResult must be 'true'; `global.clusterIsBootstrapped` must be 'true'; CM `d8-cluster-is-bootstraped` must be created", func() {
+				It("`global.clusterIsBootstrapped` must be 'true'", func() {
 					Expect(f).To(ExecuteSuccessfully())
 					Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
-					Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
+				})
+
+				It("cluster bootstrap configmap must be created", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesResource("ConfigMap", "kube-system", clusterBootstrappedConfigMap).Exists()).To(BeTrue())
 				})
 			})
 		})
 
-		Context("Someone created cm kube-system/d8-cluster-is-bootstraped", func() {
+		Context("Someone creates cluster bootstrap configmap", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateMasterAndCM))
 				f.RunHook()
@@ -186,7 +191,7 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("filterResult must be 'false'; `global.clusterIsBootstrapped` must not exist", func() {
+		It("`global.clusterIsBootstrapped` must not exist", func() {
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Exists()).To(BeFalse())
 		})
 	})
@@ -198,13 +203,13 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 
-		It("BINDING_CONTEXT must have Synchronization event with two objects with filterResult 'false' and 'true'; `global.clusterIsBootstrapped` must be 'true'", func() {
+		It("`global.clusterIsBootstrapped` must be 'true'", func() {
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
-			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "kube-system", clusterBootstrappedConfigMap).Exists()).To(BeTrue())
 		})
 	})
 
-	Context("Cluster has cm kube-system/d8-cluster-is-bootstraped", func() {
+	Context("Cluster has cluster bootstrap configmap", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateMasterAndCM))
 			f.RunHook()
@@ -213,18 +218,27 @@ var _ = Describe("Global hooks :: cluster_is_bootstraped ::", func() {
 		It("`global.clusterIsBootstrapped` must be 'true'", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
-			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-is-bootstraped").Exists()).To(BeTrue())
 		})
 
-		Context("CM kube-system/d8-cluster-is-bootstraped deleted", func() {
+		It("cluster bootstrap configmap must be created", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("ConfigMap", "kube-system", clusterBootstrappedConfigMap).Exists()).To(BeTrue())
+		})
+
+		Context("Cluster bootstrap configmap was deleted", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateMasterOnly))
 				f.RunHook()
 			})
 
-			It("Hook must fail", func() {
-				Expect(f).To(Not(ExecuteSuccessfully()))
-				Expect(f.Session.Err).Should(gbytes.Say("ERROR: CM kube-system/d8-cluster-is-bootstraped was deleted. Don't know what to do."))
+			It("configmap must be recreate", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.KubernetesResource("ConfigMap", "kube-system", clusterBootstrappedConfigMap).Exists()).To(BeTrue())
+			})
+
+			It("`global.clusterIsBootstrapped` must be stay as 'true'", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("global.clusterIsBootstrapped").Bool()).To(BeTrue())
 			})
 		})
 	})
