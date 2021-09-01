@@ -68,8 +68,6 @@ The default values are available [here](https://github.com/kubernetes/kubernetes
 | container-throttling-critical           | int (percent) | 50             |
 | container-cores-throttling-warning      | int (cores)   |                |
 | container-cores-throttling-critical     | int (cores)   |                |
-| container-restarts-1h                   | int (count)   | 5              |
-| container-restarts-24h                  | int (count)   | 5              |
 
 ##### Ingress
 
