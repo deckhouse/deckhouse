@@ -217,16 +217,31 @@ func (c *StateCache) Delete(name string) {
 	}
 }
 
-func (c *StateCache) Clean() {
+func (c *StateCache) CleanWithExceptions(excludeKeys ...string) {
 	secretToUpdate := c.secret.DeepCopy()
-	secretToUpdate.Data = map[string][]byte{
+	newState := map[string][]byte{
 		state.TombstoneKey: []byte("yes"),
 	}
+
+	for _, k := range excludeKeys {
+		v, ok := secretToUpdate.Data[k]
+		if !ok {
+			continue
+		}
+
+		newState[k] = v
+	}
+
+	secretToUpdate.Data = newState
 
 	err := c.update(secretToUpdate)
 	if err != nil {
 		log.ErrorF("Cannot clean cache %v\n", err)
 	}
+}
+
+func (c *StateCache) Clean() {
+	c.CleanWithExceptions()
 }
 
 func (c *StateCache) GetPath(name string) string {

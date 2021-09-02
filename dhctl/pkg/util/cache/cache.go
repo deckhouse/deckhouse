@@ -93,6 +93,37 @@ func (s *StateCache) Clean() {
 	}
 }
 
+func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
+	excludeKeysSet := map[string]struct{}{}
+	for _, k := range excludeKeys {
+		excludeKeysSet[k] = struct{}{}
+	}
+
+	keysToRemove := make([]string, 0)
+	err := s.Iterate(func(key string, i []byte) error {
+		if _, ok := excludeKeysSet[key]; ok {
+			return nil
+		}
+		keysToRemove = append(keysToRemove, key)
+		return nil
+	})
+
+	if err != nil {
+		log.WarnF("Can't getting keys to remove: %s ...\n", err)
+		return
+	}
+
+	// yes first write tombstone that is idempotent
+	_, err = os.Create(filepath.Join(s.dir, state.TombstoneKey))
+	if err != nil {
+		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
+	}
+
+	for _, key := range keysToRemove {
+		s.Delete(key)
+	}
+}
+
 func (s *StateCache) Delete(name string) {
 	if s.InCache(name) {
 		_ = os.Remove(s.GetPath(name))
@@ -147,6 +178,7 @@ type DummyCache struct{}
 func (d *DummyCache) Save(n string, c []byte) error            { return nil }
 func (d *DummyCache) InCache(n string) bool                    { return false }
 func (d *DummyCache) Clean()                                   {}
+func (d *DummyCache) CleanWithExceptions(e ...string)          {}
 func (d *DummyCache) Delete(n string)                          {}
 func (d *DummyCache) Load(n string) []byte                     { return nil }
 func (d *DummyCache) LoadStruct(n string, v interface{}) error { return nil }

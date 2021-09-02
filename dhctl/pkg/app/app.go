@@ -28,11 +28,10 @@ var TmpDirName = filepath.Join(os.TempDir(), "dhctl")
 var (
 	AppVersion = "dev"
 
-	ConfigPath    = ""
-	SanityCheck   = false
-	LoggerType    = "pretty"
-	SkipResources = false
-	IsDebug       = false
+	ConfigPath  = ""
+	SanityCheck = false
+	LoggerType  = "pretty"
+	IsDebug     = false
 )
 
 func init() {
@@ -50,13 +49,6 @@ func GlobalFlags(cmd *kingpin.Application) {
 		Envar(configEnvName("TMP_DIR")).
 		Default(TmpDirName).
 		StringVar(&TmpDirName)
-}
-
-func DefineSkipResourcesFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
-		Default("false").
-		Envar(configEnvName("SKIP_RESOURCES")).
-		BoolVar(&SkipResources)
 }
 
 func DefineConfigFlags(cmd *kingpin.CmdClause) {
