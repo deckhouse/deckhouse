@@ -327,6 +327,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
 	configForBashibleBundleTemplate["clusterBootstrap"] = clusterBootstrap
+	configForBashibleBundleTemplate["packagesProxy"] = make(map[string]interface{})
 	if data["packagesProxy"] != nil {
 		configForBashibleBundleTemplate["packagesProxy"] = data["packagesProxy"]
 	}

@@ -37,11 +37,13 @@ fi
 
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
   {{- $ubuntuVersion := toString $key }}
-  {{- if or $value.kernel.generic.desiredVersion $value.kernel.generic.allowedPattern }}
+  {{- if $value.kernel.generic }}
+    {{- if or $value.kernel.generic.desiredVersion $value.kernel.generic.allowedPattern }}
 if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
   desired_version={{ $value.kernel.generic.desiredVersion | quote }}
   allowed_versions_pattern={{ $value.kernel.generic.allowedPattern | quote }}
 fi
+    {{- end }}
   {{- end }}
 {{- end }}
 

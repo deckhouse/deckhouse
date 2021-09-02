@@ -16,11 +16,11 @@
 touch /var/lib/bashible/discovered-node-ip
 
 {{- if ne .nodeGroup.nodeType "Static" }}
-
-  {{- if and .clusterBootstrap.cloud .clusterBootstrap.cloud.nodeIP }}
+  {{ if eq .runType "ClusterBootstrap" }}
+    {{- if and .clusterBootstrap.cloud .clusterBootstrap.cloud.nodeIP }}
 echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
-
-# For CloudEphemeral, CloudPermanent or CloudStatic node we try to discover IP from Node object
+    {{- end }}
+  # For CloudEphemeral, CloudPermanent or CloudStatic node we try to discover IP from Node object
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json 2> /dev/null)" ; then
@@ -34,7 +34,10 @@ fi
 {{- end }}
 
 {{- if eq .nodeGroup.nodeType "Static" }}
-  {{- if not (and (hasKey .nodeGroup "static") (hasKey .nodeGroup.static "internalNetworkCIDRs")) }}
+  {{- if not (hasKey .nodeGroup "static") }}
+    >&2 echo "ERROR: nodeGroup.static.internalNetworkCIDRs must exist for static node"
+    exit 1
+  {{- else if not (hasKey .nodeGroup.static "internalNetworkCIDRs") }}
     >&2 echo "ERROR: nodeGroup.static.internalNetworkCIDRs must exist for static node"
     exit 1
   {{- else }}

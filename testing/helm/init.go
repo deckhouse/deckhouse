@@ -133,7 +133,7 @@ func (hec *Config) HelmRender() {
 
 	yamlValuesBytes := hec.values.GetAsYaml()
 
-	var renderer helm.Renderer
+	renderer := helm.Renderer{LintMode: true}
 	files, err := renderer.RenderChartFromDir(hec.modulePath, string(yamlValuesBytes))
 
 	hec.RenderError = err

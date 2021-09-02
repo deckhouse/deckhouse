@@ -41,7 +41,9 @@ evictionSoftThresholdNodefsInodesFree="10%"
 evictionSoftThresholdImagefsAvailable="10%"
 evictionSoftThresholdImagefsInodesFree="10%"
 
+{{- if hasKey .nodeGroup "kubelet" }}
 rootDir="{{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }}"
+{{- end }}
 
 nodefsSize=$(df --output=size $rootDir | tail -n1)
 nodefsSizeGFivePercent=$((nodefsSize/(1000*1000)*5/100))

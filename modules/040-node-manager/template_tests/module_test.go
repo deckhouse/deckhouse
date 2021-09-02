@@ -390,6 +390,7 @@ internal:
     type: vsphere
     machineClassKind: VsphereMachineClass
     vsphere:
+      instanceClassDefaults: {}
       server: myhost.qqq
       username: myname
       password: pAsSwOrd
@@ -450,6 +451,7 @@ internal:
     type: yandex
     machineClassKind: YandexMachineClass
     yandex:
+      instanceClassDefaults: {}
       serviceAccountJSON: '{"my":"svcacc"}'
       region: myreg
       folderID: myfolder

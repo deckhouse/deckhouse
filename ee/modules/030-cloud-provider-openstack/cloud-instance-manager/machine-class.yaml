@@ -64,7 +64,10 @@ spec:
   rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
 {{- end }}
   tags:
-{{- $tags := merge dict .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+{{- $tags := dict }}
+{{- if .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+  {{- $tags = merge $tags .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+{{- end }}
 {{- if hasKey .nodeGroup.instanceClass "additionalTags" }}
   {{- $tags = mergeOverwrite $tags .nodeGroup.instanceClass.additionalTags }}
 {{- end }}

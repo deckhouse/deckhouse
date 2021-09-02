@@ -67,6 +67,15 @@ cleanup:
       remote_src: yes
       dest: /usr/local/bin
 
+  - name: "Install helm 3"
+    unarchive:
+      extra_opts:
+        - linux-amd64/helm
+        - --strip-components=1
+      src: https://get.helm.sh/helm-v3.2.4-linux-amd64.tar.gz
+      remote_src: yes
+      dest: /usr/local/bin
+
   # TODO: checksum
   - name: "Install semver"
     unarchive:
@@ -228,10 +237,6 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- artifact: helm
-  add: /helm/helm
-  to: /usr/local/bin/helm
-  before: install
 ansible:
   setup:
   - name: "Add modules images tags.json"
@@ -370,7 +375,6 @@ git:
     - deckhouse-controller
     - global-hooks/**/*.go
     - go_lib/**/*.go
-    - helm-mod
     - modules/**/*.go
     - go.mod
     - go.sum
@@ -384,15 +388,12 @@ git:
     install:
       - dhctl/go.mod
       - dhctl/go.sum
-      - helm-mod/go.mod
-      - helm-mod/go.sum
       - go.mod
       - go.sum
     setup:
       - dhctl/**/*.go
       - deckhouse-controller/**/*.go
       - deckhouse-controller/go-build.sh
-      - helm-mod/**/*.go
       - global-hooks/**/*.go
       - go_lib/**/*.go
       - modules/**/*.go
@@ -521,49 +522,6 @@ ansible:
   - raw: rm -rf /var/cache/apk/*
   setup:
   - shell: /src/scripts/build-libjq-static.sh /src /libjq
----
-artifact: helm
-fromImage: base-for-go
-git:
-  - url: https://github.com/helm/helm
-    add: /
-    to: /helm
-    tag: v3.2.4
-    stageDependencies:
-      install:
-        - "**/*"
-  - add: /helm/patches
-    to: /patches
-    stageDependencies:
-      setup:
-        - "**/*"
-ansible:
-  beforeInstall:
-    - apk:
-        name:
-        - git
-        - ca-certificates
-        update_cache: yes
-    - command: rm -rf /var/cache/apk/*
-
-  install:
-    - command: go mod download
-      args:
-        chdir: /helm
-
-  setup:
-    - shell: |
-        for p in $(find /patches -name \*.patch) ; do
-          patch -p1 < $p
-        done
-      args:
-        chdir: /helm
-    - command: go build -o helm ./cmd/helm
-      args:
-        chdir: /helm
-      environment:
-        CGO_ENABLED: "0"
-
 ---
 artifact: terraform-provider-vsphere
 fromImage: base-for-go

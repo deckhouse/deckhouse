@@ -10,9 +10,10 @@
   {{- $_ := set $normal "kubernetesCA"       $context.Values.nodeManager.internal.kubernetesCA }}
 
   {{- $tpl_context_common := dict }}
-  {{- $_ := set $tpl_context_common "runType" "Normal" }}
-  {{- $_ := set $tpl_context_common "Template" $context.Template }}
-  {{- $_ := set $tpl_context_common "normal"   $normal }}
+  {{- $_ := set $tpl_context_common "runType"        "Normal" }}
+  {{- $_ := set $tpl_context_common "Template"       $context.Template }}
+  {{- $_ := set $tpl_context_common "normal"         $normal }}
+  {{- $_ := set $tpl_context_common "packagesProxy"  dict }}
 
   {{- if hasKey $context.Values.global.clusterConfiguration "packagesProxy" }}
     {{- $_ := set $tpl_context_common "packagesProxy" $context.Values.global.clusterConfiguration.packagesProxy }}

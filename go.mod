@@ -62,11 +62,3 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
-
-// TODO uncomment when shell-operator migrates to client-go 0.20.0
-// TODO remove when https://github.com/helm/helm/pull/8371 will be merged and released.
-//replace helm.sh/helm/v3 => github.com/diafour/helm/v3 v3.2.5-0.20200630114452-b734742e3342 // branch: fix_tpl_performance_3_2_4
-
-// TODO remove replaces below when shell-operator migrates to client-go 0.20.0
-// TODO remove ./helm-mod directory as well!
-replace helm.sh/helm/v3 => ./helm-mod
