@@ -54,6 +54,17 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/140-user-authz/templates/configmap-control-plane-configurator.yaml
+  to: /deckhouse/modules/140-user-authz/templates/configmap-control-plane-configurator.yaml
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/140-user-authz/templates/webhook-config-map.yaml
   to: /deckhouse/modules/140-user-authz/templates/webhook-config-map.yaml
   excludePaths:

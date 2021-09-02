@@ -27,6 +27,8 @@
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
 - add: /ee/modules/110-istio
   to: /deckhouse/modules/110-istio
+- add: /ee/modules/140-user-authz/templates/configmap-control-plane-configurator.yaml
+  to: /deckhouse/modules/140-user-authz/templates/configmap-control-plane-configurator.yaml
 - add: /ee/modules/140-user-authz/templates/webhook-config-map.yaml
   to: /deckhouse/modules/140-user-authz/templates/webhook-config-map.yaml
 - add: /ee/modules/140-user-authz/templates/webhook-daemonset.yaml
