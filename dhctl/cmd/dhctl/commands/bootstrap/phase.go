@@ -16,17 +16,21 @@ package bootstrap
 
 import (
 	"fmt"
+	"sort"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	destroycmd "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -175,11 +179,18 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 `
 )
 
+type Destroyer interface {
+	DestroyCluster(autoApprove bool) error
+}
+
 func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("abort", "Delete every node, which was created during bootstrap process.")
+	app.DefineSSHFlags(cmd)
+	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
+	app.DefineAbortFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.ParseConfig(app.ConfigPath)
@@ -203,56 +214,55 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return nil
 		})
 
-		nodesToDelete, err := operations.BootstrapGetNodesFromCache(metaConfig, stateCache)
+		var destroyer Destroyer
+
+		err = log.Process("common", "Choice abort type", func() error {
+			if ok := stateCache.InCache(operations.ManifestCreatedInClusterCacheKey); !ok || app.ForceAbortFromCache {
+				log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, app.ForceAbortFromCache))
+				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
+				destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
+
+				logMsg := "Deckhouse not begin installed. Abort from cache"
+				if app.ForceAbortFromCache {
+					logMsg = "Force aborting from cache"
+				}
+
+				log.InfoLn(logMsg)
+
+				return nil
+			}
+
+			var hosts map[string]string
+			err := stateCache.LoadStruct(operations.MasterHostsCacheKey, &hosts)
+			if err != nil {
+				return err
+			}
+			mastersIPs := make([]string, 0, len(hosts))
+			for _, ip := range hosts {
+				mastersIPs = append(mastersIPs, ip)
+			}
+
+			sort.Strings(mastersIPs)
+			app.SSHHosts = mastersIPs
+
+			destroyer, err = destroycmd.InitClusterDestroyer()
+			if err != nil {
+				return err
+			}
+
+			log.InfoLn("Deckhouse was begin installed. Destroy cluster")
+			return nil
+		})
+
 		if err != nil {
-			return fmt.Errorf("bootstrap-phase abort preparation: %v", err)
+			return err
 		}
 
-		for nodeGroup, nodeData := range nodesToDelete {
-			if nodeGroup == "master" {
-				// we will destroy masters later because they need additional arguments and different terraform files
-				continue
-			}
-
-			for index, nodeName := range nodeData {
-				nodeRunner := terraform.NewRunnerFromConfig(metaConfig, "static-node").
-					WithVariables(metaConfig.NodeGroupConfig(nodeGroup, index, "")).
-					WithName(nodeName).
-					WithCache(stateCache).
-					WithAllowedCachedState(true).
-					WithAutoApprove(app.SanityCheck)
-				tomb.RegisterOnShutdown(nodeName, nodeRunner.Stop)
-
-				if err := terraform.DestroyPipeline(nodeRunner, nodeName); err != nil {
-					return err
-				}
-			}
+		if destroyer == nil {
+			return fmt.Errorf("Destroyer not initialized")
 		}
 
-		if _, ok := nodesToDelete["master"]; ok {
-			for index, nodeName := range nodesToDelete["master"] {
-				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
-					WithVariables(metaConfig.NodeGroupConfig("master", index, "")).
-					WithName(nodeName).
-					WithCache(stateCache).
-					WithAllowedCachedState(true).
-					WithAutoApprove(app.SanityCheck)
-				tomb.RegisterOnShutdown(nodeName, masterRunner.Stop)
-
-				if err := terraform.DestroyPipeline(masterRunner, nodeName); err != nil {
-					return err
-				}
-			}
-		}
-
-		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
-			WithVariables(metaConfig.MarshalConfig()).
-			WithCache(stateCache).
-			WithAllowedCachedState(true).
-			WithAutoApprove(app.SanityCheck)
-		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
-
-		if err := terraform.DestroyPipeline(baseRunner, "Kubernetes cluster"); err != nil {
+		if err := destroyer.DestroyCluster(app.SanityCheck); err != nil {
 			return err
 		}
 

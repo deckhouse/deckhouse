@@ -12,22 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package state
+package infrastructure
 
-const TombstoneKey = ".tombstone"
+import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 
-type Cache interface {
-	Save(string, []byte) error
-	SaveStruct(string, interface{}) error
+func saveInCacheIfNotExists(cache state.Cache, name string, state []byte) error {
+	if cache.InCache(name) {
+		return nil
+	}
 
-	Load(string) []byte
-	LoadStruct(string, interface{}) error
+	if err := cache.Save(name, state); err != nil {
+		return err
+	}
 
-	Delete(string)
-	Clean()
-	CleanWithExceptions(excludeKeys ...string)
-
-	GetPath(string) string
-	Iterate(func(string, []byte) error) error
-	InCache(string) bool
+	return nil
 }

@@ -228,6 +228,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
 
 				masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
+				operations.SaveMasterHostsToCache(masterAddressesForSSH)
 				return nil
 			})
 			if err != nil {
@@ -275,7 +276,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		_ = log.Process("bootstrap", "Clear cache", func() error {
-			cache.Global().Clean()
+			cache.Global().CleanWithExceptions(operations.MasterHostsCacheKey, operations.ManifestCreatedInClusterCacheKey)
 			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 			return nil
 		})
@@ -286,10 +287,6 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 					fakeSession := sshClient.Settings.Copy()
 					fakeSession.SetAvailableHosts([]string{address})
 					log.InfoF("%s | %s\n", nodeName, fakeSession.String())
-				}
-
-				if err := cache.Global().SaveStruct("cluster-hosts", masterAddressesForSSH); err != nil {
-					log.DebugF("Cannot save ssh hosts %v", err)
 				}
 
 				return nil

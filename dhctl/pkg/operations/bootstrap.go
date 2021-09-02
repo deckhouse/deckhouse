@@ -31,10 +31,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+)
+
+const (
+	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
+	MasterHostsCacheKey              = "cluster-hosts"
 )
 
 func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
@@ -219,6 +225,11 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *deckhouse.Config,
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
 
+		err = cache.Global().Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
+		if err != nil {
+			return fmt.Errorf("set manifests in cluster flag to cache: %v", err)
+		}
+
 		err = deckhouse.WaitForReadiness(kubeCl)
 		if err != nil {
 			return fmt.Errorf("deckhouse install: %v", err)
@@ -324,6 +335,12 @@ func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.Met
 	return nil
 }
 
+func SaveMasterHostsToCache(hosts map[string]string) {
+	if err := cache.Global().SaveStruct(MasterHostsCacheKey, hosts); err != nil {
+		log.DebugF("Cannot save ssh hosts %v", err)
+	}
+}
+
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
 	return log.Process("bootstrap", "Create master NodeGroup", func() error {
 		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName)
@@ -337,6 +354,8 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 				return err
 			}
 			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
+
+			SaveMasterHostsToCache(addressTracker)
 		}
 
 		return nil

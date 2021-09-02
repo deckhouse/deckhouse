@@ -12,22 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package state
+package app
 
-const TombstoneKey = ".tombstone"
+import "gopkg.in/alecthomas/kingpin.v2"
 
-type Cache interface {
-	Save(string, []byte) error
-	SaveStruct(string, interface{}) error
+var (
+	SkipResources = false
+)
 
-	Load(string) []byte
-	LoadStruct(string, interface{}) error
-
-	Delete(string)
-	Clean()
-	CleanWithExceptions(excludeKeys ...string)
-
-	GetPath(string) string
-	Iterate(func(string, []byte) error) error
-	InCache(string) bool
+func DefineDestroyResourcesFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
+		Default("false").
+		Envar(configEnvName("SKIP_RESOURCES")).
+		BoolVar(&SkipResources)
 }

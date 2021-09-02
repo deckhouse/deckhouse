@@ -12,22 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package state
+package destroy
 
-const TombstoneKey = ".tombstone"
+import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 
-type Cache interface {
-	Save(string, []byte) error
-	SaveStruct(string, interface{}) error
+const resourcesDestroyedKey = "resources-were-deleted"
 
-	Load(string) []byte
-	LoadStruct(string, interface{}) error
+type State struct {
+	cache state.Cache
+}
 
-	Delete(string)
-	Clean()
-	CleanWithExceptions(excludeKeys ...string)
+func NewDestroyState(stateCache state.Cache) *State {
+	return &State{
+		cache: stateCache,
+	}
+}
 
-	GetPath(string) string
-	Iterate(func(string, []byte) error) error
-	InCache(string) bool
+func (s *State) IsResourcesDestroyed() bool {
+	return s.cache.InCache(resourcesDestroyedKey)
+}
+
+func (s *State) SetResourcesDestroyed() error {
+	return s.cache.Save(resourcesDestroyedKey, []byte("yes"))
+}
+
+func (s *State) Clean() {
+	s.cache.Clean()
 }

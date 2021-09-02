@@ -27,6 +27,8 @@ var (
 	ResourcesPath    = ""
 	ResourcesTimeout = "15m"
 	DeckhouseTimeout = 10 * time.Minute
+
+	ForceAbortFromCache = false
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -58,4 +60,13 @@ func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}
+}
+
+func DefineAbortFlags(cmd *kingpin.CmdClause) {
+	const help = `Skip 'use dhctl destroy command' error. It force bootstrap abortion from cache.
+Experimental. This feature may be deleted in the future.`
+	cmd.Flag("force-abort-from-cache", help).
+		Envar(configEnvName("FORCE_ABORT_FROM_CACHE")).
+		Default("false").
+		BoolVar(&ForceAbortFromCache)
 }

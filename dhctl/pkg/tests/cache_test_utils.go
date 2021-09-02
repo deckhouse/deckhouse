@@ -22,6 +22,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+func assertCacheKeys(t *testing.T, stateCache state.Cache, expectedKeys []string) {
+	var objectsInCacheAfterClean []string
+	err := stateCache.Iterate(func(s string, _ []byte) error {
+		objectsInCacheAfterClean = append(objectsInCacheAfterClean, s)
+		return nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, objectsInCacheAfterClean, expectedKeys)
+}
+
 func RunStateCacheTests(t *testing.T, stateCache state.Cache) {
 	var err error
 
@@ -62,22 +72,21 @@ func RunStateCacheTests(t *testing.T, stateCache state.Cache) {
 	require.Equal(t, []string{"test", "test-struct", "test.tfstate", "test2.tfstate"}, objectsInCache)
 
 	stateCache.Delete("test")
-	var objectsInCacheAfterDelete []string
-	err = stateCache.Iterate(func(s string, _ []byte) error {
-		objectsInCacheAfterDelete = append(objectsInCacheAfterDelete, s)
-		return nil
-	})
-	require.NoError(t, err)
-
-	require.Equal(t, []string{"test-struct", "test.tfstate", "test2.tfstate"}, objectsInCacheAfterDelete)
+	assertCacheKeys(t, stateCache, []string{"test-struct", "test.tfstate", "test2.tfstate"})
 
 	stateCache.Clean()
+	assertCacheKeys(t, stateCache, []string{".tombstone"})
 
-	var objectsInCacheAfterClean []string
-	err = stateCache.Iterate(func(s string, _ []byte) error {
-		objectsInCacheAfterClean = append(objectsInCacheAfterClean, s)
-		return nil
-	})
+	stateCache.Delete(".tombstone")
+	err = stateCache.Save("a", []byte("a-test"))
 	require.NoError(t, err)
-	require.Equal(t, objectsInCacheAfterClean, []string{".tombstone"})
+
+	err = stateCache.Save("b", []byte("b-test"))
+	require.NoError(t, err)
+
+	err = stateCache.Save("c", []byte("c-test"))
+	require.NoError(t, err)
+
+	stateCache.CleanWithExceptions("b")
+	assertCacheKeys(t, stateCache, []string{".tombstone", "b"})
 }
