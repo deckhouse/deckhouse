@@ -251,5 +251,17 @@ memory: 500Mi`))
 
 			Expect(hec.KubernetesResource("Service", "d8-ingress-nginx", "controller-solid-failover").Exists()).To(BeTrue())
 		})
+
+		Context("Vertical pod autoscaler CRD is disabled", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("global.enabledModules", []string{"cert-manager"})
+				hec.HelmRender()
+			})
+
+			It("should render controller", func() {
+				testD := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test")
+				Expect(testD.Exists()).To(BeTrue())
+			})
+		})
 	})
 })
