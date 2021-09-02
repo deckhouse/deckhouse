@@ -7,8 +7,6 @@ The module does not have any mandatory settings.
 ## Parameters
 * `ingressClass` —  the class of the Ingress controller to use for the dashboard;
     * An optional parameter; by default, the `modules.ingressClass` global value is used;
-* `accessLevel` — the level of access to the dashboard if no `externalAuthentication` is defined. You can view the list of supported values in the [user-authz](../../modules/140-user-authz/) documentation;
-    * By default, the `User` role is set;
 * `auth` — options related to authentication or authorization in the application:
     * `externalAuthentication` — parameters to enable external authentication (the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism is used that is based on the Nginx's [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module);
          * `authURL` — the URL of the authentication service. The service should return an HTTP 200 response code if the user authentication is successful;
@@ -38,3 +36,6 @@ The module does not have any mandatory settings.
     * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `tolerations` — the same as in the Pod's `spec.tolerations` parameter in Kubernetes;
     * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+* `accessLevel` — the level of access to the dashboard if the `user-authn` module is switched off and no `externalAuthentication` is defined. You can view the list of supported values in the [user-authz](../../modules/140-user-authz/) documentation;
+    * By default, the `User` role is set;
+    * In case of using the `user-authn` module or another `externalAuthentication`, you should configure access right with the `user-authz` modules.

@@ -7,8 +7,6 @@ title: "Модуль dashboard: настройки"
 ## Параметры
 * `ingressClass` — класс ingress контроллера, который используется для dashboard.
     * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
-* `accessLevel` — уровень доступа в dashboard при отсутствии внешней аутентификации `externalAuthentication`. Возможные значения описаны в [user-authz](../../modules/140-user-authz/).
-    * По умолчанию: `User`.
 * `auth` — опции, связанные с аутентификацией или авторизацией в приложении:
     * `externalAuthentication` - параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
          * `authURL` - URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -38,3 +36,6 @@ title: "Модуль dashboard: настройки"
     * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+* `accessLevel` — уровень доступа в dashboard, если отключен модуль `user-authn` и не включена внешняя аутентификация (`externalAuthentication`). Возможные значения описаны в [user-authz](../../modules/140-user-authz/).
+    * По умолчанию: `User`.
+    * В случае использования модуля `user-authn` или другой внешней аутентификации (`externalAuthentication`), права доступа необходимо настраивать при помощи модуля `user-authz`.
