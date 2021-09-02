@@ -18,12 +18,18 @@ package helm
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
 )
+
+func init() {
+	log.SetOutput(&FilteredHelmWriter{Writer: os.Stderr})
+}
 
 type Renderer struct {
 	Name      string
@@ -74,8 +80,8 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 
 	// render chart with prepared values
 	var e engine.Engine
-	e.Strict = false
 	e.LintMode = r.LintMode
+
 	out, err := e.Render(c, valuesToRender)
 	if err != nil {
 		return nil, fmt.Errorf("helm chart render: %v", err)

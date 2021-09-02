@@ -33,7 +33,7 @@ properties:
               - type: string
                 pattern: "^[0-9]+m?$"
               - type: number
-            x-examples: ["220", 2.24, 0.1, "100m"]
+            x-examples: ["220", 2.24]
           longtermMaxMemory:
             oneOf:
               - type: string

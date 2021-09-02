@@ -143,7 +143,7 @@ func (c *ModuleController) RunRender(values string, objectStore *storage.Unstruc
 	var renderer helm.Renderer
 	renderer.Name = c.Module.Name
 	renderer.Namespace = c.Module.Namespace
-	renderer.LintMode = false
+	renderer.LintMode = true
 
 	files, err := renderer.RenderChart(c.Chart, values)
 	if err != nil {
