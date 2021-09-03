@@ -352,7 +352,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) DB Size",
+          "legendFormat": "{{node}} DB Size",
           "metric": "",
           "refId": "A",
           "step": 4
@@ -438,20 +438,20 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, le))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) WAL fsync",
+          "legendFormat": "{{node}} WAL fsync",
           "metric": "etcd_disk_wal_fsync_duration_seconds_bucket",
           "refId": "A",
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, le))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) DB fsync",
+          "legendFormat": "{{node}} DB fsync",
           "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
           "refId": "B",
           "step": 4
@@ -540,7 +540,7 @@
           "expr": "process_resident_memory_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) Resident Memory",
+          "legendFormat": "{{node}} Resident Memory",
           "metric": "process_resident_memory_bytes",
           "refId": "A",
           "step": 4
@@ -631,7 +631,7 @@
           "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) Client Traffic In",
+          "legendFormat": "{{node}} Client Traffic In",
           "metric": "etcd_network_client_grpc_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -722,7 +722,7 @@
           "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) Client Traffic Out",
+          "legendFormat": "{{node}} Client Traffic Out",
           "metric": "etcd_network_client_grpc_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -810,10 +810,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) Peer Traffic In",
+          "legendFormat": "{{node}} Peer Traffic In",
           "metric": "etcd_network_peer_received_bytes_total",
           "refId": "A",
           "step": 4
@@ -902,12 +902,12 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node, component)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__interval_sx4])) by (node)",
           "format": "time_series",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}}) Peer Traffic Out",
+          "legendFormat": "{{node}} Peer Traffic Out",
           "metric": "etcd_network_peer_sent_bytes_total",
           "refId": "A",
           "step": 4
@@ -1118,7 +1118,7 @@
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
-          "legendFormat": "{{node}} ({{component}})",
+          "legendFormat": "{{node}}",
           "refId": "A"
         }
       ],
