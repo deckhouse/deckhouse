@@ -69,7 +69,7 @@
   - endpoints
   - limitranges
   - persistentvolumeclaims
-  - resourcequota
+  - resourcequotas
   - services
   - serviceaccounts
   verbs:
@@ -161,6 +161,12 @@
   verbs:
   {{- include "user_authz_verbs" "r" }}
   {{- include "user_authz_rules_for_not_recommended_objects" . }}
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
 {{- end -}}
 
 {{- define "user_authz_user_rules" }}
