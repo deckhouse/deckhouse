@@ -64,9 +64,10 @@
         summary: One or more Upmeter server pods is NOT Running
         description: |-
           Check StatefulSet status:
-          1. `kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status`
+          `kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status`
+
           Check the status of its pod:
-          1. `kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'`
+          `kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'`
 
     - alert: D8UpmeterAgentReplicasUnavailable
       expr: |
@@ -94,9 +95,10 @@
         summary: One or more Upmeter agent pods is NOT Running
         description: |-
           Check DaemonSet status:
-          1. `kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status`
+          `kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status`
+
           Check the status of its pod:
-          1. `kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'`
+          `kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'`
 
     - alert: D8UpmeterUnavailable
       expr: |
@@ -147,7 +149,7 @@
 
           Upmeter server should not restart too often. It should always be running and collecting episodes.
           Check its logs to find the problem:
-          1. `kubectl -n d8-upmeter logs -f upmeter-0 upmeter`
+          `kubectl -n d8-upmeter logs -f upmeter-0 upmeter`
 
     - alert: D8UpmeterMalfunctioning
       expr: |
@@ -193,7 +195,7 @@
           {{ $labels.persistentvolumeclaim }} persistent volume claim status is {{ $labels.phase }}.
 
           There is a problem with pv provisioning. Check the status of the pvc o find the problem:
-          1. `kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}`
+          `kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}`
 
           If you have no disk provisioning system in the cluster,
           you can disable ordering volumes for the some-mini through the module settings.
