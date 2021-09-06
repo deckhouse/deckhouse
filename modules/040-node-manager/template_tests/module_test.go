@@ -110,7 +110,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AWSInstanceClass
@@ -224,7 +224,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -336,7 +336,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -418,7 +418,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.19"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -522,7 +522,7 @@ internal:
     nodeType: Static
     kubernetesVersion: "1.19"
     cri:
-      type: "Docker"
+      type: "Containerd"
   nodeUsers:
   - name: test
     spec:
