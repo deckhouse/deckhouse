@@ -3,13 +3,15 @@ ARG BASE_ALPINE
 ARG BASE_GOLANG_BUSTER
 FROM $BASE_GOLANG_BUSTER as artifact
 WORKDIR /src/
-COPY lua-info.patch /
-COPY omit-helm-secrets.patch /
-COPY healthcheck.patch /
+COPY patches/lua-info.patch /
+COPY patches/omit-helm-secrets.patch /
+COPY patches/healthcheck.patch /
+COPY patches/pod-ip.patch /
 ENV GOARCH=amd64
 RUN apt-get update && apt-get install -y --no-install-recommends git mercurial patch && \
     git clone --branch controller-0.33.0 --depth 1 https://github.com/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
+    patch -p1 < /pod-ip.patch && \
     patch -p1 < /omit-helm-secrets.patch && \
     patch -p1 < /healthcheck.patch && \
     make GO111MODULE=on USE_DOCKER=false build
@@ -50,9 +52,10 @@ COPY --from=controller_0_33_0 --chown=www-data:www-data /dbg /dbg
 COPY --from=controller_0_33_0 --chown=www-data:www-data /nginx-ingress-controller /nginx-ingress-controller
 COPY --from=controller_0_33_0 --chown=www-data:www-data /wait-shutdown /wait-shutdown
 COPY --from=artifact /src/rootfs/bin/amd64/nginx-ingress-controller /src/rootfs/bin/amd64/dbg /
+# We use 0.26 controller image to copy lua libraries because is easier to install them on ubuntu
 COPY --from=controller_0_26_1 /usr/local/openresty/luajit /usr/local/openresty/luajit
-COPY balancer-lua.patch /
-COPY nginx-tpl.patch /
+COPY patches/balancer-lua.patch /
+COPY patches/nginx-tpl.patch /
 COPY rootfs /
 
 RUN apk update \
