@@ -108,6 +108,12 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       - 2.2.2.2
     maxReplicas: 6
     minReplicas: 2
+- name: test-without-hpa
+  spec:
+    inlet: LoadBalancer
+    controllerVersion: "0.48"
+    maxReplicas: 3
+    minReplicas: 3
 - name: test-next
   spec:
     ingressClass: test
@@ -170,6 +176,13 @@ memory: 200Mi`))
 
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-lbwpp").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "hpa-scaler-test-lbwpp").Exists()).To(BeTrue())
+
+			// HPA for controller with maxReplicas == minReplicas should not exists
+			Expect(hec.KubernetesResource("Deployment", "d8-ingress-nginx", "hpa-scaler-test-without-hpa").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "hpa-scaler-test-without-hpa").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-without-hpa").Exists()).To(BeTrue())
+
 			Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "prometheus-metrics-adapter-d8-ingress-nginx-cpu-utlization-for-hpa").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-custom-headers").Exists()).To(BeTrue())

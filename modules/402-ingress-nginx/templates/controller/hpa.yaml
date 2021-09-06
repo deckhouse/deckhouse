@@ -18,7 +18,6 @@ spec:
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
 
-{{- if ne $crd.spec.minReplicas $crd.spec.maxReplicas }}
 ---
 apiVersion: autoscaling/v2beta2
 kind: HorizontalPodAutoscaler
@@ -44,7 +43,6 @@ spec:
         target:
           type: Value
           value: "50"
-{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -99,6 +97,8 @@ spec:
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
-    {{ include "ingress-controller-lb-hpa" (list $context $crd $crd.name) }}
+    {{- if ne $crd.spec.minReplicas $crd.spec.maxReplicas }}
+      {{ include "ingress-controller-lb-hpa" (list $context $crd $crd.name) }}
+    {{- end }}
   {{- end }}
 {{- end }}
