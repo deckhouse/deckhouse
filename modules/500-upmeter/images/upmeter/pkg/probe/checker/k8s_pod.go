@@ -57,12 +57,14 @@ func (c PodLifecycle) Checker() check.Checker {
 
 // podLifecycleChecker is stateful checker that wraps pod creation with the check of the pod lifecycle
 type podLifecycleChecker struct {
-	access            kubernetes.Access
-	namespace         string
+	access kubernetes.Access
+
+	namespace string
+	node      string
+
 	creationTimeout   time.Duration
 	schedulingTimeout time.Duration
 	deletionTimeout   time.Duration
-	node              string
 
 	garbageCollectionTimeout  time.Duration
 	controlPlaneAccessTimeout time.Duration
@@ -84,9 +86,9 @@ func (c *podLifecycleChecker) Check() check.Error {
 /*
 1. check control-plane
 2. collect garbage
-2. create pod                   (podCreationTimeout)
-3. see the pod is scheduled     (podScheduledTimeout)
-4. delete the pod               (podDeletionTimeout)
+2. create pod                   (creationTimeout)
+3. see the pod is scheduled     (schedulingTimeout)
+4. delete the pod               (deletionTimeout)
 	+ensure the pod is not listed
 */
 func (c *podLifecycleChecker) new(pod *v1.Pod) check.Checker {
@@ -375,6 +377,14 @@ func (c *podRunningOrReadyChecker) BusyWith() string {
 
 func isPodRunning(pod *v1.Pod) bool {
 	return pod.Status.Phase == v1.PodRunning
+}
+
+func isPodPending(pod *v1.Pod) bool {
+	return pod.Status.Phase == v1.PodPending
+}
+
+func isPodTerminating(pod *v1.Pod) bool {
+	return pod.DeletionTimestamp != nil
 }
 
 func isPodReady(pod *v1.Pod) bool {
