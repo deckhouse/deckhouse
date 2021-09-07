@@ -61,7 +61,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Controller Details",
-          "linkUrl": "/d/IRPuf4ymk1/controller?var-ds_prometheus=${ds_prometheus}&var-namespace=${namespace}&var-controller=${__cell}",
+          "linkUrl": "/d/IRPuf4ymk1/controller?var-ds_prometheus=${ds_prometheus}&var-namespace=${namespace}&var-controller=${__cell}&from=${__from}&to=${__to}",
           "mappingType": 1,
           "pattern": "controller",
           "thresholds": [],

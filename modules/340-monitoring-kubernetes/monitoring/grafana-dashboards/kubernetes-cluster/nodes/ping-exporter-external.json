@@ -70,7 +70,7 @@
           "decimals": 2,
           "link": false,
           "linkTooltip": "",
-          "linkUrl": "/d/ak39dqlcds/external-ping?var-destination_name=${__cell}",
+          "linkUrl": "/d/ak39dqlcds/external-ping?var-destination_name=${__cell}&from=${__from}&to=${__to}",
           "mappingType": 1,
           "pattern": "destination_name",
           "thresholds": [],

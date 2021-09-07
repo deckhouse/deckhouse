@@ -59,7 +59,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Node Details",
-          "linkUrl": "/d/4UCtXvkmsk/node-metrics-detailed?var-ds_prometheus=${ds_prometheus}&var-node=${__cell}",
+          "linkUrl": "/d/4UCtXvkmsk/node-metrics-detailed?var-ds_prometheus=${ds_prometheus}&var-node=${__cell}&from=${__from}&to=${__to}",
           "mappingType": 1,
           "pattern": "node",
           "thresholds": [],
