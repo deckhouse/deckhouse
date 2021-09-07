@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/cluster_count_node_roles ::", func() {
+var _ = Describe("Global hooks :: discovery :: cluster_count_node_roles ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -105,6 +105,31 @@ metadata:
   labels:
     node-role.kubernetes.io/systembykubernetes: ""
 `
+		stateMasterAndSpecialNodesWithDash = `
+apiVersion: v1
+kind: Node
+metadata:
+  name: master
+  labels:
+    node-role.deckhouse.io/frontend: ""
+    node-role.kubernetes.io/master: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: front-1
+  labels:
+    node-role.deckhouse.io/frontend: ""
+    node-role.kubernetes.io/frontendbykubernetes: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: front-2
+  labels:
+    node-role.deckhouse.io/worker-dash-dash: ""
+    node-role.kubernetes.io/frontend: ""
+`
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -115,7 +140,7 @@ metadata:
 			f.RunHook()
 		})
 
-		It("filterResult of master must be null; `global.discovery.d8SpecificNodeCountByRole` must be empty map", func() {
+		It("`global.discovery.d8SpecificNodeCountByRole` must be empty map", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").Map()).To(BeEmpty())
 		})
@@ -126,13 +151,11 @@ metadata:
 				f.RunHook()
 			})
 
-			It("filterResults must contain single '', two 'frontend' and one 'system' ; `global.discovery.d8SpecificNodeCountByRole` must contain map of nodes", func() {
+			It("global.discovery.d8SpecificNodeCountByRole` must contain 2 frontend and 1 system node", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`
-{
-"frontend": 2,
-"system": 1
-}`))
+
+				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.frontend").Int()).To(Equal(int64(2)))
+				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.system").Int()).To(Equal(int64(1)))
 			})
 
 			Context("Special nodes modified", func() {
@@ -141,15 +164,12 @@ metadata:
 					f.RunHook()
 				})
 
-				It("filterResults must contain single '', one 'frontend' and two 'system' ; `global.discovery.d8SpecificNodeCountByRole` must contain map of nodes", func() {
+				It("`global.discovery.d8SpecificNodeCountByRole` must contain 2 frontend and 1 system and master nodes", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`
-{
-"frontend": 1,
-"master": 1,
-"system": 2
-}
-`))
+
+					Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.frontend").Int()).To(Equal(int64(1)))
+					Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.master").Int()).To(Equal(int64(1)))
+					Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.system").Int()).To(Equal(int64(2)))
 				})
 
 			})
@@ -164,13 +184,25 @@ metadata:
 			f.RunHook()
 		})
 
-		It("filterResults must contain single '', two 'frontend' and one 'system' ; `global.discovery.d8SpecificNodeCountByRole` must contain map of nodes", func() {
+		It("`global.discovery.d8SpecificNodeCountByRole` must contain 2 frontend and 1 system node", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole").String()).To(MatchJSON(`
-{
-"frontend": 2,
-"system": 1
-}`))
+
+			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.frontend").Int()).To(Equal(int64(2)))
+			Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.system").Int()).To(Equal(int64(1)))
+		})
+
+		Context("Node roles with dash", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateMasterAndSpecialNodesWithDash))
+				f.RunHook()
+			})
+
+			It("converts node roles to camelCase", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.frontend").Int()).To(Equal(int64(2)))
+				Expect(f.ValuesGet("global.discovery.d8SpecificNodeCountByRole.workerDashDash").Int()).To(Equal(int64(1)))
+			})
 		})
 
 	})
