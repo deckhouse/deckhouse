@@ -139,9 +139,11 @@ func initMonitoringAndAutoscaling(access kubernetes.Access) []runnerConfig {
 			period: 10 * time.Second,
 			config: checker.DaemonSetPodsReady{
 				Access:                    access,
-				Timeout:                   5 * time.Second,
 				Namespace:                 "d8-monitoring",
 				Name:                      "node-exporter",
+				RequestTimeout:            5 * time.Second,
+				PodCreationTimeout:        time.Minute,
+				PodDeletionTimeout:        5 * time.Second,
 				ControlPlaneAccessTimeout: cpTimeout,
 			},
 		}, {
