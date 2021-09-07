@@ -221,6 +221,14 @@ func GetNodeGroupTemplates(kubeCl *client.KubernetesClient) (map[string]map[stri
 			var nodeTemplate map[string]interface{}
 			if spec, ok := group.Object["spec"].(map[string]interface{}); ok {
 				nodeTemplate, _ = spec["nodeTemplate"].(map[string]interface{})
+				// if we do not set node template in cluster provider configuration
+				// we get nil node template from config,
+				// but k8s always returns empty map (not nil)
+				// and we have D8TerraformStateExporterNodeTemplateChanged alert
+				// therefore, we convert empty map to nil
+				if len(nodeTemplate) == 0 {
+					nodeTemplate = nil
+				}
 			}
 
 			nodeTemplates[group.GetName()] = nodeTemplate

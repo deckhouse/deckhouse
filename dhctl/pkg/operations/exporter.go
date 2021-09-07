@@ -244,9 +244,12 @@ func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
 	for _, status := range clusterStatuses {
 		if status == statistic.Cluster.Status {
 			c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(1)
+			log.InfoF("Cluster status is %s\n", status)
 			continue
 		}
+
 		c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(0)
+		log.InfoF("Cluster status: clean %s status\n", status)
 	}
 
 	newExistedEntities := newPreviouslyExistedEntities()
@@ -256,9 +259,11 @@ func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
 			if status == node.Status {
 				c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(1)
 				newExistedEntities.AddNode(node.Name, node.Group)
+				log.InfoF("%v/%v: node status is %v\n", node.Group, node.Name, status)
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
+			log.InfoF("%v/%v: clean node status %v\n", node.Group, node.Name, status)
 		}
 	}
 
@@ -266,9 +271,11 @@ func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
 		for _, status := range nodeTemplateStatuses {
 			if status == template.Status {
 				c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(1)
+				log.InfoF("%v: node template status is %v\n", template.Name, status)
 				continue
 			}
 			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
+			log.InfoF("%v: node template clean status %v\n", template.Name, status)
 		}
 	}
 
@@ -279,6 +286,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *converge.Statistics) {
 		}
 		for _, status := range nodeStatuses {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
+			log.InfoF("%v/%v: clean missing node status %v\n", nodeGroup, nodeName, status)
 		}
 	}
 
