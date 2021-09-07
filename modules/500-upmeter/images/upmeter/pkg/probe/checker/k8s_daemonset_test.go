@@ -61,6 +61,10 @@ func (a *FakeAccess) CloudControllerManagerNamespace() string {
 	return ""
 }
 
+func (a *FakeAccess) ClusterDomain() string {
+	return ""
+}
+
 func getTestDsPodsReadinessChecker() (*fake.FakeCluster, *dsPodsReadinessChecker) {
 	cluster := fake.NewFakeCluster()
 	access := NewFake(cluster.KubeClient)

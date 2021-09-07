@@ -19,10 +19,11 @@ package probe
 import (
 	"time"
 
+	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initSynthetic() []runnerConfig {
+func initSynthetic(access kubernetes.Access) []runnerConfig {
 	const (
 		groupName = "synthetic"
 	)
@@ -54,7 +55,7 @@ func initSynthetic() []runnerConfig {
 			check:  "internal",
 			period: 200 * time.Millisecond,
 			config: checker.DnsAvailable{
-				Domain:     "kubernetes.default",
+				Domain:     access.ClusterDomain(),
 				DnsTimeout: 2 * time.Second,
 			},
 		}, {

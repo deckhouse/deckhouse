@@ -39,6 +39,8 @@ type Access interface {
 	SchedulerProbeNode() string
 
 	CloudControllerManagerNamespace() string
+
+	ClusterDomain() string
 }
 
 type ProbeImageConfig struct {
@@ -82,6 +84,8 @@ type Config struct {
 	SchedulerProbeNode  string
 
 	CloudControllerManagerNamespace string
+
+	ClusterDomain string
 }
 
 // Accessor provides Kubernetes access in pod
@@ -93,6 +97,8 @@ type Accessor struct {
 	schedulerProbeNode  string
 
 	cloudControllerManagerNamespace string
+
+	kubernetesDomain string
 }
 
 func (a *Accessor) Init(config *Config) error {
@@ -119,6 +125,8 @@ func (a *Accessor) Init(config *Config) error {
 
 	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
+	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain
+
 	return nil
 }
 
@@ -140,4 +148,8 @@ func (a *Accessor) SchedulerProbeNode() string {
 
 func (a *Accessor) CloudControllerManagerNamespace() string {
 	return a.cloudControllerManagerNamespace
+}
+
+func (a *Accessor) ClusterDomain() string {
+	return a.kubernetesDomain
 }

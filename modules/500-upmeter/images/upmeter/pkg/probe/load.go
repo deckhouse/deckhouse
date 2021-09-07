@@ -27,7 +27,7 @@ import (
 func Load(access kubernetes.Access) []*check.Runner {
 	runConfigs := make([]runnerConfig, 0)
 
-	runConfigs = append(runConfigs, initSynthetic()...)
+	runConfigs = append(runConfigs, initSynthetic(access)...)
 	runConfigs = append(runConfigs, initControlPlane(access)...)
 	runConfigs = append(runConfigs, initMonitoringAndAutoscaling(access)...)
 	runConfigs = append(runConfigs, initScaling(access)...)

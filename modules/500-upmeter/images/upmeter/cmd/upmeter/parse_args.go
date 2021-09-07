@@ -142,6 +142,11 @@ func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {
 		Envar("UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE").
 		Default("").
 		StringVar(&config.CloudControllerManagerNamespace)
+
+	cmd.Flag("cluster-domain", "Cluster domain").
+		Envar("UPMETER_CLUSTER_DOMAIN").
+		Default("cluster.local").
+		StringVar(&config.ClusterDomain)
 }
 
 type loggerConfig struct {
