@@ -5,9 +5,10 @@ title: "Управление control plane: примеры конфигурац�
 ```yaml
 controlPlaneManagerEnabled: "true"
 controlPlaneManager: |
-  bindToWildcard: true
-  certSANs:
-  - bakery.infra
-  - devs.infra
-  loadBalancer: {}
+  apiserver:
+    bindToWildcard: true
+    certSANs:
+    - bakery.infra
+    - devs.infra
+    loadBalancer: {}
 ```
