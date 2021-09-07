@@ -61,7 +61,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Pod Details",
-          "linkUrl": "/d/m41rB4yiz1/pod?var-ds_prometheus=${ds_prometheus}&var-namespace=${namespace}&var-pod=${__cell}",
+          "linkUrl": "/d/m41rB4yiz1/pod?var-ds_prometheus=${ds_prometheus}&var-namespace=${namespace}&var-pod=${__cell}&from=${__from}&to=${__to}",
           "mappingType": 1,
           "pattern": "pod",
           "thresholds": [],

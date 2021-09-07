@@ -61,7 +61,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Namespace",
-          "linkUrl": "/d/sZzUB4ymk1/namespace?var-ds_prometheus=${ds_prometheus}&var-namespace=${__cell}",
+          "linkUrl": "/d/sZzUB4ymk1/namespace?var-ds_prometheus=${ds_prometheus}&var-namespace=${__cell}&from=${__from}&to=${__to}",
           "mappingType": 1,
           "pattern": "namespace",
           "thresholds": [],
