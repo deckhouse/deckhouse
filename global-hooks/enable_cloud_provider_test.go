@@ -25,14 +25,6 @@ import (
 )
 
 var _ = Describe("Global hooks :: enable_cloud_provider ::", func() {
-	cloudProviders := map[string]string{
-		"OpenStack": "cloudProviderOpenstack",
-		"AWS":       "cloudProviderAws",
-		"GCP":       "cloudProviderGcp",
-		"Yandex":    "cloudProviderYandex",
-		"vSphere":   "cloudProviderVsphere",
-	}
-
 	clusterConfigManifest := func(provider string) string {
 		data := `---
 apiVersion: deckhouse.io/v1
@@ -57,7 +49,7 @@ data:
 	}
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 
-	Context("Cluster has no d8-cluster-configuration Secret", func() {
+	Context("Cluster has no d8-cluster-configuration secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
@@ -66,17 +58,17 @@ data:
 		It("Should not enable any cloud providers", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			for _, valuesName := range cloudProviders {
+			for _, valuesName := range cloudProviderNameToModule {
 				Expect(f.ValuesGet(fmt.Sprintf("%sEnabled", valuesName)).Exists()).To(BeFalse())
 			}
 		})
 	})
 
-	for provider, valueName := range cloudProviders {
+	for provider, valueName := range cloudProviderNameToModule {
 		provider := provider
 		valueName := valueName
 
-		Context("Cluster has a d8-cluster-configuration Secret with provider "+provider, func() {
+		Context("Cluster has a d8-cluster-configuration secret with provider "+provider, func() {
 			provider := provider
 
 			BeforeEach(func() {
@@ -85,7 +77,7 @@ data:
 			})
 			It("Should enable only one provider "+provider, func() {
 				Expect(f).To(ExecuteSuccessfully())
-				for key, valuesName := range cloudProviders {
+				for key, valuesName := range cloudProviderNameToModule {
 					if key == provider {
 						Expect(f.ValuesGet(fmt.Sprintf("%sEnabled", valuesName)).Bool()).To(BeTrue())
 						continue
@@ -109,7 +101,7 @@ data:
 				provider := provider
 
 				Expect(f).To(ExecuteSuccessfully())
-				for key, value := range cloudProviders {
+				for key, value := range cloudProviderNameToModule {
 					if key == provider {
 						Expect(f.ValuesGet(fmt.Sprintf("%sEnabled", value)).Bool()).To(BeTrue())
 						continue

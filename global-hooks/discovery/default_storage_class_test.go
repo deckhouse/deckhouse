@@ -22,15 +22,13 @@ User-stories:
 package hooks
 
 import (
-	"sort"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: discovery/default_storage_class_name ::", func() {
+var _ = Describe("Global hooks :: discovery :: default_storage_class_name ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -98,8 +96,6 @@ metadata:
 
 			It("filterResult must be false, `global.discovery.defaultStorageClass` must not be set", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.snapshots.default_sc.0").Exists()).To(BeTrue())
-				Expect(f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.discovery.defaultStorageClass").Exists()).To(BeFalse())
 			})
 
@@ -111,8 +107,6 @@ metadata:
 
 				It("filterResult must be true, `global.discovery.defaultStorageClass` must be 'sc0'", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Get("0.snapshots.default_sc.0").Exists()).To(BeTrue())
-					Expect(f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").Bool()).To(BeTrue())
 					Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("sc0"))
 				})
 			})
@@ -125,8 +119,6 @@ metadata:
 
 				It("filterResult must be true, `global.discovery.defaultStorageClass` must be 'sc1'", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Get("0.snapshots.default_sc.1").Exists()).To(BeTrue())
-					Expect(f.BindingContexts.Get("0.snapshots.default_sc.1.filterResult.isDefault").Bool()).To(BeTrue())
 					Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("sc1"))
 				})
 			})
@@ -141,13 +133,6 @@ metadata:
 
 		It("filterResult.isDefault must be true and false, `global.discovery.defaultStorageClass` must be 'sc1'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
-			frSlice := []string{}
-			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").String())
-			frSlice = append(frSlice, f.BindingContexts.Get("0.snapshots.default_sc.1.filterResult.isDefault").String())
-			sort.Strings(frSlice)
-
-			Expect(frSlice).To(Equal([]string{"false", "true"}))
 			Expect(f.ValuesGet("global.discovery.defaultStorageClass").String()).To(Equal("sc1"))
 		})
 
@@ -159,7 +144,6 @@ metadata:
 
 			It("filterResults must be false and false, `global.discovery.defaultStorageClass` must not be set", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.snapshots.default_sc.0.filterResult.isDefault").Bool()).To(BeFalse())
 				Expect(f.ValuesGet("global.discovery.defaultStorageClass").Exists()).To(BeFalse())
 			})
 		})
