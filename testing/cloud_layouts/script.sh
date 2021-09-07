@@ -20,16 +20,45 @@ shopt -s failglob
 
 test_failed=""
 
+function abort_bootstrap_from_cache() {
+    dhctl bootstrap-phase abort \
+      --force-abort-from-cache \
+      --config "$cwd/configuration.yaml" \
+      --yes-i-am-sane-and-i-understand-what-i-am-doing
+
+    return $?
+}
+
+function abort_bootstrap() {
+  dhctl bootstrap-phase abort \
+    --ssh-user "$ssh_user" \
+    --ssh-agent-private-keys "$ssh_private_key_path" \
+    --config "$cwd/configuration.yaml" \
+    --yes-i-am-sane-and-i-understand-what-i-am-doing
+
+  return $?
+}
+
+function destroy_cluster() {
+  dhctl destroy \
+    --ssh-agent-private-keys "$ssh_private_key_path" \
+    --ssh-user "$ssh_user" \
+    --ssh-host "$master_ip" \
+    --yes-i-am-sane-and-i-understand-what-i-am-doing
+
+  return $?
+}
+
 function cleanup() {
   cleanup_exit_code=0
 
   if [[ -z "$master_ip" ]]; then
-    dhctl bootstrap-phase abort --config "$cwd/configuration.yaml" --yes-i-am-sane-and-i-understand-what-i-am-doing || cleanup_exit_code="$?"
+     {
+       abort_bootstrap || abort_bootstrap_from_cache
+     } || cleanup_exit_code="$?"
   else
     {
-      dhctl destroy --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" --ssh-host "$master_ip" \
-        --yes-i-am-sane-and-i-understand-what-i-am-doing || \
-      dhctl bootstrap-phase abort --config "$cwd/configuration.yaml" --yes-i-am-sane-and-i-understand-what-i-am-doing
+      destroy_cluster || abort_bootstrap_from_cache
     } || cleanup_exit_code="$?"
   fi
 
