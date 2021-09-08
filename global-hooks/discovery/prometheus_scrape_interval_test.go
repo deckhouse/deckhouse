@@ -28,7 +28,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: prometheus_scrape_interval ::", func() {
+var _ = Describe("Global hooks :: discovery :: prometheus_scrape_interval ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
@@ -73,9 +73,8 @@ data:
 				f.RunHook()
 			})
 
-			It("filterResult and global.discovery.prometheusScrapeInterval must be '30'", func() {
+			It("global.discovery.prometheusScrapeInterval must be '30'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").String()).To(Equal("30s"))
 				Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").String()).To(Equal("30"))
 			})
 
@@ -99,9 +98,8 @@ data:
 			f.RunHook()
 		})
 
-		It("filterResult must be '30s' and global.discovery.prometheusScrapeInterval must be '30'", func() {
+		It("global.discovery.prometheusScrapeInterval must be '30'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").String()).To(Equal("30s"))
 			Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").String()).To(Equal("30"))
 		})
 
@@ -111,9 +109,8 @@ data:
 				f.RunHook()
 			})
 
-			It("filterResult must be '5s' and global.discovery.prometheusScrapeInterval must be '5'", func() {
+			It("global.discovery.prometheusScrapeInterval must be '5'", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Get("0.filterResult").String()).To(Equal("5s"))
 				Expect(f.ValuesGet("global.discovery.prometheusScrapeInterval").String()).To(Equal("5"))
 			})
 

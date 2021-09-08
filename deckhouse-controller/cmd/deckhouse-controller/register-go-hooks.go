@@ -16,6 +16,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/global-hooks"
 	_ "github.com/deckhouse/deckhouse/global-hooks/discovery"
 	_ "github.com/deckhouse/deckhouse/global-hooks/migrate"
+	_ "github.com/deckhouse/deckhouse/global-hooks/resources"
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-operator-prometheus-crd/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/010-prometheus-crd/hooks"
