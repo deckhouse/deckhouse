@@ -13,7 +13,7 @@ To configure an HPA, you need to:
 There are three types of metrics in terms of an HPA:
 * [classic](#classic-resource-consumption-based-scaling) — these have the "Resource" type (`.spec.metrics[].type`) and are used to scale based on memory and CPU consumption;
 * [custom](#custom-metrics-based-scaling) — these have the "Pods" or "Object" type (`.spec.metrics[].type`).
-* [внешние](#external-metrics-based-scaling) — these have the "Resource" type (`.spec.metrics[].type`).
+* [external](#external-metrics-based-scaling) — these have the "Resource" type (`.spec.metrics[].type`).
 
 ## What scaling type should I prefer?
 
@@ -50,7 +50,7 @@ spec:
     resource:
       name: cpu
       target:
-        # сscale up if the average CPU utilization by all the Pods in scaleTargetRef exceeds the specified value
+        # scale up if the average CPU utilization by all the Pods in scaleTargetRef exceeds the specified value
         type: Utilization      # for type: Resource metrics only the type: Utilization parameter is available
         averageUtilization: 70 # scale up if all the Deployment's Pods have requested 1 CPU core and consumed more than 700m on average
   - type: Resource

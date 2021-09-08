@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: FAQ"
+title: "Cloud provider — OpenStack: FAQ"
 ---
 
 ## How do I set up LoadBalancer?
@@ -37,7 +37,7 @@ There may be many reasons why you may need to restrict or expand incoming/outgoi
 * Allow connecting to the ports of the static node so that the application can work;
 * Restrict access to external resources or other VMs in the cloud for security reasons;
 
-ДFor all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
+For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
 
 ### Enabling additional security groups on static and master nodes
 
@@ -57,7 +57,7 @@ You have to set the `additionalSecurityGroups` parameter for all OpenStackInstan
 A hybrid cluster combines bare metal and openstack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
 1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`;
-2. Enable and [configure](configuration.html#параметры) the module.
+2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
 

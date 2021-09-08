@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Yandex.Cloud: usage"
+title: "Cloud provider — Yandex.Cloud: usage"
 ---
 
 ## An example of the module configuration

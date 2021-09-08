@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: FAQ"
+title: "Cloud provider — GCP: FAQ"
 ---
 
 ## How do I create a cluster?

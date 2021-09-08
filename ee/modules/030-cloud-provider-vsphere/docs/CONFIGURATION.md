@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere: configuration"
+title: "Cloud provider — VMware vSphere: configuration"
 ---
 
 The module is automatically enabled for all cloud clusters deployed in vSphere.
@@ -106,7 +106,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 1. Run the `kubectl cordon node_where_pod_is_hosted` command;
 2. Delete the Pod;
-3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition. В объекте PVC *не будет* condition `Resizing`. **Note** that the `FileSystemResizePending` state is OK;
+3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition. **Note** that the `FileSystemResizePending` state is OK;
 4. Run the `kubectl uncordon node_where_pod_is_hosted` command;
 
 ## Environment requirements

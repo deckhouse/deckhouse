@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Yandex.Cloud: FAQ"
+title: "Cloud provider — Yandex.Cloud: FAQ"
 ---
 
 ## How do I set up the INTERNAL LoadBalancer?

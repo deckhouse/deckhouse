@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Yandex.Cloud"
+title: "Cloud provider — Yandex.Cloud"
 ---
 
 The `cloud-provider-yandex` module is responsible for interacting with the [Yandex.Cloud](https://cloud.yandex.ru/) cloud resources. It allows the node manager module to use Yandex.Cloud resources for provisioning nodes for the defined [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).

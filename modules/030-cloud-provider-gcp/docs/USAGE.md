@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: usage"
+title: "Cloud provider — GCP: usage"
 ---
 
 ## An example of the `GCPInstanceClass` CR

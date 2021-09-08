@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: configuration"
+title: "Cloud provider — OpenStack: configuration"
 ---
 
 The module is automatically enabled for all cloud clusters deployed in OpenStack.

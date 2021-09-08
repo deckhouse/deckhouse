@@ -154,7 +154,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
   clusters:
   - cluster:
       certificate-authority-data: $(cat ca.crt | base64 -w0)
-      server: https://<хост кластера>:6443
+      server: https://<cluster_host>:6443
     name: kubernetes
   contexts:
   - context:
@@ -174,7 +174,7 @@ When issuing the authentication certificate, you need to specify the name (`CN=<
 
 #### Granting access to the created user
 
-Создадим `ClusterAuthorizationRule`:
+Create `ClusterAuthorizationRule`:
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

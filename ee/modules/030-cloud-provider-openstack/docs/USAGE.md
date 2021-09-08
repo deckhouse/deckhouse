@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: usage"
+title: "Cloud provider — OpenStack: usage"
 ---
 
 ## An example of the configuration

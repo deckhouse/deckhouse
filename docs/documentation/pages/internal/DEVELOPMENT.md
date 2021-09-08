@@ -77,7 +77,7 @@ When the ***current*** milestone accumulates enough changes to release a new ver
                - in the `#deckhouse-releases` channel and list clusters in it; @mention the engineers on duty.
                - post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
             1. Just before the version change, @mention the engineers on duty and the engineer responsible for the release, list the affected clusters (if there were changes in the past two hours).
-        1. `stable` и `rock-solid`:
+        1. `stable` and `rock-solid`:
             1. One day prior to the version change, create a separate message:
                - in the `#deckhouse-releases` channel and list clusters in it; do not @mention anyone.
                - post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
@@ -338,7 +338,7 @@ The helper gets the global context and the desired strategy as the input to set 
     value: {{ .Chart.Name }}
   - key: dedicated.deckhouse.io
     operator: Equal
-    value: {{ имя_стратегии }}
+    value: {{ strategy_name }}
   ```
 * For the `monitoring` strategy, the rules will look as follows:
 
@@ -349,7 +349,7 @@ The helper gets the global context and the desired strategy as the input to set 
     value: {{ .Chart.Name }}
   - key: dedicated.deckhouse.io
     operator: Equal
-    value: {{ имя_стратегии }}
+    value: {{ strategy_name }}
   - key: dedicated.deckhouse.io
     operator: Equal
     value: "system"

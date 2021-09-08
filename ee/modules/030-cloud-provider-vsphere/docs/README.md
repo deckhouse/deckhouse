@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere"
+title: "Cloud provider — VMware vSphere"
 ---
 
 The `cloud-provider-vsphere` module is responsible for interacting with the [VMware vSphere-based](https://www.vmware.com/products/vsphere.html) cloud resources. It allows the [node manager](../../modules/040-node-manager/) module to use vSphere resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).

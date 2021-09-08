@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Azure: usage"
+title: "Cloud provider — Azure: usage"
 ---
 
 ## An example of the `AzureInstanceClass` CR

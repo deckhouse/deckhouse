@@ -71,7 +71,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
       # Filtering (which endpoints to use) and re-labeling (which labels attach to all the metrics collected or delete from them) settings
       relabel_configs:
-      # Фильтр по значению label'а prometheus_custom_target (obtained from the service associated with the endpoint)
+      # Filtering by the prometheus_custom_target label (obtained from the service associated with the endpoint)
       - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
         regex: .+                           # any NON-empty label would suffice
         action: keep
@@ -137,7 +137,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
     * `prometheus` —  the container with the Prometheus itself;
     * `prometheus-config-reloader` — a [wrapping](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) that:
         * monitors `prometheus.yaml` for changes and, if necessary, reloads the Prometheus configuration (via a dedicated HTTP request, see more [below](#how-are-service-monitors-handled));
-        * monitors PrometheusRules (see more [below](#как-обрабатываются-custome-resources-с-ruleами)) and, if necessary, pulls them and restarts Prometheus.
+        * monitors PrometheusRules (see more [below](#how-are-custom-resources-with-rules-processed)) and, if necessary, pulls them and restarts Prometheus.
 * The Pod uses three volumes:
     * config —  the secret (it contains `prometheus.yaml` and `configmaps.json`). It is mounted to both containers.
     * rules — an `emptyDir` volume that reads the `prometheus` container and supplies data to the `prometheus-config-reloader` container. It is mounted to both containers (in read-only mode in the case of the Prometheus container).
