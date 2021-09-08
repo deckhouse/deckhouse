@@ -21,6 +21,7 @@ require (
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
+	github.com/google/uuid v1.1.2 // indirect
 	github.com/gophercloud/gophercloud v0.12.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334

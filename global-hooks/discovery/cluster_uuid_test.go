@@ -29,11 +29,13 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: cluster_uuid ::", func() {
+var _ = Describe("Global hooks :: discovery :: cluster_uuid ::", func() {
 	const (
 		initValuesString       = `{"global": {"discovery": {}}}`
 		initConfigValuesString = `{}`
 	)
+
+	const cmUUID = "2528b7ff-a5eb-48d1-b0b0-4c87628284de"
 
 	const (
 		stateCM = `
@@ -43,8 +45,7 @@ metadata:
   name: d8-cluster-uuid
   namespace: kube-system
 data:
-  cluster-uuid: 2528b7ff-a5eb-48d1-b0b0-4c87628284de
-`
+  cluster-uuid: ` + cmUUID + "\n"
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
@@ -55,12 +56,13 @@ data:
 			f.RunHook()
 		})
 
-		It("objects must be 'empty'; `global.discovery.clusterUUID` must be generated, ", func() {
+		It("`global.discovery.clusterUUID` must be generated and config map must be created", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Get("0.objects.0").Array()).To(BeEmpty())
 			newUUID := f.ValuesGet("global.discovery.clusterUUID").String()
 			Expect(len(newUUID)).To(Equal(36))
-			Expect(f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-uuid").Field("data.cluster-uuid").String()).To(Equal(newUUID))
+
+			cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-uuid")
+			Expect(cm.Field("data.cluster-uuid").String()).To(Equal(newUUID))
 		})
 	})
 
@@ -70,10 +72,9 @@ data:
 			f.RunHook()
 		})
 
-		It("filterResult and global.discovery.clusterUUID must be '2528b7ff-a5eb-48d1-b0b0-4c87628284de'", func() {
+		It("'global.discovery.clusterUUID' must be set from config map", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Get("0.objects.0.filterResult").String()).To(Equal("2528b7ff-a5eb-48d1-b0b0-4c87628284de"))
-			Expect(f.ValuesGet("global.discovery.clusterUUID").String()).To(Equal("2528b7ff-a5eb-48d1-b0b0-4c87628284de"))
+			Expect(f.ValuesGet("global.discovery.clusterUUID").String()).To(Equal(cmUUID))
 		})
 
 		Context("CM d8-cluster-uuid deleted", func() {
@@ -82,8 +83,10 @@ data:
 				f.RunHook()
 			})
 
-			It("Hook must fail", func() {
-				Expect(f).To(Not(ExecuteSuccessfully()))
+			It("Must create config map with cluster uuid from values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				cm := f.KubernetesResource("ConfigMap", "kube-system", "d8-cluster-uuid")
+				Expect(cm.Field("data.cluster-uuid").String()).To(Equal(cmUUID))
 			})
 		})
 	})
