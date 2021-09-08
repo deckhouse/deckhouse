@@ -74,10 +74,7 @@ The `-v "$PWD/dhctl-tmp:/tmp/dhctl"` parameter enables saving the state of the T
 <div markdown="0">
 {% snippetcut %}
 ```shell
-dhctl bootstrap-phase abort \
-  --ssh-user=<username> \
-  --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml
+dhctl bootstrap-phase abort --config=/config.yml
 ```
 {% endsnippetcut %}
 </div></li>
