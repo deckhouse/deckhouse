@@ -24,7 +24,7 @@ shell:
     - apk add --no-cache make bash git mercurial patch rsync
   install:
     - mkdir /src
-    - wget https://github.com/flant/yandex-cloud-controller-manager/archive/{{ $value.ccm.yandex }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
+    - wget https://github.com/deckhouse/yandex-cloud-controller-manager/archive/{{ $value.ccm.yandex }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
     - cd /src
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
   {{- end }}

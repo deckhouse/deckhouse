@@ -29,7 +29,7 @@ ansible:
     args:
       chdir: /src
 git:
-- url: https://{{ env "REPO_MCM_USER" }}:{{ env "REPO_MCM_TOKEN" }}@fox.flant.com/sys/deckhouse-mcm.git
+- url: https://github.com/deckhouse/mcm.git
   to: /src/
   tag: v0.36.0-flant.9
   stageDependencies:

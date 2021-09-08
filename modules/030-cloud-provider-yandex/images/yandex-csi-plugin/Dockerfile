@@ -1,5 +1,5 @@
 ARG BASE_ALPINE
-FROM flant/yandex-csi-plugin:v0.9.10@sha256:663398eec1bae800c028d62f7657e62358ed350e4f98a7e48d1124314a9cc10b as artifact
+FROM registry.deckhouse.io/yandex-csi-driver/yandex-csi-driver:v0.9.11@sha256:4d51f5efb1e90265d048d2d33e07671302b5996b95881ed40e963ca46603eb56 as artifact
 
 FROM $BASE_ALPINE
 
