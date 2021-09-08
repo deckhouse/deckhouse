@@ -49,11 +49,11 @@ You can globally define a metric using the Cluster resource, while the Namespace
 
 ### `ClusterDeploymentMetric` (not available to users)
 {{ cr_spec }}
-#### Пример
+#### Example
 
 ### `ClusterStatefulSetMetric` (not available to users)
 {{ cr_spec }}
-#### Пример
+#### Example
 
 ### `ClusterDaemonSetMetric` (not available to users)
 {{ cr_spec }}

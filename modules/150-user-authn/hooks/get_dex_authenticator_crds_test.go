@@ -73,7 +73,7 @@ spec:
 `))
 			f.RunHook()
 		})
-		It("Should store desired СRDs into values", func() {
+		It("Should store desired CRDs into values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
@@ -138,7 +138,7 @@ spec:
 `))
 			f.RunHook()
 		})
-		It("Should store Raw СRDs into values", func() {
+		It("Should store Raw CRDs into values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
@@ -204,7 +204,7 @@ data:
 `))
 			f.RunHook()
 		})
-		It("Should store Raw СRDs into values", func() {
+		It("Should store Raw CRDs into values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 

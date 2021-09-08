@@ -24,7 +24,7 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 - `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` & `certmanager.k8s.io/orders`);
 - `ClusterEditor` — the same as `Editor`+ can manage a limited set of `cluster-wide` objects that can be used in application tasks (`ClusterXXXMetric`, `ClusterRoleBindings`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators. **Note** that since `ClusterEditor` can edit `ClusterRoleBindings`, he can **broaden his privileges within the cluster**;
 - `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g., `MachineSets`, `Machines`, `OpenstackInstanceClasses` and other resources). This role is best suited for cluster administrators. **Note** that since `ClusterAdmin` can edit `ClusterRoleBindings`, he can **broaden his privileges within the cluster**;
-- `SuperAdmin` — can perform any actions with any objects (note that [`limitNamespaces`](#возможности-модуля) restrictions remain valid).
+- `SuperAdmin` — can perform any actions with any objects (note that [`limitNamespaces`](#module-features) restrictions remain valid).
 
 ## Implementation nuances
 **Caution!** Currently, the multi-tenancy mode (namespace-based authorization) is implemented according to a temporary scheme and **isn't guaranteed to be entirely safe and secure**!

@@ -63,9 +63,9 @@ You can enable mTLS globally using the `tlsMode` [parameter](configuration.html#
 
 [Reference](https://istio.io/latest/docs/reference/config/security/request_authentication/).
 
-Позволяет настроить JWT-аутентификацию для реквестов.
+Allows you to configure JWT authentication for requests.
 
-## Авторизация
+## Authorization
 
 **Caution!** Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as source.ip and request.headers, for defining policies.
 

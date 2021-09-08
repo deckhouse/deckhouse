@@ -76,7 +76,7 @@ spec:
 				Expect(
 					f.KubernetesGlobalResource("User", "admin").Field("status.expireAt").Time(),
 				).Should(
-					// TODO: если подсунуть fakeClock, то тест будет актуальней
+					// TODO: if you specify fakeClock, the test will be more relevant
 					BeTemporally("~", time.Now().Add(30*time.Minute), 5*time.Minute),
 				)
 			})

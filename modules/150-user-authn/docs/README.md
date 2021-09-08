@@ -29,7 +29,7 @@ The module generates [control-plane-manager](../../modules/040-control-plane-man
 Thus, one of these modules configures the `kube-apiserver` so that it becomes the dex OIDC client. Several other Deckhouse modules will also be configured to integrate with dex, including:
 - [prometheus](../300-prometheus/)
 - [dashboard](../500-dashboard/)
-- [оpenvpn](../500-openvpn/)
+- [openvpn](../500-openvpn/)
 - etc.
 
 ### Authenticating to the Kubernetes API using a login and password

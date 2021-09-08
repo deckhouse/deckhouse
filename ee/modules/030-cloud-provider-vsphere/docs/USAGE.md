@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — VMware vSphere: usage"
+title: "Cloud provider — VMware vSphere: usage"
 ---
 
 ## An example of the configuration

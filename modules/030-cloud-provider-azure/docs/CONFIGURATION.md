@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — Azure: configuration"
+title: "Cloud provider — Azure: configuration"
 ---
 
 The module is configured automatically based on the chosen placement strategy (the `AzureClusterConfiguration` custom resource). In most cases, you do not need to configure the module manually.

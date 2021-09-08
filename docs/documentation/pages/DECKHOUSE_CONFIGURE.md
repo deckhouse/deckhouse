@@ -59,7 +59,7 @@ The following general strategy is used for making scheduling decisions:
 **Caution!** Note that you cannot set `nodeSelector` and `tolerations` for modules that involve running a DaemonSet on all cluster nodes (e.g., `ping-exporter` and `node-problem-detector`) or modules designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).
 
 {% offtopic title="The nuances of the automatic calculation related to the 'type' of the module" %}{% raw %}
-* The *monitoring*-related modules (operator-prometheus, prometheus и vertical-pod-autoscaler):
+* The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
   * Deckhouse examines nodes to determine a nodeSelector in the following order:
     * It checks if a node with the <code>node-role.deckhouse.io/MODULE_NAME</code> label is present in the cluster
     * It checks if a node with the <code>node-role.deckhouse.io/monitoring</code> label is present in the cluster

@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP: configuration"
+title: "Cloud provider — GCP: configuration"
 ---
 
 The module is configured automatically based on the chosen placement strategy defined in the [GCPClusterConfiguration](cluster_configuration.html) struct. In most cases, you do not have to configure the module manually.

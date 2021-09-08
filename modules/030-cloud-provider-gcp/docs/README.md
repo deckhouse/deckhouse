@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — GCP"
+title: "Cloud provider — GCP"
 ---
 
 The `cloud-provider-gcp` module is responsible for interacting with the [Google](https://cloud.google.com/) cloud resources. It allows the [node manager](../../modules/040-node-manager/) module to use GCP resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).

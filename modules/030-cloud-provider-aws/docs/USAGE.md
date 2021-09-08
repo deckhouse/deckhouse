@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — AWS: usage"
+title: "Cloud provider — AWS: usage"
 ---
 
 ## An example of the `AWSInstanceClass` CR
