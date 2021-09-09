@@ -16,15 +16,13 @@
       plk_protocol_version: "1"
       plk_markup_format: markdown
       description: |-
-        Ingress controller {{ $labels.controller }} in namespace {{ $labels.controller_namespace }} failed config test (nginx -t)
-        Consider the following:
-        1. Check controllers log:
-        `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c ingress-nginx-controller`
-        2. Find the newest ingress on cluster:
-        `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`
-        3. Most likely an error in configuration-snippet or server-snippet
-      summary: >
-        Config test failed on nginx ingress {{ $labels.controller }} in {{ $labels.controller_namespcae }} namespace.
+        The configuration testing (nginx -t) of the {{ $labels.controller }} Ingress controller in the {{ $labels.controller_namespace }} Namespace has failed.
+
+        The recommended course of action:
+        1. Check controllers logs: `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c ingress-nginx-controller`;
+        2. Find the newest Ingress in the cluster: `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`;
+        3. Probably, there is an error in configuration-snippet or server-snippet.
+      summary: Config test failed on Nginx Ingress {{ $labels.controller }} in {{ $labels.controller_namespcae }} Namespace.
   - alert: NginxIngressSslWillExpire
     expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
     for: 1h
@@ -35,9 +33,8 @@
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
       description: |-
-        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks
-      summary: >
-        Certificate expires soon.
+        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks.
+      summary: Certificate expires soon.
   - alert: NginxIngressSslExpired
     expr: count by (job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
     for: 1m
@@ -48,9 +45,10 @@
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
       description: |-
-        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired. https://{{ $labels.host }} version of site doesn't work!
-      summary: >
-        Certificate has expired
+        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired.
+
+        https://{{ $labels.host }} version of site doesn't work!
+      summary: Certificate has expired.
   - alert: NginxIngressProtobufExporterHasErrors
     expr: sum by (type, node, controller) (increase(protobuf_exporter_errors_total[5m])) > 0
     for: 10m
@@ -60,12 +58,11 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |-
-        Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.type }} errors.
+        The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
 
-        Please check ingress-controller logs:
-        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`
-      summary: >
-        Ingress Nginx sidecar-container with protobuf_exporter has {{ $labels.type }} errors.
+        Please, check Ingress controller's logs:
+        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`.
+      summary: The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
   - alert: D8NginxIngressDeprecated
     expr: max(d8_nginx_ingress_deprecated > 0)
     labels:
@@ -78,14 +75,14 @@
       plk_markup_format: "markdown"
       plk_incident_initial_status: "todo"
       description: |
-        Модуль nginx-ingress объявлен устаревшим и больше не поддерживается.
+        The `nginx-ingress` module has been deprecated and is no longer supported.
 
-        Необходимо использовать новый модуль ingress-nginx.
-        * Выберите подходящий Inlet внимательно прочитав документацию.
-        * Убедитесь что в кластере не используется rewrite-target-migration (rwr).
-        * По окончании миграции отключите модуль nginxIngress в configmap deckhouse `nginxIngressEnabled: "false"`
+        Use the new `ingress-nginx` module instead:
+        * Carefully study the [documentation]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/402-ingress-nginx/) and choose the suitable Inlet;
+        * Make sure that `rewrite-target-migration` (rwr) is disabled in the cluster;
+        * After the migration is complete, disable the `nginxIngress` module in Deckhouse ConfigMap (`nginxIngressEnabled: "false"`).
       summary: |
-        В кластере используется устаревший модуль nginx-ingress
+        This cluster uses the deprecated `nginx-ingress` module.
   - alert: D8IngressNginxControllerVersionDeprecated
     expr: sum by (controller_name, controller_version) (d8_ingress_nginx_controller{controller_version=~"0.25|0.26"})
     labels:
@@ -96,8 +93,10 @@
       plk_markup_format: markdown
       plk_incident_initial_status: "todo"
       description: |-
-        Found deprecated Ingress Nginx controller version: {{ $labels.controller_version }}
-        Please upgrade {{ $labels.controller_name }} IngressNginxController
-        This version is deprecated and does not have the newest improvements and patches
+        Found deprecated Ingress Nginx controller version: {{ $labels.controller_version }}.
+
+        Please upgrade {{ $labels.controller_name }} `IngressNginxController`.
+
+        This version is deprecated and does not have the newest improvements and patches.
       summary: >
-        Deprecated version of IngressNginxController {{ $labels.controller_version }} found
+        Deprecated version of `IngressNginxController` {{ $labels.controller_version }} found.

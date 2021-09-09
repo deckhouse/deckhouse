@@ -1,26 +1,24 @@
 {{- define "todo_list" }}
-        Скорее всего, machine controller manager не может создать machine через cloud provider. Возможные причины:
-          1. Уперлись в лимиты cloud provider по доступным ресурсам
-          2. Недоступно api cloud provider
-          3. Неправильно сконфигурирован cloud provider или instance class
-          4. Проблемы с bootstrap'ом machine'ы
+        Probably, machine-controller-manager is unable to create a machine using the cloud provider module. Possible causes:
+          1. Cloud provider limits on available resources;
+          2. No access to the cloud provider API;
+          3. Cloud provider or instance class misconfiguration;
+          4. Problems with bootstrapping the Machine.
 
-        Необходимо выполнить следующие действия:
-          1. `kubectl get ng {{`{{ $labels.node_group }}`}} -o yaml` В поле `.status.lastMachineFailures` можно будет увидеть все ошибки создания Machines.
-          2. Если Machines постоянно создаются и удаляются из-за какой-то ошибки, то при получении списка
-          machine вы увидете, что нет ни одной machine, которая находится в Pending больше пары минут
-          `kubectl -n d8-cloud-instance-manager get machine`
-          3. Если ошибок в логах нет и machine висят в pending, то надо посмотреть описание machine
-          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`
-          4. Если вы увидели вот такой вывод, то используйте nc, чтобы проветь логи bootstrap
-          ```
-          {
-            "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-            "tcpEndpoint": "192.168.199.158"
-          }
-          ```
-          5. Если в выводе нет информации об endpoint для получнеия логов, то это значит, что cloudInit работает некорректно.
-          Bозможные проблемы: неправильная конфигурация instance class для cloud provider.
+        The recommended course of action:
+          1. Run `kubectl get ng {{`{{ $labels.node_group }}`}} -o yaml`. In the `.status.lastMachineFailures` field you can find all errors related to the creation of Machines;
+          2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
+          `kubectl -n d8-cloud-instance-manager get machine`;
+          3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
+          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`;
+          4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
+             ```json
+             {
+               "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
+               "tcpEndpoint": "192.168.199.158"
+             }
+             ```
+          5. The absence of information about the endpoint for getting logs means that `cloudInit` is not working correctly. This may be due to the incorrect configuration of the instance class for the cloud provider.
 {{- end }}
 
 - name: d8.node-group
@@ -38,9 +36,9 @@
       plk_markup_format: "markdown"
       plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
-      summary: В node group {{`{{ $labels.node_group }}`}} есть недоступные инстансы
+      summary: There are unavailable instances in the {{`{{ $labels.node_group }}`}} node group.
       description: |
-        Количество недоступных инстансов: {{`{{ $value }}`}}. Более подробная информация в связанных алертах.
+        The number of unavailable instances is {{`{{ $value }}`}}. See the relevant alerts for more information.
 {{- template "todo_list" }}
 
   - alert: NodeGroupReplicasUnavailable
@@ -56,7 +54,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
-      summary: В node group {{`{{ $labels.node_group }}`}} нет ни одного доступного инстанса
+      summary: There are no available instances in the {{`{{ $labels.node_group }}`}} node group.
       description: |
 {{- template "todo_list" }}
 
@@ -73,9 +71,9 @@
       plk_markup_format: "markdown"
       plk_grouped_by__cluster_has_cloud_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "node_group"
-      summary: В node group {{`{{ $labels.node_group }}`}} количество одновременно недоступных инстансов превышает допустимое значение.
+      summary: The number of simultaneously unavailable instances in the {{`{{ $labels.node_group }}`}} node group exceeds the allowed value.
       description: |
-        Возможно, autoscaler заказал большое количество нод. Обратите внимание на состояние machine в кластере.
+        Possibly, autoscaler has provisioned too many Nodes. Take a look at the state of the Machine in the cluster.
 {{- template "todo_list" }}
 
   - alert: ClusterHasNodeGroupsWithUnavailableReplicas
@@ -86,6 +84,6 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       plk_alert_type: "group"
-      summary: В кластере есть несколько node group c недоступными инстансами.
+      summary: There are several node groups with unavailable instances in the cluster.
       description: |
-        Подробную информацию можно получить в одном из связанных алертов.
+        The detailed information is available in one of the relevant alerts.

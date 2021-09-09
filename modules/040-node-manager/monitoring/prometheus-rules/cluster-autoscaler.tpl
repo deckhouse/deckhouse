@@ -14,7 +14,7 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
-      summary: Под {{`{{$labels.pod}}`}} находится в состоянии НЕ Ready
+      summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
 
   - alert: D8ClusterAutoscalerPodIsNotRunning
     expr: max by (namespace, pod, phase) (kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase!="Running",pod=~"cluster-autoscaler-.*"} > 0)
@@ -29,10 +29,11 @@
       plk_pending_until_firing_for: "10m"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "phase"
-      summary: Под cluster-autoscaler находится в состоянии НЕ Running
+      summary: The cluster-autoscaler Pod is NOT Running.
       description: |-
-        Под {{`{{$labels.pod}}`}} находится в состоянии {{`{{$labels.phase}}`}}. Для проверки статуса пода необходимо выполнить:
-        1. `kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status`
+        The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
+
+        Run the following command to check the status of the Pod: `kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status`.
 
   - alert: D8ClusterAutoscalerTargetDown
     expr: max by (job) (up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 0)
@@ -48,7 +49,7 @@
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance,pod"
       plk_ignore_labels: "job"
-      summary: Prometheus не может получить метрики cluster autoscaler'a.
+      summary: Prometheus is unable to scrape cluster-autoscaler's metrics.
 
   - alert: D8ClusterAutoscalerTargetAbsent
     expr: absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1)
@@ -62,17 +63,14 @@
       plk_protocol_version: "1"
       plk_pending_until_firing_for: "5m"
       plk_grouped_by__d8_cluster_autoscaler_unavailable: "D8ClusterAutoscalerUnavailable,tier=cluster,prometheus=deckhouse"
-      summary: >
-        В таргетах prometheus нет cluster-autoscaler
+      summary: There is no cluster-autoscaler target in Prometheus.
       description: |-
-        Cluster autoscaler используется для автоматического скейлинга нод в кластере, его недоступность не позволит увеличить
-        количество нод, если будет нехватать ресурсов для scheduling'a подов. Также недоступность cluster-autoscaler
-        может привести к лишним затратам на инстансы в cloud'e, от которых можно отказаться, так как они не утилизируются.
+        Cluster-autoscaler automatically scales Nodes in the cluster; its unavailability will result in the inability to add new Nodes if there is a lack of resources to schedule Pods. In addition, its unavailability may result in over-spending due to provisioned but not used cloud instances.
 
-        Необходимо выполнить следующие действия:
-        1. Проверить наличие и состояние подов cluster-autoscaler `kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler`
-        2. Проверить наличие deployment'a cluster-autoscaler `kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler`
-        3. Посмотреть состояние deployment'a cluster-autoscaler `kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler`
+        The recommended course of action:
+        1. Check the availability and status of cluster-autoscaler Pods: `kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler`;
+        2. Check whether the cluster-autoscaler deployment is present: `kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler`;
+        3. Check the status of the cluster-autoscaler deployment: `kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler`.
 
   - alert: D8ClusterAutoscalerUnavailable
     expr: |
@@ -92,9 +90,9 @@
       plk_group_for__cluster_autoscaler_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,namespace=d8-cloud-instance-manager,prometheus=deckhouse,deployment=cluster-autoscaler"
       plk_group_for__cluster_autoscaler_stuck: "KubernetesDeploymentStuck,namespace=d8-cloud-instance-manager,prometheus=deckhouse,deployment=cluster-autoscaler"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
-      summary: Cluster autoscaler не работает
+      summary: Cluster-autoscaler is down.
       description: |
-        Cluster autoscaler не работает. Что именно с ним не так можно узнать в одном из связанных алертов.
+        Cluster-autoscaler is down. The detailed information is available in one of the relevant alerts.
 
 - name: d8.cluster-autoscaler.malfunctioning
   rules:
@@ -110,13 +108,13 @@
       plk_markup_format: "markdown"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
-      summary: Cluster autoscaler слишком часто перезагружается
+      summary: Cluster-autoscaler restarts way too often.
       description: |
-        Количество перезапусков за последний час: {{`{{ $value }}`}}.
+        The number of restarts in the last hour: {{`{{ $value }}`}}.
 
-        Частый перезапуск Cluster autoscaler не является нормальной ситуацией, он должен быть постоянно запущена и работать.
-        Необходимо посмотреть логи:
-        1. `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c controller`
+        Excessive cluster-autoscaler restarts indicate that something is wrong. Normally, it should be up and running all the time.
+
+        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c controller`.
 
   - alert: D8ClusterAutoscalerTooManyErrors
     expr: sum by(instance) (increase(cluster_autoscaler_errors_total[20m]) > 5)
@@ -131,12 +129,11 @@
       plk_markup_format: "markdown"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance"
-      summary: Слишком много ошибок в работе сluster autoscaler
+      summary: Cluster-autoscaler: too many errors.
       description: |
-        Cluster autoscaler получил ошибку от cloud provider при попытке скейлинга в кластере.
+        Cluster-autoscaler's scaling attempt resulted in an error from the cloud provider.
 
-        Необходимо посмотреть логи:
-        1. `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`
+        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
 
   - alert: D8ClusterAutoscalerMalfunctioning
     expr: |
@@ -149,9 +146,9 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_alert_type: "group"
-      summary: Cluster autoscaler работает некорректно
+      summary: Cluster-autoscaler does not work as expected.
       description: |
-        Cluster autoscaler работает некорректно. Что именно с ним не так можно узнать в одном из связанных алертов.
+        Cluster-autoscaler does not work as expected. The detailed information is available in one of the relevant alerts.
 {{- else }}
 []
 {{- end }}
