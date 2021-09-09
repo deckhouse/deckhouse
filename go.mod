@@ -22,7 +22,8 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/google/uuid v1.1.2 // indirect
-	github.com/gophercloud/gophercloud v0.12.0
+	github.com/gophercloud/gophercloud v0.20.0
+	github.com/gophercloud/utils v0.0.0-20210823151123-bfd010397530
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.8
@@ -50,7 +51,7 @@ require (
 	golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963 // indirect
 	google.golang.org/grpc v1.32.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.19.11

@@ -354,7 +354,15 @@ apiVersions:
             description: An OpenStack Identity API URL.
           caCert:
             type: string
-            description: Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate.
+            description: Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate. Certificate should be passed in PEM format as multiline string.
+            x-doc-example: |
+              ```yaml
+              caCert: |
+                -----BEGIN CERTIFICATE-----
+                MIIFyDCCBLCgAwIBAgIQBwDIWH1asdaKNaALUa4NUzANBgkqhkiG9w0BAQsFADBc
+                ...
+                -----END CERTIFICATE-----
+              ```
           domainName:
             type: string
             description: The domain name.

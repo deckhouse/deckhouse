@@ -43,8 +43,10 @@ function __main__() {
   OS_REGION_NAME="$(values::get --required cloudProviderOpenstack.internal.connection.region)"
   export OS_REGION_NAME
 
-  OS_CACERT="$(values::get cloudProviderOpenstack.internal.connection.caCert)"
-  if [[ -n $OS_CACERT && $OS_CACERT != null ]]; then
+  CA_CERT="$(values::get cloudProviderOpenstack.internal.connection.caCert)"
+  if [[ -n $CA_CERT && $CA_CERT != null ]]; then
+    OS_CACERT="/tmp/openstack_ca.crt"
+    echo "$CA_CERT" > $OS_CACERT
     export OS_CACERT
   fi
 
