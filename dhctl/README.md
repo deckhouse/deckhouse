@@ -110,8 +110,10 @@ For example, use a docker image from the Flant docker registry:
 
 1. Pull a fresh Docker image for desired release channel (we picked the Alpha channel for an example)
     ```bash
-    docker pull registry.deckhouse.io/fe/install:alpha
+    docker pull registry.deckhouse.io/deckhouse/fe/install:alpha
     ```
+    **NOTE!** It is required to have Deckhouse license key to download FE images. 
+
 2.  Run docker container and connect the terminal session to it:
    
   * `config.yaml` - configuration file for the cluster bootstrap as described above.
