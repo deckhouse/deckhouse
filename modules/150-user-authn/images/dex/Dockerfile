@@ -1,17 +1,16 @@
-# Based on https://github.com/dexidp/dex/blob/v2.28.1/Dockerfile
-ARG BASE_GOLANG_ALPINE
+# Based on https://github.com/dexidp/dex/blob/v2.30.0/Dockerfile
+ARG BASE_GOLANG_16_ALPINE
 ARG BASE_ALPINE
-FROM $BASE_GOLANG_ALPINE as artifact
+FROM $BASE_GOLANG_16_ALPINE as artifact
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
-COPY client-groups.patch obsolete.patch static-user-groups.patch /
-RUN wget https://github.com/dexidp/dex/archive/v2.28.1.tar.gz -O - | tar -xz --strip-components=1 \
+COPY patches/client-groups.patch patches/static-user-groups.patch /
+RUN wget https://github.com/dexidp/dex/archive/v2.30.0.tar.gz -O - | tar -xz --strip-components=1 \
   && git apply /client-groups.patch \
-  && git apply /static-user-groups.patch \
-  && git apply /obsolete.patch
+  && git apply /static-user-groups.patch
 RUN go build ./cmd/dex
 
-FROM dexidp/dex:v2.28.1@sha256:5e88f2205de172b60fd7af23ac92f34321688a83de9f7de7c9a6f394f6950877 as dex
+FROM ghcr.io/dexidp/dex@sha256:63fc6ee14bcf1868ebfba90885aec76597e0f27bc8e89d1fd238b1f2ee3dea6e as dex
 
 FROM $BASE_ALPINE
 RUN apk add --no-cache --update ca-certificates openssl
