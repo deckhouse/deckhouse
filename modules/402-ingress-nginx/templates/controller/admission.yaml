@@ -11,7 +11,9 @@ webhooks:
     {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
       {{- if $crd.spec.validationEnabled }}
         # there is a bug https://github.com/kubernetes/ingress-nginx/issues/4916
-        {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+        # admission webhook was speed up in 0.48 https://github.com/kubernetes/ingress-nginx/pull/7298
+        # before that fix sometime we get context deadline on a large installation
+        {{- if semverCompare ">=0.48" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
   - name: {{ $crd.name }}.validate.d8-ingress-nginx
     matchPolicy: Equivalent
     rules:
@@ -27,6 +29,7 @@ webhooks:
         scope: Namespaced
     failurePolicy: Fail
     sideEffects: None
+    timeoutSeconds: 15
     admissionReviewVersions:
       - v1
       - v1beta1
