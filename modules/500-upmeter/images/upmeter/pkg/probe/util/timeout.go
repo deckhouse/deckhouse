@@ -17,8 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"context"
-	"sync"
 	"time"
 )
 
@@ -44,68 +42,4 @@ func DoWithTimer(interval time.Duration, jobCb, onTimerCb func()) {
 			return
 		}
 	}
-}
-
-// ItemHandler should return 1 on fail, any other value is success
-type ItemHandler func(ctx context.Context, index int, item string) int
-
-// TimeoutHandler triggers the item handler execution times out
-type TimeoutHandler func(idx int, item string)
-
-// SequentialDoWithTimer starts itemHandler for each item in array.
-// If itemHandler works more then timerDuration, then itemHandler for next
-// item is started. If itemHandler returns 1, then all handlers are stopped via context.
-func SequentialDoWithTimer(
-	parentCtx context.Context,
-	period time.Duration,
-	items []string,
-	handleItem ItemHandler,
-	handleTimeout TimeoutHandler,
-) {
-	wg := sync.WaitGroup{}
-	wg.Add(len(items))
-
-	ctx, cancel := context.WithCancel(parentCtx)
-	defer cancel()
-
-	for index, item := range items {
-		go doOne(ctx, cancel, &wg, period, handleItem, handleTimeout, index, item)
-	}
-
-	wg.Wait()
-}
-
-func doOne(
-	// runtime
-	ctx context.Context,
-	cancel context.CancelFunc,
-	wg *sync.WaitGroup,
-	// configuration
-	period time.Duration,
-	handleItem ItemHandler,
-	handleTimeout TimeoutHandler,
-	// data
-	index int,
-	item string,
-) {
-	delayTimer := time.NewTimer(time.Duration(index) * period)
-	defer func() {
-		wg.Done()
-		delayTimer.Stop()
-	}()
-
-	select {
-	case <-ctx.Done():
-		return
-	case <-delayTimer.C:
-	}
-
-	DoWithTimer(period, func() {
-		result := handleItem(ctx, index, item)
-		if result == 1 {
-			cancel()
-		}
-	}, func() {
-		handleTimeout(index, item)
-	})
 }

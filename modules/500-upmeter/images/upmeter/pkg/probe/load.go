@@ -29,7 +29,7 @@ import (
 func Load(access kubernetes.Access, logger *logrus.Logger) []*check.Runner {
 	runConfigs := make([]runnerConfig, 0)
 
-	runConfigs = append(runConfigs, initSynthetic(access)...)
+	runConfigs = append(runConfigs, initSynthetic(access, logger)...)
 	runConfigs = append(runConfigs, initControlPlane(access)...)
 	runConfigs = append(runConfigs, initMonitoringAndAutoscaling(access)...)
 	runConfigs = append(runConfigs, initScaling(access)...)

@@ -37,7 +37,16 @@ var (
 	listenPort              = "8080"
 	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	ready                   = true
+	serviceURL              = "http://smoke-mini:8080"
 )
+
+func podHost(x string) string {
+	return fmt.Sprintf("smoke-mini-%s-0", x)
+}
+
+func podURL(x string) string {
+	return fmt.Sprintf("http://smoke-mini-%s:%s/", x, listenPort)
+}
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -49,21 +58,32 @@ func main() {
 		Addr:    listenHost + ":" + listenPort,
 	}
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM)
 	go func() {
-		sig := <-sigs
-		ready = false
-		log.Info(sig)
-		s.Shutdown(context.TODO())
+		err := s.ListenAndServe()
+		if err == nil || err == http.ErrServerClosed {
+			log.Info("Shutting down.")
+			return
+		}
+		log.Error(err)
 	}()
 
-	err := s.ListenAndServe()
-	if err == nil || err == http.ErrServerClosed {
-		log.Info("Shutdown.")
-		return
+	// Block to wait for a signal
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM)
+	sig := <-sigs
+
+	// 30 sec is the readiness check timeout
+	deadline := time.Now().Add(30 * time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
+	ready = false
+
+	log.Info("Got signal ", sig)
+	err := s.Shutdown(ctx)
+	if err != nil {
+		log.Error(err)
 	}
-	log.Fatal(err)
 }
 
 func setupHandlers() *http.ServeMux {
@@ -228,7 +248,7 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
 	targetServices := strings.Split(os.Getenv("SMOKE_MINI_STS_LIST"), " ")
 	for i := len(targetServices) - 1; i >= 0; i-- {
-		if fmt.Sprintf("smoke-mini-%s-0", targetServices[i]) == os.Getenv("HOSTNAME") {
+		if podHost(targetServices[i]) == os.Getenv("HOSTNAME") {
 			targetServices = append(targetServices[:i], targetServices[i+1:]...)
 		}
 	}
@@ -238,7 +258,7 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 	errorCount := 0
 	for i := 0; i < len(targetServices); i++ {
 		if errorCount <= 2 {
-			resp, err := client.Get(fmt.Sprintf("http://smoke-mini-%s:8080/", targetServices[i]))
+			resp, err := client.Get(podURL(targetServices[i]))
 			if err != nil {
 				log.Error(err)
 				errorCount++
@@ -268,7 +288,7 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 	maxErrors := 2
 	for i := 0; i < targetsCount; i++ {
 		if errorCount <= maxErrors {
-			resp, err := client.Get("http://smoke-mini:8080/")
+			resp, err := client.Get(serviceURL)
 			if err != nil {
 				log.Error(err)
 				errorCount++

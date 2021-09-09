@@ -19,9 +19,11 @@ package checker
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -35,20 +37,48 @@ type SmokeMiniAvailable struct {
 	Path        string
 	DnsTimeout  time.Duration
 	HttpTimeout time.Duration
+	Logger      *log.Entry
 }
 
 func (s SmokeMiniAvailable) Checker() check.Checker {
+	lkp := &nameLookuper{
+		name:    "smoke-mini",
+		port:    "8080",
+		timeout: s.DnsTimeout,
+	}
+
+	// timouts are maintained in request context
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    5,
+			MaxConnsPerHost: 1,
+		},
+	}
+
 	return &smokeMiniChecker{
+		// dns
+		lookuper: lkp,
+
+		// http
 		path:        s.Path,
-		dnsTimeout:  s.DnsTimeout,
 		httpTimeout: s.HttpTimeout,
+		client:      client,
+
+		logger: s.Logger,
 	}
 }
 
+// smokeMiniChecker checks that at least one smoke-mini pod responds with status 200
 type smokeMiniChecker struct {
+	// dns
+	lookuper lookuper
+
+	// http
 	path        string
-	dnsTimeout  time.Duration
 	httpTimeout time.Duration
+	client      *http.Client
+
+	logger *log.Entry
 }
 
 func (c *smokeMiniChecker) BusyWith() string {
@@ -56,122 +86,197 @@ func (c *smokeMiniChecker) BusyWith() string {
 }
 
 func (c *smokeMiniChecker) Check() check.Error {
-	const hostname = "smoke-mini"
-
-	smokeIPs, found := lookupAndShuffleIPs(hostname, c.dnsTimeout)
-	if !found {
-		return check.ErrUnknown("no smoke IPs found")
+	ips, lookupErr := c.lookuper.Lookup()
+	if lookupErr != nil {
+		return check.ErrUnknown("failed to resolve smoke-mini IPs: %v", lookupErr)
 	}
 
-	var err check.Error
+	success := make(chan struct{})
+	failures := make(chan error)
 
-	util.SequentialDoWithTimer(
-		context.Background(),
-		c.httpTimeout,
-		smokeIPs,
-		func(ctx context.Context, idx int, item string) int {
-			_, status, reqerr := requestSmokeMiniEndpoint(ctx, item, c.path)
-			if reqerr != nil {
-				err = check.ErrFail("requesting smoke-mini '%s': %v", item, reqerr)
-				return 0
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithTimeout(context.Background(), c.httpTimeout)
+
+	wg.Add(len(ips))
+
+	go func(wg *sync.WaitGroup) {
+		// Sync requesting goroutines
+
+		logger := c.logger.WithField("role", "syncer")
+
+		logger.Debugf("waiting")
+		wg.Wait()
+
+		logger.Debugf("cancelling parent context")
+		cancel()
+	}(&wg)
+
+	for _, ip := range ips {
+		go func(wg *sync.WaitGroup, ip string) {
+			defer wg.Done()
+
+			// Wee need context per request, because among concurrent requests there
+			// should not be single shared cancelling.
+			rctx, rcancel := context.WithCancel(ctx)
+			defer rcancel()
+
+			logger := c.logger.WithField("ip", ip).WithField("role", "requester")
+			logger.Debugf("requesting")
+
+			err := c.request(rctx, ip)
+
+			logger.WithError(err).Debugf("got result")
+
+			select {
+			case <-rctx.Done():
+				logger.Debugf("cancelled")
+			default:
+				if err != nil {
+					logger.Debugf("sending failure")
+					failures <- err
+					return
+				}
+				logger.Debugf("sending success")
+				success <- struct{}{}
 			}
+		}(&wg, ip)
+	}
 
-			if status == http.StatusOK {
-				// Stop the loop
-				return 1
+	logger := c.logger.WithField("role", "collector")
+	errs := make([]error, 0)
+loop:
+	for {
+		select {
+		case <-success:
+			logger.Debugf("got success, cancelling parent context")
+			cancel()
+			return nil
+
+		case err := <-failures:
+			logger.Debugf("got failure")
+			errs = append(errs, err)
+
+		case <-ctx.Done():
+			logger.Debugf("parent context cancelled")
+			// Either success, or all requests finished, or the time is out
+			if err := ctx.Err(); err != nil {
+				logger.WithError(err).Debugf("parent context error")
+				errs = append(errs, err)
 			}
+			break loop
+		}
+	}
 
-			return 0
-		}, func(idx int, item string) {
-			// The last smokeIp is timed out, send fail result.
-			if idx == len(smokeIPs)-1 {
-				err = check.ErrFail("requesting smoke-mini %s timed out", c.path)
-			}
-		})
+	msgs := make([]string, len(errs))
+	for i, e := range errs {
+		msgs[i] = e.Error()
+	}
+	return check.ErrFail("failed requests to smoke-mini: %s", strings.Join(msgs, ", "))
+}
 
-	return err
+func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
+	u := url.URL{
+		Scheme: "http",
+		Host:   ip,
+		Path:   c.path,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	//nolint:bodyclose
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s reponded with %d", u.String(), res.StatusCode)
+	}
+
+	return nil
 }
 
 // DnsAvailable is a checker constructor and configurator
 type DnsAvailable struct {
 	Domain     string
 	DnsTimeout time.Duration
+	Logger     *log.Entry
 }
 
 func (d DnsAvailable) Checker() check.Checker {
+	lkp := &nameLookuper{
+		name:    d.Domain,
+		timeout: d.DnsTimeout,
+	}
 	return &dnsChecker{
-		domain:     d.Domain,
-		dnsTimeout: d.DnsTimeout,
+		domain:   d.Domain,
+		lookuper: lkp,
+		logger:   d.Logger,
 	}
 }
 
 type dnsChecker struct {
-	domain     string
-	dnsTimeout time.Duration
+	lookuper lookuper
+	domain   string
+	logger   *log.Entry
 }
 
-func (c dnsChecker) BusyWith() string {
+func (c *dnsChecker) BusyWith() string {
 	return "resolving " + c.domain
 }
 
-func (c dnsChecker) Check() check.Error {
-	_, found := lookupAndShuffleIPs(c.domain, c.dnsTimeout)
-	if !found {
+func (c *dnsChecker) Check() check.Error {
+	_, err := c.lookuper.Lookup()
+	if err != nil {
 		return check.ErrFail("cannot resolve %s", c.domain)
 	}
 	return nil
 }
 
-// lookupAndShuffleIPs resolves IPs with timeout. The resulting `ips` slice has at least on e IP or equal nil if none found.
-// At the same time `found` is true if at least one IP resolved, otherwise it is false.
-func lookupAndShuffleIPs(addr string, resolveTimeout time.Duration) (ips []string, found bool) {
-	ips, err := util.LookupIPsWithTimeout(addr, resolveTimeout)
+type lookuper interface {
+	Lookup() ([]string, error)
+}
+
+type nameLookuper struct {
+	name    string
+	port    string
+	timeout time.Duration
+}
+
+func (l *nameLookuper) Lookup() ([]string, error) {
+	ips, err := lookupAndShuffleIPs(l.name, l.timeout)
 	if err != nil {
-		log.Errorf("resolve '%s': %v", addr, err)
-		return nil, false
+		return ips, err
 	}
 
+	// append port to ips
+	if l.port != "" {
+		for i := range ips {
+			ips[i] += ":" + l.port
+		}
+	}
+
+	return ips, nil
+}
+
+// lookupAndShuffleIPs resolves IPs with timeout. It either returns nil and error, or non-empty
+// slice of IPs and nil error.
+func lookupAndShuffleIPs(name string, resolveTimeout time.Duration) ([]string, error) {
+	// lookup
+	ips, err := util.LookupIPs(name, resolveTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("resolve '%s': %v", name, err)
+	}
 	if len(ips) == 0 {
-		log.Errorf("resolve get 0 IPs for '%s'", addr)
-		return nil, false
+		return nil, fmt.Errorf("resolve get 0 IPs for '%s'", name)
 	}
 
-	// randomize ips
+	// shuffle
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(ips), func(i, j int) { ips[i], ips[j] = ips[j], ips[i] })
 
-	return ips, true
-}
-
-func requestSmokeMiniEndpoint(ctx context.Context, ip, path string) ([]byte, int, error) {
-	if path == "" {
-		path = "/"
-	}
-	smokeUrl := fmt.Sprintf("http://%s:8080%s", ip, path)
-
-	req, err := http.NewRequest(http.MethodGet, smokeUrl, nil)
-	if err != nil {
-		log.Errorf("Create GET request: %v", err)
-		return nil, 0, err
-	}
-	req = req.WithContext(ctx)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Debugf("Do GET request: %v", err)
-		return nil, 0, err
-	}
-
-	if resp == nil {
-		return nil, 0, nil
-	}
-
-	defer resp.Body.Close()
-
-	respData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Debugf("cannot read body: %v", err)
-		return nil, 0, nil
-	}
-	return respData, resp.StatusCode, nil
+	return ips, nil
 }

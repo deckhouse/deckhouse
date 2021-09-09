@@ -19,14 +19,18 @@ package probe
 import (
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
 )
 
-func initSynthetic(access kubernetes.Access) []runnerConfig {
+func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {
 	const (
 		groupName = "synthetic"
 	)
+
+	entry := logger.WithField("group", groupName)
 
 	return []runnerConfig{
 		{
@@ -38,6 +42,9 @@ func initSynthetic(access kubernetes.Access) []runnerConfig {
 				Path:        "/",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 2 * time.Second,
+				Logger: entry.
+					WithField("probe", "access").
+					WithField("checker", "SmokeMiniAvailable"),
 			},
 		}, {
 			group:  groupName,
@@ -45,9 +52,13 @@ func initSynthetic(access kubernetes.Access) []runnerConfig {
 			check:  "smoke",
 			period: 200 * time.Millisecond,
 			config: checker.SmokeMiniAvailable{
-				Path:        "/",
+				Path:        "/dns",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 2 * time.Second,
+				Logger: entry.
+					WithField("probe", "dns").
+					WithField("check", "smoke").
+					WithField("checker", "SmokeMiniAvailable"),
 			},
 		}, {
 			group:  groupName,
@@ -57,6 +68,10 @@ func initSynthetic(access kubernetes.Access) []runnerConfig {
 			config: checker.DnsAvailable{
 				Domain:     access.ClusterDomain(),
 				DnsTimeout: 2 * time.Second,
+				Logger: entry.
+					WithField("probe", "dns").
+					WithField("check", "internal").
+					WithField("checker", "DnsAvailable"),
 			},
 		}, {
 			group:  groupName,
@@ -67,6 +82,9 @@ func initSynthetic(access kubernetes.Access) []runnerConfig {
 				Path:        "/neighbor",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 4 * time.Second,
+				Logger: entry.
+					WithField("probe", "neighbor").
+					WithField("checker", "SmokeMiniAvailable"),
 			},
 		}, {
 			group:  groupName,
@@ -77,6 +95,9 @@ func initSynthetic(access kubernetes.Access) []runnerConfig {
 				Path:        "/neighbor-via-service",
 				DnsTimeout:  2 * time.Second,
 				HttpTimeout: 4 * time.Second,
+				Logger: entry.
+					WithField("probe", "service").
+					WithField("checker", "SmokeMiniAvailable"),
 			},
 		},
 	}
