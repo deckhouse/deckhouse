@@ -95,6 +95,14 @@ spec:
 
                           Regex capture groups are available.
                         type: string
+                tlsConfig:
+                  type: object
+                  description: TLS Config to use for remote write.
+                  properties:
+                    insecureSkipVerify:
+                      description: Disable target certificate validation.
+                      type: boolean
+                      x-doc-default: false
       additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string

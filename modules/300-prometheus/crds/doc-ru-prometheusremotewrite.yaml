@@ -54,6 +54,11 @@ spec:
                           Метка, в которую записывается результирующее значение при замене.
 
                           Поле является обезательным при `action: replace`.
+                tlsConfig:
+                  description: Параметры TLS.
+                  properties:
+                    insecureSkipVerify:
+                      description: Отключить проверку сертификата.
       additionalPrinterColumns: &additionalPrinterColumns
         - name: URL
           type: string

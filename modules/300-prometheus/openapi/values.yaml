@@ -180,6 +180,11 @@ properties:
                         type: array
                         items:
                           type: string
+                tlsConfig:
+                  type: object
+                  properties:
+                    insecureSkipVerify:
+                      type: boolean
         default: []
         x-examples:
           -
