@@ -3,11 +3,13 @@
 set -euf -o pipefail
 
 runtime () {
- kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME" | jq -r '.status.nodeInfo.containerRuntimeVersion | split(":")[0]'
+  # We use external binary instead of the option `--request-timeout 60s` because the option does not work in-cluster mode.
+  # ref: https://github.com/kubernetes/kubernetes/issues/49343/
+  timeout 60s kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME" | jq -r '.status.nodeInfo.containerRuntimeVersion | split(":")[0]'
 }
 
 evictions () {
-  kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME/proxy/configz" | jq -r '.kubeletconfig | {"evictionHard": .evictionHard, "evictionSoft": .evictionSoft}'
+  timeout 60s kubectl get --raw "/api/v1/nodes/$MY_NODE_NAME/proxy/configz" | jq -r '.kubeletconfig | {"evictionHard": .evictionHard, "evictionSoft": .evictionSoft}'
 }
 
 mountpoint () {
@@ -23,7 +25,7 @@ total_inodes () {
 }
 
 runtime_root_dir () {
-  case $(runtime) in
+  case $1 in
   docker)
     curl -sS --unix-sock /var/run/docker.sock http://system/info | jq -re '.DockerRootDir'
     ;;
@@ -61,9 +63,20 @@ normalize_to_pcnt () {
 }
 
 while true; do
+  runtime=$(runtime)
+  if [[ -z "$runtime" ]]; then
+    echo "Got empty runtime. Kubernetes API server is not accessible? Will try again in 60s."
+    sleep 60
+    continue
+  fi
   evictions=$(evictions)
+  if [[ -z "$evictions" ]]; then
+    echo "Got empty kubelet eviction parameters. Kubernetes API server is not accessible? Will try again in 60s."
+    sleep 60
+    continue
+  fi
   nodefs=$(kubelet_root_dir)
-  imagefs=$(runtime_root_dir)
+  imagefs=$(runtime_root_dir "$runtime")
   nodefs_mountpoint=$(mountpoint "$nodefs")
   imagefs_mountpoint=$(mountpoint "$imagefs")
   nodefs_bytes=$(total_bytes "$nodefs_mountpoint")
