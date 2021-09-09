@@ -141,6 +141,10 @@ spec:
     writeRelabelConfigs:
 {{ .spec.writeRelabelConfigs | toYaml | indent 4 }}
     {{- end }}
+    {{- if .spec.tlsConfig }}
+    tlsConfig:
+{{ .spec.tlsConfig | toYaml | indent 4 }}
+    {{- end }}
   {{- end }}
 {{- end }}
   additionalScrapeConfigs:
