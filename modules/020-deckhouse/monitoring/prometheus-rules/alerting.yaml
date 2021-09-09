@@ -11,11 +11,12 @@
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
       description: |
-        Deckhouse в кластере находится на кастомном бранче, а не на одном из каналов обновлений..
-        Deckhouse должен быть на одном из каналов обновлений: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`
-        Узнать, на каком канале обновлений сейчас находится deckhouse можно с помощью команды:
-        1. `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
+        Deckhouse is on a custom branch instead of one of the regular release channels.
 
-        Вам необходимо переключить кластер на один из каналов обновлений.
+        It is recommended that Deckhouse be subscribed to one of the following channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+
+        Use the command below to find out what release channel is currently in use: `kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r`
+
+        Subscribe the cluster to one of the regular release channels.
       summary: |
-        Deckhouse в кластере находится не на одном из каналов обновлений.
+        Deckhouse in the cluster is not subscribed to one of the regular release channels.
