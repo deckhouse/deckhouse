@@ -15,13 +15,19 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1584119273725,
+  "iteration": 1631024354828,
   "links": [],
   "panels": [
     {
       "columns": [],
       "datasource": "$ds_prometheus",
       "description": "Очень важный момент, в данной таблице показываются средние данные за весь выбранный период в dashboard. Из-за этого в ней может быть информация о Pod'ах, namespace'ах, которые были изменены, удалены за выбранный период",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "100%",
       "gridPos": {
         "h": 8,
@@ -31,7 +37,6 @@
       },
       "id": 4,
       "links": [],
-      "options": {},
       "pageSize": 50,
       "scroll": true,
       "showHeader": true,
@@ -489,6 +494,13 @@
       "datasource": "$ds_prometheus",
       "decimals": 0,
       "description": "Количество Pod'ов в каждом namespace",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -519,9 +531,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -601,6 +614,13 @@
       "datasource": "$ds_prometheus",
       "decimals": 0,
       "description": "Количество рестартов Pod'ов",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -631,9 +651,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -725,6 +746,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -753,9 +781,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -833,6 +862,13 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -861,9 +897,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -956,6 +993,13 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько CPU следует \"освободить\", сохранив при этом корректную работу сервиса.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -984,9 +1028,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1064,6 +1109,13 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU ниже реального потребления CPU. По факту, сколько ещё CPU нужно \"застолбить\", для корректной работы сервиса.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1092,9 +1144,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1172,6 +1225,13 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "Если на графике нет данных, значит не заданы ресурсы для контейнеров",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1202,9 +1262,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1220,15 +1281,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(sum by (namespace) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) / sum by (namespace) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))) * sum by (namespace) (kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=~\"$namespace\"})\n",
+          "expr": "sum by (namespace) ((sum by (namespace, pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) / sum by (namespace, pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))) * sum by (namespace, pod) (kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=~\"$namespace\"}))",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
           "refId": "A"
         },
         {
-          "expr": "sum ((rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) / sum by (namespace) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))) * sum by (namespace) (kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=~\"$namespace\"})",
+          "expr": "sum(sum by (namespace) ((sum by (namespace, pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4])) / sum by (namespace, pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=~\"$namespace\"}[$__interval_sx4]))) * sum by (namespace, pod) (kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=~\"$namespace\"})))",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "B"
@@ -10366,6 +10429,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -10394,9 +10464,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -10475,6 +10546,13 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -10503,9 +10581,10 @@
       "links": [],
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -10567,7 +10646,8 @@
           "intervalFactor": 1,
           "legendFormat": "Kmem",
           "refId": "E"
-        }      ],
+        }
+      ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
@@ -10616,13 +10696,21 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображаются запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько Memory следует \"освободить\", сохранив при этом корректную работу сервиса.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
         "y": 46
       },
+      "hiddenSeries": false,
       "id": 361,
       "legend": {
         "alignAsTable": false,
@@ -10641,8 +10729,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -10720,13 +10811,21 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображается запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
         "y": 46
       },
+      "hiddenSeries": false,
       "id": 387,
       "legend": {
         "alignAsTable": false,
@@ -10745,8 +10844,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -10887,7 +10989,8 @@
               "fill": 0,
               "linewidth": 2,
               "stack": false
-            },            {
+            },
+            {
               "alias": "VPA Target",
               "color": "#447ebc",
               "dashes": true,
@@ -13215,7 +13318,6 @@
               "linewidth": 2,
               "stack": false
             },
-
             {
               "alias": "VPA Target",
               "color": "#447ebc",
@@ -17447,6 +17549,12 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображены Network Recieve, за исключением Pod'ов в hostNetwork.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -17472,8 +17580,8 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -17551,6 +17659,12 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике отображены Network Transmit, за исключением Pod'ов в hostNetwork.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -17576,8 +17690,8 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -17668,6 +17782,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -17693,8 +17813,8 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -17771,6 +17891,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -17796,8 +17922,8 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -17889,6 +18015,12 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. ",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -17914,8 +18046,8 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -17995,6 +18127,12 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в Rook нет поддержки метрик, то на данных графиках не отображается информация о дисках, созданных Rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -18020,8 +18158,8 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -18101,6 +18239,12 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в Rook нет поддержки метрик, то на данных графиках не отображается информация о дисках, созданных Rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 8,
@@ -18126,8 +18270,8 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
       "percentage": false,
+      "pluginVersion": "7.4.2",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -18194,16 +18338,19 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 22,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
+          "selected": false,
           "text": "default",
           "value": "default"
         },
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -18219,20 +18366,28 @@
       {
         "allValue": ".*",
         "current": {
-          "text": "All",
+          "selected": true,
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kubernetes_build_info, node)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Node",
         "multi": true,
         "name": "node",
         "options": [],
-        "query": "label_values(kubernetes_build_info, node)",
+        "query": {
+          "query": "label_values(kubernetes_build_info, node)",
+          "refId": "main-node-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -18246,20 +18401,28 @@
       {
         "allValue": "",
         "current": {
-          "text": "All",
+          "selected": true,
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
         "multi": true,
         "name": "namespace",
         "options": [],
-        "query": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
+        "query": {
+          "query": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
+          "refId": "main-namespace-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
