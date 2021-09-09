@@ -16,12 +16,10 @@ package openstack
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/blang/semver"
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/apiversions"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
 var onlineResizeMinVersion = semVerMustParseTolerant("3.42")
@@ -36,22 +34,7 @@ func semVerMustParseTolerant(ver string) semver.Version {
 }
 
 func SupportsOnlineDiskResize() error {
-	opts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		return err
-	}
-
-	provider, err := openstack.AuthenticatedClient(opts)
-	if err != nil {
-		return err
-	}
-
-	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{
-		Region: os.Getenv("OS_REGION_NAME"),
-	})
-	if err != nil {
-		return err
-	}
+	client, err := clientconfig.NewServiceClient("volume", nil)
 
 	allPages, err := apiversions.List(client).AllPages()
 	if err != nil {

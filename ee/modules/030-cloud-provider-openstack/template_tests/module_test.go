@@ -222,7 +222,7 @@ tenant-name = "mytenantname"
 username = "myuser"
 password = "myPaSs"
 region = "myreg"
-ca-file = /etc/cloud-contoller-manager-config/ca.crt
+ca-file = /etc/config/ca.crt
 [Networking]
 public-network-name = "myextnetname"
 public-network-name = "myextnetname2"

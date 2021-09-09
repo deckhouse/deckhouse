@@ -19,25 +19,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumetypes"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
 func GetVolumeTypes() error {
-	opts, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		return err
-	}
-
-	provider, err := openstack.AuthenticatedClient(opts)
-	if err != nil {
-		return err
-	}
-
-	client, err := openstack.NewBlockStorageV3(provider, gophercloud.EndpointOpts{
-		Region: os.Getenv("OS_REGION_NAME"),
-	})
+	client, err := clientconfig.NewServiceClient("volume", nil)
 
 	if err != nil {
 		return err
