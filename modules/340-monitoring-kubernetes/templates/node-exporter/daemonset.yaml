@@ -99,6 +99,8 @@ spec:
           mountPath: /var/run/containerd/containerd.sock
         - name: crictl
           mountPath: /usr/local/bin/crictl
+        - name: kube
+          mountPath: /root/.kube
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | indent 12 }}
@@ -152,5 +154,8 @@ spec:
       - name: crictl
         hostPath:
           path: /usr/local/bin/crictl
+      - emptyDir:
+          medium: Memory
+        name: kube
       imagePullSecrets:
       - name: deckhouse-registry
