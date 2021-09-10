@@ -157,12 +157,16 @@ spec:
           mountPath: "/opt/dex-authenticator/tls"
           readOnly: true
         readinessProbe:
-          httpGet:
-            port: 8443
-            scheme: HTTPS
-            path: /ping
-          initialDelaySeconds: 1
+          exec:
+            command:
+            - curl
+            - -f
+            - --cacert
+            - /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            - https://dex.d8-user-authn/.well-known/openid-configuration
+          initialDelaySeconds: 5
           periodSeconds: 5
+          failureThreshold: 5
         livenessProbe:
           httpGet:
             port: 8443
