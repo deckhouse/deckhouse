@@ -108,7 +108,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__d8_machine_controller_manager_malfunctioning: "D8MachineControllerManagerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "pod"
-      summary: The machine-controller-manager module: too many restarts.
+      summary: The machine-controller-manager module restarts too often.
       description: |
         The number of restarts in the last hour: {{`{{ $value }}`}}.
 

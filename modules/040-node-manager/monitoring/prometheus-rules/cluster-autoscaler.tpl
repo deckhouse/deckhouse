@@ -129,7 +129,7 @@
       plk_markup_format: "markdown"
       plk_grouped_by__d8_cluster_autoscaler_malfunctioning: "D8ClusterAutoscalerMalfunctioning,tier=cluster,prometheus=deckhouse"
       plk_labels_as_annotations: "instance"
-      summary: Cluster-autoscaler: too many errors.
+      summary: Cluster-autoscaler issues too many errors.
       description: |
         Cluster-autoscaler's scaling attempt resulted in an error from the cloud provider.
 
