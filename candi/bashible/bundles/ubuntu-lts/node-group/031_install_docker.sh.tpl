@@ -54,8 +54,8 @@ if bb-apt-package? containerd.io && ! bb-apt-package? docker-ce ; then
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
-  bb-apt-remove containerd.io
-  rm -rf /var/lib/containerd/ /var/run/containerd /usr/local/bin/crictl /etc/containerd/config.toml /usr/local/bin/containerd /etc/systemd/system/containerd.service.d
+  bb-rp-remove containerd.io crictl containerd-werf-edition
+  rm -rf /var/lib/containerd/ /var/run/containerd /etc/containerd/config.toml /etc/systemd/system/containerd.service.d
   # Pod kubelet-eviction-thresholds-exporter in cri=Containerd mode mounts /var/run/docker.sock, /var/run/docker.sock will be a directory and newly installed docker won't run.
   rm -rf /var/run/docker.sock
   systemctl daemon-reload
@@ -99,7 +99,9 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 
   bb-deckhouse-get-disruptive-update-approval
-  bb-apt-install $desired_version_containerd
+
+  containerd_version="$(sed "s/=/:/" <<< "${desired_version_containerd}")-$(lsb_release -cs)"
+  bb-rp-install "${containerd_version}"
 fi
 
 should_install_docker=true
@@ -113,8 +115,6 @@ if [[ "$version_in_use" == "$desired_version_docker" ]]; then
 fi
 
 if [[ "$should_install_docker" == true ]]; then
-  desired_version_docker_cli="$(sed 's/docker-ce/docker-ce-cli/' <<< "$desired_version_docker")"
-
   if bb-apt-package? "$(echo $desired_version_docker | cut -f1 -d"=")"; then
     bb-flag-set there-was-docker-installed
   fi
@@ -122,7 +122,9 @@ if [[ "$should_install_docker" == true ]]; then
   bb-deckhouse-get-disruptive-update-approval
 
   bb-flag-set new-docker-installed
-  bb-apt-install $desired_version_docker $desired_version_docker_cli
+
+  docker_image="$(sed "s/[:~]/-/g" <<< "$desired_version_docker" | sed "s/docker-ce=/docker-ce:/")"
+  bb-rp-install "${docker_image}"
 fi
 
 {{- end }}

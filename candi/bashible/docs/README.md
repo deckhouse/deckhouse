@@ -63,7 +63,7 @@ Bashible consists of small bash scripts, that are called `steps`.
 ### How to render bashible bundle?
 Bundle compilation is possible with using `dhctl` tool.
 ```bash
-dhctl render bashible-bundle --config=/config.yaml
+dhctl config render bashible-bundle --config=/config.yaml
 ```
 
 Example for `config.yaml`:
@@ -73,6 +73,9 @@ kind: BashibleTemplateData
 bundle: ubuntu-lts
 provider: OpenStack
 runType: ClusterBootstrap
+registry:
+  host: registry.deckhouse.io
+  auth: "test:test"
 clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
@@ -96,16 +99,12 @@ nodeGroup:
   zones:
   - nova
 k8s:
-  '1.15':
-    patch: 12
-  '1.16':
-    patch: 15
-    cni_version: 0.8.6
-  '1.17':
-    patch: 17
-    cni_version: 0.8.7
-  '1.18':
-    patch: 15
   '1.19':
-    patch: 7  
+    patch: 10
+    bashible:
+      ubuntu:
+        '18.04':
+          containerd:
+            desiredVersion: "containerd.io=1.4.6-1"
+            allowedPattern: "containerd.io=1.[4]"
 ```

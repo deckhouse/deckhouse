@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-apt-install apt-transport-https
+# TODO remove this step in next release
+rm -f /etc/apt/sources.list.d/apt.kubernetes.io.list /etc/apt/sources.list.d/download.docker.com.list /etc/apt/sources.list.d/nginx.org.list
+# We will install jq from registry repo
+bb-apt-remove jq

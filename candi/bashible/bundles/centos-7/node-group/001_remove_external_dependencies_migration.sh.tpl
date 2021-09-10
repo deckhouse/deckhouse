@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if bb-is-ubuntu-version? 20.04 ; then
-  bb-apt-install "nfs-common=1:1.3.4-2.5ubuntu3.*"
-elif bb-is-ubuntu-version? 18.04 ; then
-  bb-apt-install "nfs-common=1:1.3.4-2.1ubuntu5.*"
-elif bb-is-ubuntu-version? 16.04 ; then
-  bb-apt-install "nfs-common=1:1.2.8-9ubuntu12.*"
-else
-  bb-log-error "Unsupported Ubuntu version"
-  exit 1
-fi
+# TODO remove this step in next release
+rm -f /etc/yum.repos.d/d8-docker-ce.repo /etc/yum.repos.d/d8-kubernetes.repo /etc/yum.repos.d/d8-nginx.repo
+# We will install jq from registry repo
+bb-yum-remove jq

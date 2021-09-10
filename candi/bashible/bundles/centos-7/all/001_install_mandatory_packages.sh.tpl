@@ -11,5 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+SYSTEM_PACKAGES="curl wget virt-what bash-completion lvm2 parted sudo yum-utils yum-plugin-versionlock nfs-utils tar xz device-mapper-persistent-data"
+KUBERNETES_DEPENDENCIES="conntrack ebtables ethtool iproute iptables socat util-linux"
+# yum-plugin-versionlock is needed for bb-yum-install
+bb-yum-install yum-plugin-versionlock
 
-bb-yum-install jq curl wget virt-what yum-plugin-versionlock inotify-tools bash-completion bash-completion-extras lvm2 parted
+bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
+
+bb-rp-install "jq:1.6" "bash-completion-extras:2.1-11-centos7" "inotify-tools:3.14-9-centos7"
+
+bb-yum-remove yum-cron

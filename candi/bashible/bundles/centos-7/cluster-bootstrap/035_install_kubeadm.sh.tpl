@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-kubernetes_version="{{ printf "%s.%s-0" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) }}"
+kubernetes_version="{{ printf "%s.%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) }}"
+kubernetes_major_version="{{ .kubernetesVersion | toString }}"
+kubernetes_cni_version="{{ index .k8s .kubernetesVersion "cni_version" | toString }}"
 
-bb-yum-install "kubeadm-$kubernetes_version"
+bb-rp-install "kubeadm:$kubernetes_version-centos7" "kubelet:$kubernetes_version-centos7" "kubectl:$kubernetes_version-centos7" "crictl:${kubernetes_major_version}" "kubernetes-cni:${kubernetes_cni_version}-centos7"

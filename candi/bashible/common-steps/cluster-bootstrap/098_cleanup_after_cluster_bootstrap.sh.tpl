@@ -13,4 +13,4 @@
 # limitations under the License.
 
 rm -rf /var/lib/bashible/kubeadm
-bb-yum-remove kubeadm
+bb-rp-remove kubeadm

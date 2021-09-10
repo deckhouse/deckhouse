@@ -39,7 +39,8 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
-  bb-apt-remove docker.io docker-ce docker-ce-cli containerd.io
+  bb-apt-remove docker.io
+  bb-rp-remove docker-ce containerd.io
   rm -rf /var/lib/docker/ /var/run/docker.sock /var/lib/containerd/ /etc/docker /etc/containerd/config.toml
   # Pod kubelet-eviction-thresholds-exporter in cri=Docker mode mounts /var/run/containerd/containerd.sock, /var/run/containerd/containerd.sock will be a directory and newly installed containerd won't run. Same thing with crictl.
   rm -rf /var/run/containerd /usr/local/bin/crictl
@@ -80,18 +81,12 @@ if [[ "$should_install_containerd" == true ]]; then
   fi
 
   bb-deckhouse-get-disruptive-update-approval
-  bb-apt-install $desired_version
 
-  VERSION="v{{ .kubernetesVersion }}.0"
-  curl -L https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-${VERSION}-linux-amd64.tar.gz --output crictl-${VERSION}-linux-amd64.tar.gz
-  tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
-  rm -f crictl-$VERSION-linux-amd64.tar.gz
+  containerd_version="$(sed "s/containerd.io=/containerd.io:/" <<< "${desired_version}")-$(lsb_release -cs)"
+  crictl_version="crictl:{{ .kubernetesVersion }}"
+  containerd_werf_edition_version="containerd-werf-edition:v1.4.6-werf-fix.2"
+  bb-rp-install "${containerd_version}" "${crictl_version}" "${containerd_werf_edition_version}"
 
-  VERSION_WERF_CONTAINERD="v1.4.6+werf-fix.2"
-  CHECKSUM_WERF_CONTAINERD="acafa9285a7b10b6e64c15fb271df1aba17c18898c4d85371d65c30ca7bb17ce"
-  curl -L https://github.com/flant/containerd/releases/download/$VERSION_WERF_CONTAINERD/containerd --output /usr/local/bin/containerd
-  echo "$CHECKSUM_WERF_CONTAINERD /usr/local/bin/containerd" | sha256sum -c
-  chmod +x /usr/local/bin/containerd
   mkdir -p /etc/systemd/system/containerd.service.d
   bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF
 [Service]

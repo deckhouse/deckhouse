@@ -34,6 +34,13 @@ apiVersions:
       runType:
         type: string
         enum: [ClusterBootstrap, ImageBuilding, Normal]
+      registry:
+        type: object
+        properties:
+          host:
+            type: string
+          auth:
+            type: string
       clusterBootstrap:
         type: object
         properties:

@@ -1,4 +1,3 @@
-{{- /*
 # Copyright 2021 Flant CJSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-*/}}
-#!/bin/bash
 
-{{- /*
-# Bashible framework uses jq for many operations, so jq must be installed in the first step of node bootstrap.
-# But there is no package jq in centos/redhat (the jq package is located in the epel repository).
-# We need to install jq from registry packages. But library for install packages requires jq.
-# To avoid this problem we use modified version of registry package helper functions, with python instead of jq.
-*/}}
-BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-BB_RP_PREFIX="deckhouse/binaries"
-{{- /*
+bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
+bb-var BB_RP_PREFIX "deckhouse/binaries"
+
 # check if image installed
 # bb-rp-is-installed? image tag
-*/}}
 bb-rp-is-installed?() {
   if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
     local INSTALLED_TAG=""
@@ -37,11 +27,10 @@ bb-rp-is-installed?() {
   fi
   return 1
 }
-{{- /*
+
 # get token from registry auth
 # bb-rp-get-token image
-*/}}
-bb-rp-get-token() {
+ bb-rp-get-token() {
   local AUTH=""
   local AUTH_HEADER=""
   local AUTH_REALM=""
@@ -54,42 +43,39 @@ bb-rp-get-token() {
   AUTH_HEADER="$(curl -sSLi "https://${REGISTRY}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
   AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
-  curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX}/${1}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
+  # shellcheck disable=SC2086
+  curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX}/${1}:pull" | jq -r '.token'
 }
-{{- /*
+
 # fetch manifest from registry and get list of digests
 # bb-rp-get-digests crictl v1.19
-*/}}
 bb-rp-get-digests() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token "${1}")"
   curl -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/manifests/${2}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); [sys.stdout.write(layer["digest"]) for layer in parsed["layers"]]'
+			"https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/manifests/${2}" | jq -r '.layers[].digest'
 }
-{{- /*
+
 # Fetch digest from registry
 # bb-rp-fetch-digest image digest outfile
-*/}}
 bb-rp-fetch-digest() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token "${1}")"
   curl -sSLH "Authorization: Bearer ${TOKEN}" "https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
 }
-{{- /*
+
 # download image digests, unpack them and run install script
 # bb-rp-install crictl:v1.19
-*/}}
 bb-rp-install() {
-  shopt -u failglob
-
   for IMAGE_WITH_TAG in "$@"; do
     local IMAGE=""
     local TAG=""
     IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_TAG}")"
     TAG="$(awk -F ":" '{print $2}' <<< "${IMAGE_WITH_TAG}")"
 
+    # shellcheck disable=SC2211
     if bb-rp-is-installed? "${IMAGE}" "${TAG}"; then
       continue
     fi
@@ -100,6 +86,7 @@ bb-rp-install() {
     local TMPDIR=""
     TMPDIR="$(mktemp -d)"
 
+    # Get digests
     for DIGEST in ${DIGESTS}; do
       local TMPFILE=""
       TMPFILE="$(mktemp -u)"
@@ -108,46 +95,39 @@ bb-rp-install() {
       rm -f "${TMPFILE}"
     done
 
+    bb-log-info "Installing package '${IMAGE_WITH_TAG}'"
+    # run install script
+    # shellcheck disable=SC2164
     pushd "${TMPDIR}" >/dev/null
     ./install
+     bb-exit-on-error "Failed to install package '${IMAGE_WITH_TAG}'"
     # shellcheck disable=SC2164
     popd >/dev/null
 
+    # Write tag to hold file
     mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}"
     echo "${TAG}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}/tag"
+    # copy install/uninstall scripts to hold dir
     cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}"
+    # cleanup
     rm -rf "${TMPDIR}"
+
+    bb-event-fire "bb-package-installed" "${IMAGE_WITH_TAG}"
   done
-
-  shopt -s failglob
 }
-{{- /*
-# Now we render bootstrap with helm and parse registry.path and registry.dockerCfg to get registry host and auth credentials by unclear way.
-# Later, we plan render bootstrap with bashible-apiserver and use registry.host and registry.auth variables.
-# https://github.com/deckhouse/deckhouse/issues/143
-*/}}
-{{- if .registry }}
-  {{- if .registry.host }}
-REGISTRY="{{ .registry.host }}"
-  {{- else }}
-REGISTRY="$(cut -d "/" -f1 <<< "{{ .registry.path }}")"
-  {{- end }}
-  {{- if .registry.auth }}
-REGISTRY_AUTH="{{ .registry.auth }}"
-  {{- else }}
-REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); print(parsed["auths"]["'${REGISTRY}'"]["auth"]);' | base64 -d)"
-  {{- end }}
-{{- end }}
 
-. /etc/os-release
-
-until yum install nc curl wget -y; do
-  echo "Error installing packages"
-  sleep 10
-done
-{{- /*
-# install jq from deckhouse registry
-*/}}
-bb-rp-install "jq:1.6"
-
-mkdir -p /var/lib/bashible/
+# run uninstall script from hold dir
+# bb-rp-remove crictl
+bb-rp-remove() {
+  for IMAGE in "$@"; do
+    if [[ -f "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${IMAGE:?}/uninstall" ]]; then
+      bb-log-info "Removing package '${IMAGE}'"
+      # shellcheck disable=SC1090
+      . "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${IMAGE:?}/uninstall"
+      bb-exit-on-error "Failed to remove package '${IMAGE}'"
+      # cleanup
+      rm -rf "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${IMAGE:?}"
+      bb-event-fire "bb-package-removed" "${IMAGE}"
+    fi
+  done
+}
