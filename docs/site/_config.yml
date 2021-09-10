@@ -38,7 +38,6 @@ exclude:
 - docker-compose.yml
 - modules_make_data
 - modules_menu_skip
-- cluster_local
 
 highlighter: rouge
 feedback_disable: true

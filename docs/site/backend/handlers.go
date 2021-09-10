@@ -242,7 +242,7 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
     justify-content: space-between;
 ">
 <div class="content">
-    <a href="/en"><img src="/images/logos/deckhouse-platform.svg" alt="Deckhouse"></a>
+    <a href="/en/"><img src="/images/logos/deckhouse-platform.svg" alt="Deckhouse"></a>
     <div style="margin-top: 100px; width: 100%; width: 80%; margin-left: 50px;">
         <h1 class="docs__title">Page not found</h1>
         <div class="post-content">

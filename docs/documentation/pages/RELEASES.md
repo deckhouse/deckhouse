@@ -17,6 +17,10 @@ toc: false
 We use <b>five release channels</b>.
 </div>
 
+<div id="releases__stale__block" class="releases__info releases__stale__warning" >
+  <strong>Note!</strong> The cluster does not use any update channel.
+</div>
+
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}
 

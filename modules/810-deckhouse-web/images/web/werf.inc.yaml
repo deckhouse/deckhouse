@@ -11,7 +11,7 @@ ansible:
       dest: /etc/nginx/nginx.conf
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}/static
-  add: /app/_site
+  add: /app/_site/documentation
   to: /usr/share/nginx/html
   before: setup
 ---
@@ -150,6 +150,7 @@ git:
     - '**/.werf'
     - '**/.helm'
     - documentation/pages/internal
+    - documentation/config
     - site/pages/*.html
     - site/_includes/footer.html
   stageDependencies:
