@@ -1,9 +1,12 @@
 package bashible
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,6 +73,11 @@ func (s Storage) getContext(name string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("cannot get context data: %v", err)
 	}
 
+	err = s.enrichContext(context)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get registry context data: %v", err)
+	}
+
 	return context, nil
 }
 
@@ -79,4 +87,53 @@ func (s Storage) New() runtime.Object {
 
 func (s Storage) NewList() runtime.Object {
 	return &bashible.BashibleList{}
+}
+
+func (s Storage) enrichContext(context map[string]interface{}) error {
+	// enrich context with registry path and dockerCfg
+	type dockerCfg struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+
+	var (
+		registryHost string
+		registryAuth string
+		dc           dockerCfg
+	)
+
+	registryMapContext, err := s.bashibleContext.Get("registry")
+	if err != nil {
+		return fmt.Errorf("cannot get registry context data: %v", err)
+	}
+
+	registryPath, ok := registryMapContext["path"]
+	if !ok {
+		return fmt.Errorf("cannot get path from registry context: %v", registryMapContext["path"])
+	}
+	registryHost = strings.Split(registryPath.(string), "/")[0]
+
+	if registryDockerCfgJSONBase64, ok := registryMapContext["dockerCfg"]; ok {
+		bytes, err := base64.StdEncoding.DecodeString(registryDockerCfgJSONBase64.(string))
+		if err != nil {
+			return fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+		}
+
+		err = json.Unmarshal(bytes, &dc)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+		}
+
+		if registry, ok := dc.Auths[registryHost]; ok {
+			bytes, err = base64.StdEncoding.DecodeString(registry.Auth)
+			if err != nil {
+				return fmt.Errorf("cannot base64 decode auth string: %v", err)
+			}
+			registryAuth = string(bytes)
+		}
+	}
+
+	context["registry"] = map[string]interface{}{"host": registryHost, "auth": registryAuth}
+	return nil
 }

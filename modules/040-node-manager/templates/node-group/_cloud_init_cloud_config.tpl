@@ -39,6 +39,7 @@ write_files:
 {{- $_ := set $bashible_bootstrap_script_tpl_context "Template" $context.Template }}
 {{- $_ := set $bashible_bootstrap_script_tpl_context "Files" $context.Files }}
 {{- $_ := set $bashible_bootstrap_script_tpl_context "allowedBundles" $context.Values.nodeManager.allowedBundles }}
+{{- $_ := set $bashible_bootstrap_script_tpl_context "registry" (dict "path" $context.Values.global.modulesImages.registry "dockerCfg" $context.Values.global.modulesImages.registryDockercfg) }}
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   encoding: b64

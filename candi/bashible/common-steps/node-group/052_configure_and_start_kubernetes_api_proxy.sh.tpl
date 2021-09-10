@@ -13,18 +13,9 @@
 # limitations under the License.
 
 {{- if eq .bundle "ubuntu-lts" }}
-# Migration 2020-05-20: Remove after release
-if bb-apt-hold? "libnginx-mod-stream" ; then
-  bb-apt-unhold "libnginx-mod-stream"
-  if [ -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ] ; then
-    if grep "load_module /usr/lib/nginx/modules/ngx_stream_module.so;" /etc/kubernetes/kubernetes-api-proxy/nginx.conf -q ; then
-      sed -i '/load_module \/usr\/lib\/nginx\/modules\/ngx_stream_module.so;/d' /etc/kubernetes/kubernetes-api-proxy/nginx.conf
-    fi
-  fi
-fi
-bb-apt-install "nginx=1.18.0-1~$(lsb_release -cs)"
+bb-rp-install "nginx:1.20.1-$(lsb_release -cs)"
 {{- else if eq .bundle "centos-7" }}
-bb-yum-install "nginx-1.18.0"
+bb-rp-install "nginx:1.20.1-centos7"
 {{- end }}
 
 # Disable default nginx vhost

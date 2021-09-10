@@ -70,7 +70,6 @@ function get_secret() {
   fi
 }
 
-
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -110,6 +109,8 @@ function get_bundle() {
 }
 
 function main() {
+  # IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
+  export PATH="/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
   export BUNDLE="{{ .bundle }}"
@@ -117,6 +118,10 @@ function main() {
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
+{{- if .registry }}
+  export REGISTRY="{{ .registry.host }}"
+  export REGISTRY_AUTH="{{ .registry.auth }}"
+{{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(kubectl_exec get node $(hostname -s) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then

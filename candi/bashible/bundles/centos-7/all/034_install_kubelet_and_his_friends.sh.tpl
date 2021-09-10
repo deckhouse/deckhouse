@@ -12,21 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-kubernetes_version="{{ printf "%s.%s-0" (.kubernetesVersion | toString ) (index .k8s .kubernetesVersion "patch" | toString) }}"
-kubernetes_cni_version="{{ printf "%s-0" (index .k8s .kubernetesVersion "cni_version" | toString) }}"
+kubernetes_version="{{ printf "%s.%s" (.kubernetesVersion | toString ) (index .k8s .kubernetesVersion "patch" | toString) }}"
+kubernetes_cni_version="{{ index .k8s .kubernetesVersion "cni_version" | toString }}"
 
-if rpm -q kubelet >/dev/null; then
-  kubernetes_current_version="$(rpm -q kubelet | sed 's/-/ /' | sed 's/\.x86_64//' | awk '{print $2}')"
-  if grep "^1.15" <<< "$kubernetes_version" >/dev/null && grep "^1.16" <<< "$kubernetes_current_version" >/dev/null; then
-    bb-deckhouse-get-disruptive-update-approval
-  fi
-  if grep "^1.16" <<< "$kubernetes_version" >/dev/null && grep "^1.15" <<< "$kubernetes_current_version" >/dev/null; then
-    bb-deckhouse-get-disruptive-update-approval
-  fi
-fi
+bb-rp-remove kubeadm
 
-bb-yum-remove kubeadm
-bb-yum-install "kubelet-$kubernetes_version" "kubectl-$kubernetes_version" "kubernetes-cni-$kubernetes_cni_version"
+bb-rp-install "kubernetes-cni:${kubernetes_cni_version}-centos7" "kubelet:${kubernetes_version}-centos7" "kubectl:${kubernetes_version}-centos7"
 
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]] && systemctl is-active -q kubelet; then
   # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations

@@ -113,3 +113,6 @@ data:
 {{- end }}
     versionMap:
 {{ .Files.Get "candi/version_map.yml" | indent 6 }}
+    registry:
+      path: {{ $.Values.global.modulesImages.registry }}
+      dockerCfg: {{ $.Values.global.modulesImages.registryDockercfg }}

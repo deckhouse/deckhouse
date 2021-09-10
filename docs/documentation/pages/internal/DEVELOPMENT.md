@@ -861,4 +861,94 @@ docker exec -ti deckhouse-testing bash
 Minor upgrade of Deckhouse-supported Kubernetes versions
 ------------------------------------------------------
 
-When new patch versions of [Kubernetes](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) are released, you need to update versions contained in the [version_map.yml](/candi/version_map.yml) file.
+When new patch versions of [Kubernetes](https://github.com/kubernetes/kubernetes/tree/master/CHANGELOG) are released, we need to update versions contained in the [version_map.yml](/candi/version_map.yml) file and
+run [additional scripts to build and push registry package images](https://github.com/deckhouse/deckhouse/candi/tools/registrypackages).
+
+Bashible tips
+------------------------------------------------------
+
+## Install software from our registry.
+Installing packages from third-party repositories (for example, epel) in bashible steps forbidden.
+If we need to install additional software, we **must** install it from original distro repository or from our registry.
+
+Bashible supports installing software from registry images, but we need to prepare special images.
+
+#### Example
+We need to install jq binary to nodes.
+Let's prepare image.
+Download jq binary:
+```shell
+mkdir package
+cd package
+curl -sL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 --output jq && chmod +x jq
+cd ..
+```
+Prepare install and uninstall scripts:
+```shell
+cat <<EOF > package/install
+#!/bin/bash
+set -Eeo pipefail
+cp jq /usr/local/bin
+EOF
+chmod +x package/install
+
+cat <<EOF > package/uninstall
+#!/bin/bash
+set -Eeo pipefail
+rm -f /usr/local/bin/jq
+EOF
+chmod +x package/uninstall
+```
+Prepare Dockerfile:
+```dockerfile
+cat <<EOF > Dockerfile
+FROM scratch
+COPY ./package/* /
+EOF
+```
+Build Docker image:
+```shell
+docker build -t ${REGISTRY_HOST}/deckhouse/binaries/jq:1.6 .
+```
+Push image to repository:
+```shell
+docker push -t ${REGISTRY_HOST}/deckhouse/binaries/jq:1.6
+```
+* ```${REGISTRY_HOST}``` - docker registry, where we push all deckhouse images. 
+* ```deckhouse/binaries``` - hardcoded path to images.
+
+To install this image in bashible script we must use special helper function:
+```shell
+bb-rp-install "jq:1.6"
+```
+To uninstall:
+```shell
+bb-rp-remove "jq"
+```
+
+Helper function ```bb-rp-install``` downloads image and unpacks it into temporary dir, then run install script, then save install/uninstall scripts with image tag to the special
+hold directory ```/var/cache/registrypackages```.
+
+Helper function ```bb-rb-remove``` executes uninstall script from ```/var/cache/registrypackages/{IMAGE}``` and
+removes dir ```/var/cache/registrypackages/{IMAGE}```.
+
+If we need to install some deb/rpm packages, we pack them to image and write more complex install/uninstall scripts:
+```shell
+cat <<EOF > package/install
+#!/bin/bash
+set -Eeo pipefail
+dpkg -i -E nginx_1.20.1-1~bionic_amd64.deb
+apt-mark hold nginx
+EOF
+chmod +x package/install
+
+cat <<EOF > package/uninstall
+#!/bin/bash
+set -Eeo pipefail
+apt-mark unhold nginx
+dpkg -r nginx
+EOF
+chmod +x package/uninstall
+```
+
+[Additional scripts to build and push registry package images](https://github.com/deckhouse/deckhouse/candi/tools/registrypackages).

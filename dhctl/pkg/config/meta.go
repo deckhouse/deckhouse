@@ -15,6 +15,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -320,6 +321,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
+	registryData, err := m.parseRegistryData()
+	if err != nil {
+		return nil, err
+	}
+
 	configForBashibleBundleTemplate := m.VersionMap
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
 	configForBashibleBundleTemplate["bundle"] = bundle
@@ -331,6 +337,8 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	if data["packagesProxy"] != nil {
 		configForBashibleBundleTemplate["packagesProxy"] = data["packagesProxy"]
 	}
+	configForBashibleBundleTemplate["registry"] = registryData
+
 	return configForBashibleBundleTemplate, nil
 }
 
@@ -433,6 +441,42 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	}
 	m.VersionMap = versionMap
 	return nil
+}
+
+func (m *MetaConfig) parseRegistryData() (map[string]interface{}, error) {
+	type dockerCfg struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+
+	var (
+		registryHost string
+		registryAuth string
+		dc           dockerCfg
+	)
+
+	registryHost = strings.Split(m.DeckhouseConfig.ImagesRepo, "/")[0]
+
+	bytes, err := base64.StdEncoding.DecodeString(m.DeckhouseConfig.RegistryDockerCfg)
+	if err != nil {
+		return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+	}
+
+	err = json.Unmarshal(bytes, &dc)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+	}
+
+	if registry, ok := dc.Auths[registryHost]; ok {
+		bytes, err = base64.StdEncoding.DecodeString(registry.Auth)
+		if err != nil {
+			return nil, fmt.Errorf("cannot base64 decode auth string: %v", err)
+		}
+		registryAuth = string(bytes)
+	}
+
+	return map[string]interface{}{"host": registryHost, "auth": registryAuth}, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {
