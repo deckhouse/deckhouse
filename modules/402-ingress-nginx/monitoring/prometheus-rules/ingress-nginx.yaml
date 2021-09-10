@@ -78,7 +78,7 @@
         The `nginx-ingress` module has been deprecated and is no longer supported.
 
         Use the new `ingress-nginx` module instead:
-        * Carefully study the [documentation]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "deckhouse") }}/modules/402-ingress-nginx/) and choose the suitable Inlet;
+        * Carefully study the [documentation](https://deckhouse.io/en/documentation/modules/402-ingress-nginx/) and choose the suitable Inlet;
         * Make sure that `rewrite-target-migration` (rwr) is disabled in the cluster;
         * After the migration is complete, disable the `nginxIngress` module in Deckhouse ConfigMap (`nginxIngressEnabled: "false"`).
       summary: |
