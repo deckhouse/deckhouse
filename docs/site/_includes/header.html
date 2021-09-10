@@ -4,9 +4,10 @@
   <header class="header">
     <div class="header__content container">
       <div class="header__logo">
-        <a href="/{{ page.lang }}">
-          <img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse" />
-        </a>
+        <a href="/{{ page.lang }}/"><img src="{{ site.baseurl }}/images/logos/deckhouse-platform.svg" alt="Deckhouse" /></a>
+        {%- if site.mode == 'local' %}
+        <span class='updatechannel__content disable'>&nbsp;</span>
+        {%- endif %}
       </div>
       <ul class="header__navigation">
           {% for entry in topnav %}

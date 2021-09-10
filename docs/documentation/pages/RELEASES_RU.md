@@ -18,8 +18,9 @@ lang: ru
 Чтобы покрыть самые частые случаи организации окружений, а также с целью повысить качество самого Deckhouse, мы используем <b>пять каналов обновлений</b>.
 </div>
 
-
-
+<div id="releases__stale__block" class="releases__info releases__stale__warning" >
+  <strong>Внимание!</strong> В этом кластере не используется какой-либо канал обновлений.
+</div>
 
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}

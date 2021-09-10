@@ -132,6 +132,7 @@ git:
     - '**/.werf'
     - '**/.helm'
     - documentation/pages/internal
+    - documentation/config
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'

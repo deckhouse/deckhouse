@@ -14,29 +14,6 @@ document.addEventListener("DOMContentLoaded", function() {
   if (window.anchors_disabled != true) {
     anchors.add('h2,h3,h4,h5');
   }
-
-  $.getJSON('/config/data.json', {_: new Date().getTime()}).done(function (resp) {
-    let deckhouseVersionInfo = "unknown";
-    if (resp && resp['channel']) {
-      deckhouseVersionInfo = resp['channel'];
-      $(".releases__menu-item.releases__menu--channel--"+resp['channel']).addClass("releases__menu-item-block-active");
-      $(".releases__menu-item-title.releases__menu--channel--"+resp['channel']).addClass("releases__menu-item-title-active");
-      var update_channels_list = ['alpha','beta','early-access','stable','rock-solid'];
-      if (update_channels_list.indexOf(resp['channel']) < 0 ) {
-        $("#releases__stale__block").css({ display: "block" });
-      } else {
-        $("#releases__stale__block").css({display: "none"});
-        if ( resp && resp['version'] && (resp['version'] != "dev" && resp['version'] != "dev" ) )  {
-          deckhouseVersionInfo = deckhouseVersionInfo + ' (' + resp['version'] + ')';
-        };
-      };
-    } else {
-      console.log('UpdateChannel is not defined.');
-    };
-    $(".updatechannel__content").text(deckhouseVersionInfo);
-    $(".updatechannel__content").removeClass("disable");
-  });
-
 });
 
 $( document ).ready(function() {

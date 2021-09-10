@@ -8,6 +8,9 @@
     </script>
   {%- endif %}
   {% include head.html mode='documentation' %}
+  {%- if site.mode == 'local' %}
+  {% include head-local.html %}
+  {%- endif %}
   <!--#include virtual="/includes/head-site.html" -->
 </head>
 
