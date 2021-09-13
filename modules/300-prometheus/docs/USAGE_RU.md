@@ -59,6 +59,7 @@ spec:
 ## Подключение Prometheus к сторонней Grafana
 
 У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Всё что нужно - создать дополнительный `Ingress`-ресурс.
+> В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
