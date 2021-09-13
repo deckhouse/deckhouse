@@ -16,7 +16,11 @@
 
 <body>
   <div class="content">
-    <!--#include virtual="/{{ page.lang }}/includes/header.html" -->
+    {%- if site.mode == 'local' %}
+    {% include header.html %}
+    {%- else %}
+     <!--#include virtual="/{{ page.lang }}/includes/header.html" -->
+    {%- endif %}
     {{ content }}
   </div>
   <!--#include virtual="/{{ page.lang }}/includes/footer.html" -->

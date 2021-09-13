@@ -110,7 +110,7 @@ ansible:
     - copy:
         content: |
 {{ .Files.Get "modules/810-deckhouse-web/images/web/site/_data/topnav.yml" | indent 10 }}
-        dest: /srv/jekyll-data/site/_data/topnav.yml
+        dest: /srv/jekyll-data/documentation/_data/topnav.yml
     - copy:
         content: |
 {{ .Files.Get "modules/810-deckhouse-web/images/web/site/_includes/footer.html" | indent 10 }}
