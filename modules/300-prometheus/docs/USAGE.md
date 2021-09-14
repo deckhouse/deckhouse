@@ -59,6 +59,7 @@ spec:
 ## Connecting Prometheus to an external Grafana instance
 
 Each `ingress-nginx-controller` has certificates that can be used to connect to Prometheus. All you need is to create an additional `Ingress` resource.
+> For the example below, it is presumed that Secret `example-com-tls` already exist in namespace d8-monitoring.
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
