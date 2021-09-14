@@ -1,3 +1,5 @@
+// +build validation
+
 /*
 Copyright 2021 Flant CJSC
 
@@ -25,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOpenAPIValidation(t *testing.T) {
+func TestValidationOpenAPI(t *testing.T) {
 	apiFiles, err := GetOpenAPIYAMLFiles(deckhousePath)
 	require.NoError(t, err)
 

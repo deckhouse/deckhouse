@@ -41,13 +41,8 @@ Matrix Tests:
   tags:
     - deckhouse
 
-Hooks Configuration Tests:
-  extends: .Hooks Configuration Tests template
-  tags:
-    - deckhouse
-
-OpenAPI Validation:
-  extends: .OpenAPI validation template
+Validators:
+  extends: .Go Validators template
   tags:
     - deckhouse
 
@@ -57,8 +52,7 @@ OpenAPI Validation:
     - deckhouse
   needs:
     - "Matrix Tests"
-    - "Hooks Configuration Tests"
-    - "OpenAPI Validation"
+    - "Validators"
     - "Build"
     - "Build Modules Images"
     - "Go Generate"
