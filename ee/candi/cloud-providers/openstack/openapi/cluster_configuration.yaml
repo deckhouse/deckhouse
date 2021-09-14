@@ -142,6 +142,7 @@ apiVersions:
               description: The number of nodes to create.
               x-doc-required: true
             nodeTemplate:
+              additionalProperties: false
               description: Parameters of Node objects in Kubernetes to add after registering the node.
               properties:
                 labels:
@@ -216,8 +217,6 @@ apiVersions:
                   type: string
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
-
-                    **By default:** the value from `OpenStackCloudDiscoveryData` is used.
                   x-doc-required: true
                 additionalNetworks:
                   type: array
@@ -225,8 +224,6 @@ apiVersions:
                     type: string
                   description: |
                     Paths to networks that VirtualMachines' secondary NICs will connect to.
-
-                    **By default:** the value from `OpenStackCloudDiscoveryData` is used.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
