@@ -96,6 +96,13 @@ ansible:
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
+    - name: "Convert public documentation links to internal relative"
+      shell: |
+        grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
+          xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
     - copy:
         content: |
 {{ .Files.Get "modules/810-deckhouse-web/images/web/_config.yml" | indent 10 }}
