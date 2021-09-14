@@ -36,6 +36,8 @@ spec:
       labels:
         app: madison-proxy
         madison-backend: {{ . }}
+      annotations:
+        checksum/key: {{ include (print $.Template.BasePath "/madison/secret.yaml") $ | sha256sum }}
     spec:
 {{- include "helm_lib_node_selector" (tuple $ "monitoring") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple $ "monitoring") | indent 6 }}
