@@ -42,7 +42,7 @@ spec:
 ## An example for AWS (Network Load Balancer), Ingress nodes are not present in all zones
 
 In this particular case, you need to create an annotation with all the subnet IDs where Listeners must be created. The subnets must correspond to the zones where the Ingress nodes are located.
-You can get the list of subnets for a specific installation using the following command: `kubectl -n d8-system exec  deckhouse-94c79d48-lxmj5 -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
+You can get the list of subnets for a specific installation using the following command: `kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
 
 **Caution!** Note that attaching an annotation to a running Service will not work; you will need to recreate it.
 
