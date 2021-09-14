@@ -54,6 +54,12 @@ spec:
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
           - "--acme-http01-solver-image={{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.certManagerAcmeSolver }}"
+{{- if (hasKey $.Values.global.modules "https") }}
+{{- if eq $.Values.global.modules.https.mode "CertManager" }}
+          - --default-issuer-kind=ClusterIssuer
+          - --default-issuer-name={{ $.Values.global.modules.https.certManager.clusterIssuerName }}
+{{- end }}
+{{- end }}
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
