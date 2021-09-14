@@ -1,4 +1,4 @@
-p---
+---
 title: "The monitoring-ping module"
 ---
 

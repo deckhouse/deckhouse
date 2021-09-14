@@ -543,7 +543,9 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/340-monitoring-kubernetes/configuration.html
-            - title: Мониторинг control plane
+            - title:
+                ru: Мониторинг control plane
+                en: Control plane monitoring
               folders:
                 - title:
                     ru: Описание
