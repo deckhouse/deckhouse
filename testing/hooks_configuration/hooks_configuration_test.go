@@ -1,3 +1,5 @@
+// +build validation
+
 /*
 Copyright 2021 Flant CJSC
 
@@ -23,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHooksConfiguration(t *testing.T) {
+func TestValidationHooksConfiguration(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }

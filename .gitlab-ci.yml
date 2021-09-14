@@ -242,14 +242,8 @@ Cloud layouts Tests Static for containerd (scheduled):
   when: always
   needs: *needs
 
-Hooks Configuration Tests:
-  extends: .Hooks Configuration Tests template
-  tags:
-    - werf-distributed
-  needs: *needs
-
-OpenAPI Validation:
-  extends: .OpenAPI validation template
+Validators:
+  extends: .Go Validators template
   tags:
     - werf-distributed
   needs: *needs
@@ -279,8 +273,7 @@ Copyright Validation:
     - git push --force $(echo ${CI_REPOSITORY_URL} | sed -r "s/^(.+gitlab-ci-token:).+(\@.+)$/\1${REGISTRY_CLEANER_TOKEN}\2/") ${CI_JOB_NAME}
   needs:
     - "Matrix Tests"
-    - "Hooks Configuration Tests"
-    - "OpenAPI Validation"
+    - "Validators"
     - "Tests"
     - "Build CE"
     - "Build EE"
