@@ -1,6 +1,7 @@
 istio:
   auth: {}
   tlsMode: "Off" # MutualPermissive Mutual
+  outboundTrafficPolicyMode: AllowAny
   sidecar: {}
   federation:
     ingressGateway:
