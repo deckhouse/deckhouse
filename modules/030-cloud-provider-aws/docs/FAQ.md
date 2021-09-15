@@ -64,7 +64,7 @@ There are two possible cases:
   * Manually run a bastion in the <prefix>-public-0 subnet;
   * Continue the installation by specifying the bastion: `dhctl bootstrap --ssh-bastion...`
 
-## Adding CloudStatic nodes to a cluster
+## Adding CloudStatic nodes to the cluster
 
 To add a pre-created instance to the cluster, you need:
   * Attach a security group `<prefix>-node`
@@ -86,3 +86,11 @@ To add a pre-created instance to the cluster, you need:
       ```shell
       kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
       ```
+
+## How to increase the size of a volume?
+
+* Set the new size in the corresponding PersistentVolumeClaim resource, in the `spec.resources.requests.storage` parameter.
+* The progress of the process can be observed in events using the command `kubectl describe pvc`.
+* The operation is fully automatic and takes up to one minute. No further action is required.
+
+> ℹ️ After modifying a volume, you must wait at least six hours and ensure that the volume is in the in-use or available state before you can modify the same volume. This is sometimes referred to as a cooldown period. You can find details in the [official documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).

@@ -2,7 +2,7 @@ variables:
   TF_VERSION: 0.13.4
   TF_AWS_NAMESPACE: hashicorp
   TF_AWS_TYPE: aws
-  TF_AWS_VERSION: 3.6.0
+  TF_AWS_VERSION: 3.25.0
   TF_AZURE_NAMESPACE: hashicorp
   TF_AZURE_TYPE: azurerm
   TF_AZURE_VERSION: 2.36.0

@@ -86,3 +86,11 @@ IPv4 CIDR у обоих VPC должен различаться.
     ```shell
     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix
     ```
+
+## Как увеличить размер volume в кластере?
+
+* Задать новый размер в соответствующем ресурсе PersistentVolumeClaim, в параметре `spec.resources.requests.storage`.
+* За ходом процесса можно наблюдать в events через команду `kubectl describe pvc`.
+* Операция проходит полностью автоматически, и занимает до одной минуты. Никаких дополнительных действий не требуется. 
+
+> ℹ️ После изменения volume вы должны подождать не менее шести часов и убедиться, что том находится в состоянии `in-use` или `available`, прежде чем вы сможете изменить тот же volume еще раз. Подробности вы можете найти в [официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
