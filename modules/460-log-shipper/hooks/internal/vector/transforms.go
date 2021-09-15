@@ -153,6 +153,118 @@ end
 	return transforms
 }
 
+// Create transforms from filter
+func CreateTransformsFromFilter(filters []v1alpha1.LogFilter) (transforms []impl.LogTransform, err error) {
+	transforms = make([]impl.LogTransform, 0)
+
+	for _, filter := range filters {
+		switch filter.Operator {
+		case v1alpha1.LogFilterOpExists:
+			transforms = append(transforms, &DynamicTransform{
+				CommonTransform: CommonTransform{
+					Type: "filter",
+				},
+				DynamicArgsMap: map[string]interface{}{
+					"condition": fmt.Sprintf("exists(.data.%s)", filter.Field),
+				},
+			})
+		case v1alpha1.LogFilterOpDoesNotExist:
+			transforms = append(transforms, &DynamicTransform{
+				CommonTransform: CommonTransform{
+					Type: "filter",
+				},
+				DynamicArgsMap: map[string]interface{}{
+					"condition": fmt.Sprintf("!exists(.data.%s)", filter.Field),
+				},
+			})
+		case v1alpha1.LogFilterOpIn:
+			valuesAsString, err := json.Marshal(filter.Values)
+			if err != nil {
+				return nil, err
+			}
+			transforms = append(transforms, &DynamicTransform{
+				CommonTransform: CommonTransform{
+					Type: "filter",
+				},
+				DynamicArgsMap: map[string]interface{}{
+					"condition": fmt.Sprintf(`if is_boolean(.data.%s) || is_float(.data.%s)
+ { data, err = to_string(.data.%s)
+ if err != null {
+ false
+ } else {
+ includes(%s, data)
+ } }
+ else
+ {
+ includes(%s, .data.%s)
+ }`, filter.Field, filter.Field, filter.Field, valuesAsString, valuesAsString, filter.Field),
+				},
+			})
+		case v1alpha1.LogFilterOpNotIn:
+			valuesAsString, err := json.Marshal(filter.Values)
+			if err != nil {
+				return nil, err
+			}
+			transforms = append(transforms, &DynamicTransform{
+				CommonTransform: CommonTransform{
+					Type: "filter",
+				},
+				DynamicArgsMap: map[string]interface{}{
+					"condition": fmt.Sprintf(`if is_boolean(.data.%s) || is_float(.data.%s)
+ { data, err = to_string(.data.%s)
+ if err != null {
+ true
+ } else {
+ !includes(%s, data)
+ } } else {
+ !includes(%s, .data.%s)
+ }`, filter.Field, filter.Field, filter.Field, valuesAsString, valuesAsString, filter.Field),
+				},
+			})
+		case v1alpha1.LogFilterOpRegex:
+			regexps := make([]string, 0)
+			for _, regexp := range filter.Values {
+				regexps = append(regexps, fmt.Sprintf("match!(.data.%s, r'%s')", filter.Field, regexp))
+			}
+			transforms = append(transforms, &DynamicTransform{
+				CommonTransform: CommonTransform{
+					Type: "filter",
+				},
+				DynamicArgsMap: map[string]interface{}{
+					"condition": strings.Join(regexps, " || "),
+				},
+			})
+		case v1alpha1.LogFilterOpNotRegex:
+			regexps := make([]string, 0)
+			for _, regexp := range filter.Values {
+				regexps = append(regexps, fmt.Sprintf(`{ matched, err = match(.data.%s, r'%s')
+ if err != null { 
+ true
+ } else {
+ !matched
+ }}`, filter.Field, regexp))
+			}
+			transforms = append(transforms, &DynamicTransform{
+				CommonTransform: CommonTransform{
+					Type: "filter",
+				},
+				DynamicArgsMap: map[string]interface{}{
+					"condition": fmt.Sprintf(`if exists(.data.%s) && is_string(.data.%s)
+ { 
+ %s
+ } else {
+ true
+ }`, filter.Field, filter.Field, strings.Join(regexps, " && ")),
+				},
+			})
+		default:
+			continue
+		}
+	}
+
+	return
+}
+
 func BuildTransformsFromMapSlice(inputName string, trans []impl.LogTransform) ([]impl.LogTransform, error) {
 
 	prevInput := inputName

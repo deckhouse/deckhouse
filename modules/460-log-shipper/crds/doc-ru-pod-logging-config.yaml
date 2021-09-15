@@ -1,88 +1,46 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: podloggingconfigs.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: log-shipper
 spec:
-  group: deckhouse.io
-  scope: Namespaced
-  names:
-    plural: podloggingconfigs
-    singular: podloggingconfig
-    kind: PodLoggingConfig
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
-          required: ["spec"]
           description: |
             CustomResource для описания источника логов в log-pipeline.
 
-            Каждый CR `PodLoggingConfig` описывает правила сбора логов из указанного namespace.
+            Каждый CustomResource `PodLoggingConfig` описывает правила сбора логов из указанного Namespace.
           properties:
             spec:
-              type: object
-              required:
-                - clusterDestinationRefs
               properties:
                 labelSelector:
-                  type: object
                   description: |
                     Настройка `labelSelector` позволяет задать фильтр по Pod Labels.
+
                     Подробнее про выражения можно узнать в [документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
-                  anyOf:
-                    - required:
-                        - matchLabels
-                    - required:
-                        - matchExpressions
                   properties:
                     matchLabels:
-                      type: object
-                      description: Список label, которые должен иметь pod
-                      example: { "foo": "bar", "baz": "whooo" }
-                      additionalProperties:
-                        type: string
+                      description: Список label, которые должен иметь Pod.
                     matchExpressions:
-                      type: array
                       items:
-                        type: object
-                        description: Список выражений для label, которые должн иметь pod
-                        example:
-                          {
-                            "matchExpressions":
-                              [
-                                {
-                                  "key": "tier",
-                                  "operator": "In",
-                                  "values": ["production", "staging"],
-                                },
-                              ],
-                          }
-                        required:
-                          - key
-                          - operator
-                        properties:
-                          key:
-                            type: string
-                          operator:
-                            type: string
-                            enum:
-                              - In
-                              - NotIn
-                              - Exists
-                              - DoesNotExist
-                          values:
-                            type: array
-                            items:
-                              type: string
-                clusterDestinationRefs:
-                  type: array
-                  description: Список бэкендов хранения (CRD ClusterLogDestination), в которые будет отправлено сообщение.
+                        description: Список выражений для label, которые должен иметь Pod.
+                logFilter:
+                  description: |
+                    Список фильтров для логов.
+                    Только логи, подпавшие под правила, будут сохранены в хранилище.
                   items:
-                    type: string
+                    properties:
+                      field:
+                        description: Имя поля для фильтрации.
+                      operator:
+                        description: |
+                          Оператор, который можно применить для фильтрации:
+                          * Оператор `In` ищет сроку или элемент в массиве
+                          * Оператор `NotIn` является инверсивной оператора `In`
+                          * Оператор `Regex` пытается проверить строку в поле c использование регулярного вырадения, только логи, в которых есть поля подпадающие под регулярное выражение пройдут в хранилище
+                          * Оператор `NotRegex` является инверсией оператора `Regex`, в хранилище попадут логи, в которых нет поля или же оно не подпадает под регулярное выражение
+                          * Оператор `Exists` проверяет наличие поля и пропускает логи только если поле есть
+                          * Оператор `DoesNotExist` проверяет наличие поля и пропускает логи только если поле отсутствует
+                      values:
+                        description: |
+                          Список регулярных выражений или значений для сравнения. Можно использовать целые числа или строки.
+                          Поля с числами с плавающей запятой и поля логического типа будут преобразованы в строки при сравнении.
+                clusterDestinationRefs:
+                  description: Список бэкендов хранения (CRD `ClusterLogDestination`), в которые будет отправлено сообщение.

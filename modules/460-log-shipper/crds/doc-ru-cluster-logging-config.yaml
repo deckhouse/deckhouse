@@ -1,52 +1,16 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: clusterloggingconfigs.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: log-shipper
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: clusterloggingconfigs
-    singular: clusterloggingconfig
-    kind: ClusterLoggingConfig
-  preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
       schema:
         openAPIV3Schema:
-          type: object
-          required: ["spec"]
           description: |
             CustomResource для описания источника логов в log-pipeline.
 
-            Каждый CR `ClusterLoggingConfig` описывает правила сбора логов из кластера.
+            Каждый CustomResource `ClusterLoggingConfig` описывает правила сбора логов из кластера.
           properties:
             spec:
-              type: object
-              required:
-                - type
-                - destinationRefs
-              anyOf:
-                - oneOf:
-                    - properties:
-                        type:
-                          enum: ["KubernetesPods"]
-                        kubernetesPods: {}
-                      required: ["kubernetesPods"]
-                    - properties:
-                        type:
-                          enum: ["File"]
-                        file: {}
-                      required: ["file"]
               properties:
                 type:
-                  type: string
-                  enum: ["KubernetesPods", "File"]
                   description: |
                     Возможные источники логов.
 
@@ -54,89 +18,48 @@ spec:
 
                     `File` позволяет читать локальные файлы, доступные на узле.
                 kubernetesPods:
-                  type: object
-                  default: {}
                   properties:
                     namespaceSelector:
-                      type: object
-                      description: Задать фильтр по namespace.
-                      properties:
-                        matchNames:
-                          type: array
-                          items:
-                            type: string
+                      description: Задать фильтр по Namespace.
                     labelSelector:
-                      type: object
                       description: |
                         Настройка `labelSelector` позволяет задать фильтр по Pod Labels.
+
                         Подробнее про выражения можно узнать в [документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
-                      anyOf:
-                        - required:
-                            - matchLabels
-                        - required:
-                            - matchExpressions
                       properties:
                         matchLabels:
-                          type: object
-                          description: Список label, которые должен иметь pod
-                          example: { "foo": "bar", "baz": "whooo" }
-                          additionalProperties:
-                            type: string
+                          description: Список label, которые должен иметь Pod.
                         matchExpressions:
-                          type: array
                           items:
-                            type: object
-                            description: Список выражений для label, которые должн иметь pod
-                            example:
-                              {
-                                "matchExpressions":
-                                  [
-                                    {
-                                      "key": "tier",
-                                      "operator": "In",
-                                      "values": ["production", "staging"],
-                                    },
-                                  ],
-                              }
-                            required:
-                              - key
-                              - operator
-                            properties:
-                              key:
-                                type: string
-                              operator:
-                                type: string
-                                enum:
-                                  - In
-                                  - NotIn
-                                  - Exists
-                                  - DoesNotExist
-                              values:
-                                type: array
-                                items:
-                                  type: string
+                            description: Список выражений для label, которые должен иметь Pod.
                 file:
-                  type: object
                   properties:
                     include:
-                      type: array
-                      description: Список путей и паттернов для чтения. Поддеживаются wildcards.
-                      example: ["/var/log/*.log", "/var/log/nginx/*.log"]
-                      items:
-                        type: string
+                      description: Список путей и паттернов для чтения. Поддерживаются wildcards.
                     exclude:
-                      type: array
-                      description: Список путей и паттернов файлов, которые читать не требуется. Поддеживаются wildcards.
-                      example:
-                        ["/var/log/nginx/error.log", "/var/log/audit.log"]
-                      items:
-                        type: string
+                      description: Список путей и паттернов файлов, которые читать не требуется. Поддерживаются wildcards.
                     lineDelimiter:
-                      type: string
                       description: Задание символа новой строки.
-                      example: \r\n
-                destinationRefs:
-                  type: array
-                  description: Список бэкендов хранения, в которце будет отправлено сообщение.
+                logFilter:
+                  description: |
+                    Список фильтров для логов.
+                    Только логи, подпавшие под правила, будут сохранены в хранилище.
                   items:
-                    type: string
+                    properties:
+                      field:
+                        description: Имя поля для фильтрации.
+                      operator:
+                        description: |
+                          Оператор, который можно применить для фильтрации:
+                          * Оператор `In` ищет сроку или элемент в массиве
+                          * Оператор `NotIn` является инверсивной оператора `In`
+                          * Оператор `Regex` пытается проверить строку в поле c использование регулярного вырадения, только логи, в которых есть поля подпадающие под регулярное выражение пройдут в хранилище
+                          * Оператор `NotRegex` является инверсией оператора `Regex`, в хранилище попадут логи, в которых нет поля или же оно не подпадает под регулярное выражение
+                          * Оператор `Exists` проверяет наличие поля и пропускает логи только если поле есть
+                          * Оператор `DoesNotExist` проверяет наличие поля и пропускает логи только если поле отсутствует
+                      values:
+                        description: |
+                          Список регулярных выражений или значений для сравнения. Можно использовать целые числа или строки.
+                          Поля с числами с плавающей запятой и поля логического типа будут преобразованы в строки при сравнении.
+                destinationRefs:
+                  description: Список бэкендов хранения, в которые будет отправлено сообщение.

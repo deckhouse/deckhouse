@@ -78,7 +78,7 @@ function __main__() {
 
   # Create configs
   mk_configs $TEST_DIR $vectorConfig
-  vector validate --config-json $DEFAULT_CONFIG --config-json $TEST_DIR/*.json
+  vector --color never validate --config-json $DEFAULT_CONFIG --config-json $TEST_DIR/*.json
 
   RET_CODE=$?
 

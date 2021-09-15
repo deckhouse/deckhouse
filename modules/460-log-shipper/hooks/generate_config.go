@@ -125,9 +125,20 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Name = sourceConfig.Name + "_" + dest
 				newSource.Spec.DestinationRefs = make([]string, 1)
 				newSource.Spec.DestinationRefs[0] = dest
+				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+				filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
+				if err != nil {
+					return err
+				}
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
 				clusterSources = append(clusterSources, newSource)
 			}
 		} else {
+			filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
+			if err != nil {
+				return err
+			}
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
 			clusterSources = append(clusterSources, sourceConfig)
 		}
 	}
@@ -151,9 +162,20 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Name = sourceConfig.Name + "_" + dest
 				newSource.Spec.ClusterDestinationRefs = make([]string, 1)
 				newSource.Spec.ClusterDestinationRefs[0] = dest
+				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+				filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
+				if err != nil {
+					return err
+				}
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
 				namespacedSources = append(namespacedSources, newSource)
 			}
 		} else {
+			filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
+			if err != nil {
+				return err
+			}
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
 			namespacedSources = append(namespacedSources, sourceConfig)
 		}
 	}
@@ -232,7 +254,7 @@ func pipelinePartsFromClusterSource(generator *vector.LogConfigGenerator, destMa
 		}
 		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
 		destinations = append(destinations, dest)
-		sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(cdest)...)
+		sourceConfig.Spec.Transforms = append(vector.CreateDefaultTransforms(cdest), sourceConfig.Spec.Transforms...)
 	}
 
 	if len(sourceConfig.Spec.Transforms) > 0 {
@@ -258,7 +280,7 @@ func pipelinePartsFromNamespacedSource(generator *vector.LogConfigGenerator, des
 		}
 		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
 		destinations = append(destinations, dest)
-		sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(cdest)...)
+		sourceConfig.Spec.Transforms = append(vector.CreateDefaultTransforms(cdest), sourceConfig.Spec.Transforms...)
 	}
 
 	namespacedName := fmt.Sprintf("%s_%s", sourceConfig.Namespace, sourceConfig.Name)

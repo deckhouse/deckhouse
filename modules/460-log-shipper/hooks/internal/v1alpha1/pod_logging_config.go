@@ -43,6 +43,9 @@ type PodLoggingConfigSpec struct {
 	// LabelSelector filter pods by label
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
 
+	// Log filters array
+	LogFilters []LogFilter `json:"logFilter,omitempty"`
+
 	// ClusterDestinationRefs slice of ClusterLogDestination names
 	ClusterDestinationRefs []string `json:"clusterDestinationRefs,omitempty"`
 }
