@@ -1,2 +1,46 @@
 type: object
-properties: {}
+properties:
+  resourcesRequests:
+    description: |
+      Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).
+    properties:
+      mode:
+        description: |
+          Режим управления реквестами ресурсов.
+      vpa:
+        description: |
+          Настройки VPA режима управления.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            description: |
+              Настройки для CPU.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса cpu.
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса cpu.
+          memory:
+            description: |
+              Значение для запроса memory.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса memory.
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса memory.
+      static:
+        description: |
+          Настройки статического режима управления.
+        properties:
+          cpu:
+            description: |
+              Значение для запроса CPU.
+          memory:
+            description: |
+              Значение для запроса memory.

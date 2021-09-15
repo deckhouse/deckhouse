@@ -1,5 +1,6 @@
 {{- if .Values.logShipper.internal.activated }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if eq .Values.logShipper.resourcesRequests.mode "VPA" }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
@@ -13,7 +14,17 @@ spec:
     kind: DaemonSet
     name: vector-agent
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: {{ .Values.logShipper.resourcesRequests.vpa.mode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "vector"
+      maxAllowed:
+        cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.max | quote }}
+        memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.max | quote }}
+      minAllowed:
+        cpu: {{ .Values.logShipper.resourcesRequests.vpa.cpu.min | quote }}
+        memory: {{ .Values.logShipper.resourcesRequests.vpa.memory.min | quote }}
+{{- end }}
 {{- end }}
 ---
 apiVersion: policy/v1beta1
@@ -108,6 +119,10 @@ spec:
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | indent 14 }}
+{{- if eq .Values.logShipper.resourcesRequests.mode "Static" }}
+              cpu: {{ .Values.logShipper.resourcesRequests.static.cpu | quote }}
+              memory: {{ .Values.logShipper.resourcesRequests.static.memory | quote }}
+{{- end }}
           volumeMounts:
             - name: var-log
               mountPath: /var/log/
