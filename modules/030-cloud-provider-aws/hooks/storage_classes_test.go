@@ -33,6 +33,10 @@ cloudProviderAws:
     - iopsPerGB: 5
       name: iops-foo
       type: io1
+    - name: gp3
+      type: gp3
+      iops: 6000
+      throughput: 300
     exclude:
     - sc\d+
     - bar
@@ -62,6 +66,12 @@ cloudProviderAws:
   {
 	"name": "gp2",
 	"type": "gp2"
+  },
+  {
+	"name": "gp3",
+	"type": "gp3",
+	"iops": 6000,
+	"throughput": 300
   },
   {
 	"iopsPerGB": 5,

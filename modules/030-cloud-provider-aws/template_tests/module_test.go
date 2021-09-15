@@ -84,6 +84,10 @@ const moduleValues = `
       - name: iops-foo
         type: io1
         iopsPerGB: 5
+      - name: gp3-foo
+        type: gp3
+        iops: 3000
+        throughput: 125
     zoneToSubnetIdMap:
       zonea: aaa
       zoneb: bbb
