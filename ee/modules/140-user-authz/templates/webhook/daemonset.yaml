@@ -50,6 +50,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       hostNetwork: true
+      serviceAccountName: webhook
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: webhook
