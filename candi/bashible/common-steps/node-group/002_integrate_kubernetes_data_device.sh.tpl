@@ -71,12 +71,12 @@ mkdir -p /mnt/kubernetes-data/etc-kubernetes
 
 # if there is kubernetes dir with regular files then we can't delete it
 # if there aren't files then we can delete dir to prevent symlink creation problems
-if [[ "$(find /etc/kubernetes/ -type f | wc -l)" == "0" ]]; then
+if [[ "$(find /etc/kubernetes/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
   rm -rf /etc/kubernetes
   ln -s /mnt/kubernetes-data/etc-kubernetes /etc/kubernetes
 fi
 
-if [[ "$(find /var/lib/etcd/ -type f | wc -l)" == "0" ]]; then
+if [[ "$(find /var/lib/etcd/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
   rm -rf /var/lib/etcd
   ln -s /mnt/kubernetes-data/var-lib-etcd /var/lib/etcd
 fi
