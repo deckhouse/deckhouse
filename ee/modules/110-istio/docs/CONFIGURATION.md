@@ -26,18 +26,23 @@ data:
     * `key` — the key to the above certificate.
     * `chain` — a certificate chain if `cert` is an intermediate certificate.
     * `root` — the root certificate if `cert` is an intermediate certificate.
+* `outboundTrafficPolicyMode` — how to handle requests directed to external services which aren't registered in service mesh.
+    * Possible values:
+        * `AllowAny` — allow.
+        * `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry CR or to organize egressgateway.
+        * It is `AllowAny` by default.
 * `sidecar`:
     * `includeOutboundIPRanges` — traffic to these IP ranges is forcibly routed through Istio.
         * Format — an array of subnets.
-        * By default, it is a list of Pod CIDRs, Service CIDRs, and node addresses collected by the `cluster_ip_ranges` discovery hook in the cluster. Thus, non-local traffic is handled as usual while local traffic is controlled.
+        * By default — `[0.0.0.0/0]`.
         * You can redefine this parameter locally using the `traffic.sidecar.istio.io/includeOutboundIPRanges` annotation.
     * `excludeOutboundIPRanges` — traffic to these IP ranges is guaranteed not to flow through Istio.
         * Format — an array of subnets.
-        * It is set to `[]` by default. That is, there are no exceptions.
+        * It is set to — `[]` by default. That is, there are no exceptions.
         * You can redefine this parameter locally using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` annotation.
     * `excludeInboundPorts` — the range of inbound ports whose traffic is guaranteed not to flow through Istio.
         * Format — an array of ports.
-        * It is set to `[]` by default. That is, there are no exceptions.
+        * It is set to — `[]` by default. That is, there are no exceptions.
         * You can redefine this parameter locally using the `traffic.sidecar.istio.io/excludeInboundPorts` annotation.
     * `excludeOutboundPorts` — the range of outbound ports whose traffic is guaranteed not to flow through Istio.
         * Format — an array of ports.

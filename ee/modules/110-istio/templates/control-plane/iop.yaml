@@ -62,6 +62,9 @@ spec:
   meshConfig:
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+    outboundTrafficPolicy:
+  {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
+      mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
     defaultConfig:
       proxyMetadata:
         ISTIO_META_DNS_CAPTURE: "true"
@@ -99,15 +102,10 @@ spec:
         resources: {}
         logLevel: warning
         componentLogLevel: "misc:error"
-  {{- $include_ip_ranges := list }}
-  {{- $include_ip_ranges = append $include_ip_ranges "169.254.0.0/16" }}
-  {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.podSubnet }}
-  {{- $include_ip_ranges = append $include_ip_ranges $.Values.global.discovery.serviceSubnet }}
-  {{- $include_ip_ranges = concat ($.Values.istio.sidecar.includeOutboundIPRanges | default list) $include_ip_ranges }}
-        includeIPRanges:      "{{ $include_ip_ranges | join "," }}"
-        excludeIPRanges:      "{{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," }}"
-        excludeOutboundPorts: "{{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," }}"
-        excludeInboundPorts:  "{{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," }}"
+        includeIPRanges:      {{ $.Values.istio.sidecar.includeOutboundIPRanges | default list "0.0.0.0/0" | join "," | quote }}
+        excludeIPRanges:      {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }}
+        excludeOutboundPorts: {{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," | quote }}
+        excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
 
       proxy_init:
         image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}
