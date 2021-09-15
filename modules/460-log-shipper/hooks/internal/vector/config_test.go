@@ -138,7 +138,9 @@ func TestConfig_1(t *testing.T) {
         "d8_clusterns_baar_testsource"
       ],
       "encoding": {
-        "codec": "text"
+        "codec": "text",
+        "timestamp_format": "rfc3339",
+        "only_fields": ["message"]
       },
       "endpoint": "http://testmeip:9000",
       "buffer": {

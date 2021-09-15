@@ -74,7 +74,9 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 	}
 
 	LokiENC := LokiEncoding{
-		Codec: "text",
+		Codec:           "text",
+		TimestampFormat: "rfc3339",
+		OnlyFields:      []string{"message"},
 	}
 
 	common.Buffer = buffer{

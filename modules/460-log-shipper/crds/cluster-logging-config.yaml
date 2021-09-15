@@ -24,7 +24,7 @@ spec:
           description: |
             CustomResource for source in log-pipeline.
 
-            Each CR `ClusterLoggingConfig` describes rules for log fetching from cluster.
+            Each CustomResource `ClusterLoggingConfig` describes rules for log fetching from cluster.
           properties:
             spec:
               type: object
@@ -50,16 +50,16 @@ spec:
                   description: |
                     Set on of possible input sources.
 
-                    *KubernetesPods* source reads logs from kubernetes pods.
+                    `KubernetesPods` source reads logs from Kubernetes Pods.
 
-                    *File* source reads local file from node filesystem.
+                    `File` source reads local file from node filesystem.
                 kubernetesPods:
                   type: object
                   default: {}
                   properties:
                     namespaceSelector:
                       type: object
-                      description: Specifies the namespace selector to filter Pods with.
+                      description: Specifies the Namespace selector to filter Pods with.
                       properties:
                         matchNames:
                           type: array
@@ -69,6 +69,7 @@ spec:
                       type: object
                       description: |
                         Specifies the label selector to filter Pods with.
+
                         You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       anyOf:
                         - required:
@@ -78,24 +79,22 @@ spec:
                       properties:
                         matchLabels:
                           type: object
-                          description: List of labels which pod should have
+                          description: List of labels which Pod should have.
                           example: { "foo": "bar", "baz": "whooo" }
                           additionalProperties:
                             type: string
                         matchExpressions:
                           type: array
-                          description: List of label expressions for pods
-                          example:
-                            {
-                              "matchExpressions":
-                                [
-                                  {
-                                    "key": "tier",
-                                    "operator": "In",
-                                    "values": ["production", "staging"],
-                                  },
-                                ],
-                            }
+                          description: List of label expressions for Pods.
+                          example: |
+                            ```yaml
+                            matchExpressions:
+                            - key: tier
+                              operator": In
+                              values:
+                              - production
+                              - staging
+                            ```
                           items:
                             type: object
                             required:
@@ -135,8 +134,85 @@ spec:
                       type: string
                       description: String sequence used to separate one file line from another.
                       example: \r\n
+                logFilter:
+                  type: array
+                  description: |
+                    List of filter for logs.
+                    Only matched lines would be stored to log destination.
+                  example: |
+                    ```yaml
+                    logFilter:
+                    - field: tier
+                      operator: Exists
+                    - field: tier
+                      operator: In
+                      values:
+                      - production
+                      - staging
+                    - field: foo
+                      operator: NotIn
+                      values: 
+                      - dev
+                      - 42
+                      - "true"
+                      - "3.14"
+                    - field: bar
+                      operator: Regex
+                      values:
+                      - ^abc
+                      - ^\d.+$
+                    ```
+                  items:
+                    type: object
+                    required:
+                      - field
+                      - operator
+                    properties:
+                      field:
+                        description: Field name for filtering.
+                        type: string
+                      operator:
+                        type: string
+                        description: |
+                          Operator for log field comparations:
+                          * `In` operator find substring in string
+                          * `NotIn` operator is negative version of `In` operator
+                          * `Regex` operator is trying to match regexp over field, only log events with matching fields will pass
+                          * `NotRegex` operator is negative version of `Regex` operator, log events without fields or with not matched fields will pass
+                          * `Exists` operator drop log event if it contains some fields
+                          * `DoesNotExist` operator drop log event if it does not contain some fields
+                        enum:
+                          - In
+                          - NotIn
+                          - Regex
+                          - NotRegex
+                          - Exists
+                          - DoesNotExist
+                      values:
+                        type: array
+                        description: |
+                          Array of `ClusterLogDestination` CustomResource names which this source will output with.
+                          Fields with float or boolean values will be converted to strings during comparation.
+                        items:
+                          x-kubernetes-int-or-string: true
+                          anyOf:
+                            - type: integer
+                            - type: string
+                    oneOf:
+                      - properties:
+                          operator:
+                            enum: ["Exists", "DoesNotExist"]
+                          values:
+                            maxItems: 0
+                      - properties:
+                          operator:
+                            enum: ["Regex", "NotRegex", "In", "NotIn"]
+                          values:
+                            minItems: 1
                 destinationRefs:
                   type: array
-                  description: Array of ClusterLogDestination CR names which this source will output with.
+                  description: |
+                    Array of `ClusterLogDestination` CustomResource names which this source will output with.
+                    Fields with float or boolean values will be converted to string.
                   items:
                     type: string

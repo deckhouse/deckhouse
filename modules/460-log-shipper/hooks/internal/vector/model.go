@@ -135,7 +135,9 @@ type batch struct {
 }
 
 type LokiEncoding struct {
-	Codec string `json:"codec,omitempty"`
+	Codec           string   `json:"codec,omitempty"`
+	OnlyFields      []string `json:"only_fields,omitempty"`
+	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
 type kubeAnnotationFields struct {
