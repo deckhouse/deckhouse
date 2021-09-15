@@ -187,7 +187,7 @@ ENDSSH
     break
   else
     test_failed="true"
-    >&2 echo "SSH #$i failed. Sleeping 60 seconds..."
+    >&2 echo "Machine provisioning is still in progress (attempt #$i of 10). Sleeping 60 seconds..."
     sleep 60
   fi
 done
