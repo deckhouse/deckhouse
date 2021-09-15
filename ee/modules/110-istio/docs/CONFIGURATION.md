@@ -52,21 +52,22 @@ data:
   * `enabled` — designate this cluster as a federation member (see [Enabling federation](./#enabling-federation)).
     * Format — bool.
     * By default — `false`.
+* `multicluster` — multicluster parameters:
+  * `enabled` — designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-multicluster)).
+    * Format — bool.
+    * By default — `false`.
+* `alliance` — common options both for federation and multicluster.
   * `ingressGateway` — ingressgateway settings:
     * `inlet` — the method for exposing ingressgateway:
       * `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
       * `NodePort` — for installations that do not have the LB.
-      * By default, it is set to `LoadBalancer`.
+      * By default — `LoadBalancer`.
     * `nodeSelector` — the selector for the ingressgateway DaemonSet.
       * Format — a regular dictionary.
     * `tolerations` — for the ingressgateway DaemonSet.
       * Format — a regular array.
     * `serviceAnnotations` — additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex.Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
       * Format — a regular dictionary.
-* `multicluster` — multicluster parameters:
-  * `enabled` — designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-multicluster)).
-    * Format — bool.
-    * By default — `false`.
 * `tracing` — tracing parameters.
   * `enabled` — turn on or off tracing collection and displaying in kiali.
     * Format — bool.

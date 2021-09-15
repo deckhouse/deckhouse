@@ -1,16 +1,16 @@
-{{- if .Values.istio.federation.enabled }}
+{{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: federation-ingressgateway
+  name: alliance-ingressgateway
   namespace: d8-{{ $.Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: federation:ingressgateway
+  name: alliance:ingressgateway
   namespace: d8-{{ $.Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
 rules:
@@ -21,14 +21,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: federation:ingressgateway
+  name: alliance:ingressgateway
   namespace: d8-{{ $.Chart.Name }}
 {{ include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | indent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: federation:ingressgateway
+  name: alliance:ingressgateway
 subjects:
 - kind: ServiceAccount
-  name: federation-ingressgateway
+  name: alliance-ingressgateway
 {{- end }}

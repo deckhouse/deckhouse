@@ -1,4 +1,4 @@
-{{- if .Values.istio.federation.enabled }}
+{{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget

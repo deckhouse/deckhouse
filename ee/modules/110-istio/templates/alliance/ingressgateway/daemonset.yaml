@@ -1,4 +1,4 @@
-{{- if .Values.istio.federation.enabled }}
+{{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
   {{- $revision := .Values.istio.internal.globalRevision }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -35,14 +35,14 @@ spec:
     spec:
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
-      serviceAccount: federation-ingressgateway
-  {{- if $.Values.istio.federation.ingressGateway.nodeSelector }}
+      serviceAccountName: alliance-ingressgateway
+  {{- if $.Values.istio.alliance.ingressGateway.nodeSelector }}
       nodeSelector:
-{{ $.Values.istio.federation.ingressGateway.nodeSelector | toYaml | indent 8 }}
+{{ $.Values.istio.alliance.ingressGateway.nodeSelector | toYaml | indent 8 }}
   {{- end }}
-  {{- if $.Values.istio.federation.ingressGateway.tolerations }}
+  {{- if $.Values.istio.alliance.ingressGateway.tolerations }}
       tolerations:
-{{ $.Values.istio.federation.ingressGateway.tolerations | toYaml | indent 8 }}
+{{ $.Values.istio.alliance.ingressGateway.tolerations | toYaml | indent 8 }}
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
@@ -119,11 +119,11 @@ spec:
         - name: ISTIO_META_ROUTER_MODE
           value: sni-dnat
         - name: ISTIO_META_REQUESTED_NETWORK_VIEW
-          value: network-{{ $.Values.global.discovery.clusterDomain | replace "." "-" }}
+          value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_DNS_CAPTURE
           value: "true"
         - name: ISTIO_META_NETWORK
-          value: network-{{ $.Values.global.discovery.clusterDomain | replace "." "-" }}
+          value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_CLUSTER_ID
           value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ index $.Values.global.modulesImages.tags.istio (printf "proxyv2%s" ($revision | title)) }}

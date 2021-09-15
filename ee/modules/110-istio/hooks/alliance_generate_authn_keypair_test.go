@@ -15,7 +15,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: remote_clusters_generate_authn_keypair ::", func() {
+var _ = Describe("Istio hooks :: alliance_generate_authn_keypair ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{"internal":{"remoteAuthnKeypair":{}}}}`, "")
 
 	Context("Empty cluster; empty values", func() {

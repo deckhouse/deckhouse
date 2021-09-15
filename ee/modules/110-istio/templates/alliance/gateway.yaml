@@ -1,10 +1,10 @@
-{{- if .Values.istio.federation.enabled }}
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: federation-gateway
+  name: remotecluster
   namespace: d8-{{ $.Chart.Name }}
-{{ include "helm_lib_module_labels" (list $ (dict "app" "istiod")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list $ (dict "app" "ingressgateway")) | indent 2 }}
 spec:
   selector:
     app: ingressgateway
