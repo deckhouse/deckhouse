@@ -1,2 +1,91 @@
 type: object
-properties: {}
+properties:
+  resourcesRequests:
+    required: ["mode"]
+    type: object
+    description: |
+      Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+    default: {}
+    oneOf:
+      - properties:
+          mode:
+            enum: ["VPA"]
+          vpa: {}
+      - properties:
+          mode:
+            enum: ["Static"]
+          static: {}
+    properties:
+      mode:
+        type: string
+        description: |
+          The mode for managing resource requests.
+        enum: ["VPA", "Static"]
+        default: "VPA"
+      vpa:
+        type: object
+        description: |
+          Parameters of the vpa mode.
+        required:
+          - mode
+          - cpu
+          - memory
+        default: {}
+        properties:
+          mode:
+            type: string
+            description: |
+              The VPA usage mode.
+            enum: ["Initial", "Auto"]
+            default: "Auto"
+          cpu:
+            type: object
+            description: |
+              CPU-related parameters.
+            default: {}
+            properties:
+              max:
+                description: |
+                  Maximum allowed CPU requests.
+                default: "500m"
+                type: string
+              min:
+                description: |
+                  Minimum allowed CPU requests.
+                default: "50m"
+                type: string
+          memory:
+            type: object
+            description: |
+              The amount of memory requested.
+            default: {}
+            properties:
+              max:
+                description: |
+                  Maximum allowed memory requests.
+                default: "2048Mi"
+                type: string
+              min:
+                description: |
+                  Minimum allowed memory requests.
+                default: "64Mi"
+                type: string
+      static:
+        type: object
+        description: |
+          Static mode settings.
+        required:
+          - cpu
+          - memory
+        default: {}
+        properties:
+          cpu:
+            type: string
+            description: |
+              CPU requests.
+            default: "50m"
+          memory:
+            type: string
+            description: |
+              Memory requests.
+            default: "64Mi"
