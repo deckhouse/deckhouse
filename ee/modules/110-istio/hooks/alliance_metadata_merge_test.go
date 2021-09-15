@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"io/ioutil"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -19,7 +18,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: remote_clusters_metadata_merge ::", func() {
+var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 	f := HookExecutionConfigInit(`{
   "global":{
     "discovery":{
@@ -36,7 +35,7 @@ var _ = Describe("Istio hooks :: remote_clusters_metadata_merge ::", func() {
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false)
 
-	Context("Proper federations only", func() {
+	Context("Federations and Multiclusters with different cache fullfillment", func() {
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -116,18 +115,150 @@ status:
       authnKeyPub: xyz-f4
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: IstioMulticluster
+kind: IstioFederation
 metadata:
-  name: multicluster-0
+  name: federation-full-empty-ig-0
 spec:
+  trustDomain: "f5"
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    apiHost: istio-api.example.com
+    ingressGateways: []
+    publicServices:
+    - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+    public:
+      clusterUUID: aaa-bbb-f5
+      rootCA: abc-f5
+      authnKeyPub: xyz-f5
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-full-0
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    ingressGateways:
+    - {"address": "ddd", "port": 333}
+    apiHost: istio-api-0.example.com
+    networkName: network-qqq-123
     public:
       clusterUUID: aaa-bbb-m0
       rootCA: abc-m0
       authnKeyPub: xyz-m0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-full-1
+spec:
+  enableIngressGateway: false
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    apiHost: istio-api-1.example.com
+    networkName: network-xxx-123
+    public:
+      clusterUUID: aaa-bbb-m1
+      rootCA: abc-m1
+      authnKeyPub: xyz-m1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-only-public
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    public:
+      clusterUUID: aaa-bbb-m2
+      rootCA: abc-m2
+      authnKeyPub: xyz-m2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-no-ig
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    apiHost: istio-api.example.com
+    networkName: network-qqq-123
+    public:
+      clusterUUID: aaa-bbb-m3
+      rootCA: abc-m3
+      authnKeyPub: xyz-m3
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-empty-ig
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    ingressGateways: []
+    apiHost: istio-api.example.com
+    networkName: network-qqq-123
+    public:
+      clusterUUID: aaa-bbb-m4
+      rootCA: abc-m4
+      authnKeyPub: xyz-m4
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-no-apiHost
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    ingressGateways:
+    - {"address": "ddd", "port": 333}
+    networkName: network-qqq-123
+    public:
+      clusterUUID: aaa-bbb-m5
+      rootCA: abc-m5
+      authnKeyPub: xyz-m5
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-no-networkname
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    ingressGateways:
+    - {"address": "ddd", "port": 333}
+    apiHost: istio-api.example.com
+    public:
+      clusterUUID: aaa-bbb-m6
+      rootCA: abc-m6
+      authnKeyPub: xyz-m6
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: multicluster-no-public
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    ingressGateways:
+    - {"address": "ddd", "port": 333}
+    apiHost: istio-api.example.com
+    networkName: network-qqq-123
 `))
 			f.RunHook()
 		})
@@ -184,14 +315,32 @@ status:
         ]
 `))
 
-			Expect(f.ValuesGet("istio.internal.multiclusters.0.name").String()).To(Equal("multicluster-0"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.name").String()).To(Equal("multicluster-full-0"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.0.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
-			Expect(f.ValuesGet("istio.internal.multiclusters.0.apiHost").String()).To(Equal("istio-api.example.com"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.apiHost").String()).To(Equal("istio-api-0.example.com"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.networkName").String()).To(Equal("network-qqq-123"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.ingressGateways").String()).To(MatchJSON(`
+[
+  {
+    "address": "ddd",
+    "port": 333
+  }
+]
+`))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.name").String()).To(Equal("multicluster-full-1"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.apiHost").String()).To(Equal("istio-api-1.example.com"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.networkName").String()).To(Equal("network-xxx-123"))
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Value()).To(BeNil())
 
-			tokenM0Bytes, errm0r := ioutil.ReadFile("/tmp/jwt-api-multicluster-0")
-			Expect(errm0r).ShouldNot(HaveOccurred())
+			Expect(f.ValuesGet("istio.internal.multiclusters.2").Exists()).To(BeFalse())
 
-			tokenM0, errm0p := jose.ParseSigned(string(tokenM0Bytes))
+			Expect(f.ValuesGet("istio.internal.multiclustersNeedIngressGateway").Bool()).To(BeTrue())
+
+			tokenM0String := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+
+			tokenM0, errm0p := jose.ParseSigned(tokenM0String)
 			Expect(errm0p).ShouldNot(HaveOccurred())
 
 			myPubKeyPem := f.ValuesGet("istio.internal.remoteAuthnKeypair.pub").String()
@@ -222,7 +371,14 @@ status:
 		  "aaa-bbb-f2": {"rootCA": "abc-f2", "authnKeyPub": "xyz-f2"},
 		  "aaa-bbb-f3": {"rootCA": "abc-f3", "authnKeyPub": "xyz-f3"},
 		  "aaa-bbb-f4": {"rootCA": "abc-f4", "authnKeyPub": "xyz-f4"},
-		  "aaa-bbb-m0": {"rootCA": "abc-m0", "authnKeyPub": "xyz-m0"}
+		  "aaa-bbb-f5": {"rootCA": "abc-f5", "authnKeyPub": "xyz-f5"},
+		  "aaa-bbb-m0": {"rootCA": "abc-m0", "authnKeyPub": "xyz-m0"},
+		  "aaa-bbb-m1": {"rootCA": "abc-m1", "authnKeyPub": "xyz-m1"},
+		  "aaa-bbb-m2": {"rootCA": "abc-m2", "authnKeyPub": "xyz-m2"},
+		  "aaa-bbb-m3": {"rootCA": "abc-m3", "authnKeyPub": "xyz-m3"},
+		  "aaa-bbb-m4": {"rootCA": "abc-m4", "authnKeyPub": "xyz-m4"},
+		  "aaa-bbb-m5": {"rootCA": "abc-m5", "authnKeyPub": "xyz-m5"},
+		  "aaa-bbb-m6": {"rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
 		}
 `))
 		})

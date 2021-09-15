@@ -16,7 +16,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: remote_clusters_discovery_public_metadata ::", func() {
+var _ = Describe("Istio hooks :: alliance_discovery_public_metadata ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{"federation":{},"multicluster":{}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false)

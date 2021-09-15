@@ -35,6 +35,11 @@ function __main__() {
         .snapshots.public_services[].filterResult
       ]
     }' > /metadata/services.json
+
+  context::jq '
+    [
+      .snapshots.public_services[].filterResult
+    ]' > /metadata/services-array.json
 }
 
 hook::run "$@"

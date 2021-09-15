@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    onStartup: 10
+EOF
+}
+
+function __main__() {
+  if (values::is_true istio.federation.enabled || values::is_true istio.multicluster.enabled) && \
+     values::has --config istio.federation.ingressGateway && \
+     ! values::has --config istio.alliance.ingressGateway
+  then
+    old_values="$(values::get --config istio.federation.ingressGateway)"
+    values::set --config istio.alliance "{}"
+    values::set --config istio.alliance.ingressGateway "$old_values"
+    values::unset --config istio.federation.ingressGateway
+  fi
+}
+
+hook::run "$@"

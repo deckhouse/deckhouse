@@ -32,6 +32,11 @@ spec:
               required:
               - metadataEndpoint
               properties:
+                enableIngressGateway:
+                  type: boolean
+                  default: true
+                  description: |
+                    Should Istio use ingressgateways to access remote Pods? If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
                 metadataEndpoint:
                   type: string
                   description: |
@@ -61,3 +66,20 @@ spec:
                     apiHostLastFetchTimestamp:
                       type: string
                       format: date-time
+                    networkName:
+                      type: string
+                    networkNameLastFetchTimestamp:
+                      type: string
+                      format: date-time
+                    ingressGateways:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          address:
+                            type: string
+                          port:
+                            type: integer
+                    ingressGatewaysLastFetchTimestamp:
+                      format: date-time
+                      type: string

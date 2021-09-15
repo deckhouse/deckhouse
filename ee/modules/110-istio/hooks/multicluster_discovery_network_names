@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+    configVersion: v1
+    kubernetes:
+    - name: multiclusters
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      apiVersion: deckhouse.io/v1alpha1
+      kind: IstioMulticluster
+      keepFullObjectsInMemory: false
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "networkNameEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/private/multicluster-network-name" ),
+          "clusterUUID": .status.metadataCache.public.clusterUUID
+        }
+    schedule:
+    - name: multiclusters
+      group: main
+      queue: /modules/$(module::name::kebab_case)/remote-clusters
+      crontab: "* * * * *"
+EOF
+}
+
+function __main__() {
+  if ! values::has istio.internal.remoteAuthnKeypair.priv; then
+    >&2 echo "WARNING: Authn keypair for signing requests to remote metadata endpoints isn't discovered yet. Retry in 1min."
+    return 0
+  fi
+
+  if values::is_true istio.multicluster.enabled; then
+    for i in $(context::jq -r '.snapshots.multiclusters | keys[]'); do
+      multiclusterSpec="$(context::jq --argjson i "$i" -c '.snapshots.multiclusters[$i] | .filterResult')"
+      multiclusterName="$(jq    -r '.name'                <<< "$multiclusterSpec")"
+      networkNameEndpoint="$(jq -r '.networkNameEndpoint' <<< "$multiclusterSpec")"
+      clusterUUID="$(jq         -r '.clusterUUID'         <<< "$multiclusterSpec")"
+
+      token="$(
+        deckhouse-controller helper crypto gen-jwt \
+          --private-key-path <(values::get istio.internal.remoteAuthnKeypair.priv) \
+          --claim iss=d8-istio \
+          --claim aud="$clusterUUID" \
+          --claim sub="$(values::get global.discovery.clusterUUID)" \
+          --claim scope=multicluster-network-name \
+          --ttl 1m
+      )"
+
+      if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
+        echo $token > "/tmp/jwt-networkname-$multiclusterName"
+      fi
+
+      isError=0
+      # try to fetch metadata from endpoint
+      if networkName="$(
+        curl \
+          -f -s -m 3 --show-error \
+          --header "Authorization: Bearer $token" \
+          "$networkNameEndpoint"
+      )" && [[ "$networkName" =~ ^[a-z0-9-]+$ ]]
+      then
+        patch="$(jq -n --arg nn "$networkName" '
+          {"metadataCache": {"networkName": $nn, "networkNameLastFetchTimestamp": (now | todateiso8601)}}
+        ')"
+        kubernetes::status::merge_patch "" "deckhouse.io/v1alpha1" "istiomulticlusters" "$multiclusterName" "$patch"
+      else
+        isError=1
+        echo >&2 "ERROR: Cannot fetch network name metadata endpoint $networkNameEndpoint for IstioMulticluster $multiclusterName."
+      fi
+
+      jq -n --argjson isError "$isError" --arg multiclusterName "$multiclusterName" --arg endpoint "$networkNameEndpoint" '
+        {
+          "group":"multicluster_fetch_networkname",
+          "name": "d8_istio_multicluster_metadata_endpoints_fetch_error_count",
+          "set": $isError,
+          "labels": {"multicluster_name": $multiclusterName, "endpoint": $endpoint}
+        }
+      ' >> "$METRICS_PATH"
+    done
+  fi
+}
+
+hook::run "$@"
