@@ -24,23 +24,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/configmap-control-plane-configurator.yaml
-  to: /deckhouse/modules/140-user-authz/templates/configmap-control-plane-configurator.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/webhook-config-map.yaml
-  to: /deckhouse/modules/140-user-authz/templates/webhook-config-map.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/webhook-daemonset.yaml
-  to: /deckhouse/modules/140-user-authz/templates/webhook-daemonset.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/140-user-authz/templates/webhook-secret.yaml
-  to: /deckhouse/modules/140-user-authz/templates/webhook-secret.yaml
+- add: /ee/modules/140-user-authz/templates/webhook
+  to: /deckhouse/modules/140-user-authz/templates/webhook
   stageDependencies:
     setup:
         - '**/*.go'

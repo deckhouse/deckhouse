@@ -1,3 +1,3 @@
 module user-authz-webhook
 
-go 1.12
+go 1.15
