@@ -65,6 +65,12 @@ func InitLogger(loggerType string) {
 	}
 }
 
+type ProcessLogger interface {
+	LogProcessStart(name string)
+	LogProcessFail()
+	LogProcessEnd()
+}
+
 type Logger interface {
 	LogProcess(string, string, func() error) error
 
@@ -84,6 +90,8 @@ type Logger interface {
 	LogFail(string)
 
 	LogJSON([]byte)
+
+	ProcessLogger() ProcessLogger
 
 	Write([]byte) (int, error)
 }
@@ -129,6 +137,10 @@ func NewPrettyLogger() *PrettyLogger {
 			"default":   {"%s", BoldOptions()},
 		},
 	}
+}
+
+func (d *PrettyLogger) ProcessLogger() ProcessLogger {
+	return newPrettyProcessLogger()
 }
 
 func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
@@ -230,6 +242,10 @@ func NewJSONLogger() *SimpleLogger {
 	return simpleLogger
 }
 
+func (d *SimpleLogger) ProcessLogger() ProcessLogger {
+	return newWrappedProcessLogger(d)
+}
+
 func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
 	d.logger.WithField("action", "start").WithField("process", p).Infoln(t)
 	err := run()
@@ -291,6 +307,10 @@ func (d *SimpleLogger) Write(content []byte) (int, error) {
 }
 
 type DummyLogger struct{}
+
+func (d *DummyLogger) ProcessLogger() ProcessLogger {
+	return newWrappedProcessLogger(d)
+}
 
 func (d *DummyLogger) LogProcess(_, t string, run func() error) error {
 	fmt.Println(t)
@@ -404,6 +424,10 @@ func Write(buf []byte) (int, error) {
 	return defaultLogger.Write(buf)
 }
 
+func GetProcessLogger() ProcessLogger {
+	return defaultLogger.ProcessLogger()
+}
+
 func GetDefaultLogger() Logger {
 	return defaultLogger
 }
@@ -413,6 +437,10 @@ func GetSilentLogger() Logger {
 }
 
 type SilentLogger struct{}
+
+func (d *SilentLogger) ProcessLogger() ProcessLogger {
+	return newWrappedProcessLogger(d)
+}
 
 func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	err := run()

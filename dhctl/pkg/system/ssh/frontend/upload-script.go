@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/logboek"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/session"
@@ -119,22 +117,24 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	lastStep := ""
 	failsCounter := 0
 
-	handler := bundleOutputHandler(bundleCmd, &lastStep, &failsCounter)
+	processLogger := log.GetProcessLogger()
+
+	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter)
 	err = bundleCmd.WithStdoutHandler(handler).CaptureStdout(nil).Run()
 	if err != nil {
 		if lastStep != "" {
-			logboek.LogProcessFail(log.BoldFailOptions())
+			processLogger.LogProcessFail()
 		}
 		err = fmt.Errorf("execute bundle: %v", err)
 	} else {
-		logboek.LogProcessEnd(log.BoldEndOptions())
+		processLogger.LogProcessEnd()
 	}
 	return bundleCmd.StdoutBytes(), err
 }
 
 var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
-func bundleOutputHandler(cmd *Command, lastStep *string, failsCounter *int) func(string) {
+func bundleOutputHandler(cmd *Command, processLogger log.ProcessLogger, lastStep *string, failsCounter *int) func(string) {
 	return func(l string) {
 		if l == "===" {
 			return
@@ -153,14 +153,14 @@ func bundleOutputHandler(cmd *Command, lastStep *string, failsCounter *int) func
 					return
 				}
 
-				logboek.LogProcessFail(log.BoldFailOptions())
+				processLogger.LogProcessFail()
 				stepName = fmt.Sprintf("%s, retry attempt #%d of 10", stepName, *failsCounter)
 			} else if *lastStep != "" {
-				logboek.LogProcessEnd(log.BoldEndOptions())
+				processLogger.LogProcessEnd()
 				*failsCounter = 0
 			}
 
-			logboek.LogProcessStart("Run step "+stepName, log.BoldStartOptions())
+			processLogger.LogProcessStart("Run step " + stepName)
 			*lastStep = match[1]
 			return
 		}
