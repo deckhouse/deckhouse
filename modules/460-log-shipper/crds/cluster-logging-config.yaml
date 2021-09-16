@@ -209,6 +209,28 @@ spec:
                             enum: ["Regex", "NotRegex", "In", "NotIn"]
                           values:
                             minItems: 1
+                multilineParser:
+                  type: object
+                  description: Multiline parser for different patterns
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Parser types:
+                        * None - Do not parse logs.
+                        * General - Try to match general multiline logs with space or tabulation on extra lines.
+                        * Backslash - Try to match bash style logs with backslash on all lines except last event line.
+                        * LogWithTime - Try to detect events by timestamps.
+                        * MultilineJSON - Try to match json logs by `{` as a first symbol.
+                      enum:
+                        - None
+                        - General
+                        - Backslash
+                        - LogWithTime
+                        - MultilineJSON
+                      default: None
                 destinationRefs:
                   type: array
                   description: |

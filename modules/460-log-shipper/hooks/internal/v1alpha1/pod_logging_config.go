@@ -46,6 +46,9 @@ type PodLoggingConfigSpec struct {
 	// Log filters array
 	LogFilters []LogFilter `json:"logFilter,omitempty"`
 
+	// Multiline parsers
+	MultiLineParser MultiLineParser `json:"multilineParser,omitempty"`
+
 	// ClusterDestinationRefs slice of ClusterLogDestination names
 	ClusterDestinationRefs []string `json:"clusterDestinationRefs,omitempty"`
 }

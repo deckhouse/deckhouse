@@ -127,6 +127,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.DestinationRefs = make([]string, 1)
 				newSource.Spec.DestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
 				filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
 				if err != nil {
@@ -137,6 +138,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				clusterSources = append(clusterSources, newSource)
 			}
 		} else {
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpSpec.Spec.MultiLineParser.Type)...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.DestinationRefs[0]])...)
 			filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
 			if err != nil {
@@ -168,6 +170,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.ClusterDestinationRefs = make([]string, 1)
 				newSource.Spec.ClusterDestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
 				filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
 				if err != nil {
@@ -182,6 +185,7 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateMultiLinaeTransforms(tmpPogSpec.Spec.MultiLineParser.Type)...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
