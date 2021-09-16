@@ -9,6 +9,6 @@ data:
   okmeterEnabled: "true"
 ```
 
-В конфигурацию Deckhouse необходимо добавить `apiKey` для модуля `okmeter`:
+## Параметры
 
-* `apiKey` - этот ключ можно взять на странице документации по установке `okmeter` для нужного проекта (`OKMETER_API_TOKEN`).
+<!-- SCHEMA -->

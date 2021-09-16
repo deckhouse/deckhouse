@@ -19,6 +19,6 @@ By default, it creates the `/` location with the `admin` user.
     * `whitelist` — a list of IP addresses and subnets for which no login/password is required for authorization;
     * `users` — a list of users in the `username: "password"` format;
 * `nodeSelector` — the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `tolerations` — the same as in the pods' `spec.tolerations` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).

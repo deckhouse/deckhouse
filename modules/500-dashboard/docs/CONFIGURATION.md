@@ -33,9 +33,9 @@ The module does not have any mandatory settings.
       * `secretName` - the name of the secret in the `d8-system` namespace to use with the dashboard (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format);
         * It is set to `false` by default;
 * `nodeSelector` — the same as in the Pod's `spec.nodeSelector` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `tolerations` — the same as in the Pod's `spec.tolerations` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `accessLevel` — the level of access to the dashboard if the `user-authn` module is switched off and no `externalAuthentication` is defined. You can view the list of supported values in the [user-authz](../../modules/140-user-authz/) documentation;
     * By default, the `User` role is set;
     * In case of using the `user-authn` module or another `externalAuthentication`, you should configure access right with the `user-authz` modules.

@@ -66,6 +66,6 @@ data:
       * `secretName` - the name of the secret in the `d8-system` namespace to use with the openvpn admin panel (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format);
         * It is set to `false` by default;
 * `nodeSelector` — the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `tolerations` — the same as in the pods' `spec.tolerations` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).

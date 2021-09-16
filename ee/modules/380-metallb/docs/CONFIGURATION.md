@@ -39,6 +39,6 @@ The module has the following parameters in the `deckhouse` CM:
             * `layer2` — use the L2 LVS mode;
         * `addresses` — a list of ranges, where each range can look like a subnet/mask or a numeric address range (with a "-" delimiter);
 * `nodeSelector` — a selector for the main controller. It is the same as the pods' `spec.nodeSelector` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 * `tolerations` — tolerations for the main controller. They are the same as the pods' `spec.tolerations` parameter in Kubernetes;
-    * If the parameter is omitted of `false`, it will be determined [automatically](../../#advanced-scheduling).
+    * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
