@@ -22,6 +22,44 @@ properties:
       Deckhouse release channel.
 
       The order in which the stability of the update channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+  update:
+    type: object
+    description: 'Deckhouse update configuration'
+    properties:
+      windows:
+        type: array
+        description: |
+          Time windows for upgrading deckhouse. Used for downloading and starting a new deckhouse image
+          with the same tag if it exists.
+        items:
+          type: object
+          required:
+            - from
+            - to
+          properties:
+            from:
+              type: string
+              pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+              example: '13:00'
+              desription: 'Start time of upgrade window.'
+            to:
+              type: string
+              pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+              example: '18:30'
+              description: 'End time of update window.'
+            days:
+              type: array
+              description: 'Days of the week when deckhouse could be upgraded.'
+              items:
+                type: string
+                enum:
+                  - Mon
+                  - Tue
+                  - Wed
+                  - Thu
+                  - Fri
+                  - Sat
+                  - Sun
   nodeSelector:
     type: object
     additionalProperties:
