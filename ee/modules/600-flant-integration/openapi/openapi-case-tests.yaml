@@ -3,6 +3,9 @@ positive:
     - kubeall:
         team: test
         host: test.control-plane
+      metrics: false
+      madisonAuthKey: false
+      logs: false
   values:
     - internal:
         releaseChannel: "test"
@@ -18,3 +21,8 @@ positive:
           masterMinCPU: 4
           masterMinMemory: 8265010916
         terraformManagerEnabled: True
+negative:
+  configValues:
+    - metrics: true
+      madisonAuthKey: true
+      logs: true

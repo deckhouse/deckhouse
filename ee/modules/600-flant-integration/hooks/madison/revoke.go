@@ -41,6 +41,10 @@ func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
+	if madisonAuthKey.String() == "false" {
+		return nil
+	}
+
 	licenseKey, ok := input.Values.GetOk(licenseKeyPath)
 	if !ok {
 		return nil

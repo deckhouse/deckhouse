@@ -39,7 +39,10 @@ properties:
     description: |
       Discount for nodes as a percentage, without the % symbol. For example: 10, 20, 30.
   metrics:
-    type: object
+    oneOf:
+      - type: object
+      - type: boolean
+        enum: [false]
     default: {}
     properties:
       url:
@@ -47,10 +50,16 @@ properties:
         default: "https://connect.deckhouse.io/v1/remote_write"
         description: |
           URL for sending metrics in Prometheus remote_write format.
-  madisonAuthKey:
-    type: string
     description: |
-      Key to access Madison alertmanager.
+      Metrics parameters or `false` to disable metrics distribution.
+  madisonAuthKey:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum: [false]
+    description: |
+      Key to access Madison alertmanager, or `false` to disable integration.
+    x-examples: ["abc"]
   licenseKey:
     type: string
     description: |
@@ -59,6 +68,7 @@ properties:
     oneOf:
       - type: object
       - type: boolean
+        enum: [false]
     default: {}
     properties:
       url:
@@ -66,6 +76,8 @@ properties:
         default: "https://connect.flant.com/v1/loki_push"
         description: |
           URL for sending logs in Loki compatible storage.
+    description: |
+      Logs parameters or `false` to disable logs distribution.
   kubeall:
     type: object
     default: {}
