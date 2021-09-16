@@ -1,3 +1,4 @@
+{{- if .Values.flantIntegration.metrics }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1beta2
@@ -188,3 +189,4 @@ spec:
           secretName: pricing-prometheus-api-client-tls
       - name: tmp
         emptyDir: {}
+{{- end }}

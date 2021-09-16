@@ -86,4 +86,38 @@ var _ = Describe("Flant integration :: hooks :: madison revoke ::", func() {
 			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeTrue())
 		})
 	})
+
+	Context("Metrics are disabled by `false` as a string", func() {
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+		BeforeEach(func() {
+			f.ConfigValuesSet("flantIntegration.madisonAuthKey", "false")
+			f.ValuesSet("flantIntegration.madisonAuthKey", "false")
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("values must be present", func() {
+			Expect(f.ConfigValuesGet("flantIntegration.licenseKey").Exists()).To(BeTrue())
+			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeTrue())
+			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").String()).To(Equal("false"))
+		})
+	})
+
+	Context("Metrics are disabled by `false` as a boolean", func() {
+		f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+
+		BeforeEach(func() {
+			f.ConfigValuesSet("flantIntegration.madisonAuthKey", false)
+			f.ValuesSet("flantIntegration.madisonAuthKey", false)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
+			f.RunHook()
+		})
+
+		It("values must be present", func() {
+			Expect(f.ConfigValuesGet("flantIntegration.licenseKey").Exists()).To(BeTrue())
+			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").Exists()).To(BeTrue())
+			Expect(f.ConfigValuesGet("flantIntegration.madisonAuthKey").String()).To(Equal("false"))
+		})
+	})
 })

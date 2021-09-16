@@ -25,9 +25,11 @@ properties:
       url:
         description: |
           URL для отправки метрик в формате Prometheus remote_write.
+    description: |
+      Параметры отправки метрик или `false` для отключения их отправки.
   madisonAuthKey:
     description: |
-      Ключ для доступа в алертменеджер Madison.
+      Ключ для доступа в алертменеджер Madison или `false` для отключения интеграции.
   licenseKey:
     type: string
     description: |
@@ -37,6 +39,8 @@ properties:
       url:
         description: |
           URL для отправки логов в совместимое с Loki хранилище.
+    description: |
+      Параметры отправки логов или `false` для отключения их отправки.
   kubeall:
     description: |
       Параметры для формирования kubeall реестра.

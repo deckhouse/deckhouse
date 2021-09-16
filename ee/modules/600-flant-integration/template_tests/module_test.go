@@ -53,7 +53,8 @@ planIsBoughtAsBundle: false
 auxiliaryCluster: false
 clusterType: Hybrid
 nodesDiscount: 10
-metrics: {}
+metrics:
+  url: "https://example.com/remote_write"
 kubeall:
   team: ""
   host: ""
@@ -90,7 +91,8 @@ planIsBoughtAsBundle: false
 auxiliaryCluster: false
 clusterType: Hybrid
 nodesDiscount: 10
-metrics: {}
+metrics:
+  url: "https://example.com/remote_write"
 kubeall:
   team: ""
   host: ""
