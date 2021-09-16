@@ -202,17 +202,17 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		endpointsRaw := endpointsSnap[0]
 		endpoints = endpointsRaw.([]string)
 	} else {
-		input.LogEntry.Infoln("k8s version. Entrypoints snapshots is empty")
+		input.LogEntry.Infoln("k8s version. Endpoints snapshots is empty")
 	}
 	endpointsCnt := len(endpoints)
 
 	if endpointsCnt == 0 && podsCnt == 0 {
-		input.LogEntry.Infoln("k8s version. Entrypoints and pods not found. Skip")
+		input.LogEntry.Infoln("k8s version. Endpoints and pods not found. Skip")
 		return nil, nil
 	}
 
 	if podsCnt != endpointsCnt {
-		msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != entrypoints (%v) count", podsCnt, endpointsCnt)
+		msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
 
 		versions := input.Values.Get("global.discovery.kubernetesVersions")
 		minVer := input.Values.Get("global.discovery.kubernetesVersion")
