@@ -61,6 +61,13 @@ func isErrorLine(line *logLine) bool {
 	if line.Level == "error" {
 		badSubStrings := []string{
 			"Client.Timeout exceeded while awaiting headers",
+			// skip this message because hook may receive entrypoint, but
+			// api server didn't create yet.
+			// But after next iteration hook has pod and entry point together
+			// It can confuse dhctl user.
+			// We cannot skip this error in hook,
+			// because kube version needs for next installation steps
+			"Not found k8s versions",
 		}
 		for _, p := range badSubStrings {
 			if strings.Contains(line.Message, p) {
