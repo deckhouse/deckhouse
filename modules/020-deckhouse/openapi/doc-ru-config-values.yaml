@@ -13,6 +13,18 @@ properties:
       Канал обновлений Deckhouse.
 
       Порядок возрастания стабильности канала обновлений (от **наименее** стабильного, к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+  update:
+    description: Настройки обновления Deckhouse
+    windows:
+      description: |
+        Окна обновления Deckhouse. В заданные периоды скачивается и запускается новый образ Deckhouse
+        с тем же тэгом, если он существует.
+      from:
+        description: Время начала обновления.
+      to:
+        description: Время окончания обновления.
+      days:
+        description: Дни недели, в которые можно запустить обновления.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` Kubernetes pod.

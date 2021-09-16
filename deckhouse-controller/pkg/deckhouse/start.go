@@ -18,7 +18,6 @@ import (
 	"context"
 	"os"
 	"regexp"
-	"time"
 
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	klient "github.com/flant/kube-client/client"
@@ -27,14 +26,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/docker_registry_watcher"
 )
 
 // Ignore error: type name will be used as deckhouse.DeckhouseController by other packages, and that stutters
 //nolint:golint
 type DeckhouseController struct {
 	*addon_operator.AddonOperator
-	RegistryWatcher docker_registry_watcher.DockerRegistryWatcher
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -59,7 +56,6 @@ func (d *DeckhouseController) Stop() {
 }
 
 func (d *DeckhouseController) Shutdown() {
-	d.RegistryWatcher.Stop()
 	d.AddonOperator.Shutdown()
 }
 
@@ -89,52 +85,6 @@ func (d *DeckhouseController) InitAndStartRegistryWatcher() error {
 	}
 	// Set KubeClient in AddonOperator.
 	d.AddonOperator.WithKubernetesClient(kubeClient)
-
-	// Initialize and start the RegistryWatcher.
-	LastSuccessTime := time.Now()
-	registryWatcher := docker_registry_watcher.NewDockerRegistryWatcher()
-	registryWatcher.WithContext(d.ctx)
-	registryWatcher.WithRegistrySecretPath(app.RegistrySecretPath)
-	registryWatcher.WithFatalCallback(func() {
-		os.Exit(1)
-	})
-	registryWatcher.WithErrorCallback(func() {
-		d.MetricStorage.CounterAdd("deckhouse_registry_check_total", 1.0, map[string]string{})
-
-		d.MetricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1.0, map[string]string{})
-		// throttle logging
-		nowTime := time.Now()
-		if LastSuccessTime.Add(app.RegistryErrorsMaxTimeBeforeRestart).Before(nowTime) {
-			log.Errorf("No success response from registry during %s. Forced restart.", app.RegistryErrorsMaxTimeBeforeRestart.String())
-			os.Exit(1)
-		}
-	})
-	registryWatcher.WithSuccessCallback(func() {
-		d.MetricStorage.CounterAdd("deckhouse_registry_check_total", 1.0, map[string]string{})
-		LastSuccessTime = time.Now()
-	})
-	registryWatcher.WithImageInfoCallback(func() (imageName string, imageId string) {
-		imageName, imageId = GetCurrentPodImageInfo(kubeClient)
-
-		d.MetricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1.0, map[string]string{})
-		if imageName != "" && imageId != "" {
-			d.MetricStorage.GaugeSet("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
-		}
-
-		return
-	})
-	registryWatcher.WithImageUpdatedCallback(func(s string) {
-		UpdateDeploymentImageAndExit(kubeClient, s)
-	})
-
-	err = registryWatcher.Init()
-	if err != nil {
-		log.Errorf("Initialize registry manager: %s", err)
-		return err
-	}
-	registryWatcher.Start()
-
-	d.RegistryWatcher = registryWatcher
 
 	return nil
 }
@@ -210,20 +160,6 @@ func DefaultDeckhouse() *DeckhouseController {
 }
 
 func InitAndStart(ctrl *DeckhouseController) error {
-	// This callback is executed when KubernetesClient and MetricStorage
-	// are ready to use, and RegistryWatcher can started before
-	// ModuleManager initialization to be able to update image
-	// with hook configuration errors.
-	if app.FeatureWatchRegistry == "yes" {
-		err := ctrl.InitAndStartRegistryWatcher()
-		if err != nil {
-			log.Errorf("Fail to start RegistryWatcher: %s", err)
-			return err
-		}
-	} else {
-		log.Debugf("Deckhouse: registry manager disabled with DECKHOUSE_WATCH_REGISTRY=%s.", app.FeatureWatchRegistry)
-	}
-
 	err := addon_operator.InitAndStart(ctrl.AddonOperator)
 	if err != nil {
 		return err
