@@ -9,6 +9,6 @@ data:
   okmeterEnabled: "true"
 ```
 
-You need to add the `apiKey` for the `okmeter` module to the Deckhouse configuration:
+## Parameters
 
-* `apiKey` - you can get this key on the `okmeter` installation page for the appropriate project  (`OKMETER_API_TOKEN`).
+<!-- SCHEMA -->

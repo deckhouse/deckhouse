@@ -9,6 +9,6 @@ data:
   terraformManagerEnabled: "false"
 ```
 
-## Parameters
+## Параметры
 
 <!-- SCHEMA -->

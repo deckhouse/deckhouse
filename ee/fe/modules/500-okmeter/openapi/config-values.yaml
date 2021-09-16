@@ -1,14 +1,13 @@
 type: object
-required: [instances]
+required: [apiKey]
 properties:
-  instances:
-    type: array
-    items:
-      type: string
+  apiKey:
+    type: string
     description: |
-      This parameter contains a list of instances; a separate PushGateway will be created for each instance.
-    x-examples:
-    - [first, second]
+      Key to access Okmeter API.
+
+      You can get the key for your project on the `okmeter` installation page (`OKMETER_API_TOKEN`).
+    x-examples: [5ff9z2a3-9127-1sh4-2192-06a3fc6e13e3]
   nodeSelector:
     type: object
     additionalProperties:
@@ -17,6 +16,8 @@ properties:
       The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    x-examples:
+    - test: test
   tolerations:
     type: array
     description: |
