@@ -1,3 +1,4 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -28,3 +29,4 @@ subjects:
   - kind: ServiceAccount
     name: webhook
     namespace: d8-user-authz
+{{- end }}
