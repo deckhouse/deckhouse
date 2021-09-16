@@ -5,7 +5,7 @@ properties:
   internal:
     type: object
     default: {}
-    x-requred-for-helm:
+    x-required-for-helm:
     - selfSignedCA
     - webhookCACrt
     - webhookCAKey
