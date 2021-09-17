@@ -186,8 +186,8 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 	for _, node := range input.Snapshots["node_groups"] {
 		ng := node.(StandbyNodeGroupInfo)
 
-		// Ignore node groups without standby settings.
-		if ng.Standby == nil {
+		// Ignore node groups without standby parameter, or having it zero.
+		if ng.Standby == nil || ng.Standby.String() == "0" {
 			err := setNodeGroupStandbyStatus(input.ObjectPatcher(), ng.Name, nil)
 			if err != nil {
 				return err
