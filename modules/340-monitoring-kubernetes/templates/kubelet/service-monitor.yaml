@@ -41,6 +41,32 @@ spec:
       replacement: cadvisor
     - targetLabel: tier
       replacement: cluster
+    metricRelabelings:
+    - sourceLabels: [namespace]
+      regex: '^$'
+      action: drop
+    {{- if semverCompare ">=1.16" .Values.global.discovery.kubernetesVersion }}
+    - sourceLabels: [pod]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container]
+      regex: '^$'
+      action: drop
+    {{- else }}
+    - sourceLabels: [pod_name]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container_name]
+      separator: ""
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container_name]
+      targetLabel: container
+    - sourceLabels: [pod_name]
+      targetLabel: pod
+    {{- end }}
+    - regex: container_name|pod_name|id|image|name
+      action: labeldrop
   - port: https-metrics
     scheme: https
     tlsConfig:
@@ -58,32 +84,6 @@ spec:
         replacement: probes
       - targetLabel: tier
         replacement: cluster
-    metricRelabelings:
-    - sourceLabels: [namespace]
-      regex: '^$'
-      action: drop
-{{- if semverCompare ">=1.16" .Values.global.discovery.kubernetesVersion }}
-    - sourceLabels: [pod]
-      regex: '^$'
-      action: drop
-    - sourceLabels: [container]
-      regex: '^$'
-      action: drop
-{{- else }}
-    - sourceLabels: [pod_name]
-      regex: '^$'
-      action: drop
-    - sourceLabels: [container_name]
-      separator: ""
-      regex: '^$'
-      action: drop
-    - sourceLabels: [container_name]
-      targetLabel: container
-    - sourceLabels: [pod_name]
-      targetLabel: pod
-{{- end }}
-    - regex: container_name|pod_name|id|image|name
-      action: labeldrop
   selector:
     matchLabels:
       k8s-app: kubelet
