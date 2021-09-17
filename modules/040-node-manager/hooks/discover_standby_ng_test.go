@@ -37,6 +37,30 @@ spec:
   nodeType: CloudEphemeral
 status: {}
 `
+		nodeGroupWithZeroStandbyAsString = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: normal
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    standby: "0"
+status: {}
+`
+		nodeGroupWithZeroStandbyAsInt = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: normal
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    standby: 0
+status: {}
+`
 		nodeGroupStandbyAbsolute = `
 ---
 apiVersion: deckhouse.io/v1
@@ -234,6 +258,30 @@ status: {}
 	Context("Cluster with NG without standby", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(nodeGroupWithoutStandby))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; no standby NGs should be discovered", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups").Array()).To(BeEmpty())
+		})
+	})
+
+	Context("Cluster with NG with zero standby as string", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupWithZeroStandbyAsString))
+			f.RunHook()
+		})
+
+		It("Hook must not fail; no standby NGs should be discovered", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups").Array()).To(BeEmpty())
+		})
+	})
+
+	Context("Cluster with NG with zero standby as int", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(nodeGroupWithZeroStandbyAsInt))
 			f.RunHook()
 		})
 
