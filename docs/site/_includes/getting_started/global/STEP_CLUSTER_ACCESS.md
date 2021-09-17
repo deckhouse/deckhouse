@@ -9,7 +9,7 @@ To do, so you need to get master IP either from dhctl logs or from cloud provide
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-You can run kubectl on master node from the root user. This is not secure way and we recommend to configure [external access](/en/documentation/v1/modules/150-user-authn/usage.html#external-access-to-the-kubernetes-api) to Kubernetes API later.
+You can run kubectl on master node from the `root` user. This is not secure way and we recommend to configure [external access](/en/documentation/v1/modules/150-user-authn/usage.html#external-access-to-the-kubernetes-api) to Kubernetes API later.
 {% snippetcut %}
 ```shell
 sudo -i
@@ -47,12 +47,33 @@ echo "$BALANCER_IP"
 {% endif %}
 
 Point a DNS domain you specified in the "[Cluster Installation](./step3.html)" step to Deckhouse web interfaces in one of the following ways:
-<div markdown="1">
-<ul><li><p>If you have the DNS server and you can add a DNS records, then add
-{%- if page.platform_code == 'aws' %} wildcard CNAME record for domain <code>*.example.com</code> containing the hostname of load balancer (<code>BALANCER_HOSTNAME</code>)
-{%- else %} wildcard A record for domain <code>*.example.com</code> containing the IP of load balancer (<code>BALANCER_IP</code>)
-{%- endif -%}
-, you've discovered previously.</p></li>
+<ul><li>If you have the DNS server and you can add a DNS records:
+  <ul>
+    <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
+      DNS</a> (e.g. - <code>%s.kube.my</code>), then add
+      {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
+      balancer (<code>BALANCER_HOSTNAME</code>)
+      {%- else %} a corresponding wildcard A record containing the IP of load balancer (<code>BALANCER_IP</code>){%-
+      endif -%}, you've discovered previously.
+    </li>
+    <li>If your cluster DNS name template is <strong>NOT</strong> a <a
+            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g. - <code>%s-kube.company.my</code>),
+      then add А or CNAME records containing the IP of load balancer (<code>BALANCER_IP</code>), you've discovered
+      previously, for the following Deckhouse service DNS names:
+      <div class="highlight">
+<pre class="highlight">
+<code example-hosts>dashboard.example.com
+deckhouse.example.com
+dex.example.com
+grafana.example.com
+kubeconfig.example.com
+status.example.com
+upmeter.example.com</code>
+</pre>
+      </div>
+    </li>
+  </ul>
+</li>
   <li><p>If you don't have a DNS server, add static records to the file <code>/etc/hosts</code> on your PC (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
 {% if page.platform_code == 'aws' %}
     <p>You can determine the IP address of the AWS load balancer using the following command (in the cluster):</p>
@@ -93,4 +114,3 @@ EOF
 </li>
 </ul></li>
 </ul>
-</div>
