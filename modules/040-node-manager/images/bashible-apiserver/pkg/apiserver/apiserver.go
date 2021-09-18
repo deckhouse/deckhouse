@@ -101,8 +101,8 @@ func (c completedConfig) New() (*BashibleServer, error) {
 	const (
 		labelSelector    = "app=bashible-apiserver"
 		namespace        = "d8-cloud-instance-manager"
-		configMapName    = "bashible-apiserver-context"
-		configMapKey     = "context.yaml"
+		secretName       = "bashible-apiserver-context"
+		secretKey        = "context.yaml"
 		templatesRootDir = "/bashible/templates"
 		resyncTimeout    = 30 * time.Minute
 	)
@@ -114,7 +114,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 	}
 
 	cachesManager := bashibleregistry.NewCachesManager()
-	bashibleContext := template.NewContext(factory, configMapName, configMapKey, cachesManager)
+	bashibleContext := template.NewContext(factory, secretName, secretKey, cachesManager)
 
 	// Template-based REST API
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(bashible.GroupName, Scheme, metav1.ParameterCodec, Codecs)

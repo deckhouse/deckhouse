@@ -40,7 +40,7 @@ func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {
 	fullContext := make(map[string]interface{})
 	contextKey, err := s.contextName(name)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get context configMapKey: %v", err)
+		return nil, fmt.Errorf("cannot get context secretKey: %v", err)
 	}
 	context, err := s.bashibleContext.Get(contextKey)
 	if err != nil {

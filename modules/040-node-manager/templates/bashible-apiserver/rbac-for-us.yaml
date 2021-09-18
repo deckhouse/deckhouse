@@ -14,7 +14,7 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
 rules:
   - apiGroups: [""]
-    resources: ["configmaps"]
+    resources: ["secrets"]
     verbs: ["get", "watch", "list"]
 ---
 # To read configmaps in d8-cloud-instance-manager

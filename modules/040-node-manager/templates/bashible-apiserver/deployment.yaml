@@ -90,15 +90,8 @@ spec:
         - name: certs
           secret:
             secretName: bashible-api-server-tls
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: bashible-apiserver-context
-  namespace: d8-cloud-instance-manager
-{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
-data:
-  context.yaml: |-
+
+{{- define "bashible_context_data" }}
 {{- range $bundle := $.Values.nodeManager.allowedBundles }}
   {{- range $ng := $.Values.nodeManager.internal.nodeGroups }}
     bashible-{{ $bundle }}-{{ $ng.name }}:
@@ -116,3 +109,14 @@ data:
     registry:
       path: {{ $.Values.global.modulesImages.registry }}
       dockerCfg: {{ $.Values.global.modulesImages.registryDockercfg }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-apiserver-context
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+data:
+  context.yaml: |-
+{{ include "bashible_context_data" . | b64enc | indent 4 }}
