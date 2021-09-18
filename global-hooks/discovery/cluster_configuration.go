@@ -15,7 +15,10 @@
 package hooks
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -98,12 +101,53 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 			return fmt.Errorf("no serviceSubnetCIDR field in clusterConfiguration")
 		}
 
-		if serviceSubnetCIDR, ok := metaConfig.ClusterConfig["clusterDomain"]; ok {
-			input.Values.Set("global.discovery.clusterDomain", serviceSubnetCIDR)
+		if clusterDomain, ok := metaConfig.ClusterConfig["clusterDomain"]; ok {
+			input.Values.Set("global.discovery.clusterDomain", clusterDomain)
 		} else {
 			return fmt.Errorf("no clusterDomain field in clusterConfiguration")
 		}
+
+		err = maxNodesAmountMetric(input, metaConfig.ClusterConfig["podSubnetCIDR"], metaConfig.ClusterConfig["podSubnetNodeCIDRPrefix"])
+		if err != nil {
+			return err
+		}
+
 	}
 
+	return nil
+}
+
+func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessage, podSubnetNodeCIDRPrefix json.RawMessage) error {
+	var res string
+	err := json.Unmarshal(podSubnetCIDR, &res)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal %v", podSubnetCIDR)
+	}
+
+	_, ipnet, err := net.ParseCIDR(res)
+	if err != nil {
+		return fmt.Errorf("cannot parse CIDR from podSubnetCIDR %s: %v", res, err)
+	}
+
+	podSubnetMaskSize, _ := ipnet.Mask.Size()
+
+	err = json.Unmarshal(podSubnetNodeCIDRPrefix, &res)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal %v", podSubnetNodeCIDRPrefix)
+	}
+
+	nodeMaskSize, err := strconv.Atoi(res)
+	if err != nil {
+		return fmt.Errorf("cannot convert to integer podSubnetNodeCIDRPrefix %s: %v", res, err)
+	}
+
+	diff := nodeMaskSize - podSubnetMaskSize
+	if diff < 0 {
+		return fmt.Errorf("node mask size:%d must be bigger than pod subnet mask size:%d", nodeMaskSize, podSubnetMaskSize)
+	}
+
+	maxNodesAmount := 1 << diff
+
+	input.MetricsCollector.Set("d8_max_nodes_amount_by_pod_cidr", float64(maxNodesAmount), nil)
 	return nil
 }

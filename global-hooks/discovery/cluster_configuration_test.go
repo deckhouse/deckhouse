@@ -98,6 +98,10 @@ data:
 			Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.222.0.0/16"))
 			Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
 
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(HaveLen(1))
+			value := metrics[0].Value
+			Expect(*value).To(Equal(float64(256)))
 		})
 
 		Context("d8-cluster-configuration Secret has changed", func() {
@@ -119,6 +123,11 @@ data:
 				Expect(f.ValuesGet("global.discovery.podSubnet").String()).To(Equal("10.122.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.serviceSubnet").String()).To(Equal("10.213.0.0/16"))
 				Expect(f.ValuesGet("global.discovery.clusterDomain").String()).To(Equal("test.local"))
+
+				metrics := f.MetricsCollector.CollectedMetrics()
+				Expect(metrics).To(HaveLen(1))
+				value := metrics[0].Value
+				Expect(*value).To(Equal(float64(1024)))
 			})
 		})
 
