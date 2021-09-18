@@ -20,7 +20,7 @@ func ParseName(name string) (string, string, error) {
 	return os, target, nil
 }
 
-// GetNodegroupContextKey parses context configMapKey for nodegroup bundles
+// GetNodegroupContextKey parses context secretKey for nodegroup bundles
 func GetNodegroupContextKey(name string) (string, error) {
 	os, ng, err := ParseName(name)
 	if err != nil {
@@ -29,7 +29,7 @@ func GetNodegroupContextKey(name string) (string, error) {
 	return fmt.Sprintf("bundle-%s-%s", os, ng), nil
 }
 
-// GetVersionContextKey parses context configMapKey for kubernetes bundles
+// GetVersionContextKey parses context secretKey for kubernetes bundles
 func GetVersionContextKey(name string) (string, error) {
 	os, version, err := ParseName(name)
 	if err != nil {
@@ -39,7 +39,7 @@ func GetVersionContextKey(name string) (string, error) {
 	return fmt.Sprintf("bundle-%s-%s", os, version), nil
 }
 
-// GetBashibleContextKey parses context configMapKey bashible
+// GetBashibleContextKey parses context secretKey bashible
 func GetBashibleContextKey(name string) (string, error) {
 	os, nodegroup, err := ParseName(name)
 	if err != nil {

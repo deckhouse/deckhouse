@@ -39,7 +39,7 @@ kubectl get -o json bashibles ubuntu-lts.master
 ## How it works
 
 Bashible apiserver generates bash scripts on the fly for a requested bundle. Templates of bashible steps are located in
-the container of the server. The context for these templates is mounted from `bashible-apiserver-context` configmap. All
+the container of the server. The context for these templates is mounted from `bashible-apiserver-context` secret. All
 objects returned by the apiserver contain a map where keys are script file names, and values are rendered bash scripts.
 
 `metadata.creationTimestamp` is generated in the request time.
@@ -76,7 +76,7 @@ The file structure in the container:
 ```shell
 tree /bashible
 /bashible
-├── context.yaml   # mounted from `bashible-apiserver-context` configmap
+├── context.yaml   # mounted from `bashible-apiserver-context` secret
 └── templates      # added on container building
     ├── bashible
     │   ├── bashible.sh.tpl

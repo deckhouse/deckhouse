@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// NameMapper maps the name of resource to the configMapKey of a template
+// NameMapper maps the name of resource to the secretKey of a template
 type NameMapper func(name string) (string, error)
 
 type config struct {
