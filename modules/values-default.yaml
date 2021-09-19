@@ -29,3 +29,4 @@ helmEnabled: true
 smokeMiniEnabled: true
 upmeterEnabled: true
 logShipperEnabled: true
+localPathProvisionerEnabled: true

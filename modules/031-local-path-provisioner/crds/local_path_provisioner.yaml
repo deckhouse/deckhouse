@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: localpathprovisioners.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: local-path-provisioner
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: localpathprovisioners
+    singular: localpathprovisioner
+    kind: LocalPathProvisioner
+  preserveUnknownFields: false
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        description: |
+          Parameters of the LocalPathProvisioner instance.
+        properties:
+          spec:
+            type: object
+            required:
+            - path
+            properties:
+              nodeGroups:
+                type: array
+                items:
+                  type: string
+                description: |
+                  Select node groups for local-path-provisioner storage-class allowedTopologies.
+
+                  **Format**: array of string.
+                example:
+                - master
+                - worker
+              path:
+                type: string
+                description: |
+                  Node root path for local-path-provisioner PV's.
+                example: "/opt/local-path-provisioner"
