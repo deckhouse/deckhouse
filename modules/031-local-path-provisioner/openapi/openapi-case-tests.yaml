@@ -1,0 +1,25 @@
+positive:
+  configValues:
+  - {}
+  values:
+  - { internal: {} }
+  - internal:
+      localPathProvisioners: []
+  - internal:
+      localPathProvisioners:
+      - name: test
+        spec:
+          nodeGroups:
+          - master
+          - worker
+          path: "/opt/local-path-provisioner"
+      - name: test2
+        spec:
+          path: "/local"
+negative:
+  configValues:
+  - { somethingInConfig: yes }
+  values:
+  - internal:
+      localPathProvisioners:
+      - name: test

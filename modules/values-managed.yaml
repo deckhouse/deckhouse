@@ -19,3 +19,4 @@ dashboardEnabled: true
 deckhouseWebEnabled: true
 helmEnabled: true
 logShipperEnabled: true
+localPathProvisionerEnabled: true

@@ -381,7 +381,7 @@
     matrix:
     - PROVIDER: Static
       LAYOUT:
-      - Standard
+      - Static
       KUBERNETES_VERSION:
       - "1.19"
       - "1.20"
@@ -399,7 +399,7 @@
     matrix:
     - PROVIDER: Static
       LAYOUT:
-      - Standard
+      - Static
       KUBERNETES_VERSION:
       - "1.20"
       CRI:

@@ -96,18 +96,10 @@ master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -
 system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")"
 
 # Bootstrap
-# TODO --resources "$cwd/resources.yaml" dont't work is static clusters !!!!
 dhctl bootstrap --yes-i-want-to-drop-cache --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
 --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee "$cwd/bootstrap.log"
 
 >&2 echo "Starting the process, if you'd like to pause the cluster deletion, ssh to cluster \"ssh $ssh_user@$master_ip\" and execute \"kubectl create configmap pause-the-test\""
-
->&2 echo 'Creating resources'
-scp -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$cwd/resources.yaml" "$ssh_user@$master_ip":/tmp/resources.yaml
-ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"
-set -Eeuo pipefail
-kubectl create -f /tmp/resources.yaml
-ENDSSH
 
 for ((i=0; i<10; i++)); do
   bootstrap_system="$(ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash << "ENDSSH"

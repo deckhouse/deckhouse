@@ -1,0 +1,66 @@
+{{- $context := . }}
+{{- range $localPathProvisioner := $context.Values.localPathProvisioner.internal.localPathProvisioners }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+  namespace: d8-{{ $context.Chart.Name }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner")) | indent 2 }}
+data:
+  config.json: |-
+    {
+            "nodePathMap":[
+            {
+                    "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
+                    "paths":["{{ $localPathProvisioner.spec.path }}"]
+            }
+            ]
+    }
+  setup: |-
+    #!/bin/sh
+    while getopts "m:s:p:" opt
+    do
+        case $opt in
+            p)
+            absolutePath=$OPTARG
+            ;;
+            s)
+            sizeInBytes=$OPTARG
+            ;;
+            m)
+            volMode=$OPTARG
+            ;;
+        esac
+    done
+    mkdir -m 0777 -p "${absolutePath}"
+  teardown: |-
+    #!/bin/sh
+    while getopts "m:s:p:" opt
+    do
+        case $opt in
+            p)
+            absolutePath=$OPTARG
+            ;;
+            s)
+            sizeInBytes=$OPTARG
+            ;;
+            m)
+            volMode=$OPTARG
+            ;;
+        esac
+    done
+    rm -rf "${absolutePath}"
+  helperPod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      containers:
+      - name: helper-pod
+        image: {{ $context.Values.global.modulesImages.registry }}:{{ $context.Values.global.modulesImages.tags.localPathProvisioner.helper }}
+        imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- end }}

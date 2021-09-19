@@ -1,0 +1,18 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          Параметры инстанса Local-Path-Provisioner
+        properties:
+          spec:
+            properties:
+              nodeGroups:
+                description: |
+                  Нодгруппы, в которых работает данный storage-class.
+              path:
+                description: |
+                  Корневой путь на ноде к директории для хранения PV.
