@@ -13,6 +13,11 @@ apiServer:
     mountPath: "/etc/kubernetes/deckhouse/extra-files"
     readOnly: true
     pathType: DirectoryOrCreate
+  - name: "etc-pki"
+    hostPath: "/etc/pki"
+    mountPath: "/etc/pki"
+    readOnly: true
+    pathType: DirectoryOrCreate
 {{- if .apiserver.auditPolicy }}
   - name: "kube-audit-log"
     hostPath: "/var/log/kube-audit"
