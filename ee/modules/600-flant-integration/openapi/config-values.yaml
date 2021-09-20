@@ -73,7 +73,7 @@ properties:
     properties:
       url:
         type: string
-        default: "https://connect.flant.com/v1/loki_push"
+        default: "https://connect.deckhouse.io/v1/loki_push"
         description: |
           URL for sending logs in Loki compatible storage.
     description: |
