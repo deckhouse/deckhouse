@@ -49,13 +49,13 @@ EOF
 </ul>
 
 <script type="text/javascript">
-$( document ).ready(function() {
-   generate_password();
-   update_parameter('dhctl-user-password-hash', 'password', '<GENERATED_PASSWORD_HASH>',  null ,null);
-   update_parameter('dhctl-user-password-hash', null, '<GENERATED_PASSWORD_HASH>',  null ,'[user-yml]');
-   update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>',  null ,'[user-yml]');
-   update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>',  null ,'code span.c1');
-   update_parameter((sessionStorage.getItem('dhctl-domain')||'example.com').replace('%s.',''), null, 'example.com',  null ,'[user-yml]');
+$(document).ready(function () {
+    generate_password();
+    update_parameter('dhctl-user-password-hash', 'password', '<GENERATED_PASSWORD_HASH>', null, null);
+    update_parameter('dhctl-user-password-hash', null, '<GENERATED_PASSWORD_HASH>', null, '[user-yml]');
+    update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[user-yml]');
+    update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
+    update_domain_parameters();
 });
 
 </script>
