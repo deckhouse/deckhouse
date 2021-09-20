@@ -26,9 +26,11 @@ spec:
           servicePort: 443
         path: /dex-authenticator
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
+    {{- if $crd.spec.applicationIngressCertificateSecretName }}
   tls:
   - hosts:
     - {{ $crd.spec.applicationDomain }}
     secretName: {{ $crd.spec.applicationIngressCertificateSecretName }}
+    {{- end }}
   {{- end }}
 {{- end }}

@@ -37,7 +37,6 @@ spec:
               type: object
               required:
                 - applicationDomain
-                - applicationIngressCertificateSecretName
                 - applicationIngressClassName
               properties:
                 applicationDomain:
