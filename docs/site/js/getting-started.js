@@ -98,8 +98,8 @@ function update_domain_parameters() {
             $(this)[0].innerText = content.replace('admin@example.com', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
         }
     });
-    // update user email in the resources-yml snippet
-    $('[resources-yml]').each(function (index) {
+    // update user email in the resources-yml or user-yml snippet
+    $('[resources-yml],[user-yml]').each(function (index) {
         let content = ($(this)[0]) ? $(this)[0].textContent : null;
         if (content && content.length > 0) {
             $(this)[0].textContent = content.replace(/admin@example.com/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
