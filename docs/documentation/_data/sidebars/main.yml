@@ -15,6 +15,10 @@ entries:
             en: Release channels
             ru: Каналы обновлений
           url: /deckhouse-release-channels.html
+        - title:
+            en: Supported K8s & OS versions
+            ru: Поддерживаемые версии K8s и ОС
+          url: /supported_versions.html
         - title: FAQ
           url: /deckhouse-faq.html
         - title:

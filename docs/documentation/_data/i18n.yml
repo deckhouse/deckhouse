@@ -80,6 +80,12 @@ common:
   warning_ee_version:
     ru: Доступно только в
     en: Search...
+  version:
+    ru: Версия
+    en: Version
+  status:
+    ru: Статус
+    en: Status
   or:
     en: or
     ru: или
