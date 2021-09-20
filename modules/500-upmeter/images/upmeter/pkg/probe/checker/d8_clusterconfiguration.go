@@ -71,7 +71,9 @@ func (c *D8ClusterConfiguration) Checker() check.Checker {
 	// Start monitor to catch the CR
 	objectHandler := newHookProbeObjectHandler(c.CustomResourceName, c.Logger.WithField("component", "objectHandler"))
 	c.Monitor.Subscribe(objectHandler)
-	c.Monitor.Start(context.Background())
+	if err := c.Monitor.Start(context.Background()); err != nil {
+		panic(fmt.Errorf("cannot start monitor: %v", err))
+	}
 
 	gvr := schema.GroupVersionResource{
 		Group:    "deckhouse.io",
