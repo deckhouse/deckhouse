@@ -59,16 +59,20 @@ spec:
         name: node-exporter
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | indent 8 }}
         args:
-        - "--web.listen-address=127.0.0.1:9101"
-        - "--path.rootfs=/host/root"
-        - "--collector.ntp"
-        - "--collector.ntp.server-is-local"
-        - "--collector.filesystem.ignored-mount-points"
+        - '--web.listen-address=127.0.0.1:9101'
+        - '--path.rootfs=/host/root'
+        - '--collector.ntp'
+        - '--collector.ntp.server-is-local'
+        - '--collector.processes'
+        - '--collector.interrupts'
+        - '--collector.filesystem.ignored-mount-points'
         - '(^/(dev|proc|sys|run|var/lib/kubelet)($|/))|(^/var/lib/docker/)'
-        - "--collector.filesystem.ignored-fs-types"
+        - '--collector.filesystem.ignored-fs-types'
         - '^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.lxcfs|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs|squashfs)$'
         - '--collector.textfile.directory'
         - '/host/textfile'
+        - '--collector.netstat.fields'
+        - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
         volumeMounts:
         - name: root
           readOnly:  true
