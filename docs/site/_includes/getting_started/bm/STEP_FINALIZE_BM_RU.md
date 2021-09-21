@@ -1,36 +1,75 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-На данном этапе вы создали базовый кластер, который состоит из **единственного** мастера и этого достаточно для ознакомительных целей. При этом, Deckhouse Platform расчитан исключительно на реальные условия, где помимо мастера присутствуют дополнительные рабочие узлы.
+На данном этапе вы создали кластер, который состоит из **единственного** мастер-узла.
 
-Для продолжения ознакомления с Deckhouse Platform потребуется выбрать один из подходов:
-<ul><li>Если вам достаточно единственного мастера, то явно сообщите об этом платформе с помощью команды:
+Для полноценной работы кластера добавьте узлы, согласно <a href="/ru/documentation/v1/modules/040-node-manager/faq.html#как-автоматически-добавить-статичный-узел-в-кластер">документации</a> (рекомендуется для production-окружений и тестовых сред).
+
+<blockquote>
+<p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на мастер-узле. Для этого, снимите с мастер-узла taint, выполнив следующую команду:</p>
 {% snippetcut %}
 ```bash
 kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
-</li>
-<li>Если вам требуются дополнительные узлы, добавьте их в кластер согласно <a href="/ru/documentation/v1/modules/040-node-manager/faq.html#как-автоматически-добавить-статичный-узел-в-кластер">документации</a> модуля управления узлами.</li></ul>
+</blockquote>
 
-После — останется ещё три действия.
-<ul><li><p>Установить Ingress-контроллер:</p>
+Далее, остается выполнить следующие три действия.
+<ul><li><p><strong>Установка Ingress-контроллера</strong></p>
+<p>Создайте файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}
+<p>Примените его, используя следующую команду:</p>
+{% snippetcut %}
+```shell
+kubectl create -f ingress-nginx-controller.yml
+```
+{% endsnippetcut %}
 </li>
-<li><p>Создать пользователя для доступа в веб-интерфейсы кластера:</p>
+<li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
+<p>Создайте файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
 {% snippetcut name="user.yml" selector="user-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}
+<p>Примените его, используя следующую команду:</p>
+{% snippetcut %}
+```shell
+kubectl create -f user.yml
+```
+{% endsnippetcut %}
 </li>
-<li>Создать DNS-записи для организации доступа в веб-интерфейсы кластера:
-  <ul><li>Выясните публичный адрес узла, на котором работает Ingress-контроллер в вашем случае.</li>
-  <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер, то мы рекомендуем добавить wildcard-запись для <code>*.example.com</code> и публичного IP-адреса.</li>
-  <li>Если вы хотите протестировать работу кластера, но не имеете под управлением DNS-сервер, добавьте статические записи соответствия имен конкретных сервисов IP-адресу узла, на котором работает Ingress-контроллер в файл <code>/etc/hosts</code> для Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows):
+<li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
+  <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
+  <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
+    <ul>
+      <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
+        DNS-шаблоном</a> (например - <code>%s.kube.my</code>), то добавьте соответствующую wildcard A-запись со значением публичного IP-адреса, который вы получили выше.
+      </li>
+      <li>
+        Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
+              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например - <code>%s-kube.company.my</code>),
+        то добавьте А или CNAME-записи со значением публичного IP-адреса, который вы
+        получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
+        <div class="highlight">
+<pre class="highlight">
+<code example-hosts>dashboard.example.com
+deckhouse.example.com
+dex.example.com
+grafana.example.com
+kubeconfig.example.com
+status.example.com
+upmeter.example.com</code>
+</pre>
+        </div>
+      </li>
+    </ul>
+  </li>
+
+    <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>С учетом указанного на шаге <a href="step3.html">«Настройка  кластера»</a> шаблона имени, выполните следующую команду в Linux (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
 {% snippetcut selector="example-hosts" %}
 ```bash
-export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
+export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP dashboard.example.com
 $PUBLIC_IP deckhouse.example.com
