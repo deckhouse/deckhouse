@@ -600,7 +600,7 @@ CRDs must be stored in the `crds` directory in the module's root.
 The module must contain a dedicated hook called `ensure_crds.go` with the following content:
 ```go
 /*
-Copyright 2021 Flant CJSC
+Copyright 2021 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
