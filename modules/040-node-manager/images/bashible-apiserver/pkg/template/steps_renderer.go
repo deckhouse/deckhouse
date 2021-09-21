@@ -57,6 +57,11 @@ func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {
 		fullContext[k] = v
 	}
 
+	err = s.bashibleContext.EnrichContext(fullContext)
+	if err != nil {
+		return nil, err
+	}
+
 	return fullContext, nil
 }
 

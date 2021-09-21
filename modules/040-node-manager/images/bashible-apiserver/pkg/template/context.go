@@ -1,7 +1,10 @@
 package template
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +28,7 @@ func NewContext(factory informers.SharedInformerFactory, configMapName, configMa
 
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
+	EnrichContext(map[string]interface{}) error
 }
 
 type UpdateHandler interface {
@@ -150,4 +154,74 @@ func (x *configMapEventHandler) OnUpdate(oldObj, newObj interface{}) {
 
 func (x *configMapEventHandler) OnDelete(obj interface{}) {
 	// noop
+}
+
+func (c *BashibleContext) EnrichContext(context map[string]interface{}) error {
+	err := c.enrichContextWithDockerRegistry(context)
+	if err != nil {
+		return err
+	}
+
+	err = c.enrichContextWithImages(context)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *BashibleContext) enrichContextWithDockerRegistry(context map[string]interface{}) error {
+	// enrich context with registry path and dockerCfg
+	type dockerCfg struct {
+		Auths map[string]struct {
+			Auth string `json:"auth"`
+		} `json:"auths"`
+	}
+
+	var (
+		registryHost string
+		registryAuth string
+		dc           dockerCfg
+	)
+
+	registryMapContext, err := c.Get("registry")
+	if err != nil {
+		return fmt.Errorf("cannot get registry context data: %v", err)
+	}
+
+	registryPath, ok := registryMapContext["path"]
+	if !ok {
+		return fmt.Errorf("cannot get path from registry context: %v", registryMapContext["path"])
+	}
+	registryHost = strings.Split(registryPath.(string), "/")[0]
+
+	if registryDockerCfgJSONBase64, ok := registryMapContext["dockerCfg"]; ok {
+		bytes, err := base64.StdEncoding.DecodeString(registryDockerCfgJSONBase64.(string))
+		if err != nil {
+			return fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+		}
+
+		err = json.Unmarshal(bytes, &dc)
+		if err != nil {
+			return fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+		}
+
+		if registry, ok := dc.Auths[registryHost]; ok {
+			registryAuth = registry.Auth
+		}
+	}
+
+	context["registry"] = map[string]interface{}{"host": registryHost, "auth": registryAuth}
+	return nil
+}
+
+func (c *BashibleContext) enrichContextWithImages(context map[string]interface{}) error {
+	// enrich context with images
+	imagesMapContext, err := c.Get("images")
+	if err != nil {
+		return fmt.Errorf("cannot get images context data: %v", err)
+	}
+
+	context["images"] = imagesMapContext
+	return nil
 }

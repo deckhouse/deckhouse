@@ -26,6 +26,7 @@ import (
 	"github.com/peterbourgon/mergemap"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -47,8 +48,11 @@ type MetaConfig struct {
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
 	VersionMap map[string]interface{} `json:"-"`
+	Images     ImagesTags             `json:"-"`
 	UUID       string                 `json:"clusterUUID,omitempty"`
 }
+
+type ImagesTags map[string]map[string]interface{}
 
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare() (*MetaConfig, error) {
@@ -272,7 +276,12 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		}
 		data[key] = t
 	}
-	result := m.VersionMap
+
+	result := make(map[string]interface{})
+	for key, value := range m.VersionMap {
+		result[key] = value
+	}
+
 	result["extraArgs"] = make(map[string]interface{})
 	result["clusterConfiguration"] = data
 	// bashible will use this as a placeholder on envsubst call, address will be discovered in one of bashible steps
@@ -280,6 +289,17 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 
 	if nodeIP != "" {
 		result["nodeIP"] = nodeIP
+	}
+
+	result["images"] = make(map[string]interface{})
+	if app.DontUsePublicControlPlaneImages {
+		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
+		result["images"] = map[string]interface{}{
+			"etcd":                    fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["etcd"]),
+			"kube-apiserver":          fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserver"+k8s]),
+			"kube-controller-manager": fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeControllerManager"+k8s]),
+			"kube-scheduler":          fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeScheduler"+k8s]),
+		}
 	}
 
 	return result, nil
@@ -321,12 +341,16 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.parseRegistryData()
+	registryData, err := m.ParseRegistryData()
 	if err != nil {
 		return nil, err
 	}
 
-	configForBashibleBundleTemplate := m.VersionMap
+	configForBashibleBundleTemplate := make(map[string]interface{})
+	for key, value := range m.VersionMap {
+		configForBashibleBundleTemplate[key] = value
+	}
+
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
 	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
@@ -338,6 +362,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		configForBashibleBundleTemplate["packagesProxy"] = data["packagesProxy"]
 	}
 	configForBashibleBundleTemplate["registry"] = registryData
+
+	configForBashibleBundleTemplate["images"] = make(map[string]interface{})
+	if app.DontUsePublicControlPlaneImages {
+		configForBashibleBundleTemplate["images"] = map[string]interface{}{"pause": fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["common"]["pause"])}
+	}
 
 	return configForBashibleBundleTemplate, nil
 }
@@ -430,20 +459,24 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {
-	versionMapFile, err := ioutil.ReadFile(filename)
 	versionMap := make(map[string]interface{})
+
+	versionMapFile, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return fmt.Errorf("version map file load: %v", err)
+		return fmt.Errorf("%s file load: %v", filename, err)
 	}
+
 	err = yaml.Unmarshal(versionMapFile, &versionMap)
 	if err != nil {
-		return fmt.Errorf("version map file unmarshal: %v", err)
+		return fmt.Errorf("%s file unmarshal: %v", filename, err)
 	}
+
 	m.VersionMap = versionMap
+
 	return nil
 }
 
-func (m *MetaConfig) parseRegistryData() (map[string]interface{}, error) {
+func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 	type dockerCfg struct {
 		Auths map[string]struct {
 			Auth string `json:"auth"`
@@ -469,14 +502,28 @@ func (m *MetaConfig) parseRegistryData() (map[string]interface{}, error) {
 	}
 
 	if registry, ok := dc.Auths[registryHost]; ok {
-		bytes, err = base64.StdEncoding.DecodeString(registry.Auth)
-		if err != nil {
-			return nil, fmt.Errorf("cannot base64 decode auth string: %v", err)
-		}
-		registryAuth = string(bytes)
+		registryAuth = registry.Auth
 	}
 
 	return map[string]interface{}{"host": registryHost, "auth": registryAuth}, nil
+}
+
+func (m *MetaConfig) LoadImagesTags(filename string) error {
+	var imagesTags ImagesTags
+
+	imagesTagsJSONFile, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("%s file load: %v", filename, err)
+	}
+
+	err = yaml.Unmarshal(imagesTagsJSONFile, &imagesTags)
+	if err != nil {
+		return fmt.Errorf("%s file unmarshal: %v", filename, err)
+	}
+
+	m.Images = imagesTags
+
+	return nil
 }
 
 func getDNSAddress(serviceCIDR string) string {

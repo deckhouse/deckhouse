@@ -111,6 +111,8 @@ data:
 {{ include "bundle_k8s_version_context" (list $ $bundle $kubernetes_version) | indent 6 }}
   {{- end }}
 {{- end }}
+    images:
+      pause: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.pause }}
     versionMap:
 {{ .Files.Get "candi/version_map.yml" | indent 6 }}
     registry:

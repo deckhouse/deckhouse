@@ -28,7 +28,8 @@ var (
 	ResourcesTimeout = "15m"
 	DeckhouseTimeout = 10 * time.Minute
 
-	ForceAbortFromCache = false
+	ForceAbortFromCache             = false
+	DontUsePublicControlPlaneImages = false
 )
 
 func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
@@ -69,4 +70,12 @@ Experimental. This feature may be deleted in the future.`
 		Envar(configEnvName("FORCE_ABORT_FROM_CACHE")).
 		Default("false").
 		BoolVar(&ForceAbortFromCache)
+}
+
+func DefineDontUsePublicImagesFlags(cmd *kingpin.CmdClause) {
+	const help = `Don't use public images for control-plane components. Experimental. This feature may be deleted in the future.`
+	cmd.Flag("dont-use-public-control-plane-images", help).
+		Envar(configEnvName("DONT_USE_PUBLIC_CONTROL_PLANE_IMAGES")).
+		Default("false").
+		BoolVar(&DontUsePublicControlPlaneImages)
 }

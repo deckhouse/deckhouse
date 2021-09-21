@@ -7,7 +7,7 @@ metadata:
   annotations:
     control-plane-manager.deckhouse.io/kubernetes-version: {{ $.clusterConfiguration.kubernetesVersion | quote }}
 {{- if hasKey . "images" }}
-  {{- if hasKey $.images  "kube-controller-manager" }}
+  {{- if hasKey $.images "kube-controller-manager" }}
 ---
 apiVersion: v1
 kind: Pod

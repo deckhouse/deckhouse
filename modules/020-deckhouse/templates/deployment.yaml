@@ -76,6 +76,16 @@ spec:
             - /deckhouse/deckhouse
           image: {{ .Values.deckhouse.internal.currentReleaseImageName }}
           env:
+{{- if not .Values.global.clusterIsBootstrapped }}
+# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make Deckhouse work without kube-proxy
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6443"
+{{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
             - name: DECKHOUSE_BUNDLE

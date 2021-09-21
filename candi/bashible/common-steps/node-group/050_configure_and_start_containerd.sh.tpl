@@ -25,6 +25,12 @@ _on_containerd_config_changed() {
   {{- if hasKey .nodeGroup.cri "containerd" }}
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
   {{- end }}
+  {{- $sandbox_image := "k8s.gcr.io/pause:3.2" }}
+  {{- if .images }}
+    {{- if .images.pause }}
+      {{- $sandbox_image = .images.pause }}
+    {{- end }}
+  {{- end }}
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`
 bb-sync-file /etc/containerd/config.toml - << "EOF"
 version = 2
@@ -76,7 +82,7 @@ oom_score = 0
     stream_idle_timeout = "4h0m0s"
     enable_selinux = false
     selinux_category_range = 1024
-    sandbox_image = "k8s.gcr.io/pause:3.2"
+    sandbox_image = {{ $sandbox_image | quote }}
     stats_collect_period = 10
     systemd_cgroup = false
     enable_tls_streaming = false
@@ -126,6 +132,11 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
           endpoint = ["https://registry-1.docker.io"]
+{{- if .registry }}
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.host }}".auth]
+          auth = "{{ .registry.auth }}"
+{{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
       key_model = ""
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
