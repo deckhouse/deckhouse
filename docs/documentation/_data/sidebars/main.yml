@@ -358,7 +358,7 @@ entries:
                 - title:
                     ru: Описание
                     en: Description
-                  url: /modules/041-kube-proxy/
+                  url: /modules/021-kube-proxy/
             - title: kube-dns
               folders:
                 - title:
