@@ -54,7 +54,10 @@ const cacheMessage = `Create cache %s:
 	If you want to continue, please delete the cache folder manually.
 `
 
-const versionMap = "/deckhouse/candi/version_map.yml"
+const (
+	versionMap     = "/deckhouse/candi/version_map.yml"
+	imagesTagsJSON = "/deckhouse/candi/images_tags.json"
+)
 
 func printBanner() {
 	log.InfoLn(banner)
@@ -98,6 +101,12 @@ func loadConfigFromFile(path string) (*config.MetaConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = metaConfig.LoadImagesTags(imagesTagsJSON)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(metaConfig.ProviderClusterConfig) == 0 && len(metaConfig.StaticClusterConfig) == 0 {
 		return nil, fmt.Errorf("StaticClusterConfiguration must present for static-cluster bootstrap.")
 	}
@@ -136,6 +145,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineDropCacheFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
 	app.DefineDeckhouseFlags(cmd)
+	app.DefineDontUsePublicImagesFlags(cmd)
 
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)

@@ -70,6 +70,14 @@ spec:
         - /deckhouse/deckhouse
         imagePullPolicy: Always
         env:
+# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT is needed on bootstrap phase to deckhouse work without kube-proxy
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
         - name: LOG_LEVEL
           value: PLACEHOLDER
         - name: DECKHOUSE_BUNDLE

@@ -120,7 +120,7 @@ function main() {
   export NODE_GROUP="{{ .nodeGroup.name }}"
 {{- if .registry }}
   export REGISTRY="{{ .registry.host }}"
-  export REGISTRY_AUTH="{{ .registry.auth }}"
+  export REGISTRY_AUTH="$(base64 -d <<< {{ .registry.auth }})"
 {{- end }}
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then

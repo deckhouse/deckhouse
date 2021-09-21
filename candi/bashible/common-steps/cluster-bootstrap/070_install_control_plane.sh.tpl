@@ -22,7 +22,6 @@ kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
 kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml {{ $experimentalOption }} /var/lib/bashible/kubeadm/patches
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
-kubeadm init phase addon kube-proxy --config /var/lib/bashible/kubeadm/config.yaml
 
 # Upload pki for deckhouse
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system delete secret d8-pki || true
