@@ -38,8 +38,7 @@ $(document).ready(function() {
     }
 
     tokenInputElement.change(function () {
-        $.cookie('license-token', $(this).val(), {path: '/' });
-        location.reload();
+        update_license_parameters($(this).val());
     });
 })
 </script>

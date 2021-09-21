@@ -4,8 +4,8 @@
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
-```shell
-docker login -u license-token -p <LICENSE_TOKEN> registry.deckhouse.io
+```text
+ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
 docker run -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
 {% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
