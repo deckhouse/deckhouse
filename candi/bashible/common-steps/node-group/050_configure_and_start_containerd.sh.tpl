@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- if eq .cri "Containerd" }}
 bb-event-on 'bb-sync-file-changed' '_on_containerd_config_changed'
 _on_containerd_config_changed() {
-{{ if ne .runType "ImageBuilding" -}}
-  bb-deckhouse-get-disruptive-update-approval
+  {{ if ne .runType "ImageBuilding" -}}
   systemctl restart containerd.service
-{{- end }}
+  {{- end }}
 }
 
-{{- if eq .cri "Containerd" }}
   {{- $max_concurrent_downloads := 3 }}
   {{- if hasKey .nodeGroup.cri "containerd" }}
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
@@ -132,11 +131,11 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
           endpoint = ["https://registry-1.docker.io"]
-{{- if .registry }}
+  {{- if .registry }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.host }}".auth]
           auth = "{{ .registry.auth }}"
-{{- end }}
+  {{- end }}
     [plugins."io.containerd.grpc.v1.cri".image_decryption]
       key_model = ""
     [plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
