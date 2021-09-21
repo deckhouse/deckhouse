@@ -6,7 +6,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 from: {{ env "BASE_ALPINE" }}
 git:
-  - add: /modules/041-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
+  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-wrapper-installer.sh
     to: /iptables-wrapper-installer.sh
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -32,7 +32,7 @@ from: k8s.gcr.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}@{{ $value.cont
   {{- else }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
-  - add: /modules/041-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
 shell:
   beforeInstall:

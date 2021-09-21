@@ -151,6 +151,7 @@ func parseProjectList(b []byte) ([]ossProject, error) {
 var skipOssChecks = map[string]struct{}{
 	// module name
 	"010-priority-class":                      {},
+	"021-kube-proxy":                          {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
 	"030-cloud-provider-gcp":                  {},
@@ -158,7 +159,6 @@ var skipOssChecks = map[string]struct{}{
 	"030-cloud-provider-vsphere":              {},
 	"030-cloud-provider-yandex":               {},
 	"035-cni-simple-bridge":                   {},
-	"041-kube-proxy":                          {},
 	"140-user-authz":                          {},
 	"340-extended-monitoring":                 {},
 	"340-monitoring-applications":             {},

@@ -133,7 +133,7 @@ REGISTRY="{{ .registry.host }}"
 REGISTRY="$(cut -d "/" -f1 <<< "{{ .registry.path }}")"
   {{- end }}
   {{- if .registry.auth }}
-REGISTRY_AUTH="{{ .registry.auth }}"
+REGISTRY_AUTH="$(base64 -d <<< {{ .registry.auth }})"
   {{- else }}
 REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); print(parsed["auths"]["'${REGISTRY}'"]["auth"]);' | base64 -d)"
   {{- end }}
