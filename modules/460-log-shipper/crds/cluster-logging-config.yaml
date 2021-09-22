@@ -214,5 +214,6 @@ spec:
                   description: |
                     Array of `ClusterLogDestination` CustomResource names which this source will output with.
                     Fields with float or boolean values will be converted to string.
+                  minItems: 1
                   items:
                     type: string

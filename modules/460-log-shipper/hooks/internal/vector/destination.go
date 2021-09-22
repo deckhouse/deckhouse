@@ -18,11 +18,17 @@ package vector
 
 import (
 	"encoding/base64"
+	"fmt"
+	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/impl"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/v1alpha1"
 )
+
+var validMustacheTemplate = regexp.MustCompile(`^\{\{\ ([a-zA-Z0-9][a-zA-Z0-9\[\]_\\\-\.]+)\ \}\}$`)
+var vectorArryayTemplate = regexp.MustCompile(`^[a-zA-Z0-9_\\\.\-]+\[\d+\]$`)
 
 type commonDestinationSettings struct {
 	Name        string   `json:"-"`
@@ -125,9 +131,19 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 		"pod_labels": "{{ pod_labels }}",
 		"pod_owner":  "{{ pod_owner }}",
 	}
-
-	for k, v := range cspec.ExtraLabels {
-		labels[k] = v
+	var dataField string
+	keys := make([]string, 0, len(cspec.ExtraLabels))
+	for key := range cspec.ExtraLabels {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if validMustacheTemplate.MatchString(cspec.ExtraLabels[k]) {
+			dataField = validMustacheTemplate.FindStringSubmatch(cspec.ExtraLabels[k])[1]
+			labels[k] = fmt.Sprintf("{{ parsed_data.%s }}", dataField)
+		} else {
+			labels[k] = cspec.ExtraLabels[k]
+		}
 	}
 
 	ctls := CommonTLS{

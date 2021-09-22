@@ -273,8 +273,31 @@ spec:
                           description: Vector will validate the configured remote host name against the remote host's TLS certificate.
                 extraLabels:
                   type: object
-                  description: A set of labels that will be attached to each batch of events.
-                  example: { "forwarder": "vector", "key": "value" }
+                  description: |
+                    A set of labels that will be attached to each batch of events.
+                    You can use simple templating here: `{{ app }}`.
+                    There are some reserved keys:
+                    - parsed_data
+                    - pod
+                    - pod_labels
+                    - pod_ip
+                    - namespace
+                    - image
+                    - container
+                    - node
+                    - pod_owner
+                    More about [field path notation](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                  example: |
+                    ```yaml
+                    extraLabels:
+                      forwarder: vector
+                      key: value
+                      app_info: "{{ app }}"
+                      array_member: "{{ array[0] }}"
+                      symbol_escating_value: "{{ pay\.day }}"
+                    ```
                   additionalProperties:
                     type: string
-                    pattern: '^[a-zA-Z0-9_\-]+$'
+                    anyOf:
+                      - pattern: '^[a-zA-Z0-9_\-]+$'
+                      - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
