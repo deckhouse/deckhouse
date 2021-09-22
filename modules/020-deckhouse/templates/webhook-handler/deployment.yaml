@@ -77,6 +77,11 @@ spec:
           - containerPort: 9681
             name: conversion-http
             protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: validating-http
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
