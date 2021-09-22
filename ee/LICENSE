@@ -1,17 +1,17 @@
 The Deckhouse Platform Enterprise Edition (EE) license (the “EE License”)
-Copyright (c) 2021 Flant CJSC
+Copyright (c) 2021 Flant JSC
 
 This software and associated documentation files (the "Software") may only be
 used in production, if you (and any entity that you represent) have a valid
 subscription plan, available at https://deckhouse.io, for the correct number of
 Kubernetes clusters. Subject to the foregoing sentence, you are free to modify
-this Software and publish patches to the Software. You agree that Flant CJSC
+this Software and publish patches to the Software. You agree that Flant JSC
 retain all right, title and interest in and to all such modifications and/or
 patches, and all such modifications and/or patches may only be used, copied,
 modified, displayed, distributed, or otherwise exploited with a valid
 Deckhouse Platform Enterprise Edition subscription. Notwithstanding the foregoing,
 you may copy and modify the Software for development and testing purposes, without
-requiring a subscription. You agree that Flant CJSC retain all right, title and
+requiring a subscription. You agree that Flant JSC retain all right, title and
 interest in and to all such modifications. You are not granted any other rights
 beyond what is expressly stated herein.  Subject to the foregoing, it is forbidden
 to copy, merge, publish, distribute, sublicense, and/or sell the Software.
