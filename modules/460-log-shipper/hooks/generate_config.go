@@ -126,19 +126,23 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.DestinationRefs = make([]string, 1)
 				newSource.Spec.DestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
 				filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
 				if err != nil {
 					return err
 				}
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[dest])...)
 				clusterSources = append(clusterSources, newSource)
 			}
 		} else {
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.DestinationRefs[0]])...)
 			filterTransforms, err := vector.CreateTransformsFromFilter(tmpSpec.Spec.LogFilters)
 			if err != nil {
 				return err
 			}
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[sourceConfig.Spec.DestinationRefs[0]])...)
 			clusterSources = append(clusterSources, sourceConfig)
 		}
 	}
@@ -163,11 +167,13 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 				newSource.Spec.ClusterDestinationRefs = make([]string, 1)
 				newSource.Spec.ClusterDestinationRefs[0] = dest
 				newSource.Spec.Transforms = make([]impl.LogTransform, 0)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultTransforms(destMap[dest])...)
 				filterTransforms, err := vector.CreateTransformsFromFilter(tmpPogSpec.Spec.LogFilters)
 				if err != nil {
 					return err
 				}
 				newSource.Spec.Transforms = append(newSource.Spec.Transforms, filterTransforms...)
+				newSource.Spec.Transforms = append(newSource.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[dest])...)
 				namespacedSources = append(namespacedSources, newSource)
 			}
 		} else {
@@ -175,7 +181,9 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, filterTransforms...)
+			sourceConfig.Spec.Transforms = append(sourceConfig.Spec.Transforms, vector.CreateDefaultCleanUpTransforms(destMap[sourceConfig.Spec.ClusterDestinationRefs[0]])...)
 			namespacedSources = append(namespacedSources, sourceConfig)
 		}
 	}
@@ -254,7 +262,6 @@ func pipelinePartsFromClusterSource(generator *vector.LogConfigGenerator, destMa
 		}
 		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
 		destinations = append(destinations, dest)
-		sourceConfig.Spec.Transforms = append(vector.CreateDefaultTransforms(cdest), sourceConfig.Spec.Transforms...)
 	}
 
 	if len(sourceConfig.Spec.Transforms) > 0 {
@@ -280,7 +287,6 @@ func pipelinePartsFromNamespacedSource(generator *vector.LogConfigGenerator, des
 		}
 		dest := newLogDest(cdest.Spec.Type, cdest.Name, cdest.Spec)
 		destinations = append(destinations, dest)
-		sourceConfig.Spec.Transforms = append(vector.CreateDefaultTransforms(cdest), sourceConfig.Spec.Transforms...)
 	}
 
 	namespacedName := fmt.Sprintf("%s_%s", sourceConfig.Namespace, sourceConfig.Name)

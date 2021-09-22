@@ -112,7 +112,8 @@ func TestConfig_1(t *testing.T) {
         "pod_namespace": "namespace",
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
-      }
+      },
+      "glob_minimum_cooldown_ms": 1000
     },
     "d8_clusterns_foot_testsource": {
       "type": "kubernetes_logs",
@@ -127,7 +128,8 @@ func TestConfig_1(t *testing.T) {
         "pod_namespace": "namespace",
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
-      }
+      },
+      "glob_minimum_cooldown_ms": 1000
     }
   },
   "sinks": {
@@ -216,7 +218,8 @@ func TestConfig_2(t *testing.T) {
         "pod_namespace": "namespace",
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
-      }
+      },
+      "glob_minimum_cooldown_ms": 1000
     },
     "d8_clusterns_foot_testsource": {
       "type": "kubernetes_logs",
@@ -231,7 +234,8 @@ func TestConfig_2(t *testing.T) {
         "pod_namespace": "namespace",
         "pod_node_name": "node",
         "pod_owner": "pod_owner"
-      }
+      },
+      "glob_minimum_cooldown_ms": 1000
     }
   },
   "sinks": {

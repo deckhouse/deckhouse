@@ -158,5 +158,6 @@ spec:
                 clusterDestinationRefs:
                   type: array
                   description: Array of `ClusterLogDestination` CustomResource names which this source will output with.
+                  minItems: 1
                   items:
                     type: string

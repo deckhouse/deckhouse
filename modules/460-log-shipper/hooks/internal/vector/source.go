@@ -141,11 +141,13 @@ func (cs kubernetesLogSource) MarshalJSON() ([]byte, error) {
 		Labels           string               `json:"extra_label_selector,omitempty"`
 		Fields           string               `json:"extra_field_selector,omitempty"`
 		AnnotationFields kubeAnnotationFields `json:"annotation_fields,omitempty"`
+		GlobCooldownMs   int64                `json:"glob_minimum_cooldown_ms,omitempty"`
 	}{
 		Type:             cs.Type,
 		Labels:           cs.labels.String(),
 		Fields:           strings.Join(cs.fields, ","),
 		AnnotationFields: cs.annotationFields,
+		GlobCooldownMs:   1000,
 	}
 
 	return json.Marshal(s)
