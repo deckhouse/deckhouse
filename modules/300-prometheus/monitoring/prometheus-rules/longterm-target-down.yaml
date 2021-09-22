@@ -1,0 +1,13 @@
+- name: d8.prometheus.longterm_federation_target_down
+  rules:
+  - alert: D8PrometheusLongtermFederationTargetDown
+    for: __SCRAPE_INTERVAL_X_2__
+    expr: longterm_federate_scrape_successful == 0
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_pending_until_firing_for: "10m"
+      plk_grouped_by__main: "D8LongtermPrometheusMalfunctioning,tier=cluster,prometheus=deckhouse"
+      summary: prometheus-longterm cannot scrape prometheus.
+      description: prometheus-longterm cannot scrape "/federate" endpoint from Prometheus. Check error cause in prometheus-longterm WebUI or logs.

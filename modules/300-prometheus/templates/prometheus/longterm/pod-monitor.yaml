@@ -1,0 +1,40 @@
+{{- if .Values.prometheus.longtermRetentionDays }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: prometheus-longterm-federation-availability
+  namespace: d8-monitoring
+{{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
+spec:
+  jobLabel: prometheus-longterm-federation-availability
+  podMetricsEndpoints:
+  - scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
+      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+    targetPort: 9090
+    path: "/federate"
+    relabelings:
+    - regex: endpoint|namespace
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+    metricRelabelings:
+    - source_labels: [__name__]
+      regex:  'up'
+      target_label: __name__
+      replacement: 'longterm_federate_scrape_successful'
+    params:
+      'match[]':
+      - '{__name__="up", job="federate"}'
+  selector:
+    matchLabels:
+      app: prometheus
+      prometheus: longterm
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring
+{{- end }}
