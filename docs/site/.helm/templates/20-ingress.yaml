@@ -20,6 +20,9 @@ metadata:
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
+      if ($geoip_country_code ~ 'RU|UA|BY|KZ' ) {
+        rewrite ^/$ /ru/ permanent;
+      }
 {{- include "rewrites" . | indent 6 }}
 {{- if eq .Values.global.env "web-stage" }}
     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
