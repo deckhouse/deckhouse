@@ -70,6 +70,11 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 300
+      volumes:
+        - name: xtables-lock
+          hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
       containers:
       - image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.proxyFailover }}
         name: nginx
@@ -96,6 +101,10 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+        volumeMounts:
+          - mountPath: /run/xtables.lock
+            name: xtables-lock
+            readOnly: false
       - name: nginx-exporter
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.ingressNginx.nginxExporter }}
         args:

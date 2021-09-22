@@ -183,7 +183,7 @@ memory: 200Mi`))
 			Expect(hec.KubernetesResource("HorizontalPodAutoscaler", "d8-ingress-nginx", "hpa-scaler-test-without-hpa").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-test-without-hpa").Exists()).To(BeTrue())
 
-			Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "prometheus-metrics-adapter-d8-ingress-nginx-cpu-utlization-for-hpa").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("PrometheusRule", "d8-monitoring", "prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-lbwpp-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-lbwpp-auth-tls").Exists()).To(BeTrue())

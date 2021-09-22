@@ -46,12 +46,12 @@ stream {
   }
 
   server {
-    listen 127.0.0.1:81;
+    listen 127.0.0.1:81 so_keepalive=off reuseport;
     proxy_pass http;
   }
 
   server {
-    listen 127.0.0.1:444;
+    listen 127.0.0.1:444 so_keepalive=off reuseport;
     proxy_pass https;
   }
 }
