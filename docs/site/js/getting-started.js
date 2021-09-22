@@ -65,10 +65,7 @@ function config_update() {
 }
 
 function update_domain_parameters() {
-    const exampleDomainName = /%s\.example\.com/ig
-    const exampleDomainSuffix = /example\.com/ig;
-    let dhctlDomain = sessionStorage.getItem('dhctl-domain')
-    let dhctlDomainSuffx = dhctlDomain ? sessionStorage.getItem('dhctl-domain').replace('%s\.', '') : null;
+    let dhctlDomain = sessionStorage.getItem('dhctl-domain');
 
     update_parameter('dhctl-domain', 'publicDomainTemplate', '%s.example.com', null, '[config-yml]');
     // update domain template example in code block
@@ -76,7 +73,7 @@ function update_domain_parameters() {
         return ((this.innerText.match('%s.example.com') || []).length > 0);
     }).each(function (index) {
         let content = ($(this)[0]) ? $(this)[0].innerText : null;
-        if (content && content.length > 0) {
+        if (content && content.length > 0 && dhctlDomain) {
             $(this)[0].innerText = content.replace('%s.example.com', dhctlDomain).replace('grafana.example.com', dhctlDomain.replace('%s', 'grafana'));
         }
     });
@@ -84,7 +81,7 @@ function update_domain_parameters() {
     // update domain template example in snippet
     $('[config-yml]').each(function (index) {
         let content = ($(this)[0]) ? $(this)[0].textContent : null;
-        if (content && content.length > 0) {
+        if (content && content.length > 0 && dhctlDomain) {
             $(this)[0].textContent = content.replace('grafana.example.com', dhctlDomain.replace('%s', 'grafana'));
         }
     });
@@ -94,14 +91,14 @@ function update_domain_parameters() {
         return ((this.innerText.match('admin@example.com') || []).length > 0);
     }).each(function (index) {
         let content = ($(this)[0]) ? $(this)[0].innerText : null;
-        if (content && content.length > 0) {
+        if (content && content.length > 0 && dhctlDomain) {
             $(this)[0].innerText = content.replace('admin@example.com', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
         }
     });
     // update user email in the resources-yml or user-yml snippet
     $('[resources-yml],[user-yml]').each(function (index) {
         let content = ($(this)[0]) ? $(this)[0].textContent : null;
-        if (content && content.length > 0) {
+        if (content && content.length > 0 && dhctlDomain) {
             $(this)[0].textContent = content.replace(/admin@example.com/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
         }
     });
@@ -155,24 +152,43 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
     }
 }
 
+function getDockerAuthFromToken(username, password) {
+    return btoa(username + ':' + password);
+}
+
+function getDockerConfigFromToken(registry, username, password) {
+    return btoa('{"auths": { "' + registry + '": { "username": "' + username + '", "password": "' + password + '", "auth": "' + getDockerAuthFromToken(username, password) + '"}}}');
+}
+
 // Update license token and docker config
-function update_license_parameters() {
-    if ($.cookie("demotoken") || $.cookie("license-token")) {
-        let username = 'license-token';
-        let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
+function update_license_parameters(newtoken = '') {
+    if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
         let registry = 'registry.deckhouse.io';
-        let auth = btoa(username + ':' + password);
-        let config = '{"auths": { "' + registry + '": { "username": "' + username + '", "password": "' + password + '", "auth": "' + auth + '"}}}';
+        let username = 'license-token';
         let matchStringClusterConfig = '<YOUR_ACCESS_STRING_IS_HERE>';
-        let matchStringDockerLogin = "<LICENSE_TOKEN>";
+        let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
+        let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
+        let passwordHash = btoa(password);
 
-        update_parameter(btoa(config), 'registryDockerCfg', matchStringClusterConfig, null, '[config-yml]');
-        update_parameter(password, '', matchStringDockerLogin, null, '[docker-login]');
+        if (newtoken) {
+            if ( password ) {
+                matchStringClusterConfig = getDockerConfigFromToken(registry, username, password);
+                matchStringDockerLogin = 'base64 -d <<< ' + passwordHash;
+            }
+            password = newtoken;
+            passwordHash = btoa(password);
+            $.cookie('license-token', newtoken, {path: '/' })
+        }
 
+        let config = getDockerConfigFromToken(registry, username, password);
+        let replacePartStringDockerLogin = 'base64 -d <<< ' + passwordHash;
+
+        update_parameter(config, 'registryDockerCfg', matchStringClusterConfig, null, '[config-yml]');
+        update_parameter(replacePartStringDockerLogin , '', matchStringDockerLogin, null, '[docker-login]');
         $('.highlight code').filter(function () {
             return this.innerText.match(matchStringDockerLogin) == matchStringDockerLogin;
         }).each(function (index) {
-            $(this).text($(this).text().replace(matchStringDockerLogin, password));
+            $(this).text($(this).text().replace(matchStringDockerLogin, replacePartStringDockerLogin));
         });
     } else {
         console.log("No license token, so InitConfiguration was not updated");

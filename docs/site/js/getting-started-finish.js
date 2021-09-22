@@ -1,6 +1,4 @@
 function domain_update() {
-    const exampleDomainName = /%s\.example\.com/ig
-    const exampleDomainSuffix = /example\.com/ig;
     let domainPattern = sessionStorage.getItem('dhctl-domain');
     let domainSuffix = domainPattern ? domainPattern.replace('%s\.', '') : null;
 
@@ -15,7 +13,7 @@ function domain_update() {
         });
 
         $('a').filter(function () {
-            return ((this.textContent.match(exampleDomainSuffix) || []).length > 0);
+            return ((this.textContent.match(/example\.com/ig) || []).length > 0);
         }).each(function (index) {
             let content = ($(this)[0]) ? $(this)[0].textContent : null;
             let href = $(this).attr('href')

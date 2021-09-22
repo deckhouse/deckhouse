@@ -1,6 +1,4 @@
 function domain_update() {
-    const exampleDomainName = /%s\.example\.com/ig
-    const exampleDomainSuffix = /example\.com/ig;
     let domainPattern = sessionStorage.getItem('dhctl-domain');
     let domainSuffix = domainPattern ? domainPattern.replace('%s\.', '') : null;
 
