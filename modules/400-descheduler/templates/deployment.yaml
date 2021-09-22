@@ -34,7 +34,7 @@ metadata:
   namespace: d8-descheduler
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.descheduler.internal.replicas }}
   selector:
     matchLabels:
       app: descheduler
