@@ -87,6 +87,7 @@ module Comparator
       self.data = { 'title' => "Compare languages | %s" %  page.data['title'],
                     'layout' => 'compare',
                     'searchable' =>  false,
+                    'sitemap_include' => false,
                     'sidebar' => 'none',
                     'output' => 'web',
                     'multilang' => false}

@@ -3,7 +3,6 @@ layout: none
 search: exclude
 searchable: false
 sitemap_include: false
-
 ---
 
 <?xml version="1.0" encoding="UTF-8"?>
@@ -15,7 +14,7 @@ sitemap_include: false
     <url>
         <loc>{{ page.url | absolute_url }}</loc>
         <xhtml:link rel="alternate" hreflang="ru" href="{{ site.url }}{{ page.url | regex_replace_once: '^\/?en/', 'ru/' | relative_url }}" />
-        <xhtml:link rel="alternate" hreflang="en" href="{{ site.url }}{{ page.url | regex_replace_once: '^\/?ru/', 'en/'| relative_url }}" />
+        <xhtml:link rel="alternate" hreflang="en" href="{{ site.url }}{{ page.url | regex_replace_once: '^\/?ru/', 'en/' | relative_url }}" />
         <lastmod>{{site.time | date: '%Y-%m-%d' }}</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.5</priority>
