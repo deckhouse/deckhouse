@@ -100,6 +100,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: HELM3LIB
+          value: "yes"
         - name: KUBERNETES_DEPLOYED
           value: PLACEHOLDER
         ports:
