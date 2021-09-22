@@ -309,6 +309,9 @@ apiVersions:
 
               * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode).
+
+              **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting]
             default: VXLAN
@@ -329,6 +332,9 @@ apiVersions:
               * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports.
                 * **Caution!** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (`SecurityGroups` are disabled in this mode).
+
+              **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
             default: DirectRoutingWithPortSecurityEnabled

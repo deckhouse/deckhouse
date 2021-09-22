@@ -181,6 +181,9 @@ apiVersions:
 
               * `DirectRouting` – между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
               * `VXLAN` – между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+
+              **Внимание!** После изменения этого параметра необходимо выполнить `dhctl converge`.
+              **Внимание!** После переключения с/на VXLAN требуется перезагрузка всех нод кластера.
       simpleWithInternalNetwork:
         description: Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.io/ru/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
         properties:
@@ -194,6 +197,9 @@ apiVersions:
               * `DirectRoutingWithPortSecurityEnabled` — между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на портах диапазон адресов используемых во внутренней сети.
                 * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование `AllowedAddressPairs` на портах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
               * `VXLAN` — между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+
+              **Внимание!** После изменения этого параметра необходимо выполнить `dhctl converge`.
+              **Внимание!** После переключения с/на VXLAN требуется перезагрузка всех нод кластера.
           externalNetworkName:
             <<: *externalNetworkName_ru
           masterWithExternalFloatingIP:
