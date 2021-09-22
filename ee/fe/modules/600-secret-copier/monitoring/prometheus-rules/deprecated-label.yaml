@@ -10,8 +10,10 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Обнаружен устаревший лейбл `antiopa_secret_copier=yes`
+      summary: Obsolete `antiopa_secret_copier=yes` label has been found.
       description: |-
-        [Модуль для копирования секретов](https://github.com/deckhouse/deckhouse/tree/main/ee/fe/modules/600-secret-copier/) поменял служебный лейбл для обозначения оригинальных секретов в namespace `default`.
-        В скором времени мы откажемся от старого лейбла `antiopa-secret-copier: "yes"`.
-        Необходимо заменить лейбл `antiopa-secret-copier: "yes"` на  `secret-copier.deckhouse.io/enabled: ""` во всех секретах, которые использует `secret-copier` в namespace `default`.
+        The [secrets copier module](https://github.com/deckhouse/deckhouse/tree/main/ee/fe/modules/600-secret-copier/) has changed the service label for the original secrets in the `default` namespace.
+
+        Soon we will abandon the old `antiopa-secret-copier: "yes"` label.
+
+        You have to replace the `antiopa-secret-copier: "yes"` label with  `secret-copier.deckhouse.io/enabled: ""` for all secrets that the `secret-copier` module uses in the `default` namespace.

@@ -112,9 +112,9 @@
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "30m"
       description: |-
-        Последние 30 минут load average на ноде {{ $labels.node }} не опускался ниже {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
+        For the last 30 minutes, the load average on the {{ $labels.node }} Node has been higher or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
       summary: >
-        Load average на {{ $labels.node }} слишком велик.
+        The load average on the {{ $labels.node }} Node is too high.
 
   - alert: LoadAverageHigh
     expr: >-
@@ -132,6 +132,6 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       description: |-
-        Последние 5 минут Load average на ноде {{ $labels.node }} выше {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} в пересчёте на одно ядро. В очереди к процессору больше процессов, чем тот может обработать, возможно какой-то процесс наплодил слишком много дочерних процессов или thread-ов или процессор просто перегружен.
+        For the last 5 minutes, the load average on the {{ $labels.node }} Node has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
       summary: >
-        Load average на {{ $labels.node }} слишком велик.
+        The load average on the {{ $labels.node }} Node is too high.

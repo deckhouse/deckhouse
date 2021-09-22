@@ -11,10 +11,10 @@
       plk_incident_initial_status: "todo"
       plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
       description: |-
-        В кластере используются Service'ы с label'ом `prometheus-target` для сбора метрик.
+        Services with the `prometheus-target` label are used to collect metrics in the cluster.
 
-        Для поиска можно воспользоваться командой: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
+        Use the following command to filter them: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
 
-        Формат изменился. Необходимо изменить label `prometheus-target` на `prometheus.deckhouse.io/target`.
+        Note that the label format has changed. You need to replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
       summary: >
-        В кластере используются Service'ы с label'ом `prometheus-target` для сбора метрик.
+        Services with the `prometheus-target` label are used to collect metrics in the cluster.
