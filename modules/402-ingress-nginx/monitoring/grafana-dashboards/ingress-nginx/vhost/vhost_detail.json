@@ -5492,7 +5492,21 @@
             "align": false,
             "alignLevel": null
           }
-        },
+        }
+      ],
+      "title": "Request Time and Upstream Response Time",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "id": 211,
+      "panels": [
         {
           "cards": {
             "cardPadding": 0,
@@ -5618,19 +5632,6 @@
           "yBucketSize": null
         }
       ],
-      "title": "Request Time and Upstream Response Time",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 65
-      },
-      "id": 211,
-      "panels": [],
       "title": "Request Time Heatmap and Upstream Response Time Heatmap",
       "type": "row"
     },
