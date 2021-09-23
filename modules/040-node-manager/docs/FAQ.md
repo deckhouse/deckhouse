@@ -18,7 +18,7 @@ To add a new node to a static cluster, you need to:
 
 To make a node controllable by `node-manager`, perform the following steps:
 - Create a `NodeGroup` with the necessary parameters (`nodeType` can be `Static` or `CloudStatic`) or use an existing one. Let's, for example, create a `NodeGroup` called `nodes`.
-- Get the script for installing and configuring the node:  `kubectl -n d8-cloud-instance-manager  get secret manual-bootstrap-for-nodes-o json | jq '.data."adopt.sh"' -r`
+- Get the script for installing and configuring the node:  `kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-nodes -o json | jq '.data."adopt.sh"' -r`
 - Connect to the new node over SSH and run the following command using the data from the secret:  `echo <base64> | base64 -d | bash`
 
 ## How do I change the node-group of a static node?
@@ -41,6 +41,7 @@ kubectl label node <node_name> node.deckhouse.io/group-
 ```
 
 ## How to clean up a node for adding to the cluster?
+This is only needed if you have to move a static node from one cluster to another. Be aware that these operations remove local storage data. If you just need to change NodeGroup you have to follow [this instruction](#how-do-i-change-the-node-group-of-a-static-node).
 
 1. Stop all the services:
     ```shell
@@ -57,7 +58,7 @@ kubectl label node <node_name> node.deckhouse.io/group-
    ```shell
    rm -rf /var/lib/bashible 
    rm -rf /etc/kubernetes
-   rm -rf /var/lib/kubelet 
+   rm -rf /var/lib/kubelet
    rm -rf /var/lib/docker 
    rm -rf /etc/cni
    rm -rf /var/lib/cni
