@@ -8,6 +8,7 @@ function cleanup()
 }
 
 trap cleanup EXIT
+trap cleanup ERR
 
 lockfile-create /tmp/lock
 
