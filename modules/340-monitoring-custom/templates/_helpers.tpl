@@ -60,8 +60,13 @@
 {{- define "tls_config" }}
 tlsConfig:
   insecureSkipVerify: true
-  certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-  keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+  cert:
+    secret:
+      name: prometheus-scraper-tls
+      key: tls.crt
+  keySecret:
+    name: prometheus-scraper-tls
+    key: tls.key
 {{- end }}
 
 {{- define "keep_targets_for_schema" }}

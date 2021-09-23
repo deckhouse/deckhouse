@@ -70,11 +70,7 @@ spec:
     resources:
       requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 8 }}
-  - name: rules-configmap-reloader
-    resources:
-      requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 8 }}
-  - name: prometheus-config-reloader
+  - name: config-reloader
     resources:
       requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | indent 8 }}
@@ -104,6 +100,9 @@ spec:
   ruleNamespaceSelector:
     matchLabels:
       heritage: deckhouse
+  probeNamespaceSelector:
+    matchLabels:
+      heritage: deckhouse
   podMetadata:
     annotations:
       threshold.extended-monitoring.flant.com/disk-bytes-warning: "97"
@@ -113,6 +112,9 @@ spec:
     matchLabels:
       prometheus: main
   podMonitorSelector:
+    matchLabels:
+      prometheus: main
+  probeSelector:
     matchLabels:
       prometheus: main
   secrets:

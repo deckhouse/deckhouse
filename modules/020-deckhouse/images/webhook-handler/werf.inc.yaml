@@ -8,6 +8,14 @@ ansible:
         checksum: "sha256:a1cfa39a9538e27f11066aa5659b32f9beae1eea93369d395bf45bcfc8a181dc"
         dest: /usr/local/bin/yq
         mode: +x
+    - name: "Install promtool"
+      unarchive:
+        extra_opts:
+          - prometheus-2.13.0.linux-amd64/promtool
+          - --strip-components=1
+        src: https://github.com/prometheus/prometheus/releases/download/v2.13.0/prometheus-2.13.0.linux-amd64.tar.gz
+        remote_src: yes
+        dest: /usr/local/bin
 git:
 - add: /modules
   to: /available_hooks/

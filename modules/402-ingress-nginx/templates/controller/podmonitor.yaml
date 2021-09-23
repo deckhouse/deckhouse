@@ -4,17 +4,22 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: ingress-nginx-controller
-  namespace: d8-ingress-nginx
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   podMetricsEndpoints:
-  - targetPort: https-metrics
+  - port: https-metrics
     scheme: https
     path: /controller/metrics
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop
@@ -35,13 +40,18 @@ spec:
     # remove ingress_class, we have "controller" label
     - regex: ingress_class
       action: labeldrop
-  - targetPort: https-metrics
+  - port: https-metrics
     scheme: https
     path: /protobuf/metrics
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop

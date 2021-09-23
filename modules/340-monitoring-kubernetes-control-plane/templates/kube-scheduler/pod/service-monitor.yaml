@@ -19,10 +19,14 @@ spec:
     path: {{ .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.metricsPath }}
   {{- if eq .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.authenticationMethod "PrometheusCertificate" }}
     tlsConfig:
-      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
       insecureSkipVerify: true
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
   {{- else if eq .Values.monitoringKubernetesControlPlane.internal.kubeScheduler.pod.authenticationMethod "Certificate" }}
     tlsConfig:
       insecureSkipVerify: true

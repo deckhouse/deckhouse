@@ -1,3 +1,5 @@
+{{/* We have to define static targets for `kube-state-metrics` against of using ServiceMonitor. */}}
+{{/* Because it exports a lot of samples and we don't want to scrape all its Pods. */}}
 {{- define "additional-scrape-config" }}
 - job_name: kube-state-metrics/main
   honor_labels: true

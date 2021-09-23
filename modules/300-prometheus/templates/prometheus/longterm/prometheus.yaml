@@ -71,11 +71,7 @@ spec:
     resources:
       requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 8 }}
-  - name: rules-configmap-reloader
-    resources:
-      requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 8 }}
-  - name: prometheus-config-reloader
+  - name: config-reloader
     resources:
       requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | indent 8 }}
