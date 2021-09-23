@@ -50,6 +50,20 @@ kubernetes:
       matchNames:
         - d8-cluster-configuration
     jqFilter: '.data."cluster-configuration.yaml" // ""'
+  - name: deckhouse_config
+    apiVersion: v1
+    kind: ConfigMap
+    queue: "deckhouse-config"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["d8-system"]
+    nameSelector:
+      matchNames: ["deckhouse"]
+    jqFilter: '.data.global // ""'
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main
@@ -79,6 +93,30 @@ function __main__() {
 EOF
       return 0
     fi
+  fi
+
+  missing_taints=""
+  has_missing_taints=0
+  taints=$(context::jq -r '.review.request.object.spec.nodeTemplate.taints // []')
+  if [[ "$taints" != "[]" ]]; then
+    customTolerationKeys=$(context::jq -e -r '.snapshots.deckhouse_config[0].filterResult' | yq  e '.' -j - | jq -r '.modules.placement.customTolerationKeys | if . == null then empty else .[] end')
+    for taint in $(jq -e -r '.[].key' <<< "$taints"); do
+      # Skip 'standart' taints
+      if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/master' ]]; then
+        continue
+      fi
+      if ! printf '%s\n' "${customTolerationKeys[@]}" | grep -q -E "^$taint\$"; then
+        has_missing_taints=1
+        missing_taints="${missing_taints} ${taint}"
+      fi
+    done
+  fi
+
+  if [[ ${has_missing_taints} -eq 1 ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to create a NodeGroup resource with taints not specified in global.modules.placement.customTolerationKeys in Deckhouse ConfigMap, add:${missing_taints} to customTolerationKeys."}
+EOF
+    return 0
   fi
 
   # check for nodeGroup deckhouse.io/v1alpha1
