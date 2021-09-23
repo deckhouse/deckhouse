@@ -123,14 +123,16 @@ internal:
 var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	nsName := "d8-flant-integration"
+	nsMonitoringName := "d8-monitoring"
+	chartName := "flant-integration"
+
 	Context("Cluster", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSetFromYaml("flantIntegration", moduleValues)
 			f.HelmRender()
 		})
-		nsName := "d8-flant-integration"
-		chartName := "flant-integration"
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
@@ -141,7 +143,7 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			sa := f.KubernetesResource("ServiceAccount", nsName, "pricing")
 			ds := f.KubernetesResource("DaemonSet", nsName, "pricing")
 			s := f.KubernetesResource("Secret", nsName, "grafana-agent-config")
-			pm := f.KubernetesResource("PodMonitor", nsName, "pricing")
+			pm := f.KubernetesResource("PodMonitor", nsMonitoringName, "pricing")
 			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":pricing")
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":pricing")
 			cld := f.KubernetesGlobalResource("ClusterLogDestination", "flant-integration-loki-storage")
@@ -226,8 +228,6 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			f.ValuesSetFromYaml("flantIntegration", moduleValuesNoLogs)
 			f.HelmRender()
 		})
-		nsName := "d8-flant-integration"
-		chartName := "flant-integration"
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
@@ -236,7 +236,7 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", nsName, "deckhouse-registry")
 
 			sa := f.KubernetesResource("ServiceAccount", nsName, "pricing")
-			pm := f.KubernetesResource("PodMonitor", nsName, "pricing")
+			pm := f.KubernetesResource("PodMonitor", nsMonitoringName, "pricing")
 			cr := f.KubernetesGlobalResource("ClusterRole", "d8:"+chartName+":pricing")
 			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:"+chartName+":pricing")
 			cld := f.KubernetesGlobalResource("ClusterLogDestination", "flant-integration-loki-storage")

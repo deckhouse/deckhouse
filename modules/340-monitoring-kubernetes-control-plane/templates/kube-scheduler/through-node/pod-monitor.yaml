@@ -12,10 +12,14 @@ spec:
     port: metrics-ks
     path: /metrics
     tlsConfig:
-      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
       insecureSkipVerify: true
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
     relabelings:
     - regex: endpoint|namespace|pod|container
       action: labeldrop

@@ -1,15 +1,14 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_BUSTER
-FROM $BASE_GOLANG_BUSTER as artifact
+ARG BASE_GOLANG_16_BUSTER
+FROM $BASE_GOLANG_16_BUSTER as artifact
 RUN apt update && apt install -qfy \
   bash make git patch ca-certificates openssh-client openssl
 RUN mkdir /coreos && cd /coreos \
-  && git clone -b "v0.38.0" --single-branch https://github.com/coreos/prometheus-operator
+  && git clone -b "v0.50.0" --single-branch https://github.com/prometheus-operator/prometheus-operator.git
 WORKDIR /coreos/prometheus-operator
-COPY prometheus-probes.patch tls-config-and-bearer-token.patch scrape_params.patch ./
-RUN patch -p1 < prometheus-probes.patch && \
-    patch -p1 < tls-config-and-bearer-token.patch && \
-    patch -p1 < scrape_params.patch && \
+COPY patches/liveness-probe.patch patches/scrape-params.patch ./
+RUN patch -p1 < liveness-probe.patch && \
+    patch -p1 < scrape-params.patch && \
     make operator
 
 FROM $BASE_ALPINE

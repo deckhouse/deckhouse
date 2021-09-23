@@ -9,12 +9,17 @@ metadata:
 spec:
   jobLabel: prometheus-longterm-federation-availability
   podMetricsEndpoints:
-  - scheme: https
+  - port: https
+    scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
-    targetPort: 9090
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
     path: "/federate"
     relabelings:
     - regex: endpoint|namespace
@@ -23,9 +28,9 @@ spec:
       regex: "true"
       action: keep
     metricRelabelings:
-    - source_labels: [__name__]
+    - sourceLabels: [__name__]
       regex:  'up'
-      target_label: __name__
+      targetLabel: __name__
       replacement: 'longterm_federate_scrape_successful'
     params:
       'match[]':

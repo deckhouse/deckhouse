@@ -4,7 +4,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: cert-manager
-  namespace: d8-cert-manager
+  namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | indent 2 }}
 spec:
   jobLabel: app
@@ -13,8 +13,13 @@ spec:
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
     relabelings:
     - regex: endpoint
       action: labeldrop

@@ -78,8 +78,13 @@ spec:
   - scheme: https
     tlsConfig:
       insecureSkipVerify: true
-      certFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.crt
-      keyFile: /etc/prometheus/secrets/prometheus-scraper-tls/tls.key
+      cert:
+        secret:
+          name: prometheus-scraper-tls
+          key: tls.crt
+      keySecret:
+        name: prometheus-scraper-tls
+        key: tls.key
     relabelings:
 {{ include "basic_relabeling_for_schema" (list "https" $name) | indent 4 }}
 
