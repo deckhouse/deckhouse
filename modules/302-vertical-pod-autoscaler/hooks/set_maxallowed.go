@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -85,6 +86,7 @@ func applyVpaResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return recommendations[i].ContainerName < recommendations[j].ContainerName
 	})
 	c.ContainerRecommendations = recommendations
+
 	return c, nil
 }
 
@@ -124,30 +126,30 @@ var (
 
 func updateVpaResources(input *go_hook.HookInput) error {
 	var (
-		configEveryNodeMilliCPU  int64
-		configEveryNodeMemory    int64
-		configMasterNodeMilliCPU int64
-		configMasterNodeMemory   int64
+		configEveryNodeMilliCPU  float64
+		configEveryNodeMemory    float64
+		configMasterNodeMilliCPU float64
+		configMasterNodeMemory   float64
 
-		totalRequestsMasterNodeMilliCPU int64
-		totalRequestsMasterNodeMemory   int64
-		totalRequestsEveryNodeMilliCPU  int64
-		totalRequestsEveryNodeMemory    int64
+		totalRequestsMasterNodeMilliCPU float64
+		totalRequestsMasterNodeMemory   float64
+		totalRequestsEveryNodeMilliCPU  float64
+		totalRequestsEveryNodeMemory    float64
 	)
 
-	configEveryNodeMilliCPU, err := getPathInt(input, "global.modules.resourcesRequests.internal.milliCpuEveryNode")
+	configEveryNodeMilliCPU, err := getPathFloat64(input, "global.modules.resourcesRequests.internal.milliCpuEveryNode")
 	if err != nil {
 		return err
 	}
-	configEveryNodeMemory, err = getPathInt(input, "global.modules.resourcesRequests.internal.memoryEveryNode")
+	configEveryNodeMemory, err = getPathFloat64(input, "global.modules.resourcesRequests.internal.memoryEveryNode")
 	if err != nil {
 		return err
 	}
-	configMasterNodeMilliCPU, err = getPathInt(input, "global.modules.resourcesRequests.internal.milliCpuMaster")
+	configMasterNodeMilliCPU, err = getPathFloat64(input, "global.modules.resourcesRequests.internal.milliCpuMaster")
 	if err != nil {
 		return err
 	}
-	configMasterNodeMemory, err = getPathInt(input, "global.modules.resourcesRequests.internal.memoryMaster")
+	configMasterNodeMemory, err = getPathFloat64(input, "global.modules.resourcesRequests.internal.memoryMaster")
 	if err != nil {
 		return err
 	}
@@ -166,13 +168,14 @@ func updateVpaResources(input *go_hook.HookInput) error {
 
 		for _, r := range v.ContainerRecommendations {
 			ut := r.UncappedTarget
+
 			switch v.Label {
 			case masterLabel:
-				totalRequestsMasterNodeMilliCPU += ut.Cpu().MilliValue()
-				totalRequestsMasterNodeMemory += ut.Memory().Value()
+				totalRequestsMasterNodeMilliCPU += float64(ut.Cpu().MilliValue())
+				totalRequestsMasterNodeMemory += float64(ut.Memory().Value())
 			case everyNodeLabel:
-				totalRequestsEveryNodeMilliCPU += ut.Cpu().MilliValue()
-				totalRequestsEveryNodeMemory += ut.Memory().Value()
+				totalRequestsEveryNodeMilliCPU += float64(ut.Cpu().MilliValue())
+				totalRequestsEveryNodeMemory += float64(ut.Memory().Value())
 			}
 		}
 	}
@@ -183,29 +186,39 @@ func updateVpaResources(input *go_hook.HookInput) error {
 		}
 		v := snapshot.(*VPA)
 
-		err = input.ObjectPatcher().FilterObject(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var (
-				recommendationsMilliCPU int64
-				recommendationsMemory   int64
+				recommendationsMilliCPU float64
+				recommendationsMemory   float64
 				containerPolicies       []autoscaler.ContainerResourcePolicy
 			)
 
 			for _, container := range v.ContainerRecommendations {
 				switch v.Label {
 				case masterLabel:
-					recommendationsMilliCPU = container.UncappedTarget.Cpu().MilliValue() * configMasterNodeMilliCPU / totalRequestsMasterNodeMilliCPU
-					recommendationsMemory = container.UncappedTarget.Memory().Value() * configMasterNodeMemory / totalRequestsMasterNodeMemory
+					recommendationsMilliCPU = float64(container.UncappedTarget.Cpu().MilliValue()) * (configMasterNodeMilliCPU / totalRequestsMasterNodeMilliCPU)
+					recommendationsMemory = float64(container.UncappedTarget.Memory().Value()) * (configMasterNodeMemory / totalRequestsMasterNodeMemory)
 				case everyNodeLabel:
-					recommendationsMilliCPU = container.UncappedTarget.Cpu().MilliValue() * configEveryNodeMilliCPU / totalRequestsEveryNodeMilliCPU
-					recommendationsMemory = container.UncappedTarget.Memory().Value() * configEveryNodeMemory / totalRequestsEveryNodeMemory
+					recommendationsMilliCPU = float64(container.UncappedTarget.Cpu().MilliValue()) * (configEveryNodeMilliCPU / totalRequestsEveryNodeMilliCPU)
+					recommendationsMemory = float64(container.UncappedTarget.Memory().Value()) * (configEveryNodeMemory / totalRequestsEveryNodeMemory)
 				}
+
+				if math.IsInf(recommendationsMilliCPU, 1) || math.IsInf(recommendationsMilliCPU, -1) {
+					return nil, fmt.Errorf("recommendationsMilliCPU is infinity number")
+				}
+
+				if math.IsInf(recommendationsMemory, 1) || math.IsInf(recommendationsMemory, -1) {
+					return nil, fmt.Errorf("recommendationsMemory is infinity number")
+				}
+
 				newContainerPolicy := autoscaler.ContainerResourcePolicy{
 					ContainerName: container.ContainerName,
 					MaxAllowed: v1.ResourceList{
-						v1.ResourceCPU:    *resource.NewMilliQuantity(recommendationsMilliCPU, resource.BinarySI),
-						v1.ResourceMemory: *resource.NewQuantity(recommendationsMemory, resource.DecimalExponent),
+						v1.ResourceCPU:    *resource.NewMilliQuantity(int64(recommendationsMilliCPU), resource.BinarySI),
+						v1.ResourceMemory: *resource.NewQuantity(int64(recommendationsMemory), resource.DecimalExponent),
 					},
 				}
+
 				containerPolicies = append(containerPolicies, newContainerPolicy)
 			}
 
@@ -222,17 +235,14 @@ func updateVpaResources(input *go_hook.HookInput) error {
 				return nil, fmt.Errorf("cannot parse unstructured to object: %v", err)
 			}
 			return resObj, nil
-		}, vpaAPIVersion, "VerticalPodAutoscaler", v.Namespace, v.Name, "")
-		if err != nil {
-			return err
-		}
+		}, vpaAPIVersion, "VerticalPodAutoscaler", v.Namespace, v.Name)
 	}
 	return nil
 }
 
-func getPathInt(input *go_hook.HookInput, path string) (int64, error) {
+func getPathFloat64(input *go_hook.HookInput, path string) (float64, error) {
 	if !input.Values.Exists(path) {
 		return 0, fmt.Errorf("%s must be set", path)
 	}
-	return input.Values.Get(path).Int(), nil
+	return input.Values.Get(path).Float(), nil
 }

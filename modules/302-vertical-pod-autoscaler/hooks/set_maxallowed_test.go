@@ -77,12 +77,6 @@ metadata:
   name: deckhouse
   namespace: d8-system
 spec:
-  resourcePolicy:
-    containerPolicies:
-    - containerName: deckhouse
-      maxAllowed:
-        cpu: 227m
-        memory: "310373428"
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -94,8 +88,8 @@ status:
     containerRecommendations:
     - containerName: deckhouse
       uncappedTarget:
-        cpu: 109m
-        memory: "297164212"
+        cpu: 671m
+        memory: 2823238195
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -189,10 +183,10 @@ name: node-exporter
 
 	Context("Cluster with two VPAs and set of global.modules.resourcesRequests.internal variables", func() {
 		BeforeEach(func() {
-			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuMaster", "1024")
-			f.ValuesSet("global.modules.resourcesRequests.internal.memoryMaster", "520093696")
-			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuEveryNode", "1024")
-			f.ValuesSet("global.modules.resourcesRequests.internal.memoryEveryNode", "520093696")
+			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuMaster", "1850")
+			f.ValuesSet("global.modules.resourcesRequests.internal.memoryMaster", "3864053781")
+			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuEveryNode", "300")
+			f.ValuesSet("global.modules.resourcesRequests.internal.memoryEveryNode", "536870912")
 			f.BindingContexts.Set(f.KubeStateSet(TwoVpas))
 			f.RunHook()
 		})
@@ -208,22 +202,22 @@ name: node-exporter
 			Expect(vpaDeckhouse.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
 - containerName: deckhouse
   maxAllowed:
-    cpu: 1024m
-    memory: "520093696"
+    cpu: 1850m
+    memory: "3864053781"
 `))
 			Expect(vpaNodeExporter.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
 - containerName: kube-rbac-proxy
   maxAllowed:
-    cpu: 341m
-    memory: "155299493"
+    cpu: 100m
+    memory: "160309154"
 - containerName: kubelet-eviction-thresholds-exporter
   maxAllowed:
-    cpu: 341m
-    memory: "155299493"
+    cpu: 100m
+    memory: "160309154"
 - containerName: node-exporter
   maxAllowed:
-    cpu: 341m
-    memory: "209494708"
+    cpu: 100m
+    memory: "216252602"
 `))
 			Expect(vpaDeckhouse.Field("spec.targetRef").String()).To(MatchYAML(`
 apiVersion: apps/v1
@@ -243,7 +237,7 @@ name: node-exporter
 			f.BindingContexts.Set(f.KubeStateSet(TwoVpas))
 			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuMaster", "4096")
 			f.ValuesSet("global.modules.resourcesRequests.internal.memoryMaster", "8589934592")
-			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuEveryNode", "300")
+			f.ValuesSet("global.modules.resourcesRequests.internal.milliCpuEveryNode", "750")
 			f.ValuesSet("global.modules.resourcesRequests.internal.memoryEveryNode", "134217728")
 			f.RunHook()
 		})
@@ -266,15 +260,15 @@ and global variables controlPlaneRequestsCpu, controlPlaneRequestsMemory, everyN
 			Expect(vpaNodeExporter.Field("spec.resourcePolicy.containerPolicies").String()).To(MatchYAML(`
 - containerName: kube-rbac-proxy
   maxAllowed:
-    cpu: 100m
+    cpu: 250m
     memory: "40077288"
 - containerName: kubelet-eviction-thresholds-exporter
   maxAllowed:
-    cpu: 100m
+    cpu: 250m
     memory: "40077288"
 - containerName: node-exporter
   maxAllowed:
-    cpu: 100m
+    cpu: 250m
     memory: "54063150"
 `))
 			Expect(vpaDeckhouse.Field("spec.targetRef").String()).To(MatchYAML(`
