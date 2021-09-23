@@ -11,14 +11,14 @@
       plk_protocol_version: "1"
       plk_incident_initial_status: "todo"
       description: |
-        В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration, который создает `rwr` ингрессы.
+        The rewriteTargetMigration parameter is enabled for the old nginx-ingress module in the cluster. It is responsible for creating `rwr` Ingresses.
 
-        Данный параметр был создан для миграции со старых версий Ingress ресурсов на новые.
-        В кластере необходимо отключить данный параметр, для этого нужно:
-        1. Во всех клиентских `Ingress` ресурсах изменить аннотации с вида `ingress.kubernetes.io` на `nginx.ingress.kubernetes.io`
-        2. Если в клиентских `Ingress` ресурсах используется аннотация `nginx.ingress.kubernetes.io/rewrite-target`, то ее формат необходимо модифицировать, так как описано в `Ingress` ресурсе с постфиксом `-rwr` и добавить аннотацию `nginx.ingress.kubernetes.io/use-regex`
-        3. После чего выкатить все обновленные `Ingress` ресурсы
-        4. Согласовать с клиентом время, когда можно перекатить все ingress контроллеры, так как сейчас при отключении данной опции все ingress контроллеры перекатываются разом.
-        5. Если у вас в кластере используется новый модуль `ingress-nginx`, то после переделки всех ресурсов и до отключения данного флага нужно отредактировать custom resource `IngressNginxController` указав там `ingressClass` без `rwr`.
+        This parameter was designed to migrate from older versions of Ingress resources to newer ones.
+        You have to disable this parameter in the cluster. To do that:
+        1. Replace the `ingress.kubernetes.io` annotation with `nginx.ingress.kubernetes.io` for all client `Ingress` resources.
+        2. If client `Ingress` resources use the `nginx.ingress.kubernetes.io/rewrite-target` annotation, you have to modify its format as described in the `Ingress` resource with the `-rwr` postfix and add the `nginx.ingress.kubernetes.io/use-regex` annotation
+        3. Re-deploy all the updated `Ingress` resources
+        4. Coordinate with the client the time to re-deploy all the Ingress controllers since disabling this option will result in all ingress controllers being re-deployed simultaneously.
+        5. If you use a new `ingress-nginx` module in the cluster, then you need to edit the `IngressNginxController` custom resource and remove the `rwr` postfix for `ingressClass` after reconfiguring all the resources and before disabling this flag.
       summary: |
-        В кластере для старого модуля nginx-ingress включен параметр rewriteTargetMigration.
+        The rewriteTargetMigration parameter is enabled for the old nginx-ingress module in the cluster.

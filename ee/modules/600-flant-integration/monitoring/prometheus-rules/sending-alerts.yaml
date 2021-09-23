@@ -36,10 +36,10 @@
         plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
         plk_caused_by__kubernetes_deployment_replicas_unavailable: "KubernetesDeploymentReplicasUnavailable,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring,deployment={{ $labels.deployment }}"
         description: |
-          Prometheus не может доставить {{ $value | humanizePercentage }} алертов в madison бекенд {{ $labels.madison_backend }}, через madison-proxy {{ $labels.pod }}
-          Необходимо посмотреть логи madison proxy:
-          1. `kubectl -n d8-monitoring logs -f {{ $labels.pod }}`
-        summary: Prometheus не может доставить {{ $value | humanizePercentage}} алертов в madison бекенд {{ $labels.madison_backend }}, через madison-proxy {{ $labels.pod }}
+          Pometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
+
+          You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f {{ $labels.pod }}`
+        summary: Pometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
 
     - alert: D8PrometheusMadisonErrorSendingAlerts
       expr: |
@@ -76,10 +76,10 @@
         plk_pending_until_firing_for: "10m"
         plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
         description: |
-          Prometheus не может доставить 100% алертов, более чем, через один из madison-proxy.
-          Необходимо посмотреть логи madison proxy:
-          1. `kubectl -n d8-monitoring logs -f -l app=madison-proxy`
-        summary: Prometheus не может доставить 100% алертов, более чем, через один из madison-proxy
+          Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
+
+          You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f -l app=madison-proxy`
+        summary: Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
 
     - alert: D8PrometheusMadisonErrorSendingAlerts
       expr: |
@@ -111,8 +111,8 @@
         d8_module: flant-integration
         d8_component: madison-proxy
       annotations:
-        description: Prometheus не может доставить 100% алертов
-        summary: Prometheus не может доставить 100% алертов
+        description: Prometheus is unable to deliver 100% alerts.
+        summary: Prometheus is unable to deliver 100% alerts.
         plk_protocol_version: "1"
         plk_labels_as_annotations: "pod"
         plk_grouped_by__main: "D8PrometheusMadisonIntegrationMalfunctioning,tier=cluster,prometheus=deckhouse"
@@ -130,6 +130,8 @@
         plk_group_for__missing_dead_mans_switch: "MissingDeadMansSwitch"
         plk_grouped_by__main: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,namespace=d8-monitoring"
         plk_ignore_labels: "deployment"
-        summary: Интеграция prometheus с madison работает некорректно
+        summary: The Prometheus and Madison integration is not working properly.
         description: |
-          Интеграция prometheus с madison работает некорректно. Что именно с ней не так, можно узнать в одном из связанных алертов.
+          The Prometheus and Madison integration is not working properly.
+
+          Refer to the relevant alerts for more information.

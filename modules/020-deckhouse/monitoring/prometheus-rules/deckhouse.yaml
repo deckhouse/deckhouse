@@ -141,7 +141,8 @@
         The number of restarts in the last hour: {{ $value }}.
 
         Excessive Deckhouse restarts indicate that something is wrong. Normally, Deckhouse should be up and running all the time.
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseHasNoAccessToRegistry
     expr: max by (pod, instance) (increase(deckhouse_registry_errors[__SCRAPE_INTERVAL_X_4__])) > 0
@@ -159,7 +160,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to connect to the registry.
       description: |
-        Deckhouse is unable to connect to the registry (registry.deckhouse.io in most cases) to check for a new Docker image (checks are performed every 15 seconds). Since Deckhouse does not have access to the registry, automatic updates are not available.
+        Deckhouse is unable to connect to the registry (registry.deckhouse.io in most cases) to check for a new Docker image (checks are performed every 15 seconds). Deckhouse does not have access to the registry; automatic updates are not available.
 
         Usually, this alert means that the Deckhouse Pod is having difficulties with connecting to the Internet.
 
@@ -180,7 +181,7 @@
       description: |
         Deckhouse cannot process the {{ $labels.queue }} queue with {{ $value }} tasks piled up.
 
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseGlobalHookFailsTooOften
     expr: max(increase({job="deckhouse", __name__=~"deckhouse_global_hook.*_errors"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
@@ -199,7 +200,7 @@
       description: |
         The {{ $labels.hook }} has failed in the last `__SCRAPE_INTERVAL_X_4__`.
 
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseModuleHookFailsTooOften
     expr: max(increase({job="deckhouse", __name__=~"deckhouse_module_hook.*_errors"}[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
@@ -218,7 +219,7 @@
       description: |
         The {{ $labels.hook }} hook of the {{ $labels.module }} module has failed in the last `__SCRAPE_INTERVAL_X_4__`.
 
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotDiscoverModules
     expr: max by (pod, instance) (increase(deckhouse_modules_discover_errors[__SCRAPE_INTERVAL_X_4__])) > 1
@@ -235,7 +236,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to discover modules.
       description: |
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotRunModule
     expr: max(increase(deckhouse_module_run_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
@@ -252,7 +253,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to start the {{ $labels.module }} module.
       description: |
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotDeleteModule
     expr: max(increase(deckhouse_module_delete_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module) > 1
@@ -269,7 +270,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to delete the {{ $labels.module }} module.
       description: |
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotRunGlobalHook
     expr: max(increase(deckhouse_global_hook_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, hook) > 1
@@ -286,7 +287,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to run the {{ $labels.hook }} global hook.
       description: |
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseCouldNotRunModuleHook
     expr: max(increase(deckhouse_module_hook_errors[__SCRAPE_INTERVAL_X_4__])) by (pod, instance, module, hook) > 1
@@ -303,7 +304,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to run the {{ $labels.module }}/{{ $labels.hook }} module hook.
       description: |
-        Please, refer to the relevant logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
+        Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
   - alert: D8DeckhouseMalfunctioning
     expr: count(ALERTS{alertname=~"D8DeckhousePodIsRestartingTooOften|D8DeckhouseCouldNotDiscoverModules|D8DeckhouseCouldNotRunGlobalHook|D8DeckhouseCouldNotRunModuleHook|D8DeckhouseCouldNotRunModule|D8DeckhouseCouldNotDeleteModule|D8DeckhouseQueueIsHung|D8DeckhouseGlobalHookFailsTooOften|D8DeckhouseModuleHookFailsTooOften", alertstate="firing"}) > 0
@@ -317,4 +318,6 @@
       plk_alert_type: "group"
       summary: Deckhouse does not work as expected.
       description: |
-        Deckhouse does not work as expected. You can find out the exact problem in the relevant alerts.
+        Deckhouse does not work as expected.
+
+        You can find out the exact problem in the relevant alerts.

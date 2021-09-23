@@ -19,6 +19,7 @@
         Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
       description: |-
         Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
+
         Currently at: {{ .Value }} unavailable replica(s)
         Threshold at: {{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }} unavailable replica(s)
 
@@ -125,18 +126,17 @@
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "5m"
       summary: |-
-        Daemonset {{ $labels.namespace }}/{{ $labels.daemonset }} имеет {{ .Value }} подов в неактуальном состоянии в течении 15 минут.
+        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
       description: |-
-        Daemonset {{ $labels.namespace }}/{{ $labels.daemonset }} имеет {{ .Value }} подов в неактуальном состоянии в течении 15 минут.
+        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
 
-        Необходимо выполнить следующие действия:
-        1. Проверить состояние daemonset'a `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}`
-        2. Получить описание daemonset'a `kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}`
-        3. Если вы видите, что в описании daemonset'a не совпадают значения `Number of Nodes Scheduled with Up-to-date Pods`
-        и `Current Number of Nodes Scheduled`, то необходимо проверить updateStrategy у daemonset'a
+        The recommended course of action:
+        1. Check the DaemonSet's status: `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}`
+        2. Analyze the DaemonSet's description: `kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}`
+        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match 
+        `Current Number of Nodes Scheduled`, check the DaemonSet's updateStrategy:
         `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}-o json | jq '.spec.updateStrategy'`
-        4. Если установлена updateStrategy OnDelete, то обновления daemonset'a произойдёт только при удалении подов.
-
+        4. Note that if the OnDelete updateStrategy is set, the DaemonSet gets only updated when Pods are deleted.
 
   - alert: KubernetesStatefulSetReplicasUnavailable
     expr: |
@@ -157,6 +157,7 @@
         Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
       description: |-
         Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+
         Currently at: {{ .Value }} unavailable replica(s)
         Threshold at: {{ printf "extended_monitoring_statefulset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", statefulset=\"%s\"}" $labels.namespace $labels.statefulset | query | first | value }} unavailable replica(s)
 
