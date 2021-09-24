@@ -1,0 +1,67 @@
+# NOTE PR is an issue, and PR milestones are acceptable via isseus API
+# What we want to react to:
+# - PR with currently opened release milestone
+#   - release milestone is that named as semver, e.g. "v1.39.42"
+#   - the milestone MUST be opened
+#     - gh issue list -R deckhouse/deckhouse -S 'milestone:"v1.26.0"' --json id,number,milestone --jq ".[].milestone.title"
+
+# Get open milestones
+#   gh api 'repos/deckhouse/deckhouse/milestones?state=open' --jq "[.[] | .title]"
+#   ["v1.26.0"]
+#   TODO check for semver
+#
+# Get milestone PRs that vere merged
+
+# Реагирует на события
+# - Мерж в main из ПР PR с майлстоном MS
+# - Изменение майлстона в замерженном PR
+#   - Если майлстон закрыт, то ничего не делает
+#   - Для каждого открытого майлстона MS
+# - Комментарий /changelog в ПР с ченджом
+#
+# Что делает
+#   - Создает/Обновляет ПР в main с ченджлогом для MS, присваивает ему этот MS
+#     - Генерирует ченджлог для патч-версии
+#       - Собирает все замерженные ПР с майлстоном MS
+#       - Парсит описание в специальной секции
+#     - Оформляет файл (редактирует YAML)
+#       - Создает или читает файл для минорной версии CHANGELOG/CHANGELOG-v{maj.min}.yaml
+#       - Добавляет или перезаписывает секцию с ченджлогом патч-версии (MS) в этом файле
+#     - Создает или обновляет ПР в main с новой версией файла
+#     - Приносит ПР ченджа в доску проекта
+
+
+# prerequisites:
+# - milestone:
+#   - is semver
+#   - is open
+# - pr:
+#   - has milestone (filtering PRs does that iherintly)
+#   - is merged
+# - issue:
+#   - must be PR
+name: Generate Release Changelog
+on:
+  milestone:
+    types:
+      - "opened"
+      - "edited"
+  pull_request:
+    types:
+      # TODO must be merged
+      - "closed"
+    branches:
+      - "main"
+  issues:
+    types:
+      - "milestoned"
+      - "demilestoned"
+# TODO permissions: "write-all" # FIXME not that much
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh issue comment $ISSUE --body "Thank you for opening this issue!"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ github.event.issue.html_url }}
