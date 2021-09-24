@@ -86,8 +86,16 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	snap := input.Snapshots["deckhouse"]
+	if len(snap) == 0 {
+		return nil
+	}
 
 	deckhousePod := snap[0].(deckhousePodInfo)
+
+	if deckhousePod.Image == "" || deckhousePod.ImageID == "" {
+		input.LogEntry.Debug("Deckhouse pod is not ready. Try to update later")
+		return nil
+	}
 
 	idSplit := strings.Split(deckhousePod.ImageID, "@")
 	if len(idSplit) < 2 {
@@ -135,9 +143,19 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
+	var image, imageID string
+
+	if len(pod.Spec.Containers) > 0 {
+		image = pod.Spec.Containers[0].Image
+	}
+
+	if len(pod.Status.ContainerStatuses) > 0 {
+		imageID = pod.Status.ContainerStatuses[0].ImageID
+	}
+
 	return deckhousePodInfo{
-		Image:     pod.Spec.Containers[0].Image,
-		ImageID:   pod.Status.ContainerStatuses[0].ImageID,
+		Image:     image,
+		ImageID:   imageID,
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
 	}, nil
