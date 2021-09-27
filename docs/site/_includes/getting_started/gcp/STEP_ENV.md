@@ -27,6 +27,14 @@ gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME
 ```
 {% endsnippetcut %}
 
+Connect roles to the service account:
+{% snippetcut %}
+```shell
+for role in roles/compute.admin roles/iam.serviceAccountUser roles/networkmanagement.admin; do \
+  gcloud projects add-iam-policy-binding ${PROJECT} --member=serviceAccount:${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com --role=${role}; done
+```
+{% endsnippetcut %}
+
 Verify service account roles:
 {% snippetcut %}
 ```shell
