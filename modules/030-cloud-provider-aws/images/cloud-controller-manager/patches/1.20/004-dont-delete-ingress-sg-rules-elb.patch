@@ -1,0 +1,31 @@
+Index: pkg/providers/v1/aws.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
+--- a/pkg/providers/v1/aws.go	(revision 9e3808d53f0364178f2c40476ea368f3c5140d39)
++++ b/pkg/providers/v1/aws.go	(date 1632470455704)
+@@ -4332,6 +4332,13 @@
+ 	c.sortELBSecurityGroupList(lbSecurityGroupIDs, annotations)
+ 	loadBalancerSecurityGroupID := lbSecurityGroupIDs[0]
+
++	var deleteSecurityGroupID bool
++	// we shouldn't delete Ingress SG rule, if it allows access
++	// from configured "ElbSecurityGroup", so that we won't disrupt access to Nodes from other ELBs
++	if loadBalancerSecurityGroupID != c.cfg.Global.ElbSecurityGroup {
++		deleteSecurityGroupID = true
++	}
++
+ 	// Get the actual list of groups that allow ingress from the load-balancer
+ 	var actualGroups []*ec2.SecurityGroup
+ 	{
+@@ -4427,7 +4434,7 @@
+ 			if !changed {
+ 				klog.Warning("Allowing ingress was not needed; concurrent change? groupId=", instanceSecurityGroupID)
+ 			}
+-		} else {
++		} else if deleteSecurityGroupID {
+ 			changed, err := c.removeSecurityGroupIngress(instanceSecurityGroupID, permissions)
+ 			if err != nil {
+ 				return err
