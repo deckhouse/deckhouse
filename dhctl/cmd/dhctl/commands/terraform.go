@@ -54,7 +54,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.InfoLn("Check started ...\n")
 
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
