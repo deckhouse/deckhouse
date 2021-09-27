@@ -30,3 +30,4 @@ smokeMiniEnabled: true
 upmeterEnabled: true
 logShipperEnabled: true
 localPathProvisionerEnabled: true
+podReloaderEnabled: true
