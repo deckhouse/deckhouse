@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2021 Flant CJSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module "static-node" {
-  source = "../../../terraform-modules/static-node"
-  prefix = local.prefix
-  cluster_uuid = var.clusterUUID
-  node_index = var.nodeIndex
-  node_group = local.node_group
-  root_volume_size = local.root_volume_size
-  root_volume_type = local.root_volume_type
-  additional_security_groups = local.additional_security_groups
-  cloud_config = var.cloudConfig
-  zones = local.zones
-  tags = local.tags
+output "master_ip_address_for_ssh" {
+  value = module.master-node.master_private_ip
+}
+
+output "node_internal_ip_address" {
+  value = module.master-node.master_private_ip
+}
+
+output "kubernetes_data_device_path" {
+  value = module.master-node.kubernetes_data_device_path
 }

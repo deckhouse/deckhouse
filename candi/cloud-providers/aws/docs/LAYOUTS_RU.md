@@ -85,3 +85,51 @@ sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
 tags:
   team: torpedo
 ```
+
+## WithNAT
+
+**Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам (его можно создать вместе с кластером, указав параметры в секции `withNAT.bastionInstance`).
+
+Виртуальные машины будут выходить в интернет через NAT Gateway с общим и единственным source IP.
+
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vRS95L6rJr_SswWphLYYHN9GZLC3I0jpbKXbjr3935kqJdaeBIxmJyejKCOUdLPaKlY2Fk_zzNaGmE9/pub?w=1422&h=997)
+<!--- Исходник: https://docs.google.com/drawings/d/1UPzygO3w8wsRNHEna2uoYB-69qvW6zDYB5s1OumUOes/edit --->
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: AWSClusterConfiguration
+layout: WithNAT
+provider:
+  providerAccessKeyId: MYACCESSKEY
+  providerSecretAccessKey: mYsEcReTkEy
+  region: eu-central-1
+withNAT:
+  zone: eu-central-1a
+  bastionInstance:
+    instanceClass:
+      instanceType: m5.large
+      ami: ami-09a4a23815cdb5e06
+masterNodeGroup:
+  # Количество master-узлов.
+  # Если указано больше одного master-узла, то etcd-кластер соберётся автоматически.
+  replicas: 1
+  instanceClass:
+    instanceType: m5.xlarge
+    ami: ami-03818140b4ac9ae2b
+nodeGroups:
+  - name: mydb
+    nodeTemplate:
+      labels:
+        node-role.kubernetes.io/mydb: ""
+    replicas: 2
+    instanceClass:
+      instanceType: t2.medium
+      ami: ami-03818140b4ac9ae2b
+    additionalTags:
+      backup: me
+vpcNetworkCIDR: "10.241.0.0/16"
+nodeNetworkCIDR: "10.241.32.0/20"
+sshPublicKey: "ssh-rsa <SSH_PUBLIC_KEY>"
+tags:
+  team: torpedo
+```

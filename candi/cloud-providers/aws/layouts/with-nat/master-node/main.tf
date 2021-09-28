@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2021 Flant CJSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module "static-node" {
-  source = "../../../terraform-modules/static-node"
+module "master-node" {
+  source = "../../../terraform-modules/master-node"
   prefix = local.prefix
   cluster_uuid = var.clusterUUID
   node_index = var.nodeIndex
-  node_group = local.node_group
+  node_group = var.providerClusterConfiguration.masterNodeGroup
   root_volume_size = local.root_volume_size
   root_volume_type = local.root_volume_type
   additional_security_groups = local.additional_security_groups
