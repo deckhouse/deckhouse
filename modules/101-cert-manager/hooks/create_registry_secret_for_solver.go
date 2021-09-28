@@ -17,13 +17,13 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/base64"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -33,9 +33,15 @@ import (
 const (
 	challengesSnapshot = "challenges"
 	secretsSnapshot    = "registry_secrets_namespaces"
+	d8RegistrySnapshot = "d8_registry_secret"
 
 	solverSecretName = "acme-solver-deckhouse-regestry"
 )
+
+type registrySecret struct {
+	Namespace string
+	Config    string
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/cert-manager/registry-secrets",
@@ -44,26 +50,60 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       challengesSnapshot,
 			ApiVersion: "certmanager.k8s.io/v1alpha1",
 			Kind:       "Challenge",
-			FilterFunc: filterNamespace,
+			FilterFunc: applyNamespaceFilter,
 		},
 		{
 			Name:       secretsSnapshot,
 			ApiVersion: "v1",
 			Kind:       "Secret",
-			FilterFunc: filterNamespace,
+			FilterFunc: applyRegistrySecretFilter,
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{solverSecretName},
 			},
 		},
+		{
+			Name:       d8RegistrySnapshot,
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"deckhouse-registry"},
+			},
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-system"},
+				},
+			},
+			FilterFunc: applyRegistrySecretFilter,
+		},
 	},
 }, handleChallenge)
 
-func filterNamespace(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetNamespace(), nil
 }
 
-func prepareSolverRegistrySecret(namespace, dockerCfg string) *v1.Secret {
-	return &v1.Secret{
+func applyRegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var s corev1.Secret
+	err := sdk.FromUnstructured(obj, &s)
+	if err != nil {
+		return "", err
+	}
+
+	ns := s.GetNamespace()
+
+	conf, ok := s.Data[corev1.DockerConfigJsonKey]
+	if !ok {
+		return "", fmt.Errorf("registry auth conf is not in registry secret %s/%s", ns, obj.GetName())
+	}
+
+	return registrySecret{
+		Namespace: ns,
+		Config:    string(conf),
+	}, nil
+}
+
+func prepareSolverRegistrySecret(namespace, dockerCfg string) *corev1.Secret {
+	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
@@ -78,11 +118,11 @@ func prepareSolverRegistrySecret(namespace, dockerCfg string) *v1.Secret {
 			},
 		},
 
-		StringData: map[string]string{
-			".dockerconfigjson": dockerCfg,
+		Data: map[string][]byte{
+			corev1.DockerConfigJsonKey: []byte(dockerCfg),
 		},
 
-		Type: v1.SecretTypeDockerConfigJson,
+		Type: corev1.SecretTypeDockerConfigJson,
 	}
 }
 
@@ -103,54 +143,44 @@ func prepareSolverRegistrySecret(namespace, dockerCfg string) *v1.Secret {
 //   In future we want to rid all of patches in cert-manager
 //   and use vanilla cert-manager
 func handleChallenge(input *go_hook.HookInput) error {
-	registryCfgRaw := input.Values.Get("global.modulesImages.registryDockercfg").String()
-	if registryCfgRaw == "" {
-		return fmt.Errorf("registry config is empty")
+	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
+	if len(d8RegistrySnap) == 0 {
+		input.LogEntry.Warnln("Registry secret not found. Skip")
+		return nil
 	}
-	// we need to decode from base64 str because 'SecretTypeDockerConfigJson'
-	// validate passed data as json config but global.modulesImages.registryDockercfg
-	// stored in base64
-	registryCfgBytes, err := base64.StdEncoding.DecodeString(registryCfgRaw)
-	if err != nil {
-		return fmt.Errorf("registry config cannot decoded from base64")
-	}
-	registryCfg := string(registryCfgBytes)
 
-	var (
-		challengesNss = set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
-		secretsNss    = set.NewFromSnapshot(input.Snapshots[secretsSnapshot])
-	)
+	registryCfg := d8RegistrySnap[0].(registrySecret).Config
+
+	challengesNss := set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
+	// namespace -> .dockerconfigjson content
+	secretsByNs := map[string]string{}
+
+	for _, sRaw := range input.Snapshots[secretsSnapshot] {
+		regSecret := sRaw.(registrySecret)
+		secretsByNs[regSecret.Namespace] = regSecret.Config
+	}
 
 	// create secrets
 	for ns := range challengesNss {
+		secretContent, ok := secretsByNs[ns]
 		// secret already exists in namespace. do not create or patch
-		if secretsNss.Has(ns) {
+		if ok && secretContent == registryCfg {
 			continue
 		}
 
 		secret := prepareSolverRegistrySecret(ns, registryCfg)
-		un, err := sdk.ToUnstructured(secret)
-		if err != nil {
-			return err
-		}
 
-		err = input.ObjectPatcher().CreateOrUpdateObject(un, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
 	}
 
 	// gc secrets
-	for ns := range secretsNss {
+	for ns := range secretsByNs {
 		if challengesNss.Has(ns) {
 			// a secret exists in namespace, and exists one more challenges. do not delete secret
 			continue
 		}
 
-		err := input.ObjectPatcher().DeleteObject("v1", "Secret", ns, solverSecretName, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.Delete("v1", "Secret", ns, solverSecretName)
 	}
 
 	return nil
