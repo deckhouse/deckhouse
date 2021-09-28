@@ -21,7 +21,7 @@
     {
       "columns": [],
       "datasource": "$ds_prometheus",
-      "description": "Очень важный момент, в данной таблице показываются средние данные за весь выбранный период в dashboard. Из-за этого в ней может быть информация о Pod'ах, namespace'ах, которые были изменены, удалены за выбранный период",
+      "description": "Note that this table shows the average values for the entire period selected in the dashboard. Consequently, it may contain information about Pods or namespaces that were changed or deleted during the selected period.",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -493,7 +493,7 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "decimals": 0,
-      "description": "Количество Pod'ов в каждом namespace",
+      "description": "The number of Pods in each namespace",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -613,7 +613,7 @@
       "dashes": false,
       "datasource": "$ds_prometheus",
       "decimals": 0,
-      "description": "Количество рестартов Pod'ов",
+      "description": "The number of Pod restarts",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -861,7 +861,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+      "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -992,7 +992,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU выше реального потребления CPU. По факту, сколько CPU следует \"освободить\", сохранив при этом корректную работу сервиса.",
+      "description": "This graph shows the requested CPU resources higher than the actual CPU consumption. In other words, it shows CPU resources that can be \"freed\" without affecting the service.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -1108,7 +1108,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображаются запрошенные (requested) ресурсы CPU ниже реального потребления CPU. По факту, сколько ещё CPU нужно \"застолбить\", для корректной работы сервиса.",
+      "description": "This graph shows the requested CPU resources lower than the actual CPU consumption. In other words, it shows CPU resources that need to be \"reserved\" for the service to run smoothly.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -1224,7 +1224,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "Если на графике нет данных, значит не заданы ресурсы для контейнеров",
+      "description": "The absence of data on the graph means that container resources are not set",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -6060,7 +6060,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6186,7 +6186,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6314,7 +6314,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6442,7 +6442,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6570,7 +6570,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6698,7 +6698,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6826,7 +6826,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -6954,7 +6954,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7082,7 +7082,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7210,7 +7210,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7338,7 +7338,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7466,7 +7466,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7594,7 +7594,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7722,7 +7722,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7850,7 +7850,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -7978,7 +7978,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8106,7 +8106,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8234,7 +8234,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8362,7 +8362,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8490,7 +8490,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8618,7 +8618,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8746,7 +8746,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -8874,7 +8874,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9002,7 +9002,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9130,7 +9130,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9258,7 +9258,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9386,7 +9386,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9514,7 +9514,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9642,7 +9642,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9770,7 +9770,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -9898,7 +9898,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -10026,7 +10026,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -10154,7 +10154,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -10282,7 +10282,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Total может быть не равен system + user из-за особенностей учета cgroup в ядре. Более детально можно почитать тут: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
+          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -10545,7 +10545,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+      "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
       "fieldConfig": {
         "defaults": {
           "custom": {},
@@ -10695,7 +10695,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображаются запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько Memory следует \"освободить\", сохранив при этом корректную работу сервиса.",
+      "description": "This graph shows the requested Memory resources higher than the actual Memory consumption. In other words, it shows Memory resources that can be \"freed\" without affecting the service.",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -10810,7 +10810,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображается запрошенные (requested) ресурсы Memory выше реального потребления Memory. По факту, сколько еще Memory необходимо \"застолбить\" для корректной работы сервиса.",
+      "description": "This graph shows the requested Memory resources higher than the actual Memory consumption. In other words, it shows Memory resources that need to be \"reserved\" for the service to run smoothly.",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -10936,7 +10936,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -11128,7 +11128,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -11322,7 +11322,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -11516,7 +11516,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -11710,7 +11710,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -11904,7 +11904,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -12098,7 +12098,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -12292,7 +12292,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -12486,7 +12486,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -12680,7 +12680,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -12874,7 +12874,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -13068,7 +13068,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -13262,7 +13262,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -13456,7 +13456,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -13650,7 +13650,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -13844,7 +13844,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -14038,7 +14038,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -14232,7 +14232,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -14426,7 +14426,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -14620,7 +14620,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -14814,7 +14814,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -15008,7 +15008,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -15202,7 +15202,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -15396,7 +15396,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -15590,7 +15590,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -15784,7 +15784,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -15978,7 +15978,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -16172,7 +16172,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -16366,7 +16366,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -16560,7 +16560,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -16754,7 +16754,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -16948,7 +16948,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -17142,7 +17142,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -17336,7 +17336,7 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": "$ds_prometheus",
-          "description": "Метрика Working set bytes - реально используемая память контейнером, так как включает active file memory. И пр достижении данного значения к лимиту, может прийти OOMKiller. Данное значение может быть выше RSS + Cache. Так как не вся active file memory является Cache.",
+          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
           "fill": 1,
           "gridPos": {
             "h": 9,
@@ -17548,7 +17548,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображены Network Recieve, за исключением Pod'ов в hostNetwork.",
+      "description": "This graph shows Network Receive (except for the hostNetwork Pods)",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -17658,7 +17658,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике отображены Network Transmit, за исключением Pod'ов в hostNetwork.",
+      "description": "This graph shows Network Transmit (except for the hostNetwork Pods)",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -18014,7 +18014,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. ",
+      "description": "This graph does not show any localstorage-related information due to incorrectly calculating the occupied space on localstorage disks",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -18126,7 +18126,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в Rook нет поддержки метрик, то на данных графиках не отображается информация о дисках, созданных Rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "description": "This graph does not show any localstorage-related information due to incorrectly calculating the occupied space on localstorage disks",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -18238,7 +18238,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$ds_prometheus",
-      "description": "На данном графике не отображается информация о localstorage-дисках, так как в localstorage-дисках потребленное место рассчитывается неверно. \n\nТак как в Rook нет поддержки метрик, то на данных графиках не отображается информация о дисках, созданных Rook'ом: https://github.com/deckhouse/deckhouse/issues/443",
+      "description": "This graph does not show any localstorage-related information due to incorrectly calculating the occupied space on localstorage disks",
       "fieldConfig": {
         "defaults": {
           "custom": {}
