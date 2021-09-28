@@ -314,7 +314,7 @@ func DeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
-	preparedLabels := map[string]string{"heritage": "deckhouse"}
+	preparedLabels := map[string]string{"heritage": "deckhouse", "name": name}
 	for key, value := range labels {
 		preparedLabels[key] = value
 	}
