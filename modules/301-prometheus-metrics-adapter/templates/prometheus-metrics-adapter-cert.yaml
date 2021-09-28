@@ -2,11 +2,15 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: prometheus-metrics-adapter-cert
+  # 2021-09-23 migrate name from
+  # prometheus-metrics-adapter-cert to prometheus-metrics-adapter-server-cert
+  # because we change CA certificate data key
+  # we generate new CA and cert because we don't want to write migration
+  name: prometheus-metrics-adapter-server-cert
   namespace: d8-monitoring
 {{ include "helm_lib_module_labels" (list .) | indent 2 }}
 type: kubernetes.io/tls
 data:
   tls.crt: {{ .Values.prometheusMetricsAdapter.internal.adapterPem | b64enc }}
   tls.key: {{ .Values.prometheusMetricsAdapter.internal.adapterKey | b64enc }}
-  adapter-ca.crt: {{ .Values.prometheusMetricsAdapter.internal.adapterCA | b64enc }}
+  ca.crt: {{ .Values.prometheusMetricsAdapter.internal.adapterCA | b64enc }}

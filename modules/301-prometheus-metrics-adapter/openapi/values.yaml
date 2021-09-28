@@ -1,0 +1,104 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+x-required-for-helm:
+- internal
+properties:
+  internal:
+    type: object
+    additionalProperties: false
+    default: {}
+    x-required-for-helm:
+    - adapterPem
+    - adapterKey
+    - adapterCA
+    - prometheusAPIClientTLS
+    properties:
+      adapterPem:
+        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+        type: string
+
+      adapterCA:
+        x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+        type: string
+
+      adapterKey:
+        x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+        type: string
+
+      prometheusAPIClientTLS:
+        default: {}
+        additionalProperties: false
+        x-required-for-helm:
+          - certificate
+          - key
+        type: object
+        properties:
+          certificate:
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+            type: string
+
+          key:
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+            type: string
+
+      customMetrics:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          daemonset:
+            type: object
+            default: { }
+            x-examples: [ {"some-name":{"cluster":"query", "namespaced": {"ns", "query"}}} ]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary. see x-examples
+            additionalProperties: true
+
+          deployment:
+            type: object
+            default: { }
+            x-examples: [{"some-name":{"cluster":"query", "namespaced": {"ns", "query"}}}]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary. see x-examples
+            additionalProperties: true
+
+          ingress:
+            type: object
+            default: { }
+            x-examples: [{"some-name":{"cluster":"query", "namespaced": {"ns", "query"}}}]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary. see x-examples
+            additionalProperties: true
+
+          namespace:
+            type: object
+            default: { }
+            x-examples: [{"some-name":{"cluster":"query", "namespaced": {"ns", "query"}}}]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary
+            additionalProperties: true
+
+          pod:
+            type: object
+            default: { }
+            x-examples: [{"some-name":{"cluster":"query", "namespaced": {"ns", "query"}}}]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary
+            additionalProperties: true
+
+          service:
+            type: object
+            default: { }
+            x-examples: [{"name":{"cluster":"query", "namespaced": {"ns", "query"}}}]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary
+            additionalProperties: true
+
+          statefulset:
+            type: object
+            default: { }
+            x-examples: [{"name":{"cluster":"query", "namespaced": {"ns", "query"}}}]
+            # enable additional properties, because properties has name same as name in k8s
+            # and this names can be arbitrary
+            additionalProperties: true
