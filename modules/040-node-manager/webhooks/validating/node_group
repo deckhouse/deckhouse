@@ -19,12 +19,43 @@ source /shell_lib.sh
 function __config__(){
   cat <<EOF
 configVersion: v1
+kubernetes:
+  - name: endpoints
+    apiVersion: v1
+    kind: Endpoints
+    queue: "endpoints-config"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames:
+      - kubernetes
+    jqFilter: |
+      {
+        "count": (.subsets[].addresses | length )
+      }
+  - name: cluster_config
+    apiVersion: v1
+    kind: Secret
+    queue: "cluster-config"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    nameSelector:
+      matchNames:
+        - d8-cluster-configuration
+    jqFilter: '.data."cluster-configuration.yaml" // ""'
 kubernetesValidating:
 - name: nodegroup-policy.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["v1alpha1"]
+    apiVersions: ["*"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["nodegroups"]
     scope:       "Cluster"
@@ -32,6 +63,26 @@ EOF
 }
 
 function __main__() {
+  # cri.type cannot be changed if count of endpoints < 3
+  if context::jq -e -r '.review.request.name == "master"' >/dev/null 2>&1; then
+    defaultCRI="$(context::jq -r '.snapshots.cluster_config[0].filterResult' | base64 -d | grep "defaultCRI" | cut -d" " -f2)"
+    if [[ -z "${defaultCRI}" ]]; then
+      defaultCRI="Containerd"
+    fi
+    oldCRIType="$(context::jq -r --arg df "${defaultCRI}" '.review.request.oldObject.spec.cri.type // $df')"
+    newCRIType="$(context::jq -r --arg df "${defaultCRI}" '.review.request.object.spec.cri.type // $df')"
+    endpointsCount="$(context::jq -r '.snapshots.endpoints[].filterResult.count')"
+
+    if [[ ("${newCRIType}" != "${oldCRIType}") && ("${endpointsCount}" -lt 3) ]]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to change cri.type in master node group for cluster with apiserver endpoints < 3"}
+EOF
+      return 0
+    fi
+  fi
+
+  # check for nodeGroup deckhouse.io/v1alpha1
+  if context::jq -e -r '.review.request.object.apiVersion == "deckhouse.io/v1alpha1"' >/dev/null 2>&1; then
     if context::jq -e -r '.review.request.object.spec.cri.type != "Docker" and .review.request.object.spec.docker != null' >/dev/null 2>&1; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"it is forbidden to create NodeGroup resource with set .spec.docker and without .spec.cri.type=\"Docker\""}
@@ -45,6 +96,7 @@ EOF
 EOF
       return 0
     fi
+  fi
 
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
