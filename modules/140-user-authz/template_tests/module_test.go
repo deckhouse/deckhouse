@@ -153,18 +153,30 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			})
 		})
 
-		Context("allowScale option is set in a CAR", func() {
+		Context("allowScale option is set to true in a CAR", func() {
 			BeforeEach(func() {
 				f.ValuesSet("userAuthz.internal.crds.0.spec.allowScale", true)
 				f.HelmRender()
 			})
 
-			It("Should create a port-forward RoleBinding", func() {
+			It("Should create a scale RoleBinding", func() {
 				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
 				Expect(crb.Exists()).To(BeTrue())
 
 				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
 				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
+			})
+		})
+
+		Context("allowScale option is set to false in a CAR", func() {
+			BeforeEach(func() {
+				f.ValuesSet("userAuthz.internal.crds.0.spec.allowScale", false)
+				f.HelmRender()
+			})
+
+			It("Should not create a scale RoleBinding", func() {
+				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
+				Expect(crb.Exists()).To(BeFalse())
 			})
 		})
 
