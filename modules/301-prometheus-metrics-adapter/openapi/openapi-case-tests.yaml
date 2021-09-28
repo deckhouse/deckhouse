@@ -1,0 +1,126 @@
+positive:
+  values:
+  # all in
+  - internal:
+      adapterPem: cert
+      adapterCA: cert
+      adapterKey: key
+      prometheusAPIClientTLS:
+        certificate: cert
+        key: key
+      customMetrics:
+        daemonset:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+
+        deployment:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        ingress:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        namespace:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        pod:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        service:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        statefulset:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+  # empty metrics types
+  - internal:
+      adapterPem: cert
+      adapterCA: cert
+      adapterKey: key
+      prometheusAPIClientTLS:
+        certificate: cert
+        key: key
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+negative:
+  values:
+  # incorrect metric type
+  - internal:
+      adapterPem: cert
+      adapterCA: cert
+      adapterKey: key
+      prometheusAPIClientTLS:
+        certificate: cert
+        key: key
+      customMetrics:
+        incorrect_metric_type:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+
+# next case don't work because deckhouse testes not support x-required-for-helm
+# need to fix it and uncomment cases after fix
+
+##  # does not have internal pma tls
+#  - internal:
+#      prometheusAPIClientTLS:
+#        certificate: cert
+#        key: key
+#      customMetrics:
+#        daemonset: { }
+#        deployment: { }
+#        ingress: { }
+#        namespace: { }
+#        pod: { }
+#        service: { }
+#        statefulset: { }
+#
+#  # does not have prom client tls object
+#  - internal:
+#      adapterPem: cert
+#      adapterCA: cert
+#      adapterKey: key
+#      customMetrics:
+#        daemonset: { }
+#        deployment: { }
+#        ingress: { }
+#        namespace: { }
+#        pod: { }
+#        service: { }
+#        statefulset: { }
+#
+#  # does not have prom client tls
+#  - internal:
+#      adapterPem: cert
+#      adapterCA: cert
+#      adapterKey: key
+#      prometheusAPIClientTLS: { }
+#      customMetrics:
+#        daemonset: { }
+#        deployment: { }
+#        ingress: { }
+#        namespace: { }
+#        pod: { }
+#        service: { }
+#        statefulset: { }

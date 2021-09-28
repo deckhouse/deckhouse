@@ -104,7 +104,7 @@ spec:
       volumes:
       - name: adapter-cert
         secret:
-          secretName: prometheus-metrics-adapter-cert
+          secretName: prometheus-metrics-adapter-server-cert
       - name: prometheus-metrics-adapter-config
         configMap:
           name: prometheus-metrics-adapter-config
