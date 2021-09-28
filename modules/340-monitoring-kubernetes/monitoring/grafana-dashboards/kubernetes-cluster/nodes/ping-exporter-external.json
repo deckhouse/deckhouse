@@ -35,7 +35,7 @@
     {
       "columns": [],
       "datasource": "$ds_prometheus",
-      "description": "Средние значения измерений, сгруппированные по целям ping запросов",
+      "description": "Average measurements grouped by ping request targets",
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
@@ -570,7 +570,7 @@
         {
           "columns": [],
           "datasource": "$ds_prometheus",
-          "description": "Средние значения измерений, сгруппированные по источникам ping запросов",
+          "description": "Average measurements grouped by ping request sources",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
@@ -1146,7 +1146,7 @@
         {
           "columns": [],
           "datasource": "$ds_prometheus",
-          "description": "Средние значения измерений, сгруппированные по источникам ping запросов",
+          "description": "Average measurements grouped by ping request sources",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
@@ -1739,7 +1739,7 @@
         {
           "columns": [],
           "datasource": "$ds_prometheus",
-          "description": "Средние значения измерений, сгруппированные по источникам ping запросов",
+          "description": "Average measurements grouped by ping request sources",
           "fontSize": "100%",
           "gridPos": {
             "h": 6,
