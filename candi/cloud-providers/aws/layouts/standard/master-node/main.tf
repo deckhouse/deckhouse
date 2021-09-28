@@ -18,7 +18,6 @@ module "master-node" {
   cluster_uuid = var.clusterUUID
   node_index = var.nodeIndex
   node_group = var.providerClusterConfiguration.masterNodeGroup
-  associate_public_ip_address = local.associate_public_ip_to_masters
   root_volume_size = local.root_volume_size
   root_volume_type = local.root_volume_type
   additional_security_groups = local.additional_security_groups

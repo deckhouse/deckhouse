@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "master_ip_address_for_ssh" {
-  value = local.associate_public_ip_to_masters ? module.master-node.master_public_ip : module.master-node.master_private_ip
+  value = module.master-node.master_private_ip
 }
 
 output "node_internal_ip_address" {

@@ -12,6 +12,14 @@ apiVersions:
       kind:
         type: string
         enum: [AWSClusterConfiguration]
+      peeredVPCs:
+        type: array
+        description: |
+          A list of AWS VPC ids to peer with the cluster network.
+
+          The service account must have access to all the VPCs listed. You have to configure the peering connection [manually](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html) if no access is available.
+        items:
+          type: string
       masterNodeGroup:
         required: [replicas, instanceClass]
         description: |
@@ -187,12 +195,67 @@ apiVersions:
           The way resources are located in the cloud.
 
           Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
-        enum: ['WithoutNAT', 'Standard']
+        enum: ['WithoutNAT', 'WithNAT', 'Standard']
       withoutNAT:
         type: object
         additionalProperties: false
         required: []
         properties: {}
+      withNAT:
+        type: object
+        additionalProperties: false
+        required: []
+        properties:
+          bastionInstance:
+            type: object
+            required: [instanceClass]
+            properties:
+              zone:
+                type: string
+                description: |
+                  The zone in which the bastion instance will be created.
+
+                  By default, the first available zone in the region or the first from the list of the global parameter `zones` will be used.
+              instanceClass:
+                type: object
+                required: [instanceType, ami]
+                description: |
+                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                properties: &instanceClassProperties
+                  instanceType:
+                    type: string
+                    description: |
+                      Instance type of AWS instance.
+
+                      **Caution!** Ensure that this type is present in selected zone.
+                    example: t3.large
+                  ami:
+                    type: string
+                    description: |
+                      The Amazon Machine Image (AMI ID) to use in provisioned instance.
+
+                      Here is how you can find the required AMI (each region has its own set of AMIs):
+                      ```shell
+                      aws ec2 --region <REGION> describe-images \
+                      --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                      jq '.Images[].ImageId'
+                      ```
+                    example: ami-040a1551f9c9d11ad
+                  additionalSecurityGroups:
+                    type: array
+                    description: |
+                      The additional security groups to add to provisioned instance of the specific InstanceClass.
+                    items:
+                      type: string
+                  diskType:
+                    description: Instance EBS disk type.
+                    example: "gp2"
+                    type: string
+                    enum: [gp2, io2, io1, st1, sc1]
+                  diskSizeGb:
+                    description: Instance disk size in gigabytes.
+                    example: 20
+                    type: integer
       vpcNetworkCIDR:
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -272,6 +335,11 @@ apiVersions:
         properties:
           layout:
             enum: [WithoutNAT]
+            type: string
+      - required: [layout]
+        properties:
+          layout:
+            enum: [WithNAT]
             type: string
     - oneOf:
       - required: [vpcNetworkCIDR]
