@@ -98,3 +98,45 @@ A VLAN with DHCP and Internet access is required for the running cluster:
 Various types of storage can be used in the cluster; for the minimum configuration, you will need:
 * Datastore for provisioning PersistentVolumes to the Kubernetes cluster;
 * Datastore for provisioning root disks for the VMs (it can be the same Datastore as for PersistentVolume).
+
+### Building a VM image
+
+1. [Install Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
+1. Clone the Deckhouse repository:
+   ```bash
+   git clone https://github.com/deckhouse/deckhouse/
+   ```
+
+1. `cd` into the `ee/modules/030-cloud-provider-vsphere/packer/` folder of the repository:
+   ```bash
+   cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
+   ```
+
+1. Create a file name `vsphere.auto.pkrvars.hcl` with the following contents:
+   ```hcl
+   vcenter_server = "<hostname or IP of a vCenter>"
+   vcenter_username = "<username>"
+   vcenter_password = "<password>"
+   vcenter_cluster = "<ComputeCluster name, in which template will be created>"
+   vcenter_datacenter = "<Datacenter name>"
+   vcenter_resource_pool = <"ResourcePool name">
+   vcenter_datastore = "<Datastore name>"
+   vcenter_folder = "<Folder name>"
+   vm_network = "<VM network in which you will build an image>"
+   ```
+{% raw %}
+1. If your PC (the one you are running Packer from) is not located in the same network as `vm_network` (if you are connected through a tunnel), change `{{ .HTTPIP }}` in the `<UbuntuVersion>.pkrvars.hcl` to your PCs VPN IP:
+
+   ```hcl
+   " url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
+   ```
+{% endraw %}
+
+1. Build a version of Ubuntu:
+
+   ```shell
+   # Ubuntu 20.04
+   packer build --var-file=20.04.pkrvars.hcl .
+   # Ubuntu 18.04
+   packer build --var-file=18.04.pkrvars.hcl .
+   ```
