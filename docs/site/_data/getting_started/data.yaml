@@ -368,8 +368,45 @@ installTypes:
         template: getting_started/global/STEP_FINISH.md
   vsphere:
     ee_only: true
-    wip: true  # show button with "soon..." caption
     type: cloud
     name:
       en: VMware vSphere
       ru: VMware vSphere
+    pages_title:
+      en: "Deckhouse Platform on VMware vSphere"
+      ru: "Deckhouse Platform на VMware vSphere"
+    layouts:
+      standard:
+        name: Standard
+        recommended: true
+    steps:
+      step2:
+        name:
+          ru: Как будет происходить установка?
+          en: A brief overview of installation
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          ru: Настройка кластера
+          en: Setting up cluster
+        template: getting_started/global/step_cluster_setup.html
+      step4:
+        name:
+          ru: Подготовка окружения
+          en: Preparing environment
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          ru: Установка
+          en: Installation
+        template: getting_started/global/STEP_INSTALL.md
+      step6:
+        name:
+          ru: Получаем доступ к кластеру
+          en: Getting access to the cluster
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step7:
+        name:
+          ru: Куда двигаться дальше?
+          en: What can I do next?
+        template: getting_started/global/STEP_FINISH.md

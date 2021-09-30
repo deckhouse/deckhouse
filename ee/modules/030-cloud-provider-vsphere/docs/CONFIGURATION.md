@@ -61,7 +61,7 @@ If you need to configure a module because, say, you have a bare metal cluster an
 
 ## Storage
 
-The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone(-s). Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter). 
+The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone(-s). Also, it can filter out the unnecessary StorageClasses (you can do this via the `exclude` parameter).
 
 * `exclude` — a list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster;
   * Format — an array of strings;
@@ -69,7 +69,7 @@ The module automatically creates a StorageClass for each Datastore and Datastore
 * `default` — the name of StorageClass that will be used in the cluster by default;
   * Format — a string;
   * An optional parameter;
-  * If the parameter is omitted, the default StorageClass is either: 
+  * If the parameter is omitted, the default StorageClass is either:
     * an arbitrary StorageClass present in the cluster that has the default annotation;
     * the first (in lexicographic order) StorageClass of those created by the module.
 
@@ -77,7 +77,7 @@ Example:
 ```yaml
 cloudProviderVsphere: |
   storageClass:
-    exclude: 
+    exclude:
     - ".*-lun101-.*"
     - slow-lun103-1c280603
     default: fast-lun102-7d0bf578
@@ -243,30 +243,3 @@ VirtualMachine.State.RemoveSnapshot
 VirtualMachine.State.RenameSnapshot
 VirtualMachine.State.RevertToSnapshot
 ```
-
-## Enabling UUID support in all VMs
-
-For the `vsphere-csi-driver` to work, support for the `disk.EnableUUID` parameter must be enabled in all cluster VMs.
-
-For this, right-click on each VM in the vSphere interface, select `Edit Settings...` in the menu and switch to the `VM Options` tab:
-
-![](../../images/030-cloud-provider-vsphere/edit_settings.png)
-
-Open the `Advanced` section:
-
-![](../../images/030-cloud-provider-vsphere/advanced.png)
-
-And click on `EDIT CONFIGURATION...` in the `Configuration Parameters` field. In the list of parameters, find the `disk.EnableUUID` parameter. If this parameter is missing, you have to enable it. To do this, you'll need to:
-
-* Turn off the VM;
-* Go to the `EDIT CONFIGURATION...` section (as described above);
-* In the upper right corner, click the `ADD CONFIGURATION PARAMS` button;
-
-![](../../images/030-cloud-provider-vsphere/configuration_params.png)
-
-* Enter the name of the `disk.EnableUUID` parameter with the value `TRUE`;
-
-![](../../images/030-cloud-provider-vsphere/add_new_configuration_params.png)
-
-* Click the `OK` button;
-* Turn on the VM.
