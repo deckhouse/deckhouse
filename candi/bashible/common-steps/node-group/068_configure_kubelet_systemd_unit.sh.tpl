@@ -53,9 +53,12 @@ ExecStart=/usr/local/bin/d8-kubelet-forker /usr/bin/kubelet \\
     --kubeconfig=/etc/kubernetes/kubelet.conf \\
     --network-plugin=cni \\
     --address=${discovered_node_ip:-0.0.0.0} \\
-{{- if eq .nodeGroup.nodeType "Static" -}}
+{{- /* During the first multi-network Node bootstrap `kubelet` discovers external IP getting it by Node's hostname. */ -}}
+{{- /* We have to bootstrap Node with the internal IP because the API certificate denies requests by external IP. */ -}}
+{{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") -}}
 $([ -n "$discovered_node_ip" ] && echo -e "\n    --node-ip=${discovered_node_ip} \\")
-{{- else }}
+{{- end }}
+{{- if not (eq .nodeGroup.nodeType "Static") }}
     --cloud-provider=external \\
 {{- end }}
     --pod-manifest-path=/etc/kubernetes/manifests \\
