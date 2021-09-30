@@ -108,7 +108,7 @@ masterNodeGroup:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2004-lts")] | sort_by(.created_at)[-1].id'
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
-    imageID: fd83klic6c8gfgi40urb
+    imageID: fd8firhksp7daa6msfes
     # [<ru>] список IP, которые будут выданы мастерам; Auto — выбрать автоматически
     # [<en>] a list of IPs that will be assigned to masters; Auto means assign automatically
     externalIPAddresses:

@@ -108,7 +108,7 @@ masterNodeGroup:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2004-lts")] | sort_by(.created_at)[-1].id'
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
-    imageID: fd83klic6c8gfgi40urb
+    imageID: fd8firhksp7daa6msfes
     externalIPAddresses:
     - "Auto"
 # [<en>] this subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex.Cloud zones
