@@ -13,4 +13,5 @@
 # limitations under the License.
 
 apt update
-bb-apt-install jq curl wget virt-what inotify-tools bash-completion ca-certificates
+apt install -y ca-certificates
+bb-apt-install jq curl wget virt-what inotify-tools bash-completion
