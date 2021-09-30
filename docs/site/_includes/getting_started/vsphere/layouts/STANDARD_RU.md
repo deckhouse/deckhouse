@@ -1,3 +1,3 @@
-Currently this is the only placement strategy for vSphere provider. It provides deep customization options for lots of network layouts.
+В настоящее время это единственная схема размещения для vSphere.
 
-Here we'll describe setting up a cluster on a single Network which has a DHCP server and access to the Internet.
+В данной схеме размещения виртуальные машины находятся в одной сети с DHCP-сервером и доступом в Интернет.
