@@ -97,3 +97,45 @@ govc permissions.set  -principal имя_пользователя -role kubernete
 В кластере может одновременно использоваться различное количество типов хранилищ. В минимальной конфигурации потребуются:
 * `Datastore`, в котором Kubernetes кластер будет заказывать `PersistentVolume`
 * `Datastore`, в котором будут заказываться root-диски для VM (может быть тот же `Datastore`, что и для `PersistentVolume`)
+
+### Сборка образа виртуальных машин
+
+1. [Установить Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli).
+1. Склонировать [репозиторий Deckhouse](https://github.com/deckhouse/deckhouse/):
+   ```bash
+   git clone https://github.com/deckhouse/deckhouse/
+   ```
+
+1. Перейти в директорию `ee/modules/030-cloud-provider-vsphere/packer/` склонированного репозитория:
+   ```bash
+   cd deckhouse/ee/modules/030-cloud-provider-vsphere/packer/
+   ```
+
+1. Создать файл `vsphere.auto.pkrvars.hcl` со следующим содержимым:
+   ```hcl
+   vcenter_server = "<хостнейм или IP vCenter>"
+   vcenter_username = "<имя пользователя>"
+   vcenter_password = "<пароль>"
+   vcenter_cluster = "<имя ComputeCluster, где будет создан образ>"
+   vcenter_datacenter = "<имя Datacenter>"
+   vcenter_resource_pool = "имя ResourcePool"
+   vcenter_datastore = "<имя Datastore, в котором будет создан образ>"
+   vcenter_folder = "<имя директории>"
+   vm_network = "<имя сети, к которой подключится виртуальная машина при сборке образа>"
+   ```
+{% raw %}
+1. Если ваш компьютер (с которого запущен Packer) не находится в одной сети с `vm_network`, а вы подключены через VPN-туннель, то замените `{{ .HTTPIP }}` в файле `<UbuntuVersion>.pkrvars.hcl` на IP-адрес вашего компьютера из VPN-сети в следующей строке:
+
+    ```hcl
+    " url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg",
+    ```
+{% endraw %}
+
+1. Выберите версию Ubuntu и соберите образ:
+
+   ```shell
+   # Ubuntu 20.04
+   packer build --var-file=20.04.pkrvars.hcl .
+   # Ubuntu 18.04
+   packer build --var-file=18.04.pkrvars.hcl .
+   ```
