@@ -16,8 +16,8 @@
 {% snippetcut %}
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=admin
-export GOVC_PASSWORD=testtest
+export GOVC_USERNAME=<USER_NAME>
+export GOVC_PASSWORD=<USER_PASSWORD>
 export GOVC_INSECURE=1
 ```
 {% endsnippetcut %}

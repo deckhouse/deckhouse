@@ -2,6 +2,17 @@
 title: "Cloud provider - VMware vSphere: подготовка окружения"
 ---
 
+<!-- АВТОР! Не забудь актуализировать getting started если это необходимо -->
+
+## Список необходимых ресурсов vSphere
+
+* **User** пользователь с необходимым [набором прав](#права).
+* **Network** с DHCP и доступом в Интернет.
+* **Datacenter** с соответствующим тэгом [`k8s-region`](#создание-тэгов-и-категорий-тэгов).
+* **ComputeCluster** с соответствующим тэгом [`k8s-zone`](#создание-тэгов-и-категорий-тэгов).
+* **Datastore** в любом количестве, с соответствующими [тэгами](#datastore-тэги).
+* **Template** — [подготовленный](#сборка-образа-виртуальных-машин) образ vSphere.
+
 ## Конфигурация vSphere
 
 Для конфигурации vSphere необходимо использовать vSphere CLI [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
@@ -9,15 +20,18 @@ title: "Cloud provider - VMware vSphere: подготовка окружения
 ### Настройка govc
 
 ```shell
-export GOVC_URL=n-cs-5.hq.li.corp.kavvas.com
-export GOVC_USERNAME=ewwefsadfsda
-export GOVC_PASSWORD=weqrfweqfeds
+export GOVC_URL=example.com
+export GOVC_USERNAME=<USER_NAME>
+export GOVC_PASSWORD=<USER_PASSWORD>
 export GOVC_INSECURE=1
 ```
 
 ### Создание тэгов и категорий тэгов
 
 В vSphere нет понятия "регион" и "зона", поэтому для разграничения зон доступности используются тэги.
+
+"Регионом" в vSphere является `Datacenter`, а "зоной" — `ComputeCluster`.
+
 Например, если необходимо сделать 2 региона, и в каждом регионе будет 2 зоны доступности:
 
 ```shell
@@ -31,26 +45,31 @@ govc tags.create -d "Kubernetes Zone X2-A" -c k8s-zone k8s-zone-x2-a
 govc tags.create -d "Kubernetes Zone X2-B" -c k8s-zone k8s-zone-x2-b
 ```
 
-Созданные категории тэгов необходимо указать в `VsphereClusterConfiguration` в `.spec.provider`.
+> Созданные категории тэгов необходимо указать в `VsphereClusterConfiguration` в `.spec.provider`.
 
-Тэги *регионов* навешиваются на Datacenter:
+Тэги *регионов* навешиваются на Datacenter. Пример:
 
 ```shell
 govc tags.attach -c k8s-region k8s-region-x1 /X1
 ```
 
-Тэги *зон* навешиваются на Cluster и Datastores:
+Тэги *зон* навешиваются на Cluster и Datastores. Пример:
 
 ```shell
 govc tags.attach -c k8s-zone k8s-zone-x1-a /X1/host/x1_cluster_prod
 govc tags.attach -c k8s-zone k8s-zone-x1-a /X1/datastore/x1_lun_1
 ```
 
+#### Datastore тэги
+
+При наличии Datastore'ов на **всех** ESXi, где будут размещаться виртуальные машины нод кластера, возможно использовать динамический заказ PV.
+Для автоматического создания StorageClass'ов в Kubernetes кластере, повесьте тэг региона и зоны, созданные ранее, на выбранные Datastore'ы.
+
 ### Права
 
-Необходимо создать роль (Role) с указанными правами и прикрепить её к одному или нескольким Datacenters, где нужно развернуть Kubernetes кластер.
+> Ввиду разнообразия подключаемых к vSphere SSO-провайдеров, шаги по созданию пользователя в данной статье не рассматриваются.
 
-Упущено создание пользователя, ввиду разнообразия SSO, подключаемых к vSphere.
+Необходимо создать роль (Role) с указанными правами и прикрепить её к одному или нескольким Datacenter'ам, где нужно развернуть кластер Kubernetes.
 
 ```shell
 govc role.create kubernetes Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement Global.GlobalTag Global.SystemTag InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory InventoryService.Tagging.CreateTag InventoryService.Tagging.DeleteCategory InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory InventoryService.Tagging.ModifyUsedByForTag Network.Assign Resource.AssignVMToPool Resource.ColdMigrate Resource.HotMigrate Resource.CreatePool Resource.DeletePool Resource.RenamePool Resource.EditPool Resource.MovePool StorageProfile.View System.Anonymous System.Read System.View VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice VirtualMachine.Config.AdvancedConfig VirtualMachine.Config.Annotation VirtualMachine.Config.CPUCount VirtualMachine.Config.ChangeTracking VirtualMachine.Config.DiskExtend VirtualMachine.Config.DiskLease VirtualMachine.Config.EditDevice VirtualMachine.Config.HostUSBDevice VirtualMachine.Config.ManagedBy VirtualMachine.Config.Memory VirtualMachine.Config.MksControl VirtualMachine.Config.QueryFTCompatibility VirtualMachine.Config.QueryUnownedFiles VirtualMachine.Config.RawDevice VirtualMachine.Config.ReloadFromPath VirtualMachine.Config.RemoveDisk VirtualMachine.Config.Rename VirtualMachine.Config.ResetGuestInfo VirtualMachine.Config.Resource VirtualMachine.Config.Settings VirtualMachine.Config.SwapPlacement VirtualMachine.Config.ToggleForkParent VirtualMachine.Config.UpgradeVirtualHardware VirtualMachine.GuestOperations.Execute VirtualMachine.GuestOperations.Modify VirtualMachine.GuestOperations.ModifyAliases VirtualMachine.GuestOperations.Query VirtualMachine.GuestOperations.QueryAliases VirtualMachine.Hbr.ConfigureReplication VirtualMachine.Hbr.MonitorReplication VirtualMachine.Hbr.ReplicaManagement VirtualMachine.Interact.AnswerQuestion VirtualMachine.Interact.Backup VirtualMachine.Interact.ConsoleInteract VirtualMachine.Interact.CreateScreenshot VirtualMachine.Interact.CreateSecondary VirtualMachine.Interact.DefragmentAllDisks VirtualMachine.Interact.DeviceConnection VirtualMachine.Interact.DisableSecondary VirtualMachine.Interact.DnD VirtualMachine.Interact.EnableSecondary VirtualMachine.Interact.GuestControl VirtualMachine.Interact.MakePrimary VirtualMachine.Interact.Pause VirtualMachine.Interact.PowerOff VirtualMachine.Interact.PowerOn VirtualMachine.Interact.PutUsbScanCodes VirtualMachine.Interact.Record VirtualMachine.Interact.Replay VirtualMachine.Interact.Reset VirtualMachine.Interact.SESparseMaintenance VirtualMachine.Interact.SetCDMedia VirtualMachine.Interact.SetFloppyMedia VirtualMachine.Interact.Suspend VirtualMachine.Interact.TerminateFaultTolerantVM VirtualMachine.Interact.ToolsInstall VirtualMachine.Interact.TurnOffFaultTolerance VirtualMachine.Inventory.Create VirtualMachine.Inventory.CreateFromExisting VirtualMachine.Inventory.Delete VirtualMachine.Inventory.Move VirtualMachine.Inventory.Register VirtualMachine.Inventory.Unregister VirtualMachine.Namespace.Event VirtualMachine.Namespace.EventNotify VirtualMachine.Namespace.Management VirtualMachine.Namespace.ModifyContent VirtualMachine.Namespace.Query VirtualMachine.Namespace.ReadContent VirtualMachine.Provisioning.Clone VirtualMachine.Provisioning.CloneTemplate VirtualMachine.Provisioning.CreateTemplateFromVM VirtualMachine.Provisioning.Customize VirtualMachine.Provisioning.DeployTemplate VirtualMachine.Provisioning.DiskRandomAccess VirtualMachine.Provisioning.DiskRandomRead VirtualMachine.Provisioning.FileRandomAccess VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.MarkAsTemplate VirtualMachine.Provisioning.MarkAsVM VirtualMachine.Provisioning.ModifyCustSpecs VirtualMachine.Provisioning.PromoteDisks VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot VirtualMachine.State.RevertToSnapshot
@@ -61,9 +80,9 @@ govc permissions.set  -principal имя_пользователя -role kubernete
 ## Инфраструктура
 
 ### Сети
-Для работы кластера необходим VLAN с DHCP и доступом в Интернет
-* Если VLAN публичный (белые адреса), то нужна вторая сеть, в которой необходимо развернуть сеть узлов кластера (в этой сети DHCP не нужен)
-* Если VLAN внутренний (серые адреса), то эта же сеть будет сетью узлов кластера
+Для работы кластера необходим VLAN с DHCP и доступом в Интернет:
+* Если VLAN публичный (публичные адреса), то нужна вторая сеть, в которой необходимо развернуть сеть узлов кластера (в этой сети DHCP не нужен).
+* Если VLAN внутренний (приватные адреса), то эта же сеть будет сетью узлов кластера.
 
 ### Входящий трафик
 * Если у вас имеется внутренний балансировщик запросов, то можно обойтись им и направлять трафик напрямую на frontend-узлы кластера.
