@@ -9,7 +9,7 @@
 
 ## vSphere configuration
 
-You'll need the vSphere CLI — [govc]((https://github.com/vmware/govmomi/tree/master/govc#installation)) to proceed with the rest of the guide.
+You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) to proceed with the rest of the guide.
 
 ### govc configuration
 
