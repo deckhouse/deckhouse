@@ -1,4 +1,4 @@
-{{- if eq .Values.upmeter.smokeMiniDisabled false }}
+{{- if not .Values.upmeter.smokeMiniDisabled }}
 {{- $context := . }}
 {{- range $k, $v := .Values.upmeter.internal.smokeMini.sts }}
   {{- $sts := pluck $k $.Values.upmeter.internal.smokeMini.sts | first }}

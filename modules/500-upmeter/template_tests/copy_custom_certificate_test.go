@@ -60,13 +60,32 @@ discovery:
     master: 1
   kubernetesVersion: 1.16.15
 `
+
 const customCertificatePresent = `
+auth:
+  status:
+    password: qw
+  webui:
+    password: zx
+disabledProbes: []
 https:
   mode: CustomCertificate
 internal:
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
+  disabledProbes: []
+  smokeMini:
+    sts: 
+      a: {}
+      b: {}
+      c: {}
+      d: {}
+      e: {}
+  upmeter: {}
+smokeMini: { auth: {} }
+smokeMiniDisabled: false
+statusPageAuthDisabled: false
 `
 
 var _ = Describe("Module :: upmeter :: helm template :: custom-certificate", func() {
@@ -91,7 +110,5 @@ var _ = Describe("Module :: upmeter :: helm template :: custom-certificate", fun
 			Expect(createdSecret.Exists()).To(BeTrue())
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
 		})
-
 	})
-
 })

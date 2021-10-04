@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package hooks
+package smokemini
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -79,7 +81,7 @@ metadata:
   name: smoke-mini-a
   namespace: d8-upmeter
 spec:
-  selector:
+  IndexSelector:
     matchLabels:
       smoke-mini: a
   serviceName: smoke-mini-a
@@ -92,13 +94,12 @@ spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-          - nodeSelectorTerms:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - node-a-1
-            weight: 1
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node-a-1
       containers:
       - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
         name: smoke-mini
@@ -122,13 +123,12 @@ spec:
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
         nodeSelectorTerms:
-          matchExpressions:
-          - key: kubernetes.io/hostname
-            operator: In
-            values:
-            - node-a-1
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+              - node-a-1
 `, 3),
 			Entry("Two nodes and a pod", `
 ---
@@ -166,7 +166,7 @@ metadata:
   name: smoke-mini-a
   namespace: d8-upmeter
 spec:
-  selector:
+  IndexSelector:
     matchLabels:
       smoke-mini: a
   serviceName: smoke-mini-a
@@ -179,13 +179,12 @@ spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-          - nodeSelectorTerms:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - node-a-1
-            weight: 1
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node-a-1
       containers:
       - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
         name: smoke-mini
@@ -209,13 +208,12 @@ spec:
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
         nodeSelectorTerms:
-          matchExpressions:
-          - key: kubernetes.io/hostname
-            operator: In
-            values:
-            - node-a-1
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+              - node-a-1
 `, 4),
 			Entry("Unscheduled pod", `
 ---
@@ -242,7 +240,7 @@ metadata:
   name: smoke-mini-a
   namespace: d8-upmeter
 spec:
-  selector:
+  IndexSelector:
     matchLabels:
       smoke-mini: a
   serviceName: smoke-mini-a
@@ -255,13 +253,12 @@ spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-          - nodeSelectorTerms:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - node-a-1
-            weight: 1
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                  - node-a-1
       containers:
       - image: registry.deckhouse.io/deckhouse/ce/upmeter/smoke-mini:whatever
         name: smoke-mini
@@ -317,3 +314,43 @@ status:
 		})
 	})
 })
+
+func Test_firstNonEmpty(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "none",
+			want: "",
+		},
+		{
+			name: "one empty",
+			args: []string{""},
+			want: "",
+		},
+		{
+			name: "multiple starting with empty",
+			args: []string{"", "a", "b"},
+			want: "a",
+		},
+		{
+			name: "multiple starting with non-empty",
+			args: []string{"x", "", "a"},
+			want: "x",
+		},
+		{
+			name: "one filled among empty",
+			args: []string{"", "", "z", "", ""},
+			want: "z",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := firstNonEmpty(tt.args...); got != tt.want {
+				t.Errorf("firstNonEmpty() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

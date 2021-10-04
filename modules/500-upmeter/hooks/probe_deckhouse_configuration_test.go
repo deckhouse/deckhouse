@@ -33,10 +33,10 @@ var _ = Describe("Modules :: upmeter :: hooks :: probe_deckhouse_configuration :
 			expectedSnapshot := probeObject{Name: name, Inited: initial}
 			obj := newUpmeterHookProbeObject(name, initial)
 
-			rawShapshot, err := filterProbeObject(obj)
+			rawSnapshot, err := filterProbeObject(obj)
 			Expect(err).ToNot(HaveOccurred())
 
-			snapshot := rawShapshot.(probeObject)
+			snapshot := rawSnapshot.(probeObject)
 			Expect(snapshot).To(Equal(expectedSnapshot))
 		})
 	})
@@ -58,7 +58,7 @@ spec:
 	decUnstructured := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	obj := &unstructured.Unstructured{}
 	if _, _, err := decUnstructured.Decode([]byte(manifest), nil, obj); err != nil {
-		panic("cannot decoda YAML to unstructured.Unstructured")
+		panic("cannot decode YAML to unstructured.Unstructured")
 	}
 
 	return obj

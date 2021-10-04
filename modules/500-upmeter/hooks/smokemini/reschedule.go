@@ -1,0 +1,216 @@
+/*
+Copyright 2021 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package smokemini
+
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/tidwall/gjson"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
+)
+
+const (
+	Namespace           = "d8-upmeter"
+	defaultStorageClass = "false" // `false` boolean parses as the string
+)
+
+var (
+	namespaceSelector = &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{Namespace}}}
+	labelSelector     = &metav1.LabelSelector{MatchLabels: map[string]string{"app": "smoke-mini"}}
+)
+
+var _ = sdk.RegisterFunc(
+	&go_hook.HookConfig{
+		Schedule: []go_hook.ScheduleConfig{{
+			Name:    "reschedule",
+			Crontab: "* * * * *",
+		}},
+		Queue: "/modules/upmeter/update_selector",
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       "nodes",
+				ApiVersion: "v1",
+				Kind:       "Node",
+				FilterFunc: snapshot.NewNode,
+			},
+			{
+				Name:              "statefulsets",
+				ApiVersion:        "apps/v1",
+				Kind:              "StatefulSet",
+				NamespaceSelector: namespaceSelector,
+				LabelSelector:     labelSelector,
+				FilterFunc:        snapshot.NewStatefulSet,
+
+				ExecuteHookOnEvents: pointer.BoolPtr(false),
+			},
+			{
+				Name:              "pods",
+				ApiVersion:        "v1",
+				Kind:              "Pod",
+				NamespaceSelector: namespaceSelector,
+				LabelSelector:     labelSelector,
+				FilterFunc:        snapshot.NewPod,
+
+				ExecuteHookOnEvents: pointer.BoolPtr(false),
+			},
+			{
+				Name:              "pdb",
+				ApiVersion:        "policy/v1beta1",
+				Kind:              "PodDisruptionBudget",
+				NamespaceSelector: namespaceSelector,
+				LabelSelector:     labelSelector,
+				FilterFunc:        snapshot.NewDisruption,
+
+				ExecuteHookOnEvents: pointer.BoolPtr(false),
+			},
+			{
+				Name:       "default_sc",
+				ApiVersion: "storage.k8s.io/v1",
+				Kind:       "StorageClass",
+				FilterFunc: snapshot.NewStorageClass,
+			},
+		},
+	},
+	reschedule,
+)
+
+func reschedule(input *go_hook.HookInput) error {
+	if !smokeMiniEnabled(input.Values) {
+		return nil
+	}
+
+	const statePath = "upmeter.internal.smokeMini.sts"
+
+	// Parse the state from values
+	statefulSets := snapshot.ParseStatefulSetSlice(input.Snapshots["statefulsets"])
+	state, err := getSmokeMiniState(input.Values.Get(statePath))
+	if err != nil {
+		return err
+	}
+	if state.Empty() {
+		// Take care of the initial state. The values are the source of truth after they are
+		// filled for the fist time.
+		state.Populate(statefulSets)
+		input.Values.Set(statePath, state)
+	}
+
+	// Parse inputs
+	var (
+		storageClass = getSmokeMiniStorageClass(input.Values, input.Snapshots["default_sc"])
+		image        = getSmokeMiniImage(input.Values)
+
+		nodes             = snapshot.ParseNodeSlice(input.Snapshots["nodes"])
+		pods              = snapshot.ParsePodSlice(input.Snapshots["pods"])
+		disruptionAllowed = parseAllowedDisruption(input.Snapshots["pdb"])
+
+		logger = input.LogEntry
+	)
+
+	// Construct
+	stsSelector := scheduler.NewStatefulSetSelector(nodes, storageClass, pods, disruptionAllowed)
+	nodeSelector := scheduler.NewNodeSelector(state)
+	kubeCleaner := scheduler.NewCleaner(input.PatchCollector, logger, pods)
+	s := scheduler.New(stsSelector, nodeSelector, kubeCleaner, image, storageClass)
+
+	// Do the job
+	x, newSts, err := s.Schedule(state, nodes)
+	if err != nil {
+		if errors.Is(err, scheduler.ErrAbort) {
+			logger.Warn(err)
+			return nil
+		}
+		return err
+	}
+
+	// Update values
+	state[x] = newSts
+	input.Values.Set(statePath, state)
+	return nil
+}
+
+// getSmokeMiniState parses the state from values
+func getSmokeMiniState(stateValues gjson.Result) (scheduler.State, error) {
+	var state scheduler.State
+	err := json.Unmarshal([]byte(stateValues.Raw), &state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func getK8sDefaultStorageClass(rs []go_hook.FilterResult) string {
+	parsed := snapshot.ParseStorageClassSlice(rs)
+	for _, sc := range parsed {
+		if sc.Default {
+			return sc.Name
+		}
+	}
+	return ""
+}
+
+func parseAllowedDisruption(rs []go_hook.FilterResult) bool {
+	allowances := parseBoolSnapshot(rs)
+	if len(allowances) == 0 {
+		return false
+	}
+	return allowances[0]
+}
+
+// parseBoolSnapshot parses bool from snapshots
+func parseBoolSnapshot(rs []go_hook.FilterResult) []bool {
+	ret := make([]bool, len(rs))
+	for i, r := range rs {
+		ret[i] = r.(bool)
+	}
+	return ret
+}
+
+func getSmokeMiniImage(values *go_hook.PatchableValues) string {
+	var (
+		registry = values.Get("global.modulesImages.registry").String()
+		tag      = values.Get("global.modulesImages.tags.upmeter.smokeMini").String()
+	)
+	return registry + ":" + tag
+}
+
+func getSmokeMiniStorageClass(values *go_hook.PatchableValues, snapshot []go_hook.FilterResult) string {
+	var (
+		k8s = getK8sDefaultStorageClass(snapshot)
+		d8  = values.Get("global.storageClass").String()
+		sm  = values.Get("upmeter.smokeMini.storageClass").String()
+	)
+	return firstNonEmpty(sm, d8, k8s, defaultStorageClass)
+}
+
+// firstNonEmpty returns first non-empty string. Returns empty string if no strings passed, or all
+// arguments are empty strings.
+func firstNonEmpty(xs ...string) string {
+	for _, s := range xs {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
+}
