@@ -53,6 +53,8 @@ spec:
         - "--kube-client-from-cluster"
         image: {{ .Values.global.modulesImages.registry }}:{{ include "terraform_manager_image" . }}
         env:
+        - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
+          value: "true"
         - name: DHCTL_CLI_RUNNING_NODE_NAME
           valueFrom:
             fieldRef:
