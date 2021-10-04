@@ -1,0 +1,20 @@
+defaults:
+
+positive:
+  values:
+    - internal:
+        providerClusterConfiguration:
+          sshKey: test
+          provider:
+            region: test
+            serviceAccountJSON: test
+        providerDiscoveryData:
+          disableExternalIP: true
+          instances:
+            diskSizeGb: 50
+            diskType: test
+            image: image
+            networkTags: ["test1"]
+          networkName: test
+          subnetworkName: test
+          zones: ["test"]

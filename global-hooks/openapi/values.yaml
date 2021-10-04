@@ -21,6 +21,7 @@ properties:
       clusterDomain: test
       clusterType: "Cloud"
       cloud:
+        prefix: test
         provider: OpenStack
   highAvailability:
     type: boolean

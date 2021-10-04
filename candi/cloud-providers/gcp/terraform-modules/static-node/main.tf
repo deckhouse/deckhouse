@@ -19,7 +19,7 @@ data "google_compute_subnetwork" "kube" {
 data "google_compute_zones" "available" {}
 
 locals {
-  zone        = element(local.zones, var.nodeIndex)
+  zone = element(local.zones, var.nodeIndex)
 }
 
 resource "google_compute_address" "static" {
@@ -57,6 +57,7 @@ resource "google_compute_instance" "static" {
   }
   lifecycle {
     ignore_changes = [
+      attached_disk,
       metadata["user-data"]
     ]
   }
