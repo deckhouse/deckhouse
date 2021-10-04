@@ -50,7 +50,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Описывает runtime параметры группы узлов.
+            Описывает runtime-параметры группы узлов.
           properties:
             status: &status
               properties:
@@ -180,7 +180,7 @@ spec:
                               description: |
                                 Количество памяти.
 
-                                Значение может быть абсолютным в байтах (например, `128974848`) или в kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
+                                Значение может быть абсолютным в байтах (например, `128974848`) или в Kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
                     classReference:
                       description: |
                         Ссылка на объект `InstanceClass`. Уникален для каждого `cloud-provider-`модуля.
@@ -193,7 +193,7 @@ spec:
                             Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
                 nodeTemplate: &nodeTemplate
                   description: |
-                    Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации ноды.
+                    Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
                   properties:
                     labels:
                       description: |
@@ -210,16 +210,15 @@ spec:
                   description: Параметры статического узла.
                   properties:
                     internalNetworkCIDRs:
-                      description: CIDR подсети
+                      description: CIDR подсети.
                 chaos: &chaos
                   description: |
                     Настройки chaos monkey.
                   properties:
                     mode:
                       description: |
-                        Режим работы chaos monkey.
-
-                        - `DrainAndDelete` — при срабатывании drain'ит и удаляет ноду
+                        Режим работы chaos monkey:
+                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем - удаляет его;
                         - `Disabled` — не трогает данную NodeGroup.
                     period:
                       description: |
@@ -238,7 +237,7 @@ spec:
                     approvalMode:
                       description: |
                         Режим выдачи разрешения на disruptive обновление.
-                        - `Manual` — отключить автоматическую выдачу разрешений на disruption, когда disruption потребуется – загорится специальный алерт.
+                        - `Manual` — отключить автоматическую выдачу разрешений на disruption. Когда disruption потребуется – загорится специальный алерт.
                         - `Automatic` —  автоматически выдавать разрешения на disruption при обновлении (значение по умолчанию).
                     automatic:
                       description: |
@@ -246,7 +245,7 @@ spec:
                       properties:
                         drainBeforeApproval:
                           description: |
-                            Выгон (draining) подов с ноды, перед выдачей разрешения на disruption.
+                            Выгон (draining) pod'ов с узла, перед выдачей разрешения на disruption.
                 docker:
                   description: |
                     Параметры настройки Docker.
@@ -255,7 +254,7 @@ spec:
                   properties:
                     maxConcurrentDownloads:
                       description: |
-                        Максимальное количество потоков одновременного скачивания docker образов.
+                        Максимальное количество потоков одновременного скачивания Docker-образов.
                     manage:
                       description: |
                         Автоматическое управление версией и параметрами Docker.
@@ -265,7 +264,7 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на нодах данной `NodeGroup`.
+                        Максимальное количество pod'ов на узлах данной `NodeGroup`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet'а (volume mounts, и т.д.).
@@ -274,7 +273,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Описывает runtime параметры группы узлов.
+            Описывает runtime-параметры группы узлов.
           properties:
             status: *status
             spec:
@@ -292,7 +291,7 @@ spec:
                       properties:
                         maxConcurrentDownloads:
                           description: |
-                            Максимальное количество потоков одновременного скачивания docker образов.
+                            Максимальное количество потоков одновременного скачивания Docker-образов.
                         manage:
                           description: |
                             Автоматическое управление версией и параметрами Docker.
@@ -307,7 +306,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Describes the runtime parameters of the node group.
+            Описывает runtime-параметры группы узлов.
           properties:
             status: *status
             spec:
@@ -342,7 +341,7 @@ spec:
                       description: Параметры настройки Docker.
                       properties:
                         maxConcurrentDownloads:
-                          description: Максимальное количество потоков одновременного скачивания docker образов.
+                          description: Максимальное количество потоков одновременного скачивания Docker-образов.
                         manage:
                           description: Автоматическое управление версией и параметрами Docker.
                 cloudInstances: *cloudInstances

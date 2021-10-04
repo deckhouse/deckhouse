@@ -404,9 +404,8 @@ spec:
                     mode:
                       type: string
                       description: |
-                        The chaos monkey mode.
-
-                        - `DrainAndDelete` — drains and deletes a node when triggered
+                        The chaos monkey mode:
+                        - `DrainAndDelete` — drains and deletes a node when triggered;
                         - `Disabled` — leaves this NodeGroup intact.
                       x-doc-default: 'Disabled'
                       enum:
@@ -465,7 +464,7 @@ spec:
                     manage:
                       type: boolean
                       x-doc-default: true
-                      description: Enable docker maintenance from bashible.
+                      description: Enable Docker maintenance from bashible.
                 kubelet: &kubelet
                   type: object
                   description: Kubelet settings for nodes.
@@ -517,7 +516,7 @@ spec:
                         manage:
                           type: boolean
                           x-doc-default: true
-                          description: Enable docker maintenance from bashible.
+                          description: Enable Docker maintenance from bashible.
                   oneOf:
                     - properties:
                         type:
@@ -592,7 +591,7 @@ spec:
                         manage:
                           type: boolean
                           x-doc-default: true
-                          description: Enable docker maintenance from bashible.
+                          description: Enable Docker maintenance from bashible.
                   oneOf:
                     - properties:
                         type:
