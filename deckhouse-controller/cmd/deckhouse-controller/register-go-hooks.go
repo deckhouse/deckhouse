@@ -44,4 +44,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini"
 )

@@ -83,3 +83,7 @@ func (s Set) Slice() []string {
 	sort.Strings(xs)
 	return xs
 }
+
+func (s Set) Size() int {
+	return len(s)
+}

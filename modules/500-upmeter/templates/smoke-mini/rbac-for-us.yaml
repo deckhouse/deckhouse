@@ -1,4 +1,4 @@
-{{- if eq .Values.upmeter.smokeMiniDisabled false }}
+{{- if not .Values.upmeter.smokeMiniDisabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount

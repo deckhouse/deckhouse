@@ -64,10 +64,9 @@ func filterProbeObject(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 
 func mirrorProbeValue(input *go_hook.HookInput) error {
 	const (
-		apiVersion  = "deckhouse.io/v1"
-		kind        = "UpmeterHookProbe"
-		namespace   = ""
-		subresource = ""
+		apiVersion = "deckhouse.io/v1"
+		kind       = "UpmeterHookProbe"
+		namespace  = ""
 	)
 
 	for _, raw := range input.Snapshots["probe_objects"] {
