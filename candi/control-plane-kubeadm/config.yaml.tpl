@@ -89,7 +89,7 @@ controllerManager:
     pathType: DirectoryOrCreate
   extraArgs:
     profiling: "true"
-    terminated-pod-gc-threshold: "10"
+    terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- end }}
