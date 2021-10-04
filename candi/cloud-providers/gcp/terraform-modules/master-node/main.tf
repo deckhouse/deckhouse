@@ -19,7 +19,7 @@ data "google_compute_subnetwork" "kube" {
 data "google_compute_zones" "available" {}
 
 locals {
-  zone        = element(local.zones, var.nodeIndex)
+  zone = element(local.zones, var.nodeIndex)
 }
 
 resource "google_compute_address" "master" {

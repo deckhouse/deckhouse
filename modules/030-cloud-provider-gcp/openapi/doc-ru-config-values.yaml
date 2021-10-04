@@ -1,0 +1,26 @@
+type: object
+properties:
+  storageClass:
+    type: object
+    properties:
+      exclude:
+        type: array
+        items:
+          type: string
+        description: |
+          Полные имена (или regex выражения имён) StorageClass, которые не будут созданы в кластере.
+            * Формат — массив строк.
+            * Опциональный параметр.
+        x-examples:
+        - ["pd-standard.*", "pd-ssd-replicated"]
+      default:
+        type: string
+        description: |
+          Имя StorageClass, который будет использоваться в кластере по умолчанию.
+            * Формат — строка.
+            * Опциональный параметр.
+            * Если параметр не задан, фактическим StorageClass по умолчанию будет либо:
+              * Присутствующий в кластере произвольный StorageClass с default аннотацией.
+              * Первый StorageClass из создаваемых модулем (в порядке из таблицы выше).
+        x-examples:
+        - "pd-ssd-not-replicated"

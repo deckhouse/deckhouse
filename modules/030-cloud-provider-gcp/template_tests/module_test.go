@@ -97,7 +97,6 @@ const moduleValues = `
       replicationType: regional-pd
     providerClusterConfiguration:
       sshKey: mysshkey
-      subnetworkCIDR: 10.0.0.0/24
       provider:
         region: myregion
         serviceAccountJSON: mysvcacckey

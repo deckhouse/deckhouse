@@ -191,3 +191,14 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema) (isValid bool, multiE
 
 	return false, allErrs.ErrorOrNil()
 }
+
+func ValidateDiscoveryData(config *[]byte) (bool, error) {
+	schemaStore := NewSchemaStore()
+
+	_, err := schemaStore.Validate(config)
+	if err != nil {
+		return false, fmt.Errorf("Loading schema file: %v", err)
+	}
+
+	return true, nil
+}
