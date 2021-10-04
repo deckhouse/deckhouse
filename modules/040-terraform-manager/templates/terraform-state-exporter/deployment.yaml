@@ -65,6 +65,9 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+        env:
+        - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
+          value: "true"
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
