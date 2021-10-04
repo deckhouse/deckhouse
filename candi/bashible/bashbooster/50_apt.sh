@@ -75,7 +75,15 @@ bb-apt-dist-upgrade() {
 
 bb-apt-install() {
     PACKAGES_TO_INSTALL=()
+
+    local FORCE=false
+
     export DEBIAN_FRONTEND=noninteractive
+
+    if [[ "$1" == "--force" ]]; then
+      FORCE=true
+      shift
+    fi
 
     for PACKAGE in "$@"
     do
@@ -83,8 +91,8 @@ bb-apt-install() {
         if test -f "$BB_APT_UNHANDLED_PACKAGES_STORE" && grep -Eq "^${PACKAGE}$" "$BB_APT_UNHANDLED_PACKAGES_STORE"; then
             NEED_FIRE=true
         fi
-        if ! bb-apt-package? "$PACKAGE"
-        then
+
+        if [[ "$FORCE" == "true" ]] || ! bb-apt-package? "$PACKAGE"; then
             PACKAGES_TO_INSTALL+=("$PACKAGE")
         fi
     done
