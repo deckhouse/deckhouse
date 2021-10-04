@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ import (
 const (
 	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
 	MasterHostsCacheKey              = "cluster-hosts"
+	BastionHostCacheKey              = "bastion-hosts"
 )
 
 func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
@@ -339,6 +341,33 @@ func SaveMasterHostsToCache(hosts map[string]string) {
 	if err := cache.Global().SaveStruct(MasterHostsCacheKey, hosts); err != nil {
 		log.DebugF("Cannot save ssh hosts %v", err)
 	}
+}
+
+func GetMasterHostsIPs() ([]string, error) {
+	var hosts map[string]string
+	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
+	if err != nil {
+		return nil, err
+	}
+	mastersIPs := make([]string, 0, len(hosts))
+	for _, ip := range hosts {
+		mastersIPs = append(mastersIPs, ip)
+	}
+
+	sort.Strings(mastersIPs)
+
+	return mastersIPs, nil
+}
+
+func SaveBastionHostToCache(host string) {
+	if err := cache.Global().Save(BastionHostCacheKey, []byte(host)); err != nil {
+		log.DebugF("Cannot save ssh hosts %v", err)
+	}
+}
+
+func GetBastionHostFromCache() string {
+	host := cache.Global().Load(BastionHostCacheKey)
+	return string(host)
 }
 
 func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {

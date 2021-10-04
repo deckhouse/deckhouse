@@ -16,7 +16,6 @@ package bootstrap
 
 import (
 	"fmt"
-	"sort"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -232,18 +231,16 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				return nil
 			}
 
-			var hosts map[string]string
-			err := stateCache.LoadStruct(operations.MasterHostsCacheKey, &hosts)
+			mastersIPs, err := operations.GetMasterHostsIPs()
 			if err != nil {
 				return err
 			}
-			mastersIPs := make([]string, 0, len(hosts))
-			for _, ip := range hosts {
-				mastersIPs = append(mastersIPs, ip)
-			}
-
-			sort.Strings(mastersIPs)
 			app.SSHHosts = mastersIPs
+
+			bastionHost := operations.GetBastionHostFromCache()
+			if bastionHost != "" {
+				setBastionHostFromCloudProvider(bastionHost, nil)
+			}
 
 			destroyer, err = destroycmd.InitClusterDestroyer()
 			if err != nil {

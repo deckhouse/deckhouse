@@ -136,6 +136,18 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	})
 }
 
+func setBastionHostFromCloudProvider(host string, sshClient *ssh.Client) {
+	app.SSHBastionHost = host
+	app.SSHBastionUser = app.SSHUser
+	app.SSHBastionPort = app.SSHPort
+
+	if sshClient != nil {
+		sshClient.Settings.BastionHost = app.SSHBastionHost
+		sshClient.Settings.BastionUser = app.SSHBastionUser
+		sshClient.Settings.BastionPort = app.SSHBastionPort
+	}
+}
+
 func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
 	app.DefineSSHFlags(cmd)
@@ -150,23 +162,24 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	runFunc := func() error {
 		masterAddressesForSSH := make(map[string]string)
 
+		// first, parse and check cluster config
 		metaConfig, err := loadConfigFromFile(app.ConfigPath)
 		if err != nil {
 			return err
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
-			return err
+		// next parse and check resources
+		var resourcesToCreate *config.Resources
+		if app.ResourcesPath != "" {
+			parsedResources, err := config.ParseResources(app.ResourcesPath)
+			if err != nil {
+				return err
+			}
+
+			resourcesToCreate = parsedResources
 		}
 
-		err = terminal.AskBecomePassword()
-		if err != nil {
-			return err
-		}
-
-		printBanner()
-
+		// next init cache
 		cachePath := metaConfig.CachePath()
 		if err = cache.Init(cachePath); err != nil {
 			// TODO: it's better to ask for confirmation here
@@ -178,15 +191,18 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			cache.Global().Delete(state.TombstoneKey)
 		}
 
-		var resourcesToCreate *config.Resources
-		if app.ResourcesPath != "" {
-			parsedResources, err := config.ParseResources(app.ResourcesPath)
-			if err != nil {
-				return err
-			}
-
-			resourcesToCreate = parsedResources
+		// after verifying configs and cache ask password
+		sshClient, err := ssh.NewClientFromFlags().Start()
+		if err != nil {
+			return err
 		}
+
+		err = terminal.AskBecomePassword()
+		if err != nil {
+			return err
+		}
+
+		printBanner()
 
 		clusterUUID, err := generateClusterUUID()
 		if err != nil {
@@ -227,6 +243,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 				deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 				deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
+
+				if baseOutputs.BastionHost != "" {
+					setBastionHostFromCloudProvider(baseOutputs.BastionHost, sshClient)
+					operations.SaveBastionHostToCache(baseOutputs.BastionHost)
+				}
 
 				app.SSHHosts = []string{masterOutputs.MasterIPForSSH}
 				sshClient.Settings.SetAvailableHosts(app.SSHHosts)
@@ -286,7 +307,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		_ = log.Process("bootstrap", "Clear cache", func() error {
-			cache.Global().CleanWithExceptions(operations.MasterHostsCacheKey, operations.ManifestCreatedInClusterCacheKey)
+			cache.Global().CleanWithExceptions(
+				operations.MasterHostsCacheKey,
+				operations.ManifestCreatedInClusterCacheKey,
+				operations.BastionHostCacheKey,
+			)
 			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
 			return nil
 		})

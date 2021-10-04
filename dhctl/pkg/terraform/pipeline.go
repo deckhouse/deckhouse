@@ -30,6 +30,8 @@ type PipelineOutputs struct {
 	TerraformState []byte
 	CloudDiscovery []byte
 
+	BastionHost string
+
 	MasterIPForSSH     string
 	NodeInternalIP     string
 	KubeDataDevicePath string
@@ -198,6 +200,9 @@ func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)
 	}
 
+	// bastion host is optional
+	bastionHost, _ := getStringOrIntOutput(r, "bastion_ip_address_for_ssh")
+
 	tfState, err := r.getState()
 	if err != nil {
 		return nil, err
@@ -206,6 +211,7 @@ func GetBaseInfraResult(r *Runner) (*PipelineOutputs, error) {
 	return &PipelineOutputs{
 		TerraformState: tfState,
 		CloudDiscovery: cloudDiscovery,
+		BastionHost:    bastionHost,
 	}, nil
 }
 
