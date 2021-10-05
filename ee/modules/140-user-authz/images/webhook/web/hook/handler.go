@@ -169,7 +169,7 @@ func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
 	}
 
 	if request.Spec.ResourceAttributes.Resource != "" {
-		hasLimitedNamespaces := len(limitNamespaces) > 0 || !accessToSystemNamespaces
+		hasLimitedNamespaces := !accessToSystemNamespaces || emptyOrContainsAllMatchingRegex(limitNamespaces)
 		return h.authorizeClusterScopedRequest(request, hasLimitedNamespaces)
 	}
 
@@ -282,4 +282,18 @@ func (h *Handler) affectedDirs(r *WebhookRequest) []DirectoryEntry {
 	}
 
 	return dirEntriesAffected
+}
+
+func emptyOrContainsAllMatchingRegex(regexes []*regexp.Regexp) bool {
+	if len(regexes) == 0 {
+		return false
+	}
+	for _, regex := range regexes {
+		switch regex.String() {
+		case ".*", ".+":
+			return false
+		}
+	}
+
+	return true
 }
