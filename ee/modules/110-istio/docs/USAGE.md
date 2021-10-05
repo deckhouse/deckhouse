@@ -200,10 +200,10 @@ spec:
 ## Ingress
 
 To use Ingress, you need to:
-* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/402-ingress-nginx/) module's IngressNginxController CR. Note that this controller can only serve the Istio environment!
+* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/402-ingress-nginx/) module's IngressNginxController CR.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP while envoy load balances them.
-  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc.cluster.local` — using this annotation, envoy can identify the application service (Istio does not parse the Ingress host). The alternative approach is to create `VirtualService` with a public FQDN.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the ingress-controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress-controller's sidecar is only catching traffic directed to Service CIDR.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar can identify the application service that serves requests.
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -213,7 +213,7 @@ metadata:
   namespace: bookinfo
   annotations:
     nginx.ingress.kubernetes.io/service-upstream: "true" # nginx proxies traffic to the ClusterIP instead of pods' own IPs.
-    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc.cluster.local # In Istio, all routing is carried out based on the `Host:` headers. To let Istio know about the `productpage.example.com` external domain, we use the internal domain of which Istio is aware.
+    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc # In Istio, all routing is carried out based on the `Host:` headers. Instead of letting Istio know about the `productpage.example.com` external domain, we use the internal domain of which Istio is aware.
 spec:
   rules:
     - host: productpage.example.com

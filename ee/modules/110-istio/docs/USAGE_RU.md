@@ -204,8 +204,8 @@ spec:
 Для работы с Ingress требуется подготовить:
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у CR IngressNginxController модуля [ingress-nginx](../../modules/402-ingress-nginx/). Данный контроллер сможет обслуживать толко Istio-окружение!
 * Ingress, который ссылается на Service. Обязательные аннотации для Ingress:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — таким образом ingress-контроллер будет отправлять запросы на единственный ClusterIP, работу по балансировке будет делать envoy.
-  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc.cluster.local` — Istio не парсит host из Ingress, с данной аннотацией envoy сможет идентифицировать прикладной сервис. Другой подход — создавать `VirtualService` с публичным FQDN.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона ServiceCIDR, остальные запросы отправляются напрямую.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 ```yaml
 apiVersion: extensions/v1beta1
@@ -215,7 +215,7 @@ metadata:
   namespace: bookinfo
   annotations:
     nginx.ingress.kubernetes.io/service-upstream: "true" # Просим nginx проксировать трафик на ClusterIP вместо собственных IP подов.
-    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc.cluster.local # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов. Чтобы сообщать Istio о существовании внешнего домена `productpage.example.com`, мы просто используем внутренний домен, о котором Istio осведомлён.
+    nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов. Чтобы не сообщать Istio о существовании внешнего домена `productpage.example.com`, мы просто используем внутренний домен, о котором Istio осведомлён.
 spec:
   rules:
     - host: productpage.example.com

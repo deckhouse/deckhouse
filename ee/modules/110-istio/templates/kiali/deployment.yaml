@@ -30,6 +30,8 @@ spec:
     metadata:
       labels:
         app: kiali
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/kiali/configmap.yaml") . | sha256sum }}
     spec:
 {{- include "helm_lib_node_selector" (tuple . "system") | indent 6 }}
 {{- include "helm_lib_tolerations" (tuple . "system") | indent 6 }}

@@ -50,6 +50,8 @@ data:
         * You can redefine this parameter locally using the `traffic.sidecar.istio.io/excludeOutboundPorts` annotation.
 * `federation` — parameters for federating with other clusters:
   * `enabled` — designate this cluster as a federation member (see [Enabling federation](./#enabling-federation)).
+    * Format — bool.
+    * By default — `false`.
   * `ingressGateway` — ingressgateway settings:
     * `inlet` — the method for exposing ingressgateway:
       * `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
@@ -63,6 +65,28 @@ data:
       * Format — a regular dictionary.
 * `multicluster` — multicluster parameters:
   * `enabled` — designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-multicluster)).
+    * Format — bool.
+    * By default — `false`.
+* `tracing` — tracing parameters.
+  * `enabled` — turn on or off tracing collection and displaying in kiali.
+    * Format — bool.
+    * By default — `false`.
+  * `collector` — tracing collection settings.
+    * `zipkin` — zipkin protocol parameters used by Istio for sending traces. Jaeger supports this protocol.
+      * Mandatory section if tracing is enabled.
+      * `address` — network address of zipkin collector.
+        * Format — `<IP of FQDN>:<port>`
+        * Example — `zipkin.myjaeger.svc:9411`.
+  * `kiali` — span displaying settings for kiali.
+    * Optional section. When not provided, kiali won't show any tracing dashboards.
+    * `jaegerURLForUsers` — jaeger UI address for users.
+      * Mandatory parameter.
+      * Format — `<proto>://<fqdn>[:port]/<base path>`.
+      * Example — `https://tracing-service:4443/jaeger`.
+    * `jaegerGRPCEndpoint` — accessible from cluster address of jaeger GRPC interface for system queries by kiali.
+      * Optional parameter. When not provided, kiali will only show external links using the `jaegerURLForUsers` config without interpretationing.
+      * Format — `<proto>://<fqdn>[:port]/`.
+      * Example — `http://tracing.myjaeger.svc:16685/`.
 * `nodeSelector` —  the same as the pods' `spec.nodeSelector` parameter in Kubernetes.
     * If the parameter is omitted, it will be set [automatically](../../#advanced-scheduling).
     * You can set it to `false` to avoid adding any nodeSelector.
