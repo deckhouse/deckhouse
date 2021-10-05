@@ -79,7 +79,7 @@ func applyClusterConfigForProviderFilter(obj *unstructured.Unstructured) (go_hoo
 		}
 	}
 
-	return nil, nil
+	return "", nil
 }
 
 func enableCloudProvider(input *go_hook.HookInput) error {

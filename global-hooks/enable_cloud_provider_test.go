@@ -25,6 +25,16 @@ import (
 )
 
 var _ = Describe("Global hooks :: enable_cloud_provider ::", func() {
+	secretManifest := func(content string) string {
+		return `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(content))
+	}
 	clusterConfigManifest := func(provider string) string {
 		data := `---
 apiVersion: deckhouse.io/v1
@@ -38,14 +48,7 @@ podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "1.19"
 `
-		return `
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  "cluster-configuration.yaml": ` + base64.StdEncoding.EncodeToString([]byte(data))
+		return secretManifest(data)
 	}
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 
@@ -111,4 +114,31 @@ data:
 			})
 		})
 	}
+
+	Context("Cluster has a d8-cluster-configuration secret for static cluster", func() {
+		const clusterConf = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.244.0.0/16
+podSubnetNodeCIDRPrefix: "24"
+serviceSubnetCIDR: 192.168.0.0/16
+kubernetesVersion: "1.19"
+clusterDomain: cluster.local
+defaultCRI: Docker
+
+`
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(secretManifest(clusterConf)))
+			f.RunHook()
+		})
+		It("Should not enable any provider", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			for valueName := range cloudProviderNameToModule {
+				Expect(f.ValuesGet(fmt.Sprintf("%sEnabled", valueName)).Exists()).To(BeFalse())
+
+			}
+		})
+	})
 })
