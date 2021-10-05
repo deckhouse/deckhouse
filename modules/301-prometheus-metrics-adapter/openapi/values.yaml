@@ -37,7 +37,9 @@ properties:
           certificate:
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
             type: string
-
+          certificate_updated:
+            x-examples: [ false ]
+            type: boolean
           key:
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
             type: string
