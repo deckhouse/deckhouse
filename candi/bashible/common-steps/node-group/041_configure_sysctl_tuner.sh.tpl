@@ -67,6 +67,11 @@ sysctl -w kernel.pid_max=2000000
 {{- if eq .bundle "centos-7" }}
 sysctl -w fs.may_detach_mounts=1; # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
 {{- end }}
+# kubelet parameters
+sysctl -w vm.overcommit_memory=1
+sysctl -w kernel.panic=10
+sysctl -w kernel.panic_on_oops=1
+
 echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null ; # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null ; # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
 echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null ;

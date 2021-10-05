@@ -291,16 +291,18 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	result["images"] = make(map[string]interface{})
+	images := make(map[string]interface{})
 	if app.DontUsePublicControlPlaneImages {
 		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
-		result["images"] = map[string]interface{}{
-			"etcd":                    fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["etcd"]),
-			"kube-apiserver":          fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserver"+k8s]),
-			"kube-controller-manager": fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeControllerManager"+k8s]),
-			"kube-scheduler":          fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeScheduler"+k8s]),
-		}
+		images["etcd"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["etcd"])
+		images["kube-apiserver"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserver"+k8s])
+		images["kube-controller-manager"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeControllerManager"+k8s])
+		images["kube-scheduler"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeScheduler"+k8s])
 	}
+
+	images["kube-apiserver-healthcheck"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserverHealthcheck"])
+
+	result["images"] = images
 
 	return result, nil
 }

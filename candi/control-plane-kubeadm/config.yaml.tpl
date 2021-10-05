@@ -26,6 +26,8 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
+    kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
+    anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- end }}
@@ -70,7 +72,7 @@ apiServer:
     audit-log-maxsize: "100"
     audit-log-maxbackup: "10"
   {{- end }}
-    profiling: "true"
+    profiling: "false"
     request-timeout: "300s"
     tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
   {{- if hasKey .apiserver "certSANs" }}
@@ -88,15 +90,13 @@ controllerManager:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
-    profiling: "true"
+    profiling: "false"
     terminated-pod-gc-threshold: "12500"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- end }}
     node-cidr-mask-size: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
-{{- if hasKey . "nodeIP" }}
-    bind-address: {{ .nodeIP | quote }}
-{{- end }}
+    bind-address: "127.0.0.1"
     port: "0"
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     cloud-provider: external
@@ -118,13 +118,11 @@ scheduler:
     readOnly: true
     pathType: DirectoryOrCreate
   extraArgs:
-    profiling: "true"
+    profiling: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
 {{- end }}
-{{- if hasKey . "nodeIP" }}
-    bind-address: {{ .nodeIP | quote }}
-{{- end }}
+    bind-address: "127.0.0.1"
     port: "0"
 {{- if hasKey . "etcd" }}
   {{- if hasKey .etcd "existingCluster" }}

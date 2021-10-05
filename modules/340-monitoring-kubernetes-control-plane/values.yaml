@@ -34,15 +34,15 @@ monitoringKubernetesControlPlane:
         podSelector: {}
         port: 6443
       metricsPath: /metrics
-  
+
     kubeControllerManager:
       accessType: ThroughNode
       throughNode:
         nodeSelector:
           node-role.kubernetes.io/master: ""
-        localPort: 10252
-        scheme: http
-        authenticationMethod: None
+        localPort: 10257
+        scheme: https
+        authenticationMethod: ProxyServiceAccount
         proxyListenPort: 10362
       pod:
         podSelector: {}
@@ -53,9 +53,9 @@ monitoringKubernetesControlPlane:
       throughNode:
         nodeSelector:
           node-role.kubernetes.io/master: ""
-        localPort: 10251
-        scheme: http
-        authenticationMethod: None
+        localPort: 10259
+        scheme: https
+        authenticationMethod: ProxyServiceAccount
         proxyListenPort: 10363
       pod:
         podSelector: {}

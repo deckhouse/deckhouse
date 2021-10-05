@@ -31,9 +31,7 @@ spec:
     - name: kube-scheduler
       readinessProbe:
         httpGet:
-  {{- if hasKey . "nodeIP" }}
-          host: {{ .nodeIP | quote }}
-  {{- end }}
+          host: 127.0.0.1
           path: /healthz
           port: 10259
           scheme: HTTPS
@@ -48,22 +46,9 @@ spec:
     - name: kube-scheduler
       livenessProbe:
         httpGet:
-          scheme: HTTPS
+          host: 127.0.0.1
           port: 10259
-{{- if hasKey . "nodeIP" }}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-scheduler
-  namespace: kube-system
-spec:
-  containers:
-    - name: kube-scheduler
-      livenessProbe:
-        httpGet:
-          host: {{ .nodeIP | quote }}
-{{- end }}
+          scheme: HTTPS
 {{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
 ---

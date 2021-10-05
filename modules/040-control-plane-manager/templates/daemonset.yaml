@@ -5,6 +5,7 @@
 {{- range $component := list (list "kubeApiserver" "kube-apiserver") (list "kubeControllerManager" "kube-controller-manager") (list "kubeScheduler" "kube-scheduler") }}
   {{- $_ := set $images (index $component 1) (printf "%s:%s" $.Values.global.modulesImages.registry (index $.Values.global.modulesImages.tags.controlPlaneManager (printf "%s%s" (index $component 0) $kubeImageTagSuffix)) ) }}
 {{- end }}
+{{- $_ := set $images "kube-apiserver-healthcheck" (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.kubeApiserverHealthcheck) }}
 {{- $_ := set $images "etcd" (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
