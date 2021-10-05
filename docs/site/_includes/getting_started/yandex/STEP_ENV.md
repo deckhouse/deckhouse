@@ -36,7 +36,7 @@ You can enable `Cloud NAT` manually using the web interface.
 
 Example:
 
-![Enabling NAT](/ru/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat.png)
+![Enabling NAT](/en/documentation/v1/images/030-cloud-provider-yandex/enable_cloud_nat.png)
 </div>
 
 <script>
