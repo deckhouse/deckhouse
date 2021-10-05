@@ -69,6 +69,11 @@ spec:
       proxyMetadata:
         ISTIO_META_DNS_CAPTURE: "true"
         PROXY_CONFIG_XDS_AGENT: "true"
+  {{- if $.Values.istio.tracing.enabled }}
+      tracing:
+        zipkin:
+          address: {{ $.Values.istio.tracing.collector.zipkin.address }}
+  {{- end }}
 
   {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
@@ -135,4 +140,10 @@ spec:
       enabled: true
       v2:
         enabled: true
+
+    sidecarInjectorWebhook:
+      neverInjectSelector:
+      - matchExpressions:
+        - key: job-name
+          operator: Exists
 {{- end }}
