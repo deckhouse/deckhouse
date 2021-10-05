@@ -196,6 +196,15 @@ apiVersions:
 
           Read [more](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
+      standard:
+        type: object
+        additionalProperties: false
+        required: []
+        properties:
+          associatePublicIPToMasters:
+            type: boolean
+          associatePublicIPToNodes:
+            type: boolean
       withoutNAT:
         type: object
         additionalProperties: false
