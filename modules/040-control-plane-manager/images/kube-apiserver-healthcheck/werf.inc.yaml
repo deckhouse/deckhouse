@@ -1,0 +1,30 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ env "BASE_ALPINE" }}
+import:
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/kube-apiserver-healthcheck
+  to: /usr/local/bin/kube-apiserver-healthcheck
+  before: setup
+docker:
+  ENTRYPOINT: ["/usr/local/bin/kube-apiserver-healthcheck"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ env "BASE_GOLANG_ALPINE" }}
+git:
+- add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - go.mod
+  - go.sum
+  - main.go
+shell:
+  beforeInstall:
+  - apk add --no-cache make bash git mercurial patch rsync
+  install:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go

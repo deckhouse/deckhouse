@@ -45,6 +45,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
         kubeApiserver116: imagehash
         kubeControllerManager116: imagehash
         kubeScheduler116: imagehash
+        kubeApiserverHealthcheck: imagehash
   discovery:
     d8SpecificNodeCountByRole:
       worker: 1
