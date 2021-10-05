@@ -56,7 +56,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 			return err
 		}
 
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}

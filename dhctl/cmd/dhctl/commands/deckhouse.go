@@ -35,7 +35,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 
 		err = log.Process("default", "Remove Deckhouse️", func() error {
 			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
@@ -79,7 +79,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 			return err
 		}
 
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
