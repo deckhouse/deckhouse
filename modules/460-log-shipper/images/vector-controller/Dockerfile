@@ -1,5 +1,5 @@
 ARG BASE_SHELL_OPERATOR
-FROM flant/vector:0.15.4-alpine@sha256:78cd243e9a8ebc279a8cc8586398fe0b12f089db60ac62c90d39910e4057ea7f AS vector
+FROM flant/vector:0.16.1-alpine@sha256:c0705a557fcf9022c0b23a50d6eb1d51d33207310c61dd58106aab9b23f77ebb AS vector
 
 FROM $BASE_SHELL_OPERATOR
 COPY --from=vector /usr/local/bin/vector /usr/local/bin/vector
