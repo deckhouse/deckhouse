@@ -209,11 +209,11 @@ data:
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`.provider in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.vNetCIDR in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.subnetCIDR in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.masterNodeGroup in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.sshPublicKey in body is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.provider is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.vNetCIDR is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.subnetCIDR is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.masterNodeGroup is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.sshPublicKey is required`))
 		})
 	})
 
@@ -226,10 +226,10 @@ data:
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.Session.Err).Should(gbytes.Say(`.resourceGroupName in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.vnetName in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.subnetName in body is required`))
-			Expect(f.Session.Err).Should(gbytes.Say(`.zones in body is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.resourceGroupName is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.vnetName is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.subnetName is required`))
+			Expect(f.Session.Err).Should(gbytes.Say(`.zones is required`))
 		})
 	})
 })

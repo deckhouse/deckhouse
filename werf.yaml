@@ -151,7 +151,7 @@ ansible:
 
 ---
 image: base-for-go
-from: {{ env "BASE_GOLANG_ALPINE" }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
 ansible:
   beforeInstall:
   - name: "Install dependencies"
@@ -501,7 +501,7 @@ from: {{ env "BASE_ALPINE" }}
 fromCacheVersion: "20210527"
 git:
 - url: https://github.com/flant/libjq-go
-  tag: v1.6.1
+  tag: v1.6.2
   add: /
   to: /src
   stageDependencies:

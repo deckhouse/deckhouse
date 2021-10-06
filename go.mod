@@ -12,19 +12,19 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.9.0
-	github.com/flant/addon-operator v1.0.0-rc.1.0.20211013122809-945a799d26d7 // branch: master
+	github.com/flant/addon-operator v1.0.0-rc.1.0.20211013162138-2f83eb14d5a9 // branch: master
 	github.com/flant/kube-client v0.0.6
-	github.com/flant/shell-operator v1.0.4-0.20211013121126-88907c05aafa // branch: master
+	github.com/flant/shell-operator v1.0.4-0.20211013151103-bfe409c85564 // branch: master
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-openapi/spec v0.20.3
+	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/google/uuid v1.1.2
 	github.com/gophercloud/gophercloud v0.20.0
 	github.com/gophercloud/utils v0.0.0-20210823151123-bfd010397530
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.11
 	github.com/kyokomi/emoji v2.1.0+incompatible
@@ -33,12 +33,12 @@ require (
 	github.com/onsi/gomega v1.16.0
 	github.com/otiai10/copy v1.0.2
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.7.5
-	github.com/tidwall/sjson v1.1.6
+	github.com/tidwall/gjson v1.9.1
+	github.com/tidwall/sjson v1.2.2
 	github.com/vmware/govmomi v0.24.1
 	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
@@ -58,9 +58,10 @@ require (
 
 replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 
+// Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
+replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
+
+// Due to Helm3 lib problems
 replace k8s.io/client-go => k8s.io/client-go v0.19.11
 
 replace k8s.io/api => k8s.io/api v0.19.11
-
-// kustomize problems https://github.com/kubernetes-sigs/kustomize/blob/master/cmd/depprobcheck/README.md
-replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.4
