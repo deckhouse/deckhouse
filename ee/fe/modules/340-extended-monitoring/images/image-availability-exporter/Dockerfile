@@ -1,8 +1,8 @@
 ARG BASE_ALPINE
-ARG BASE_GOLANG_BUSTER
+ARG BASE_GOLANG_16_BUSTER
 
 # Based on https://github.com/deckhouse/k8s-image-availability-exporter/blob/master/Dockerfile
-FROM $BASE_GOLANG_BUSTER as artifact
+FROM $BASE_GOLANG_16_BUSTER as artifact
 WORKDIR /src
 ENV GOARCH=amd64
 RUN apt-get update && \
