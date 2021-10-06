@@ -1,6 +1,6 @@
 ---
 artifact: dhctl
-from: {{ env "BASE_GOLANG_ALPINE" }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
 - add: /dhctl
   to: /dhctl

@@ -1,6 +1,6 @@
 ---
 artifact: apiserver
-from: {{ env "BASE_GOLANG_ALPINE" }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
 - add: /modules/040-node-manager/images/bashible-apiserver
   to: /src

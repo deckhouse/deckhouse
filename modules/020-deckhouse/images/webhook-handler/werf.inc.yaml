@@ -18,7 +18,7 @@ ansible:
         dest: /usr/local/bin
 git:
 - add: /modules
-  to: /available_hooks/
+  to: /available_hooks
   includePaths:
   - '*/webhooks/'
 - add: /modules/020-deckhouse/images/webhook-handler/entrypoint.sh
