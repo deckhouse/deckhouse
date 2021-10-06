@@ -40,8 +40,6 @@ Build Modules Images CE:
     WERF_ENV: CE
   only:
   - tags
-  - main
-  - /^release-.*$/
 
 Build Modules Images EE:
   extends: .Build Modules Images template
@@ -51,8 +49,6 @@ Build Modules Images EE:
     WERF_ENV: EE
   only:
   - tags
-  - main
-  - /^release-.*$/
 
 Build Modules Images FE:
   extends: .Build Modules Images template
@@ -73,7 +69,6 @@ Build CE:
     WERF_ENV: CE
   only:
   - tags
-  - /^release-.*$/
 
 Build EE:
   extends: .Build template
@@ -83,7 +78,6 @@ Build EE:
     WERF_ENV: EE
   only:
   - tags
-  - /^release-.*$/
 
 Build FE:
   extends: .Build template
