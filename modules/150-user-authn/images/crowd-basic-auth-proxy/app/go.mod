@@ -8,6 +8,5 @@ require (
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/felixge/httpsnoop v1.0.1
 	github.com/prometheus/client_golang v1.5.1
-	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 )
