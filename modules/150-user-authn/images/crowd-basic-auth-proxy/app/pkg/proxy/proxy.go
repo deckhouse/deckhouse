@@ -109,7 +109,9 @@ type Handler struct {
 var _ http.Handler = &Handler{}
 
 func NewHandler() *Handler {
-	return &Handler{Cache: ttlcache.NewCache(), CrowdGroups: []string{}}
+	c := ttlcache.NewCache()
+	c.SkipTtlExtensionOnHit(true)
+	return &Handler{Cache: c, CrowdGroups: []string{}}
 }
 
 func (h *Handler) Run() {
@@ -183,14 +185,14 @@ func (h *Handler) Run() {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	basicLogin, basicPassword, ok := r.BasicAuth()
 	if !ok {
-		logger.Error("401 Unauthorized, no basic auth credentials")
+		logger.Error("401 Unauthorized, no basic auth credentials have been sent")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	groups := h.validateCredentials(basicLogin, basicPassword)
 	if len(groups) == 0 {
-		logger.Error("403 Forbidden, Crowd authentication problem")
+		logger.Errorf("403 Forbidden, Crowd authentication problem: User %s has no allowed groups", basicLogin)
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -201,7 +203,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) validateCredentials(login, password string) []string {
-	value, exists := h.Cache.Get(login + ":" + password)
+	userID := login + ":" + password
+
+	value, exists := h.Cache.Get(userID)
 	if exists {
 		if value != nil {
 			return value.([]string)
@@ -215,25 +219,25 @@ func (h *Handler) validateCredentials(login, password string) []string {
 	}{Username: login, Password: password})
 	if err != nil {
 		logger.Errorf("validating user credentials: %+v", err)
-		h.Cache.SetWithTTL(login+":"+password, nil, h.CacheTTL)
+		h.Cache.SetWithTTL(userID, nil, h.CacheTTL)
 		return nil
 	}
 
 	body, err := h.crowdClient.MakeRequest("/user/group/nested?username="+login, "GET", nil)
 	if err != nil {
 		logger.Errorf("getting user groups: %+v", err)
-		h.Cache.SetWithTTL(login+":"+password, nil, h.CacheTTL)
+		h.Cache.SetWithTTL(userID, nil, h.CacheTTL)
 		return nil
 	}
 
 	crowdGroups, err := h.crowdClient.GetGroups(body)
 	if err != nil {
-		logger.Errorf("getting user groups: %+v", err)
-		h.Cache.SetWithTTL(login+":"+password, nil, h.CacheTTL)
+		logger.Errorf("parsing user groups: %+v", err)
+		h.Cache.SetWithTTL(userID, nil, h.CacheTTL)
 		return nil
 	}
 
-	h.Cache.SetWithTTL(login+":"+password, crowdGroups, h.CacheTTL)
+	h.Cache.SetWithTTL(userID, crowdGroups, h.CacheTTL)
 	logger.Printf("received groups for %s: %s", login, crowdGroups)
 	return crowdGroups
 }
