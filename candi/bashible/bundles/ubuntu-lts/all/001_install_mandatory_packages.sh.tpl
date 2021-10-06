@@ -15,6 +15,14 @@
 SYSTEM_PACKAGES="curl wget virt-what inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common"
 KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool conntrack"
 
+# Hack for Ubuntu 16.04
+if bb-is-ubuntu-version? 16.04 ; then
+  if grep -q "^mozilla\/DST_Root_CA_X3.crt$" /etc/ca-certificates.conf; then
+    sed -i "/mozilla\/DST_Root_CA_X3.crt/d" /etc/ca-certificates.conf
+    update-ca-certificates --fresh
+  fi
+fi
+
 # Avoid problems with expired ca-certificates
 bb-apt-install --force ca-certificates
 
