@@ -31,27 +31,28 @@
         * 3.x (for moby project in Azure)
       summary: >
         Unsupported version of CRI {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}
-  - alert: DeprecatedDockerContainerRuntime
-    expr: |
-      sum by (container_runtime_version, node) (
-        kube_node_info{container_runtime_version=~"docker://.*"}
-        * on (node) group_left(label_node_deckhouse_io_group) kube_node_labels
-        * on (label_node_deckhouse_io_group) group_left(cri_type)
-        label_replace(
-          node_group_info{cri_type!="NotManaged"},
-          "label_node_deckhouse_io_group", "$0", "name", ".*"
-        )
-      )
-    labels:
-      tier: cluster
-      severity_level: "9"
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: markdown
-      plk_incident_initial_status: "todo"
-      description: |-
-        Found docker CRI installed on {{`{{$labels.node}}`}} node.
-        Docker runtime is deprecated and will be removed in the nearest future.
-        You should migrate to Containerd CRI.
-      summary: >
-        Deprecated version of CRI {{`{{$labels.container_runtime_version}}`}} installed on {{`{{$labels.node}}`}} node.
+
+  # - alert: DeprecatedDockerContainerRuntime
+  #   expr: |
+  #     sum by (container_runtime_version, node) (
+  #       kube_node_info{container_runtime_version=~"docker://.*"}
+  #       * on (node) group_left(label_node_deckhouse_io_group) kube_node_labels
+  #       * on (label_node_deckhouse_io_group) group_left(cri_type)
+  #       label_replace(
+  #         node_group_info{cri_type!="NotManaged"},
+  #         "label_node_deckhouse_io_group", "$0", "name", ".*"
+  #       )
+  #     )
+  #   labels:
+  #     tier: cluster
+  #     severity_level: "9"
+  #   annotations:
+  #     plk_protocol_version: "1"
+  #     plk_markup_format: markdown
+  #     plk_incident_initial_status: "todo"
+  #     description: |-
+  #       Found docker CRI installed on {{`{{$labels.node}}`}} node.
+  #       Docker runtime is deprecated and will be removed in the nearest future.
+  #       You should migrate to Containerd CRI.
+  #     summary: >
+  #       Deprecated version of CRI {{`{{$labels.container_runtime_version}}`}} installed on {{`{{$labels.node}}`}} node.
