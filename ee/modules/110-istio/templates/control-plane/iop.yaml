@@ -93,6 +93,7 @@ spec:
       multiCluster:
         clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
       externalIstiod: false
+      jwtPolicy: {{ include "istioJWTPolicy" $ }}
 
       logging:
         level: "default:info"
