@@ -60,7 +60,9 @@ resource "aws_instance" "node" {
   lifecycle {
     ignore_changes = [
       user_data,
-      ebs_optimized
+      ebs_optimized,
+      #TODO: remove ignore after we enable automatic converge for master nodes
+      volume_tags
     ]
   }
 }
