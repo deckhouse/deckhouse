@@ -7,7 +7,7 @@ properties:
       - type: string
       - type: boolean
         enum: [ false ]
-    x-examples: [ false, "default", "localstorage" ]
+    x-examples: [ false, "default"]
     description: |
       The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
@@ -162,7 +162,7 @@ properties:
           - type: string
           - type: boolean
             enum: [ false ]
-        x-examples: [ false, "default", "localstorage" ]
+        x-examples: [ false, "default"]
         description: |
           A storageClass to use when checking the health of disks.
 

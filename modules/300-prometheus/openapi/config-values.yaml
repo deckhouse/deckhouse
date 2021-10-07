@@ -17,7 +17,7 @@ properties:
       **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume reprovisioning and data loss.
   longtermStorageClass:
     type: string
-    x-examples: ["ceph-ssd", "false"]
+    x-examples: ["ceph-ssd"]
     description: |
       The name of the storageClass to use for Longterm Prometheus.
 
@@ -110,7 +110,7 @@ properties:
           ```
   ingressClass:
     type: string
-    x-examples: ["public", "production"]
+    x-examples: ["public"]
     description: |
       The class of the Ingress controller used for Grafana/Prometheus.
 
@@ -176,7 +176,7 @@ properties:
           - type: string
             pattern: "^[0-9]+m?$"
           - type: number
-        x-examples: ["3", 3, "0.1", 0.1, "1500m"]
+        x-examples: ["3"]
         description: |
           The maximum CPU requests set by the VPA controller for the main Prometheus pods.
 
@@ -186,7 +186,7 @@ properties:
           - type: string
             pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
           - type: number
-        x-examples: ["3Mi", 4096]
+        x-examples: ["3Mi"]
         description: |
           The maximum Memory requests set by the VPA controller for the main Prometheus pods.
 
@@ -196,7 +196,7 @@ properties:
           - type: string
             pattern: "^[0-9]+m?$"
           - type: number
-        x-examples: ["1400m", 1, 0.1]
+        x-examples: [0.1]
         description: |
           The maximum CPU requests set by the VPA controller for the Longterm Prometheus pods.
 
@@ -206,7 +206,7 @@ properties:
           - type: string
             pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
           - type: number
-        x-examples: ["4Mi", 4096]
+        x-examples: ["4Mi"]
         description: |
           The maximum Memory requests set by the VPA controller for the longterm Prometheus pods.
 
@@ -216,7 +216,6 @@ properties:
         description: |
           The pod update mode.
         default: "Initial"
-        x-examples: ["Initial", "Auto", "Off"]
         enum:
           - "Initial"
           - "Auto"
@@ -272,9 +271,6 @@ properties:
         - key: "key1"
           operator: "Equal"
           value: "value1"
-          effect: "NoSchedule"
-        - key: "key1"
-          operator: "Exists"
           effect: "NoSchedule"
     description: |
       The same as in the pods' `spec.tolerations` parameter in Kubernetes;

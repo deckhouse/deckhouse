@@ -82,4 +82,4 @@ definitions:
       - type: string
       - type: boolean
         enum: [ false ]
-    x-examples: [ "default", false ]
+    x-examples: [ "default" ]

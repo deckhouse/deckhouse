@@ -51,7 +51,7 @@ properties:
       kubernetesVersions:
         type: array
         x-examples:
-        - [ "1.19.2", "1.20.10" ]
+        - ["1.19.2"]
       extensionAPIServerAuthenticationRequestheaderClientCA:
         type: string
         x-examples: [testCA]
