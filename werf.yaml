@@ -19,7 +19,6 @@ cleanup:
     apk:
       name:
       - jo
-      repository: http://nl.alpinelinux.org/alpine/edge/community/
       update_cache: yes
 
   - name: "Install rgxg"
@@ -180,14 +179,9 @@ ansible:
         - libstdc++
         - libgcc
         - libcurl
-
-  - name: "Install dependencies from edge/main"
-    apk:
-      name:
         - binutils
         - binutils-dev
         - elfutils-dev
-      repository: http://nl.alpinelinux.org/alpine/edge/main/
 
 {{- include "base components" . }}
 
@@ -329,7 +323,6 @@ ansible:
     apk:
       name:
         - dumb-init
-      repository: http://nl.alpinelinux.org/alpine/edge/community/
 
   - name: "Install ginkgo"
     command: go get github.com/onsi/ginkgo/ginkgo
