@@ -1,6 +1,22 @@
 positive:
   values:
     - internal:
+        vpa:
+          maxCPU: 4096
+          maxMemory: 0.1
+    - internal:
+        vpa:
+          maxCPU: "1400m"
+          maxMemory: "100"
+    - internal:
+        vpa:
+          longtermMaxCPU: "1m"
+          longtermMaxMemory: "100Mi"
+    - internal:
+        vpa:
+          longtermMaxCPU: 4096
+          longtermMaxMemory: 1000
+    - internal:
         prometheusLongterm:
           retentionGigabytes: 25
     - internal:
@@ -59,7 +75,7 @@ positive:
 
 negative:
   values:
-    - internal:
+  - internal:
       vpa:
         maxCPU: "123Hz"
         maxMemory: "3445J"
