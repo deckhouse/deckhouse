@@ -42,9 +42,6 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  loadBalancer:
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: nlb
   nodeSelector:
     node-role.deckhouse.io/worker: ""
 ---

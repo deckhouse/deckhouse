@@ -68,7 +68,7 @@ layout: Standard
 # [<en>] public SSH key for accessing cloud nodes
 # [<ru>] публичная часть SSH-ключа для доступа к узлам облака
 sshPublicKey: ssh-rsa <SSH_PUBLIC_KEY>
-# [<en>] address space of the AWS cloud
+# [<en>] address space of the Azure cloud
 # [<ru>] адресное пространство облака внутри Azure
 vNetCIDR: 10.241.0.0/16
 # [<en>] address space of the cluster's nodes
