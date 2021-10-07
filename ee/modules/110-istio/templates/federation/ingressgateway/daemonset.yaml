@@ -61,7 +61,7 @@ spec:
         - istio-ingressgateway
         env:
         - name: JWT_POLICY
-          value: first-party-jwt
+          value: {{ include "istioJWTPolicy" . }}
         - name: PILOT_CERT_PROVIDER
           value: istiod
         - name: CA_ADDR
@@ -165,6 +165,11 @@ spec:
         - mountPath: /etc/istio/ingressgateway-ca-certs
           name: ingressgateway-ca-certs
           readOnly: true
+  {{- if eq (include "istioJWTPolicy" .) "third-party-jwt" }}
+        - name: istio-token
+          mountPath: /var/run/secrets/tokens
+          readOnly: true
+  {{- end }}
       volumes:
       - configMap:
           defaultMode: 420
@@ -210,4 +215,13 @@ spec:
           defaultMode: 420
           optional: true
           secretName: istio-ingressgateway-ca-certs
+  {{- if eq (include "istioJWTPolicy" .) "third-party-jwt" }}
+      - name: istio-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: istio-token
+              expirationSeconds: 43200
+              audience: istio-ca
+  {{- end }}
 {{- end }}
