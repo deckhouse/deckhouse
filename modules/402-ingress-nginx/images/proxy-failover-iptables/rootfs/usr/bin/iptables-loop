@@ -18,9 +18,9 @@ set -e
 
 CHAIN_NAME="ingress-failover"
 JUMP_RULE="-p tcp -m multiport --dports 80,443 -m addrtype --dst-type LOCAL -j $CHAIN_NAME"
-SOCKET_EXISTS_RULE="-m socket --nowildcard -m mark --mark 0 -j RETURN"
-MARK_HTTP_RULE="-p tcp --dport 80 -j MARK --set-mark 1"
-MARK_HTTPS_RULE="-p tcp --dport 443 -j MARK --set-mark 1"
+SOCKET_EXISTS_RULE="-m socket --nowildcard -m mark ! --mark 3 -j RETURN"
+MARK_HTTP_RULE="-p tcp --dport 80 -j CONNMARK --set-mark 3"
+MARK_HTTPS_RULE="-p tcp --dport 443 -j CONNMARK --set-mark 3"
 SAVE_MARK_RULE="-j CONNMARK --save-mark"
 RESTORE_HTTP_MARK_RULE="-p tcp --dport 80 -j CONNMARK --restore-mark"
 RESTORE_HTTPS_MARK_RULE="-p tcp --dport 443 -j CONNMARK --restore-mark"
