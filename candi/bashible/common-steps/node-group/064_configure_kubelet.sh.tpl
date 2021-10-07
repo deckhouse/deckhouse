@@ -43,6 +43,8 @@ evictionSoftThresholdImagefsInodesFree="10%"
 
 {{- if hasKey .nodeGroup "kubelet" }}
 rootDir="{{ .nodeGroup.kubelet.rootDir | default "/var/lib/kubelet" }}"
+{{- else }}
+rootDir="/var/lib/kubelet"
 {{- end }}
 
 nodefsSize=$(df --output=size $rootDir | tail -n1)
