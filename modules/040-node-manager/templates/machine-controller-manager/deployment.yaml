@@ -74,10 +74,6 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 5
-          volumeMounts:
-            - name: resolv-conf-volume
-              mountPath: /etc/resolv.conf
-              readOnly: true
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
@@ -127,10 +123,5 @@ spec:
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
-      volumes:
-        - name: resolv-conf-volume
-          hostPath:
-            path: /var/lib/bashible/resolv/resolv.conf
-            type: File
   {{- end }}
 {{- end }}

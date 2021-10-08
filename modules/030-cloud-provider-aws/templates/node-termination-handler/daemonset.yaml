@@ -67,15 +67,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        volumeMounts:
-        - name: resolv-conf-volume
-          mountPath: /etc/resolv.conf
-          readOnly: true
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
-      volumes:
-      - name: resolv-conf-volume
-        hostPath:
-          path: /var/lib/bashible/resolv/resolv.conf
-          type: File

@@ -87,9 +87,6 @@ spec:
           mountPath: /etc/coredns
         - name: tmp
           mountPath: /tmp
-        - name: resolv-conf-volume
-          mountPath: /etc/resolv.conf
-          readOnly: true
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -136,9 +133,5 @@ spec:
           name: node-local-dns
       - name: tmp
         emptyDir: {}
-      - name: resolv-conf-volume
-        hostPath:
-          path: /var/lib/bashible/resolv/resolv.conf
-          type: File
       imagePullSecrets:
       - name: deckhouse-registry

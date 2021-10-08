@@ -234,7 +234,6 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 		l.ErrorsList.Add(objectPriorityClass(object))
 	}
 	l.ErrorsList.Add(objectDNSPolicy(object))
-	l.ErrorsList.Add(objectResolvConfVolume(object))
 
 	l.ErrorsList.Add(roles.ObjectUserAuthzClusterRolePath(l.Module, object))
 	l.ErrorsList.Add(roles.ObjectRBACPlacement(l.Module, object))
