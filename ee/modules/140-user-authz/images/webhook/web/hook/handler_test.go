@@ -66,7 +66,7 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "Namespaced Limited and denied",
+			Name: "Namespaced Limited and denied namespace",
 			User: "limited",
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
@@ -78,6 +78,17 @@ func TestAuthorizeRequest(t *testing.T) {
 				Denied: true,
 				Reason: "user has no access to the namespace",
 			},
+		},
+		{
+			Name: "Namespaced Limited with unlimited namespace regex",
+			User: "limited-with-unlimited-regex",
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "any-other-namespace",
+			},
+			ResultStatus: WebhookRequestStatus{},
 		},
 		{
 			Name: "Namespaced limited with system",
@@ -154,6 +165,8 @@ func TestAuthorizeRequest(t *testing.T) {
 	for _, testCase := range tc {
 		t.Run(testCase.Name, func(t *testing.T) {
 			nsRegex, _ := regexp.Compile("test-.*")
+			allRegex, _ := regexp.Compile(".*")
+
 			handler := &Handler{
 				logger: &log.Logger{},
 				cache: &dummyCache{
@@ -172,6 +185,9 @@ func TestAuthorizeRequest(t *testing.T) {
 						},
 						"limited": {
 							LimitNamespaces: []*regexp.Regexp{nsRegex},
+						},
+						"limited-with-unlimited-regex": {
+							LimitNamespaces: []*regexp.Regexp{allRegex},
 						},
 						"limited-and-system-allowed": {
 							LimitNamespaces:               []*regexp.Regexp{nsRegex},
