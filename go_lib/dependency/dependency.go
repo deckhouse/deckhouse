@@ -165,9 +165,10 @@ func (dc *dependencyContainer) GetRegistryClient(repo string) (cr.Client, error)
 		return TestDC.GetRegistryClient(repo)
 	}
 
-	if dc.crClient != nil {
-		return dc.crClient, nil
-	}
+	// Maybe we should use multitone here
+	// if dc.crClient != nil {
+	// 	return dc.crClient, nil
+	// }
 
 	client, err := cr.NewClient(repo)
 	if err != nil {

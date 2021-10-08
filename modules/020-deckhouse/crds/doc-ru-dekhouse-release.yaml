@@ -1,0 +1,32 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию релизов Deckhouse.
+          properties:
+            spec:
+              properties:
+                version:
+                  description: |
+                    Указывает версию Deckhouse для данного релиза.
+                  example: 'v1.24.20'
+            status:
+              properties:
+                phase:
+                  type: string
+                  description: 'Показывает текущий статус релиза.'
+                transitionTime:
+                  description: 'Показывает, когда статус релиза изменился.'
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Показывает текущий статус релиза.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: string
+          description: 'Показывает, когда статус релиза изменился.'

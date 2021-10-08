@@ -8,6 +8,8 @@ properties:
     x-required-for-helm:
     - currentReleaseImageName
     properties:
+      releaseVersionImageHash:
+        type: string
       currentReleaseImageName:
         type: string
         pattern: '^[a-zA-Z0-9\.\/@:\-_]+$'
