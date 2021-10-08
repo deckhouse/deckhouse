@@ -86,9 +86,6 @@ spec:
         - name: config-volume
           mountPath: /etc/coredns
           readOnly: true
-        - name: resolv-conf-volume
-          mountPath: /etc/resolv.conf
-          readOnly: true
         ports:
         - containerPort: 5353
           name: dns
@@ -110,16 +107,6 @@ spec:
             path: /ready
             port: 8181
             scheme: HTTP
-        resources:
-          requests:
-{{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
-      - name: resolv-watcher
-{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
-        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.kubeDns.resolvWatcher }}
-        volumeMounts:
-        - name: resolv-conf-volume
-          mountPath: /etc/resolv.conf
-          readOnly: true
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
@@ -162,10 +149,6 @@ spec:
           items:
           - key: Corefile
             path: Corefile
-      - name: resolv-conf-volume
-        hostPath:
-          path: /var/lib/bashible/resolv/resolv.conf
-          type: File
       affinity:
         nodeAffinity:
 {{- if .Values.kubeDns.internal.specificNodeType }}

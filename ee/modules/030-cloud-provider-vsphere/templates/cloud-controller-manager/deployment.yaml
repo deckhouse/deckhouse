@@ -98,9 +98,6 @@ spec:
               readOnly: true
             - mountPath: /tmp
               name: tmp
-            - name: resolv-conf-volume
-              mountPath: /etc/resolv.conf
-              readOnly: true
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 14 }}
@@ -114,8 +111,4 @@ spec:
           secretName: cloud-controller-manager
       - name: tmp
         emptyDir: {}
-      - name: resolv-conf-volume
-        hostPath:
-          path: /var/lib/bashible/resolv/resolv.conf
-          type: File
 {{- end }}

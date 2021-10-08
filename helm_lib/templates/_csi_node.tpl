@@ -102,9 +102,6 @@ spec:
           mountPath: /csi
         - name: registration-dir
           mountPath: /registration
-        - name: resolv-conf-volume
-          mountPath: /etc/resolv.conf
-          readOnly: true
         resources:
           requests:
 {{ include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -128,9 +125,6 @@ spec:
           mountPath: /csi
         - name: device-dir
           mountPath: /dev
-        - name: resolv-conf-volume
-          mountPath: /etc/resolv.conf
-          readOnly: true
     {{- if $additionalNodeVolumeMounts }}
 {{ $additionalNodeVolumeMounts | toYaml | indent 8 }}
       {{- end }}
@@ -156,10 +150,6 @@ spec:
         hostPath:
           path: /dev
           type: Directory
-      - name: resolv-conf-volume
-        hostPath:
-          path: /var/lib/bashible/resolv/resolv.conf
-          type: File
     {{- if $additionalNodeVolumes }}
 {{ $additionalNodeVolumes | toYaml | indent 6 }}
       {{- end }}
