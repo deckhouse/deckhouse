@@ -6,4 +6,4 @@ config:
   stapel:
     mount:
      allowBuildDir: true
-     allowFromPaths: [ "modules/images_tags_*.json" ]
+     allowFromPaths: [ "modules/images_tags_*.json"]
