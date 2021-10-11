@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -211,7 +212,9 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		return nil, nil
 	}
 
-	if podsCnt != endpointsCnt {
+	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
+
+	if controlPlaneEnabled && podsCnt != endpointsCnt {
 		msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
 
 		versions := input.Values.Get("global.discovery.kubernetesVersions")
