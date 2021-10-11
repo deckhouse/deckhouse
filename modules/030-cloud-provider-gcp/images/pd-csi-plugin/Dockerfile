@@ -3,8 +3,8 @@ ARG BASE_GOLANG_ALPINE
 ARG BASE_DEBIAN
 FROM $BASE_GOLANG_ALPINE as artifact
 WORKDIR /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver
-RUN wget https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver/archive/v0.7.0.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver/
-RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-X main.vendorVersion='"${TAG:-latest}"' -extldflags "-static"' -o bin/gce-pd-csi-driver ./cmd/
+RUN wget https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver/archive/v1.3.3.tar.gz -O - | tar -xz --strip-components=1 -C /go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-X main.version='"${TAG:-latest}"' -extldflags "-static"' -o bin/gce-pd-csi-driver ./cmd/gce-pd-csi-driver/
 
 FROM $BASE_DEBIAN as base
 RUN apt-get update && apt-get install -y --no-install-recommends udev && apt-get clean -y && rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*

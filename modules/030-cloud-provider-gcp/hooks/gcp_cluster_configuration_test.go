@@ -184,7 +184,8 @@ data:
     "diskType": "pd-standard",
     "networkTags": [
       "tag"
-    ]
+    ],
+   "labels": {}
   },
   "zones": [
 	"a",
