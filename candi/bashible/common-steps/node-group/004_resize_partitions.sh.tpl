@@ -63,7 +63,13 @@ grow_lvm() {
   LVM_SUPPRESS_FD_WARNINGS=1 lvextend -q -l +100%FREE "${1}"
 }
 
-for partition in $(mount | grep ext4 | awk '{print $1}' | sort -u); do
+# resize only ext4 disks, because we don't use other fs as node disks.
+# exclude from resize all csi-driven disks, and disks, managed by kubelet (like https://kubernetes.io/docs/concepts/storage/volumes/#rbd).
+for partition in $(mount | grep -vE "kubernetes.io" | grep "ext4" | awk '{print $1}' | sort -u); do
+  # check if disk is present
+  if [[ ! -e "${partition}" ]]; then
+    continue
+  fi
 
   # partition = /dev/mapper/vgubuntu-root. LVM partition.
   if [[ "${partition}" =~ ^/dev/mapper/[a-z\-]+$ ]]; then
