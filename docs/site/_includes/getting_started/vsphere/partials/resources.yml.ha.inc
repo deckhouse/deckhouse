@@ -178,6 +178,8 @@ spec:
   email: admin@example.com
   # [<en>] this is a hash for generated password: <GENERATED_PASSWORD>
   # [<ru>] это хэш сгенерированного пароля: <GENERATED_PASSWORD>
+  # [<en>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
+  # [<ru>] echo "<GENERATED_PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2
   # [<en>] you might consider changing this
   # [<ru>] возможно, захотите изменить
   password: <GENERATED_PASSWORD_HASH>
