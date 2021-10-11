@@ -48,7 +48,8 @@ func Execute() {
 	rootCmd.PersistentFlags().StringVar(&handler.CrowdApplicationPassword, "crowd-application-password", "user123", "password of Atlassian Crowd application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.CrowdGroups, "crowd-allowed-group", nil, "Allowed Crowd groups")
 	rootCmd.PersistentFlags().StringVar(&handler.KubernetesAPIServerURL, "api-server-url", "https://api.example.com", "Kubernetes api server URL")
-	rootCmd.PersistentFlags().DurationVar(&handler.CacheTTL, "cache-ttl", 10*time.Second, "Crowd cache TTL")
+	rootCmd.PersistentFlags().DurationVar(&handler.AuthCacheTTL, "auth-cache-ttl", 10*time.Second, "Crowd auth cache TTL")
+	rootCmd.PersistentFlags().DurationVar(&handler.GroupsCacheTTL, "groups-cache-ttl", 2*time.Minute, "Crowd groups cache TTL")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Printf("starting crowd proxy error: %s", err)
