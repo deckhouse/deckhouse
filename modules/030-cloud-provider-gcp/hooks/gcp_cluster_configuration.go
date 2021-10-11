@@ -53,7 +53,7 @@ type Instances struct {
 	DiskSizeGb  int64             `json:"diskSizeGb"`
 	DiskType    string            `json:"diskType"`
 	NetworkTags []string          `json:"networkTags"`
-	Labels      map[string]string `json:"labels,omitempty"`
+	Labels      map[string]string `json:"labels"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
