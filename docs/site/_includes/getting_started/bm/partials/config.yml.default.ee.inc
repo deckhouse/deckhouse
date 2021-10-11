@@ -70,9 +70,9 @@ apiVersion: deckhouse.io/v1
 # [<en>] type of the configuration section
 # [<ru>] тип секции конфигурации
 kind: StaticClusterConfiguration
-# [<en>] address space of the cluster's internal network
-# [<ru>] адресное пространство внутренней сети кластера
-# [<en>] you might consider changing this
-# [<ru>] возможно, захотите изменить
+# [<en>] list of internal cluster networks (e.g., '10.0.4.0/24'), which is
+# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.)
+# [<ru>] cписок внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой
 internalNetworkCIDRs:
-- 10.0.4.0/24
+- *!CHANGE_internalNetworkCIDRs*
