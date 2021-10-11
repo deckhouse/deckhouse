@@ -34,7 +34,12 @@ import (
 
 var _ = Describe("Global hooks :: kubernetes_version ::", func() {
 	const (
-		initValuesString       = `{"global": {"modulesImages": {}, "discovery":{}}}`
+		initValuesString           = `{"global": {"enabledModules": ["control-plane-manager"],"modulesImages": {}, "discovery":{}}}`
+		globalValuesWithoutCPMYaml = `
+modulesImages: {}
+discovery: {}
+`
+
 		initConfigValuesString = `{}`
 
 		initialVersion = "1.19.10"
@@ -213,10 +218,11 @@ subsets:
 					Expect(f).ToNot(ExecuteSuccessfully())
 					assertNoFile()
 				})
+
 			})
 		}
 
-		Context("Endpoint are created", func() {
+		Context("Endpoint were created", func() {
 			const initialVersion = "1.19.2"
 			BeforeEach(func() {
 				dependency.TestDC.HTTPClient.DoMock.
@@ -235,6 +241,24 @@ subsets:
 			It("does not write k8s version into file", func() {
 				Expect(f).NotTo(ExecuteSuccessfully())
 				assertNoFile()
+			})
+
+			Context("control plane manager is disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+
+					f.RunHook()
+				})
+
+				It("sets k8s version with versions array with one version into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertValues(initialVersion, []string{initialVersion})
+				})
+
+				It("sets k8s version into file", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertVersionInFile(initialVersion)
+				})
 			})
 
 		})
@@ -260,6 +284,44 @@ subsets:
 		It("does not write k8s version into file", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 			assertNoFile()
+		})
+
+		Context("control plane manager is disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+
+				f.RunHook()
+			})
+
+			It("sets k8s version with versions array with one version into values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertValues(initialVersion, []string{initialVersion})
+			})
+
+			It("sets k8s version into file", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertVersionInFile(initialVersion)
+			})
+
+			Context("Change version", func() {
+				BeforeEach(func() {
+					dependency.TestDC.HTTPClient.DoMock.
+						Set(func(req *http.Request) (rp1 *http.Response, err error) {
+							return versionsResponse(verToChange), nil
+						})
+					f.RunHook()
+				})
+
+				It("changes k8s version with versions array with one version into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertValues(verToChange, []string{verToChange})
+				})
+
+				It("changes k8s version into file", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertVersionInFile(verToChange)
+				})
+			})
 		})
 
 		for _, s := range apiServerPods {
@@ -353,6 +415,48 @@ subsets:
 		It("does not write k8s version into file", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 			assertNoFile()
+		})
+
+		Context("control plane manager is disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", []byte(globalValuesWithoutCPMYaml))
+
+				f.RunHook()
+			})
+
+			It("sets k8s version with versions array with one version into values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertValues(k8sVer, initVers)
+			})
+
+			It("sets k8s version into file", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				assertVersionInFile(k8sVer)
+			})
+
+			Context("Change version", func() {
+				changeVers := []string{"1.21.20", "1.19.4", "1.20.2"}
+				k8sVer := changeVers[1]
+				BeforeEach(func() {
+					dependency.TestDC.HTTPClient.DoMock.
+						Set(func(req *http.Request) (rp1 *http.Response, err error) {
+							host := strings.Split(req.Host, ":")[0]
+							ver := changeVers[indexOf(host, endpointsMul)]
+							return versionsResponse(ver), nil
+						})
+					f.RunHook()
+				})
+
+				It("changes k8s version with versions array with one version into values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertValues(k8sVer, changeVers)
+				})
+
+				It("changes k8s version into file", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					assertVersionInFile(k8sVer)
+				})
+			})
 		})
 
 		for _, s := range apiServerPods {

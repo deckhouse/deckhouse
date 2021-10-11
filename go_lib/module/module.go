@@ -38,3 +38,15 @@ func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 
 	panic("https mode is not defined")
 }
+
+func IsEnabled(moduleName string, input *go_hook.HookInput) bool {
+	modules := input.Values.Get("global.enabledModules").Array()
+
+	for _, m := range modules {
+		if m.String() == moduleName {
+			return true
+		}
+	}
+
+	return false
+}
