@@ -97,7 +97,9 @@ type Handler struct {
 	CrowdApplicationLogin    string
 	CrowdApplicationPassword string
 	CrowdGroups              []string
-	CacheTTL                 time.Duration
+
+	AuthCacheTTL   time.Duration
+	GroupsCacheTTL time.Duration
 
 	Cache        *ttlcache.Cache
 	reverseProxy *httputil.ReverseProxy
@@ -118,7 +120,8 @@ func (h *Handler) Run() {
 	logger.Printf("-- Listening on: %s", h.ListenAddress)
 	logger.Printf("-- Atlassian Crowd URL: %s", h.CrowdBaseURL)
 	logger.Printf("-- Kubernetes API URL: %s", h.KubernetesAPIServerURL)
-	logger.Printf("-- Cache TTL: %v", h.CacheTTL)
+	logger.Printf("-- Auth Cache TTL: %v", h.AuthCacheTTL)
+	logger.Printf("-- Groups Cache TTL: %v", h.GroupsCacheTTL)
 
 	u, _ := url.Parse(h.KubernetesAPIServerURL)
 
@@ -219,25 +222,25 @@ func (h *Handler) validateCredentials(login, password string) []string {
 	}{Username: login, Password: password})
 	if err != nil {
 		logger.Errorf("validating user credentials: %+v", err)
-		h.Cache.SetWithTTL(userID, nil, h.CacheTTL)
+		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
 		return nil
 	}
 
 	body, err := h.crowdClient.MakeRequest("/user/group/nested?username="+login, "GET", nil)
 	if err != nil {
 		logger.Errorf("getting user groups: %+v", err)
-		h.Cache.SetWithTTL(userID, nil, h.CacheTTL)
+		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
 		return nil
 	}
 
 	crowdGroups, err := h.crowdClient.GetGroups(body)
 	if err != nil {
 		logger.Errorf("parsing user groups: %+v", err)
-		h.Cache.SetWithTTL(userID, nil, h.CacheTTL)
+		h.Cache.SetWithTTL(userID, nil, h.AuthCacheTTL)
 		return nil
 	}
 
-	h.Cache.SetWithTTL(userID, crowdGroups, h.CacheTTL)
+	h.Cache.SetWithTTL(userID, crowdGroups, h.GroupsCacheTTL)
 	logger.Printf("received groups for %s: %s", login, crowdGroups)
 	return crowdGroups
 }
