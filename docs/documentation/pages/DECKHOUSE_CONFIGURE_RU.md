@@ -57,7 +57,7 @@ data:
 1. Если параметр модуля `tolerations` не указан, то мы автоматически ставим Pod'ам модуля все возможные toleration'ы (см. список ниже).
 1. Отключить автоматическое вычисление параметров `nodeSelector` или `tolerations` можно значением `false`.
 
-**Важно!** Если модуль предполагает работу DaemonSet'a на всех узлах кластера (например, `ping-exporter` и `node-problem-detector`) или модуль должен работать на master-узлах (например, `prometheus-metrics-adapter` или некоторые компоненты `vertical-pod-autoscaler`) — то у таких модулей возможность настройки `nodeSelector` и `tolerations` отключена.
+**Важно!** Если модуль предполагает работу DaemonSet'a на всех узлах кластера (например, `cni-flannel`, `monitoring-ping`) или модуль должен работать на master-узлах (например, `prometheus-metrics-adapter` или некоторые компоненты `vertical-pod-autoscaler`) — то у таких модулей возможность настройки `nodeSelector` и `tolerations` отключена.
 
 {% offtopic title="Особенности автоматики, зависящие от 'типа' модуля" %}{% raw %}
 * Модули *monitoring* (operator-prometheus, prometheus и vertical-pod-autoscaler):

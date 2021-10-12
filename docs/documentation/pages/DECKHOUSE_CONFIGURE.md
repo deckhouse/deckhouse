@@ -56,7 +56,7 @@ The following general strategy is used for making scheduling decisions:
 1. If the `tolerations` parameter is not set for the module, all the possible tolerations are automatically applied to the module's Pods (see the list below).
 1. You can set both parameters to `false` to disable their automatic calculation..
 
-**Caution!** Note that you cannot set `nodeSelector` and `tolerations` for modules that involve running a DaemonSet on all cluster nodes (e.g., `ping-exporter` and `node-problem-detector`) or modules designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).
+**Caution!** Note that you cannot set `nodeSelector` and `tolerations` for modules that involve running a DaemonSet on all cluster nodes (e.g., `cni-flannel`, `monitoring-ping`) or modules designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).
 
 {% offtopic title="The nuances of the automatic calculation related to the 'type' of the module" %}{% raw %}
 * The *monitoring*-related modules (operator-prometheus, prometheus and vertical-pod-autoscaler):
