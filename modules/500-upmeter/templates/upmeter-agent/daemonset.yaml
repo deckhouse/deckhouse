@@ -85,9 +85,11 @@ spec:
             value: "/db/db.sqlite"
           - name: UPMETER_DB_MIGRATIONS_PATH
             value: "/data/migrations/agent"
-          {{- if eq $.Values.global.clusterConfiguration.clusterType "Cloud" }}
+          {{- if hasKey $.Values.global "clusterConfiguration" }}
+            {{- if eq $.Values.global.clusterConfiguration.clusterType "Cloud" }}
           - name: UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE
             value: "d8-cloud-provider-{{ $.Values.global.clusterConfiguration.cloud.provider | lower }}"
+            {{- end }}
           {{- end }}
           - name: UPMETER_SCHEDULER_PROBE_NODE
             valueFrom:
