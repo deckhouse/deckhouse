@@ -20,3 +20,4 @@ deckhouseWebEnabled: true
 helmEnabled: true
 logShipperEnabled: true
 localPathProvisionerEnabled: true
+upmeterEnabled: true
