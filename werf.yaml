@@ -209,7 +209,7 @@ git:
   - modules/*/docs
   - modules/*/README.md
   - modules/*/images
-  - modules/*/hooks/*.go
+  - modules/*/hooks/**/*.go
   - modules/*/template_tests
   - modules/*/.namespace
   - modules/*/values_matrix_test.yaml

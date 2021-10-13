@@ -47,10 +47,10 @@ func (s State) Populate(statefulsets []snapshot.StatefulSet) {
 
 // XState is the state of a single StatefulSet
 type XState struct {
-	Image        string `json:"image"`
-	Node         string `json:"node"`
-	Zone         string `json:"zone"`
-	StorageClass string `json:"effectiveStorageClass"`
+	Image        string `json:"image,omitempty"`
+	Node         string `json:"node,omitempty"`
+	Zone         string `json:"zone,omitempty"`
+	StorageClass string `json:"effectiveStorageClass,omitempty"`
 }
 
 func (s *XState) empty() bool {

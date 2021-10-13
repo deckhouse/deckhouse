@@ -25,7 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const defaultZone = "NONE"
+const (
+	defaultZone         = "NONE"
+	DefaultStorageClass = "false"
+)
 
 type StatefulSet struct {
 	Index string
@@ -69,6 +72,9 @@ func NewStatefulSet(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 				break
 			}
 		}
+	}
+	if storageClassName == "" {
+		storageClassName = DefaultStorageClass
 	}
 
 	sss := StatefulSet{
