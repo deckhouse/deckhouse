@@ -86,16 +86,7 @@ func expireDexUsers(input *go_hook.HookInput) error {
 		}
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {
-			err := input.ObjectPatcher().DeleteObject(
-				/*apiVersion*/ "deckhouse.io/v1",
-				/*kind*/ "User",
-				/*namespace*/ "",
-				/*name*/ dexUserExpire.Name,
-				/*subresource*/ "",
-			)
-			if err != nil {
-				return fmt.Errorf("cannot delete user %s", dexUserExpire.Name)
-			}
+			input.PatchCollector.Delete("deckhouse.io/v1", "User", "", dexUserExpire.Name)
 		}
 	}
 	return nil

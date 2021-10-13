@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -150,12 +148,8 @@ func handleSetReplicas(input *go_hook.HookInput) error {
 				"replicas": desiredReplicas,
 			},
 		}
-		data, _ := json.Marshal(patch)
 
-		err := input.ObjectPatcher().MergePatchObject(data, "machine.sapcloud.io/v1alpha1", "MachineDeployment", "d8-cloud-instance-manager", md.Name, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(patch, "machine.sapcloud.io/v1alpha1", "MachineDeployment", "d8-cloud-instance-manager", md.Name)
 	}
 
 	return nil

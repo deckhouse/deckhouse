@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -168,18 +166,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 			continue
 		}
 		if node.IsApproved {
-			err := input.ObjectPatcher().MergePatchObject(
-				removeApprovedPatch,
-				"v1",
-				"Node",
-				"",
-				node.Name,
-				"",
-			)
-			if err != nil {
-				return err
-			}
-
+			input.PatchCollector.MergePatch(removeApprovedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}
@@ -194,11 +181,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	for _, node := range nodeMap {
 		// Approve one node
 		if node.IsWaitingForApproval && node.IsReady && !node.IsUnschedulable {
-			err := input.ObjectPatcher().MergePatchObject(approvedPatch, "v1", "Node", "", node.Name, "")
-			if err != nil {
-				return err
-			}
-
+			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}
@@ -207,23 +190,20 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 }
 
 var (
-	removeApprovedPatch, _ = json.Marshal(
-		map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"control-plane-manger.deckhouse.io/approved": nil,
-				},
+	removeApprovedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"control-plane-manger.deckhouse.io/approved": nil,
 			},
 		},
-	)
-	approvedPatch, _ = json.Marshal(
-		map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"control-plane-manger.deckhouse.io/approved":             "",
-					"control-plane-manger.deckhouse.io/waiting-for-approval": nil,
-				},
+	}
+
+	approvedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"control-plane-manger.deckhouse.io/approved":             "",
+				"control-plane-manger.deckhouse.io/waiting-for-approval": nil,
 			},
 		},
-	)
+	}
 )

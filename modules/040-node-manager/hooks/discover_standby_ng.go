@@ -17,13 +17,13 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -188,11 +188,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 
 		// Ignore node groups without standby parameter, or having it zero.
 		if ng.Standby == nil || ng.Standby.String() == "0" {
-			err := setNodeGroupStandbyStatus(input.ObjectPatcher(), ng.Name, nil)
-			if err != nil {
-				return err
-			}
-
+			setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, nil)
 			continue
 		}
 
@@ -203,10 +199,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 				actualStandby++
 			}
 		}
-		err := setNodeGroupStandbyStatus(input.ObjectPatcher(), ng.Name, &actualStandby)
-		if err != nil {
-			return err
-		}
+		setNodeGroupStandbyStatus(input.PatchCollector, ng.Name, &actualStandby)
 
 		readyNodesCount := 0
 		allocatableCPUList := make([]*resource.Quantity, 0)
@@ -264,13 +257,13 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func setNodeGroupStandbyStatus(patcher go_hook.ObjectPatcher, nodeGroupName string, standby *int) error {
-	statusStandbyPatch, _ := json.Marshal(map[string]interface{}{
+func setNodeGroupStandbyStatus(patcher *object_patch.PatchCollector, nodeGroupName string, standby *int) {
+	statusStandbyPatch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"standby": standby,
 		},
-	})
-	return patcher.MergePatchObject(statusStandbyPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, "/status")
+	}
+	patcher.MergePatch(statusStandbyPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
 }
 
 var NumPercentRegex = regexp.MustCompile(`^([0-9]+)%$`)

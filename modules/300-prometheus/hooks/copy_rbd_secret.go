@@ -26,7 +26,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -152,17 +151,7 @@ func copyRBDSecretHandler(input *go_hook.HookInput) error {
 			},
 		}
 
-		unst, err := runtime.DefaultUnstructuredConverter.ToUnstructured(newSecret)
-		if err != nil {
-			return err
-		}
-		err = input.ObjectPatcher().CreateObject(
-			&unstructured.Unstructured{Object: unst},
-			"",
-		)
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.Create(newSecret)
 	}
 
 	return nil

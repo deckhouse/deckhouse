@@ -17,7 +17,6 @@ limitations under the License.
 package change_host_address
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -98,49 +97,20 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 		}
 
 		if podAddress.InitialHost == "" {
-			jsonMergePatch, err := initialHostPatch(podAddress.Host)
-			if err != nil {
-				return fmt.Errorf("cannot convert patch to json: %v", err)
+			patch := map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]interface{}{
+						initialHostAddressAnnotation: podAddress.Host,
+					},
+				},
 			}
-
-			err = input.ObjectPatcher().MergePatchObject(
-				/*patch*/ jsonMergePatch,
-				/*apiVersion*/ "v1",
-				/*kind*/ "Pod",
-				/*namespace*/ namespace,
-				/*name*/ podAddress.Name,
-				/*subresource*/ "",
-			)
-			if err != nil {
-				return fmt.Errorf("cannot patch pod %s/%s", namespace, podAddress.Name)
-			}
+			input.PatchCollector.MergePatch(patch, "v1", "Pod", namespace, podAddress.Name)
 			continue
 		}
 
 		if podAddress.InitialHost != podAddress.Host {
-			err := input.ObjectPatcher().DeleteObject(
-				/*apiVersion*/ "v1",
-				/*kind*/ "Pod",
-				/*namespace*/ namespace,
-				/*name*/ podAddress.Name,
-				/*subresource*/ "",
-			)
-			if err != nil {
-				return fmt.Errorf("cannot delete pod %s/%s", namespace, podAddress.Name)
-			}
+			input.PatchCollector.Delete("v1", "Pod", namespace, podAddress.Name)
 		}
 	}
 	return nil
-}
-
-func initialHostPatch(host string) ([]byte, error) {
-	patch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				initialHostAddressAnnotation: host,
-			},
-		},
-	}
-
-	return json.Marshal(patch)
 }

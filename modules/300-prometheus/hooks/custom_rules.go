@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -97,10 +98,7 @@ func customRulesHandler(input *go_hook.HookInput) error {
 	for _, ruleF := range rulesSnap {
 		rule := ruleF.(*CustomRule)
 		internalRule := createPrometheusRule(rule.Name, rule.Groups)
-		err := input.ObjectPatcher().CreateOrUpdateObject(&internalRule, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.Create(&internalRule, object_patch.UpdateIfExists())
 
 		tmpMap[internalRule.GetName()] = true
 	}
@@ -111,10 +109,7 @@ func customRulesHandler(input *go_hook.HookInput) error {
 	for _, sn := range internalRulesSnap {
 		internalRuleName := sn.(string)
 		if _, ok := tmpMap[internalRuleName]; !ok {
-			err := input.ObjectPatcher().DeleteObject("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", internalRuleName, "")
-			if err != nil {
-				return err
-			}
+			input.PatchCollector.Delete("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", internalRuleName)
 		}
 	}
 

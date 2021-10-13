@@ -83,18 +83,20 @@ func (hec *HookExecutionConfig) KubernetesResource(kind, namespace, name string)
 	return hec.kubernetesResource(kind, namespace, name)
 }
 
-func (hec *HookExecutionConfig) kubernetesResource(kind, namespace, name string) object_store.KubeObject {
-	resource := fake.Pluralize(kind)
+// TODO extract this GVR finder into github.com/flant/kube-client.
+func (hec *HookExecutionConfig) kubernetesResource(kindOrName, namespace, name string) object_store.KubeObject {
 	possibleGVR := make([]schema.GroupVersionResource, 0)
 
 	for _, group := range hec.fakeCluster.Discovery.Resources {
-		gvr := schema.GroupVersionResource{
-			Resource: resource,
-		}
-		for _, res := range group.APIResources {
-			if res.Kind == kind {
-				gvr.Version = res.Version
-				gvr.Group = res.Group
+		for _, apiResource := range group.APIResources {
+			if strings.EqualFold(apiResource.Kind, kindOrName) || strings.EqualFold(apiResource.Name, kindOrName) {
+				// ignore parse error, because FakeClusterResources should be valid
+				gv, _ := schema.ParseGroupVersion(group.GroupVersion)
+				gvr := schema.GroupVersionResource{
+					Resource: apiResource.Name,
+					Group:    gv.Group,
+					Version:  gv.Version,
+				}
 				possibleGVR = append(possibleGVR, gvr)
 				break
 			}

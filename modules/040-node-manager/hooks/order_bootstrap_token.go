@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,10 +173,7 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 
 	// Remove all expired tokens
 	for _, token := range expiredTokens {
-		err := input.ObjectPatcher().DeleteObjectInBackground("v1", "Secret", "kube-system", token.Name, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.Delete("v1", "Secret", "kube-system", token.Name, object_patch.InBackground())
 	}
 
 	// we don't want to keep tokens for deleted NodeGroups
@@ -200,14 +198,7 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 			tokenExpiration := time.Now().Add(4 * time.Hour)
 
 			newSecret := bootstrapTokenGenerateSecret(tokenID, tokenSecret, ng.Name, tokenExpiration)
-			obj, err := sdk.ToUnstructured(newSecret)
-			if err != nil {
-				return err
-			}
-			err = input.ObjectPatcher().CreateObject(obj, "")
-			if err != nil {
-				return err
-			}
+			input.PatchCollector.Create(newSecret)
 
 			input.Values.Set("nodeManager.internal.bootstrapTokens."+ng.Name, fmt.Sprintf("%s.%s", tokenID, tokenSecret))
 		}

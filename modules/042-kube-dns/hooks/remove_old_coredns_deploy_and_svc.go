@@ -21,6 +21,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -61,18 +62,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeKubeDNSDeployAndService)
 
 func removeKubeDNSDeployAndService(input *go_hook.HookInput) error {
-	err := input.ObjectPatcher().DeleteObjectNonCascading("apps/v1", "Deployment", "kube-system", "coredns", "")
-	if err != nil {
-		return err
-	}
+	input.PatchCollector.Delete("apps/v1", "Deployment", "kube-system", "coredns", object_patch.NonCascading())
 
 	kubeDNSSVCIsClusterIPTypeSnap := input.Snapshots["kube_dns_svc"]
 	if len(kubeDNSSVCIsClusterIPTypeSnap) > 0 {
 		if kubeDNSSVCIsClusterIPTypeSnap[0].(bool) {
-			err = input.ObjectPatcher().DeleteObject("v1", "Service", "kube-system", "kube-dns", "")
-			if err != nil {
-				return err
-			}
+			input.PatchCollector.Delete("v1", "Service", "kube-system", "kube-dns")
 		}
 	}
 

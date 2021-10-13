@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -236,17 +235,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 				"maxUsedControlPlaneKubernetesVersion": encoded,
 			},
 		}
-		data, _ := json.Marshal(patch)
-		err := input.ObjectPatcher().MergePatchObject(
-			data,
-			"v1", "Secret",
-			"kube-system",
-			"d8-cluster-configuration",
-			"",
-		)
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
 	}
 
 	if prevEffectiveVersion != "" && prevEffectiveVersion != resultStr {

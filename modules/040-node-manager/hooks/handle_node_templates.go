@@ -170,7 +170,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err := input.ObjectPatcher().FilterObject(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			nodeObj := new(v1.Node)
 			err := sdk.FromUnstructured(obj, nodeObj)
 			if err != nil {
@@ -188,11 +188,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			}
 			nodeObj.Status = v1.NodeStatus{}
 			return sdk.ToUnstructured(nodeObj)
-		}, "v1", "Node", "", node.Name, "")
-
-		if err != nil {
-			return err
-		}
+		}, "v1", "Node", "", node.Name)
 	}
 
 	return nil

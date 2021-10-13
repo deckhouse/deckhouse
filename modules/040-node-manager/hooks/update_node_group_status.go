@@ -25,6 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -341,7 +342,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 		instancesCount := instances[ngName]
 
-		patchData := updateStatusBuildPatch(
+		patch := buildUpdateStatusPatch(
 			nodesNum, readyNodesNum, uptodateNodesCount,
 			minPerZone, maxPerZone,
 			desiredMax, instancesCount,
@@ -349,26 +350,19 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 			lastMachineFailures,
 		)
 
-		err := input.ObjectPatcher().MergePatchObject(patchData,
-			"deckhouse.io/v1", "NodeGroup",
-			"", ngName,
-			"/status",
-		)
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", ngName, object_patch.WithSubresource("/status"))
 	}
 
 	return nil
 }
 
-func updateStatusBuildPatch(
+func buildUpdateStatusPatch(
 	nodesNum, readyNodesNum, uptodateNodesCount,
 	minPerZone, maxPerZone,
 	desiredMax, instancesNum int32,
 	nodeType ngv1.NodeType, statusMsg string,
 	lastMachineFailures []*v1alpha1.MachineSummary,
-) []byte {
+) interface{} {
 	ready := "True"
 	if len(statusMsg) > 0 {
 		ready = "False"
@@ -400,9 +394,7 @@ func updateStatusBuildPatch(
 		"status": patch,
 	}
 
-	data, _ := json.Marshal(statusPatch)
-
-	return data
+	return statusPatch
 }
 
 type statusNodeGroup struct {
