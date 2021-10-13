@@ -32,8 +32,7 @@ import (
 )
 
 const (
-	Namespace           = "d8-upmeter"
-	defaultStorageClass = "false" // `false` boolean parses as the string
+	Namespace = "d8-upmeter"
 )
 
 var (
@@ -105,7 +104,7 @@ func reschedule(input *go_hook.HookInput) error {
 
 	// Parse the state from values
 	statefulSets := snapshot.ParseStatefulSetSlice(input.Snapshots["statefulsets"])
-	state, err := getSmokeMiniState(input.Values.Get(statePath))
+	state, err := parseState(input.Values.Get(statePath))
 	if err != nil {
 		return err
 	}
@@ -150,8 +149,8 @@ func reschedule(input *go_hook.HookInput) error {
 	return nil
 }
 
-// getSmokeMiniState parses the state from values
-func getSmokeMiniState(stateValues gjson.Result) (scheduler.State, error) {
+// parseState parses the state from values
+func parseState(stateValues gjson.Result) (scheduler.State, error) {
 	var state scheduler.State
 	err := json.Unmarshal([]byte(stateValues.Raw), &state)
 	if err != nil {
@@ -173,7 +172,8 @@ func getK8sDefaultStorageClass(rs []go_hook.FilterResult) string {
 func parseAllowedDisruption(rs []go_hook.FilterResult) bool {
 	allowances := parseBoolSnapshot(rs)
 	if len(allowances) == 0 {
-		return false
+		// No PDB means any disruption allowed. Smoke-mini PDB could have been deleted on purpose.
+		return true
 	}
 	return allowances[0]
 }
@@ -195,13 +195,13 @@ func getSmokeMiniImage(values *go_hook.PatchableValues) string {
 	return registry + ":" + tag
 }
 
-func getSmokeMiniStorageClass(values *go_hook.PatchableValues, snapshot []go_hook.FilterResult) string {
+func getSmokeMiniStorageClass(values *go_hook.PatchableValues, storageClassSnap []go_hook.FilterResult) string {
 	var (
-		k8s = getK8sDefaultStorageClass(snapshot)
+		k8s = getK8sDefaultStorageClass(storageClassSnap)
 		d8  = values.Get("global.storageClass").String()
 		sm  = values.Get("upmeter.smokeMini.storageClass").String()
 	)
-	return firstNonEmpty(sm, d8, k8s, defaultStorageClass)
+	return firstNonEmpty(sm, d8, k8s, snapshot.DefaultStorageClass)
 }
 
 // firstNonEmpty returns first non-empty string. Returns empty string if no strings passed, or all

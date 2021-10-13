@@ -32,7 +32,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: smoke_mini_rescheduler ::", fun
 "upmeter":{
   "internal":{
     "smokeMini":{
-      "sts":{"a":{},"b":{},"c":{}}
+      "sts":{"a":{},"b":{},"c":{},"d":{},"e":{}}
     }
   }
 }}`, `{}`)
@@ -50,6 +50,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
+    failure-domain.beta.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -63,6 +64,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
+    failure-domain.beta.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -137,6 +139,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
+    failure-domain.beta.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -148,6 +151,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-2
+    failure-domain.beta.kubernetes.io/zone: nova
   name: node-a-2
 status:
   conditions:
@@ -222,6 +226,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
+    failure-domain.beta.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
@@ -303,6 +308,7 @@ kind: Node
 metadata:
   labels:
     kubernetes.io/hostname: node-a-1
+    failure-domain.beta.kubernetes.io/zone: nova
   name: node-a-1
 status:
   conditions:
