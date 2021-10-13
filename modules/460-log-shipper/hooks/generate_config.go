@@ -21,6 +21,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -215,7 +216,8 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 
 	if generatedPipelines == 0 {
 		input.Values.Set("logShipper.internal.activated", false)
-		return input.ObjectPatcher().DeleteObjectInBackground("v1", "Secret", "d8-log-shipper", "d8-log-shipper-config", "")
+		input.PatchCollector.Delete("v1", "Secret", "d8-log-shipper", "d8-log-shipper-config", object_patch.InBackground())
+		return nil
 	}
 
 	config, err := generator.GenerateConfig()
@@ -244,12 +246,8 @@ func handleClusterLogs(input *go_hook.HookInput) error {
 		Data: map[string][]byte{"vector.json": config},
 	}
 
-	un, err := sdk.ToUnstructured(secret)
-	if err != nil {
-		return err
-	}
-
-	return input.ObjectPatcher().CreateOrUpdateObject(un, "")
+	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+	return nil
 }
 
 func pipelinePartsFromClusterSource(generator *vector.LogConfigGenerator, destMap map[string]v1alpha1.ClusterLogDestination, sourceConfig *vector.ClusterLoggingConfig) (source impl.LogSource, transforms []impl.LogTransform, destinations []impl.LogDestination, err error) {

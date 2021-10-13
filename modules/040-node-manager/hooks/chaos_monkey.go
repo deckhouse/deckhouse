@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -131,14 +131,9 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err = input.ObjectPatcher().MergePatchObject(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
-		if err != nil {
-			return err
-		}
-		err = input.ObjectPatcher().DeleteObjectInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(victimAnnotationPatch, "machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name)
+
+		input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", victimMachine.Name, object_patch.InBackground())
 	}
 
 	return nil
@@ -268,13 +263,11 @@ type chaosNode struct {
 }
 
 var (
-	victimAnnotationPatch, _ = json.Marshal(
-		map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"node.deckhouse.io/chaos-monkey-victim": "",
-				},
+	victimAnnotationPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"node.deckhouse.io/chaos-monkey-victim": "",
 			},
 		},
-	)
+	}
 )

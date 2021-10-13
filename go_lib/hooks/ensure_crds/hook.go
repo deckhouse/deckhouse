@@ -28,6 +28,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/hashicorp/go-multierror"
 	yamlv3 "gopkg.in/yaml.v3"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -151,13 +152,8 @@ func putCRDToCluster(input *go_hook.HookInput, dc dependency.Container, crdYAML 
 		return fmt.Errorf("unsupported crd apiversion: %v", res.GetAPIVersion())
 	}
 
-	res, err = sdk.ToUnstructured(crd)
-	if err != nil {
-		return err
-	}
-
-	err = input.ObjectPatcher().CreateOrUpdateObject(res, "")
-	return err
+	input.PatchCollector.Create(crd, object_patch.UpdateIfExists())
+	return nil
 }
 
 func getCRDFromCluster(dc dependency.Container, crdName string) (*v1.CustomResourceDefinition, error) {

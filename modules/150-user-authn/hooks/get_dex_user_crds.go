@@ -17,13 +17,13 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
@@ -129,25 +129,13 @@ func getDexUsers(input *go_hook.HookInput) error {
 			continue
 		}
 
-		patch := map[string]interface{}{"status": expirePatch{ExpireAt: dexUser.ExpireAt}}
-
-		jsonMergePatch, err := json.Marshal(patch)
-		if err != nil {
-			return fmt.Errorf("cannot convert user status patch to json: %v", err)
-
+		patch := map[string]interface{}{
+			"status": expirePatch{
+				ExpireAt: dexUser.ExpireAt,
+			},
 		}
 
-		err = input.ObjectPatcher().MergePatchObject(
-			/*patch*/ jsonMergePatch,
-			/*apiVersion*/ "deckhouse.io/v1",
-			/*kind*/ "User",
-			/*namespace*/ "",
-			/*name*/ dexUser.Name,
-			/*subresource*/ "/status",
-		)
-		if err != nil {
-			return fmt.Errorf("cannot patch status for user %s: %s", dexUser.Name, err.Error())
-		}
+		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
 	input.Values.Set("userAuthn.internal.dexUsersCRDs", users)

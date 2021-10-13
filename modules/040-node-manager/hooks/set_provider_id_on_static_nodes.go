@@ -17,8 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	corev1 "k8s.io/api/core/v1"
@@ -81,21 +79,16 @@ func handleSetProviderID(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err := input.ObjectPatcher().MergePatchObject(staticPatch, "v1", "Node", "", node.Name, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(staticPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil
 }
 
 var (
-	staticPatch, _ = json.Marshal(
-		map[string]interface{}{
-			"spec": map[string]string{
-				"providerID": "static://",
-			},
+	staticPatch = map[string]interface{}{
+		"spec": map[string]string{
+			"providerID": "static://",
 		},
-	)
+	}
 )

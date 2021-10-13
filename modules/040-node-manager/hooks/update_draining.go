@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"io"
 	"sync"
 
@@ -125,19 +124,14 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
 			continue
 		}
-		err = input.ObjectPatcher().MergePatchObject(drainAnnotationsPatch, "v1", "Node", "", drainedNode.Name, "")
-		if err != nil {
-			input.LogEntry.Errorf("node drain patch failed: %s", err)
-			continue
-		}
-
+		input.PatchCollector.MergePatch(drainAnnotationsPatch, "v1", "Node", "", drainedNode.Name)
 	}
 
 	return nil
 }
 
 var (
-	drainAnnotations = map[string]interface{}{
+	drainAnnotationsPatch = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
 				"update.node.deckhouse.io/draining": nil,
@@ -145,8 +139,6 @@ var (
 			},
 		},
 	}
-
-	drainAnnotationsPatch, _ = json.Marshal(drainAnnotations)
 )
 
 type drainingNode struct {

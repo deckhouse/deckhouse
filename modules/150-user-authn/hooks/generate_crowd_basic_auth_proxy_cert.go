@@ -172,8 +172,9 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	if err != nil {
 		return err
 	}
-	// whatever the result is we have to delete the job
-	_ = input.ObjectPatcher().DeleteObject("batch/v1", "Job", proxyJobNS, proxyJobName, "")
+
+	// Postpone job deletion after hook execution.
+	input.PatchCollector.Delete("batch/v1", "Job", proxyJobNS, proxyJobName)
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") == "true" {
 		createdJob.Status.Conditions = []batchv1.JobCondition{{Type: batchv1.JobComplete, Status: corev1.ConditionTrue}}

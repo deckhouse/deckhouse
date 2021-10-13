@@ -27,6 +27,7 @@ import (
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -307,7 +308,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, errorMsg)
+				setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
 				continue
 			}
 
@@ -335,7 +336,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 
 				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
-				setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, errorMsg)
+				setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
 				continue
 			}
 
@@ -356,7 +357,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
 					input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 
-					setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, errorMsg)
+					setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, errorMsg)
 					continue
 				}
 			}
@@ -436,7 +437,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		ngForValues["updateEpoch"] = updateEpoch
 
 		// Reset status error for current NodeGroup.
-		setNodeGroupErrorStatus(input.ObjectPatcher(), nodeGroup.Name, "")
+		setNodeGroupErrorStatus(input.PatchCollector, nodeGroup.Name, "")
 
 		ngBytes, _ := cljson.Marshal(ngForValues)
 		finalNodeGroups = append(finalNodeGroups, json.RawMessage(ngBytes))
@@ -483,14 +484,13 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	return res
 }
 
-func setNodeGroupErrorStatus(patcher go_hook.ObjectPatcher, nodeGroupName, message string) {
-	statusErrorPatch, _ := json.Marshal(map[string]interface{}{
+func setNodeGroupErrorStatus(patcher *object_patch.PatchCollector, nodeGroupName, message string) {
+	statusErrorPatch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"error": message,
 		},
-	})
-	// Patches are deferred, error is always nil.
-	_ = patcher.MergePatchObject(statusErrorPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, "/status")
+	}
+	patcher.MergePatch(statusErrorPatch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
 }
 
 var epochTimestampAccessor = func() int64 {

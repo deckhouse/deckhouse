@@ -98,10 +98,7 @@ func handleRemoveCSI(input *go_hook.HookInput) error {
 			continue
 		}
 
-		err := input.ObjectPatcher().FilterObject(removeCSIFilterNode, "v1", "Node", "", csiName, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.Filter(removeCSIFilterNode, "v1", "Node", "", csiName)
 	}
 
 	return nil

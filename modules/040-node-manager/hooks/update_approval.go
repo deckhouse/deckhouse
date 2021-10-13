@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -197,10 +196,7 @@ ngLoop:
 			continue
 		}
 
-		err := input.ObjectPatcher().MergePatchObject(approvedPatch, "v1", "Node", "", approvedNodeName, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", approvedNodeName)
 		setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
 		ar.finished = true
 	}
@@ -209,16 +205,14 @@ ngLoop:
 }
 
 var (
-	approvedPatch, _ = json.Marshal(
-		map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"update.node.deckhouse.io/approved":             "",
-					"update.node.deckhouse.io/waiting-for-approval": nil,
-				},
+	approvedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             "",
+				"update.node.deckhouse.io/waiting-for-approval": nil,
 			},
 		},
-	)
+	}
 )
 
 // Approve disruption updates for NodeGroups with approvalMode == Automatic
@@ -280,13 +274,8 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			metricStatus = "DisruptionApproved"
 		}
 
-		patchData, _ := json.Marshal(patch)
-		err := input.ObjectPatcher().MergePatchObject(patchData, "v1", "Node", "", node.Name, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
-
 	}
 
 	return nil
@@ -334,11 +323,7 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 				"unschedulable": nil,
 			}
 		}
-		data, _ := json.Marshal(patch)
-		err := input.ObjectPatcher().MergePatchObject(data, "v1", "Node", "", node.Name, "")
-		if err != nil {
-			return err
-		}
+		input.PatchCollector.MergePatch(patch, "v1", "Node", "", node.Name)
 		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
 		ar.finished = true
 	}
