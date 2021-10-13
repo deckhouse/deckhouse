@@ -23,7 +23,7 @@ Suppose we have a VPA object:
 
 ```yaml
 ---
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: test2
@@ -60,7 +60,7 @@ resources:
 Suppose we have a VPA object:
 ```yaml
 ---
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: test2

@@ -23,7 +23,7 @@ kubectl describe vpa my-app-vpa
 
 ```yaml
 ---
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: test2
@@ -60,7 +60,7 @@ resources:
 У нас есть VPA объект:
 ```yaml
 ---
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: test2

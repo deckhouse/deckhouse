@@ -16,7 +16,7 @@ verticalPodAutoscaler: |
 ## Пример минимального CR `VerticalPodAutoscaler`
 
 ```yaml
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: my-app-vpa
@@ -30,7 +30,7 @@ spec:
 ## Пример полного CR `VerticalPodAutoscaler`
 
 ```yaml
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: my-app-vpa

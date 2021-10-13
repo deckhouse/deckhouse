@@ -57,7 +57,7 @@ spec:
     port: 80
     protocol: TCP
 ---
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
