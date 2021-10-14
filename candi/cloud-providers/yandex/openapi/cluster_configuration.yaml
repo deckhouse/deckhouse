@@ -42,6 +42,10 @@ apiVersions:
             additionalProperties: false
             required: [cores, memory, imageID]
             properties: &instanceClassProperties
+              platform:
+                description: |
+                  The type of virtual machine to create. The default is 'standard-v2'.
+                type: string
               cores:
                 description: |
                   Amount of CPU cores to provision on a Yandex Compute Instance.

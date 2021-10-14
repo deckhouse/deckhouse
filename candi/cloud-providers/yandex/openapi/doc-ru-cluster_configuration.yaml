@@ -41,6 +41,9 @@ apiVersions:
             additionalProperties: false
             required: [cores, memory, imageID]
             properties: &instanceClassProperties_ru
+              platform:
+                description: |
+                  Платформа виртуальной машины. По умолчанию 'standard-v2'.
               cores:
                 description: |
                   Количество ядер у создаваемых инстансов.
