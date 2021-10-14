@@ -264,32 +264,48 @@ func Test_filterByZone_selectZone(t *testing.T) {
 		},
 		// Case when two zones are equal, but the number of sts is odd. Sts should not migrate
 		{
-			name: "2Z 2N sts in one zones 2+3: zone is prioritized in alphabetical order (a)",
-			// dist A=2,B=3; demands A=1,B=-1, sts 'a' stays at zone A
+			name: "2Z 2N sts in zones 2+3: zone is prioritized in alphabetical order (a)",
+			// distributed as A=2,B=3; demands A=1,B=-1, sts 'a' stays at zone A
 			fields: fields{stateByZones("A", "A", "B", "B", "B")},
 			args:   args{nodes: []snapshot.Node{{Zone: "A"}, {Zone: "B"}}, x: "a"},
 			want:   "A",
 		},
 		{
-			name: "2Z 2N sts in one zones 2+3: zone is prioritized in alphabetical order (a)",
-			// dist A=A,B=3; demands A=1,B=-1, sts 'd' wants to zone A
+			name: "2Z 2N sts in zones 2+3: zone is prioritized in alphabetical order (a)",
+			// distributed as A=A,B=3; demands A=1,B=-1, sts 'd' wants to zone A
 			fields: fields{stateByZones("A", "A", "B", "B", "B")},
 			args:   args{nodes: []snapshot.Node{{Zone: "A"}, {Zone: "B"}}, x: "d"},
 			want:   "A",
 		},
 		{
-			name: "2Z 2N sts in one zones 3+2: zone is prioritized in alphabetical order (a)",
-			// dist A=3,B=2; demands A=0, B=0, sts 'a' stays at zone A
+			name: "2Z 2N sts in zones 3+2: zone is prioritized in alphabetical order (a)",
+			// distributed as A=3,B=2; demands A=0, B=0, sts 'a' stays at zone A
 			fields: fields{stateByZones("A", "A", "A", "B", "B")},
 			args:   args{nodes: []snapshot.Node{{Zone: "A"}, {Zone: "B"}}, x: "a"},
 			want:   "A",
 		},
 		{
-			name: "2Z 2N sts in one zones 3+2: zone is prioritized in alphabetical order (d)",
-			// dist A=3,B=2; demands A=0, B=0, sts 'd' stays at zone B
+			name: "2Z 2N sts in zones 3+2: zone is prioritized in alphabetical order (d)",
+			// distributed as A=3,B=2; demands A=0, B=0, sts 'd' stays at zone B
 			fields: fields{stateByZones("A", "A", "A", "B", "B")},
 			args:   args{nodes: []snapshot.Node{{Zone: "A"}, {Zone: "B"}}, x: "d"},
 			want:   "B",
+		},
+		{
+			name: "3Z 2N sts in zones 2+2+1: zone is prioritized in alphabetical order (d)",
+			// distributed as A=2,B=2,C=1; demands A=1, B=0, C=0,
+			// sts 'd' stays at zone B because it does not need to leave
+			fields: fields{stateByZones("A", "A", "B", "B", "C")},
+			args:   args{nodes: []snapshot.Node{{Zone: "A"}, {Zone: "B"}}, x: "d"},
+			want:   "B",
+		},
+		{
+			name: "3Z 2N sts in zones 2+2+1: zone is prioritized in alphabetical order (e)",
+			// distributed as A=2,B=2,C=1; demands A=1, B=0, C=0,
+			// sts 'e' moves to A because C is not present within nodes
+			fields: fields{stateByZones("A", "A", "B", "B", "C")},
+			args:   args{nodes: []snapshot.Node{{Zone: "A"}, {Zone: "B"}}, x: "e"},
+			want:   "A",
 		},
 	}
 	for _, tt := range tests {

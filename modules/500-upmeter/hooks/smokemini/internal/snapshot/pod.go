@@ -42,7 +42,7 @@ func NewPod(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 	sp := Pod{
 		Index:   IndexFromPodName(pod.GetName()).String(),
-		Node:    pod.Spec.NodeName, // node name and hostname are always equal
+		Node:    pod.Spec.NodeName, // node name and hostname are equal
 		Phase:   pod.Status.Phase,
 		Created: pod.CreationTimestamp.Time,
 	}

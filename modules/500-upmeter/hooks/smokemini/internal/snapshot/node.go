@@ -31,6 +31,8 @@ type Node struct {
 	Schedulable bool
 }
 
+const zoneLabelKey = "failure-domain.beta.kubernetes.io/zone"
+
 func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := new(v1.Node)
 	err := sdk.FromUnstructured(obj, node)
@@ -40,7 +42,7 @@ func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 	zone := defaultZone
 	labels := node.GetLabels()
-	if z, ok := labels["failure-domain.beta.kubernetes.io/zone"]; ok {
+	if z, ok := labels[zoneLabelKey]; ok {
 		zone = z
 	}
 
@@ -54,7 +56,7 @@ func NewNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	n := Node{
-		Name:        node.GetName(), // node name sand hostname are always equal
+		Name:        node.GetName(), // node name and hostname always equal
 		Zone:        zone,
 		Schedulable: !node.Spec.Unschedulable && isReady,
 	}

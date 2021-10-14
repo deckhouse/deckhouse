@@ -124,6 +124,10 @@ func (f *filterByZone) collect(nodes []snapshot.Node, spread func(int, []int) []
 		if !sts.scheduled() {
 			continue
 		}
+		if _, ok := zonesByName[sts.Zone]; !ok {
+			// If a zone is not deduced from nodes, it is out of consideration.
+			continue
+		}
 		zonesByName[sts.Zone].sts++
 	}
 
