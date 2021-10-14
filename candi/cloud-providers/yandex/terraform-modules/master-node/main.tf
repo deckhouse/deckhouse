@@ -31,38 +31,39 @@ locals {
     "ru-central1-c" = data.yandex_vpc_subnet.kube_c
   }
 
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
-  zones = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
-  subnets = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
+  actual_zones    = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
+  zones           = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", null) != null ? tolist(setintersection(local.actual_zones, var.providerClusterConfiguration.masterNodeGroup["zones"])) : local.actual_zones
+  subnets         = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
   internal_subnet = element(local.subnets, var.nodeIndex)
 
   // TODO apply external_subnet_id_from_ids to external_subnet_id directly after remove externalSubnetID
   external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? local.external_subnet_ids[var.nodeIndex] : null
 
-  external_subnet_id = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
-  external_ip_address = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
+  external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
+  external_ip_address        = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
   assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
 
 }
 
 resource "yandex_compute_disk" "kubernetes_data" {
-  name = join("-", [local.prefix, "kubernetes-data", var.nodeIndex])
+  name        = join("-", [local.prefix, "kubernetes-data", var.nodeIndex])
   description = "volume for etcd and kubernetes certs"
-  size = 10
-  zone = local.internal_subnet.zone
-  type = "network-ssd"
+  size        = 10
+  zone        = local.internal_subnet.zone
+  type        = "network-ssd"
 
   labels = local.additional_labels
 }
 
 resource "yandex_compute_instance" "master" {
-  name         = join("-", [local.prefix, "master", var.nodeIndex])
-  hostname     = join("-", [local.prefix, "master", var.nodeIndex])
-  zone         = local.internal_subnet.zone
+  name     = join("-", [local.prefix, "master", var.nodeIndex])
+  hostname = join("-", [local.prefix, "master", var.nodeIndex])
+  zone     = local.internal_subnet.zone
 
   allow_stopping_for_update = true
 
-  platform_id  = "standard-v2"
+  platform_id = local.platform
+
   resources {
     cores  = local.cores
     memory = local.memory
@@ -72,15 +73,15 @@ resource "yandex_compute_instance" "master" {
 
   boot_disk {
     initialize_params {
-      type = "network-ssd"
+      type     = "network-ssd"
       image_id = local.image_id
-      size = local.disk_size_gb
+      size     = local.disk_size_gb
 
     }
   }
 
   secondary_disk {
-    disk_id = yandex_compute_disk.kubernetes_data.id
+    disk_id     = yandex_compute_disk.kubernetes_data.id
     auto_delete = "false"
     device_name = "kubernetes-data"
   }
@@ -94,8 +95,8 @@ resource "yandex_compute_instance" "master" {
   }
 
   network_interface {
-    subnet_id = local.internal_subnet.id
-    nat       = local.assign_external_ip_address
+    subnet_id      = local.internal_subnet.id
+    nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address && (local.external_ip_address != "Auto") ? local.external_ip_address : null
   }
 
@@ -109,8 +110,8 @@ resource "yandex_compute_instance" "master" {
   }
 
   metadata = {
-    ssh-keys = "user:${local.ssh_public_key}"
-    user-data = base64decode(var.cloudConfig)
+    ssh-keys          = "user:${local.ssh_public_key}"
+    user-data         = base64decode(var.cloudConfig)
     node-network-cidr = local.node_network_cidr
   }
 }

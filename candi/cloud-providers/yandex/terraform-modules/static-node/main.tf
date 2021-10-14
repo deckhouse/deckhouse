@@ -31,40 +31,41 @@ locals {
     "ru-central1-c" = data.yandex_vpc_subnet.kube_c
   }
 
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
-  zones = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
-  subnets = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
+  actual_zones    = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
+  zones           = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
+  subnets         = length(local.zones) > 0 ? [for z in local.zones : local.zone_to_subnet[z]] : values(local.zone_to_subnet)
   internal_subnet = element(local.subnets, var.nodeIndex)
 
   // TODO apply external_subnet_id_from_ids to external_subnet_id directly after remove externalSubnetID
   external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? local.external_subnet_ids[var.nodeIndex] : null
 
-  external_subnet_id = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
+  external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
   assign_external_ip_address = (local.external_subnet_id == null) && (length(local.external_ip_addresses) > 0) ? true : false
-  external_ip = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
+  external_ip                = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
 }
 
 resource "yandex_compute_instance" "static" {
-  name         = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
-  hostname     = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
-  zone         = local.internal_subnet.zone
+  name     = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  hostname = join("-", [local.prefix, var.nodeGroupName, var.nodeIndex])
+  zone     = local.internal_subnet.zone
 
   allow_stopping_for_update = true
 
-  platform_id  = "standard-v2"
+  platform_id = local.platform
+
   resources {
-    cores  = local.cores
+    cores         = local.cores
     core_fraction = local.core_fraction
-    memory = local.memory
+    memory        = local.memory
   }
 
   labels = local.additional_labels
 
   boot_disk {
     initialize_params {
-      type = "network-ssd"
+      type     = "network-ssd"
       image_id = local.image_id
-      size = local.disk_size_gb
+      size     = local.disk_size_gb
     }
   }
 
@@ -77,8 +78,8 @@ resource "yandex_compute_instance" "static" {
   }
 
   network_interface {
-    subnet_id = local.internal_subnet.id
-    nat       = local.assign_external_ip_address
+    subnet_id      = local.internal_subnet.id
+    nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address && (local.external_ip != "Auto") ? local.external_ip : null
   }
 
@@ -92,8 +93,8 @@ resource "yandex_compute_instance" "static" {
   }
 
   metadata = {
-    ssh-keys = "user:${local.ssh_public_key}"
-    user-data = base64decode(var.cloudConfig)
+    ssh-keys          = "user:${local.ssh_public_key}"
+    user-data         = base64decode(var.cloudConfig)
     node-network-cidr = local.node_network_cidr
   }
 }
