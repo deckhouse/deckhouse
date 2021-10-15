@@ -111,7 +111,7 @@ Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44
 
 ## Environment requirements
 
-1. vSphere version required: `v7.0U2`.
+1. vSphere version required: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` work); 
 2. vCenter to which master nodes can connect to from within the cluster;
 3. Datacenter with the following components:
 
