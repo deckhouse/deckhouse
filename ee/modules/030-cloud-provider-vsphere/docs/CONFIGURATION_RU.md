@@ -110,7 +110,7 @@ cloudProviderVsphere: |
 
 ## Требования к окружениям
 
-1. Требования к версии vSphere: `v7.0U2`.
+1. Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
 2. vCenter, до которого есть доступ изнутри кластера с master-узлов.
 3. Создать Datacenter, в котором создать:
 
