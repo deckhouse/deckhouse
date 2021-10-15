@@ -31,6 +31,13 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
   setup:
+    - name: "Create modules.yml"
+      shell: |
+        export MODULES_DIR=/comparison
+        bash ./modules_list.sh 1>_data/modules.yaml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
     - name: "{{ .Env }} version. Merging modules of different releases"
       shell: |
         cp -rf /src/ee/modules /src >& /dev/null
@@ -163,4 +170,21 @@ git:
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
+- add: /
+  to: /comparison
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+  - ee/modules/**/docs/README.md
+- add: /ee/fe
+  to: /comparison/fe
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
 {{ tpl (.Files.Get "docs/documentation/werf-git-section.inc.yaml") . }}

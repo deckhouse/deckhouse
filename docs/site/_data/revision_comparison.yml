@@ -1,0 +1,151 @@
+sections:
+  - id: infrastructure
+    description:
+      en: Supported infrastructure
+      ru: Поддерживаемая инфраструктура
+    items:
+      # - id: anchor_id  (not required)
+      #   description:
+      #     en: Description in English
+      #     ru: Description in Russian
+      #   revision: (ce|ee|fe)
+      #   or
+      #   revision:
+      #     ce: true     each item can be true, partial or false
+      #     ee: partial
+      #     fe: false
+      #   hint:
+      #     ru: Hint in Russian (not required)
+      #     en: Hint in English (not required)
+      #   or
+      #   hint:
+      #     ce:
+      #       ru: Hint in Russian (not required)
+      #       en: Hint in English (not required)
+      #   footnote: (not required)
+      #     ce: true     each item can be true, partial or false
+      #     ee: false
+      - description:
+          en: Bare metal
+          ru: Bare metal
+        revision: ce
+        external_url:
+          en: https://deckhouse.io/en/gs/bm/step2.html
+          ru: https://deckhouse.io/ru/gs/bm/step2.html
+      - description:
+          en: Public cloud providers (AWS, Azure, GCP…)
+          ru: Публичные облака (AWS, Azure, GCP…)
+        revision: ce
+      - description:
+          en: OpenStack
+          ru: OpenStack
+        footnote:
+          ce: true
+        revision: ee
+        url: modules/030-cloud-provider-openstack/
+      - description:
+          en: VMware vSphere
+          ru: VMware vSphere
+        footnote:
+          ce: true
+        revision: ee
+        url: modules/030-cloud-provider-vsphere/
+  - id: features
+    description:
+      en: Supported features
+      ru: Поддерживаемые возможности
+    items:
+      - description:
+          en: Istio service mesh
+          ru: Istio service mesh
+        revision: ee
+        url: modules/110-istio/
+      - description:
+          en: Multitenancy
+          ru: Multitenancy
+        revision: ee
+      - description:
+          en: Enterprise-level security** <em>(coming soon)</em>
+          ru: Безопасность для enterprise** <em>(скоро появится)</em>
+        revision: ee
+      - description:
+          en: BGP support
+          ru: Поддержка BGP
+        revision: ee
+        url: modules/380-metallb/
+      - description:
+          en: Instant autoscaling*** <em>(coming soon)</em>
+          ru: Мгновенное автомасштабирование*** <em>(скоро появится)</em>
+        revision: ee
+      - description:
+          en: Local DNS caching
+          ru: Локальное DNS-кэширование
+        revision: ee
+        url: modules/350-node-local-dns/
+      - description:
+          en: Upgrades timeframe**** <em>(coming soon)</em>
+          ru: Время обновлений**** <em>(скоро появится)</em>
+        revision: ee
+      - description:
+          en: Experimental features
+          ru: Экспериментальные фичи
+        revision: ee
+        skipInDocumentation: true
+  - id: other
+    description:
+      en: Other
+      ru: Другое
+    items:
+      - description:
+          en: Open Source
+          ru: Open Source
+        revision:
+          ce: true
+          ee: partial
+          fe: partial
+        external_url:
+          en: https://deckhouse.io/en/about_us.html#open-source
+          ru: https://deckhouse.io/ru/about_us.html#open-source
+        hint:
+          ee:
+            en: limitations are applied
+            ru: с ограничениями
+          fe:
+            en: limitations are applied
+            ru: с ограничениями
+      - description:
+          en: Support
+          ru: Поддержка
+        revision: ee
+        hint:
+          ce:
+            en: from the community only
+            ru: только от сообщества
+          ee:
+            en: from Flant
+            ru: от «Фланта»
+          fe:
+            en: from Flant
+            ru: от «Фланта»
+      - description:
+          en: "Training & Consulting"
+          ru: Обучение и консультации
+        revision: ee
+        external_url:
+          en: https://deckhouse.io/en/services/training.html
+          ru: https://deckhouse.io/ru/services/training.html
+description:
+  ru: |
+    <em>* Установить Deckhouse Platform CE можно и на OpenStack и vSphere, но тогда эти платформы будут работать
+        как обычные bare metal-серверы. Не будет интеграции с облаками, т.е. виртуальные машины придется
+        создавать вручную, не будет автомасштабирования и т.д.</em><br/>
+    <em>** Включая интеграцию с Vault и зашифрованные секреты в etcd.</em><br/>
+    <em>*** Добавление новых Pod'ов/узлов ускоряется благодаря предварительно собранным образам.</em><br/>
+    <em>**** Настраиваемое окно времени для автоматических обновлений платформы.</em>
+  en: |
+    <em>* You can still install Deckhouse Platform CE on OpenStack and vSphere; however, in that case those
+        platforms will function as regular bare metal servers. There won't be any cloud integration, i.e. the
+        VMs are added manually, no autoscaling is provided, etc.</em><br/>
+    <em>** Including Vault integration and encrypted secrets in etcd.</em><br/>
+    <em>*** Accelerated new Pods/nodes adding thanks to fully prebuilt images.</em><br/>
+    <em>**** Selectable timeframe for automatic platform upgrades.</em>
