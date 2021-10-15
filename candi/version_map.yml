@@ -154,7 +154,7 @@ k8s:
               allowedPattern: ""
     ccm:
       openstack: v1.19.2
-      yandex: v0.19.3-fix.3
+      yandex: v0.21.3
       aws: b390ec15ea471adc8312b4528cf37814852b993e
       vsphere: v1.19.1
       azure: v0.6.0@sha256:8073113a20882642a980b338635cdc5945e5673a18aef192090e6fde2b89a75c
@@ -178,7 +178,7 @@ k8s:
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.20.1
-      yandex: v0.20.4
+      yandex: v0.21.3
       aws: 9e3808d53f0364178f2c40476ea368f3c5140d39
       vsphere: v1.20.0
       azure: v0.7.2@sha256:67d0dfedb0829c06a757357db744d438a2e79cb4f7fa956659264c77c05bbf66
@@ -202,7 +202,7 @@ k8s:
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.21.0
-      yandex: v0.21.2
+      yandex: v0.21.3
       aws: d31100461a83378b658b1ab2c689d79987a0d863
       vsphere: v1.20.0
       azure: v1.0.0@sha256:b31991b6056a879ddc15eac8d6f3025b4c3f1e86617f91d320b1dcba22db0217
