@@ -19,6 +19,10 @@ entries:
             en: Supported K8s & OS versions
             ru: Поддерживаемые версии K8s и ОС
           url: /supported_versions.html
+        - title:
+            en: Revision comparison
+            ru: Cравнение редакций
+          url: /revision-comparison.html
         - title: FAQ
           url: /deckhouse-faq.html
         - title:

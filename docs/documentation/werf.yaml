@@ -34,6 +34,12 @@ ansible:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
   setup:
+    - name: "Create modules.yml"
+      shell: |
+        ./modules_list.sh 1>_data/modules.yaml
+      args:
+        executable: /bin/bash
+        chdir: /srv/jekyll-data/documentation/
     - name: "{{ .Env }} version. Merging modules of different releases"
       shell: |
         cp -rf /src/ee/modules /src >& /dev/null
@@ -59,7 +65,6 @@ ansible:
           cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
           if [ $? -eq 0 ]; then
             # permalink is absent, add permalink
-            # PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$#index.html#' )"
             PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$##' )"
             sed -i "1apermalink: $PERMALINK" $i
           fi
@@ -123,6 +128,7 @@ git:
   includePaths:
     - site/_config.yml
     - site/_includes/head.html
+    - site/_data/revision_comparison.yml
     - site/Gemfile
     - site/Gemfile.lock
     - documentation

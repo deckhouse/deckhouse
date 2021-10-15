@@ -1,0 +1,189 @@
+{%- assign modules = site.data.modules.modules %}
+{%- assign maindata = site.data.revision_comparison %}
+{%- assign supported_img_url = '/images/icons/supported.svg' %}
+{%- assign notsupported_img_url = '/images/icons/not_supported.svg' %}
+{%- assign revision = 'fe' %}
+{%- if site.mode == 'local' and site.versionType %}
+{%- assign revision = site.versionType | downcase %}
+{%- endif %}
+
+<table markdown="0">
+<thead>
+    <tr>
+      <th style="text-align: center"></th>
+      <th style="text-align: center">CE</th>
+      <th style="text-align: center"><a style="color: #fff;" href="/{{ page.lang }}/products/enterprise_edition.html">EE</a></th>
+      <th style="text-align: center">Experimental</th>
+    </tr>
+</thead>
+<tbody>
+<tr>
+  <td style="font-size: 1.5em; text-align: left; font-weight:bold" colspan="3">{% if page.lang == 'ru' %}Модули{% else %}Modules{% endif %}
+  </td>
+</tr>
+{%- for module in modules %}
+{%- assign modulePath = module[1].path %}
+{%- assign moduleExternal = false %}
+
+{%- if revision == 'ce' and module[1].revision != 'ce' %}
+{%- assign moduleExternal = true %}
+{%- endif %}
+
+{%- if revision == 'ee' and module[1].revision == 'fe' %}
+{%- assign moduleExternal = true %}
+{%- endif %}
+
+{%- if moduleExternal %}
+{%- assign modulePath = module[1].path | prepend: '/documentation/' | prepend: page.lang | prepend: 'https://deckhouse.io/' %}
+{%- endif %}
+<tr>
+  <td style="text-align: left">
+    <a href="{{ modulePath }}">{{ module[0] }}</a>
+  </td>
+  <td style="text-align: center; width: 170px;">
+      {% if module[1].revision == 'ee' or module[1].revision == 'fe'  %}
+      <img src="{{ notsupported_img_url }}">
+      {% else %}
+      <img src="{{ supported_img_url }}">
+      {% endif %}
+  </td>
+  <td style="text-align: center; width: 170px;">
+      {% if module[1].revision == 'ee' or module[1].revision == 'ce'  %}
+      <img src="{{ supported_img_url }}">
+      {% else %}
+      <img src="{{ notsupported_img_url }}">
+      {% endif %}
+  </td>
+  <td style="text-align: center; width: 170px;">
+      <img src="{{ supported_img_url }}">
+  </td>
+</tr>
+{%- endfor %}
+
+{%- for section in maindata.sections %}
+<tr>
+  <td style="font-size: 1.5em; text-align: left; font-weight:bold" colspan="3">{{ section.description[page.lang] }}</td>
+</tr>
+{% for item in section.items %}
+{%- if item.skipInDocumentation and item.skipInDocumentation == true %}{% continue %}{% endif %}
+<tr>
+  <td style="text-align: left">
+  {%- if item.url %}
+  <a href="{{ item.url }}">{{  item.description[page.lang] }}</a>
+  {%- elsif item.external_url %}
+  <a href="{{ item.external_url[page.lang] }}">{{  item.description[page.lang] }}</a>
+  {%- else %}
+  {{ item.description[page.lang] }}
+  {%- endif %}
+  </td>
+  <td style="text-align: center; width: 170px;">
+    {% assign supported = false %}
+    {%- if item.revision.ce %}
+        {%- assign supported = item.revision.ce %}
+    {%- else %}
+        {%- if item.revision == 'ce' %}
+            {%- assign supported = true %}
+        {%- endif %}
+    {%- endif %}
+    <div>
+      {%- if item.footnote.ce and item.footnote.ce == true %}
+      <span class="table__asterisk">
+      {%- endif  %}
+
+      {%- case supported %}
+        {% when true %}
+          <img src="{{ supported_img_url }}" />
+        {% when 'partial' %}
+          <img src="{{ supported_img_url }}" /><img src="{{ notsupported_img_url }}" />
+        {% else %}
+          <img src="{{ notsupported_img_url }}" />
+      {%- endcase %}
+
+      {%- if item.footnote.ce and item.footnote.ce == true %}
+      </span>
+      {%- endif  %}
+      {%- if item.hint.ce %}
+        <br /><small>({{ item.hint.ce[page.lang] }})</small>
+      {%- elsif item.hint.ee or item.hint.fe %}
+        <br /><br />
+      {%- endif  %}
+    </div>
+  </td>
+  <td style="text-align: center; width: 170px;">
+        {% assign supported = false %}
+        {%- if item.revision.ee %}
+            {%- assign supported = item.revision.ee %}
+        {%- else %}
+            {%- if item.revision == 'ce' or item.revision == 'ee' %}
+                {%- assign supported = true %}
+            {%- endif %}
+        {%- endif %}
+        <div>
+          {%- if item.footnote.ee and item.footnote.ee == true %}
+          <span class="table__asterisk">
+          {%- endif  %}
+
+          {%- case supported %}
+            {% when true %}
+              <img src="{{ supported_img_url }}" />
+            {% when 'partial' %}
+              <img src="{{ supported_img_url }}" /><img src="{{ notsupported_img_url }}" />
+            {% else %}
+              <img src="{{ notsupported_img_url }}" />
+          {%- endcase %}
+
+          {%- if item.footnote.ee and item.footnote.ee == true %}
+          </span>
+          {%- endif  %}
+          {%- if item.hint.ee %}
+            <br><small>({{ item.hint.ee[page.lang] }})</small>
+          {%- elsif item.hint.ce or item.hint.fe %}
+            <br /><br />
+          {%- endif  %}
+        </div>
+  </td>
+  <td style="text-align: center; width: 170px;">
+        {% assign supported = false %}
+        {%- if item.revision.fe %}
+            {%- assign supported = item.revision.fe %}
+        {%- else %}
+            {%- if item.revision == 'ce' or item.revision == 'ee' or item.revision == 'fe' %}
+                {%- assign supported = true %}
+            {%- endif %}
+        {%- endif %}
+        <div>
+          {%- if item.footnote.fe and item.footnote.fe == true %}
+          <span class="table__asterisk">
+          {%- endif  %}
+
+          {%- case supported %}
+            {% when true %}
+              <img src="{{ supported_img_url }}" />
+            {% when 'partial' %}
+              <img src="{{ supported_img_url }}" /><img src="{{ notsupported_img_url }}" />
+            {% else %}
+              <img src="{{ notsupported_img_url }}" />
+          {%- endcase %}
+
+          {%- if item.footnote.fe and item.footnote.fe == true %}
+          </span>
+          {%- endif  %}
+          {%- if item.hint.fe %}
+            <br><small>({{ item.hint.fe[page.lang] }})</small>
+          {%- elsif item.hint.ce or item.hint.ee %}
+            <br /><br />
+          {%- endif  %}
+        </div>
+  </td>
+</tr>
+{%- endfor %}
+{%- endfor %}
+
+</tbody>
+</table>
+
+<p style="max-width: 740px; margin-top: 25px; font-size: 0.9em;" markdown="0">
+{{ site.data.revision_comparison.description[page.lang] }}
+</p>
+
+
