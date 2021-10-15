@@ -40,11 +40,9 @@ func CreateEmptyFile(path string) error {
 }
 
 func TouchFile(path string) error {
-	err := CreateEmptyFile(path)
-
-	if err != nil && os.IsExist(err) {
-		return nil
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return CreateEmptyFile(path)
 	}
 
-	return err
+	return nil
 }
