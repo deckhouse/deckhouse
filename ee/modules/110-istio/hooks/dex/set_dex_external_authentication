@@ -16,7 +16,6 @@ function __main__() {
       values::set istio.auth.externalAuthentication '{}'
       values::set istio.auth.externalAuthentication.authURL "https://istio-dex-authenticator.d8-istio.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
       values::set istio.auth.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
-      values::set istio.auth.externalAuthentication.useBearerTokens "true"
       values::set istio.internal.deployDexAuthenticator "true"
     else
       values::unset istio.internal.deployDexAuthenticator

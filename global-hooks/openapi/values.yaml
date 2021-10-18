@@ -35,6 +35,9 @@ properties:
     type: object
     default: {}
     properties:
+      clusterUUID:
+        type: string
+        x-examples: [deadbeef-4bda-11ec-81d3-0242ac130003]
       clusterDomain:
         type: string
         x-examples: [test]

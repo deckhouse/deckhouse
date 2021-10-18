@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -35,9 +36,25 @@ var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false)
 
+	Context("Empty cluster and minimal settings", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+
+			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("istio.internal.multiclusters").String()).To(MatchJSON(`[]`))
+			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`{}`))
+			Expect(f.ValuesGet("istio.internal.multiclustersNeedIngressGateway").Bool()).To(BeFalse())
+		})
+	})
+
 	Context("Federations and Multiclusters with different cache fullfillment", func() {
 		BeforeEach(func() {
-			f.ValuesSet(`istio.federation.enabled`, true)
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -58,8 +75,9 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "aaa", "port": 222}
+    private:
+      ingressGateways:
+      - {"address": "aaa", "port": 222}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -70,8 +88,9 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    publicServices:
-    - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}]}
+    private:
+      publicServices:
+      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.0"}
     public:
       clusterUUID: aaa-bbb-f2
       rootCA: abc-f2
@@ -86,10 +105,11 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "bbb", "port": 222}
-    publicServices:
-    - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+    private:
+      ingressGateways:
+      - {"address": "bbb", "port": 222}
+      publicServices:
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}], "virtualIP": "169.0.0.1"}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -104,11 +124,12 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "ccc", "port": 222}
-    publicServices:
-    - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
-    - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]}
+    private:
+      ingressGateways:
+      - {"address": "ccc", "port": 222}
+      publicServices:
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.2"}
+      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}], "virtualIP": "169.0.0.3"}
     public:
       clusterUUID: aaa-bbb-f4
       rootCA: abc-f4
@@ -123,13 +144,34 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways: []
-    publicServices:
-    - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+    private:
+      ingressGateways: []
+      publicServices:
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}], "virtualIP": "169.0.0.3"}
     public:
       clusterUUID: aaa-bbb-f5
       rootCA: abc-f5
       authnKeyPub: xyz-f5
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: federation-full-no-virtualip-0
+spec:
+  trustDomain: "f5"
+  metadataEndpoint: "https://some-proper-host/"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "ccc", "port": 222}
+      publicServices:
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.2"}
+      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]} # no virtualIP, federation should be skipped
+    public:
+      clusterUUID: aaa-bbb-f4
+      rootCA: abc-f4
+      authnKeyPub: xyz-f4
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -140,10 +182,11 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "ddd", "port": 333}
-    apiHost: istio-api-0.example.com
-    networkName: network-qqq-123
+    private:
+      ingressGateways:
+      - {"address": "ddd", "port": 333}
+      apiHost: istio-api-0.example.com
+      networkName: network-qqq-123
     public:
       clusterUUID: aaa-bbb-m0
       rootCA: abc-m0
@@ -158,8 +201,9 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    apiHost: istio-api-1.example.com
-    networkName: network-xxx-123
+    private:
+      apiHost: istio-api-1.example.com
+      networkName: network-xxx-123
     public:
       clusterUUID: aaa-bbb-m1
       rootCA: abc-m1
@@ -188,8 +232,9 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    apiHost: istio-api.example.com
-    networkName: network-qqq-123
+    private:
+      apiHost: istio-api.example.com
+      networkName: network-qqq-123
     public:
       clusterUUID: aaa-bbb-m3
       rootCA: abc-m3
@@ -204,9 +249,10 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways: []
-    apiHost: istio-api.example.com
-    networkName: network-qqq-123
+    private:
+      ingressGateways: []
+      apiHost: istio-api.example.com
+      networkName: network-qqq-123
     public:
       clusterUUID: aaa-bbb-m4
       rootCA: abc-m4
@@ -221,9 +267,10 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "ddd", "port": 333}
-    networkName: network-qqq-123
+    private:
+      ingressGateways:
+      - {"address": "ddd", "port": 333}
+      networkName: network-qqq-123
     public:
       clusterUUID: aaa-bbb-m5
       rootCA: abc-m5
@@ -238,9 +285,10 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "ddd", "port": 333}
-    apiHost: istio-api.example.com
+    private:
+      ingressGateways:
+      - {"address": "ddd", "port": 333}
+      apiHost: istio-api.example.com
     public:
       clusterUUID: aaa-bbb-m6
       rootCA: abc-m6
@@ -255,19 +303,17 @@ spec:
   metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
-    ingressGateways:
-    - {"address": "ddd", "port": 333}
-    apiHost: istio-api.example.com
-    networkName: network-qqq-123
+    private:
+      ingressGateways:
+      - {"address": "ddd", "port": 333}
+      apiHost: istio-api.example.com
+      networkName: network-qqq-123
 `))
 			f.RunHook()
 		})
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
-			stderrBuff := string(f.Session.Err.Contents())
-			Expect(stderrBuff).To(Equal(""))
 
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`
 [
@@ -282,7 +328,7 @@ status:
             "publicServices": [
               {
                 "hostname": "bbb",
-                "virtualIP": "169.254.0.1",
+                "virtualIP": "169.0.0.1",
                 "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
               }
             ],
@@ -300,12 +346,12 @@ status:
             "publicServices": [
               {
                 "hostname": "ccc",
-                "virtualIP": "169.254.0.2",
+                "virtualIP": "169.0.0.2",
                 "ports": [{"name": "ppp", "port": 123}]
               },
               {
                 "hostname": "ddd",
-                "virtualIP": "169.254.0.3",
+                "virtualIP": "169.0.0.3",
                 "ports": [{"name": "xxx", "port": 555}]
               }
             ],
@@ -364,23 +410,38 @@ status:
 			expM0Date := time.Unix(tokenM0Payload.Exp, 0)
 
 			Expect(nbfM0Date).Should(BeTemporally("~", time.Now().UTC(), 25*time.Second))
-			Expect(expM0Date).Should(BeTemporally("~", time.Now().Add(8760*time.Hour).UTC(), 25*time.Second))
+			Expect(expM0Date).Should(BeTemporally("~", time.Now().Add(25*time.Hour).UTC(), 25*time.Second))
 
 			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`
 		{
-		  "aaa-bbb-f2": {"rootCA": "abc-f2", "authnKeyPub": "xyz-f2"},
-		  "aaa-bbb-f3": {"rootCA": "abc-f3", "authnKeyPub": "xyz-f3"},
-		  "aaa-bbb-f4": {"rootCA": "abc-f4", "authnKeyPub": "xyz-f4"},
-		  "aaa-bbb-f5": {"rootCA": "abc-f5", "authnKeyPub": "xyz-f5"},
-		  "aaa-bbb-m0": {"rootCA": "abc-m0", "authnKeyPub": "xyz-m0"},
-		  "aaa-bbb-m1": {"rootCA": "abc-m1", "authnKeyPub": "xyz-m1"},
-		  "aaa-bbb-m2": {"rootCA": "abc-m2", "authnKeyPub": "xyz-m2"},
-		  "aaa-bbb-m3": {"rootCA": "abc-m3", "authnKeyPub": "xyz-m3"},
-		  "aaa-bbb-m4": {"rootCA": "abc-m4", "authnKeyPub": "xyz-m4"},
-		  "aaa-bbb-m5": {"rootCA": "abc-m5", "authnKeyPub": "xyz-m5"},
-		  "aaa-bbb-m6": {"rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
+		  "aaa-bbb-f2": {"clusterUUID": "aaa-bbb-f2", "rootCA": "abc-f2", "authnKeyPub": "xyz-f2"},
+		  "aaa-bbb-f3": {"clusterUUID": "aaa-bbb-f3", "rootCA": "abc-f3", "authnKeyPub": "xyz-f3"},
+		  "aaa-bbb-f4": {"clusterUUID": "aaa-bbb-f4", "rootCA": "abc-f4", "authnKeyPub": "xyz-f4"},
+		  "aaa-bbb-f5": {"clusterUUID": "aaa-bbb-f5", "rootCA": "abc-f5", "authnKeyPub": "xyz-f5"},
+		  "aaa-bbb-m0": {"clusterUUID": "aaa-bbb-m0", "rootCA": "abc-m0", "authnKeyPub": "xyz-m0"},
+		  "aaa-bbb-m1": {"clusterUUID": "aaa-bbb-m1", "rootCA": "abc-m1", "authnKeyPub": "xyz-m1"},
+		  "aaa-bbb-m2": {"clusterUUID": "aaa-bbb-m2", "rootCA": "abc-m2", "authnKeyPub": "xyz-m2"},
+		  "aaa-bbb-m3": {"clusterUUID": "aaa-bbb-m3", "rootCA": "abc-m3", "authnKeyPub": "xyz-m3"},
+		  "aaa-bbb-m4": {"clusterUUID": "aaa-bbb-m4", "rootCA": "abc-m4", "authnKeyPub": "xyz-m4"},
+		  "aaa-bbb-m5": {"clusterUUID": "aaa-bbb-m5", "rootCA": "abc-m5", "authnKeyPub": "xyz-m5"},
+		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
 		}
 `))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("virtualIP wasn't set for publicService ddd of IstioFederation federation-full-no-virtualip-0"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
+
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-networkname wasn't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
+			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
+
+			// there should be 11 log messages
+			Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(11))
 		})
 	})
 })

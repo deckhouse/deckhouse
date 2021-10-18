@@ -41,9 +41,6 @@ var _ = Describe("Istio hooks :: alliance_generate_authn_keypair ::", func() {
 			pubBlock, _ := pem.Decode([]byte(pubString))
 			_, err1 := x509.ParsePKIXPublicKey(pubBlock.Bytes)
 			Expect(err1).To(BeNil())
-
-			stderrBuff := string(f.Session.Err.Contents())
-			Expect(stderrBuff).To(Equal(""))
 		})
 	})
 
@@ -68,9 +65,6 @@ data:
 
 			Expect(f.ValuesGet("istio.internal.remoteAuthnKeypair.pub").String()).To(Equal("aaa"))
 			Expect(f.ValuesGet("istio.internal.remoteAuthnKeypair.priv").String()).To(Equal("bbb"))
-
-			stderrBuff := string(f.Session.Err.Contents())
-			Expect(stderrBuff).To(Equal(""))
 		})
 	})
 })
