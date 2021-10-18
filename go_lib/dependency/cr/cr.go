@@ -17,9 +17,14 @@ limitations under the License.
 package cr
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -38,11 +43,13 @@ type Client interface {
 type client struct {
 	registryURL string
 	authConfig  authn.AuthConfig
+	ca          string
+	isHTTP      bool
 }
 
-// NewClient creates container registry client using `repo` as prefix fo tags passed to methods.
+// NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo string) (Client, error) {
+func NewClient(repo, ca string, isHTTP bool) (Client, error) {
 	authConfig, err := readAuthConfig("/etc/registrysecret/.dockerconfigjson")
 	if err != nil {
 		return nil, err
@@ -51,6 +58,8 @@ func NewClient(repo string) (Client, error) {
 	r := &client{
 		registryURL: repo,
 		authConfig:  authConfig,
+		ca:          ca,
+		isHTTP:      isHTTP,
 	}
 
 	return r, nil
@@ -58,7 +67,13 @@ func NewClient(repo string) (Client, error) {
 
 func (r *client) Image(tag string) (v1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
-	ref, err := name.ParseReference(imageURL) // parse options available: weak validation, etc.
+
+	var nameOpts []name.Option
+	if r.isHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +81,7 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	return remote.Image(
 		ref,
 		remote.WithAuth(authn.FromConfig(r.authConfig)),
-		// remote.WithTransport(GetHTTPTransport()),
+		remote.WithTransport(GetHTTPTransport(r.ca)),
 	)
 }
 
@@ -102,4 +117,30 @@ func readAuthConfig(configPath string) (authn.AuthConfig, error) {
 	}
 
 	return authn.AuthConfig{}, fmt.Errorf("no auth data")
+}
+
+func GetHTTPTransport(ca string) (transport http.RoundTripper) {
+	if ca == "" {
+		return http.DefaultTransport
+	}
+	caPool, err := x509.SystemCertPool()
+	if err != nil {
+		panic(fmt.Errorf("cannot get system cert pool: %v", err))
+	}
+
+	caPool.AppendCertsFromPEM([]byte(ca))
+
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{RootCAs: caPool},
+		TLSNextProto:          make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+	}
 }

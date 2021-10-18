@@ -18,11 +18,27 @@
 {{- /*
 # Bashible framework uses jq for many operations, so jq must be installed in the first step of node bootstrap.
 # But there is no package jq in centos/redhat (the jq package is located in the epel repository).
-# We need to install jq from registry packages. But library for install packages requires jq.
+# We need to install jq from packages registry. But library for install packages requires jq.
 # To avoid this problem we use modified version of registry package helper functions, with python instead of jq.
+
+# If package registry uses self-signed certificate, we need to pass ca certificate to curl to verify certificate passed
+# from registry. But we cannot pass ca certificate to bootstrap script due to to size limitation of cloud-init scripts in some cloud providers (AWS<=16kb).
+# Instead we pass -k (insecure) flag to curl as workaround solution.
+
+# Now we render bootstrap with helm and parse registry.path and registry.dockerCfg to get registry host and auth credentials by unclear way.
+# Later, we plan render bootstrap with bashible-apiserver and use registry.host and registry.auth variables.
+# https://github.com/deckhouse/deckhouse/issues/143
 */}}
+REGISTRY_ADDRESS="{{ .registry.address }}"
+SCHEME="{{ .registry.scheme }}"
+REGISTRY_PATH="{{ .registry.path }}"
+{{- if .registry.auth }}
+REGISTRY_AUTH="$(base64 -d <<< {{ .registry.auth }})"
+{{- else }}
+REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); parsed["auths"]["'${REGISTRY_ADDRESS}'"].setdefault("auth", ""); print(parsed["auths"]["'${REGISTRY_ADDRESS}'"]["auth"]);' | base64 -d)"
+{{- end }}
 BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-BB_RP_PREFIX="deckhouse/binaries"
+BB_RP_PREFIX="${REGISTRY_PATH%/*}/binaries"
 {{- /*
 # check if image installed
 # bb-rp-is-installed? image tag
@@ -51,10 +67,13 @@ bb-rp-get-token() {
     AUTH="-u ${REGISTRY_AUTH}"
   fi
 
-  AUTH_HEADER="$(curl -sSLi "https://${REGISTRY}/v2/" | grep -i "www-authenticate")"
+  AUTH_HEADER="$(curl --retry 3 -k -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
   AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
-  curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX}/${1}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
+{{- /*
+  # Remove leading / from BB_RP_PREFIX due to scope format -> scope=repository:sys/binaries/jq:pull
+*/}}
+  curl --retry 3 -k -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX#/}/${1}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
 }
 {{- /*
 # fetch manifest from registry and get list of digests
@@ -63,10 +82,10 @@ bb-rp-get-token() {
 bb-rp-get-digests() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token "${1}")"
-  curl -fsSL \
+  curl --retry 3 -k -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/manifests/${2}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); [sys.stdout.write(layer["digest"]) for layer in parsed["layers"]]'
+			"${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/manifests/${2}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); [sys.stdout.write(layer["digest"]) for layer in parsed["layers"]]'
 }
 {{- /*
 # Fetch digest from registry
@@ -75,7 +94,7 @@ bb-rp-get-digests() {
 bb-rp-fetch-digest() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token "${1}")"
-  curl -sSLH "Authorization: Bearer ${TOKEN}" "https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
+  curl --retry 3 -k -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
 }
 {{- /*
 # download image digests, unpack them and run install script
@@ -122,22 +141,9 @@ bb-rp-install() {
   shopt -s failglob
 }
 {{- /*
-# Now we render bootstrap with helm and parse registry.path and registry.dockerCfg to get registry host and auth credentials by unclear way.
-# Later, we plan render bootstrap with bashible-apiserver and use registry.host and registry.auth variables.
-# https://github.com/deckhouse/deckhouse/issues/143
+# IMPORTANT !!! Do not remove this line, because in Centos/Redhat when dhctl bootstraps the cluster /usr/local/bin not in PATH.
 */}}
-{{- if .registry }}
-  {{- if .registry.host }}
-REGISTRY="{{ .registry.host }}"
-  {{- else }}
-REGISTRY="$(cut -d "/" -f1 <<< "{{ .registry.path }}")"
-  {{- end }}
-  {{- if .registry.auth }}
-REGISTRY_AUTH="$(base64 -d <<< {{ .registry.auth }})"
-  {{- else }}
-REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); parsed["auths"]["'${REGISTRY}'"].setdefault("auth", ""); print(parsed["auths"]["'${REGISTRY}'"]["auth"]);' | base64 -d)"
-  {{- end }}
-{{- end }}
+export PATH="/usr/local/bin:$PATH"
 
 . /etc/os-release
 

@@ -13,7 +13,8 @@
 # limitations under the License.
 
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
-bb-var BB_RP_PREFIX "deckhouse/binaries"
+# shellcheck disable=SC2153
+bb-var BB_RP_PREFIX "${REGISTRY_PATH%/*}/binaries"
 
 # check if image installed
 # bb-rp-is-installed? image tag
@@ -40,11 +41,12 @@ bb-rp-is-installed?() {
     AUTH="-u ${REGISTRY_AUTH}"
   fi
 
-  AUTH_HEADER="$(curl -sSLi "https://${REGISTRY}/v2/" | grep -i "www-authenticate")"
+  AUTH_HEADER="$(curl --retry 3 -sSLi "${SCHEME}://${REGISTRY_ADDRESS}/v2/" | grep -i "www-authenticate")"
   AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
   AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
   # shellcheck disable=SC2086
-  curl -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX}/${1}:pull" | jq -r '.token'
+  # Remove leading / from BB_RP_PREFIX due to scope format -> scope=repository:sys/binaries/jq:pull
+  curl --retry 3 -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX#/}/${1}:pull" | jq -r '.token'
 }
 
 # fetch manifest from registry and get list of digests
@@ -52,10 +54,10 @@ bb-rp-is-installed?() {
 bb-rp-get-digests() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token "${1}")"
-  curl -fsSL \
+  curl --retry 3 -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/manifests/${2}" | jq -r '.layers[].digest'
+			"${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/manifests/${2}" | jq -r '.layers[].digest'
 }
 
 # Fetch digest from registry
@@ -63,7 +65,7 @@ bb-rp-get-digests() {
 bb-rp-fetch-digest() {
   local TOKEN=""
   TOKEN="$(bb-rp-get-token "${1}")"
-  curl -sSLH "Authorization: Bearer ${TOKEN}" "https://${REGISTRY}/v2/${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
+  curl --retry 3 -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
 }
 
 # download image digests, unpack them and run install script

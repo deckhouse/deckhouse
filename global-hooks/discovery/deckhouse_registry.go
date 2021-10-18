@@ -32,6 +32,14 @@ const (
 	imageModulesD8RegistryConfSnap = "d8_registry_secret"
 )
 
+type registrySecret struct {
+	RegistryDockercfg []byte
+	Address           string
+	Path              string
+	Scheme            string
+	CA                string
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -76,7 +84,7 @@ func applyD8ImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	// get it from deckhouse image
 	image := deployment.Spec.Template.Spec.Containers[0].Image
 	// remove branch or channel
-	image = strings.Split(image, ":")[0]
+	image = image[:strings.LastIndex(image, ":")]
 	// dev-deckhouse image is 'dev' name . remove it
 	// because stages is in repo
 	image = strings.TrimSuffix(image, "/dev")
@@ -86,17 +94,34 @@ func applyD8ImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
+
+	ret := &registrySecret{}
+
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
 		return nil, err
 	}
 
 	registryCnf, ok := secret.Data[".dockerconfigjson"]
+
 	if !ok {
 		return nil, fmt.Errorf("not deckhouse found docker config in secret")
 	}
+	ret.RegistryDockercfg = registryCnf
 
-	return registryCnf, nil
+	ret.Address = string(secret.Data["address"])
+	ret.Path = string(secret.Data["path"])
+
+	var scheme []byte
+	scheme, ok = secret.Data["scheme"]
+	if !ok {
+		scheme = []byte("https")
+	}
+	ret.Scheme = string(scheme)
+
+	ret.CA = string(secret.Data["ca"])
+
+	return ret, nil
 }
 
 func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
@@ -111,13 +136,29 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 		return fmt.Errorf("not found deckhouse registry conf secret")
 	}
 
-	registryConfRaw := registryConfSnap[0].([]byte)
+	registrySecretRaw := registryConfSnap[0].(*registrySecret)
 	// yes, we store base64 encoded string but in secret object store decoded data
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
-	registryConfEncoded := base64.StdEncoding.EncodeToString(registryConfRaw)
+	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
-	input.Values.Set("global.modulesImages.registry", registrySnap[0].(string))
+	// construct registry parameter from registryAddress and registryPath, if set.
+	// if registryAddress and registryPath are unset, fill it from d8 deployment image paramater.
+	registry := registrySnap[0].(string)
+
+	if registrySecretRaw.Address == "" {
+		parts := strings.SplitN(registry, "/", 2)
+		registrySecretRaw.Address = parts[0]
+		if len(parts) == 2 {
+			registrySecretRaw.Path = fmt.Sprintf("/%s", parts[1])
+		}
+	}
+
+	// TODO in later releases we can remove `global.modulesImages.registry` and use combination of `registryAddress` and `registryPath`
+	input.Values.Set("global.modulesImages.registry", registry)
 	input.Values.Set("global.modulesImages.registryDockercfg", registryConfEncoded)
-
+	input.Values.Set("global.modulesImages.registryScheme", registrySecretRaw.Scheme)
+	input.Values.Set("global.modulesImages.registryCA", registrySecretRaw.CA)
+	input.Values.Set("global.modulesImages.registryAddress", registrySecretRaw.Address)
+	input.Values.Set("global.modulesImages.registryPath", registrySecretRaw.Path)
 	return nil
 }

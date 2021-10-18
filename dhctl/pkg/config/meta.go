@@ -49,10 +49,19 @@ type MetaConfig struct {
 
 	VersionMap map[string]interface{} `json:"-"`
 	Images     ImagesTags             `json:"-"`
+	Registry   RegistryData           `json:"-"`
 	UUID       string                 `json:"clusterUUID,omitempty"`
 }
 
 type ImagesTags map[string]map[string]interface{}
+
+type RegistryData struct {
+	Address   string `json:"address"`
+	Path      string `json:"path"`
+	Scheme    string `json:"scheme"`
+	CA        string `json:"ca"`
+	DockerCfg string `json:"dockerCfg"`
+}
 
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare() (*MetaConfig, error) {
@@ -102,6 +111,16 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		if err := json.Unmarshal(nodeGroups, &m.TerraNodeGroupSpecs); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
 		}
+	}
+
+	m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
+	m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
+	m.Registry.CA = m.DeckhouseConfig.RegistryCA
+
+	parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
+	m.Registry.Address = parts[0]
+	if len(parts) == 2 {
+		m.Registry.Path = fmt.Sprintf("/%s", parts[1])
 	}
 
 	return m, nil
@@ -294,10 +313,10 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	images := make(map[string]interface{})
 	if app.DontUsePublicControlPlaneImages {
 		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
-		images["etcd"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["etcd"])
-		images["kube-apiserver"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserver"+k8s])
-		images["kube-controller-manager"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeControllerManager"+k8s])
-		images["kube-scheduler"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeScheduler"+k8s])
+		images["etcd"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["etcd"])
+		images["kube-apiserver"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["kubeApiserver"+k8s])
+		images["kube-controller-manager"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["kubeControllerManager"+k8s])
+		images["kube-scheduler"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["kubeScheduler"+k8s])
 	}
 
 	images["kube-apiserver-healthcheck"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserverHealthcheck"])
@@ -486,14 +505,11 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 	}
 
 	var (
-		registryHost string
 		registryAuth string
 		dc           dockerCfg
 	)
 
-	registryHost = strings.Split(m.DeckhouseConfig.ImagesRepo, "/")[0]
-
-	bytes, err := base64.StdEncoding.DecodeString(m.DeckhouseConfig.RegistryDockerCfg)
+	bytes, err := base64.StdEncoding.DecodeString(m.Registry.DockerCfg)
 	if err != nil {
 		return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
 	}
@@ -503,11 +519,14 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
 	}
 
-	if registry, ok := dc.Auths[registryHost]; ok {
+	if registry, ok := dc.Auths[m.Registry.Address]; ok {
 		registryAuth = registry.Auth
 	}
 
-	return map[string]interface{}{"host": registryHost, "auth": registryAuth}, nil
+	ret := m.Registry.ConvertToMap()
+	ret["auth"] = registryAuth
+
+	return ret, nil
 }
 
 func (m *MetaConfig) LoadImagesTags(filename string) error {
@@ -526,6 +545,15 @@ func (m *MetaConfig) LoadImagesTags(filename string) error {
 	m.Images = imagesTags
 
 	return nil
+}
+
+func (r *RegistryData) ConvertToMap() map[string]interface{} {
+	ret := make(map[string]interface{})
+	ret["address"] = r.Address
+	ret["path"] = r.Path
+	ret["scheme"] = r.Scheme
+	ret["ca"] = r.CA
+	return ret
 }
 
 func getDNSAddress(serviceCIDR string) string {

@@ -66,5 +66,7 @@ type DeckhouseClusterConfig struct {
 	LogLevel          string                 `json:"logLevel,omitempty"`
 	ImagesRepo        string                 `json:"imagesRepo"`
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
+	RegistryCA        string                 `json:"registryCA,omitempty"`
+	RegistryScheme    string                 `json:"registryScheme,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"`
 }

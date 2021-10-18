@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SYSTEM_PACKAGES="curl wget virt-what inotify-tools bash-completion lvm2 parted apt-transport-https sudo nfs-common"
-KUBERNETES_DEPENDENCIES="iptables iproute2 socat util-linux mount ebtables ethtool conntrack"
+# Avoid problems with expired ca-certificates
+bb-apt-install --force ca-certificates
 
-# Hack for Ubuntu 16.04
-if bb-is-ubuntu-version? 16.04 ; then
-  if grep -q "^mozilla\/DST_Root_CA_X3.crt$" /etc/ca-certificates.conf; then
-    sed -i "/mozilla\/DST_Root_CA_X3.crt/d" /etc/ca-certificates.conf
-    update-ca-certificates --fresh
-  fi
-fi
+{{- if .registry.ca }}
+bb-event-on 'registry-ca-changed' '_update_ca_certificates'
+function _update_ca_certificates() {
+  update-ca-certificates
+}
 
-bb-apt-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
-
-bb-rp-install "jq:1.6"
+bb-sync-file /usr/local/share/ca-certificates/registry-ca.crt - registry-ca-changed << "EOF"
+{{ .registry.ca }}
+EOF
+{{- end }}

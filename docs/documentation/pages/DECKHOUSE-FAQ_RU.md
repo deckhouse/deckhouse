@@ -60,3 +60,69 @@ deckhouse: |
   nodeSelector:
     node-role.deckhouse.io/deckhouse: ""
 ```
+## Как установить Deckhouse из стороннего registry?
+
+При установке, Deckhouse можно настроить на работу из стороннего registry (например, проксирующий registry внутри закрытого контура). 
+
+### Установка
+#### Настройка
+Установить следующие параметры в ресурсе `InitConfiguration`:
+- `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. Адрес образа Deckhouse в стороннем registry, с учетом используемой редакции (ce/ee/fe).
+Пример: `registry.deckhouse.io/deckhouse/ce`.
+- `registryDockerCfg: <BASE64>`. Права доступа к стороннему registry в BASE64.
+
+Если разрешен анонимный доступ к образам Deckhouse в стороннем registry, то `registryDockerCfg` должен выглядеть следующим образом:
+```json
+{"auths": { "<PROXY_REGISTRY>": {}}}
+```
+
+Приведенное значение должно быть закодировано в BASE64.
+
+Если для доступа к образам Deckhouse в стороннем registry необходима аутентификация, то `registryDockerCfg` должен выглядеть следующим образом:
+```json
+{"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
+```
+
+где `<AUTH_BASE64>` — это строка вида `<PROXY_USERNAME>:<PROXY_PASSWORD>`, закодированная в BASE64.
+
+Итоговое значение для `registryDockerCfg` должно быть закодировано в BASE64.
+
+* `<PROXY_USERNAME>` — имя пользователя для аутентификации на `<PROXY_REGISTRY>`.
+* `<PROXY_PASSWORD>` — пароль пользователя для аутентификации на `<PROXY_REGISTRY>`.
+* `<PROXY_REGISTRY>` — адрес стороннего registry в виде `<HOSTNAME>[:PORT]`.
+
+Для настройки нестандартных конфигураций сторонних registry предназначены еще два параметра в ресурсе `InitConfiguration`:
+- `registryCA` - корневой серфитификат, которым можно проверить сертификат registry (если  registry использует самоподписанные сертификаты).
+- `registryScheme` - протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию используется `HTTPS`.
+
+#### Bootstrap
+Укажите для `dhctl` следующий параметр, чтобы он использовал образы `control-plane` из стороннего registry вместо публичного (`k8s.gcr.io`): `--dont-use-public-control-plane-images`.
+
+#### Особенности настройки сторонних registry
+
+**Внимание:** Deckhouse поддерживает работу только с Bearer token схемой авторизации в registry.
+
+##### Nexus
+При использовании [Nexus](https://github.com/sonatype/nexus-public) в режиме registry-прокси необходимо соблюдение нескольких условий:
+
+* Включить `Docker Bearer Token Realm`
+![](../images/registry/nexus/Nexus1.png)
+
+* Включить анонимный доступ к registry (без анонимного доступа [не работает](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer Token авторизация)
+![](../images/registry/nexus/Nexus2.png)
+
+* Установить `Maximum metadata age` в 0 (иначе ломается автоапдейт Deckhouse)
+![](../images/registry/nexus/Nexus3.png)
+
+## Как переключить работающий кластер Deckhouse на использование стороннего registry?
+
+* Изменить секрет `d8-system/deckhouse-registry.`
+  * Исправить `.dockerconfigjson` на данные, соответствующие авторизации в новом registry.
+  * Исправить `address` на адрес нового registry (например, `registry.example.com`).
+  * Исправить `path` на путь к репозиторию deckhouse в новом registry (например, `/deckhouse/fe`).
+  * При необходимости изменить `scheme` на `http` (если используется http registry).
+  * При необходимости изменить или добавить поле `ca` куда внести корневой сертификат, который будет использован для проверки сертификата registry (в случае, если registry использует самоподписные сертификаты).
+* Выполнить рестарт пода Deckhouse'а.
+* Дождаться окончания конвержа Deckhouse'a.
+* Дождаться пока bashible применит новые настройки на мастер-ноде.
+* Поправить поле `image` в деплойменте `d8-system/deckhouse` на адрес образа Deckhouse'a в новом registry.

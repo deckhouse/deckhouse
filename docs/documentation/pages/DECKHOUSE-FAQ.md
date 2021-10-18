@@ -59,3 +59,17 @@ deckhouse: |
   nodeSelector:
     node-role.deckhouse.io/deckhouse: ""
 ```
+## How to setup deckhouse from third-party registry?
+TODO
+## How to switch running Deckhouse cluster to work with third-party registry?
+
+* Change secret `d8-system/deckhouse-registry.`
+  * Change `.dockerconfigjson` to third-party registry credentials.
+  * Change `address` to third-party registry host address (for example, `registry.example.com`).
+  * Change `path` to repo path in third-party registry (for example, `/deckhouse/fe`).
+  * If necessary, change `scheme` to `http` (if third-party registry uses http scheme).
+  * If necessary, change or add `ca` field with root CA certificate, which is used to validate third-party registry https certificate (if third-party registry uses self-signed certificates).
+* Restart Deckhouse pod.
+* Wait while Deckhouse converge is finished.
+* Wait while bashible converge on master nodes is finished.
+* Update `image` field in `d8-system/deckhouse` deployment to Deckhouse image address in third-party-registry.
