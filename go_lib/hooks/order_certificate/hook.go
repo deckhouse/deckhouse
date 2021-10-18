@@ -79,6 +79,22 @@ type OrderCertificateRequest struct {
 	WaitTimeout time.Duration
 }
 
+func (r *OrderCertificateRequest) DeepCopy() OrderCertificateRequest {
+	newR := OrderCertificateRequest{
+		Namespace:  r.Namespace,
+		SecretName: r.SecretName,
+		CommonName: r.CommonName,
+		SANs:       append(make([]string, 0, len(r.SANs)), r.SANs...),
+		Groups:     append(make([]string, 0, len(r.Groups)), r.Groups...),
+		Usages:     append(make([]certificatesv1beta1.KeyUsage, 0, len(r.Usages)), r.Usages...),
+
+		ValueName:   r.ValueName,
+		ModuleName:  r.ModuleName,
+		WaitTimeout: r.WaitTimeout,
+	}
+	return newR
+}
+
 func ParseSecret(secret *v1.Secret) *CertificateSecret {
 	cc := &CertificateSecret{
 		Name: secret.Name,
@@ -142,59 +158,64 @@ func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {
 }
 
 func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.HookInput, dc dependency.Container) error {
-
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		publicDomain := input.Values.Get("global.modules.publicDomainTemplate").String()
-		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
-
-		for _, request := range requests {
-			// Convert cluster domain and public domain sans
-			for index, san := range request.SANs {
-				switch {
-				case strings.HasPrefix(san, publicDomainPrefix) && publicDomain != "":
-					san = strings.TrimPrefix(san, publicDomainPrefix)
-					request.SANs[index] = fmt.Sprintf(publicDomain, san)
-
-				case strings.HasPrefix(san, clusterDomainPrefix) && clusterDomain != "":
-					san = strings.TrimPrefix(san, clusterDomainPrefix)
-					request.SANs[index] = fmt.Sprintf("%s.%s", san, clusterDomain)
-				}
-			}
-
-			valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
-			if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
-				var secret *CertificateSecret
-
-				for _, snap := range snaps {
-					snapSecret := snap.(*CertificateSecret)
-					if snapSecret.Name == request.SecretName {
-						secret = snapSecret
-						break
-					}
-				}
-
-				if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
-					// Check that certificate is not expired and has the same order request
-					genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*7)
-					if err != nil {
-						return err
-					}
-					if !genNew {
-						info := CertificateInfo{Certificate: string(secret.Crt), Key: string(secret.Key)}
-						input.Values.Set(valueName, info)
-						continue
-					}
-				}
-			}
-
-			info, err := IssueCertificate(input, dc, request)
-			if err != nil {
-				return err
-			}
-			input.Values.Set(valueName, info)
-		}
-		return nil
+		return certificateHandlerWithRequests(input, dc, requests)
 	}
+}
+
+func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Container, requests []OrderCertificateRequest) error {
+	publicDomain := input.Values.Get("global.modules.publicDomainTemplate").String()
+	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
+
+	for _, originalRequest := range requests {
+		request := originalRequest.DeepCopy()
+
+		// Convert cluster domain and public domain sans
+		for index, san := range request.SANs {
+			switch {
+			case strings.HasPrefix(san, publicDomainPrefix) && publicDomain != "":
+				san = strings.TrimPrefix(san, publicDomainPrefix)
+				request.SANs[index] = fmt.Sprintf(publicDomain, san)
+
+			case strings.HasPrefix(san, clusterDomainPrefix) && clusterDomain != "":
+				san = strings.TrimPrefix(san, clusterDomainPrefix)
+				request.SANs[index] = fmt.Sprintf("%s.%s", san, clusterDomain)
+			}
+		}
+
+		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
+		if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
+			var secret *CertificateSecret
+
+			for _, snap := range snaps {
+				snapSecret := snap.(*CertificateSecret)
+				if snapSecret.Name == request.SecretName {
+					secret = snapSecret
+					break
+				}
+			}
+
+			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
+				// Check that certificate is not expired and has the same order request
+				genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*7)
+				if err != nil {
+					return err
+				}
+				if !genNew {
+					info := CertificateInfo{Certificate: string(secret.Crt), Key: string(secret.Key)}
+					input.Values.Set(valueName, info)
+					continue
+				}
+			}
+		}
+
+		info, err := IssueCertificate(input, dc, request)
+		if err != nil {
+			return err
+		}
+		input.Values.Set(valueName, info)
+	}
+	return nil
 }
 
 func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request OrderCertificateRequest) (*CertificateInfo, error) {
