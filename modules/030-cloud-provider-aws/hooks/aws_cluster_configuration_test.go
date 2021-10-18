@@ -186,12 +186,12 @@ data:
 			Expect(c).To(Not(ExecuteSuccessfully()))
 
 			Expect(c.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: validate cloud_discovery_data: Document validation failed:`))
-			Expect(c.Session.Err).Should(gbytes.Say(`instances.additionalSecurityGroups in body should match`))
-			Expect(c.Session.Err).Should(gbytes.Say(`instances.iamProfileName in body is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.keyName in body is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.loadBalancerSecurityGroup in body is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.zoneToSubnetIdMap in body is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.zones in body is required`))
+			Expect(c.Session.Err).Should(gbytes.Say(`instances.additionalSecurityGroups should match`))
+			Expect(c.Session.Err).Should(gbytes.Say(`instances.iamProfileName is required`))
+			Expect(c.Session.Err).Should(gbytes.Say(`.keyName is required`))
+			Expect(c.Session.Err).Should(gbytes.Say(`.loadBalancerSecurityGroup is required`))
+			Expect(c.Session.Err).Should(gbytes.Say(`.zoneToSubnetIdMap is required`))
+			Expect(c.Session.Err).Should(gbytes.Say(`.zones is required`))
 		})
 	})
 
@@ -206,9 +206,9 @@ data:
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
 			Expect(d.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: Document validation failed`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.layout in body is required`))
-			Expect(d.Session.Err).Should(gbytes.Say(`vpcNetworkCIDR in body should match`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.provider in body is required`))
+			Expect(d.Session.Err).Should(gbytes.Say(`.layout is required`))
+			Expect(d.Session.Err).Should(gbytes.Say(`vpcNetworkCIDR should match`))
+			Expect(d.Session.Err).Should(gbytes.Say(`.provider is required`))
 			// etcetera...
 		})
 	})

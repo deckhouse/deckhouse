@@ -206,8 +206,8 @@ data:
 
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.provider in body is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.sshKey in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.sshKey is required`))
 		})
 	})
 
@@ -219,8 +219,8 @@ data:
 
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.networkName in body is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.subnetworkName in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.networkName is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.subnetworkName is required`))
 		})
 	})
 
