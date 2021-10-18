@@ -18,7 +18,7 @@
 </thead>
 <tbody>
 <tr>
-  <td style="font-size: 1.5em; text-align: left; font-weight:bold" colspan="3">{% if page.lang == 'ru' %}Модули{% else %}Modules{% endif %}
+  <td style="font-size: 1.5em; text-align: left; font-weight:bold" colspan="4">{% if page.lang == 'ru' %}Модули{% else %}Modules{% endif %}
   </td>
 </tr>
 {%- for module in modules %}
@@ -62,7 +62,7 @@
 
 {%- for section in maindata.sections %}
 <tr>
-  <td style="font-size: 1.5em; text-align: left; font-weight:bold" colspan="3">{{ section.description[page.lang] }}</td>
+  <td style="font-size: 1.5em; text-align: left; font-weight:bold" colspan="4">{{ section.description[page.lang] }}</td>
 </tr>
 {% for item in section.items %}
 {%- if item.skipInDocumentation and item.skipInDocumentation == true %}{% continue %}{% endif %}
