@@ -59,8 +59,12 @@ properties:
     additionalProperties: true
     type: object
     x-examples:
-    - registry: registry.deckhouse.io
+    - registry: registry.deckhouse.io/deckhouse/fe
       registryDockercfg: registry.example.com
+      registryAddress: registry.deckhouse.io
+      registryPath: /deckhouse/fe
+      registryScheme: https
+      registryCA: testCA
       tags: {}
   modules:
     default: {}

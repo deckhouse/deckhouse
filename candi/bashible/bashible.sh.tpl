@@ -119,7 +119,9 @@ function main() {
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
 {{- if .registry }}
-  export REGISTRY="{{ .registry.host }}"
+  export REGISTRY_ADDRESS="{{ .registry.address }}"
+  export SCHEME="{{ .registry.scheme }}"
+  export REGISTRY_PATH="{{ .registry.path }}"
   export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth }}")"
 {{- end }}
 

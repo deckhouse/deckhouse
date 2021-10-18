@@ -109,7 +109,13 @@ spec:
     versionMap:
 {{ .Files.Get "candi/version_map.yml" | indent 6 }}
     registry:
-      path: {{ $.Values.global.modulesImages.registry }}
+      address: {{ $.Values.global.modulesImages.registryAddress }}
+      path: {{ $.Values.global.modulesImages.registryPath }}
+      scheme: {{ $.Values.global.modulesImages.registryScheme }}
+  {{- if $.Values.global.modulesImages.registryCA }}
+      ca: |
+{{ $.Values.global.modulesImages.registryCA | indent 8 }}
+  {{- end }}
       dockerCfg: {{ $.Values.global.modulesImages.registryDockercfg }}
 {{- end }}
 ---

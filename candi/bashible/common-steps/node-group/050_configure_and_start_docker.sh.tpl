@@ -35,6 +35,16 @@ bb-sync-file /etc/docker/daemon.json - << "EOF"
                 "max-size": "10m"
         },
 	"max-concurrent-downloads": {{ $max_concurrent_downloads }}
+{{- if eq .registry.scheme "http" }}
+  "insecure-registries" : ["{{ .registry.address }}"]
+{{- end }}
 }
 EOF
+{{- if .registry.ca }}
+mkdir -p /etc/docker/certs.d/{{ .registry.address }}
+bb-sync-file /etc/docker/certs.d/{{ .registry.address }}/ca.crt  - << "EOF"
+{{ .registry.ca }}
+EOF
+{{- end }}
+
 {{- end }}

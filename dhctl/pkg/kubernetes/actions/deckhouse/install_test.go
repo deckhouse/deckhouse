@@ -21,6 +21,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -55,7 +56,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With docker cfg",
 			func() error {
-				err := CreateDeckhouseManifests(fakeClient, &Config{DockerCfg: "YW55dGhpbmc="})
+				err := CreateDeckhouseManifests(fakeClient, &Config{Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="}})
 				if err != nil {
 					return err
 				}
@@ -75,13 +76,13 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With secrets",
 			func() error {
-				config := Config{
+				conf := Config{
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
 					DeckhouseConfig:       map[string]interface{}{"test": "test"},
 				}
-				err := CreateDeckhouseManifests(fakeClient, &config)
+				err := CreateDeckhouseManifests(fakeClient, &conf)
 				if err != nil {
 					return err
 				}

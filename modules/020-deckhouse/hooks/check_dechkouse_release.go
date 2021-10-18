@@ -71,7 +71,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"))
+	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), GetCA(input), IsHTTP(input))
 	if err != nil {
 		return err
 	}
@@ -199,4 +199,13 @@ func untarLayer(rc io.Reader) (io.Reader, error) {
 type releaseMetadata struct {
 	Version     string `json:"version"`
 	ReleaseDate string `json:"release_date"`
+}
+
+func GetCA(input *go_hook.HookInput) string {
+	return input.Values.Get("global.modulesImages.registryCA").String()
+}
+
+func IsHTTP(input *go_hook.HookInput) bool {
+	registryScheme := input.Values.Get("global.modulesImages.registryScheme").String()
+	return registryScheme == "http"
 }

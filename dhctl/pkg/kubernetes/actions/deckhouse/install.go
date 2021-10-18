@@ -39,8 +39,7 @@ import (
 )
 
 type Config struct {
-	Registry              string
-	DockerCfg             string
+	Registry              config.RegistryData
 	LogLevel              string
 	Bundle                string
 	ReleaseChannel        string
@@ -57,17 +56,17 @@ type Config struct {
 }
 
 func (c *Config) GetImage() string {
-	registryNameTemplate := "%s/dev:%s"
+	registryNameTemplate := "%s%s/dev:%s"
 	tag := c.DevBranch
 	if c.ReleaseChannel != "" {
-		registryNameTemplate = "%s:%s"
+		registryNameTemplate = "%s%s:%s"
 		tag = strcase.ToKebab(c.ReleaseChannel)
 	}
-	return fmt.Sprintf(registryNameTemplate, c.Registry, tag)
+	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
 }
 
 func (c *Config) IsRegistryAccessRequired() bool {
-	return c.DockerCfg != ""
+	return c.Registry.DockerCfg != ""
 }
 
 func deckhouseDeploymentFromConfig(cfg *Config) *appsv1.Deployment {
@@ -141,7 +140,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 	if cfg.IsRegistryAccessRequired() {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "deckhouse-registry"`,
-			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.DockerCfg) },
+			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.Registry) },
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
@@ -397,8 +396,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *config.MetaConfig) (*Config, erro
 
 	installConfig := Config{
 		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.DeckhouseConfig.ImagesRepo,
-		DockerCfg:             metaConfig.DeckhouseConfig.RegistryDockerCfg,
+		Registry:              metaConfig.Registry,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		ReleaseChannel:        metaConfig.DeckhouseConfig.ReleaseChannel,
 		Bundle:                metaConfig.DeckhouseConfig.Bundle,

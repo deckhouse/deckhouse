@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -249,9 +250,9 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func DeckhouseRegistrySecret(dockerCfg string) *apiv1.Secret {
-	data, _ := base64.StdEncoding.DecodeString(dockerCfg)
-	return &apiv1.Secret{
+func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
+	data, _ := base64.StdEncoding.DecodeString(registry.DockerCfg)
+	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: deckhouseRegistrySecretName,
@@ -266,8 +267,20 @@ func DeckhouseRegistrySecret(dockerCfg string) *apiv1.Secret {
 		},
 		Data: map[string][]byte{
 			apiv1.DockerConfigJsonKey: data,
+			"address":                 []byte(registry.Address),
+			"scheme":                  []byte(registry.Scheme),
 		},
 	}
+
+	if registry.Path != "" {
+		ret.Data["path"] = []byte(registry.Path)
+	}
+
+	if registry.CA != "" {
+		ret.Data["ca"] = []byte(registry.CA)
+	}
+
+	return ret
 }
 
 func DeckhouseConfigMap(deckhouseConfig map[string]interface{}) *apiv1.ConfigMap {

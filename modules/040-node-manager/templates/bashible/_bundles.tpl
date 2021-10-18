@@ -9,12 +9,19 @@
   {{- $_ := set $normal "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses }}
   {{- $_ := set $normal "kubernetesCA"       $context.Values.nodeManager.internal.kubernetesCA }}
 
-  {{- $tpl_context_common := dict }}
+  {{- $registry := dict }}
+  {{- $_ := set $registry "address" $context.Values.global.modulesImages.registryAddress }}
+  {{- $_ := set $registry "path" $context.Values.global.modulesImages.registryPath }}
+  {{- $_ := set $registry "scheme" $context.Values.global.modulesImages.registryScheme }}
+  {{- $_ := set $registry "ca" $context.Values.global.modulesImages.registryCA }}
+  {{- $_ := set $registry "dockerCfg" $context.Values.global.modulesImages.registryDockercfg }}
+
+  {{- $tpl_context_common := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
   {{- $_ := set $tpl_context_common "runType"        "Normal" }}
   {{- $_ := set $tpl_context_common "Template"       $context.Template }}
   {{- $_ := set $tpl_context_common "normal"         $normal }}
+  {{- $_ := set $tpl_context_common "registry"       $registry }}
   {{- $_ := set $tpl_context_common "packagesProxy"  dict }}
-
   {{- if hasKey $context.Values.global.clusterConfiguration "packagesProxy" }}
     {{- $_ := set $tpl_context_common "packagesProxy" $context.Values.global.clusterConfiguration.packagesProxy }}
   {{- end }}
@@ -112,16 +119,14 @@
   {{- $bundle  := index . 1 -}}
   {{- $ng      := index . 2 -}}
 
-  {{- $common_tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
-  {{- $candi_version_map := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
-  {{- $tpl_context := merge $common_tpl_context $candi_version_map }}
+  {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $ng.kubernetesVersion }}
   {{- $_ := set $tpl_context "cri" $ng.cri.type }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
 
   {{- if hasKey $context.Values.nodeManager.internal "nodeStatusUpdateFrequency" }}
-  {{- $_ := set $tpl_context "nodeStatusUpdateFrequency" $context.Values.nodeManager.internal.nodeStatusUpdateFrequency }}
+    {{- $_ := set $tpl_context "nodeStatusUpdateFrequency" $context.Values.nodeManager.internal.nodeStatusUpdateFrequency }}
   {{- end }}
 
   {{- range $step_file, $_ := $context.Files.Glob (include "bundles_common_steps_pattern" (list "node-group")) }}
@@ -156,10 +161,7 @@
   {{- $bundle  := index . 1 -}}
   {{- $kubernetes_version := index . 2 -}}
 
-  {{- $common_tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
-  {{- $candi_version_map := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
-  {{- $tpl_context := merge $common_tpl_context $candi_version_map }}
-
+  {{- $tpl_context := (include "bundles_tpl_context_common_yaml" $context | fromYaml) }}
   {{- $_ := set $tpl_context "bundle" $bundle }}
   {{- $_ := set $tpl_context "kubernetesVersion" $kubernetes_version }}
 

@@ -70,7 +70,7 @@ func setReleaseChannel(input *go_hook.HookInput, dc dependency.Container) error 
 		return nil
 	}
 
-	registry, err := dc.GetRegistryClient(repo)
+	registry, err := dc.GetRegistryClient(repo, GetCA(input), IsHTTP(input))
 	if err != nil {
 		return fmt.Errorf("cannot init registry client: %v", err)
 	}
@@ -131,11 +131,15 @@ func setReleaseChannel(input *go_hook.HookInput, dc dependency.Container) error 
 }
 
 func parseReleaseChannel(imageTag, repo string) (releaseChannel, bool) {
-	parts := strings.Split(imageTag, ":")
-	if len(parts) != 2 || parts[0] != repo {
+	imageSplitIndex := strings.LastIndex(imageTag, ":")
+	if imageSplitIndex == -1 {
 		return unknownReleaseChannel, false
 	}
-	tag := parts[1]
+	repoFromImageTag := imageTag[:imageSplitIndex]
+	tag := imageTag[imageSplitIndex+1:]
+	if repoFromImageTag != repo {
+		return unknownReleaseChannel, false
+	}
 	relChan := releaseChannelFromName(tag)
 	return relChan, relChan.IsKnown()
 }

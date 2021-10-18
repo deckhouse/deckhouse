@@ -212,17 +212,20 @@ func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	idSplit := strings.Split(deckhousePod.ImageID, "@")
-	if len(idSplit) < 2 {
+	idSplitIndex := strings.LastIndex(deckhousePod.ImageID, "@")
+	if idSplitIndex == -1 {
 		return fmt.Errorf("image hash not found: %s", deckhousePod.ImageID)
 	}
-	imageHash := idSplit[1]
+	imageHash := deckhousePod.ImageID[idSplitIndex+1:]
 
-	imageSplit := strings.Split(deckhousePod.Image, ":")
-	repo := imageSplit[0]
-	tag := imageSplit[1]
+	imageSplitIndex := strings.LastIndex(deckhousePod.Image, ":")
+	if imageSplitIndex == -1 {
+		return fmt.Errorf("image tag not found: %s", deckhousePod.Image)
+	}
+	repo := deckhousePod.Image[:imageSplitIndex]
+	tag := deckhousePod.Image[imageSplitIndex+1:]
 
-	regClient, err := dc.GetRegistryClient(repo)
+	regClient, err := dc.GetRegistryClient(repo, GetCA(input), IsHTTP(input))
 	if err != nil {
 		input.LogEntry.Errorf("Registry (%s) client init failed: %s", repo, err)
 		return nil

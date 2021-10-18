@@ -42,8 +42,12 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 1
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/fe
   registryDockercfg: cfg
+  registryAddress: registry.deckhouse.io
+  registryPath: /deckhouse/fe
+  registryCA: CACACA
+  registryScheme: https
   tags:
     deckhouse:
       webhookHandler: hash

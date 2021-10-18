@@ -26,6 +26,12 @@ apiVersions:
             type: string
             minLength: 1
             default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
+          registryCA:
+            type: string
+          registryScheme:
+            type: string
+            enum: [HTTP, HTTPS]
+            default: HTTPS
           releaseChannel:
             type: string
             enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]

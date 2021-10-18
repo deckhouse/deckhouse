@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -179,7 +178,6 @@ func (c *BashibleContext) enrichContextWithDockerRegistry(context map[string]int
 	}
 
 	var (
-		registryHost string
 		registryAuth string
 		dc           dockerCfg
 	)
@@ -189,11 +187,10 @@ func (c *BashibleContext) enrichContextWithDockerRegistry(context map[string]int
 		return fmt.Errorf("cannot get registry context data: %v", err)
 	}
 
-	registryPath, ok := registryMapContext["path"]
+	registryAddress, ok := registryMapContext["address"]
 	if !ok {
-		return fmt.Errorf("cannot get path from registry context: %v", registryMapContext["path"])
+		return fmt.Errorf("cannot get registry address: %v", err)
 	}
-	registryHost = strings.Split(registryPath.(string), "/")[0]
 
 	if registryDockerCfgJSONBase64, ok := registryMapContext["dockerCfg"]; ok {
 		bytes, err := base64.StdEncoding.DecodeString(registryDockerCfgJSONBase64.(string))
@@ -206,12 +203,13 @@ func (c *BashibleContext) enrichContextWithDockerRegistry(context map[string]int
 			return fmt.Errorf("cannot unmarshal docker cfg: %v", err)
 		}
 
-		if registry, ok := dc.Auths[registryHost]; ok {
+		if registry, ok := dc.Auths[registryAddress.(string)]; ok {
 			registryAuth = registry.Auth
 		}
 	}
 
-	context["registry"] = map[string]interface{}{"host": registryHost, "auth": registryAuth}
+	registryMapContext["auth"] = registryAuth
+	context["registry"] = registryMapContext
 	return nil
 }
 

@@ -40,8 +40,11 @@ enabledModules: ["vertical-pod-autoscaler-crd"]
 modules:
   placement: {}
 modulesImages:
-  registry: registry.deckhouse.io
+  registry: registry.deckhouse.io/deckhouse/ce
   registryDockercfg: cfg
+  registryAddress: registry.deckhouse.io
+  registryPath: /deckhouse/ce
+  registryScheme: https
   tags:
     nodeManager:
       clusterAutoscaler: imagehash
@@ -584,8 +587,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
-			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
-			bashibleSecrets["bashible-worker-ubuntu-lts"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-lts")
 			bashibleSecrets["bashible-node-users"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-users")
 
 			roles := map[string]object_store.KubeObject{}
@@ -626,8 +627,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-ubuntu-lts"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-node-users"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -682,8 +681,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
-			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
-			bashibleSecrets["bashible-worker-ubuntu-lts"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-lts")
 			bashibleSecrets["bashible-node-users"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-users")
 
 			roles := map[string]object_store.KubeObject{}
@@ -724,8 +721,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-ubuntu-lts"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-node-users"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -796,8 +791,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
-			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
-			bashibleSecrets["bashible-worker-ubuntu-lts"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-lts")
 			bashibleSecrets["bashible-node-users"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-users")
 
 			roles := map[string]object_store.KubeObject{}
@@ -872,8 +865,6 @@ ccc: ddd
 			Expect(simpleMachineDeploymentA.Exists()).To(BeTrue())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-ubuntu-lts"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-node-users"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -928,8 +919,6 @@ ccc: ddd
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
-			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
-			bashibleSecrets["bashible-worker-ubuntu-lts"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-lts")
 			bashibleSecrets["bashible-node-users"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-users")
 
 			roles := map[string]object_store.KubeObject{}
@@ -970,8 +959,6 @@ ccc: ddd
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-ubuntu-lts"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-node-users"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -1026,8 +1013,6 @@ ccc: ddd
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
-			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
-			bashibleSecrets["bashible-worker-ubuntu-lts"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-lts")
 			bashibleSecrets["bashible-node-users"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-users")
 
 			roles := map[string]object_store.KubeObject{}
@@ -1068,8 +1053,6 @@ ccc: ddd
 			Expect(machineDeploymentB.Exists()).To(BeTrue())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-ubuntu-lts"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-node-users"].Exists()).To(BeTrue())
 
 			Expect(roles["bashible"].Exists()).To(BeTrue())
@@ -1122,8 +1105,6 @@ ccc: ddd
 
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
-			bashibleSecrets["bashible-worker-centos-7"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-centos-7")
-			bashibleSecrets["bashible-worker-ubuntu-lts"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-worker-ubuntu-lts")
 			bashibleSecrets["bashible-node-users"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-users")
 
 			bootstrapSecrets := map[string]object_store.KubeObject{}
@@ -1167,8 +1148,6 @@ ccc: ddd
 			Expect(machineDeploymentB.Exists()).To(BeFalse())
 
 			Expect(bashibleSecrets["bashible-bashbooster"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-centos-7"].Exists()).To(BeTrue())
-			Expect(bashibleSecrets["bashible-worker-ubuntu-lts"].Exists()).To(BeTrue())
 			Expect(bashibleSecrets["bashible-node-users"].Exists()).To(BeTrue())
 
 			Expect(bootstrapSecrets["manual-bootstrap-for-worker"].Exists()).To(BeTrue())
