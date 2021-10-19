@@ -12,7 +12,7 @@ function bp() {
   werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
   if [[ -n "${CI_COMMIT_TAG}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-    werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO}
+    werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO} --report-path images_tags_werf.json
   fi
 
   jq '
