@@ -704,6 +704,20 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/400-descheduler/configuration.html
+            - title: pod-reloader
+              folders:
+                - title:
+                    ru: Описание
+                    en: Description
+                  url: /modules/465-pod-reloader/
+                - title:
+                    ru: Примеры
+                    en: Usage
+                  url: /modules/465-pod-reloader/usage.html
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/465-pod-reloader/configuration.html
     - title:
         en: Security
         ru: Безопасность

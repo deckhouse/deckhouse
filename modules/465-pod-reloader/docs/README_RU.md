@@ -1,0 +1,23 @@
+---
+title: "Модуль pod-reloader"
+---
+
+Модуль создан на основе [Reloader](https://github.com/stakater/Reloader) и **включен** по умолчанию.
+Он предоставляет возможность автоматически произвести rollout в случае измения ConfigMap или Secret.
+Для управления используются аннотации. Модуль запускается на **system** нодах.
+
+**Важно** У Reloader отсутствует отказоустойчивость.
+
+В этом документе описаны основные аннотации, а примеры использования можно найти [тут](usage.html).
+
+| Аннотация                                    | Ресурс                             | Описание                                                                                                                                                                 | Примеры значений                              |
+| -------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| `pod-reloader.deckhouse.io/auto`             | Deployment, Daemonset, Statefulset | В случае изменения в связанных, то есть примонтированных или использованных как перменные окружения, ConfigMap или Secret произойдёт перезапуск подов этого контроллера. | `"true"`,`"false"`                            |
+| `pod-reloader.deckhouse.io/search`           | Deployment, Daemonset, Statefulset | В случае наличия этой аннотации - перезапуск будет производиться исключительно при изменении ConfigMap или Secret с аннотацией `pod-reloader.deckhouse.io/match: "true"` | `"true"`,`"false"`                            |
+| `pod-reloader.deckhouse.io/configmap-reload` | Deployment, Daemonset, Statefulset | Указать список ConfigMap от которых зависит контроллер                                                                                                                   | `"some-cm"`,`"some-cm1,some-cm2"`             |
+| `pod-reloader.deckhouse.io/secret-reload`    | Deployment, Daemonset, Statefulset | Указать список Secret от которых зависит контроллер                                                                                                                      | `"some-secret"`,`"some-secret1,some-secret2"` |
+| `pod-reloader.deckhouse.io/match`            | Secret, Configmap                  | Аннотация по которой из связанных ресурсов выбираются те, за изменениями которых мы следим                                                                               | `"true"`,`"false"`                            |
+
+**Важно** Аннотация `pod-reloader.deckhouse.io/search` не может быть использована вместе с `pod-reloader.deckhouse.io/auto: "true"`. Reloader будет игнорировать `pod-reloader.deckhouse.io/search` и `pod-reloader.deckhouse.io/match`. Для верной работы выставите `pod-reloader.deckhouse.io/auto` в значние `"false"` или удалите вовсе.
+
+**Важно** Аннотации `pod-reloader.deckhouse.io/configmap-reload` и `pod-reloader.deckhouse.io/secret-reload` не могут быть использованы вместе с `pod-reloader.deckhouse.io/auto: "true"`. Reloader будет игнорировать `pod-reloader.deckhouse.io/search` и `pod-reloader.deckhouse.io/match`. Для верной работы выставите `pod-reloader.deckhouse.io/auto` в значние `"false"` или удалите вовсе.
