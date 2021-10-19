@@ -30,7 +30,7 @@ ansible:
       chdir: /src
 git:
 - url: https://github.com/deckhouse/mcm.git
-  to: /src/
+  to: /src
   tag: v0.36.0-flant.10
   stageDependencies:
     install:
