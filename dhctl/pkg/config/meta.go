@@ -81,6 +81,16 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
+
+		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
+		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
+		m.Registry.CA = m.DeckhouseConfig.RegistryCA
+
+		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
+		m.Registry.Address = parts[0]
+		if len(parts) == 2 {
+			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -452,6 +462,8 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
+	out.Registry = m.Registry
+
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType
 	}
@@ -509,18 +521,23 @@ func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
 		dc           dockerCfg
 	)
 
-	bytes, err := base64.StdEncoding.DecodeString(m.Registry.DockerCfg)
-	if err != nil {
-		return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-	}
+	log.DebugF("registry data: %v\n", m.Registry)
 
-	err = json.Unmarshal(bytes, &dc)
-	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-	}
+	if m.Registry.DockerCfg != "" {
+		bytes, err := base64.StdEncoding.DecodeString(m.Registry.DockerCfg)
+		if err != nil {
+			return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+		}
 
-	if registry, ok := dc.Auths[m.Registry.Address]; ok {
-		registryAuth = registry.Auth
+		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
+		err = json.Unmarshal(bytes, &dc)
+		if err != nil {
+			return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+		}
+
+		if registry, ok := dc.Auths[m.Registry.Address]; ok {
+			registryAuth = registry.Auth
+		}
 	}
 
 	ret := m.Registry.ConvertToMap()
@@ -548,12 +565,13 @@ func (m *MetaConfig) LoadImagesTags(filename string) error {
 }
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {
-	ret := make(map[string]interface{})
-	ret["address"] = r.Address
-	ret["path"] = r.Path
-	ret["scheme"] = r.Scheme
-	ret["ca"] = r.CA
-	return ret
+	return map[string]interface{}{
+		"address":   r.Address,
+		"path":      r.Path,
+		"scheme":    r.Scheme,
+		"ca":        r.CA,
+		"dockerCfg": r.DockerCfg,
+	}
 }
 
 func getDNSAddress(serviceCIDR string) string {
