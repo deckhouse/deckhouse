@@ -60,7 +60,58 @@ deckhouse: |
     node-role.deckhouse.io/deckhouse: ""
 ```
 ## How to setup deckhouse from third-party registry?
-TODO
+
+During bootstrap, Deckhouse can be configured to work from a third-party registry (for example, a proxying registry inside a closed circuits).
+
+### Bootstrap
+#### Config
+Setting up parameters in `InitConfiguration`:
+- `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. Deckhouse image address with edition (ce/ee/fe) in third-party registry.
+Example: `registry.deckhouse.io/deckhouse/ce`.
+- `registryDockerCfg: <BASE64>`. Trird-party registry auth credentials in BASE64.
+
+If anonymous access is enabled, `registryDockerCfg` must be:
+```json
+{"auths": { "<PROXY_REGISTRY>": {}}}
+```
+`registryDockerCfg` must be BASE64 encoded.
+
+If anonymous access don't enabled, `registryDockerCfg` must be:
+```json
+{"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
+```
+
+`<AUTH_BASE64>` — BASE64 encoded auth string `<PROXY_USERNAME>:<PROXY_PASSWORD>`.
+
+registryDockerCfg` must be BASE64 encoded.
+
+* `<PROXY_USERNAME>` — auth username for `<PROXY_REGISTRY>`.
+* `<PROXY_PASSWORD>` — auth password for `<PROXY_REGISTRY>`.
+* `<PROXY_REGISTRY>` — registry address`<HOSTNAME>[:PORT]`.
+
+To configure non-standard configurations of third-party registry, two more parameters are provided in the `InitConfiguration` resource:
+- `registryCA` - root CA certificate, which is used to validate third-party registry https certificate (if third-party registry uses self-signed certificates).
+- `registryScheme` - registry scheme (`HTTP` or `HTTPS`). Default - `HTTPS`.
+
+#### Bootstrap
+Use `dhctl` key `--dont-use-public-control-plane-images` to tell Deckhouse to use `control-plane` images from third-party registry instead of public (`k8s.gcr.io`).
+
+#### Third-party registry setup tips
+
+**Attention:** Deckhouse supports only Bearer token registry auth.
+
+##### Nexus
+If [Nexus](https://github.com/sonatype/nexus-public) registry-proxy is used, some parameters must be set:
+
+* Enable `Docker Bearer Token Realm`
+  ![](../images/registry/nexus/Nexus1.png)
+
+* Enable anonymous registry access (without anonymous access Bearer Token auth [don't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms))
+  ![](../images/registry/nexus/Nexus2.png)
+
+* Set `Maximum metadata age` to 0 (Deckhouse autoupdate don't work properly if metadata caching enabled)
+  ![](../images/registry/nexus/Nexus3.png)
+
 ## How to switch running Deckhouse cluster to work with third-party registry?
 
 * Change secret `d8-system/deckhouse-registry.`

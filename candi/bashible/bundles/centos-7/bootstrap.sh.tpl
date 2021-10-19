@@ -32,8 +32,8 @@
 REGISTRY_ADDRESS="{{ .registry.address }}"
 SCHEME="{{ .registry.scheme }}"
 REGISTRY_PATH="{{ .registry.path }}"
-{{- if .registry.auth }}
-REGISTRY_AUTH="$(base64 -d <<< {{ .registry.auth }})"
+{{- if hasKey .registry "auth" }}
+REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth }}")"
 {{- else }}
 REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); parsed["auths"]["'${REGISTRY_ADDRESS}'"].setdefault("auth", ""); print(parsed["auths"]["'${REGISTRY_ADDRESS}'"]["auth"]);' | base64 -d)"
 {{- end }}
