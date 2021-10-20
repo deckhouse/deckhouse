@@ -251,6 +251,8 @@ spec:
 
 In other words, if you explicitly deny something, then only this restrictive rule will work. If you explicitly allow something, only explicitly authorized requests will be allowed (however, restrictions will stay in force and have precedence).
 
+**Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications, by default it is, due module configuration parameter `tlsMode: MutualPermissive`.
+
 Examples:
 * Let's deny POST requests for the myapp application. Since a policy is defined, only POST requests to the application are denied (as per the algorithm above).
 
@@ -262,7 +264,8 @@ Examples:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     action: DENY
     rules:
     - to:
@@ -280,7 +283,8 @@ Examples:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     action: ALLOW # the default value, can be skipped
     rules:
     - from:
@@ -298,7 +302,8 @@ Examples:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     action: ALLOW # the default value, can be skipped
     rules: []
   ```
@@ -313,7 +318,8 @@ Examples:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     rules:
     - {}
   ```
