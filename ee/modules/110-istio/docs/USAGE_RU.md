@@ -253,6 +253,8 @@ spec:
 
 Иными словами, если вы явно что-то запретили, то работает только ваш запрет. Если же вы что-то явно разрешили, то теперь разрешены только явно одобренные запросы (запреты никуда не деваются и имеют приоритет).
 
+**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как namespace или principal, необходимо, чтобы все вовлечённые сервисы работали под управлением Istio. Также, между приложениями должен быть организован Mutual TLS, по умолчанию он организован, благодаря параметру модуля `tlsMode: MutualPermissive`.
+
 Примеры:
 * Запретим POST-запросы для приложения myapp. Отныне, так как для приложения появилась политика, то согласно алгоритму выше будут запрещены только POST-запросы к приложению.
 
@@ -264,7 +266,8 @@ spec:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     action: DENY
     rules:
     - to:
@@ -282,7 +285,8 @@ spec:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     action: ALLOW # default, можно не указывать
     rules:
     - from:
@@ -300,7 +304,8 @@ spec:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     action: ALLOW # default, можно не указывать
     rules: []
   ```
@@ -315,7 +320,8 @@ spec:
     namespace: foo
   spec:
     selector:
-      app: myapp
+      matchLabels:
+        app: myapp
     rules:
     - {}
   ```
