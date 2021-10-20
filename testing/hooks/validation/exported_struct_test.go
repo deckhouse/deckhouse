@@ -122,6 +122,15 @@ func checkStructFields(fset *token.FileSet, structs map[string]*ast.StructType, 
 
 		for _, fields := range structSpec.Fields.List {
 			switch f := fields.Type.(type) {
+			case *ast.StarExpr:
+				// for embedded fields, like
+				// type MyStruct struct { *corev1.Node }
+				if ff, ok := f.X.(*ast.SelectorExpr); ok {
+					if ff.Sel.IsExported() {
+						sc.ExportedFields++
+					}
+				}
+
 			case *ast.SelectorExpr:
 				// embedded fields
 				if f.Sel.IsExported() {
