@@ -23,8 +23,10 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -41,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
 			Name:    "check_deckhouse_release",
-			Crontab: "*/15 * * * * *",
+			Crontab: "* * * * *", // every minute
 		},
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -100,12 +102,35 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("version not found. Probably image is broken or layer is not exist")
 	}
 
+	newSemver, err := semver.NewVersion(meta.Version)
+	if err != nil {
+		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
+		return err
+	}
+
 	snap := input.Snapshots["releases"]
-	for _, sn := range snap {
-		release := sn.(deckhouseReleaseUpdate)
-		if release.Version == meta.Version {
+	releases := make([]deckhouseReleaseUpdate, 0, len(snap))
+	for _, rl := range snap {
+		releases = append(releases, rl.(deckhouseReleaseUpdate))
+	}
+
+	sort.Sort(sort.Reverse(byVersion(releases)))
+
+releaseLoop:
+	for _, release := range releases {
+		switch {
+		case release.Version.GreaterThan(newSemver):
+			// cleanup versions which are older then current version in a specified channel and are in a Pending state
+			if release.Phase == v1alpha1.PhasePending {
+				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name, object_patch.InBackground())
+			}
+
+		case release.Version.Equal(newSemver):
 			input.LogEntry.Debugf("Release with version %s already exists", release.Version)
 			return nil
+
+		default:
+			break releaseLoop
 		}
 	}
 
@@ -122,6 +147,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 		Spec: v1alpha1.DeckhouseReleaseSpec{
 			Version: meta.Version,
 		},
+		Approved: false,
 	}
 
 	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())

@@ -25,6 +25,10 @@ spec:
           required:
             - spec
           properties:
+            approved:
+              type: boolean
+              default: false
+              description: Flag for the manual deployment readiness. 'Auto' deployment mode ignores it.
             spec:
               type: object
               required:
@@ -46,16 +50,25 @@ spec:
                     - Outdated
                   description: Show a current status of the release.
                 transitionTime:
-                  type: string
+                  type: date
                   description: Show a time when the release status was changed.
+                approved:
+                  type: boolean
+                  description: |
+                    Show the release readiness for deployment.  It's always true for 'Auto' deployment mode
       subresources:
         status: {}
       additionalPrinterColumns:
+        - name: approved
+          jsonPath: .status.approved
+          type: boolean
+          description: 'Is the release approved for deployment.'
         - name: phase
           jsonPath: .status.phase
           type: string
           description: 'Current release status.'
         - name: transitionTime
           jsonPath: .status.transitionTime
-          type: string
+          type: date
+          format: date-time
           description: 'When the release status was changed.'

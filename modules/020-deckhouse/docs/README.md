@@ -6,7 +6,9 @@ search: releaseChannel, release channel stabilization, auto-switching the releas
 In **Deckhouse**, this module sets up:
 - The logging level;
 - The set of features;
-- The desirable release channel.
+- The desirable release channel;
+- Update windows;
+- Update mode (Manual / Auto).
 
 - Also, this module starts the service for validating custom resources that are managed by deckhouse modules.
 
