@@ -20,6 +20,7 @@ import (
 	"os"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
+	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
 	"github.com/flant/kube-client/klogtologrus"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
@@ -56,6 +57,7 @@ func main() {
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		klogtologrus.InitAdapter(sh_app.DebugKubernetesAPI)
+		stdliblogtologrus.InitAdapter()
 		return nil
 	})
 
