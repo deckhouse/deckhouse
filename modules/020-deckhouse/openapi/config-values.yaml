@@ -26,6 +26,13 @@ properties:
     type: object
     description: 'Deckhouse update configuration'
     properties:
+      mode:
+        type: string
+        default: 'Auto'
+        description: 'Release approval mode'
+        enum:
+          - 'Auto'
+          - 'Manual'
       windows:
         type: array
         description: |

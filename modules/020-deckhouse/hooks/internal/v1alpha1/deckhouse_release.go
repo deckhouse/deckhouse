@@ -27,6 +27,12 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+const (
+	PhasePending  = "Pending"
+	PhaseDeployed = "Deployed"
+	PhaseOutdated = "Outdated"
+)
+
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
 	metav1.TypeMeta `json:",inline"`
@@ -34,6 +40,8 @@ type DeckhouseRelease struct {
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Approved bool `json:"approved"`
 
 	Spec DeckhouseReleaseSpec `json:"spec"`
 
@@ -45,8 +53,8 @@ type DeckhouseReleaseSpec struct {
 }
 
 type DeckhouseReleaseStatus struct {
-	Phase string `json:"phase,omitempty"`
-
+	Phase          string    `json:"phase,omitempty"`
+	Approved       bool      `json:"approved"`
 	TransitionTime time.Time `json:"transitionTime,omitempty"`
 }
 

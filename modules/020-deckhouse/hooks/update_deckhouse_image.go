@@ -81,6 +81,7 @@ type deckhousePodInfo struct {
 	Namespace string `json:"namespace"`
 	Image     string `json:"image"`
 	ImageID   string `json:"imageID"`
+	Ready     bool   `json:"ready"`
 }
 
 // isNextReleasePatch check SORTED array of DeckhouseReleases.
@@ -93,21 +94,17 @@ func isNextReleasePatch(releases []deckhouseReleaseUpdate) bool {
 	for i, r := range releases {
 		if r.Phase == "Deployed" {
 			currentReleaseIndex = i
-			var err error
-			currentRelease, err = semver.NewVersion(r.Version)
-			if err != nil {
-				return false
-			}
+			currentRelease = r.Version
 			continue
 		}
 
 		if currentRelease != nil && i == currentReleaseIndex+1 {
 			// check next release
-			nextRelease, err := semver.NewVersion(r.Version)
-			if err != nil {
-				return false
-			}
-			if nextRelease.Major() == currentRelease.Major() && nextRelease.Minor() == currentRelease.Minor() {
+			if r.Version.Major() == currentRelease.Major() && r.Version.Minor() == currentRelease.Minor() {
+				// always mark patch releases as Auto approvement
+				r.ManualApproved = true
+				r.StatusApproved = true
+				releases[i] = r
 				return true
 			}
 
@@ -157,16 +154,32 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	return deckhouseReleaseUpdate{
-		Name:    release.Name,
-		Version: release.Spec.Version,
-		Phase:   release.Status.Phase,
+		Name:           release.Name,
+		Version:        semver.MustParse(release.Spec.Version),
+		Phase:          release.Status.Phase,
+		ManualApproved: release.Approved,
+		StatusApproved: release.Status.Approved,
 	}, nil
 }
 
 type deckhouseReleaseUpdate struct {
-	Name    string
-	Version string
-	Phase   string
+	Name           string
+	Version        *semver.Version
+	Phase          string
+	ManualApproved bool
+	StatusApproved bool
+}
+
+type byVersion []deckhouseReleaseUpdate
+
+func (a byVersion) Len() int {
+	return len(a)
+}
+func (a byVersion) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a byVersion) Less(i, j int) bool {
+	return a[i].Version.LessThan(a[j].Version)
 }
 
 func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -182,8 +195,11 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		imageName = pod.Spec.Containers[0].Image
 	}
 
+	var ready bool
+
 	if len(pod.Status.ContainerStatuses) > 0 {
 		imageID = pod.Status.ContainerStatuses[0].ImageID
+		ready = pod.Status.ContainerStatuses[0].Ready
 	}
 
 	return deckhousePodInfo{
@@ -191,72 +207,14 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		ImageID:   imageID,
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
+		Ready:     ready,
 	}, nil
-}
-
-// tagUpdate update by tag, in dev mode or specified image
-func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
-	snap := input.Snapshots["deckhouse_pod"]
-	if len(snap) == 0 {
-		return nil
-	}
-
-	deckhousePod := snap[0].(deckhousePodInfo)
-	if deckhousePod.Image == "" && deckhousePod.ImageID == "" {
-		// pod is restarting or something like that, try more in a 15 seconds
-		return nil
-	}
-
-	if deckhousePod.Image == "" || deckhousePod.ImageID == "" {
-		input.LogEntry.Debug("Deckhouse pod is not ready. Try to update later")
-		return nil
-	}
-
-	idSplitIndex := strings.LastIndex(deckhousePod.ImageID, "@")
-	if idSplitIndex == -1 {
-		return fmt.Errorf("image hash not found: %s", deckhousePod.ImageID)
-	}
-	imageHash := deckhousePod.ImageID[idSplitIndex+1:]
-
-	imageSplitIndex := strings.LastIndex(deckhousePod.Image, ":")
-	if imageSplitIndex == -1 {
-		return fmt.Errorf("image tag not found: %s", deckhousePod.Image)
-	}
-	repo := deckhousePod.Image[:imageSplitIndex]
-	tag := deckhousePod.Image[imageSplitIndex+1:]
-
-	regClient, err := dc.GetRegistryClient(repo, GetCA(input), IsHTTP(input))
-	if err != nil {
-		input.LogEntry.Errorf("Registry (%s) client init failed: %s", repo, err)
-		return nil
-	}
-
-	input.MetricsCollector.Inc("deckhouse_registry_check_total", map[string]string{})
-	input.MetricsCollector.Inc("deckhouse_kube_image_digest_check_total", map[string]string{})
-
-	repoDigest, err := regClient.Digest(tag)
-	if err != nil {
-		input.MetricsCollector.Inc("deckhouse_registry_check_errors_total", map[string]string{})
-		input.LogEntry.Errorf("Registry (%s) get digest failed: %s", repo, err)
-		return nil
-	}
-
-	input.MetricsCollector.Set("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
-
-	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
-		return nil
-	}
-
-	input.LogEntry.Info("New deckhouse image found. Restarting.")
-
-	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
-
-	return nil
 }
 
 // fetch releases from snapshots and sort them into ascending semver order
 // also patch status for a new (Pending) releases
 func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate {
+	approvalMode := input.Values.Get("deckhouse.update.mode").String()
 	snap := input.Snapshots["releases"]
 	if len(snap) == 0 {
 		return nil
@@ -268,26 +226,34 @@ func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate 
 		releases = append(releases, rl.(deckhouseReleaseUpdate))
 	}
 
-	sort.Slice(releases, func(i, j int) bool {
-		v1r, err := semver.NewVersion(releases[i].Version)
-		if err != nil {
-			return false // could be in dev tags
-		}
-		v2r, err := semver.NewVersion(releases[j].Version)
-		if err != nil {
-			return false // could be in dev tags
-		}
-
-		return v1r.LessThan(v2r)
-	})
+	sort.Sort(byVersion(releases))
 
 	for i, rl := range releases {
-		if rl.Phase == "" {
-			patch := json.RawMessage(fmt.Sprintf(`{"status": {"phase": "Pending", "transitionTime": "%s"}}`, now.Format(time.RFC3339)))
-			input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
-			rl.Phase = "Pending"
-			releases[i] = rl
+		statusPatch := statusPatch{
+			Phase:          rl.Phase,
+			Approved:       rl.StatusApproved,
+			TransitionTime: now,
 		}
+
+		if rl.Phase == "" {
+			statusPatch.Phase = v1alpha1.PhasePending
+			statusPatch.TransitionTime = now
+		}
+
+		if statusPatch.Phase == v1alpha1.PhasePending {
+			// check and set .status.approved for pending releases
+			if approvalMode == "Manual" && !rl.ManualApproved {
+				statusPatch.Approved = false
+			} else {
+				statusPatch.Approved = true
+			}
+		}
+
+		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+
+		rl.StatusApproved = statusPatch.Approved
+		rl.Phase = statusPatch.Phase
+		releases[i] = rl
 	}
 
 	return releases
@@ -295,44 +261,83 @@ func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate 
 
 // releaseChannelUpdate update with previously set release channel when CR DeckhouseRelease exists
 func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseUpdate) error {
+	snap := input.Snapshots["deckhouse_pod"]
+	if len(snap) == 0 {
+		return nil
+	}
+
+	// upgrade only when current release is ready.
+	deckhousePod := snap[0].(deckhousePodInfo)
+	if !deckhousePod.Ready {
+		input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
+		return nil
+	}
+
 	repo := input.Values.Get("global.modulesImages.registry").String()
 	now := time.Now()
 
-	currentRelease := -1
+	currentReleaseIndex := -1
 	for i, rl := range releases {
 		switch rl.Phase {
 		// "Deployed" shows only Actual (current) release. All previous releases are marked as Outdated
 		// It's much more comfortable to observe DeckhouseReleases like this because by default they are sorted by Name
 		// and sometimes it's a bit weird for semver names. This statuses shows you the real view of releases
-		case "Outdated":
+		case v1alpha1.PhaseOutdated:
 			// pass
 
-		case "Pending":
-			if i == currentRelease+1 {
-				patch := json.RawMessage(fmt.Sprintf(`{"status": {"phase": "Deployed", "transitionTime": "%s"}}`, now.Format(time.RFC3339)))
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
-				input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-					var depl appsv1.Deployment
-					err := sdk.FromUnstructured(u, &depl)
-					if err != nil {
-						return nil, err
-					}
+		case v1alpha1.PhasePending:
+			if i < currentReleaseIndex {
+				// some old release, for example - when downgrade the release channel
+				// mark it as Outdated
+				sp := statusPatch{
+					Phase:          v1alpha1.PhaseOutdated,
+					TransitionTime: now,
+				}
+				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+				continue
+			}
 
-					depl.Spec.Template.Spec.Containers[0].Image = repo + ":" + rl.Version
+			if i != currentReleaseIndex+1 {
+				continue
+			}
 
-					return sdk.ToUnstructured(&depl)
-				}, "apps/v1", "Deployment", "d8-system", "deckhouse")
+			if !rl.StatusApproved {
+				input.LogEntry.Infof("Release %s is waiting for manual approval", rl.Version)
 				return nil
 			}
 
-		case "Deployed":
+			input.LogEntry.Infof("Applying release %s", rl.Version)
+			st := statusPatch{
+				Phase:          v1alpha1.PhaseDeployed,
+				Approved:       rl.StatusApproved,
+				TransitionTime: now,
+			}
+			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+			input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+				var depl appsv1.Deployment
+				err := sdk.FromUnstructured(u, &depl)
+				if err != nil {
+					return nil, err
+				}
+
+				depl.Spec.Template.Spec.Containers[0].Image = repo + ":" + rl.Version.Original()
+
+				return sdk.ToUnstructured(&depl)
+			}, "apps/v1", "Deployment", "d8-system", "deckhouse")
+			return nil
+
+		case v1alpha1.PhaseDeployed:
 			if i == len(releases)-1 {
 				// last release, don't update
 				return nil
 			}
-			currentRelease = i
-			patch := json.RawMessage(fmt.Sprintf(`{"status": {"phase": "Outdated", "transitionTime": "%s"}}`, now.Format(time.RFC3339)))
-			input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+			currentReleaseIndex = i
+			sp := statusPatch{
+				Phase:          v1alpha1.PhaseOutdated,
+				Approved:       rl.StatusApproved,
+				TransitionTime: now,
+			}
+			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
 		}
 	}
 
@@ -432,4 +437,74 @@ func (uw updateWindow) isTodayAllowed(now time.Time, days []string) bool {
 	}
 
 	return false
+}
+
+// tagUpdate update by tag, in dev mode or specified image
+func tagUpdate(input *go_hook.HookInput, dc dependency.Container) error {
+	snap := input.Snapshots["deckhouse_pod"]
+	if len(snap) == 0 {
+		return nil
+	}
+
+	deckhousePod := snap[0].(deckhousePodInfo)
+	if deckhousePod.Image == "" && deckhousePod.ImageID == "" {
+		// pod is restarting or something like that, try more in a 15 seconds
+		return nil
+	}
+
+	if deckhousePod.Image == "" || deckhousePod.ImageID == "" {
+		input.LogEntry.Debug("Deckhouse pod is not ready. Try to update later")
+		return nil
+	}
+
+	idSplitIndex := strings.LastIndex(deckhousePod.ImageID, "@")
+	if idSplitIndex == -1 {
+		return fmt.Errorf("image hash not found: %s", deckhousePod.ImageID)
+	}
+	imageHash := deckhousePod.ImageID[idSplitIndex+1:]
+
+	imageSplitIndex := strings.LastIndex(deckhousePod.Image, ":")
+	if imageSplitIndex == -1 {
+		return fmt.Errorf("image tag not found: %s", deckhousePod.Image)
+	}
+	repo := deckhousePod.Image[:imageSplitIndex]
+	tag := deckhousePod.Image[imageSplitIndex+1:]
+
+	regClient, err := dc.GetRegistryClient(repo, GetCA(input), IsHTTP(input))
+	if err != nil {
+		input.LogEntry.Errorf("Registry (%s) client init failed: %s", repo, err)
+		return nil
+	}
+
+	input.MetricsCollector.Inc("deckhouse_registry_check_total", map[string]string{})
+	input.MetricsCollector.Inc("deckhouse_kube_image_digest_check_total", map[string]string{})
+
+	repoDigest, err := regClient.Digest(tag)
+	if err != nil {
+		input.MetricsCollector.Inc("deckhouse_registry_check_errors_total", map[string]string{})
+		input.LogEntry.Errorf("Registry (%s) get digest failed: %s", repo, err)
+		return nil
+	}
+
+	input.MetricsCollector.Set("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
+
+	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
+		return nil
+	}
+
+	input.LogEntry.Info("New deckhouse image found. Restarting.")
+
+	input.PatchCollector.Delete("v1", "Pod", deckhousePod.Namespace, deckhousePod.Name)
+
+	return nil
+}
+
+type statusPatch v1alpha1.DeckhouseReleaseStatus
+
+func (sp statusPatch) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"status": v1alpha1.DeckhouseReleaseStatus(sp),
+	}
+
+	return json.Marshal(m)
 }

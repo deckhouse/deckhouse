@@ -35,6 +35,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		"deckhouse": {
               "releaseChannel": "Stable",
 			  "update": {
+				"mode": "Auto",
 				"windows": [{"from": "00:00", "to": "23:00"}]
 			  }
 			}
@@ -115,6 +116,53 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
+			patchRelease := f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1")
+			Expect(patchRelease.Field("status.approved").Bool()).To(Equal(true))
+		})
+	})
+
+	Context("Deckhouse previous release is not ready", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.windows", []byte(`[{"from": "00:00", "to": "23:59"}]`))
+
+			f.KubeStateSet(deckhouseDeployment + deckhouseNotReadyPod + deckhouseReleases)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+		It("Should not upgrade deckhouse version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+		})
+	})
+
+	Context("Manual approvement is set", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
+			f.ValuesDelete("deckhouse.update.windows")
+
+			f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+		It("Should not upgrade deckhouse version", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+		})
+
+		Context("After setting manual approve", func() {
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				cc := f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + manualApprovedReleases)
+				f.BindingContexts.Set(cc)
+				f.RunHook()
+			})
+			It("Must upgrade deckhouse", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(Equal("my.registry.com/deckhouse:v1.26.0"))
+			})
 		})
 	})
 
@@ -151,7 +199,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 })
 
 var (
-	deckhousePodYaml = `
+	deckhouseReadyPod = `
 ---
 apiVersion: v1
 kind: Pod
@@ -168,6 +216,29 @@ status:
   containerStatuses:
     - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
       imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      ready: true
+`
+	deckhouseNotReadyPod = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j7
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss/dev:test-me
+status:
+  containerStatuses:
+    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
+      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      ready: false
+`
+
+	deckhouseDeployment = `
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -182,8 +253,9 @@ spec:
           image: my.registry.com/deckhouse:v1.25.0
 `
 
-	deckhouseReleases = `
+	deckhousePodYaml = deckhouseReadyPod + deckhouseDeployment
 
+	deckhouseReleases = `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
@@ -200,6 +272,26 @@ metadata:
   name: v1-26-0
 spec:
   version: "v1.26.0"
+`
+
+	manualApprovedReleases = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-25-0
+spec:
+  version: "v1.25.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1-26-0
+spec:
+  version: "v1.26.0"
+approved: true
 `
 
 	deckhousePatchRelease = `

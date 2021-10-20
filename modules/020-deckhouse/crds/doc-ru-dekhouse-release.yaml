@@ -6,6 +6,8 @@ spec:
           description: |
             Определяет конфигурацию релизов Deckhouse.
           properties:
+            approved:
+              description: 'Флаг для разрешения ручного обновления. Автоматическое обновление игнорирует данные флаг.'
             spec:
               properties:
                 version:
@@ -15,18 +17,23 @@ spec:
             status:
               properties:
                 phase:
-                  type: string
                   description: 'Показывает текущий статус релиза.'
                 transitionTime:
                   description: 'Показывает, когда статус релиза изменился.'
+                approved:
+                  description: 'Показывает готовность релиза к обновлению. Всегда true для Автоматического обновления'
       subresources:
         status: {}
       additionalPrinterColumns:
+        - name: approved
+          jsonPath: .status.approved
+          type: boolean
+          description: 'Готов ли релиз к установке.'
         - name: phase
           jsonPath: .status.phase
           type: string
           description: 'Показывает текущий статус релиза.'
         - name: transitionTime
           jsonPath: .status.transitionTime
-          type: string
+          type: date
           description: 'Показывает, когда статус релиза изменился.'
