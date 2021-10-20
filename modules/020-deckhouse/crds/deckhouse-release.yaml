@@ -50,7 +50,7 @@ spec:
                     - Outdated
                   description: Show a current status of the release.
                 transitionTime:
-                  type: date
+                  type: string
                   description: Show a time when the release status was changed.
                 approved:
                   type: boolean

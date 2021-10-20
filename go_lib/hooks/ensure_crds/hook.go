@@ -50,7 +50,7 @@ func RegisterEnsureCRDsHook(crdsGlob string) bool {
 
 func ensureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		var result error
+		result := new(multierror.Error)
 
 		crds, err := filepath.Glob(crdsGlob)
 		if err != nil {
@@ -86,11 +86,11 @@ func ensureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc depend
 			}
 		}
 
-		if result != nil {
-			input.LogEntry.WithError(result)
+		if result.ErrorOrNil() != nil {
+			input.LogEntry.WithError(result).Error("ensure_crds failed")
 		}
 
-		return result
+		return result.ErrorOrNil()
 	}
 }
 
