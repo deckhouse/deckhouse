@@ -45,14 +45,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
-			WaitForSynchronization: &waitForSync,
+			WaitForSynchronization: pointer.BoolPtr(false),
 			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			FilterFunc:             updateApprovalNodeGroupFilter,
 		},
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: &waitForSync,
+			WaitForSynchronization: pointer.BoolPtr(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{
