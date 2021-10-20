@@ -4,9 +4,10 @@ ARG BASE_ALPINE
 FROM $BASE_GOLANG_16_ALPINE as artifact
 RUN apk add --no-cache git ca-certificates gcc build-base sqlite patch make curl
 WORKDIR /dex
-COPY patches/client-groups.patch patches/static-user-groups.patch /
+COPY patches/client-groups.patch patches/concurrent.patch patches/static-user-groups.patch /
 RUN wget https://github.com/dexidp/dex/archive/v2.30.0.tar.gz -O - | tar -xz --strip-components=1 \
   && git apply /client-groups.patch \
+  && git apply /concurrent.patch \
   && git apply /static-user-groups.patch
 RUN go build ./cmd/dex
 
