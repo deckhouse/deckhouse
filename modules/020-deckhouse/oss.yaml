@@ -21,3 +21,9 @@
   description: A lightweight and flexible command-line JSON processor.
   logo: https://stedolan.github.io/jq/jq.png
   licence: Mixed (https://github.com/stedolan/jq/blob/master/COPYING)
+
+- name: image-syncer
+  link: https://github.com/AliyunContainerService/image-syncer
+  description: image-syncer is a docker registry tools. With image-syncer you can synchronize docker images from some source registries to target registries, which include most popular public docker registry services
+  logo: https://avatars.githubusercontent.com/u/16377432?s=200&v=4
+  licence: Apache License 2.0
