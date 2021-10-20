@@ -17,10 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -61,6 +66,7 @@ metadata:
 			node := f.KubernetesGlobalResource("Node", "wor-ker")
 			Expect(node.Field("metadata.annotations.\"update.node.deckhouse.io/drained\"").String()).To(BeEmpty())
 			Expect(node.Field("metadata.annotations.\"update.node.deckhouse.io/draining\"").Exists()).To(BeFalse())
+			Expect(node.Field("metadata.spec.unschedulable").Exists()).To(BeFalse())
 		})
 	})
 
@@ -106,6 +112,16 @@ data:
 					unschedulable := gUnschedulable
 					BeforeEach(func() {
 						f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(initialState+generateStateToTestDrainingNodes(nodeNames, draining, unschedulable), 4))
+						k8sClient := f.BindingContextController.FakeCluster().Client
+						// BindingContexts work with Dynamic client but drainHelper works with CoreV1 from kubernetes.Interface client
+						// copy nodes to the static client for appropriate testing
+						nodesList, _ := k8sClient.Dynamic().Resource(schema.GroupVersionResource{Resource: "nodes", Version: "v1"}).List(context.Background(), v1.ListOptions{})
+						for _, obj := range nodesList.Items {
+							var n corev1.Node
+							_ = sdk.FromUnstructured(&obj, &n)
+							_ = k8sClient.CoreV1().Nodes().Delete(context.Background(), n.Name, v1.DeleteOptions{})
+							_, _ = k8sClient.CoreV1().Nodes().Create(context.Background(), &n, v1.CreateOptions{})
+						}
 						f.RunHook()
 					})
 
@@ -128,7 +144,6 @@ data:
 								if unschedulable {
 									By(fmt.Sprintf("%s must be unschedulable", nodeName), func() {
 										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).Exists()).To(BeTrue())
-										Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`spec.unschedulable`).String()).To(Equal("true"))
 									})
 								} else {
 									By(fmt.Sprintf("%s must not be unschedulable", nodeName), func() {
