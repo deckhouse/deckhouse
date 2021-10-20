@@ -22,7 +22,11 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"sort"
+	"strconv"
+	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	. "github.com/onsi/ginkgo"
@@ -50,7 +54,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: check deckhouse release ::", 
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{Body: `{"version": "v1.25.3"}`}}, nil
 			}}, nil)
 			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateScheduleContext("*/30 * * * * *"))
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 		It("Release should be created", func() {
@@ -91,4 +95,32 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 
 func (fl fakeLayer) Size() (int64, error) {
 	return int64(len(fl.Body)), nil
+}
+
+func TestSort(t *testing.T) {
+	s1 := deckhouseReleaseUpdate{
+		Version: semver.MustParse("v1.24.0"),
+	}
+	s2 := deckhouseReleaseUpdate{
+		Version: semver.MustParse("v1.24.1"),
+	}
+	s3 := deckhouseReleaseUpdate{
+		Version: semver.MustParse("v1.24.2"),
+	}
+	s4 := deckhouseReleaseUpdate{
+		Version: semver.MustParse("v1.24.3"),
+	}
+	s5 := deckhouseReleaseUpdate{
+		Version: semver.MustParse("v1.24.4"),
+	}
+
+	releases := []deckhouseReleaseUpdate{s3, s4, s1, s5, s2}
+	sort.Sort(sort.Reverse(byVersion(releases)))
+
+	for i, rl := range releases {
+		if rl.Version.String() != "1.24."+strconv.FormatInt(int64(4-i), 10) {
+			t.Fail()
+		}
+	}
+
 }
