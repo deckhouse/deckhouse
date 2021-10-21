@@ -33,23 +33,32 @@ if bb-flag? reboot; then
     sleep 1
   done
 
-  # Our task is to force setting Node status to NotReady to prevent unwanted schedulings during reboot.
-  # We could update .status.conditions directly, but:
-  # * kubectl can't edit status subresource by design (related discussion https://github.com/kubernetes/kubectl/issues/564).
-  # * curl in CentOS can't read kubelet client certificate key from /var/lib/kubelet/pki/kubelet-client-current.pem due to libnss bug.
-  # * wget in CentOS has no --method argument, so we cant use PATCH HTTP request.
-  # The solution — to delete Lease object for our node and handle this event with Deckhouse hook modules/040-node-manager/hooks/node_lease_handler.
-  bb-log-info "Deleting node Lease resource..."
-  attempt=0
-  until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-node-lease delete lease "${HOSTNAME}"; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "2" ]; then
-      bb-log-warning "Can't delete node Lease resource. Node status won't be set to NotReady."
-      break
-    fi
-    bb-log-info "Retrying delete node Lease resource..."
-    sleep 1
-  done
+  # When we bootstrap node we do not start kubelet, if node need to reboot.
+  # If kubelet does not start in first time, /etc/kubernetes/kubelet.conf file will not created.
+  # This is normally, after reboot kubelet will start and file will be created.
+  # If kubelet is not started (on bootstrap), node will not join into cluster and we do not need to delete lease.
+  # Why don't we start kubelet when we bootstrap node (in some cases)?
+  # We want bootstrap node fully, reboot it and after reboot join node into cluster.
+  if [ -f /etc/kubernetes/kubelet.conf ] ; then
+
+    # Our task is to force setting Node status to NotReady to prevent unwanted schedulings during reboot.
+    # We could update .status.conditions directly, but:
+    # * kubectl can't edit status subresource by design (related discussion https://github.com/kubernetes/kubectl/issues/564).
+    # * curl in CentOS can't read kubelet client certificate key from /var/lib/kubelet/pki/kubelet-client-current.pem due to libnss bug.
+    # * wget in CentOS has no --method argument, so we cant use PATCH HTTP request.
+    # The solution — to delete Lease object for our node and handle this event with Deckhouse hook modules/040-node-manager/hooks/node_lease_handler.
+    bb-log-info "Deleting node Lease resource..."
+    attempt=0
+    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-node-lease delete lease "${HOSTNAME}"; do
+      attempt=$(( attempt + 1 ))
+      if [ "$attempt" -gt "2" ]; then
+        bb-log-warning "Can't delete node Lease resource. Node status won't be set to NotReady."
+        break
+      fi
+      bb-log-info "Retrying delete node Lease resource..."
+      sleep 1
+    done
+  fi
   {{- end }}
 
   shutdown -r now
