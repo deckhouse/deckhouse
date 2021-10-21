@@ -2,7 +2,7 @@
 title: "Модуль pod-reloader"
 ---
 
-Модуль создан на основе [Reloader](https://github.com/stakater/Reloader) и **включен** по умолчанию.
+Модуль создан на основе [Reloader](https://github.com/stakater/Reloader).
 Он предоставляет возможность автоматически произвести rollout в случае измения ConfigMap или Secret.
 Для управления используются аннотации. Модуль запускается на **system** нодах.
 
