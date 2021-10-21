@@ -40,8 +40,10 @@ done
 # Start output bootstrap logs
 if type socat >/dev/null 2>&1; then
   socat -u FILE:/var/log/cloud-init-output.log,ignoreeof TCP4-LISTEN:8000,fork,reuseaddr &
+  bootstrap_job_log_pid=$!
 else
   while true; do cat /var/log/cloud-init-output.log | nc -l "$tcp_endpoint" "$output_log_port"; done &
+  bootstrap_job_log_pid=$!
 fi
 
   {{- end }}
@@ -55,7 +57,10 @@ until /var/lib/bashible/bashible.sh; do
 done;
 
 # Stop output bootstrap logs
-kill -9 %1
+if [ -n "$bootstrap_job_log_pid" ] && kill -s 0 "$bootstrap_job_log_pid" 2>/dev/null; then
+  kill -9 "$bootstrap_job_log_pid"
+fi
+
 {{- end }}
 
 {{- define "node_group_bashible_bootstrap_script_noninteractive" -}}
