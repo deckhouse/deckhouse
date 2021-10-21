@@ -95,22 +95,13 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	for _, s := range snap {
 		dNode := s.(drainingNode)
 		if !dNode.IsDraining() {
-			// annotation was removed but there was an error during the uncordoning. Try one more time
-			if dNode.IsCordoned() {
-				err = drain.RunCordonOrUncordon(drainHelper, dNode.Node, false)
-				if err != nil {
-					input.LogEntry.Warnf("Node '%s' cordon failed: %s", dNode.Name, err)
-				}
-			}
 			continue
 		}
 
-		if !dNode.IsCordoned() {
-			err := drain.RunCordonOrUncordon(drainHelper, dNode.Node, true)
-			if err != nil {
-				input.LogEntry.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
-				continue
-			}
+		err := drain.RunCordonOrUncordon(drainHelper, dNode.Node, true)
+		if err != nil {
+			input.LogEntry.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
+			continue
 		}
 
 		wg.Add(1)
@@ -130,10 +121,6 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		if drainedNode.Err != nil {
 			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
 			continue
-		}
-		err = drain.RunCordonOrUncordon(drainHelper, drainedNode.Node, false)
-		if err != nil {
-			input.LogEntry.Warnf("Node '%s' uncordon failed: %s", drainedNode.Node.Name, err)
 		}
 		input.PatchCollector.MergePatch(drainAnnotationsPatch, "v1", "Node", "", drainedNode.Node.Name)
 	}
