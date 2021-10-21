@@ -59,24 +59,22 @@ deckhouse: |
   nodeSelector:
     node-role.deckhouse.io/deckhouse: ""
 ```
-## How to setup deckhouse from third-party registry?
+## How to setup Deckhouse from a third-party registry?
 
-During bootstrap, Deckhouse can be configured to work from a third-party registry (for example, a proxying registry inside a closed circuits).
+Deckhouse can be configured to work from a third-party registry (for example, a proxying registry inside private environments).
 
-### Bootstrap
-#### Config
-Setting up parameters in `InitConfiguration`:
-- `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. Deckhouse image address with edition (ce/ee/fe) in third-party registry.
-Example: `registry.deckhouse.io/deckhouse/ce`.
+### Preparing configuration
+Set up the following parameters in the `InitConfiguration` resource:
+- `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. The address of the Deckhouse image in a third-party registry, according to the edition used (ce/ee/fe). Example: `imagesRepo: registry.deckhouse.io/deckhouse/ce`.
 - `registryDockerCfg: <BASE64>`. Trird-party registry auth credentials in BASE64.
 
-If anonymous access is enabled, `registryDockerCfg` must be:
+If anonymous access to Deckhouse images is allowed in a third-party registry, then `registryDockerCfg` should look like this:
 ```json
 {"auths": { "<PROXY_REGISTRY>": {}}}
 ```
 `registryDockerCfg` must be BASE64 encoded.
 
-If anonymous access don't enabled, `registryDockerCfg` must be:
+If authentication is required to access Deckhouse images in a third-party registry, then `registryDockerCfg` should look like this:
 ```json
 {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
 ```
@@ -91,36 +89,36 @@ registryDockerCfg` must be BASE64 encoded.
 
 To configure non-standard configurations of third-party registry, two more parameters are provided in the `InitConfiguration` resource:
 - `registryCA` - root CA certificate, which is used to validate third-party registry https certificate (if third-party registry uses self-signed certificates).
-- `registryScheme` - registry scheme (`HTTP` or `HTTPS`). Default - `HTTPS`.
+- `registryScheme` - registry scheme (`http` or `https`). Default - `https`.
 
-#### Bootstrap
+### Installing
 Use `dhctl` key `--dont-use-public-control-plane-images` to tell Deckhouse to use `control-plane` images from third-party registry instead of public (`k8s.gcr.io`).
 
-#### Third-party registry setup tips
+### Third-party registry setup tips
 
 **Attention:** Deckhouse supports only Bearer token registry auth.
 
-##### Nexus
+#### Nexus
 If [Nexus](https://github.com/sonatype/nexus-public) registry-proxy is used, some parameters must be set:
 
 * Enable `Docker Bearer Token Realm`
   ![](../images/registry/nexus/Nexus1.png)
 
-* Enable anonymous registry access (without anonymous access Bearer Token auth [don't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms))
+* Enable anonymous registry access (otherwise Bearer Token auth [won't work](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms))
   ![](../images/registry/nexus/Nexus2.png)
 
-* Set `Maximum metadata age` to 0 (Deckhouse autoupdate don't work properly if metadata caching enabled)
+* Set `Maximum metadata age` to 0 (otherwise the automatic update of Deckhouse won't not properly due to caching)
   ![](../images/registry/nexus/Nexus3.png)
 
 ## How to switch running Deckhouse cluster to work with third-party registry?
 
-* Change secret `d8-system/deckhouse-registry.`
+* Change secret `d8-system/deckhouse-registry` (all parameters are BASE64 encoded):
   * Change `.dockerconfigjson` to third-party registry credentials.
   * Change `address` to third-party registry host address (for example, `registry.example.com`).
   * Change `path` to repo path in third-party registry (for example, `/deckhouse/fe`).
-  * If necessary, change `scheme` to `http` (if third-party registry uses http scheme).
+  * If necessary, change `scheme` to `http` (if third-party registry uses HTTP scheme).
   * If necessary, change or add `ca` field with root CA certificate, which is used to validate third-party registry https certificate (if third-party registry uses self-signed certificates).
-* Restart Deckhouse pod.
-* Wait while Deckhouse converge is finished.
-* Wait while bashible converge on master nodes is finished.
+* Restart Deckhouse Pod.
+* Wait for the Deckhouse Pod to become Ready.
+* Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
 * Update `image` field in `d8-system/deckhouse` deployment to Deckhouse image address in third-party-registry.
