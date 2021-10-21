@@ -518,9 +518,8 @@ ansible:
 ---
 artifact: terraform-provider-vsphere
 fromImage: base-for-go
-fromCacheVersion: "20210527"
 git:
-  - url: https://github.com/flant/terraform-provider-vsphere
+  - url: https://github.com/deckhouse/3p-terraform-provider-vsphere
     add: /
     to: /terraform-provider-vsphere
     tag: v{{ env "TF_VSPHERE_VERSION" }}-flant.1
