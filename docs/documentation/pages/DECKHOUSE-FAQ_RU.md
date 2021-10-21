@@ -62,13 +62,11 @@ deckhouse: |
 ```
 ## Как установить Deckhouse из стороннего registry?
 
-При установке, Deckhouse можно настроить на работу из стороннего registry (например, проксирующий registry внутри закрытого контура). 
+При установке, Deckhouse можно настроить на работу со сторонним registry (например, проксирующий registry внутри закрытого контура). 
 
-### Установка
-#### Настройка
-Установить следующие параметры в ресурсе `InitConfiguration`:
-- `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. Адрес образа Deckhouse в стороннем registry, с учетом используемой редакции (ce/ee/fe).
-Пример: `registry.deckhouse.io/deckhouse/ce`.
+### Подготовка конфигурации
+Установите следующие параметры в ресурсе `InitConfiguration`:
+- `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/<DECKHOUSE_REVISION>`. Адрес образа Deckhouse в стороннем registry с учетом используемой редакции - ce,ee или fe. Пример: `imagesRepo: registry.deckhouse.io/deckhouse/ce`.
 - `registryDockerCfg: <BASE64>`. Права доступа к стороннему registry в BASE64.
 
 Если разрешен анонимный доступ к образам Deckhouse в стороннем registry, то `registryDockerCfg` должен выглядеть следующим образом:
@@ -91,38 +89,38 @@ deckhouse: |
 * `<PROXY_PASSWORD>` — пароль пользователя для аутентификации на `<PROXY_REGISTRY>`.
 * `<PROXY_REGISTRY>` — адрес стороннего registry в виде `<HOSTNAME>[:PORT]`.
 
-Для настройки нестандартных конфигураций сторонних registry предназначены еще два параметра в ресурсе `InitConfiguration`:
-- `registryCA` - корневой серфитификат, которым можно проверить сертификат registry (если  registry использует самоподписанные сертификаты).
-- `registryScheme` - протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию используется `HTTPS`.
+Для настройки нестандартных конфигураций сторонних registry в ресурсе `InitConfiguration` предусмотрены еще два параметра:
+- `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если  registry использует самоподписанные сертификаты).
+- `registryScheme` — протокол доступа к registry (`http` или `https`). По умолчанию - `https`.
 
-#### Bootstrap
-Укажите для `dhctl` следующий параметр, чтобы он использовал образы `control-plane` из стороннего registry вместо публичного (`k8s.gcr.io`): `--dont-use-public-control-plane-images`.
+### Установка
+Укажите для `dhctl` параметр `--dont-use-public-control-plane-images`, чтобы он использовал образы `control-plane` из стороннего registry, вместо публичного (`k8s.gcr.io`).
 
-#### Особенности настройки сторонних registry
+### Особенности настройки сторонних registry
 
-**Внимание:** Deckhouse поддерживает работу только с Bearer token схемой авторизации в registry.
+**Внимание:** Deckhouse поддерживает работу только с Bearer token-схемой авторизации в registry.
 
-##### Nexus
+#### Nexus
 При использовании [Nexus](https://github.com/sonatype/nexus-public) в режиме registry-прокси необходимо соблюдение нескольких условий:
 
 * Включить `Docker Bearer Token Realm`
 ![](../images/registry/nexus/Nexus1.png)
 
-* Включить анонимный доступ к registry (без анонимного доступа [не работает](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer Token авторизация)
+* Включить анонимный доступ к registry (иначе, [не будет работать](https://help.sonatype.com/repomanager3/system-configuration/user-authentication#UserAuthentication-security-realms) Bearer Token-авторизация)
 ![](../images/registry/nexus/Nexus2.png)
 
-* Установить `Maximum metadata age` в 0 (иначе ломается автоапдейт Deckhouse)
+* Установить `Maximum metadata age` в 0 (иначе, автоматическое обновление Deckhouse не будет работать корректно из-за кеширования)
 ![](../images/registry/nexus/Nexus3.png)
 
 ## Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
-* Изменить секрет `d8-system/deckhouse-registry.`
-  * Исправить `.dockerconfigjson` на данные, соответствующие авторизации в новом registry.
+* Изменить секрет `d8-system/deckhouse-registry` (все параметры хранятся в кодировке BASE64):
+  * Исправить `.dockerconfigjson` с учетом авторизации в новом registry.
   * Исправить `address` на адрес нового registry (например, `registry.example.com`).
-  * Исправить `path` на путь к репозиторию deckhouse в новом registry (например, `/deckhouse/fe`).
-  * При необходимости изменить `scheme` на `http` (если используется http registry).
-  * При необходимости изменить или добавить поле `ca` куда внести корневой сертификат, который будет использован для проверки сертификата registry (в случае, если registry использует самоподписные сертификаты).
-* Выполнить рестарт пода Deckhouse'а.
-* Дождаться окончания конвержа Deckhouse'a.
-* Дождаться пока bashible применит новые настройки на мастер-ноде.
-* Поправить поле `image` в деплойменте `d8-system/deckhouse` на адрес образа Deckhouse'a в новом registry.
+  * Исправить `path` на путь к репозиторию Deckhouse в новом registry (например, `/deckhouse/fe`).
+  * При необходимости, изменить `scheme` на `http` (если используется HTTP registry).
+  * Если registry использует самоподписные сертификаты, то изменить или добавить поле `ca` куда внести корневой сертификат соответствующего сертификата registry.
+* Выполнить рестарт Pod'а Deckhouse'а.
+* Дождаться перехода Pod'а Deckhouse в статус Ready.
+* Дождаться применения bashible новых настроек на мастер-узле. В журнале bashible на master-узле (`journalctl -u bashible`) должно появится сообщение `Configuration is in sync, nothing to do`.
+* Изменить поле `image` в Deployment `d8-system/deckhouse` на адрес образа Deckhouse в новом registry.
