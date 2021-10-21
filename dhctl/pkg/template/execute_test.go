@@ -26,6 +26,7 @@ func TestExecuteTemplate(t *testing.T) {
 
 	err := yaml.Unmarshal([]byte(`
 nodeIP: "127.0.0.1"
+runType: "ClusterBootstrap"
 clusterConfiguration:
   kubernetesVersion: "1.19"
   clusterType: "Cloud"

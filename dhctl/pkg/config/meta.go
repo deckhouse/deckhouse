@@ -311,6 +311,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result[key] = value
 	}
 
+	result["runType"] = "ClusterBootstrap"
 	result["extraArgs"] = make(map[string]interface{})
 	result["clusterConfiguration"] = data
 	// bashible will use this as a placeholder on envsubst call, address will be discovered in one of bashible steps
