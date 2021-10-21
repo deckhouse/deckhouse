@@ -64,6 +64,8 @@ properties:
             type: string
           tls.key:
             type: string
+          ca.crt:
+            type: string
 definitions:
   stsEntry:
     type: object
