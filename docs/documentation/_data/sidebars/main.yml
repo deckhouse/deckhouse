@@ -836,17 +836,6 @@ entries:
     - title: Bare Metal Support
       versionType: ee
       folders:
-        - title: metallb
-          versionType: ee
-          folders:
-            - title:
-                ru: Описание
-                en: Description
-              url: /modules/380-metallb/
-            - title:
-                ru: Настройки
-                en: Configuration
-              url: /modules/380-metallb/configuration.html
         - title: keepalived
           versionType: experimental
           folders:
@@ -868,6 +857,39 @@ entries:
                   url: /modules/450-keepalived/configuration.html
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
+        - title: Local Path Provisioner
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/031-local-path-provisioner/
+            - title:
+                ru: Примеры
+                en: Usage
+              url: /modules/031-local-path-provisioner/usage.html
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/031-local-path-provisioner/configuration.html
+                - title: Custom Resources
+                  url: /modules/031-local-path-provisioner/cr.html
+            - title: FAQ
+              url: /modules/031-local-path-provisioner/faq.html
+        - title: metallb
+          versionType: ee
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/380-metallb/
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/380-metallb/configuration.html
         - title: network-gateway
           versionType: experimental
           folders:

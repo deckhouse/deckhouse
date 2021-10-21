@@ -2,7 +2,7 @@
 title: "The pod-reloader module"
 ---
 
-The module utilizes [Reloader](https://github.com/stakater/Reloader) and is **enabled** by default.
+The module utilizes [Reloader](https://github.com/stakater/Reloader).
 It provides the ability for automatic rollout on ConfigMap or Secret changes.
 The module uses annotations for operating. The module is running on **system** nodes.
 
