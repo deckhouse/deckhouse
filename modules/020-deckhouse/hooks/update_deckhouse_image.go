@@ -229,6 +229,8 @@ func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate 
 	sort.Sort(byVersion(releases))
 
 	for i, rl := range releases {
+		var statusChanged bool
+
 		statusPatch := statusPatch{
 			Phase:          rl.Phase,
 			Approved:       rl.StatusApproved,
@@ -238,22 +240,31 @@ func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate 
 		if rl.Phase == "" {
 			statusPatch.Phase = v1alpha1.PhasePending
 			statusPatch.TransitionTime = now
+			statusChanged = true
 		}
 
 		if statusPatch.Phase == v1alpha1.PhasePending {
 			// check and set .status.approved for pending releases
 			if approvalMode == "Manual" && !rl.ManualApproved {
 				statusPatch.Approved = false
+				if rl.StatusApproved {
+					statusChanged = true
+				}
 			} else {
 				statusPatch.Approved = true
+				if !rl.StatusApproved {
+					statusChanged = true
+				}
 			}
 		}
 
-		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+		if statusChanged {
+			input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
 
-		rl.StatusApproved = statusPatch.Approved
-		rl.Phase = statusPatch.Phase
-		releases[i] = rl
+			rl.StatusApproved = statusPatch.Approved
+			rl.Phase = statusPatch.Phase
+			releases[i] = rl
+		}
 	}
 
 	return releases
