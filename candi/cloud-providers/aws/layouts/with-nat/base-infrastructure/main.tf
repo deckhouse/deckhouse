@@ -269,9 +269,9 @@ resource "aws_vpc_peering_connection" "kube" {
   peer_region   = var.providerClusterConfiguration.provider.region
   auto_accept   = false
 
-  tags = {
-    Side = "Requester"
-  }
+  tags = merge(local.tags, {
+    Name = local.prefix
+  })
 }
 
 resource "aws_vpc_peering_connection_accepter" "kube" {
@@ -279,9 +279,9 @@ resource "aws_vpc_peering_connection_accepter" "kube" {
   vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
   auto_accept               = true
 
-  tags = {
-    Side = "Accepter"
-  }
+  tags = merge(local.tags, {
+    Name = local.prefix
+  })
 }
 
 resource "aws_route" "kube" {
