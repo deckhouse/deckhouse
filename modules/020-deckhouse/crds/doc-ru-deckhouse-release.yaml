@@ -7,21 +7,23 @@ spec:
             Определяет конфигурацию релизов Deckhouse.
           properties:
             approved:
-              description: 'Флаг для разрешения ручного обновления. Автоматическое обновление игнорирует данные флаг.'
+              description: |
+                Флаг для разрешения ручного обновления.
+
+                Игнорируется, если в конфигурации модуля установлен режим обновления `Auto` (`update.mode: Auto`)
             spec:
               properties:
                 version:
-                  description: |
-                    Указывает версию Deckhouse для данного релиза.
-                  example: 'v1.24.20'
+                  description: Версия Deckhouse.
             status:
               properties:
                 phase:
-                  description: 'Показывает текущий статус релиза.'
+                  description: Текущий статус релиза.
                 transitionTime:
-                  description: 'Показывает, когда статус релиза изменился.'
+                  description: Время изменения статуса релиза
                 approved:
-                  description: 'Показывает готовность релиза к обновлению. Всегда true для Автоматического обновления'
+                  description: |
+                    Статус готовности релиза к обновлению. Всегда true для Автоматического обновления (`update.mode: Auto`).
       subresources:
         status: {}
       additionalPrinterColumns:

@@ -21,14 +21,17 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration for deckhouse release.
+            Defines the configuration for Deckhouse release.
           required:
             - spec
           properties:
             approved:
               type: boolean
               default: false
-              description: Flag for the manual deployment readiness. 'Auto' deployment mode ignores it.
+              description: |
+                Flag for the manual deployment readiness.
+
+                Ignored if the module's update mode is set to `Auto` (`update.mode: Auto`).
             spec:
               type: object
               required:
@@ -36,8 +39,7 @@ spec:
               properties:
                 version:
                   type: string
-                  description: |
-                    Contains a version of the Deckhouse.
+                  description: Deckhouse version.
                   example: 'v1.24.20'
             status:
               type: object
@@ -48,14 +50,14 @@ spec:
                     - Pending
                     - Deployed
                     - Outdated
-                  description: Show a current status of the release.
+                  description: Current status of the release.
                 transitionTime:
                   type: string
-                  description: Show a time when the release status was changed.
+                  description: Time of release status change.
                 approved:
                   type: boolean
                   description: |
-                    Show the release readiness for deployment.  It's always true for 'Auto' deployment mode
+                    The status of the release's readiness for deployment. Always true for automatic updates (`update.mode: Auto`).
       subresources:
         status: {}
       additionalPrinterColumns:
