@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -60,7 +59,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func parseDeckhouseImage(input *go_hook.HookInput) error {
 	const (
 		deckhouseImagePath = "deckhouse.internal.currentReleaseImageName"
-		repoPath           = "global.modulesImages.registry"
 	)
 
 	deckhouseSnapshot := input.Snapshots["deckhouse"]
@@ -75,115 +73,11 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 	}
 
 	// Generate alert for deckhouse being not on release channel
-	repo := input.Values.Get(repoPath).String()
-	input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", isOnReleaseChannelMetricValue(image, repo), nil)
+	if input.Values.Exists("deckhouse.releaseChannel") {
+		input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", 0, nil)
+	} else {
+		input.MetricsCollector.Set("d8_deckhouse_is_not_on_release_channel", 1, nil)
+	}
 
 	return nil
-}
-
-func isOnReleaseChannelMetricValue(image, repo string) float64 {
-	_, isKnown := parseReleaseChannel(image, repo)
-	if isKnown {
-		return 0
-	}
-	return 1
-}
-
-func parseReleaseChannel(imageTag, repo string) (releaseChannel, bool) {
-	parts := strings.Split(imageTag, ":")
-	if len(parts) != 2 || parts[0] != repo {
-		return unknownReleaseChannel, false
-	}
-	tag := parts[1]
-	relChan := releaseChannelFromName(tag)
-	return relChan, relChan.IsKnown()
-}
-
-const (
-	unknownReleaseChannel releaseChannel = iota - 1
-	alphaReleaseChannel
-	betaReleaseChannel
-	earlyAccessReleaseChannel
-	stableReleaseChannel
-	rockSolidReleaseChannel
-)
-
-// Known release channels
-
-const (
-	tagAlpha       = "alpha"
-	tagBeta        = "beta"
-	tagEarlyAccess = "early-access"
-	tagStable      = "stable"
-	tagRockSolid   = "rock-solid"
-
-	nameAlpha       = "Alpha"
-	nameBeta        = "Beta"
-	nameEarlyAccess = "EarlyAccess"
-	nameStable      = "Stable"
-	nameRockSolid   = "RockSolid"
-
-	minReleaseChannel = alphaReleaseChannel
-	maxReleaseChannel = rockSolidReleaseChannel
-)
-
-type releaseChannel int
-
-func (r releaseChannel) String() string {
-	switch r {
-	case alphaReleaseChannel:
-		return nameAlpha
-	case betaReleaseChannel:
-		return nameBeta
-	case earlyAccessReleaseChannel:
-		return nameEarlyAccess
-	case stableReleaseChannel:
-		return nameStable
-	case rockSolidReleaseChannel:
-		return nameRockSolid
-	default:
-		return ""
-	}
-}
-
-func (r releaseChannel) Tag() string {
-	return name2tag(r.String())
-}
-
-func (r releaseChannel) IsKnown() bool {
-	return r >= minReleaseChannel && r <= maxReleaseChannel
-}
-
-func name2tag(s string) string {
-	switch s {
-	case nameAlpha:
-		return tagAlpha
-	case nameBeta:
-		return tagBeta
-	case nameEarlyAccess:
-		return tagEarlyAccess
-	case nameStable:
-		return tagStable
-	case nameRockSolid:
-		return tagRockSolid
-	default:
-		return s
-	}
-}
-
-func releaseChannelFromName(s string) releaseChannel {
-	switch name2tag(s) {
-	case tagAlpha:
-		return alphaReleaseChannel
-	case tagBeta:
-		return betaReleaseChannel
-	case tagEarlyAccess:
-		return earlyAccessReleaseChannel
-	case tagStable:
-		return stableReleaseChannel
-	case tagRockSolid:
-		return rockSolidReleaseChannel
-	default:
-		return unknownReleaseChannel
-	}
 }

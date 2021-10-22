@@ -97,25 +97,4 @@ spec:
 			})
 		})
 	})
-
-	Context("isOnReleaseChannelMetricValue func", func() {
-		It("returns 0 when image is on a release channel", func() {
-			var (
-				repo  = "registry.deckhouse.io/deckhouse/fe"
-				image = "registry.deckhouse.io/deckhouse/fe:early-access"
-			)
-			metricValue := isOnReleaseChannelMetricValue(image, repo)
-			Expect(metricValue).To(Equal(float64(0)))
-		})
-
-		It("returns 1 when image is NOT on a release channel", func() {
-			var (
-				repo  = "registry.deckhouse.io/deckhouse/fe"
-				image = "registry.deckhouse.io/deckhouse/fe:late-access"
-			)
-			metricValue := isOnReleaseChannelMetricValue(image, repo)
-
-			Expect(metricValue).To(Equal(float64(1)))
-		})
-	})
 })
