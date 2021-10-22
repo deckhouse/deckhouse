@@ -36,10 +36,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/draining",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "nodes_for_draining",
-			WaitForSynchronization: pointer.BoolPtr(false),
-			ApiVersion:             "v1",
-			Kind:                   "Node",
+			Name:                         "nodes_for_draining",
+			WaitForSynchronization:       pointer.BoolPtr(false),
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			ExecuteHookOnEvents:          pointer.BoolPtr(false),
+			ApiVersion:                   "v1",
+			Kind:                         "Node",
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
@@ -67,7 +69,16 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
-	return drainingNode{&node}, nil
+	var isDraining bool
+	if _, ok := node.Annotations["update.node.deckhouse.io/draining"]; ok {
+		isDraining = true
+	}
+
+	return drainingNode{
+		Name:          node.Name,
+		IsDraining:    isDraining,
+		Unschedulable: node.Spec.Unschedulable,
+	}, nil
 }
 
 // Drain nodes: If node is marked for draining – drain it!
@@ -94,22 +105,31 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	snap := input.Snapshots["nodes_for_draining"]
 	for _, s := range snap {
 		dNode := s.(drainingNode)
-		if !dNode.IsDraining() {
+		if !dNode.IsDraining {
 			continue
 		}
-
-		err := drain.RunCordonOrUncordon(drainHelper, dNode.Node, true)
+		cordonNode := &corev1.Node{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "Node",
+				APIVersion: "v1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name: dNode.Name,
+			},
+			Spec: corev1.NodeSpec{Unschedulable: dNode.Unschedulable},
+		}
+		err := drain.RunCordonOrUncordon(drainHelper, cordonNode, true)
 		if err != nil {
 			input.LogEntry.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
 			continue
 		}
 
 		wg.Add(1)
-		go func(node *corev1.Node) {
+		go func(nodeName string) {
 			defer wg.Done()
-			err = drain.RunNodeDrain(drainHelper, node.Name)
-			drainingNodesC <- drainedNodeRes{Node: node, Err: err}
-		}(dNode.Node)
+			err = drain.RunNodeDrain(drainHelper, nodeName)
+			drainingNodesC <- drainedNodeRes{NodeName: nodeName, Err: err}
+		}(dNode.Name)
 	}
 
 	go func() {
@@ -122,7 +142,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			input.LogEntry.Errorf("node drain failed: %s", drainedNode.Err)
 			continue
 		}
-		input.PatchCollector.MergePatch(drainAnnotationsPatch, "v1", "Node", "", drainedNode.Node.Name)
+		input.PatchCollector.MergePatch(drainAnnotationsPatch, "v1", "Node", "", drainedNode.NodeName)
 	}
 
 	return nil
@@ -140,21 +160,12 @@ var (
 )
 
 type drainingNode struct {
-	*corev1.Node
-}
-
-func (dn *drainingNode) IsDraining() bool {
-	if _, ok := dn.Annotations["update.node.deckhouse.io/draining"]; ok {
-		return true
-	}
-	return false
-}
-
-func (dn *drainingNode) IsCordoned() bool {
-	return dn.Spec.Unschedulable
+	Name          string
+	IsDraining    bool
+	Unschedulable bool
 }
 
 type drainedNodeRes struct {
-	Node *corev1.Node
-	Err  error
+	NodeName string
+	Err      error
 }
