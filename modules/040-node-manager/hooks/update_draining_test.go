@@ -36,7 +36,8 @@ var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -47,7 +48,7 @@ var _ = Describe("Modules :: nodeManager :: hooks :: update_approval_draining ::
 
 	Context("Cluster node is draining", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+			f.KubeStateSet(`
 ---
 apiVersion: v1
 kind: Node
@@ -57,7 +58,8 @@ metadata:
     node.deckhouse.io/group: "master"
   annotations:
     update.node.deckhouse.io/draining: ""
-`, 1))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -111,7 +113,8 @@ data:
 					draining := gDraining
 					unschedulable := gUnschedulable
 					BeforeEach(func() {
-						f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(initialState+generateStateToTestDrainingNodes(nodeNames, draining, unschedulable), 4))
+						f.KubeStateSet(initialState + generateStateToTestDrainingNodes(nodeNames, draining, unschedulable))
+						f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 						k8sClient := f.BindingContextController.FakeCluster().Client
 						// BindingContexts work with Dynamic client but drainHelper works with CoreV1 from kubernetes.Interface client
 						// copy nodes to the static client for appropriate testing
