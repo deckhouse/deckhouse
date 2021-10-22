@@ -84,10 +84,10 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
-// isNextReleasePatch check SORTED array of DeckhouseReleases.
+// determinePatchRelease check SORTED array of DeckhouseReleases.
 // If the next release after CURRENT Deployed release is a patch release - returns true
 // else returns false
-func isNextReleasePatch(releases []deckhouseReleaseUpdate) bool {
+func determinePatchRelease(releases []deckhouseReleaseUpdate) bool {
 	var currentReleaseIndex = -1
 	var currentRelease *semver.Version
 
@@ -101,7 +101,7 @@ func isNextReleasePatch(releases []deckhouseReleaseUpdate) bool {
 		if currentRelease != nil && i == currentReleaseIndex+1 {
 			// check next release
 			if r.Version.Major() == currentRelease.Major() && r.Version.Minor() == currentRelease.Minor() {
-				// always mark patch releases as Auto approvement
+				// always mark patch releases as Approved
 				r.ManualApproved = true
 				r.StatusApproved = true
 				releases[i] = r
@@ -124,6 +124,8 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	// production upgrade
 	releases := fetchAndPrepareReleases(input)
 
+	isPatch := determinePatchRelease(releases)
+
 	windows, exists := input.Values.GetOk("deckhouse.update.windows")
 	if exists {
 		updatePermitted, err := isUpdatePermitted(windows.Array())
@@ -131,7 +133,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 			return fmt.Errorf("update windows configuration is not valid: %s", err)
 		}
 		if !updatePermitted {
-			if isNextReleasePatch(releases) {
+			if isPatch {
 				// patch upgrade does not respect update windows
 				return releaseChannelUpdate(input, releases)
 			}
@@ -313,11 +315,11 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 			}
 
 			if !rl.StatusApproved {
-				input.LogEntry.Infof("Release %s is waiting for manual approval", rl.Version)
+				input.LogEntry.Infof("Release %s is waiting for manual approval", rl.Name)
 				return nil
 			}
 
-			input.LogEntry.Infof("Applying release %s", rl.Version)
+			input.LogEntry.Infof("Applying release %s", rl.Name)
 			st := statusPatch{
 				Phase:          v1alpha1.PhaseDeployed,
 				Approved:       rl.StatusApproved,
