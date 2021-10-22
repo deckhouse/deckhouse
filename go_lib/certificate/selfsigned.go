@@ -19,7 +19,6 @@ package certificate
 import (
 	"bytes"
 	"log"
-	"os"
 	"time"
 
 	"github.com/cloudflare/cfssl/cli/genkey"
@@ -68,10 +67,12 @@ func GenerateSelfSignedCert(logger *logrus.Entry, cn string, ca Authority, optio
 		}
 	}
 
-	// Catch cfssl logs message
+	// Catch cfssl output and show it only if error is occurred.
 	var buf bytes.Buffer
+	logWriter := log.Writer()
+
 	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
+	defer log.SetOutput(logWriter)
 
 	g := &csr.Generator{Validator: genkey.Validator}
 	csrBytes, key, err := g.ProcessRequest(request)

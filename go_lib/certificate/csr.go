@@ -19,7 +19,6 @@ package certificate
 import (
 	"bytes"
 	"log"
-	"os"
 
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/sirupsen/logrus"
@@ -37,10 +36,12 @@ func GenerateCSR(logger *logrus.Entry, cn string, options ...Option) (csrPEM, ke
 
 	g := &csr.Generator{Validator: Validator}
 
-	// Catch cfssl logs message
+	// Catch cfssl output and show it only if error is occurred.
 	var buf bytes.Buffer
+	logWriter := log.Writer()
+
 	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
+	defer log.SetOutput(logWriter)
 
 	csrPEM, key, err = g.ProcessRequest(request)
 	if err != nil {
