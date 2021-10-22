@@ -70,7 +70,7 @@ EOF
         jqFilter: |
           {
             "name": .metadata.name,
-            "address": (.status.addresses[] | select(.type == "ExternalIP") | .address)
+            "address": ((.status.addresses[] | select(.type == "ExternalIP") | .address) // (.status.addresses[] | select(.type == "InternalIP") | .address))
           }
 EOF
   fi
@@ -83,6 +83,12 @@ function __on_group::main-lb() {
         .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
       ]
     }' > /metadata/ingressgateways.json
+
+  context::jq '
+    [
+      .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
+    ]' > /metadata/ingressgateways-array.json
+
 }
 
 function __on_group::main-np() {
@@ -94,6 +100,13 @@ function __on_group::main-np() {
         .snapshots.nodes[].filterResult | .name as $name | select($nodes | index($name)) | {"address": .address, "port": $port}
       ]
     }' > /metadata/ingressgateways.json
+
+  context::jq '
+    .snapshots.ingressgateway_service[0].filterResult.port as $port |
+    [.snapshots.pods[].filterResult.nodeName] as $nodes |
+    [
+        .snapshots.nodes[].filterResult | .name as $name | select($nodes | index($name)) | {"address": .address, "port": $port}
+    ]' > /metadata/ingressgateways-array.json
 }
 
 hook::run "$@"

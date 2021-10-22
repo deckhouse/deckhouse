@@ -37,7 +37,7 @@ spec:
 {{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metadata-exporter")) | indent 6 }}
 {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
-      serviceAccountName: metadata-exporter
+      serviceAccountName: alliance-metadata-exporter
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -57,6 +57,8 @@ spec:
           value: "true"
         - name: MULTICLUSTER_API_HOST
           value: {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
+        - name: MULTICLUSTER_NETWORK_NAME
+          value: {{ include "istioNetworkName" . | quote}}
   {{- end }}
         ports:
         - name: http
@@ -88,7 +90,6 @@ spec:
           mountPath: /remote/
         - name: metadata
           mountPath: /metadata/
-  {{- if .Values.istio.federation.enabled }}
       - name: metadata-discovery
 {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
         image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.istio.metadataDiscovery }}
@@ -99,7 +100,7 @@ spec:
         - name: CLUSTER_DOMAIN
           value: {{ $.Values.global.discovery.clusterDomain | quote }}
         - name: INLET
-          value: {{ $.Values.istio.federation.ingressGateway.inlet }}
+          value: {{ $.Values.istio.alliance.ingressGateway.inlet | quote }}
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
@@ -108,7 +109,6 @@ spec:
           mountPath: /metadata/
         - name: tmp
           mountPath: /tmp/
-  {{- end }}
       volumes:
       - name: istio-ca-root-cert
         configMap:

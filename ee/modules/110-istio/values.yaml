@@ -3,10 +3,11 @@ istio:
   tlsMode: "Off" # MutualPermissive Mutual
   outboundTrafficPolicyMode: AllowAny
   sidecar: {}
-  federation:
-    ingressGateway:
-      inlet: NodePort
+  federation: {}
   multicluster: {}
+  alliance:
+    ingressGateway:
+      inlet: LoadBalancer
   tracing:
     collector:
       zipkin: {}

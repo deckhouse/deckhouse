@@ -40,6 +40,28 @@ type publicMetadata struct {
 	RootCA      string `json:"rootCA,omitempty"`
 }
 
+type privateMetadata struct {
+	Alliance struct {
+		IngressGateways []struct {
+			Address string `json:"address"`
+			Port    uint   `json:"port"`
+		} `json:"ingressGateways"`
+	} `json:"alliance"`
+	Federation struct {
+		PublicServices []struct {
+			Hostname string `json:"hostname"`
+			Ports    []struct {
+				Name string `json:"name"`
+				Port uint   `json:"port"`
+			} `json:"ports"`
+		} `json:"publicServices"`
+	} `json:"federation"`
+	Multicluster struct {
+		ApiHost     string `json:"apiHost"`
+		NetworkName string `json:"networkName"`
+	} `json:"multicluster"`
+}
+
 // map[custerUUID]pubilcMetadata
 type remotePublicMetadata map[string]publicMetadata
 
@@ -130,6 +152,40 @@ func renderPublicMetadataJSON() {
 	publicMetadataJSON = string(jsonbuf)
 }
 
+func renderPrivateMetadataJSON() string {
+	var pm privateMetadata
+
+	data, err := ioutil.ReadFile("/metadata/ingressgateways-array.json")
+	if err == nil {
+		json.Unmarshal(data, &pm.Alliance.IngressGateways)
+	}
+
+	if os.Getenv("FEDERATION_ENABLED") == "true" {
+		data, err := ioutil.ReadFile("/metadata/services-array.json")
+		if err == nil {
+			json.Unmarshal(data, &pm.Federation.PublicServices)
+		}
+	}
+
+	if os.Getenv("MULTICLUSTER_ENABLED") == "true" {
+		pm.Multicluster.NetworkName = os.Getenv("MULTICLUSTER_NETWORK_NAME")
+		if len(pm.Multicluster.NetworkName) == 0 {
+			panic("Error reading MULTICLUSTER_NETWORK_NAME from env")
+		}
+
+		pm.Multicluster.ApiHost = os.Getenv("MULTICLUSTER_API_HOST")
+		if len(pm.Multicluster.ApiHost) == 0 {
+			panic("Error reading MULTICLUSTER_API_HOST from env")
+		}
+	}
+
+	jsonbuf, err := json.MarshalIndent(pm, "", "  ")
+	if err != nil {
+		panic("Error marshalling cluster private metadata to json: " + err.Error())
+	}
+	return string(jsonbuf)
+}
+
 func checkAuthn(header http.Header, scope string) error {
 	reqTokenString := header.Get("Authorization")
 	if !strings.HasPrefix(reqTokenString, "Bearer ") {
@@ -189,21 +245,23 @@ func checkAuthn(header http.Header, scope string) error {
 }
 
 func httpHandlerPubilcJSON(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Only GET method is supported.", http.StatusMethodNotAllowed)
-		return
-	}
-
 	fmt.Fprint(w, publicMetadataJSON)
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerSpiffeBundleEndpoint(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Only GET method is supported.", http.StatusMethodNotAllowed)
+func httpHandlerPrivateJSON(w http.ResponseWriter, r *http.Request) {
+	err := checkAuthn(r.Header, "private")
+	if err != nil {
+		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
+	privateMetadataJSON := renderPrivateMetadataJSON()
+	fmt.Fprint(w, privateMetadataJSON)
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
+func httpHandlerSpiffeBundleEndpoint(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, spiffeBundleJSON)
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
@@ -214,6 +272,7 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+// TODO: delete after refactoring in favour of httpHandlerPrivate
 func httpHandlerFederationServices(w http.ResponseWriter, r *http.Request) {
 	err := checkAuthn(r.Header, "federation-services")
 	if err != nil {
@@ -230,6 +289,7 @@ func httpHandlerFederationServices(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+// TODO: delete after refactoring in favour of httpHandlerPrivate
 func httpHandlerFederationIngressgateways(w http.ResponseWriter, r *http.Request) {
 	err := checkAuthn(r.Header, "federation-ingressgateways")
 	if err != nil {
@@ -245,6 +305,39 @@ func httpHandlerFederationIngressgateways(w http.ResponseWriter, r *http.Request
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+// TODO: delete after refactoring in favour of httpHandlerPrivate
+func httpHandlerAllianceIngressgateways(w http.ResponseWriter, r *http.Request) {
+	err := checkAuthn(r.Header, "alliance-ingressgateways")
+	if err != nil {
+		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
+	}
+
+	data, err := ioutil.ReadFile("/metadata/ingressgateways.json")
+	if err != nil {
+		http.Error(w, "Error reading ingressgateways.json", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
+// TODO: delete after refactoring in favour of httpHandlerPrivate
+func httpHandlerMulticlusterNetworkName(w http.ResponseWriter, r *http.Request) {
+	err := checkAuthn(r.Header, "multicluster-network-name")
+	if err != nil {
+		http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
+	}
+
+	networkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
+	if len(networkName) == 0 {
+		http.Error(w, "Error reading network name", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, networkName)
+	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+}
+
+// TODO: delete after refactoring in favour of httpHandlerPrivate
 func httpHandlerMulticlusterAPIHost(w http.ResponseWriter, r *http.Request) {
 	err := checkAuthn(r.Header, "multicluster-api-host")
 	if err != nil {
@@ -260,9 +353,16 @@ func httpHandlerMulticlusterAPIHost(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+func renderScheduler() {
+	time.Sleep(1 * time.Minute)
+	renderSpiffeBundleJSON()
+	renderPublicMetadataJSON()
+}
+
 func main() {
 	renderSpiffeBundleJSON()
 	renderPublicMetadataJSON()
+	go renderScheduler()
 
 	listenAddr := "0.0.0.0:8080"
 
@@ -273,13 +373,19 @@ func main() {
 	router.Handle("/metadata/public/spiffe-bundle-endpoint", http.HandlerFunc(httpHandlerSpiffeBundleEndpoint))
 	router.Handle("/metadata/public/public.json", http.HandlerFunc(httpHandlerPubilcJSON))
 
+	// TODO: delete after refactoring in favour of httpHandlerPrivate
 	if os.Getenv("FEDERATION_ENABLED") == "true" {
 		router.Handle("/metadata/private/federation-services", http.HandlerFunc(httpHandlerFederationServices))
 		router.Handle("/metadata/private/federation-ingressgateways", http.HandlerFunc(httpHandlerFederationIngressgateways))
 	}
 	if os.Getenv("MULTICLUSTER_ENABLED") == "true" {
 		router.Handle("/metadata/private/multicluster-api-host", http.HandlerFunc(httpHandlerMulticlusterAPIHost))
+		router.Handle("/metadata/private/multicluster-network-name", http.HandlerFunc(httpHandlerMulticlusterNetworkName))
 	}
+	router.Handle("/metadata/private/alliance-ingressgateways", http.HandlerFunc(httpHandlerAllianceIngressgateways))
+	// TODO end
+
+	router.Handle("/metadata/private/private.json", http.HandlerFunc(httpHandlerPrivateJSON))
 
 	server := &http.Server{
 		Addr:         listenAddr,

@@ -35,7 +35,10 @@ function __config__() {
         {
           "name": .metadata.name,
           "spiffeEndpoint": ((.spec.metadataEndpoint | sub("/*$"; "")) + "/public/spiffe-bundle-endpoint"),
+          "enableIngressGateway": .spec.enableIngressGateway,
           "apiHost": .status.metadataCache.apiHost,
+          "networkName": .status.metadataCache.networkName,
+          "ingressGateways": .status.metadataCache.ingressGateways,
           "public": .status.metadataCache.public
         }
     beforeHelm: 10
@@ -66,10 +69,8 @@ function __main__() {
   echo 0 > $octet_3_store
   echo 0 > $octet_4_store
 
-  # The `| .publicServices = [.publicServices[] | select(.ports)]` section is Migration until new crd status spec will be filled
   federations="$(context::jq -c '[
-    .snapshots.federations[].filterResult | select(.ingressGateways and .publicServices and .public) | del(.public)
-    | .publicServices = [.publicServices[] | select(.ports)]
+    .snapshots.federations[].filterResult | select((.ingressGateways | length > 0) and .publicServices and .public) | del(.public)
   ] | sort')"
 
   for idx_f in $(jq -r '. | keys[]' <<< "$federations"); do
@@ -79,7 +80,17 @@ function __main__() {
     done
   done
 
-  multiclusters="$(context::jq -c '[.snapshots.multiclusters[].filterResult | select(.apiHost and .public)]')"
+  multiclusters="$(context::jq -c '
+    [
+      .snapshots.multiclusters[].filterResult |
+      select(
+        ((.enableIngressGateway | not) or (.enableIngressGateway and (.ingressGateways | length > 0))) and
+        .apiHost and
+        .networkName and
+        .public
+      )
+    ]
+  ')"
   remotePublicMetadata="$(context::jq -c '
     [.snapshots.federations[].filterResult | select(.public) | .public] +
     [.snapshots.multiclusters[].filterResult | select(.public) | .public] |
@@ -102,15 +113,13 @@ function __main__() {
         --claim scope=api \
         --ttl 8760h
     )"
-    if [ -n "${D8_IS_TESTS_ENVIRONMENT-}" ]; then
-      echo $token > "/tmp/jwt-api-$multiclusterName"
-    fi
 
     multiclusters="$(jq --argjson i "$i" --arg token "$token" '.[$i].apiJWT = $token | del(.[$i].public)' <<< "$multiclusters")"
   done
 
   values::set istio.internal.federations "$federations"
   values::set istio.internal.multiclusters "$multiclusters"
+  values::set istio.internal.multiclustersNeedIngressGateway "$(context::jq -r '[.snapshots.multiclusters[].filterResult.enableIngressGateway] | any')"
   values::set istio.internal.remotePublicMetadata "$remotePublicMetadata"
 
   rm $octet_3_store $octet_4_store
