@@ -19,7 +19,6 @@ package certificate
 import (
 	"bytes"
 	"log"
-	"os"
 
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/initca"
@@ -47,10 +46,12 @@ func GenerateCA(logger *logrus.Entry, cn string, options ...Option) (Authority, 
 		option(request)
 	}
 
-	// Catch cfssl logs message
+	// Catch cfssl output and show it only if error is occurred.
 	var buf bytes.Buffer
+	logWriter := log.Writer()
+
 	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
+	defer log.SetOutput(logWriter)
 
 	ca, _, key, err := initca.New(request)
 	if err != nil {
