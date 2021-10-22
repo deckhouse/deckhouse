@@ -10,26 +10,33 @@ properties:
       - `Managed` - поставка для managed-кластеров от облачных провайдеров, например Google Kubernetes Engine.
   releaseChannel:
     description: |
-      Канал обновлений Deckhouse.
+      Желаемый канал обновлений Deckhouse (Deckhouse переключится на него при появлении такой возможности).
 
       Порядок возрастания стабильности канала обновлений (от **наименее** стабильного, к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
-    description: Настройки обновления Deckhouse
-    mode:
-      description: Режим обновления - автоматический (Auto) или ручной (Manual)
-    windows:
-      description: |
-        Окна обновления Deckhouse. В заданные периоды скачивается и запускается новый образ Deckhouse
-        с тем же тэгом, если он существует.
-      from:
-        description: Время начала обновления.
-      to:
-        description: Время окончания обновления.
-      days:
-        description: Дни недели, в которые можно запустить обновления.
+    description: Настройки режима и окон обновления Deckhouse.
+    properties:
+      mode:
+        description: |
+          Режим обновления минорных версий Deckhouse (смена релизов). **Не влияет на обновление patch-версий.**
+          - `Auto` (автоматический) — Все обновления применяются автоматически.
+
+            Обновления минорной версии Deckhouse (обновления релизов, например с `v1.26.*` на `v1.27.*`), применяются с учетом заданных окон обновлений, либо (если окна обновлений не заданы) по мере появления обновлений на соответствующем канале обновлений.
+          - `Manual` (ручной) — Для смены минорной версии Deckhouse (например с `v1.26.*` на `v1.27.*`), необходимо ручное подтверждение. Для подтверждения обновления необходимо отредактировать [CR `DeckhouseRelease`](https://deckhouse.io/ru/documentation/v1/modules/020-deckhouse/cr.html), который соответствует обновляемой версии, установив поле `approved` в `true`.
+      windows:
+        description: |
+          Список окон обновлений.
+        items:
+          properties:
+            from:
+              description: Время начала окна обновления.
+            to:
+              description: Время окончания окна обновления.
+            days:
+              description: Дни недели, в которые применяется окно обновлений.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:

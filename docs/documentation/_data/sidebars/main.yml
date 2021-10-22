@@ -40,9 +40,15 @@ entries:
                     en: Usage
                   url: /modules/020-deckhouse/usage.html
                 - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/020-deckhouse/configuration.html
+                    ru: Справка
+                    en: Reference
+                  folders:
+                    - title:
+                        ru: Настройки
+                        en: Configuration
+                      url: /modules/020-deckhouse/configuration.html
+                    - title: Custom Resources
+                      url: /modules/020-deckhouse/cr.html
             - title: deckhouse-web
               folders:
                 - title:
