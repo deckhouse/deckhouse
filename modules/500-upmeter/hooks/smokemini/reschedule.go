@@ -49,11 +49,12 @@ var _ = sdk.RegisterFunc(
 		Queue: "/modules/upmeter/update_selector",
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
-				Name:                   "nodes",
-				ApiVersion:             "v1",
-				Kind:                   "Node",
-				FilterFunc:             snapshot.NewNode,
-				WaitForSynchronization: pointer.BoolPtr(false),
+				Name:                         "nodes",
+				ApiVersion:                   "v1",
+				Kind:                         "Node",
+				FilterFunc:                   snapshot.NewNode,
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
 			{
 				Name:              "statefulsets",
@@ -63,8 +64,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewStatefulSet,
 
-				ExecuteHookOnEvents:    pointer.BoolPtr(false),
-				WaitForSynchronization: pointer.BoolPtr(false),
+				ExecuteHookOnEvents:          pointer.BoolPtr(false),
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
 			{
 				Name:              "pods",
@@ -74,8 +76,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewPod,
 
-				ExecuteHookOnEvents:    pointer.BoolPtr(false),
-				WaitForSynchronization: pointer.BoolPtr(false),
+				ExecuteHookOnEvents:          pointer.BoolPtr(false),
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
 			{
 				Name:              "pdb",
@@ -85,15 +88,17 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewDisruption,
 
-				ExecuteHookOnEvents:    pointer.BoolPtr(false),
-				WaitForSynchronization: pointer.BoolPtr(false),
+				ExecuteHookOnEvents:          pointer.BoolPtr(false),
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
 			{
-				Name:                   "default_sc",
-				ApiVersion:             "storage.k8s.io/v1",
-				Kind:                   "StorageClass",
-				FilterFunc:             snapshot.NewStorageClass,
-				WaitForSynchronization: pointer.BoolPtr(false),
+				Name:                         "default_sc",
+				ApiVersion:                   "storage.k8s.io/v1",
+				Kind:                         "StorageClass",
+				FilterFunc:                   snapshot.NewStorageClass,
+				ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+				WaitForSynchronization:       pointer.BoolPtr(false),
 			},
 		},
 	},
