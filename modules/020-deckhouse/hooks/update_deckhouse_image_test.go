@@ -136,7 +136,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 		})
 	})
 
-	Context("Manual approvement is set", func() {
+	Context("Manual approval mode is set", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
 			f.ValuesDelete("deckhouse.update.windows")
@@ -149,6 +149,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f).To(ExecuteSuccessfully())
 			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.0"))
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
 		})
 
 		Context("After setting manual approve", func() {
@@ -162,6 +163,20 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 				Expect(f).To(ExecuteSuccessfully())
 				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(Equal("my.registry.com/deckhouse:v1.26.0"))
+			})
+		})
+
+		Context("Auto deploy Patch release in Manual mode", func() {
+			BeforeEach(func() {
+				f.KubeStateSet("")
+				cc := f.KubeStateSet(deckhouseDeployment + deckhouseReadyPod + deckhouseReleases + deckhousePatchRelease)
+				f.BindingContexts.Set(cc)
+				f.RunHook()
+			})
+			It("Must upgrade deckhouse", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(Equal("my.registry.com/deckhouse:v1.25.1"))
 			})
 		})
 	})
