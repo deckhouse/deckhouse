@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"io"
 	"sync"
 
@@ -98,6 +99,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	}(errOut)
 
 	drainHelper := drain.NewDrainer(k8sCli, errOut)
+	drainHelper.Ctx = context.Background()
 
 	var wg = &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
