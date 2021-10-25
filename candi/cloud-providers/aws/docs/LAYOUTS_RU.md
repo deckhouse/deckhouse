@@ -104,8 +104,8 @@ provider:
   providerSecretAccessKey: mYsEcReTkEy
   region: eu-central-1
 withNAT:
-  zone: eu-central-1a
   bastionInstance:
+    zone: eu-central-1a
     instanceClass:
       instanceType: m5.large
       ami: ami-09a4a23815cdb5e06

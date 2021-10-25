@@ -72,6 +72,8 @@ installTypes:
       without_nat:
         name: WithoutNAT
         recommended: true
+      with_nat:
+        name: WithNAT
     pages_title:
       en: "Deckhouse Platform in Amazon AWS"
       ru: "Deckhouse Platform в Amazon AWS"
