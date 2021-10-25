@@ -26,6 +26,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -68,10 +69,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   filterDeckhousePod,
 		},
 		{
-			Name:       "releases",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "DeckhouseRelease",
-			FilterFunc: filterDeckhouseRelease,
+			Name:                         "releases",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "DeckhouseRelease",
+			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
+			FilterFunc:                   filterDeckhouseRelease,
 		},
 	},
 }, dependency.WithExternalDependencies(updateDeckhouse))
@@ -84,15 +86,15 @@ type deckhousePodInfo struct {
 	Ready     bool   `json:"ready"`
 }
 
-// determinePatchRelease check SORTED array of DeckhouseReleases.
+// isNextReleasePatch check SORTED array of DeckhouseReleases.
 // If the next release after CURRENT Deployed release is a patch release - returns true
 // else returns false
-func determinePatchRelease(releases []deckhouseReleaseUpdate) bool {
+func isNextReleasePatch(releases []deckhouseReleaseUpdate) bool {
 	var currentReleaseIndex = -1
 	var currentRelease *semver.Version
 
 	for i, r := range releases {
-		if r.Phase == "Deployed" {
+		if r.Phase == v1alpha1.PhaseDeployed {
 			currentReleaseIndex = i
 			currentRelease = r.Version
 			continue
@@ -101,10 +103,6 @@ func determinePatchRelease(releases []deckhouseReleaseUpdate) bool {
 		if currentRelease != nil && i == currentReleaseIndex+1 {
 			// check next release
 			if r.Version.Major() == currentRelease.Major() && r.Version.Minor() == currentRelease.Minor() {
-				// always mark patch releases as Approved
-				r.ManualApproved = true
-				r.StatusApproved = true
-				releases[i] = r
 				return true
 			}
 
@@ -122,28 +120,34 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	// production upgrade
-	releases := fetchAndPrepareReleases(input)
+	approvalMode := input.Values.Get("deckhouse.update.mode").String()
+	isManualMode := approvalMode == "Manual"
 
-	isPatch := determinePatchRelease(releases)
+	releases := fetchAndPrepareReleases(input, isManualMode)
 
-	windows, exists := input.Values.GetOk("deckhouse.update.windows")
-	if exists {
-		updatePermitted, err := isUpdatePermitted(windows.Array())
-		if err != nil {
-			return fmt.Errorf("update windows configuration is not valid: %s", err)
-		}
-		if !updatePermitted {
+	isPatch := isNextReleasePatch(releases)
+
+	// update windows works only for Auto deployment mode
+	if !isManualMode {
+		windows, exists := input.Values.GetOk("deckhouse.update.windows")
+		if exists {
 			if isPatch {
-				// patch upgrade does not respect update windows
-				return releaseChannelUpdate(input, releases)
+				// patch release does not respect update windows
+				return releaseChannelUpdate(input, releases, isPatch)
 			}
 
-			input.LogEntry.Debug("Deckhouse update does not get into update windows. Skipping")
-			return nil
+			updatePermitted, err := isUpdatePermitted(windows.Array())
+			if err != nil {
+				return fmt.Errorf("update windows configuration is not valid: %s", err)
+			}
+			if !updatePermitted {
+				input.LogEntry.Debug("Deckhouse update does not get into update windows. Skipping")
+				return nil
+			}
 		}
 	}
 
-	return releaseChannelUpdate(input, releases)
+	return releaseChannelUpdate(input, releases, isPatch)
 }
 
 // used also in check_deckhouse_release.go
@@ -215,8 +219,7 @@ func filterDeckhousePod(unstructured *unstructured.Unstructured) (go_hook.Filter
 
 // fetch releases from snapshots and sort them into ascending semver order
 // also patch status for a new (Pending) releases
-func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate {
-	approvalMode := input.Values.Get("deckhouse.update.mode").String()
+func fetchAndPrepareReleases(input *go_hook.HookInput, isManualMode bool) []deckhouseReleaseUpdate {
 	snap := input.Snapshots["releases"]
 	if len(snap) == 0 {
 		return nil
@@ -247,7 +250,7 @@ func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate 
 
 		if statusPatch.Phase == v1alpha1.PhasePending {
 			// check and set .status.approved for pending releases
-			if approvalMode == "Manual" && !rl.ManualApproved {
+			if isManualMode && !rl.ManualApproved {
 				statusPatch.Approved = false
 				if rl.StatusApproved {
 					statusChanged = true
@@ -273,7 +276,9 @@ func fetchAndPrepareReleases(input *go_hook.HookInput) []deckhouseReleaseUpdate 
 }
 
 // releaseChannelUpdate update with previously set release channel when CR DeckhouseRelease exists
-func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseUpdate) error {
+func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseUpdate, isPatch bool) error {
+	input.MetricsCollector.Expire("d8_releases")
+
 	snap := input.Snapshots["deckhouse_pod"]
 	if len(snap) == 0 {
 		return nil
@@ -314,15 +319,17 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				continue
 			}
 
-			if !rl.StatusApproved {
+			// always deploy Patch releases
+			if !rl.StatusApproved && !isPatch {
 				input.LogEntry.Infof("Release %s is waiting for manual approval", rl.Name)
+				input.MetricsCollector.Set("d8_release_waiting_manual", 1, map[string]string{"name": rl.Name}, metrics.WithGroup("d8_releases"))
 				return nil
 			}
 
 			input.LogEntry.Infof("Applying release %s", rl.Name)
 			st := statusPatch{
 				Phase:          v1alpha1.PhaseDeployed,
-				Approved:       rl.StatusApproved,
+				Approved:       true,
 				TransitionTime: now,
 			}
 			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
