@@ -21,7 +21,7 @@ spec:
       openAPIV3Schema:
         type: object
         description: |
-          Parameters of the LocalPathProvisioner instance.
+          Parameters of the `local-path-provisioner` instance.
         properties:
           spec:
             type: object
@@ -33,14 +33,12 @@ spec:
                 items:
                   type: string
                 description: |
-                  Select node groups for local-path-provisioner storage-class allowedTopologies.
-
-                  **Format**: array of string.
+                  Select nodeGroups for storageClass allowedTopologies.
                 example:
                 - master
                 - worker
               path:
                 type: string
                 description: |
-                  Node root path for local-path-provisioner PV's.
+                  Node root path for PV's.
                 example: "/opt/local-path-provisioner"
