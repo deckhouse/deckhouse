@@ -6,13 +6,13 @@ spec:
     schema:
       openAPIV3Schema:
         description: |
-          Параметры инстанса Local-Path-Provisioner
+          Параметры экземпляра `local-path-provisioner`.
         properties:
           spec:
             properties:
               nodeGroups:
                 description: |
-                  Нодгруппы, в которых работает данный storage-class.
+                  nodeGroup'ы, в которых работает данный storageClass.
               path:
                 description: |
                   Корневой путь на ноде к директории для хранения PV.
