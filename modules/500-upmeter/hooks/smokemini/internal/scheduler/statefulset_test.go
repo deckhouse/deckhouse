@@ -47,7 +47,7 @@ func assertNone(t *testing.T, x string, err error) {
 }
 
 func assertAbortion(t *testing.T, x string, err error) {
-	if assert.ErrorIs(t, err, ErrAbort, "should return aborting error") {
+	if assert.ErrorIs(t, err, ErrSkip, "should return skipping error") {
 		assert.Equal(t, "", x, "should be not selected")
 	}
 }
