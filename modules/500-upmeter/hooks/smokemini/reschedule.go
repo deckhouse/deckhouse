@@ -146,8 +146,8 @@ func reschedule(input *go_hook.HookInput) error {
 	// Do the job
 	x, newSts, err := s.Schedule(state, nodes)
 	if err != nil {
-		if errors.Is(err, scheduler.ErrAbort) {
-			logger.Warn(err)
+		if errors.Is(err, scheduler.ErrSkip) {
+			logger.Info(err)
 			return nil
 		}
 		return err

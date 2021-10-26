@@ -24,15 +24,15 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	snapshot "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
 var (
-	// ErrAbort is the legal abortion of scheduling
-	ErrAbort = fmt.Errorf("scheduling aborted")
+	// ErrSkip is the legal abortion of scheduling
+	ErrSkip = fmt.Errorf("scheduling skipped")
 
 	// errNext lets one step in pipeline to pass the control to the next step
-	errNext = fmt.Errorf("skipping")
+	errNext = fmt.Errorf("next step")
 )
 
 func NewStatefulSetSelector(nodes []snapshot.Node, storageClass string, pods []snapshot.Pod, disruptionAllowed bool) IndexSelectorPipe {
@@ -60,7 +60,7 @@ func (s IndexSelectorPipe) Select(state State) (string, error) {
 		}
 		return x, err
 	}
-	return "", fmt.Errorf("did not choose StatefulSet")
+	return "", ErrSkip
 }
 
 type selectByPod struct {
@@ -95,7 +95,7 @@ func (s *selectByPod) Select(state State) (string, error) {
 
 	if !s.disruptionAllowed {
 		// Aborting to save available pods
-		return "", fmt.Errorf("%w: no disruption allowed", ErrAbort)
+		return "", fmt.Errorf("%w: no disruption allowed", ErrSkip)
 	}
 
 	// Find sts which was not moved for the longest time. Oldest pod cannot be younger than N-1 crontab
