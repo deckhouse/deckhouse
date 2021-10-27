@@ -30,7 +30,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +37,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/v1alpha1"
 )
 
@@ -136,7 +136,7 @@ func updateDeckhouse(input *go_hook.HookInput, dc dependency.Container) error {
 				return releaseChannelUpdate(input, releases, isPatch)
 			}
 
-			updatePermitted, err := isUpdatePermitted(windows.Array())
+			updatePermitted, err := isUpdatePermitted([]byte(windows.Raw))
 			if err != nil {
 				return fmt.Errorf("update windows configuration is not valid: %s", err)
 			}
@@ -364,99 +364,23 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 	return nil
 }
 
-func isUpdatePermitted(windows []gjson.Result) (bool, error) {
-	if len(windows) == 0 {
+func isUpdatePermitted(windowsData []byte) (bool, error) {
+	if len(windowsData) == 0 {
 		return true, nil
 	}
 
-	var now time.Time
+	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.Local)
-	} else {
-		now = time.Now()
 	}
 
-	for _, window := range windows {
-		var w updateWindow
-		err := json.Unmarshal([]byte(window.Raw), &w)
-		if err != nil {
-			return false, err
-		}
-		if w.IsAllowed(now) {
-			return true, nil
-		}
+	windows, err := update.FromJSON(windowsData)
+	if err != nil {
+		return false, err
 	}
 
-	return false, nil
-}
-
-type updateWindow struct {
-	From string   `json:"from"`
-	To   string   `json:"to"`
-	Days []string `json:"days"`
-}
-
-// IsAllowed check if specified window is allowed at the moment or not
-func (uw updateWindow) IsAllowed(now time.Time) bool {
-	fromInput, _ := time.Parse("15:04", uw.From)
-	toInput, _ := time.Parse("15:04", uw.To)
-
-	fromTime := time.Date(now.Year(), now.Month(), now.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, now.Location())
-	toTime := time.Date(now.Year(), now.Month(), now.Day(), toInput.Hour(), toInput.Minute(), 0, 0, now.Location())
-
-	updateToday := uw.isTodayAllowed(now, uw.Days)
-
-	if !updateToday {
-		return false
-	}
-
-	if now.After(fromTime) && now.Before(toTime) {
-		return true
-	}
-
-	return false
-}
-
-func (uw updateWindow) isDay(today time.Time, day string) bool {
-	switch strings.ToLower(day) {
-	case "mon":
-		day = "Monday"
-
-	case "tue":
-		day = "Tuesday"
-
-	case "wed":
-		day = "Wednesday"
-
-	case "thu":
-		day = "Thursday"
-
-	case "fri":
-		day = "Friday"
-
-	case "sat":
-		day = "Saturday"
-
-	case "sun":
-		day = "Sunday"
-	}
-
-	return today.Weekday().String() == day
-}
-
-func (uw updateWindow) isTodayAllowed(now time.Time, days []string) bool {
-	if len(days) == 0 {
-		return true
-	}
-
-	for _, day := range days {
-		if uw.isDay(now, day) {
-			return true
-		}
-	}
-
-	return false
+	return windows.IsAllowed(now), nil
 }
 
 // tagUpdate update by tag, in dev mode or specified image
