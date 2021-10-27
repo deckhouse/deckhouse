@@ -291,7 +291,6 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 		return nil
 	}
 
-	repo := input.Values.Get("global.modulesImages.registry").String()
 	now := time.Now()
 
 	currentReleaseIndex := -1
@@ -326,24 +325,8 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				return nil
 			}
 
-			input.LogEntry.Infof("Applying release %s", rl.Name)
-			st := statusPatch{
-				Phase:          v1alpha1.PhaseDeployed,
-				Approved:       true,
-				TransitionTime: now,
-			}
-			input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
-			input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-				var depl appsv1.Deployment
-				err := sdk.FromUnstructured(u, &depl)
-				if err != nil {
-					return nil, err
-				}
+			applyRelease(input, rl, now)
 
-				depl.Spec.Template.Spec.Containers[0].Image = repo + ":" + rl.Version.Original()
-
-				return sdk.ToUnstructured(&depl)
-			}, "apps/v1", "Deployment", "d8-system", "deckhouse")
 			return nil
 
 		case v1alpha1.PhaseDeployed:
@@ -361,7 +344,42 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 		}
 	}
 
+	// self-healing, if deployed release was deleted
+	if currentReleaseIndex == -1 {
+		// no deployed releases found, deploy first pending release
+		for _, rl := range releases {
+			if rl.Phase == v1alpha1.PhasePending {
+				applyRelease(input, rl, now)
+				return nil
+			}
+		}
+	}
+
 	return nil
+}
+
+func applyRelease(input *go_hook.HookInput, rl deckhouseReleaseUpdate, ts time.Time) {
+	input.LogEntry.Infof("Applying release %s", rl.Name)
+
+	repo := input.Values.Get("global.modulesImages.registry").String()
+
+	st := statusPatch{
+		Phase:          v1alpha1.PhaseDeployed,
+		Approved:       true,
+		TransitionTime: ts,
+	}
+	input.PatchCollector.MergePatch(st, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+	input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		var depl appsv1.Deployment
+		err := sdk.FromUnstructured(u, &depl)
+		if err != nil {
+			return nil, err
+		}
+
+		depl.Spec.Template.Spec.Containers[0].Image = repo + ":" + rl.Version.Original()
+
+		return sdk.ToUnstructured(&depl)
+	}, "apps/v1", "Deployment", "d8-system", "deckhouse")
 }
 
 func isUpdatePermitted(windowsData []byte) (bool, error) {
