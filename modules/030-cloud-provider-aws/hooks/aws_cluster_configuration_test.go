@@ -22,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -149,8 +148,7 @@ data:
 
 		It("Hook should fail with errors", func() {
 			Expect(a).To(Not(ExecuteSuccessfully()))
-
-			Expect(a.Session.Err).Should(gbytes.Say(`ERROR: Can't find Secret d8-provider-cluster-configuration in Namespace kube-system`))
+			Expect(a.GoHookError.Error()).Should(ContainSubstring(`Can't find Secret d8-provider-cluster-configuration in Namespace kube-system`))
 		})
 	})
 
@@ -185,13 +183,14 @@ data:
 		It("All values should be gathered from discovered data", func() {
 			Expect(c).To(Not(ExecuteSuccessfully()))
 
-			Expect(c.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: validate cloud_discovery_data: Document validation failed:`))
-			Expect(c.Session.Err).Should(gbytes.Say(`instances.additionalSecurityGroups should match`))
-			Expect(c.Session.Err).Should(gbytes.Say(`instances.iamProfileName is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.keyName is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.loadBalancerSecurityGroup is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.zoneToSubnetIdMap is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.zones is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.additionalSecurityGroups should match`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.ami is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.associatePublicIPAddress is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.iamProfileName is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.keyName is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.loadBalancerSecurityGroup is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.zoneToSubnetIdMap is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.zones is required`))
 		})
 	})
 
@@ -205,10 +204,11 @@ data:
 		It("All values should be gathered from discovered data", func() {
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
-			Expect(d.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: Document validation failed`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.layout is required`))
-			Expect(d.Session.Err).Should(gbytes.Say(`vpcNetworkCIDR should match`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.provider is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.layout is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`vpcNetworkCIDR should match`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
 			// etcetera...
 		})
 	})

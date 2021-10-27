@@ -65,6 +65,15 @@ var (
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
+		"modules/030-cloud-provider-aws/openapi/config-values.yaml": {
+			// ignore AWS disk types
+			"properties.storageClass.properties.provision.items.properties.type",
+			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
+		},
+		"modules/030-cloud-provider-aws/openapi/values.yaml": {
+			// ignore AWS disk types
+			"properties.internal.properties.storageClasses.items.oneOf[*].properties.type",
+		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
