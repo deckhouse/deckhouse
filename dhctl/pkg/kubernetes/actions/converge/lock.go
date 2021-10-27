@@ -95,11 +95,11 @@ func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
 		Name:                 "d8-converge-lock",
 		Identity:             identity,
 		Namespace:            "d8-system",
-		LeaseDurationSeconds: 120,
-		RenewDurationSeconds: 100,
-		RetryDuration:        2 * time.Second,
-		OnRenewError: func(_ error) {
-			log.WarnLn("Lease renew was failed. Send SIGINT and shutdown")
+		LeaseDurationSeconds: 300,
+		RenewEverySeconds:    180,
+		RetryWaitDuration:    3 * time.Second,
+		OnRenewError: func(renewErr error) {
+			log.WarnF("Lease renew was failed. Send SIGINT and shutdown: %v\n", renewErr)
 			p, err := os.FindProcess(os.Getpid())
 			if err != nil {
 				log.ErrorF("Cannot find pid: %v", err)

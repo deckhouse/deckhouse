@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/user"
 	"strings"
@@ -41,12 +42,19 @@ type LeaseLockConfig struct {
 	Identity  string
 
 	LeaseDurationSeconds int32
-	RenewDurationSeconds int64
-	RetryDuration        time.Duration
+	RenewEverySeconds    int64
+	RetryWaitDuration    time.Duration
 
 	OnRenewError func(err error)
 
 	AdditionalUserInfo string
+}
+
+// RenewRetries returns a number of possible retries between renew seconds and lease lifetime seconds.
+func (c *LeaseLockConfig) RenewRetries() int {
+	d := int64(c.LeaseDurationSeconds) - c.RenewEverySeconds
+	retries := math.Ceil(float64(d) / c.RetryWaitDuration.Seconds())
+	return int(retries)
 }
 
 type LockUserInfo struct {
@@ -117,7 +125,8 @@ func (l *LeaseLock) Unlock() {
 
 	close(l.exitRenewCh)
 
-	err := retry.NewSilentLoop("release lease", 5, l.config.RetryDuration).Run(func() error {
+	deleteRetries := l.config.RenewRetries()
+	err := retry.NewSilentLoop("unlock lease", deleteRetries, l.config.RetryWaitDuration).Run(func() error {
 		err := l.leasesCl.Delete(context.TODO(), l.lease.Name, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			return nil
@@ -139,7 +148,7 @@ func (l *LeaseLock) startAutoRenew() {
 	defer log.Debugln("lease autorenew stopped")
 	log.Debugln("lease autorenew started")
 
-	t := time.NewTicker(time.Duration(l.config.RenewDurationSeconds) * time.Second)
+	t := time.NewTicker(time.Duration(l.config.RenewEverySeconds) * time.Second)
 	defer t.Stop()
 
 	for {
@@ -169,7 +178,8 @@ func (l *LeaseLock) tryAcquire(force bool) (*coordinationv1.Lease, error) {
 		return strings.HasPrefix(err.Error(), prefix)
 	}
 
-	err := retry.NewSilentLoop("release lease", 5, l.config.RetryDuration).BreakIf(cannotRenew).Run(func() error {
+	acquireRetries := l.config.RenewRetries()
+	err := retry.NewSilentLoop("acquire lease", acquireRetries, l.config.RetryWaitDuration).BreakIf(cannotRenew).Run(func() error {
 		var err error
 		lease, err = l.createLease()
 		if err == nil {
@@ -233,7 +243,9 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 	}
 
 	var newLease *coordinationv1.Lease
-	err := retry.NewSilentLoop("try to renew", 5, l.config.RetryDuration).Run(func() error {
+
+	renewRetries := l.config.RenewRetries()
+	err := retry.NewSilentLoop("try to renew", renewRetries, l.config.RetryWaitDuration).Run(func() error {
 		var err error
 		lease.Spec.RenewTime = now()
 		newLease, err = l.leasesCl.Update(context.TODO(), lease, metav1.UpdateOptions{})
@@ -326,7 +338,7 @@ func RemoveLease(kubeCl *KubernetesClient, config *LeaseLockConfig, confirm func
 
 	log.Infof("Starting remove lease lock")
 
-	err = retry.NewSilentLoop("release lease", 5, config.RetryDuration).Run(func() error {
+	err = retry.NewSilentLoop("release lease", 5, config.RetryWaitDuration).Run(func() error {
 		err := leasesCl.Delete(context.TODO(), lease.Name, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			return nil
