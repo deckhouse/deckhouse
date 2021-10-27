@@ -236,7 +236,7 @@ spec:
                   properties:
                     approvalMode:
                       description: |
-                        Режим выдачи разрешения на disruptive обновление.
+                        Режим выдачи разрешения на disruptive-обновление.
                         - `Manual` — отключить автоматическую выдачу разрешений на disruption. Когда disruption потребуется – загорится специальный алерт.
                         - `Automatic` —  автоматически выдавать разрешения на disruption при обновлении (значение по умолчанию).
                     automatic:
@@ -245,7 +245,18 @@ spec:
                       properties:
                         drainBeforeApproval:
                           description: |
-                            Выгон (draining) pod'ов с узла, перед выдачей разрешения на disruption.
+                            Выгон (draining) Pod'ов с узла, перед выдачей разрешения на disruption.
+                        windows:
+                          description: |
+                            Список окон disruption-обновлений узлов.
+                          items:
+                            properties:
+                              from:
+                                description: Время начала окна обновления.
+                              to:
+                                description: Время окончания окна обновления.
+                              days:
+                                description: Дни недели, в которые применяется окно обновлений.
                 docker:
                   description: |
                     Параметры настройки Docker.
