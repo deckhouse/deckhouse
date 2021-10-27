@@ -549,6 +549,108 @@ status:
 			// })
 		})
 	})
+
+	Context("Update windows", func() {
+		Context("out of update windows", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Automatic
+    automatic:
+      windows:
+        - from: "18:00"
+          to: "21:00"
+      drainBeforeApproval: true
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: ng1
+  annotations:
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+spec:
+  unschedulable: true
+`))
+				f.RunHook()
+			})
+
+			It("Should not be approved", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				n := f.KubernetesGlobalResource("Node", "worker-1")
+				Expect(n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).String()).To(Equal(""))
+				Expect(n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeTrue())
+			})
+		})
+
+		Context("inside update windows", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng2
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Automatic
+    automatic:
+      windows:
+        - from: "8:00"
+          to: "18:00"
+      drainBeforeApproval: true
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-2
+  labels:
+    node.deckhouse.io/group: ng2
+  annotations:
+    update.node.deckhouse.io/approved: ""
+    update.node.deckhouse.io/disruption-required: ""
+spec:
+  unschedulable: true
+`))
+				f.RunHook()
+			})
+
+			It("Should be approved", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				n := f.KubernetesGlobalResource("Node", "worker-2")
+				Expect(n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-approved`).String()).To(Equal(""))
+				Expect(n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
+			})
+		})
+	})
 })
 
 func generateStateToTestApproveUpdates(nodeNames []string, oneIsApproved, waitingForApproval, nodeReady, ngReady bool, nodeType string) string {

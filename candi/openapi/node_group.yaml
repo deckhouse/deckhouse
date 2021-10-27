@@ -450,6 +450,39 @@ spec:
                           x-doc-default: true
                           description: |
                             Drain pods from the nodes before approving disruption.
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                example: '13:00'
+                                desription: 'Start time of disruptive update window.'
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                example: '18:30'
+                                description: 'End time of disruptive update window.'
+                              days:
+                                type: array
+                                description: 'Days of the week when node could be updated.'
+                                items:
+                                  type: string
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
                 docker:
                   description: |
                     Docker settings for nodes.
