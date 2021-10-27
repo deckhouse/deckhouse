@@ -33,6 +33,7 @@ func (in *AutomaticDisruptions) DeepCopyInto(out *AutomaticDisruptions) {
 		*out = new(bool)
 		**out = **in
 	}
+	out.Windows = in.Windows.DeepCopy()
 	return
 }
 

@@ -5,6 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
 // +genclient
@@ -216,7 +218,7 @@ type Disruptions struct {
 	ApprovalMode string `json:"approvalMode"`
 
 	// Extra settings for Automatic mode.
-	Automatic AutomaticDisruptions `json:"automatic,omitemtpy"`
+	Automatic AutomaticDisruptions `json:"automatic,omitempty"`
 }
 
 func (d Disruptions) IsEmpty() bool {
@@ -225,11 +227,13 @@ func (d Disruptions) IsEmpty() bool {
 
 type AutomaticDisruptions struct {
 	// Indicates if Pods should be drained from node before allow disruption.
-	DrainBeforeApproval *bool `json:"drainBeforeApproval,omitemtpy"`
+	DrainBeforeApproval *bool `json:"drainBeforeApproval,omitempty"`
+	// Node update windows
+	Windows update.Windows `json:"windows,omitempty"`
 }
 
 func (a AutomaticDisruptions) IsEmpty() bool {
-	return a.DrainBeforeApproval == nil
+	return a.DrainBeforeApproval == nil && len(a.Windows) == 0
 }
 
 type Kubelet struct {

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"os"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -218,6 +219,12 @@ var (
 // Approve disruption updates for NodeGroups with approvalMode == Automatic
 // We don't limit number of Nodes here, because it's already limited
 func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
+	now := time.Now()
+
+	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
+		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.Local)
+	}
+
 	for _, node := range ar.nodes {
 		if !(node.IsDisruptionRequired && !node.IsDraining) {
 			continue
@@ -229,6 +236,11 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		// Skip nodes in NodeGroup not allowing disruptive updates
 		if !(ng.Disruptions.ApprovalMode == "Automatic") {
+			continue
+		}
+
+		// Skip node if update is not permitted in the current time window
+		if !ng.Disruptions.Automatic.Windows.IsAllowed(now) {
 			continue
 		}
 
@@ -366,6 +378,10 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	ung := updateNodeGroup{
 		Name:     ng.Name,
 		NodeType: ng.Spec.NodeType,
+	}
+
+	if len(ng.Spec.Disruptions.Automatic.Windows) > 0 {
+		ung.Disruptions.Automatic.Windows = ng.Spec.Disruptions.Automatic.Windows
 	}
 
 	if ng.Spec.Disruptions.ApprovalMode != "" {
