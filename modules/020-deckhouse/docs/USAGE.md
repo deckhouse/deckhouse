@@ -13,6 +13,8 @@ deckhouse: |
 
 ## Setting up the update mode
 
+> You can also configure node disruption update window in CR [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup) (the `disruptions.automatic.windows` parameter).
+
 Deckhouse will update as soon as a new release will be created if update windows are not set and the update mode is Auto.
 
 Patch versions (e.g. updates from `1.26.1` to `1.26.2`) are installed without confirmation and without taking into account update windows.
