@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/deckhouse/deckhouse/blob/main/docs/site/images/d8-logo.png"/>
+  <img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/d8-logo.png"/>
 </p>
 
 <p align="center">
@@ -9,9 +9,11 @@
   <a href="CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant"></a>
 </p>
 
-[Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE). [Certified in CNCF](https://github.com/cncf/k8s-conformance) for Kubernetes 1.19, 1.20, 1.21.
+[Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
 
 # Main features
+
+<img align="right" width="200" height="270" src="docs/site/images/cncf-certified-kubernetes.png">
 
 - NoOps: system software on the nodes, Kubernetes core software, Kubernetes platform components are automatically managed.
 - SLA by design: availability can be guaranteed even without direct access to your infrastructure.
@@ -20,9 +22,11 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
+_Deckhouse Platform has passed the CNCF [Certified Kubernetes Conformance Program](https://www.cncf.io/certification/software-conformance/) certification for Kubernetes 1.19, 1.20, 1.21._
+
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 
-<img src="https://github.com/deckhouse/deckhouse/blob/main/docs/site/images/diagrams/structure.svg?sanitize=true">
+<img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/diagrams/structure.svg">
 
 ## CE vs. EE
 
