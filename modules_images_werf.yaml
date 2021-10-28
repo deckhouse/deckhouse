@@ -12,6 +12,8 @@ cleanup:
       branch: master
     imagesPerReference:
       last: 10
+gitWorktree:
+  forceShallowClone: true
 
 {{- $Root := . }}
 {{- $CandiVersionMap := .Files.Get "candi/version_map.yml" | fromYaml }}
