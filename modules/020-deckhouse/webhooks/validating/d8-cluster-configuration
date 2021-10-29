@@ -62,14 +62,9 @@ EOF
   # defaultCRI cannot be changed if count of endpoints < 3
   if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
     endpointsCount="$(context::jq -r '.snapshots.endpoints[].filterResult.count')"
-    oldDefaultCRI="$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d | grep "defaultCRI" | cut -d" " -f2)"
-    newDefaultCRI="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | grep "defaultCRI" | cut -d" " -f2)"
-    if [[ -z "${oldDefaultCRI}" ]]; then
-      oldDefaultCRI="Containerd"
-    fi
-    if [[ -z "${newDefaultCRI}" ]]; then
-      newDefaultCRI="Containerd"
-    fi
+    oldDefaultCRI="$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d | yq eval '.defaultCRI // "Containerd"' -)"
+    newDefaultCRI="$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d | yq eval '.defaultCRI // "Containerd"' -)"
+
     if [[ ("${newDefaultCRI}" != "${oldDefaultCRI}") && ("${endpointsCount}" -lt 3) ]]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"it is forbidden to change defaultCRI type for cluster with apiserver endpoints < 3"}
