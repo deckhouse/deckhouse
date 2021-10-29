@@ -177,7 +177,7 @@ function update_license_parameters(newtoken = '') {
             }
             password = newtoken;
             passwordHash = btoa(password);
-            $.cookie('license-token', newtoken, {path: '/' })
+            $.cookie('license-token', newtoken, {path: '/' ,  expires: 365 })
         }
 
         let config = getDockerConfigFromToken(registry, username, password);
@@ -219,7 +219,7 @@ function set_license_token_cookie() {
     let urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('license-token')) {
         let token = urlParams.get('license-token');
-        $.cookie('license-token', token, {path: '/'});
+        $.cookie('license-token', token, {path: '/',  expires: 365 });
     }
 }
 
