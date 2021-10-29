@@ -206,6 +206,6 @@ $(document).ready(function(){
 
     $gdpr_button.on('click', function() {
         $gdpr.hide();
-        $.cookie('gdpr-status', 'accepted', {path: '/' });
+        $.cookie('gdpr-status', 'accepted', {path: '/' ,  expires: 3650 });
     })
 });
