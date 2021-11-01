@@ -30,21 +30,31 @@ spec:
           properties:
             spec:
               type: object
-              required:
-                - type
               oneOf:
                 - properties:
-                    type:
-                      enum: ["Loki"]
                     loki: {}
-                - properties:
                     type:
-                      enum: ["Elasticsearch"]
+                      enum:
+                        - Loki
+                  required:
+                    - loki
+                    - type
+                - properties:
                     elasticsearch: {}
-                - properties:
                     type:
-                      enum: ["Logstash"]
+                      enum:
+                        - Elasticsearch
+                  required:
+                    - elasticsearch
+                    - type
+                - properties:
                     logstash: {}
+                    type:
+                      enum:
+                        - Logstash
+                  required:
+                    - type
+                    - logstash
               properties:
                 type:
                   type: string
