@@ -1,0 +1,14 @@
+groups:
+ - name: "v1"
+   channels:
+    - name: alpha
+      version: latest
+    - name: beta
+      version: latest
+    - name: ea
+      version: latest
+    - name: stable
+      version: latest
+    - name: rock-solid
+      version: latest
+

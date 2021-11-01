@@ -31,14 +31,7 @@ spec:
             name: http
             protocol: TCP
           env:
-          - name: ACTIVE_RELEASE
-            value: {{ .Values.global.active_release | quote }}
-          - name: LOG_LEVEL
-            value: "info"
-{{- if ne .Values.web.env "web-production" }}
-          - name: URL_VALIDATION
-            value: "false"
-{{- end }}
+{{- include "vrouter_envs" . | indent 10 }}
           livenessProbe:
             httpGet:
               path: /health
@@ -50,10 +43,15 @@ spec:
           volumeMounts:
             - name: releasechannels
               mountPath: /app/releasechannels
+            - name: release-channels
+              mountPath: /app/release-channels
       volumes:
         - name: releasechannels
           configMap:
             name: releasechannels-data
+        - name: release-channels
+          configMap:
+            name: release-channels-data
 ---
 apiVersion: v1
 kind: Service

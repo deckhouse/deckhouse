@@ -1,5 +1,4 @@
-{{ $BASE_GOLANG := "golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab" }}
-{{ $BASE_DEBIAN := "debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299" }}
+{{ $BASE_GOLANG_16_BUSTER := "golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210" }}
 
 project: deckhouse-web
 configVersion: 1
@@ -44,7 +43,7 @@ git:
     beforeSetup: '**/*'
 ---
 image: web-backend
-from: {{ $BASE_GOLANG }}
+from: {{ $BASE_GOLANG_16_BUSTER }}
 fromCacheVersion: 20210701
 docker:
   WORKDIR: /app
@@ -52,18 +51,24 @@ ansible:
   install:
     - shell: apt update && apt install -yq git curl jq
     - shell: |
-        go get -d -v ./
+        go mod tidy
         go get github.com/go-delve/delve/cmd/dlv
+      args:
+        executable: /bin/sh
+        chdir: /go/src/app
   setup:
     - shell: |
-        go build -gcflags "all=-N -l" -v -o /app/server /app/
+        go build -gcflags "all=-N -l" -v -o /app/server /go/src/app/cmd/v-router
       args:
-        executable: /bin/bash
-        chdir: /app
+        executable: /bin/sh
+        chdir: /go/src/app
 git:
-  - add: /docs/site/backend
-    to: /app
+  - url: https://github.com/z9r5/v-router.git
+    tag: v1.0.4
+    add: /
+    to: /go/src/app
     stageDependencies:
+      install: 'go.mod'
       setup: '**/*'
 import:
   - artifact: web-static
