@@ -18,6 +18,13 @@ spec:
     name: smoke-mini-{{ $k }}
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "smoke-mini"
+        # Smoke mini is small enough to avoid sufficient vertical scaling.
+        maxAllowed:
+          cpu: 50m
+          memory: 50Mi
     {{- end }}
 ---
 apiVersion: apps/v1
