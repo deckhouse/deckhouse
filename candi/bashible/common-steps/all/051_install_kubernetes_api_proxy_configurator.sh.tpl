@@ -34,31 +34,12 @@ function kubectl_exec() {
 
 # Read from command args
 apiserver_endpoints=$@
-apiserver_backup_endpoints=""
 
 if [ -z "$apiserver_endpoints" ] ; then
-  self_node_addresses=""
-  if self_node=$(kubectl_exec get node $HOSTNAME -o json); then
-    self_node_addresses="$(echo "$self_node" | jq '.status.addresses[] | .address' -r)"
-  fi
-
   if eps=$(kubectl_exec -n default get endpoints kubernetes -o json) ; then
     for ep in $(echo "$eps" | jq '.subsets[] | (.ports[0].port | tostring) as $port | .addresses[] | .ip + ":" +  $port' -r | sort) ; do
-      ip_regex=$(echo $ep | cut -d: -f1 | sed 's/\./\\./g')
-
-      if echo "$self_node_addresses" | grep $ip_regex > /dev/null ; then
-        apiserver_endpoints="$apiserver_endpoints $ep"
-      else
-        # If endpoint is not local treat it as a backup
-        apiserver_backup_endpoints="$apiserver_backup_endpoints $ep"
-      fi
+      apiserver_endpoints="$apiserver_endpoints $ep"
     done
-
-    # If there are no local enpoints use remote normally
-    if [ -z "$apiserver_endpoints" ] ; then
-      apiserver_endpoints="$apiserver_backup_endpoints"
-      apiserver_backup_endpoints=""
-    fi
   fi
 fi
 
@@ -116,9 +97,6 @@ stream {
 $(
 for ep in $apiserver_endpoints ; do
   echo -e "    server $ep;"
-done
-for ep in $apiserver_backup_endpoints ; do
-  echo -e "    server $ep backup;"
 done
 )
   }
