@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -88,6 +90,13 @@ metadata:
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 			Expect(scAuxiliary.Field("metadata.annotations").Exists()).To(BeFalse())
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(1))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
 		})
 	})
 
@@ -109,6 +118,31 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(scAuxiliary.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(3))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
+
+			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_default_duplicate",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "auxiliary",
+				},
+			}))
+			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_default_duplicate",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "main",
+				},
+			}))
+
 		})
 	})
 

@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -164,6 +166,13 @@ provisioner: yandex.csi.flant.com
 			Expect(f.KubernetesGlobalResource("StorageClass", "yandex-proper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "local-storage").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "rook-rbd").Exists()).To(BeTrue())
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(1))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
 		})
 	})
 
@@ -177,9 +186,65 @@ provisioner: yandex.csi.flant.com
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("StorageClass", "aws-improper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "azure-improper").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("StorageClass", "gcp-improper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "openstack-improper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "vsphere-improper").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("StorageClass", "yandex-improper").Exists()).To(BeTrue())
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(7))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
+			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_cloud_manual",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "aws-improper",
+				},
+			}))
+			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_cloud_manual",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "azure-improper",
+				},
+			}))
+			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_cloud_manual",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "gcp-improper",
+				},
+			}))
+			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_cloud_manual",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "openstack-improper",
+				},
+			}))
+			Expect(ops[5]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_cloud_manual",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "vsphere-improper",
+				},
+			}))
+			Expect(ops[6]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "set",
+				Name:   "storage_class_cloud_manual",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "yandex-improper",
+				},
+			}))
 		})
 	})
 
