@@ -51,7 +51,7 @@ func (s *Scheduler) Schedule(state State, nodes []snapshot.Node) (string, *XStat
 	// Find suitable nodes
 	bestNodes := s.nodeFilter.Filter(nodes, x)
 	if len(bestNodes) == 0 {
-		return x, nil, fmt.Errorf("%w: no suitable node found", ErrAbort)
+		return x, nil, fmt.Errorf("%w: no suitable node found", ErrSkip)
 	}
 
 	node := bestNodes[0]
