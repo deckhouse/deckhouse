@@ -27,15 +27,6 @@ import (
 	"d8.io/upmeter/pkg/check"
 )
 
-const (
-	exportPeriod = 30 * time.Second
-	scrapePeriod = 200 * time.Millisecond
-)
-
-func seriesSize() int {
-	return int(exportPeriod / scrapePeriod)
-}
-
 type ProbeExecutor struct {
 	probeManager *manager.Manager
 	metrics      *metric_storage.MetricStorage
@@ -45,6 +36,11 @@ type ProbeExecutor struct {
 	series  map[string]*check.StatusSeries
 	results map[string]*check.ProbeResult
 
+	// time configuration
+	exportPeriod time.Duration
+	scrapePeriod time.Duration
+	seriesSize   int
+
 	// to send a bunch of episodes further
 	send chan []check.Episode
 
@@ -53,10 +49,19 @@ type ProbeExecutor struct {
 }
 
 func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
-	p := &ProbeExecutor{
+	const (
+		exportPeriod = 30 * time.Second
+		scrapePeriod = 200 * time.Millisecond
+	)
+
+	return &ProbeExecutor{
 		recv:    make(chan check.Result),
 		series:  make(map[string]*check.StatusSeries),
 		results: make(map[string]*check.ProbeResult),
+
+		exportPeriod: exportPeriod,
+		scrapePeriod: scrapePeriod,
+		seriesSize:   int(exportPeriod / scrapePeriod),
 
 		probeManager: mgr,
 		send:         send,
@@ -64,7 +69,6 @@ func New(mgr *manager.Manager, send chan []check.Episode) *ProbeExecutor {
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
 	}
-	return p
 }
 
 func (e *ProbeExecutor) Start() {
@@ -74,7 +78,7 @@ func (e *ProbeExecutor) Start() {
 
 // runTicker is the scheduler for probe checks
 func (e *ProbeExecutor) runTicker() {
-	ticker := time.NewTicker(scrapePeriod)
+	ticker := time.NewTicker(e.scrapePeriod)
 
 	for {
 		select {
@@ -90,7 +94,7 @@ func (e *ProbeExecutor) runTicker() {
 
 // scrapeTicker collects probe check results and schedules the exporting of episodes.
 func (e *ProbeExecutor) scrapeTicker() {
-	ticker := time.NewTicker(scrapePeriod)
+	ticker := time.NewTicker(e.scrapePeriod)
 
 	for {
 		select {
@@ -100,8 +104,8 @@ func (e *ProbeExecutor) scrapeTicker() {
 		case <-ticker.C:
 			var (
 				now        = time.Now()
-				exportTime = now.Round(exportPeriod)
-				scrapeTime = now.Round(scrapePeriod)
+				exportTime = now.Round(e.exportPeriod)
+				scrapeTime = now.Round(e.scrapePeriod)
 			)
 
 			err := e.scrape()
@@ -113,7 +117,7 @@ func (e *ProbeExecutor) scrapeTicker() {
 				continue
 			}
 
-			episodeStart := exportTime.Add(-exportPeriod)
+			episodeStart := exportTime.Add(-e.exportPeriod)
 			if err := e.export(episodeStart); err != nil {
 				log.Fatalf("cannot export results: %v", err)
 			}
@@ -129,7 +133,7 @@ func (e *ProbeExecutor) scrapeTicker() {
 // run checks if probe is running and restarts them
 func (e *ProbeExecutor) run() {
 	// rounding lets us avoid inaccuracies in time comparison
-	now := time.Now().Round(scrapePeriod)
+	now := time.Now().Round(e.scrapePeriod)
 
 	for _, runner := range e.probeManager.Runners() {
 		if !runner.ShouldRun(now) {
@@ -165,7 +169,7 @@ func (e *ProbeExecutor) scrape() error {
 	for id, probeResult := range e.results {
 		series, ok := e.series[id]
 		if !ok {
-			series = check.NewStatusSeries(seriesSize())
+			series = check.NewStatusSeries(e.seriesSize)
 			e.series[id] = series
 		}
 		err := series.Add(probeResult.Status())
@@ -182,18 +186,18 @@ func (e *ProbeExecutor) export(start time.Time) error {
 
 	// collect episodes for calculated probes
 	for _, calc := range e.probeManager.Calculators() {
-		series, err := calcSeries(e.series, calc.MergeIds())
+		series, err := check.MergeStatusSeries(e.seriesSize, e.series, calc.MergeIds())
 		if err != nil {
 			return fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
 		}
-		ep := check.NewEpisode(calc.ProbeRef(), start, scrapePeriod, series.Stats())
+		ep := check.NewEpisode(calc.ProbeRef(), start, e.scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
 	}
 
 	// collect episodes for real probes
 	for id, probeResult := range e.results {
 		series := e.series[id]
-		ep := check.NewEpisode(probeResult.ProbeRef(), start, scrapePeriod, series.Stats())
+		ep := check.NewEpisode(probeResult.ProbeRef(), start, e.scrapePeriod, series.Stats())
 		episodes = append(episodes, ep)
 		series.Clean()
 	}
@@ -208,22 +212,4 @@ func (e *ProbeExecutor) Stop() {
 
 	<-e.done
 	<-e.done
-}
-
-func calcSeries(byId map[string]*check.StatusSeries, ids []string) (*check.StatusSeries, error) {
-	acc := check.NewStatusSeries(seriesSize())
-
-	for _, id := range ids {
-		series, ok := byId[id]
-		if !ok {
-			return nil, fmt.Errorf("series for %q is not present", id)
-		}
-
-		err := acc.Merge(series)
-		if err != nil {
-			return nil, fmt.Errorf("cannot merge status series: %v", err)
-		}
-	}
-
-	return acc, nil
 }

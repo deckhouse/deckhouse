@@ -19,9 +19,11 @@ package check
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestStatusSeries_Add(t *testing.T) {
+func Test_StatusSeries_Add(t *testing.T) {
 	tests := []struct {
 		name    string
 		size    int
@@ -49,7 +51,7 @@ func TestStatusSeries_Add(t *testing.T) {
 	}
 }
 
-func TestStatusSeries_Stats(t *testing.T) {
+func Test_StatusSeries_Stats(t *testing.T) {
 	type data struct {
 		size int
 		add  []Status
@@ -161,7 +163,7 @@ func TestStatusSeries_Stats(t *testing.T) {
 	}
 }
 
-func TestStatusSeries_Merge(t *testing.T) {
+func Test_StatusSeries_Merge(t *testing.T) {
 	type args struct {
 		dstSize int
 		dstAdd  []Status
@@ -196,6 +198,34 @@ func TestStatusSeries_Merge(t *testing.T) {
 				srcSize: 5,
 			},
 			wantStats: Stats{Expected: 5},
+		},
+		{
+			name:    "nodata 0/5 + filled one",
+			wantErr: false,
+			args: args{
+				dstSize: 5,
+				srcSize: 5,
+				srcAdd:  []Status{Up, Up, Down, Down, Up},
+			},
+			wantStats: Stats{
+				Expected: 5,
+				Up:       3,
+				Down:     2,
+			},
+		},
+		{
+			name:    "filled one + nodata 0/5",
+			wantErr: false,
+			args: args{
+				dstSize: 5,
+				srcSize: 5,
+				dstAdd:  []Status{Up, Up, Down, Down, Up},
+			},
+			wantStats: Stats{
+				Expected: 5,
+				Up:       3,
+				Down:     2,
+			},
 		},
 		{
 			name:    "One up 1/1 + 1/1 up",
@@ -443,7 +473,7 @@ func TestStatusSeries_Merge(t *testing.T) {
 	}
 }
 
-func TestStatusSeries_Clean(t *testing.T) {
+func Test_StatusSeries_Clean(t *testing.T) {
 	// setup
 	size := 5
 	ss := NewStatusSeries(size)
@@ -463,5 +493,98 @@ func TestStatusSeries_Clean(t *testing.T) {
 	wantEmpty := Stats{Expected: size}
 	if !reflect.DeepEqual(gotEmpty, wantEmpty) {
 		t.Errorf("unexpected stats after Clean(): got=%v, want=%v", gotEmpty, wantEmpty)
+	}
+}
+
+func Test_MergeStatusSeries(t *testing.T) {
+	size := 10
+
+	type args struct {
+		a   *StatusSeries
+		b   *StatusSeries
+		ids []string
+	}
+
+	someData := NewStatusSeries(size)
+	misSized := NewStatusSeries(size + 1)
+	for i := 0; i < size; i++ {
+		someData.Add(Up)
+		misSized.Add(Up)
+	}
+	misSized.Add(Up) // one extra status
+
+	tests := []struct {
+		name    string
+		args    args
+		want    *StatusSeries
+		wantErr bool
+	}{
+		{
+			name: "all nodata returns nodata",
+			args: args{
+				a:   NewStatusSeries(size),
+				b:   NewStatusSeries(size),
+				ids: []string{"a", "b"},
+			},
+			want:    NewStatusSeries(size),
+			wantErr: false,
+		},
+		{
+			name: "data with nodata returns the data",
+			args: args{
+				a:   NewStatusSeries(size),
+				b:   someData,
+				ids: []string{"a", "b"},
+			},
+			want:    someData,
+			wantErr: false,
+		},
+		{
+			name: "missing id returns nodata",
+			args: args{
+				// no "a"
+				b:   someData,
+				ids: []string{"a", "b"},
+			},
+			want:    NewStatusSeries(size),
+			wantErr: false,
+		},
+		{
+			name: "size mismatch results in error",
+			args: args{
+				a:   misSized,
+				b:   someData,
+				ids: []string{"a", "b"},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ss := map[string]*StatusSeries{}
+			if tt.args.a != nil {
+				ss["a"] = tt.args.a
+			}
+			if tt.args.b != nil {
+				ss["b"] = tt.args.b
+			}
+
+			got, err := MergeStatusSeries(size, ss, tt.args.ids)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error %v", err)
+				}
+				if got != nil {
+					t.Errorf("expected nil in place of series data, got %v", got)
+				}
+				return
+			}
+
+			// assert the content
+			assert.Equal(t, got.series, tt.want.series)
+
+		})
 	}
 }
