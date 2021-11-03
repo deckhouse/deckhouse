@@ -285,8 +285,9 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 	}
 
 	// upgrade only when current release is ready.
+	// skip it for patches.
 	deckhousePod := snap[0].(deckhousePodInfo)
-	if !deckhousePod.Ready {
+	if !isPatch && !deckhousePod.Ready {
 		input.LogEntry.Info("Deckhouse is not ready. Skipping upgrade")
 		return nil
 	}
