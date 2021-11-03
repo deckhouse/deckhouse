@@ -7,6 +7,7 @@ kind: Deployment
 metadata:
   name: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
   annotations:
+    "documentation/version": "{{ .Version }}"
     "werf.io/replicas-on-creation": "1"
   labels:
     service: {{ .Chart.Name }}-{{ .VersionDNSNormalized }}
