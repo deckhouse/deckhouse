@@ -12,5 +12,9 @@ Disallow: *?*
 Disallow: */compare/*
 Allow: /
 
+Allow: /*/documentation/v1
+Disallow: /*/documentation/v1.
+Disallow: /*/documentation/latest/
+
 Sitemap: {{ site.url }}/sitemap.xml
 Host: {{ site.url }}

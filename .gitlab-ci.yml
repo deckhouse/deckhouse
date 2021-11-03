@@ -12,9 +12,9 @@ variables:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
 include:
-  - '.gitlab/ci_includes/web.yml'
   - '.gitlab/ci_includes/terraform_versions.yml'
   - '.gitlab/ci_includes/image_versions.yml'
+  - '.gitlab/ci_includes/web.yml'
   - '.gitlab/ci_templates/build.yml'
   - '.gitlab/ci_templates/cleanup.yml'
   - '.gitlab/ci_templates/tests.yml'
