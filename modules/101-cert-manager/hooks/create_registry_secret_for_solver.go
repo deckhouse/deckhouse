@@ -35,7 +35,8 @@ const (
 	secretsSnapshot    = "registry_secrets_namespaces"
 	d8RegistrySnapshot = "d8_registry_secret"
 
-	solverSecretName = "acme-solver-deckhouse-regestry"
+	solverSecretName         = "acme-solver-deckhouse-regestry"
+	solverServiceAccountName = "acme-solver-deckhouse-sa"
 )
 
 type registrySecret struct {
@@ -48,7 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       challengesSnapshot,
-			ApiVersion: "certmanager.k8s.io/v1alpha1",
+			ApiVersion: "acme.cert-manager.io/v1",
 			Kind:       "Challenge",
 			FilterFunc: applyNamespaceFilter,
 		},
@@ -126,6 +127,24 @@ func prepareSolverRegistrySecret(namespace, dockerCfg string) *corev1.Secret {
 	}
 }
 
+func prepareSolverRegistryServiceAccount(namespace string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      solverServiceAccountName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"heritage":                            "deckhouse",
+				"cert-manager.deckhouse.io/solver-sa": "true",
+			},
+		},
+		ImagePullSecrets: []corev1.LocalObjectReference{{Name: solverSecretName}},
+	}
+}
+
 // handleChallenge
 // synopsis:
 //   For every namespace contained cert-manager challenge
@@ -169,8 +188,10 @@ func handleChallenge(input *go_hook.HookInput) error {
 		}
 
 		secret := prepareSolverRegistrySecret(ns, registryCfg)
+		sa := prepareSolverRegistryServiceAccount(ns)
 
 		input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+		input.PatchCollector.Create(sa, object_patch.UpdateIfExists())
 	}
 
 	// gc secrets
@@ -181,6 +202,7 @@ func handleChallenge(input *go_hook.HookInput) error {
 		}
 
 		input.PatchCollector.Delete("v1", "Secret", ns, solverSecretName)
+		input.PatchCollector.Delete("v1", "ServiceAccount", ns, solverServiceAccountName)
 	}
 
 	return nil

@@ -1,0 +1,72 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: legacy-webhook
+  namespace: d8-cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-webhook" "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: legacy-webhook
+  updatePolicy:
+    updateMode: "Initial"
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-webhook
+  namespace: d8-cert-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "legacy-webhook")) | indent 2 }}
+spec:
+{{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | indent 2 }}
+  selector:
+    matchLabels:
+      app: legacy-webhook
+  template:
+    metadata:
+      annotations:
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
+        checksum/certificate: {{ include (print .Template.BasePath "/webhook/secret-tls.yaml") . | sha256sum }}
+      labels:
+        app: legacy-webhook
+    spec:
+      serviceAccountName: legacy-webhook
+{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | indent 6 }}
+{{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "legacy-webhook")) | indent 6 }}
+{{- include "helm_lib_node_selector" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "master") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | indent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: webhook
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | indent 8 }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.legacyCertManagerWebhook }}
+        args:
+        - --v=3
+        - --secure-port=6443
+        - --tls-cert-file=/certs/tls.crt
+        - --tls-private-key-file=/certs/tls.key
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+        - mountPath: /tmp
+          name: tmp
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+      volumes:
+      - name: certs
+        secret:
+          secretName: cert-manager-webhook-tls
+      - name: tmp
+        emptyDir: {}

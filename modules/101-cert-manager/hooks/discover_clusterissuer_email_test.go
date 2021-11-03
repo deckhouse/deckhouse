@@ -25,7 +25,7 @@ var _ = Describe("Cert Manager hooks :: discover email for clusterissuers ::", f
 	const (
 		clusterissuerWithEmail = `
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: letsencrypt
@@ -34,14 +34,16 @@ metadata:
 spec:
   acme:
     email: test+letsencrypt-test-dev@notice.flant.com
-    http01: {}
+    solvers:
+    - http01:
+        ingress: {}
     privateKeySecretRef:
       name: cert-manager-letsencrypt-private-key
     server: https://acme-v02.api.letsencrypt.org/directory
 `
 		clusterissuerWithoutEmail = `
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: letsencrypt
@@ -49,7 +51,9 @@ metadata:
     heritage: deckhouse
 spec:
   acme:
-    http01: {}
+    solvers:
+    - http01:
+        ingress: {}
     privateKeySecretRef:
       name: cert-manager-letsencrypt-private-key
     server: https://acme-v02.api.letsencrypt.org/directory
@@ -57,7 +61,7 @@ spec:
 	)
 
 	f := HookExecutionConfigInit(`{"certManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("certmanager.k8s.io", "v1alpha1", "ClusterIssuer", false)
+	f.RegisterCRD("cert-manager.io", "v1", "ClusterIssuer", false)
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

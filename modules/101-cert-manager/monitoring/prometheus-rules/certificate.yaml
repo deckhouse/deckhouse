@@ -24,6 +24,28 @@
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
       summary: Certificate expired
 
+  - alert: CertmanagerCertificateOrderErrors
+    expr: |
+      sum by (scheme, host, path, status) (
+        rate(
+          certmanager_http_acme_client_request_count{status!~"2[0-9][0-9]"}[5m]
+        )
+      ) > 0
+    for: 30m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      plk_grouped_by__main: D8CertmanagerMalfunctioning,tier=cluster,prometheus=deckhouse
+      summary: Certmanager cannot order a certificate.
+      description: |
+        Cermanager receives responses with the code `{{ $labels.status }}` on requesting {{ $labels.scheme }}://{{ $labels.host }}{{ $labels.path }}.
+
+        It can affect certificates ordering and prolongation. Check certmanager logs for more info.
+        `kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager` or
+        `kubectl -n d8-cert-manager logs -l app=legacy-cert-manager -c cert-manager`
+
 - name: kubernetes.certmanager.orphan_certificate
   rules:
     - alert: D8CertmanagerOrphanSecretsWithoutCorrespondingCertificateResources

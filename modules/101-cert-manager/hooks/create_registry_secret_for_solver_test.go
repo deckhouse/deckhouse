@@ -32,7 +32,7 @@ const (
 
 func genTestChallengeManifest(name, ns string) string {
 	return fmt.Sprintf(`
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: acme.cert-manager.io/v1
 kind: Challenge
 metadata:
   labels:
@@ -40,7 +40,7 @@ metadata:
   name: "%s"
   namespace: "%s"
   ownerReferences:
-    - apiVersion: certmanager.k8s.io/v1alpha1
+    - apiVersion: acme.cert-manager.io/v1
       blockOwnerDeletion: true
       controller: true
       kind: Order
@@ -87,6 +87,9 @@ func assertRegistrySecretExists(f *HookExecutionConfig, dockerCfgContent string,
 		config := secret.Field(`data`).Get("\\.dockerconfigjson").String()
 		// yes decoded, because we use SecretTypeDockerConfigJson
 		Expect(config).To(BeEquivalentTo(dockerCfgContent))
+
+		sa := f.KubernetesResource("ServiceAccount", ns, solverServiceAccountName)
+		Expect(sa).ToNot(BeEmpty())
 	}
 }
 
@@ -94,12 +97,15 @@ func assertRegistrySecretNotExists(f *HookExecutionConfig, nss ...string) {
 	for _, ns := range nss {
 		secret := f.KubernetesResource("Secret", ns, solverSecretName)
 		Expect(secret).To(BeEmpty())
+
+		sa := f.KubernetesResource("ServiceAccount", ns, solverServiceAccountName)
+		Expect(sa).To(BeEmpty())
 	}
 }
 
 var _ = Describe("Cert Manager hooks :: generate registry secret for http challenge solver ::", func() {
 	f := HookExecutionConfigInit(`{"global":{}}`, "")
-	f.RegisterCRD("certmanager.k8s.io", "v1alpha1", "Challenge", true)
+	f.RegisterCRD("acme.cert-manager.io", "v1", "Challenge", true)
 
 	const ns1 = "ns1"
 	const ns2 = "ns2"

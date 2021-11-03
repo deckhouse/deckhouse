@@ -1,0 +1,72 @@
+- name: deckhouse.certmanager.legacy
+  rules:
+  - alert: D8CertManagerDeprecatedCertificateResource
+    expr: sum (d8_cert_manager_deprecated_resources{kind="Certificate"}) > 0
+    for: 5m
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      summary: Deprecated Certificates found.
+      description: |
+        Deprecated cert-manager Certificates found. `certificates.certmanager.k8s.io/v1alpha1` support is deprecated and will be removed in the nearest future.
+        Please migrate to [cert-manager.io/v1](https://cert-manager.io/v1.5-docs/concepts/certificate/) resource.
+
+        You can found deprecated certificates by running: `kubectl get -A certificates.certmanager.k8s.io -l heritage!=deckhouse`
+  - alert: D8CertManagerDeprecatedIssuerResource
+    expr: sum (d8_cert_manager_deprecated_resources{kind="Issuer"}) > 0
+    for: 5m
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      summary: Deprecated Issuer found.
+      description: |
+        Deprecated cert-manager Issuers found. `issuers.certmanager.k8s.io/v1alpha1` support is deprecated and will be removed in the nearest future.
+        Please migrate to [cert-manager.io/v1](https://cert-manager.io/v1.5-docs/concepts/issuer/) resource.
+        You can use [this instruction](https://docs.cert-manager.io/en/release-0.11/tasks/upgrading/upgrading-0.7-0.8.html#performing-an-incremental-switch-to-the-new-format) for migration.
+
+        You can found deprecated certificates by running: `kubectl get -A issuers.certmanager.k8s.io -l heritage!=deckhouse`
+  - alert: D8CertManagerDeprecatedClusterIssuerResource
+    expr: sum (d8_cert_manager_deprecated_resources{kind="ClusterIssuer"}) > 0
+    for: 5m
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      summary: Deprecated ClusterIssuer found.
+      description: |
+        Deprecated cert-manager ClusterIssuers found. `clusterissuers.certmanager.k8s.io/v1alpha1` support is deprecated and will be removed in the nearest future.
+        Please migrate to [cert-manager.io/v1](https://cert-manager.io/v1.5-docs/concepts/issuer/) resource.
+        You can use [this instruction](https://docs.cert-manager.io/en/release-0.11/tasks/upgrading/upgrading-0.7-0.8.html#performing-an-incremental-switch-to-the-new-format) for migration.
+
+        You can found deprecated certificates by running: `kubectl get clusterissuers.certmanager.k8s.io -l heritage!=deckhouse`
+  - alert: D8CertManagerDeprecatedIngressAnnotations
+    expr: sum (d8_cert_manager_deprecated_resources{kind="Ingress"}) > 0
+    for: 5m
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_incident_initial_status: "todo"
+      plk_create_group_if_not_exists__main: D8CertManagerDeprecatedResources,tier=~tier
+      plk_grouped_by__main: D8CertManagerDeprecatedResources,tier=~tier
+      summary: Deprecated Ingress annotations found.
+      description: |
+        Deprecated cert-manager Ingress annotations found. `certmanager.k8s.io/v1alpha1` annotations support is deprecated and will be removed in the nearest future.
+        Please [migrate](https://docs.cert-manager.io/en/release-0.11/tasks/upgrading/upgrading-0.10-0.11.html?highlight=annotations#additional-annotation-changes) to cert-manager.io/v1 annotations.
+
+        You can found deprecated certificates by running: `kubectl get -A ingress -o json | jq '.items[] | select(.metadata.annotations| to_entries | map(.key)[] | test("certmanager.k8s.io")) | "Ingress resource \(.metadata.namespace)/\(.metadata.name) contains old annotations: (\( .metadata.annotations | to_entries | map(.key)[] | select( . | test("certmanager.k8s.io") )  ))"'`

@@ -6,7 +6,7 @@ title: "The cert-manager module: usage"
 ## An example of provisioning a certificate
 
 ```yaml
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: example-com                          # the name of the certificate; you can use it to view the cert's status
@@ -20,17 +20,6 @@ spec:
   dnsNames:                                  # additional domains (optional)
   - www.example.com
   - admin.example.com
-  acme:
-    config:
-    - http01:
-        ingressClass: nginx                  # what ingress controller to use for the challenge
-      domains:
-      - example.com                          # a list of domains for which the above ingress controller is used to prove the DNS control
-      - www.example.com                      
-    - http01:
-        ingressClass: nginx-aws-http
-      domains:
-      - admin.example.com                    # this domain is challenged via the additional ingress controller
 ```
 
 Here:
@@ -66,7 +55,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 3. Create a Certificate with validation via Cloudflare. Note that you must specify `cloudflareGlobalAPIKey` and `cloudflareEmail` in Deckhouse beforehand:
 
    ```yaml
-   apiVersion: certmanager.k8s.io/v1alpha1
+   apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
      name: domain-wildcard
@@ -79,12 +68,6 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
      commonName: "*.domain.com"
      dnsNames:
      - "*.domain.com"
-     acme:
-       config:
-       - dns01:
-           provider: cloudflare
-         domains:
-         - "*.domain.com"
    ```
 
 4. Create an Ingress:
@@ -160,7 +143,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 3. Create a Certificate with validation via route53. Note that you must specify `route53AccessKeyID` and `route53SecretAccessKey` in Deckhouse beforehand:
 
    ```yaml
-   apiVersion: certmanager.k8s.io/v1alpha1
+   apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
      name: domain-wildcard
@@ -173,12 +156,6 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
      commonName: "*.domain.com"
      dnsNames:
      - "*.domain.com"
-     acme:
-       config:
-       - dns01:
-           provider: route53
-         domains:
-         - "*.domain.com"
    ```
 
 ## Issuing a DNS wildcard certificate using Google
@@ -203,7 +180,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 3. Create a Certificate with validation via cloudDNS:
 
    ```yaml
-   apiVersion: certmanager.k8s.io/v1alpha1
+   apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
      name: domain-wildcard
@@ -215,12 +192,6 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
        kind: ClusterIssuer
      dnsNames:
      - "*.domain.com"
-     acme:
-       config:
-       - dns01:
-           provider: clouddns
-         domains:
-         - "*.domain.com"
    ```
 
 ## Issuing a self-signed certificate
@@ -228,7 +199,7 @@ Read more [here](https://cert-manager.io/docs/tutorials/acme/http-validation/).
 In this case, the entire process is even more straightforward than that of LetsEncypt. Simply replace the issuer name (`letsencrypt`) with `selfsigned`:
 
 ```yaml
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: example-com                          # the name of the certificate; you can use it to view the cert's status
@@ -242,15 +213,4 @@ spec:
   dnsNames:                                  # additional certificate domains (optional)
   - www.example.com
   - admin.example.com
-  acme:
-    config:
-    - http01:
-        ingressClass: nginx                  # what ingress controller to use for the challenge
-      domains:
-      - example.com                          # a list of domains for which the above ingress controller is used to prove the DNS control
-      - www.example.com                      
-    - http01:
-        ingressClass: nginx-aws-http
-      domains:
-      - admin.example.com                    # this domain is challenged via the additional ingress controller
 ```

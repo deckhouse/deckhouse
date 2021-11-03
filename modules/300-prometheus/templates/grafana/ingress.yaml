@@ -63,7 +63,7 @@ spec:
             servicePort: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: grafana
@@ -74,12 +74,6 @@ spec:
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
   - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
-  acme:
-    config:
-{{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | indent 4 }}
-      domains:
-      - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
-      - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer

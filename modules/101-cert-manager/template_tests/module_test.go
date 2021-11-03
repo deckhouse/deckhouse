@@ -44,6 +44,9 @@ modulesImages:
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
+      legacyCertManagerController: legacystring
+      legacyCertManagerWebhook: legacystring
+      legacyCertManagerCainjector: legacystring
 discovery:
   clusterMasterCount: 1
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -68,6 +71,9 @@ modulesImages:
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
+      legacyCertManagerController: legacystring
+      legacyCertManagerWebhook: legacystring
+      legacyCertManagerCainjector: legacystring
 discovery:
   clusterMasterCount: 5
   clusterControlPlaneIsHighlyAvailable: true
@@ -93,6 +99,9 @@ modulesImages:
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
+      legacyCertManagerController: legacystring
+      legacyCertManagerWebhook: legacystring
+      legacyCertManagerCainjector: legacystring
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
@@ -117,6 +126,9 @@ modulesImages:
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
+      legacyCertManagerController: legacystring
+      legacyCertManagerWebhook: legacystring
+      legacyCertManagerCainjector: legacystring
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
@@ -410,10 +422,15 @@ podAntiAffinity:
 
 			clusterIssuer := f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "clouddns")
 			Expect(clusterIssuer.Exists()).To(BeTrue())
-			Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.project").String()).To(Equal("project-209317"))
-			Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
-			Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
-
+			if clusterIssuer.Field("apiVersion").String() == "cert-manager.io/v1" {
+				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.clouddns.project").String()).To(Equal("project-209317"))
+				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
+				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
+			} else {
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.project").String()).To(Equal("project-209317"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
+			}
 		})
 	})
 })

@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "ClusterIssuers",
-			ApiVersion:                   "certmanager.k8s.io/v1alpha1",
+			ApiVersion:                   "cert-manager.io/v1",
 			Kind:                         "ClusterIssuer",
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			LabelSelector: &metav1.LabelSelector{

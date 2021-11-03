@@ -9,6 +9,7 @@ metadata:
 rules:
 - apiGroups:
   - certmanager.k8s.io
+  - cert-manager.io
   resources:
   - certificates
   - issuers
@@ -30,6 +31,7 @@ metadata:
 rules:
 - apiGroups:
   - certmanager.k8s.io
+  - cert-manager.io
   resources:
   - certificates
   - issuers
@@ -50,6 +52,7 @@ metadata:
 rules:
 - apiGroups:
   - certmanager.k8s.io
+  - cert-manager.io
   resources:
   - challenges
   - orders
@@ -67,6 +70,7 @@ metadata:
 rules:
 - apiGroups:
   - certmanager.k8s.io
+  - cert-manager.io
   resources:
   - clusterissuers
   verbs:
