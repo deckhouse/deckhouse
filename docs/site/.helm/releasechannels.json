@@ -5,23 +5,19 @@
       "channels": [
         {
           "name": "alpha",
-          "version": "v1.2.3-dev"
+          "version": "latest"
         },
         {
           "name": "beta",
-          "version": "v1.2.3-dev"
+          "version": "latest"
         },
         {
           "name": "ea",
-          "version": "v1.2.3-dev"
+          "version": "latest"
         },
         {
           "name": "stable",
-          "version": "v1.2.3-dev"
-        },
-        {
-          "name": "rock-solid",
-          "version": "v1.0.1"
+          "version": "latest"
         }
       ]
     }

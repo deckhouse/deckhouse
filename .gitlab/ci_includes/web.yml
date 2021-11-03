@@ -3,10 +3,9 @@ Main web build:
   variables:
     WERF_DIR: "docs/site"
     WERF_LOG_VERBOSE: "on"
-    WERF_LOOSE_GITERMINISM: "true"
   script:
-  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - type trdl && . $(trdl use werf 1.2 ${WERF_CHANNEL})
+  - type werf && source $(werf ci-env gitlab --as-file)
   - werf build
   except:
   - schedules
@@ -25,8 +24,8 @@ Doc web build:
     WERF_DIR: "docs/documentation"
     WERF_LOG_VERBOSE: "on"
   script:
-  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - type trdl && . $(trdl use werf 1.2 ${WERF_CHANNEL})
+  - type werf && source $(werf ci-env gitlab --as-file)
   - werf build
   except:
   - schedules
@@ -47,10 +46,20 @@ Web links test:
 .web_base_deploy: &web_base_deploy
   stage: deploy_website
   before_script:
+  - export DOC_VERSION=${DOC_VERSION:-${CI_COMMIT_TAG:-latest}}
   - export WERF_NAMESPACE=${WERF_NAMESPACE:-deckhouse-${CI_ENVIRONMENT_SLUG}}
+  - export WERF_SET_DOC_VERSION="global.doc_version=${DOC_VERSION}"
+  - export WERF_SET_ACTIVE_RELEASE="global.active_release=${DOC_ACTIVE_RELEASE:-v1}"
+  - |
+    if [[ "$(echo ${WERF_DIR} | cut -d \/ -f 2 )" == "site" ]] ; then
+       export WERF_RELEASE="deckhouse-site"
+    else
+       export WERF_RELEASE="deckhouse-doc-${DOC_VERSION}"
+    fi
   script:
-  - type multiwerf && source $(multiwerf use 1.2 alpha --as-file)
-  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - type trdl && . $(trdl use werf 1.2 ${WERF_CHANNEL})
+  - type werf && source $(werf ci-env gitlab --as-file)
+  - set
   - werf converge
     --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
     --set "global.env=${CI_ENVIRONMENT_SLUG}"
@@ -73,23 +82,16 @@ Test Main Deploy:
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
     WERF_DIR: "docs/site"
-    WERF_RELEASE: "deckhouse-site"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
-    WERF_ENV: web-test
   environment:
     name: web-test
     url: https://deckhouse.test.flant.com
   when: manual
 
-Test Doc Deploy :
+Test Doc Deploy:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
     WERF_DIR: "docs/documentation"
-    WERF_RELEASE: "deckhouse-doc"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_ENV: web-test
   environment:
     name: web-test
     url: https://deckhouse.test.flant.com
@@ -100,64 +102,37 @@ Stage Main Deploy:
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
     WERF_DIR: "docs/site"
-    WERF_RELEASE: "deckhouse-site"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
-    WERF_ENV: web-stage
   environment:
     name: web-stage
     url: https://deckhouse.stage.flant.com
   when: manual
 
-Stage Doc Deploy :
+Stage Doc Deploy:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
     WERF_DIR: "docs/documentation"
-    WERF_RELEASE: "deckhouse-doc"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_ENV: web-stage
   environment:
     name: web-stage
     url: https://deckhouse.stage.flant.com
   when: manual
 
-EARLY Main Deploy:
+Stage Doc Tag Deploy:
   <<: *web_base_deploy
   variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
-    WERF_DIR: "docs/site"
-    WERF_RELEASE: "deckhouse-site"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
-    WERF_ENV: web-early
-  environment:
-    name: web-early
-    url: https://early.deckhouse.io
-  when: manual
-
-EARLY Doc Deploy :
-  <<: *web_base_deploy
-  variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
+    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_DEV}"
     WERF_DIR: "docs/documentation"
-    WERF_RELEASE: "deckhouse-doc"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_ENV: web-early
   environment:
-    name: web-early
-    url: https://early.deckhouse.io
-  when: manual
+    name: web-stage
+    url: https://deckhouse.stage.flant.com
+  only:
+    - tags
 
 Prod Main Deploy:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
     WERF_DIR: "docs/site"
-    WERF_RELEASE: "deckhouse-site"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
-    WERF_ENV: web
   environment:
     name: web-production
     url: https://deckhouse.io
@@ -165,30 +140,30 @@ Prod Main Deploy:
     - main
   except:
     - schedules
+  when: manual
 
-Prod Doc Deploy :
+Prod Doc Deploy:
   <<: *web_base_deploy
   variables:
     WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
     WERF_DIR: "docs/documentation"
-    WERF_RELEASE: "deckhouse-doc"
-    WERF_SET_DOC_VERSION: "global.doc_version=v1.2.3-dev"
-    WERF_ENV: web
   environment:
     name: web-production
     url: https://deckhouse.io
   only:
     - main
+    - tags
   except:
     - schedules
+  when: manual
 
 Web cleanup:
   stage: cleanup_registry
   variables:
     WERF_DIR: "docs/site"
   script:
-  - type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL} --as-file)
-  - type werf && source $(werf ci-env gitlab --verbose --as-file)
+  - type trdl && . $(trdl use werf 1.2 ${WERF_CHANNEL})
+  - type werf && source $(werf ci-env gitlab --as-file)
   - docker login -u nobody -p ${REGISTRY_CLEANER_TOKEN} ${CI_REGISTRY_IMAGE}
   - werf cleanup
   only:

@@ -1,6 +1,4 @@
 giterminismConfigVersion: 1
 config:
   goTemplateRendering:
-    allowUncommittedFiles:
-      - .werf/releasechannels.json
     allowEnvVariables: [ /BASE_.+/, /CI_.+/, "WERF_ENV" ]
