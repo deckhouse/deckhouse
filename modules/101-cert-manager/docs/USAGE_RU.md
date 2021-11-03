@@ -6,7 +6,7 @@ title: "Модуль cert-manager: примеры конфигурации"
 ## Пример заказа сертификата
 
 ```yaml
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: example-com                          # имя сертификата, через него потом можно смотреть статус
@@ -20,17 +20,6 @@ spec:
   dnsNames:                                  # дополнительыне домены сертификата, указывать не обязательно
   - www.example.com
   - admin.example.com
-  acme:
-    config:
-    - http01:
-        ingressClass: nginx                  # через какой ingress controller проходить challenge
-      domains:
-      - example.com                          # список доменов, для которых проходить challenge через этот
-      - www.example.com                      # ingress controller
-    - http01:
-        ingressClass: nginx-aws-http
-      domains:
-      - admin.example.com                    # проходит challenge через дополнительный ingress controller
 ```
 
 При этом:
@@ -66,7 +55,7 @@ spec:
 3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Deckhouse:
 
    ```yaml
-   apiVersion: certmanager.k8s.io/v1alpha1
+   apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
      name: domain-wildcard
@@ -79,12 +68,6 @@ spec:
      commonName: "*.domain.com"
      dnsNames:
      - "*.domain.com"
-     acme:
-       config:
-       - dns01:
-           provider: cloudflare
-         domains:
-         - "*.domain.com"
    ```
 
 4. Создаем Ingress:
@@ -160,7 +143,7 @@ spec:
 3. Создаем Certificate с проверкой с помощью провайдера route53. Данная возможность появится только при указании настроек `route53AccessKeyID` и `route53SecretAccessKey` в Deckhouse:
 
    ```yaml
-   apiVersion: certmanager.k8s.io/v1alpha1
+   apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
      name: domain-wildcard
@@ -173,12 +156,6 @@ spec:
      commonName: "*.domain.com"
      dnsNames:
      - "*.domain.com"
-     acme:
-       config:
-       - dns01:
-           provider: route53
-         domains:
-         - "*.domain.com"
    ```
 
 ## Заказ wildcard-сертификата с DNS в Google
@@ -203,7 +180,7 @@ spec:
 3. Создаем Certificate с валидацией через cloudDNS:
 
    ```yaml
-   apiVersion: certmanager.k8s.io/v1alpha1
+   apiVersion: cert-manager.io/v1
    kind: Certificate
    metadata:
      name: domain-wildcard
@@ -215,12 +192,6 @@ spec:
        kind: ClusterIssuer
      dnsNames:
      - "*.domain.com"
-     acme:
-       config:
-       - dns01:
-           provider: clouddns
-         domains:
-         - "*.domain.com"
    ```
 
 ## Заказ selfsigned-сертификата
@@ -228,7 +199,7 @@ spec:
 Все еще проще, чем с LetsEncypt. Просто меняем `letsencrypt` на `selfsigned`:
 
 ```yaml
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: example-com                          # имя сертификата, через него потом можно смотреть статус
@@ -242,15 +213,4 @@ spec:
   dnsNames:                                  # дополнительные домены сертификата, указывать не обязательно
   - www.example.com
   - admin.example.com
-  acme:
-    config:
-    - http01:
-        ingressClass: nginx                  # через какой ingress controller проходить challenge
-      domains:
-      - example.com                          # список доменов, для которых проходить challenge через этот
-      - www.example.com                      # ingress controller
-    - http01:
-        ingressClass: nginx-aws-http
-      domains:
-      - admin.example.com                    # проходит challenge через дополнительный ingress controller
 ```

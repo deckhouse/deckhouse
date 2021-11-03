@@ -1,7 +1,7 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: dex
@@ -12,12 +12,6 @@ spec:
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "dex") }}
   - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
-  acme:
-    config:
-{{ include "helm_lib_module_https_cert_manager_acme_solver_challenge_settings" . | indent 4 }}
-      domains:
-      - {{ include "helm_lib_module_public_domain" (list . "dex") }}
-      - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer

@@ -84,7 +84,7 @@ spec:
           servicePort: https
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: status
@@ -94,17 +94,6 @@ spec:
   secretName: ingress-tls-status
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "status") }}
-  acme:
-    config:
-    {{- if has (include "helm_lib_module_https_cert_manager_cluster_issuer_name" .) (list "route53" "cloudflare" "digitalocean") }}
-    - dns01:
-        provider: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
-    {{- else }}
-    - http01:
-        ingressClass: {{ include "helm_lib_module_ingress_class" . | quote }}
-    {{- end }}
-      domains:
-      - {{ include "helm_lib_module_public_domain" (list . "status") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer

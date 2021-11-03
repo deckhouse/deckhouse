@@ -1,6 +1,6 @@
 ---
 ### Cluster issuer, which is only suitable for creating CA or non-trusted certificates
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: selfsigned-no-trust
@@ -9,7 +9,7 @@ spec:
   selfSigned: {}
 ---
 ### Cluster issuer that uses the specified CA to issue certificates
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: selfsigned

@@ -1,6 +1,6 @@
 {{- if hasKey .Values.certManager "cloudDNSServiceAccount" }}
 ---
-apiVersion: certmanager.k8s.io/v1alpha1
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: clouddns
@@ -14,9 +14,8 @@ spec:
   {{- end }}
     privateKeySecretRef:
       name: clouddns-tls-key
-    dns01:
-      providers:
-      - name: clouddns
+    solvers:
+    - dns01:
         clouddns:
           {{ $serviceAccount := .Values.certManager.cloudDNSServiceAccount | b64dec | fromJson}}
           {{- if and (hasKey $serviceAccount "project_id") ($serviceAccount.project_id) }}
@@ -27,5 +26,4 @@ spec:
           serviceAccountSecretRef:
             name: clouddns
             key: key.json
-
 {{- end }}

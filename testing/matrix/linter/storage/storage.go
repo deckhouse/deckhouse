@@ -275,6 +275,11 @@ func (s *UnstructuredObjectStore) Put(path string, object map[string]interface{}
 
 	index := GetResourceIndex(storeObject)
 	if _, ok := s.Storage[index]; ok {
+		// for cert-manager migration we have duplicated resources for legacy version
+		// it's ok for cluster but is not expected by tests. Remove it after legacy version will be removed
+		if strings.Contains(index.AsString(), "ClusterIssuer") || strings.HasPrefix(index.AsString(), "d8-cert-manager") {
+			return nil
+		}
 		return fmt.Errorf("object %q already exists in the object store", index.AsString())
 	}
 
