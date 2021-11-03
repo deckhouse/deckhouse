@@ -66,6 +66,9 @@ type NodeGroupSpec struct {
 	// Disruptions settings for nodes. Optional.
 	Disruptions Disruptions `json:"disruptions,omitempty"`
 
+	// Update settings for NodeGroups. Optional
+	Update Update `json:"update,omitempty"`
+
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
 }
@@ -223,6 +226,10 @@ type Disruptions struct {
 
 func (d Disruptions) IsEmpty() bool {
 	return d.ApprovalMode == "" && d.Automatic.IsEmpty()
+}
+
+type Update struct {
+	MaxConcurrent *intstr.IntOrString `json:"maxConcurrent,omitempty"`
 }
 
 type AutomaticDisruptions struct {

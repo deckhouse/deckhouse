@@ -643,3 +643,15 @@ spec:
                 operatingSystem: *operatingSystem
                 disruptions: *disruptions
                 kubelet: *kubelet
+                update:
+                  type: object
+                  properties:
+                    maxConcurrent:
+                      oneOf:
+                        - type: string
+                          pattern: "^[1-9][0-9]*%?$"
+                        - type: number
+                      default: 1
+                      description: |
+                        Maximum number of concurrently updating nodes. Can be set as absolute count or as a percent of total nodes.
+
