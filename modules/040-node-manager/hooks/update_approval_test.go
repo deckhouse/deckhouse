@@ -650,6 +650,153 @@ spec:
 				Expect(n.Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
 			})
 		})
+
+		Context("With maxConcurrent update set", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng2
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Automatic
+    automatic:
+      drainBeforeApproval: true
+  update:
+    maxConcurrent: 3
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: ng2
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+spec:
+  unschedulable: true
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-2
+  labels:
+    node.deckhouse.io/group: ng2
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+spec:
+  unschedulable: true
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-3
+  labels:
+    node.deckhouse.io/group: ng2
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+spec:
+  unschedulable: true
+`))
+				f.RunHook()
+			})
+
+			It("Should be approved", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				n1 := f.KubernetesGlobalResource("Node", "worker-1")
+				n2 := f.KubernetesGlobalResource("Node", "worker-2")
+				n3 := f.KubernetesGlobalResource("Node", "worker-3")
+				Expect(n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+				Expect(n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+				Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+				Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+				Expect(n3.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+				Expect(n3.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With maxConcurrent update set to half of nodes", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: configuration-checksums
+  namespace: d8-cloud-instance-manager
+data:
+  test: dXBkYXRlZA== # updated
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng2
+spec:
+  nodeType: Static
+  disruptions:
+    approvalMode: Automatic
+    automatic:
+      drainBeforeApproval: true
+  update:
+    maxConcurrent: "50%"
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-1
+  labels:
+    node.deckhouse.io/group: ng2
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+spec:
+  unschedulable: true
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-2
+  labels:
+    node.deckhouse.io/group: ng2
+  annotations:
+    update.node.deckhouse.io/waiting-for-approval: ""
+spec:
+  unschedulable: true
+`))
+				f.RunHook()
+			})
+
+			It("Should be approved", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				n1 := f.KubernetesGlobalResource("Node", "worker-1")
+				n2 := f.KubernetesGlobalResource("Node", "worker-2")
+				n1Approved := n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()
+				if n1Approved {
+					Expect(n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+					Expect(n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+					Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+					Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+				} else {
+					Expect(n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeFalse())
+					Expect(n1.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeTrue())
+					Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/approved`).Exists()).To(BeTrue())
+					Expect(n2.Field(`metadata.annotations.update\.node\.deckhouse\.io/waiting-for-approval`).Exists()).To(BeFalse())
+				}
+
+			})
+		})
 	})
 })
 

@@ -18,6 +18,8 @@ package hooks
 
 import (
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
@@ -130,40 +133,70 @@ type updateApprover struct {
 	nodeGroups  map[string]updateNodeGroup
 }
 
+func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
+	var concurrency = 1
+	switch ngCon.Type {
+	case intstr.Int:
+		concurrency = ngCon.IntValue()
+
+	case intstr.String:
+		if strings.HasSuffix(ngCon.String(), "%") {
+			percentStr := strings.TrimSuffix(ngCon.String(), "%")
+			percent, _ := strconv.Atoi(percentStr)
+			concurrency = totalNodes * percent / 100
+			if concurrency == 0 {
+				concurrency = 1
+			}
+		} else {
+			concurrency = ngCon.IntValue()
+		}
+	}
+
+	return concurrency
+}
+
 // Approve updates
 //  * Only one node from node group can be approved for update
 //  * If there are not ready nodes in the group, they'll be updated first
 func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
-ngLoop:
 	for _, ng := range ar.nodeGroups {
 		nodeGroupNodes := make([]updateApprovalNode, 0)
+		currentUpdates := 0
 
 		for _, node := range ar.nodes {
 			if node.NodeGroup == ng.Name {
 				nodeGroupNodes = append(nodeGroupNodes, node)
 			}
 		}
-		// Skip ng, if it already has approved nodes
+
+		concurrency := calculateConcurrency(ng.Concurrency, len(nodeGroupNodes))
+
+		var hasWaitingForApproval bool
+
+		// Count already approved nodes
 		for _, ngn := range nodeGroupNodes {
 			if ngn.IsApproved {
-				continue ngLoop
+				currentUpdates++
 			}
+
+			if !hasWaitingForApproval && ngn.IsWaitingForApproval {
+				hasWaitingForApproval = true
+			}
+		}
+
+		// Skip ng, if maxConcurrent is already reached
+		if currentUpdates >= concurrency {
+			continue
 		}
 
 		// Skip ng, if it has no waiting nodes
-		var hasWaitingForApproval bool
-		for _, nn := range nodeGroupNodes {
-			if nn.IsWaitingForApproval {
-				hasWaitingForApproval = true
-				break
-			}
-		}
-
 		if !hasWaitingForApproval {
 			continue
 		}
 
-		approvedNodeName := ""
+		countToApprove := concurrency - currentUpdates
+
+		approvedNodeNames := make(map[string]struct{}, countToApprove)
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
@@ -178,27 +211,36 @@ ngLoop:
 			if allReady {
 				for _, ngn := range nodeGroupNodes {
 					if ngn.IsWaitingForApproval {
-						approvedNodeName = ngn.Name
+						approvedNodeNames[ngn.Name] = struct{}{}
+						if len(approvedNodeNames) == countToApprove {
+							break
+						}
+					}
+				}
+			}
+		}
+
+		if len(approvedNodeNames) < countToApprove {
+			//    Allow one of not ready nodes, if any
+			for _, ngn := range nodeGroupNodes {
+				if !ngn.IsReady && ngn.IsWaitingForApproval {
+					approvedNodeNames[ngn.Name] = struct{}{}
+					if len(approvedNodeNames) == countToApprove {
 						break
 					}
 				}
 			}
 		}
 
-		//    Allow one of not ready nodes, if any
-		for _, ngn := range nodeGroupNodes {
-			if !ngn.IsReady && ngn.IsWaitingForApproval {
-				approvedNodeName = ngn.Name
-				break
-			}
-		}
-
-		if approvedNodeName == "" {
+		if len(approvedNodeNames) == 0 {
 			continue
 		}
 
-		input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", approvedNodeName)
-		setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
+		for approvedNodeName := range approvedNodeNames {
+			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", approvedNodeName)
+			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
+		}
+
 		ar.finished = true
 	}
 
@@ -365,6 +407,8 @@ type updateNodeGroup struct {
 	NodeType    ngv1.NodeType
 	Disruptions ngv1.Disruptions
 	Status      ngv1.NodeGroupStatus
+
+	Concurrency *intstr.IntOrString
 }
 
 func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -378,6 +422,13 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	ung := updateNodeGroup{
 		Name:     ng.Name,
 		NodeType: ng.Spec.NodeType,
+	}
+
+	if ng.Spec.Update.MaxConcurrent != nil {
+		ung.Concurrency = ng.Spec.Update.MaxConcurrent
+	} else {
+		concurrency := intstr.FromInt(1)
+		ung.Concurrency = &concurrency
 	}
 
 	if len(ng.Spec.Disruptions.Automatic.Windows) > 0 {

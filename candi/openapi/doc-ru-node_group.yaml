@@ -361,3 +361,7 @@ spec:
                 operatingSystem: *operatingSystem
                 disruptions: *disruptions
                 kubelet: *kubelet
+                update:
+                  properties:
+                    maxConcurrent:
+                      description: Максимальное количество одновременно обновляемых узлов. Можно указать число узлов или процент от общего количества узлов в данной группе.
