@@ -23,10 +23,10 @@ spec:
 
 Для всего этого следует применять дополнительные network tags.
 
-## Установка дополнительных network tags на статических и мастер-узлах
+## Установка дополнительных network tags на статических и master-узлах
 
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные network tags указываются в `GCPClusterConfiguration`:
-- для мастер-узлов — в секции `masterNodeGroup` в поле `additionalNetworkTags`;
+- для master-узлов — в секции `masterNodeGroup` в поле `additionalNetworkTags`;
 - для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalNetworkTags`.
 
 Поле `additionalNetworkTags` содержит массив строк с именами network tags.

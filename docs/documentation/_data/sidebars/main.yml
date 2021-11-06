@@ -669,7 +669,7 @@ entries:
                 - title: Custom resources
                   url: /modules/301-prometheus-metrics-adapter/cr.html
         - title:
-            en: Vertical pod autoscaler
+            en: Vertical Pod autoscaler
             ru: Вертикальное масштабирование
           folders:
             - title:

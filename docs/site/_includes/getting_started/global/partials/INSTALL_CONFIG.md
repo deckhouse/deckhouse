@@ -11,9 +11,12 @@ The recommended settings for a Deckhouse Platform {% if revision == 'ee' %}Enter
 **Please pay attention to**:
 - <span class="mustChange">highlighted</span> parameters you *must* define.
 - <span class="mightChange">parameters</span> you might want to change.
-
-> The other available cloud provider related options are described in the [documentation](https://deckhouse.io/en/documentation/v1/kubernetes.html).
->
+{% if page.platform_type == 'cloud' %}
+> The other available cloud provider related options are described in the [documentation](/en/documentation/v1/kubernetes.html).
+>{% endif %}
+{%- if page.platform_type == 'baremetal' %}
+> The installation must be performed from a **[personal computer](step2.html#installation-process)** with SSH access to the node, the **master node** of the future cluster.
+>{% endif %}
 > To learn more about the Deckhouse Platform release channels, please see the [relevant documentation](/en/documentation/v1/deckhouse-release-channels.html).
 
 {% snippetcut name="config.yml" selector="config-yml" %}

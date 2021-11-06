@@ -10,7 +10,10 @@
       name="domain" placeholder="%s.example.com"
       autocomplete="off" />
     <span class="info">
-      This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.example.com</code> will be available as <code>grafana.example.com</code>.
+      This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.example.com</code> will be available as <code>grafana.example.com</code>.<br />
+      This tutorial assumes the use of a public domain directed to a public cluster address.
+      This is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
+      If using existing certificates (including Self-Signed), you need to change the <a href="/en/documentation/v1/deckhouse-configure-global.html#parameters">global settings</a> in the <code>modules.https</code> section.
     </span>
   </div>
 </div>

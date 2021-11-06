@@ -35,16 +35,16 @@ This module installs the [Istio service mesh](https://istio.io/).
 
 ## The application service architecture with Istio enabled
 ### Details of usage
-* Each pod of the service gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
+* Each Pod of the service gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
   * Envoy — proxifies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
   * pilot-agent — a part of Istio. It keeps the Envoy configurations up to date and has a caching DNS server built-in.
-* Each pod has a DNAT configured for incoming and outgoing application service requests to the sidecar-proxy. The additional init container is responsible for this. Thus, the traffic is routed transparently for applications.
+* Each Pod has a DNAT configured for incoming and outgoing application service requests to the sidecar-proxy. The additional init container is responsible for this. Thus, the traffic is routed transparently for applications.
 * Since all incoming service traffic is redirected to the sidecar-proxy, this also applies to the readiness/liveness traffic. The corresponding Kubernetes subsystem cannot probe containers under Mutual TLS. Thus, all the existing probes are automatically reconfigured to use a dedicated sidecar-proxy port that routes traffic to the application unchanged.
 * A prepared ingress controller shold be used to receive requests from users or third-party services outside of the cluster:
   * The controller's pods have additional sidecar-proxy containers.
   * Unlike application pods, the ingress controller's sidecar-proxy intercepts only outgoing traffic from the controller to the services. The incoming traffic from the users is handled directly by the controller itself.
 * Ingress resources require refinement in the form of adding the following annotations:
-    * nginx.ingress.kubernetes.io/service-upstream: "true" — the ingress-nginx controller will use the service's ClusterIP as upstream instead of the pod addresses. Thus, sidecar-proxy now handles traffic balancing between the pods. Use this option only if your service has a ClusterIP.
+    * nginx.ingress.kubernetes.io/service-upstream: "true" — the ingress-nginx controller will use the service's ClusterIP as upstream instead of the Pod addresses. Thus, sidecar-proxy now handles traffic balancing between the pods. Use this option only if your service has a ClusterIP.
     * nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc.cluster-dns-suffix" — the ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g., Host: example.com).
 * Resources of the Service type do not require any adaptation and continue to function properly. Applications have access to the addresses of services like servicename, servicename.myns.svc, etc., just like before.
 * DNS requests from within the pods are transparently redirected to the sidecar-proxy for processing:
@@ -57,7 +57,7 @@ The architecture of the demo service is as follows:
   * Accepts user requests and sends secondary requests to the bar pod.
   * Is linked to the corresponding foo Service.
 * The bar pod:
-  * Accepts secondary requests from the foo pod and processes them.
+  * Accepts secondary requests from the foo Pod and processes them.
   * Is linked to the corresponding bar Service.
 * Ingress exposes the foo service via the example.com domain.
 

@@ -59,7 +59,7 @@ Bootstrap process with `dhctl` consists of several stages:
 
 #### Terraform
 There are three variants of terraforming:
-* `base-infrastructure` - creates basic cluster components: networks, routers, ssh key pairs, etc.
+* `base-infrastructure` - creates basic cluster components: networks, routers, SSH key pairs, etc.
     * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
         * `cloud_discovery_data` - the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
 

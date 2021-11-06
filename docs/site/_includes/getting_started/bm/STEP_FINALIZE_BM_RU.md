@@ -1,12 +1,12 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** мастер-узла.
+На данном этапе вы создали кластер, который состоит из **единственного** master-узла.
 
 Для полноценной работы кластера добавьте узлы, согласно <a href="/ru/documentation/v1/modules/040-node-manager/faq.html#как-автоматически-добавить-статичный-узел-в-кластер">документации</a> (рекомендуется для production-окружений и тестовых сред).
 
 <blockquote>
-<p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на мастер-узле. Для этого, снимите с мастер-узла taint, выполнив следующую команду:</p>
+<p>Если вы развернули кластер <strong>для ознакомительных целей</strong> и одного узла вам достаточно, разрешите компонентам Deckhouse работать на master-узле. Для этого, снимите с master-узла taint, выполнив на master-узле следующую команду:</p>
 {% snippetcut %}
 ```bash
 kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
@@ -16,11 +16,11 @@ kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/
 
 Далее, остается выполнить следующие три действия.
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
-<p>Создайте файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
+<p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
 {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}
-<p>Примените его, используя следующую команду:</p>
+<p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 kubectl create -f ingress-nginx-controller.yml
@@ -28,11 +28,11 @@ kubectl create -f ingress-nginx-controller.yml
 {% endsnippetcut %}
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
-<p>Создайте файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
+<p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
 {% snippetcut name="user.yml" selector="user-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}
-<p>Примените его, используя следующую команду:</p>
+<p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 kubectl create -f user.yml
@@ -66,7 +66,7 @@ upmeter.example.com</code>
     </ul>
   </li>
 
-    <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>С учетом указанного на шаге <a href="step3.html">«Настройка  кластера»</a> шаблона имени, выполните следующую команду в Linux (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
+    <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
 {% snippetcut selector="example-hosts" %}
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"

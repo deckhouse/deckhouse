@@ -7,7 +7,7 @@ properties:
 
       Если не указано — используется StorageClass существующей PVC Prometheus, а если PVC пока нет — используется или `global.storageClass`, или `global.discovery.defaultStorageClass`, а если и их нет — данные сохраняются в `emptyDir`.
 
-      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть pod придется руками
+      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть Pod придется руками
 
       **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из cуществующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
   longtermStorageClass:
@@ -108,22 +108,22 @@ properties:
     properties:
       maxCPU:
         description: |
-          Максимальная граница CPU requests, выставляемая VPA контроллером для pod'ов основного Prometheus.
+          Максимальная граница CPU requests, выставляемая VPA контроллером для Pod'ов основного Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества Pod'ов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       maxMemory:
         description: |
-          Максимальная граница Memory requests, выставляемая VPA контроллером для pod'ов основного Prometheus.
+          Максимальная граница Memory requests, выставляемая VPA контроллером для Pod'ов основного Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества Pod'ов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       longtermMaxCPU:
         description: |
-          Максимальная граница CPU requests, выставляемая VPA контроллером для pod'ов Longterm Prometheus.
+          Максимальная граница CPU requests, выставляемая VPA контроллером для Pod'ов Longterm Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества Pod'ов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       longtermMaxMemory:
         description: |
-          Максимальная граница Memory requests, выставляемая VPA контроллером для pod'ов longterm Prometheus.
+          Максимальная граница Memory requests, выставляемая VPA контроллером для Pod'ов longterm Prometheus.
 
           Значение по умолчанию подбирается автоматически, исходя из максимального количества Pod'ов, которое можно создать в кластере при текущем количестве узлов и их настройках. Подробнее см. хук `detect_vpa_max` модуля.
       updateMode:
@@ -144,7 +144,7 @@ properties:
       Как часто Longterm Prometheus должен собирать себе "снимок" данных из основного Prometheus.
   nodeSelector:
     description: |
-      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+      Структура, аналогичная `spec.nodeSelector` Kubernetes Pod.
 
       Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:

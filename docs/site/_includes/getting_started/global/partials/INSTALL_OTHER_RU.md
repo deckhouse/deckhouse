@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Platform** воспользуемся готовым Docker-образом. В образ необходимо передать конфигурационные файлы, а так же ssh-ключи для доступа на master-узлы:
+Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы и SSH-ключи доступа на **master-узлы**. Выполните на **[персональном компьютере](step2.html#процесс-установки)**:
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}

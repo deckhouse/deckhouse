@@ -55,7 +55,7 @@
 
         The recommended course of action:
         1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
-        2. View the status of the pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
 
   - alert: D8ImageAvailabilityExporterPodIsNotRunning
     expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"image-availability-exporter-.*"})
@@ -74,7 +74,7 @@
 
         The recommended course of action:
         1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
-        2. View the status of the pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
 
   - alert: D8ImageAvailabilityExporterUnavailable
     expr: count(ALERTS{alertname=~"D8ImageAvailabilityExporterTargetDown|D8ImageAvailabilityExporterTargetAbsent", alertstate="firing"})

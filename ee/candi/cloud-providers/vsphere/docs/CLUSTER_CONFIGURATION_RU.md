@@ -14,7 +14,7 @@ title: "Cloud provider — VMware vSphere: настройки провайдер
     * Формат — bool.
     * Опциональный параметр. По умолчанию `false`.
 * `masterNodeGroup` — описание master NodeGroup.
-  * `replicas` — сколько мастер-узлов создать.
+  * `replicas` — сколько master-узлов создать.
   * `zones` — узлы будут создаваться только в перечисленных зонах.
   * `instanceClass` — частичное содержимое полей [VsphereInstanceClass](cr.html#vsphereinstanceclass). Обязательными параметрами являются `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`.
     * `numCPUs`

@@ -42,7 +42,7 @@ apiVersions:
         properties:
           replicas:
             description: |
-              Сколько мастер-узлов создать.
+              Сколько master-узлов создать.
           zones:
             description: |
               Список зон, в которых допустимо создавать master-узлы.

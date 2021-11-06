@@ -2,7 +2,7 @@
 title: "The node-local-dns module: usage"
 ---
 
-## An example of configuring a custom DNS for a pod
+## An example of configuring a custom DNS for a Pod
 
 ```yaml
 apiVersion: v1

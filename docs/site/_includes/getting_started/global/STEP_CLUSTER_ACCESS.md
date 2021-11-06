@@ -74,7 +74,7 @@ upmeter.example.com</code>
     </li>
   </ul>
 </li>
-  <li><p>If you don't have a DNS server, add static records to the file <code>/etc/hosts</code> on your PC (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
+  <li><p>If you don't have a DNS server, then on the computer from which you need access to Deckhouse services add static records to the file <code>/etc/hosts</code> (for Linux, or <code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
 {% if page.platform_code == 'aws' %}
     <p>You can determine the IP address of the AWS load balancer using the following command (in the cluster):</p>
 
