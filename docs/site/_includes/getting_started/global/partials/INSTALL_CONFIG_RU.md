@@ -11,10 +11,13 @@
 **Обратите внимание**:
 - <span class="mustChange">обязательные</span> для самостоятельного заполнения параметры.
 - <span class="mightChange">опциональные</span> параметры.
-
-> Полное описание параметров конфигурации cloud-провайдеров вы можете найти [документации](https://deckhouse.io/ru/documentation/v1/kubernetes.html).
->
-> Подробнее о каналах обновления Deckhouse Platform (release channels) можно почитать в [документации](/ru/documentation/v1/deckhouse-release-channels.html).
+{% if page.platform_type == 'cloud' %}
+> Полное описание параметров конфигурации cloud-провайдеров вы можете найти в [документации](/ru/documentation/v1/kubernetes.html).
+>{% endif %}
+{%- if page.platform_type == 'baremetal' %}
+> Выполнять установку необходимо с **[персонального компьютера](step2.html#процесс-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
+>{% endif %}
+> Deckhouse Platform использует каналы обновлений (release channels), о чём вы можете подробнее узнать в [документации](/ru/documentation/v1/deckhouse-release-channels.html).
 
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/config.yml.{{ include.layout }}.{{ revision }}.inc" syntax="yaml" %}

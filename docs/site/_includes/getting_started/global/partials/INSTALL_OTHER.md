@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-To install the **Deckhouse Platform**, we will use a prebuilt Docker image. It is necessary to transfer configuration files to the container, as well as ssh-keys for access to the master nodes:
+Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container, as well as SSH keys for access to the master nodes. Run on the **[personal computer](step2.html#installation-process)**:
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}

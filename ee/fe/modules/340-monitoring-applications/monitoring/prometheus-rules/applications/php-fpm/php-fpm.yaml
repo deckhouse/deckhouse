@@ -9,7 +9,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       description: |-
-        Number of php-fpm idle processes is below 10% in pod {{$labels.namespace}}/{{$labels.pod}}
+        Number of php-fpm idle processes is below 10% in Pod {{$labels.namespace}}/{{$labels.pod}}
         Consider the following:
 
         1. Raise `pm.max_children` in php-fpm config file.
@@ -17,4 +17,4 @@
 
         More info: https://www.php.net/manual/en/install.fpm.configuration.php
       summary: >
-        Number of php-fpm idle processes is below 10% in pod {{$labels.namespace}}/{{$labels.pod}}
+        Number of php-fpm idle processes is below 10% in Pod {{$labels.namespace}}/{{$labels.pod}}

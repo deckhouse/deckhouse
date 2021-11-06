@@ -12,7 +12,7 @@ properties:
 
       If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either `global.StorageClass` or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
-      `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the pod manually.
+      `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
       **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume reprovisioning and data loss.
   longtermStorageClass:
@@ -178,9 +178,9 @@ properties:
           - type: number
         x-examples: ["3"]
         description: |
-          The maximum CPU requests set by the VPA controller for the main Prometheus pods.
+          The maximum CPU requests set by the VPA controller for the main Prometheus Pods.
 
-          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       maxMemory:
         oneOf:
           - type: string
@@ -188,9 +188,9 @@ properties:
           - type: number
         x-examples: ["3Mi"]
         description: |
-          The maximum Memory requests set by the VPA controller for the main Prometheus pods.
+          The maximum Memory requests set by the VPA controller for the main Prometheus Pods.
 
-          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxCPU:
         oneOf:
           - type: string
@@ -198,9 +198,9 @@ properties:
           - type: number
         x-examples: [0.1]
         description: |
-          The maximum CPU requests set by the VPA controller for the Longterm Prometheus pods.
+          The maximum CPU requests set by the VPA controller for the Longterm Prometheus Pods.
 
-          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       longtermMaxMemory:
         oneOf:
           - type: string
@@ -208,13 +208,13 @@ properties:
           - type: number
         x-examples: ["4Mi"]
         description: |
-          The maximum Memory requests set by the VPA controller for the longterm Prometheus pods.
+          The maximum Memory requests set by the VPA controller for the longterm Prometheus Pods.
 
-          The default value is chosen automatically based on the maximum number of pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
       updateMode:
         type: string
         description: |
-          The pod update mode.
+          The Pod update mode.
         default: "Initial"
         enum:
           - "Initial"
@@ -247,7 +247,7 @@ properties:
     x-examples:
       - disktype: ssd
     description: |
-      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   tolerations:
@@ -273,7 +273,7 @@ properties:
           value: "value1"
           effect: "NoSchedule"
     description: |
-      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
   mainMaxDiskSizeGigabytes:

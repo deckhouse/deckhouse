@@ -13,7 +13,7 @@ The module runs the standard `CoreDNS` server (as part of a DaemonSet) on all no
 The regular DNS usage in Kubernetes poses some problems that may lead to unnecessary degradation of the service's performance:
 - No request caching (in Linux, there is no caching right out-of-the-box; thus, pods also lack it out-of-the-box);
 - All the container-originated DNS requests result in a network request to the cluster DNS. Thus, even requests to resources within the same node result in network requests;
-- The pod request is first resolved in the cluster DNS zones and only then channeled to external DNS servers. For example, the request to ya.ru is first resolved in cluster zones such as `cluster.local`, `svc.cluster.local`, `<namespace>.svc.cluster.local`, receives negative responses, and gets appropriately resolved only on the "second" attempt.
+- The Pod request is first resolved in the cluster DNS zones and only then channeled to external DNS servers. For example, the request to ya.ru is first resolved in cluster zones such as `cluster.local`, `svc.cluster.local`, `<namespace>.svc.cluster.local`, receives negative responses, and gets appropriately resolved only on the "second" attempt.
 
 Thus, even slight network delays may result in significant service performance degradation due to above problems.
 

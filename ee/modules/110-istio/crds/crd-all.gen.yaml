@@ -2911,7 +2911,7 @@ spec:
                 httpGet:
                   properties:
                     host:
-                      description: Host name to connect to, defaults to the pod IP.
+                      description: Host name to connect to, defaults to the Pod IP.
                       format: string
                       type: string
                     httpHeaders:

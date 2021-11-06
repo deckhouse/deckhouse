@@ -26,6 +26,6 @@ If it is not feasible for some reason, use the following annotations: `prometheu
     * `prometheus.deckhouse.io/path` — the path to collect metrics (default: `/metrics`);
     * `prometheus.deckhouse.io/query-param-$name` — the $name=$value argument for the GET query (default: ``)
     * `prometheus.deckhouse.io/allow-unready-pod` — allows collecting metrics for pods in any state (by default, Prometheus scrapes metrics from the Ready pods only).
-    * `prometheus.deckhouse.io/sample-limit` — sample limit for a pod (refer to the table above to find out the default sample limit for an application).
+    * `prometheus.deckhouse.io/sample-limit` — sample limit for a Pod (refer to the table above to find out the default sample limit for an application).
 
 Click [here](../../modules/300-prometheus/faq.html) to learn more about application monitoring..

@@ -41,10 +41,10 @@ spec:
 
 Для всего этого следует применять дополнительные security groups. Можно использовать только предварительно созданные в облаке security groups.
 
-## Установка дополнительных security groups на статических и мастер-узлах
+## Установка дополнительных security groups на статических и master-узлах
 
 Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные security groups указываются в `AWSClusterConfiguration`:
-- для мастер-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`
+- для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`
 - для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в поле `additionalSecurityGroups`.
 
 Поле `additionalSecurityGroups` — содержит массив строк с именами security groups.

@@ -86,7 +86,7 @@ masterNodeGroup:
   # [<en>] number of replicas
   # [<en>] if more than 1 master node exists, control-plane will be automatically deployed on all master nodes
   # [<ru>] количество реплик мастера
-  # [<ru>] если будет больше одного мастер-узла, то control-plane на всех master-узлах будет развернут автоматическии
+  # [<ru>] если будет больше одного master-узла, то control-plane на всех master-узлах будет развернут автоматическии
   replicas: 1
   # [<en>] Parameters of the VM instance
   # [<ru>] параметры инстанса

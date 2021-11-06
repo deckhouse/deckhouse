@@ -2,14 +2,14 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 
 # Доступ к кластеру через Kubernetes API
-Deckhouse только что завершил процесс установки вашего кластера. Теперь вы можете подключиться к мастер-узлу, используя ssh.
-Для этого необходимо получить IP-адрес мастера либо из логов dhctl, либо из web интерфейса/cli утилиты облачного провайдера.
+Deckhouse только что завершил процесс установки вашего кластера. Теперь вы можете подключиться к master-узлу, используя ssh.
+Для этого необходимо получить IP-адрес master-узла либо из логов dhctl, либо из web интерфейса/cli утилиты облачного провайдера.
 {% snippetcut %}
 ```shell
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-Вы можете запускать kubectl на мастере от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api) к Kubernetes API позже.
+Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api) к Kubernetes API позже.
 {% snippetcut %}
 ```shell
 sudo -i
@@ -21,10 +21,10 @@ kubectl get nodes
 [IngressNginxController](/en/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller) был создан во время процесса установки кластера.
 Теперь осталось настроить доступ к веб-интерфейсам компонентов, которые уже установлены в кластере, таким как Grafana, Prometheus, Dashboard и так далее.
 LoadBalancer уже создан и вам остаётся только направить DNS-домен на него.
-В первую очередь необходимо подключиться к мастер-узлу, как это описано [выше](#доступ-к-кластеру-через-kubernetes-api).
+В первую очередь необходимо подключиться к master-узлу, как это описано [выше](#доступ-к-кластеру-через-kubernetes-api).
 
 {% if page.platform_type == 'cloud' %}
-Получите IP адрес балансировщика. Для этого в кластере от пользователя `root` выполните команду:
+Получите IP адрес балансировщика. Для этого, на **master-узле** от пользователя `root` выполните команду:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}
@@ -75,9 +75,9 @@ upmeter.example.com</code>
       </li>
     </ul>
   </li>
-  <li><p>Если вы не имеете под управлением DNS-сервер, добавьте статические записи в файл <code>/etc/hosts</code> для Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows).</p>
+  <li><p>Если вы не имеете под управлением DNS-сервер, то на компьютере, с которого необходим доступ к сервисам Deckhouse, добавьте статические записи в файл <code>/etc/hosts</code> для Linux или <code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows.</p>
 {% if page.platform_code == 'aws' %}
-  <p>Определить IP-адрес балансировщика можно при помощи следующей команды (также выполняемой в кластере):</p>
+  <p>Определить IP-адрес балансировщика можно при помощи следующей команды, выполняемой на <strong>master-узле</strong>:</p>
 
 <div markdown="1">
 {% snippetcut %}
@@ -88,7 +88,7 @@ BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1); echo "$BALANCER_IP"
 </div>
 {% endif %}
 
-  <p>Для добавления записей в файл <code>/etc/hosts</code> локально, выполните например следующие шаги:</p>
+  <p>Для добавления записей в файл <code>/etc/hosts</code> на Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующие шаги:</p>
 
 <ul><li><p>Экспортируйте переменную <code>BALANCER_IP</code>, указав полученный IP-адрес балансировщика:</p>
 {% snippetcut %}
