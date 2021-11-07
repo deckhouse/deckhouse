@@ -1,0 +1,42 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# vim
+*.swp
+
+# IDE
+.project
+.settings
+.idea/
+.vscode
+venv/
+
+# local development deckhouse binary
+/deckhouse/deckhouse
+
+# terraform and dhctl artifacts
+*-tfstate/
+.terraform/
+
+# e2e tests
+testing/cloud_layouts/**/tmp
+testing/cloud_layouts/**/bootstrap.log
+testing/cloud_layouts/**/configuration.yaml
+testing/cloud_layouts/**/sshkey*
+layouts-tests-tmp/
+
+# Documentation
+.jekyll-cache/
+_site/

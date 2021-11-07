@@ -1,0 +1,24 @@
+name: Publish channels
+on:
+  push:
+    branches:
+    - release-channels
+
+jobs:
+  deploy_channels_cm_prod:
+    name: Deploy channels.yaml to production
+    runs-on: self-hosted
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Converge
+      uses: werf/actions/converge@v1.2
+      with:
+        env: production
+      env:
+        WERF_NAMESPACE: "deckhouse-web-production"
+        WERF_KUBE_CONTEXT: prod
+        WERF_DIR: "ci"
