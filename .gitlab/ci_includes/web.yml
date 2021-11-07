@@ -152,6 +152,7 @@ Prod Doc Deploy:
     url: https://deckhouse.io
   only:
     - main
+    - /^release-.*/
   except:
     - schedules
   when: manual
@@ -165,10 +166,7 @@ Prod Doc Tag Deploy:
     name: web-production
     url: https://deckhouse.io
   only:
-    - main
     - tags
-  except:
-    - schedules
 
 Web cleanup:
   stage: cleanup_registry
