@@ -1,3 +1,10 @@
+<a data-proofer-ignore href="#">
+  {%- if page.lang == "ru" %}
+      Выбрать канал обновлений
+  {%- else %}
+      Choose a release channel
+  {%- endif %}
+</a>
 {%- raw %}
 {{ $CurrentPageURL := .CurrentPageURL }}
 {{ $CurrentPageURLRelative := .CurrentPageURLRelative }}
