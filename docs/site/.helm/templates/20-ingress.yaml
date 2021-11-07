@@ -22,18 +22,18 @@ metadata:
         rewrite ^/$ /ru/ permanent;
       }
 {{- include "rewrites" . | indent 6 }}
-{{- if eq .Values.werf.env "web-stage" }}
+{{- if eq .Values.web.env "web-stage" }}
     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-    nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.deckhouse-{{ .Values.werf.env }}.svc.cluster.local/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-url: https://{{ .Chart.Name }}-public-dex-authenticator.deckhouse-{{ .Values.web.env }}.svc.cluster.local/dex-authenticator/auth
     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-{{- else if eq .Values.werf.env "web-test" }}
+{{- else if eq .Values.web.env "web-test" }}
     nginx.ingress.kubernetes.io/auth-url: http://basic-auth.kube-basic-auth.svc.cluster.local/deckhouse
 {{- end }}
 spec:
   tls:
   - hosts:
       - {{ $host }}
-{{- if eq .Values.werf.env "web-production" }}
+{{- if eq .Values.web.env "web-production" }}
       - www.{{ $host }}
 {{- end }}
     secretName: tls-{{ $host }}
@@ -54,7 +54,7 @@ spec:
   secretName: tls-{{ $host }}
   issuerRef:
     kind: ClusterIssuer
-{{- if hasPrefix "review" .Values.werf.env }}
+{{- if hasPrefix "review" .Values.web.env }}
     name: letsencrypt-staging
 {{- else }}
     name: letsencrypt
@@ -62,7 +62,7 @@ spec:
   commonName: {{ $host }}
   dnsNames:
   - {{ $host }}
-{{- if eq .Values.werf.env "web-production" }}
+{{- if eq .Values.web.env "web-production" }}
   - www.{{ $host }}
 {{- end }}
   acme:
@@ -71,10 +71,10 @@ spec:
         ingressClass: nginx
       domains:
       - {{ $host }}
-{{- if eq .Values.werf.env "web-production" }}
+{{- if eq .Values.web.env "web-production" }}
       - www.{{ $host }}
 {{- end }}
-{{- if eq .Values.werf.env "web-stage" }}
+{{- if eq .Values.web.env "web-stage" }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: DexAuthenticator
