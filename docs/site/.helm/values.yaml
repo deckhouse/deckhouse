@@ -8,3 +8,23 @@ resources:
       _default: 20M
       production: 50M
 
+vrouter:
+  defaultGroup: "v1"
+  defaultChannel: "stable"
+  defaultChannel4DefaultGroup: "latest"
+  showLatestChannel: "true"
+  i18nType: "location"
+  logLevel:
+    web-stage: trace
+    _default: debug
+    web-production: info
+  pathStatic:
+    _default: root
+  pathChannelsFile:
+    _default: /app/release-channels/channels.yaml
+  pathTpls:
+    _default: /includes
+  urlValidation:
+    _default: false
+    web-production: true
+

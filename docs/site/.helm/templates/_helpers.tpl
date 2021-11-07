@@ -5,3 +5,29 @@ resources:
   limits:
     memory: {{ pluck .Values.web.env .Values.resources.requests.memory | first | default .Values.resources.requests.memory._default }}
 {{- end }}
+
+{{- define "vrouter_envs" }}
+- name: VROUTER_DEFAULT_GROUP
+  value: {{ .Values.vrouter.defaultGroup | quote }}
+- name: VROUTER_DEFAULT_CHANNEL
+  value: {{ .Values.vrouter.defaultChannel | quote }}
+- name: VROUTER_DEFAULT_CHANNEL_FOR_DEFAULT_GROUP
+  value: {{ .Values.vrouter.defaultChannel4DefaultGroup | quote }}
+- name: VROUTER_SHOW_LATEST_CHANNEL
+  value: {{ .Values.vrouter.showLatestChannel | quote }}
+- name: VROUTER_LISTEN_PORT
+  value: "8080"
+- name: VROUTER_LOG_LEVEL
+  value: {{ pluck .Values.web.env .Values.vrouter.logLevel | first | default .Values.vrouter.logLevel._default | quote }}
+- name: VROUTER_PATH_STATIC
+  value: {{ pluck .Values.web.env .Values.vrouter.pathStatic | first | default .Values.vrouter.pathStatic._default | quote }}
+- name: VROUTER_PATH_CHANNELS_FILE
+  value: {{ pluck .Values.web.env .Values.vrouter.pathChannelsFile | first | default .Values.vrouter.pathChannelsFile._default | quote }}
+- name: VROUTER_PATH_TPLS
+  value: {{ pluck .Values.web.env .Values.vrouter.pathTpls | first | default .Values.vrouter.pathTpls._default | quote }}
+- name: VROUTER_I18N_TYPE
+  value: {{ .Values.vrouter.i18nType | quote }}
+- name: VROUTER_URL_VALIDATION
+  value: {{ pluck .Values.web.env .Values.vrouter.urlValidation | first | default .Values.vrouter.urlValidation._default | quote }}
+{{- end }}
+

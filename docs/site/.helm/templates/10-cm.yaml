@@ -6,3 +6,13 @@ metadata:
 data:
   releasechannels.json: |
     {{ $.Files.Get "releasechannels.json" | fromJson| toJson }}
+{{- if and (ne .Values.web.env "web-production") (ne .Values.web.env "web-stage")  }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: release-channels-data
+data:
+  channels.yaml: |
+{{ $.Files.Get "channels.yaml" | indent 4 }}
+{{- end }}

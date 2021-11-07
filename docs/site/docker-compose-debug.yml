@@ -6,9 +6,15 @@ services:
 #    command: "/app/server"
     command: "dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./server"
     environment:
-      WERF_LOG_VERBOSE: "on"
-      LOG_LEVEL: "debug"
-      URL_VALIDATION: "false"
+      VROUTER_DEFAULT_GROUP: "v1"
+      VROUTER_DEFAULT_CHANNEL: "latest"
+      VROUTER_USE_LATEST_CHANNEL: "true"
+      VROUTER_URL_VALIDATION: "false"
+      VROUTER_LISTEN_PORT: "80"
+      VROUTER_LOG_LEVEL: "debug"
+      VROUTER_PATH_STATIC: "/app/root"
+      VROUTER_PATH_CHANNELS_FILE: "releasedata/channels.yaml"
+      VROUTER_I18N_TYPE: "location"
     networks:
       - deckhouse
     cap_add:
@@ -18,6 +24,7 @@ services:
     ports:
       - "2345:2345"
     volumes:
+      - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
       - ".helm/releasechannels.json:/app/releasechannels/releasechannels.json:ro"
   front:
     image: nginx:latest

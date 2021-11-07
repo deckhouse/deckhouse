@@ -5,13 +5,20 @@ services:
     image: $WERF_WEB_BACKEND_DOCKER_IMAGE_NAME
     command: "/app/server"
     environment:
-      WERF_LOG_VERBOSE: "on"
-      LOG_LEVEL: "trace"
-      URL_VALIDATION: "false"
+      VROUTER_DEFAULT_GROUP: "v1"
+      VROUTER_DEFAULT_CHANNEL: "latest"
+      VROUTER_USE_LATEST_CHANNEL: "true"
+      VROUTER_URL_VALIDATION: "false"
+      VROUTER_LISTEN_PORT: "80"
+      VROUTER_LOG_LEVEL: "debug"
+      VROUTER_PATH_STATIC: "/app/root"
+      VROUTER_PATH_CHANNELS_FILE: "releasedata/channels.yaml"
+      VROUTER_I18N_TYPE: "location"
     networks:
       - deckhouse
     volumes:
-      - ".helm/releasechannels.json:/app/releasechannels/releasechannels.json:ro"
+      #- ".helm/releasechannels.json:/app/releasechannels/releasechannels.json:ro"
+      - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
   front:
     image: nginx:latest
     volumes:
