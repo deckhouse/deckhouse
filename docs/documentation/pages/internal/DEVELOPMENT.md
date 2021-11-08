@@ -9,17 +9,17 @@ lang: en
 As a noun, both of these terms can be used interchangeably.
 - The code within some branch that is not a part of a release is considered a dev version.
 - Release (verb) — the process of creating, announcing, and releasing a new form (version) of the program.
-*Do not confuse* it with changing the version within the update channel.
-- Update channel — the following update channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`.
+*Do not confuse* it with changing the version within the release channel.
+- Release channel — the following release channels are available (from less to more stable): `alpha`, `beta`, `early-access`, `stable`, and `rock-solid` (see more below). For example, the phrase "early-access or above" means `early-access`, `stable`, and `rock-solid`.
 
 Versioning
 ----------------
 We use the versioning scheme similar to the [semver](https://semver.org/) one.
 
 Examples:
-- `v1.24.0`, `v1.24.5` - these versions are distributed to early-access "or above" update channels.
-- `v1.24.10-beta`, `v1.24.32-beta.4` - these versions are distributed to beta "or below" update channels.
-- `v1.24.10-alpha`, `v1.24.32-alpha.4` - these versions are distributed to alpha "or below" update channels.
+- `v1.24.0`, `v1.24.5` - these versions are distributed to early-access "or above" release channels.
+- `v1.24.10-beta`, `v1.24.32-beta.4` - these versions are distributed to beta "or below" release channels.
+- `v1.24.10-alpha`, `v1.24.32-alpha.4` - these versions are distributed to alpha "or below" release channels.
 
 ## How to test the Deckhouse version
 The CI pipeline is configured to build an image based on each branch. This image is available at  `dev-registry.deckhouse.io/sys/deckhouse-oss/dev:<BRANCH>`.
@@ -32,13 +32,13 @@ A copy of Deckhouse running in the cluster regularly checks if a new image is av
 If the digest for the tag in the registry does not match the one for the image in the cluster, Deckhouse modifies its deployment manifest and shuts down.
 The new image is pulled from the registry when a new Deckhouse Pod is being created.
 
-## The process of releasing new versions and changing versions in the update channels
-Getting information about the versions (releases) that are currently available in the update channels:
+## The process of releasing new versions and changing versions in the release channels
+Getting information about the versions (releases) that are currently available in the release channels:
 - Issues and MRs included in a specific version can be found in the milestone with the version name.
 - Information about versions (releases) is posted in the `#deckhouse-releases` Slack channel; also, it is included in the description of the tag that corresponds to a specific version.
-- The code corresponding to a version currently active in the specific update channel can be found in the corresponding branch (`alpha`, `beta` etc.).
+- The code corresponding to a version currently active in the specific release channel can be found in the corresponding branch (`alpha`, `beta` etc.).
 
-### Releasing a version with **new** functionality/modifications and changing versions in the update channels
+### Releasing a version with **new** functionality/modifications and changing versions in the release channels
 
 Issues and MRs that will be a part of a new release are put in the ***current*** milestone.
 
@@ -52,10 +52,10 @@ When the ***current*** milestone accumulates enough changes to release a new ver
     1. Create the appropriate Russian and English posts in the Slack messenger (Add -> Post). Insert and format the content from the milestone description in the posts. Check the `Create a public link to share outside of Slack` checkbox.
 1. Releasing a version
     1. Pre-deployment
-        1. Post a message to the `#deckhouse-releases` channel containing a link to an English-language post. The message must announce the new release and forthcoming version change in the `alpha` update channel. Make sure that all teams are aware of the forthcoming release.
+        1. Post a message to the `#deckhouse-releases` channel containing a link to an English-language post. The message must announce the new release and forthcoming version change in the `alpha` release channel. Make sure that all teams are aware of the forthcoming release.
         1. Post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
-        1. Deploy a new version to `alpha` using the `Alpha (pre-release)` job of the `Deploy` stage. In the process, werf pushes an image that already exists in `antiopa/dev:<release branch version>` to the `antiopa:alpha` channel, and all the installations that use this channel are [updated](#auto-updates).
-        1. Check logs in a variety of clusters that use the `alpha` update channel.
+        1. Deploy a new version to `alpha` using the `Alpha (pre-release)` job of the `Deploy` stage.
+        1. Check logs in a variety of clusters that use the `alpha` release channel.
         1. If errors occurred when deploying to `alpha`:
             1. Immediately notify the users about the problem in the announcement's thread (in the `#deckhouse-releases` Slack channel) while mentioning (@name) the L1 engineer on duty and the engineer of the team responsible for the cluster affected. Inform that R&D is dealing with the problem.
             1. Create an issue (optional).
@@ -66,8 +66,8 @@ When the ***current*** milestone accumulates enough changes to release a new ver
             1. Inform the clients that the deployment process is successful.
         1. Wait until the next day.
     1. Commiting a version
-        1. Create a `v<release version>-alpha` tag for the corresponding commit in the release branch (usually, the last commit). Copy the description from the release's milestone to the Release Notes section (you can delete the description in the milestone while including the link to the corresponding tag). The CI pipeline is configured so that the `antiopa:<tag>` image will be pushed to the registry.
-        1. Deploy to the `alpha` by running the `alpha` job of the `Deploy` stage. The CI pipeline is configured so that werf will push the `antiopa:<tag>` image to the `antiopa:alpha`.
+        1. Create a `v<release version>-alpha` tag for the corresponding commit in the release branch (usually, the last commit). Copy the description from the release's milestone to the Release Notes section (you can delete the description in the milestone while including the link to the corresponding tag).
+        1. Deploy to the `alpha` by running the `alpha` job of the `Deploy` stage.
 1. Changing the version (release) to `beta`, `early-access`, `stable`, and `rock-solid`.
     1. Inform the users in Slack.
         1. `beta`: Create a `v<release version>-beta` tag, create a dedicated message in the `#deckhouse-releases` channel, and insert in it a link to the post in the appropriate language. Mention (@name) teams' engineers on duty. Post the appropriate message to the channels of clients whose clusters will be affected by the deployment.
@@ -82,11 +82,11 @@ When the ***current*** milestone accumulates enough changes to release a new ver
                - in the `#deckhouse-releases` channel and list clusters in it; do not @mention anyone.
                - post the appropriate message to the client channels of projects affected by the deployment of a new version (#TODO description of the messaging process).
             1. Just before the version change, @mention the teams involved and provide a list of servers.
-    1. Change the version in the corresponding update channel (`beta`, `early-access`, `stable`, or `rock-solid`) by running the job with the appropriate name in the `Deploy` stage. The CI pipeline is configured so that werf will push the `antiopa:<tag>` image to the `antiopa:< update channel>`.
+    1. Change the version in the corresponding release channel (`beta`, `early-access`, `stable`, or `rock-solid`) by running the job with the appropriate name in the `Deploy` stage.
     1. Check logs on all updated clusters for errors in an orderly manner.
     1. Post the success message to the client channels of projects affected by the deployment of a new version.
 
-Periodicity and timing of updates in the update channels:
+Periodicity and timing of updates in the release channels:
 1. The R&D team can change `alpha` versions at any time at its own discretion with any periodicity and without prior warning.
 1. The R&D team can switch versions to `beta` at any time at its own discretion with any periodicity and without prior warning but not earlier than the next day after changing the `alpha` version.
 1. `Early-access`, `stable`, and `rock-solid` versions can **only** be changed in the **11:30-13:00 GMT+3 interval** only on certain days of the week:
@@ -94,17 +94,17 @@ Periodicity and timing of updates in the update channels:
    1. `stable` — on Wednesdays, but not earlier than on the 6th day after switching to this version in the `early-access` channel.
    1. `early-access` — on Thursdays, but not earlier than the day after switching to this version in the `beta` channel.
 
-### Releasing a version with **hotfixes** and switching versions in the update channels
+### Releasing a version with **hotfixes** and switching versions in the release channels
 
 There can be several possibilities if a bug is detected in the release progressed to the `beta` channel (or above):
 1. The bug is in the new functionality:
-    1. The release in question contains only the new functionality (that no one uses yet) – in this case, switching versions is canceled (this release will not be advanced to more stable update channels), and the appropriate notification is posted in Slack. The bug will be fixed in the subsequent releases.
+    1. The release in question contains only the new functionality (that no one uses yet) – in this case, switching versions is canceled (this release will not be advanced to more stable release channels), and the appropriate notification is posted in Slack. The bug will be fixed in the subsequent releases.
     1. The release in question contains other urgently needed changes, or the new functionality is in high demand – in this case, the bug is fixed via hotfix releases.
 1. The bug is in the existing functionality: the bug is fixed via hotfix releases.
 
 Hotfix releases are not stand-alone releases but a set of fixes that are backported to all active releases ASAP (if necessary). After the hotfix is released, the main version stays the same but gets a corresponding suffix. Since these changes are backported to all active releases, they should be kept to the minimum necessary!
 
-**If the bug is not urgent, you better be patient and wait until the fix is implemented as part of the standard release process. This is especially true for the `stable` and `rock-solid` update channels.**
+**If the bug is not urgent, you better be patient and wait until the fix is implemented as part of the standard release process. This is especially true for the `stable` and `rock-solid` release channels.**
 
 Releasing hotfixes and switching versions:
 1. Preparatory steps:
@@ -114,7 +114,7 @@ Releasing hotfixes and switching versions:
     1. In the Description field, enter a detailed description of the changes (it is primarily intended for DevOps teams so they can get a sense of what changes the release introduces; however, the clients can read it as well).
     1. Create the appropriate Russian and English posts in the Slack messenger (Add -> Post), tacking into account the milestone description. Check the `Create a public link to share outside of Slack` checkbox.
     1. Release a hotfix version (including pre-deploying and committing steps).
-1. For `beta`, `early-access`, `stable`, and `rock-solid` update channels, do the following:
+1. For `beta`, `early-access`, `stable`, and `rock-solid` release channels, do the following:
     1. Cherry-pick commits in MRs of the hotfix release and include them in the appropriate release branch.
     1. Add a tag of the following format: `<hotfix release version>-alpha` (e.g., `v1.24.3-alpha`).
     1. Post a message to the `#deckhouse-releases` channel containing a link to a post.
@@ -122,7 +122,7 @@ Releasing hotfixes and switching versions:
     1. If, in turn, the hotfix release has some bugs/issues, add the '.XX' suffix to the tag corresponding to the release version. For example, if the tag of the hotfix release is `v1.24.3-beta`, then the new one will be `v1.24.3-beta.1`, etc.
 1. After the release is replaced with a new one in the `rock-solid` channel, its branch is deleted.
 
-Periodicity and timing of hotfix updates in the update channels **within the same global version**:
+Periodicity and timing of hotfix updates in the release channels **within the same global version**:
 1. The R&D team can change hotfix versions in the `alpha` channel at any time at its own discretion with any periodicity and without prior warning.
 1. For the `beta` and `early-access` channels, the R&D team can switch to a hotfix version at any time at its own discretion but not earlier than two hours after switching to this version in the `alpha` and `beta` channels, accordingly.
 1. For the `stable` and `rock-solid` channels, the switching to the hotfix version can be performed in the **13:00—14:00 GMT+3** interval on any day:
@@ -133,12 +133,12 @@ Periodicity and timing of hotfix updates in the update channels **within the sam
 ### Canceling a scheduled version change
 
 1. If degradation of the previously existing functionality is discovered in the release (hotfix release), the planned upgrade to this version is suspended.
-1. If a new version (hotfix release) is released to fix the degradation, the version switching is performed according to the previous section. If the hotfix release turns out to be successful, it is propagated further to the update channels according to the channel stability level.
-1. The current release is considered canceled if the necessary fixes are included in the next standard release (instead of the hotfix one). The switching to a canceled release is no longer performed in the update channels (there is no point in changing the version to the one known to result in degradation).
+1. If a new version (hotfix release) is released to fix the degradation, the version switching is performed according to the previous section. If the hotfix release turns out to be successful, it is propagated further to the release channels according to the channel stability level.
+1. The current release is considered canceled if the necessary fixes are included in the next standard release (instead of the hotfix one). The switching to a canceled release is no longer performed in the release channels (there is no point in changing the version to the one known to result in degradation).
 1. The following actions must be performed for canceled releases:
-    1. In the release thread, post a notification that the release has been canceled, and the switching to this version is no longer performed in the update channels. 
+    1. In the release thread, post a notification that the release has been canceled, and the switching to this version is no longer performed in the release channels. 
     1. Specify the approximate date of the next release (if known) that will succeed the release in question.
-    1. Please, include the phrase below in the message (including in fox) about the release of the next version:  "This release contains all changes made to the XXXXXXXXX version that was cancelled in the `<update channel name>`". If there are several releases, please, specify each one of them.
+    1. Please, include the phrase below in the message (including in fox) about the release of the next version:  "This release contains all changes made to the XXXXXXXXX version that was cancelled in the `<release channel name>`". If there are several releases, please, specify each one of them.
 
 Style Guide
 -----------
