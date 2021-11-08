@@ -106,7 +106,7 @@ spec:
 		})
 	})
 
-	Context("Deckhouse on update channel", func() {
+	Context("Deckhouse on a release channel", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateWithStableChannel))
 			f.RunHook()

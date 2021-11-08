@@ -21,7 +21,7 @@ properties:
     description: |
       Desirable Deckhouse release channel (Deckhouse will switch to it when such an opportunity appears).
 
-      The order in which the stability of the update channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
     type: object
     description: Settings of the Deckhouse update mode and windows.

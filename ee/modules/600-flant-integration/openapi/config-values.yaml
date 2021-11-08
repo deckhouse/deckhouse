@@ -9,7 +9,7 @@ properties:
     type: boolean
     default: false
     description: |
-      Is the RockSolid update channel included in the price, or should we charge for it separately.
+      Is the RockSolid release channel included in the price, or should we charge for it separately.
   plan:
     type: string
     enum: ["Standard", "Silver", "Gold", "Platinum"]
