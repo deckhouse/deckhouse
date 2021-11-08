@@ -160,6 +160,8 @@ fi
 
 {{- define "node_group_bashible_bootstrap_script_download_bashible" -}}
   {{- $context := . }}
+# IMPORTANT !!! Centos/Redhat put jq in /usr/local/bin but it is not in PATH.
+export PATH="/usr/local/bin:$PATH"
 # Get bashible script from secret
 get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
