@@ -647,11 +647,12 @@ spec:
                   type: object
                   properties:
                     maxConcurrent:
-                      oneOf:
+                      x-kubernetes-int-or-string: true
+                      anyOf:
+                        - type: integer
                         - type: string
-                          pattern: "^[1-9][0-9]*%?$"
-                        - type: number
                       default: 1
+                      pattern: "^[1-9][0-9]*%?$"
                       description: |
                         Maximum number of concurrently updating nodes. Can be set as absolute count or as a percent of total nodes.
 
