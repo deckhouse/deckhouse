@@ -37,11 +37,12 @@ if [[ -z $desired_version ]]; then
 fi
 
 should_install_kernel=true
+
+# Do not install kernel if version_in_use is equal to desired version or is allowed.
 version_in_use="$(uname -r)"
 if test -n "$allowed_versions_pattern" && grep -Eq "$allowed_versions_pattern" <<< "$version_in_use"; then
   should_install_kernel=false
 fi
-
 if [[ "$version_in_use" == "$desired_version" ]]; then
   should_install_kernel=false
 fi
@@ -51,7 +52,7 @@ if [[ "$should_install_kernel" == true ]]; then
   bb-yum-install "kernel-${desired_version}"
   packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$" || true)"
 else
-  packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${version_in_use}$" || true)"
+  packages_to_remove="$(rpm -q kernel | grep -Ev "$allowed_versions_pattern | ^kernel-${version_in_use}$" || true)"
 fi
 
 if [ -n "$packages_to_remove" ]; then
