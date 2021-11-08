@@ -14,13 +14,13 @@ import (
 func TestAuthorizeRequest(t *testing.T) {
 	tc := []struct {
 		Name         string
-		User         string
+		Group        []string
 		Attributes   WebhookResourceAttributes
 		ResultStatus WebhookRequestStatus
 	}{
 		{
-			Name: "Namespaced",
-			User: "normal",
+			Name:  "Namespaced",
+			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -30,8 +30,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "Namespaced Restricted",
-			User: "normal",
+			Name:  "Namespaced Restricted",
+			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -44,8 +44,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
-			Name: "Namespaced Restricted Allowed",
-			User: "system-allowed",
+			Name:  "Namespaced Restricted System Allowed",
+			Group: []string{"system-allowed"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -55,8 +55,19 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "Namespaced Limited",
-			User: "limited",
+			Name:  "Namespaced One Not Limited Group And One Restricted",
+			Group: []string{"limited", "system-allowed"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "not-allowed-by-default",
+			},
+			ResultStatus: WebhookRequestStatus{},
+		},
+		{
+			Name:  "Namespaced Limited",
+			Group: []string{"limited"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -66,8 +77,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "Namespaced Limited and denied namespace",
-			User: "limited",
+			Name:  "Namespaced Limited and denied namespace",
+			Group: []string{"limited"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -80,8 +91,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
-			Name: "Namespaced Limited with unlimited namespace regex",
-			User: "limited-with-unlimited-regex",
+			Name:  "Namespaced Limited with unlimited namespace regex",
+			Group: []string{"limited-with-unlimited-regex"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -91,8 +102,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "Namespaced limited with system",
-			User: "limited-and-system-allowed",
+			Name:  "Namespaced limited with system",
+			Group: []string{"limited-and-system-allowed"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -102,8 +113,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "ClusterScoped",
-			User: "normal",
+			Name:  "ClusterScoped",
+			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -116,8 +127,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
-			Name: "ClusterScoped but namespaced",
-			User: "normal",
+			Name:  "ClusterScoped but namespaced",
+			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -126,12 +137,12 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "making cluster scoped requests for namespaced resources is not allowed",
+				Reason: "making cluster scoped requests for namespaced resources are not allowed",
 			},
 		},
 		{
-			Name: "ClusterScoped but namespaced and all namespaces are allowed",
-			User: "system-allowed",
+			Name:  "ClusterScoped but namespaced and all namespaces are allowed",
+			Group: []string{"system-allowed"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -141,8 +152,8 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
-			Name: "ClusterScoped but namespaced and limited namespaces",
-			User: "limited",
+			Name:  "ClusterScoped but namespaced and limited namespaces",
+			Group: []string{"limited"},
 			Attributes: WebhookResourceAttributes{
 				Group:     "test",
 				Version:   "v1",
@@ -151,12 +162,23 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 			ResultStatus: WebhookRequestStatus{
 				Denied: true,
-				Reason: "making cluster scoped requests for namespaced resources is not allowed",
+				Reason: "making cluster scoped requests for namespaced resources are not allowed",
 			},
 		},
 		{
+			Name:  "ClusterScoped One Not Limited Group And One Restricted",
+			Group: []string{"limited", "system-allowed"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "v1",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			ResultStatus: WebhookRequestStatus{},
+		},
+		{
 			Name:         "Non Resource allowed",
-			User:         "normal",
+			Group:        []string{"normal"},
 			Attributes:   WebhookResourceAttributes{},
 			ResultStatus: WebhookRequestStatus{},
 		},
@@ -164,8 +186,8 @@ func TestAuthorizeRequest(t *testing.T) {
 
 	for _, testCase := range tc {
 		t.Run(testCase.Name, func(t *testing.T) {
-			nsRegex, _ := regexp.Compile("test-.*")
-			allRegex, _ := regexp.Compile(".*")
+			nsRegex, _ := regexp.Compile("^test-.*$")
+			allRegex, _ := regexp.Compile("^.*$")
 
 			handler := &Handler{
 				logger: &log.Logger{},
@@ -178,9 +200,12 @@ func TestAuthorizeRequest(t *testing.T) {
 					},
 				},
 				directory: map[string]map[string]DirectoryEntry{
-					"User": {
-						"normal": {},
+					"Group": {
+						"normal": {
+							LimitNamespacesAbsent: true,
+						},
 						"system-allowed": {
+							LimitNamespacesAbsent:         true,
 							AllowAccessToSystemNamespaces: true,
 						},
 						"limited": {
@@ -199,7 +224,8 @@ func TestAuthorizeRequest(t *testing.T) {
 
 			req := &WebhookRequest{
 				Spec: WebhookResourceSpec{
-					User:               testCase.User,
+					User:               "test",
+					Group:              testCase.Group,
 					ResourceAttributes: testCase.Attributes,
 				},
 				Status: WebhookRequestStatus{},
@@ -207,11 +233,11 @@ func TestAuthorizeRequest(t *testing.T) {
 
 			req = handler.authorizeRequest(req)
 			if req.Status.Denied != testCase.ResultStatus.Denied {
-				t.Fatalf("denied: got %v | expected %v", req.Status.Denied, testCase.ResultStatus.Denied)
+				t.Errorf("denied: got %v | expected %v", req.Status.Denied, testCase.ResultStatus.Denied)
 			}
 
 			if req.Status.Reason != testCase.ResultStatus.Reason {
-				t.Fatalf("reason: got %v | expected %v", req.Status.Reason, testCase.ResultStatus.Reason)
+				t.Errorf("reason: got %q | expected %q", req.Status.Reason, testCase.ResultStatus.Reason)
 			}
 		})
 	}
@@ -223,4 +249,42 @@ type dummyCache struct {
 
 func (d *dummyCache) Get(api, key string) (bool, error) {
 	return d.data[api][key], nil
+}
+
+func TestWrapRegexpTest(t *testing.T) {
+	tc := []struct {
+		Name   string
+		Input  string
+		Output string
+	}{
+		{
+			Name:   "Wrap",
+			Input:  ".*",
+			Output: "^.*$",
+		},
+		{
+			Name:   "Wrap tail",
+			Input:  "^.*",
+			Output: "^.*$",
+		},
+		{
+			Name:   "Wrap head",
+			Input:  ".*$",
+			Output: "^.*$",
+		},
+		{
+			Name:   "No wrap",
+			Input:  "^.*$",
+			Output: "^.*$",
+		},
+	}
+
+	for _, testCase := range tc {
+		t.Run(testCase.Name, func(t *testing.T) {
+			res := wrapRegex(testCase.Input)
+			if testCase.Output != res {
+				t.Fatalf("got %q, expected %q", res, testCase.Output)
+			}
+		})
+	}
 }
