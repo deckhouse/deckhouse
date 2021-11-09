@@ -9,7 +9,7 @@ cleanup:
     imagesPerReference:
       last: 2
   - references:
-      branch: master
+      branch: main
     imagesPerReference:
       last: 10
 gitWorktree:

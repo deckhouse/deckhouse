@@ -3,6 +3,20 @@
 
 project: deckhouse-web
 configVersion: 1
+cleanup:
+  keepPolicies:
+  - references:
+      tag: /.*/
+  - references:
+      branch: /.*/
+    imagesPerReference:
+      last: 2
+  - references:
+      branch: main
+    imagesPerReference:
+      last: 10
+gitWorktree:
+  forceShallowClone: true
 
 ---
 artifact: web-static
