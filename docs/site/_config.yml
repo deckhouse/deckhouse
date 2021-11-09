@@ -75,6 +75,9 @@ defaults:
       type: "pages"
     values:
       mode: "ssi"
+      search: exclude
+      sitemap_include: false
+      layout: none
   - scope:
       path: "modules_ru"
       type: "pages"

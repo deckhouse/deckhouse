@@ -59,14 +59,12 @@ Web links test:
   script:
   - type trdl && . $(trdl use werf 1.2 ${WERF_CHANNEL})
   - type werf && source $(werf ci-env gitlab --as-file)
-  - set
   - werf converge
     --set "global.url=$(cut -d / -f 3 <<< $CI_ENVIRONMENT_URL)"
     --set "web.env=${CI_ENVIRONMENT_SLUG}"
   needs:
   - "Doc web build"
   - "Main web build"
-  - "Web links test"
   except:
   - schedules
   - alpha
