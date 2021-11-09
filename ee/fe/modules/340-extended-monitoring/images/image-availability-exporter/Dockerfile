@@ -7,7 +7,7 @@ WORKDIR /src
 ENV GOARCH=amd64
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git && \
-    git clone --branch v0.1.17 --depth 1 https://github.com/deckhouse/k8s-image-availability-exporter.git /src && \
+    git clone --branch v0.2.0 --depth 1 https://github.com/deckhouse/k8s-image-availability-exporter.git /src && \
     go get -d -v ./... && \
     CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o /k8s-image-availability-exporter main.go
 
