@@ -88,20 +88,16 @@
       if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
         DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${CI_COMMIT_BRANCH};
         DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${CI_COMMIT_BRANCH};
-        DESTINATION_RELEASE_VERSION_IMAGE=${DEV_REGISTRY_PATH}/dev/release-channel:alpha;
       else
         DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_BRANCH};
         DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_BRANCH};
       fi;
       docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
       docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
-      docker image tag $(werf stage image release-channel-version) ${DESTINATION_RELEASE_VERSION_IMAGE};
       docker image push ${DESTINATION_IMAGE};
       docker image push ${DESTINATION_INSTALL_IMAGE};
-      docker image push ${DESTINATION_RELEASE_VERSION_IMAGE};
       docker image rmi ${DESTINATION_IMAGE};
       docker image rmi ${DESTINATION_INSTALL_IMAGE};
-      docker image rmi ${DESTINATION_RELEASE_VERSION_IMAGE};
     fi
   except:
     variables:
