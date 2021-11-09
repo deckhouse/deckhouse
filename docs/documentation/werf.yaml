@@ -14,13 +14,13 @@ ansible:
 {{ .Files.Get ".werf/nginx.conf" | indent 8 }}
       dest: /etc/nginx/nginx.conf
 import:
-- artifact: static-pages
+- image: static-pages
   add: /app/_site
   to: /app
   before: setup
 ---
-artifact: static-pages
-from: jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34
+image: static-pages
+from: {{ env "BASE_JEKYLL" }}
 fromCacheVersion: 20210713
 ansible:
   install:
