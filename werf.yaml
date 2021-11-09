@@ -380,12 +380,11 @@ git:
     - deckhouse-controller/development
     - deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
   stageDependencies:
-    install:
+    setup:
       - dhctl/go.mod
       - dhctl/go.sum
       - go.mod
       - go.sum
-    setup:
       - dhctl/**/*.go
       - deckhouse-controller/**/*.go
       - deckhouse-controller/go-build.sh
