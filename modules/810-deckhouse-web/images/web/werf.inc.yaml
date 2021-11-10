@@ -10,12 +10,12 @@ ansible:
 {{ .Files.Get "modules/810-deckhouse-web/images/web/nginx.conf" | indent 8 }}
       dest: /etc/nginx/nginx.conf
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
+- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
   to: /usr/share/nginx/html
   before: setup
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}/static
+artifact: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ env "BASE_JEKYLL" }}
 mount:
   - from: build_dir
