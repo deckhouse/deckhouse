@@ -18,7 +18,6 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,11 +25,6 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 var _ = Describe("Module :: user-authn :: helm template :: connectors", func() {
 	hec := SetupHelmConfig("")

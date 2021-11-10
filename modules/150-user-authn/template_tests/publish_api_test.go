@@ -17,8 +17,6 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -54,9 +52,10 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		})
 		It("Should deploy publish api and kubeconfig generator", func() {
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
-			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
+			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls-selfsigned")
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("Issuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("kubernetes-api"))
+			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 
@@ -78,6 +77,20 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		})
 	})
 
+	Context("With global mode CustomCertificate", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
+			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			hec.HelmRender()
+		})
+
+		It("Should deploy secret certificate", func() {
+			Expect(hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
+		})
+	})
+
 	Context("With publish API global mode", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
@@ -88,8 +101,8 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		It("Should use cluster issuer", func() {
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
-			fmt.Println(certificate.Field("spec").String())
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
+			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 
@@ -103,9 +116,9 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		It("Should use cluster issuer and dns challenge", func() {
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			certificate := hec.KubernetesResource("Certificate", "d8-user-authn", "kubernetes-tls")
-			fmt.Println(certificate.Field("spec").String())
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("route53"))
+			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 
