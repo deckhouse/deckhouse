@@ -59,19 +59,23 @@ spec:
 ## Подключение Prometheus к сторонней Grafana
 
 У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Всё что нужно - создать дополнительный `Ingress`-ресурс.
+
 > В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
+
+> Имена для Ingress `my-prometheus-api` и Secret `my-basic-auth-secret` указаны для примера. Замените их на более подходящие в вашем случае.
+
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: prometheus-api
+  name: my-prometheus-api
   namespace: d8-monitoring
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+    nginx.ingress.kubernetes.io/auth-secret: my-basic-auth-secret
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_ssl_certificate /etc/nginx/ssl/client.crt;
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
@@ -94,7 +98,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: basic-auth
+  name: my-basic-auth-secret
   namespace: d8-monitoring
 type: Opaque
 data:
