@@ -35,6 +35,10 @@ metadata:
     nginx.ingress.kubernetes.io/limit-rpm: "10"
     # Works only for ingress-controllers >=0.40. It is here to not forget to add the annotation after upgrading ingress controller.
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    # Send alert only if dex doesn't work at all (resolves issue #204).
+    # We use 101% here to switch off warnings because this threshold value is out of the range.
+    threshold.extended-monitoring.flant.com/5xx-warning: "101"
+    threshold.extended-monitoring.flant.com/5xx-critical: "100"
 {{ include "helm_lib_module_labels" (list . (dict "app" "dex")) | indent 2 }}
 spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
