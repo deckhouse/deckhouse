@@ -584,7 +584,6 @@ func Test_MergeStatusSeries(t *testing.T) {
 
 			// assert the content
 			assert.Equal(t, got.series, tt.want.series)
-
 		})
 	}
 }

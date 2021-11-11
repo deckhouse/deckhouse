@@ -100,7 +100,6 @@ func mergeStrategy(dst, src Status) Status {
 	return dst
 }
 
-
 func MergeStatusSeries(size int, byId map[string]*StatusSeries, ids []string) (*StatusSeries, error) {
 	acc := NewStatusSeries(size)
 

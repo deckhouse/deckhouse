@@ -89,7 +89,7 @@ func (c *deploymentLifecycleChecker) Check() check.Error {
 */
 func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Checker {
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
-	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, deployment.Kind, c.namespace, deployment.Labels, c.garbageCollectionTimeout)
+	collectGarbage := newGarbageCollectorCheckerByName(c.access, deployment.Kind, c.namespace, deployment.GetName(), c.garbageCollectionTimeout)
 
 	createDeployment := withTimeout(
 		&deploymentCreationChecker{

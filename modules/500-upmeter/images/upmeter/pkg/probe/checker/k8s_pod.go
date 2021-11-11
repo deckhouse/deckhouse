@@ -93,7 +93,7 @@ func (c *podLifecycleChecker) Check() check.Error {
 */
 func (c *podLifecycleChecker) new(pod *v1.Pod) check.Checker {
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
-	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, pod.Kind, c.namespace, pod.Labels, c.garbageCollectionTimeout)
+	collectGarbage := newGarbageCollectorCheckerByName(c.access, pod.Kind, c.namespace, pod.GetName(), c.garbageCollectionTimeout)
 
 	listOpts := listOptsByLabels(pod.GetLabels())
 
