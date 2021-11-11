@@ -99,3 +99,22 @@ func mergeStrategy(dst, src Status) Status {
 	}
 	return dst
 }
+
+func MergeStatusSeries(size int, byId map[string]*StatusSeries, ids []string) (*StatusSeries, error) {
+	acc := NewStatusSeries(size)
+
+	for _, id := range ids {
+		series, ok := byId[id]
+		if !ok {
+			// no data means no data
+			return NewStatusSeries(size), nil
+		}
+
+		err := acc.Merge(series)
+		if err != nil {
+			return nil, fmt.Errorf("cannot merge status series: %v", err)
+		}
+	}
+
+	return acc, nil
+}

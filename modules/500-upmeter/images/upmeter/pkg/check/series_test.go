@@ -19,6 +19,8 @@ package check
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStatusSeries_Add(t *testing.T) {
@@ -463,5 +465,97 @@ func TestStatusSeries_Clean(t *testing.T) {
 	wantEmpty := Stats{Expected: size}
 	if !reflect.DeepEqual(gotEmpty, wantEmpty) {
 		t.Errorf("unexpected stats after Clean(): got=%v, want=%v", gotEmpty, wantEmpty)
+	}
+}
+
+func Test_MergeStatusSeries(t *testing.T) {
+	size := 10
+
+	type args struct {
+		a   *StatusSeries
+		b   *StatusSeries
+		ids []string
+	}
+
+	someData := NewStatusSeries(size)
+	misSized := NewStatusSeries(size + 1)
+	for i := 0; i < size; i++ {
+		someData.Add(Up)
+		misSized.Add(Up)
+	}
+	misSized.Add(Up) // one extra status
+
+	tests := []struct {
+		name    string
+		args    args
+		want    *StatusSeries
+		wantErr bool
+	}{
+		{
+			name: "all nodata returns nodata",
+			args: args{
+				a:   NewStatusSeries(size),
+				b:   NewStatusSeries(size),
+				ids: []string{"a", "b"},
+			},
+			want:    NewStatusSeries(size),
+			wantErr: false,
+		},
+		{
+			name: "data with nodata returns the data",
+			args: args{
+				a:   NewStatusSeries(size),
+				b:   someData,
+				ids: []string{"a", "b"},
+			},
+			want:    someData,
+			wantErr: false,
+		},
+		{
+			name: "missing id returns nodata",
+			args: args{
+				// no "a"
+				b:   someData,
+				ids: []string{"a", "b"},
+			},
+			want:    NewStatusSeries(size),
+			wantErr: false,
+		},
+		{
+			name: "size mismatch results in error",
+			args: args{
+				a:   misSized,
+				b:   someData,
+				ids: []string{"a", "b"},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ss := map[string]*StatusSeries{}
+			if tt.args.a != nil {
+				ss["a"] = tt.args.a
+			}
+			if tt.args.b != nil {
+				ss["b"] = tt.args.b
+			}
+
+			got, err := MergeStatusSeries(size, ss, tt.args.ids)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error %v", err)
+				}
+				if got != nil {
+					t.Errorf("expected nil in place of series data, got %v", got)
+				}
+				return
+			}
+
+			// assert the content
+			assert.Equal(t, got.series, tt.want.series)
+		})
 	}
 }

@@ -6,6 +6,8 @@ services:
     container_name: documentation
     environment:
       WERF_LOG_VERBOSE: "on"
+      BASE_NGINX_ALPINE: "nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
+      BASE_JEKYLL: "jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34"
     networks:
       - deckhouse
 

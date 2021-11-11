@@ -71,6 +71,10 @@ spec:
             name: data
             readOnly: false
           env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
           - name: UPMETER_SCHEDULER_PROBE_IMAGE
             value: "{{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.alpine }}"
           - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
