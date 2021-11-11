@@ -69,6 +69,10 @@ var (
 			// ignore internal values
 			"properties.internal.properties.podNetworkMode",
 		},
+		"modules/040-node-manager/openapi/config-values.yaml": {
+			// ignore internal values
+			"properties.allowedBundles.items",
+		},
 		"modules/042-kube-dns/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.specificNodeType",
