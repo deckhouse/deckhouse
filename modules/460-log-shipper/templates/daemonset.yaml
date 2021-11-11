@@ -164,7 +164,7 @@ spec:
           resources:
             requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 14 }}
-      terminationGracePeriodSeconds: 60
+      terminationGracePeriodSeconds: 120
       volumes:
         - name: var-log
           hostPath:

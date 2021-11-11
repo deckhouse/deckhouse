@@ -42,7 +42,7 @@ func TestDestPatch(t *testing.T) {
 		gen.AppendLogPipeline(source3, nil, []impl.LogDestination{dest})
 
 		require.Len(t, gen.destinations, 1)
-		assert.Equal(t, gen.destinations[0].(*lokiDestination).Inputs, []string{"d8_cluster_s1", "d8_cluster_s2", "d8_cluster_s3"})
+		assert.Equal(t, gen.destinations[0].(*lokiDestination).Inputs, []string{"d8_cluster_source_s1", "d8_cluster_source_s2", "d8_cluster_source_s3"})
 	})
 
 	t.Run("cluster source with namespace", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestDestPatch(t *testing.T) {
 		gen.AppendLogPipeline(source2, nil, []impl.LogDestination{dest})
 
 		require.Len(t, gen.destinations, 1)
-		assert.Equal(t, gen.destinations[0].(*lokiDestination).Inputs, []string{"d8_cluster_s1", "d8_clusterns_n1_s2", "d8_clusterns_n2_s2"})
+		assert.Equal(t, gen.destinations[0].(*lokiDestination).Inputs, []string{"d8_cluster_source_s1", "d8_clusterns_source_n1_s2", "d8_clusterns_source_n2_s2"})
 	})
 
 	t.Run("Namespaced", func(t *testing.T) {
@@ -70,7 +70,7 @@ func TestDestPatch(t *testing.T) {
 		gen.AppendLogPipeline(source2, nil, []impl.LogDestination{dest})
 
 		require.Len(t, gen.destinations, 1)
-		assert.Equal(t, gen.destinations[0].(*lokiDestination).Inputs, []string{"d8_namespaced_ns1_s1", "d8_namespaced_ns2_s2"})
+		assert.Equal(t, gen.destinations[0].(*lokiDestination).Inputs, []string{"d8_namespaced_source_ns1_s1", "d8_namespaced_source_ns2_s2"})
 	})
 }
 
@@ -99,7 +99,7 @@ func TestConfig_1(t *testing.T) {
 	assert.JSONEq(t, `
 {
   "sources": {
-    "d8_clusterns_baar_testsource": {
+    "d8_clusterns_source_baar_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
       "extra_field_selector": "metadata.namespace=baar",
@@ -115,7 +115,7 @@ func TestConfig_1(t *testing.T) {
       },
       "glob_minimum_cooldown_ms": 1000
     },
-    "d8_clusterns_foot_testsource": {
+    "d8_clusterns_source_foot_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb",
       "extra_field_selector": "metadata.namespace=foot",
@@ -133,11 +133,11 @@ func TestConfig_1(t *testing.T) {
     }
   },
   "sinks": {
-    "d8_cluster_testoutput": {
+    "d8_cluster_sink_testoutput": {
       "type": "loki",
       "inputs": [
-        "d8_clusterns_foot_testsource",
-        "d8_clusterns_baar_testsource"
+        "d8_clusterns_source_foot_testsource",
+        "d8_clusterns_source_baar_testsource"
       ],
       "encoding": {
         "codec": "text",
@@ -156,7 +156,7 @@ func TestConfig_1(t *testing.T) {
 		"container": "{{ container }}",
 		"image": "{{ image }}",
 		"namespace": "{{ namespace }}",
-		"node": "{{ node_name }}",
+		"node": "{{ node }}",
 		"pod": "{{ pod }}",
 		"pod_ip": "{{ pod_ip }}",
 		"stream": "{{ stream }}",
@@ -205,7 +205,7 @@ func TestConfig_2(t *testing.T) {
 	assert.JSONEq(t, `
 {
   "sources": {
-    "d8_clusterns_baar_testsource": {
+    "d8_clusterns_source_baar_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
       "extra_field_selector": "metadata.namespace=baar",
@@ -221,7 +221,7 @@ func TestConfig_2(t *testing.T) {
       },
       "glob_minimum_cooldown_ms": 1000
     },
-    "d8_clusterns_foot_testsource": {
+    "d8_clusterns_source_foot_testsource": {
       "type": "kubernetes_logs",
       "extra_label_selector": "aaaa=bbbb,baz in (norf,qux)",
       "extra_field_selector": "metadata.namespace=foot",
@@ -239,11 +239,11 @@ func TestConfig_2(t *testing.T) {
     }
   },
   "sinks": {
-    "d8_cluster_testoutput": {
+    "d8_cluster_sink_testoutput": {
       "type": "socket",
       "inputs": [
-        "d8_clusterns_foot_testsource",
-        "d8_clusterns_baar_testsource"
+        "d8_clusterns_source_foot_testsource",
+        "d8_clusterns_source_baar_testsource"
       ],
       "address": "192.168.0.1:9000",
       "mode": "tcp",
@@ -308,7 +308,7 @@ func TestConfig_3(t *testing.T) {
     }
   },
   "sinks": {
-    "d8_cluster_testoutput": {
+    "d8_cluster_sink_testoutput": {
       "type": "elasticsearch",
       "inputs": [
         "testfile"
