@@ -56,7 +56,7 @@ function common_hooks::https::copy_custom_certificate::main() {
         fi
         values::set "${module_name}.internal.customCertificateData" "$secret_data"
       else
-        >&2 echo "ERROR: custom certificate secret name is configured, but secret with this name doesn't exist."
+        >&2 echo "ERROR: custom certificate secret \"$secret_name\" is requested, but secret with this name doesn't exist in \"ns/d8-system\"."
         return 1
       fi
     fi
