@@ -78,10 +78,9 @@ func (c *namespaceLifeCycleChecker) Check() check.Error {
 func (c *namespaceLifeCycleChecker) new(namespace *v1.Namespace) check.Checker {
 	kind := namespace.GetObjectKind().GroupVersionKind().Kind
 	name := namespace.GetName()
-	labels := namespace.GetLabels()
 
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
-	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, kind, "", labels, c.garbageCollectorTimeout)
+	collectGarbage := newGarbageCollectorCheckerByName(c.access, kind, "", name, c.garbageCollectorTimeout)
 
 	createNamespace := withTimeout(
 		&namespaceCreationChecker{access: c.access, namespace: namespace},

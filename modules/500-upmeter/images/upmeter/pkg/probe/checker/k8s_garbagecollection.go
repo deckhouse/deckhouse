@@ -38,12 +38,12 @@ type garbageCollectorChecker struct {
 	firstRun bool
 }
 
-func newGarbageCollectorCheckerByLabels(access k8s.Access, kind, namespace string, labels map[string]string, timeout time.Duration) check.Checker {
+func newGarbageCollectorCheckerByName(access k8s.Access, kind, namespace, name string, timeout time.Duration) check.Checker {
 	return &garbageCollectorChecker{
 		access:    access,
 		namespace: namespace,
 		kind:      kind,
-		listOpts:  listOptsByLabels(labels),
+		listOpts:  listOptsByName(name),
 		timeout:   timeout,
 
 		// inner state
@@ -83,17 +83,13 @@ func (c *garbageCollectorChecker) Check() check.Error {
 		return check.ErrUnknown("garbage found for %s/%s", c.namespace, c.kind)
 	}
 
-	// Wait until deletion
-	count := int(c.timeout.Seconds())
-	listErrors := 0
-	for ; count > 0; count-- {
-		// Sleep first to give time for API server to delete objects
+	// Take some time to ensure objects are deleted
+	tries := int(c.timeout.Seconds())
+	for ; tries > 0; tries-- {
 		time.Sleep(time.Second)
 
 		list, err = listObjects(client, c.kind, c.namespace, *c.listOpts)
-		if err != nil {
-			listErrors++
-		} else if len(list) == 0 {
+		if err == nil && len(list) == 0 {
 			return nil
 		}
 	}

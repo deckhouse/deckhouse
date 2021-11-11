@@ -78,11 +78,11 @@ func (c *configMapLifecycleChecker) Check() check.Error {
 func (c *configMapLifecycleChecker) new(configMap *v1.ConfigMap) check.Checker {
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
 
-	collectGarbage := newGarbageCollectorCheckerByLabels(
+	collectGarbage := newGarbageCollectorCheckerByName(
 		c.access,
 		configMap.Kind,
 		c.namespace,
-		configMap.GetLabels(),
+		configMap.GetName(),
 		c.garbageCollectorTimeout)
 
 	createAndDeleteConfigMap := withTimeout(
