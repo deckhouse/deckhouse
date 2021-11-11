@@ -105,12 +105,12 @@ func NewKubernetesLogSource(name string, spec v1alpha1.KubernetesPodsSpec, names
 // 3. Cluster with NamespaceSelector - d8_clusterns_<ns>_<source_name>
 func (cs kubernetesLogSource) BuildSources() []impl.LogSource {
 	if cs.namespaced {
-		cs.Name = fmt.Sprintf("d8_namespaced_%s_%s", cs.namespaces[0], cs.Name)
+		cs.Name = fmt.Sprintf("d8_namespaced_source_%s_%s", cs.namespaces[0], cs.Name)
 		return []impl.LogSource{cs}
 	}
 
 	if len(cs.namespaces) <= 1 {
-		cs.Name = "d8_cluster_" + cs.Name
+		cs.Name = "d8_cluster_source_" + cs.Name
 		return []impl.LogSource{cs}
 	}
 
@@ -118,7 +118,7 @@ func (cs kubernetesLogSource) BuildSources() []impl.LogSource {
 
 	for _, ns := range cs.namespaces {
 		k := kubernetesLogSource{
-			commonSource:     commonSource{Name: fmt.Sprintf("d8_clusterns_%s_%s", ns, cs.Name), Type: cs.Type},
+			commonSource:     commonSource{Name: fmt.Sprintf("d8_clusterns_source_%s_%s", ns, cs.Name), Type: cs.Type},
 			namespaces:       []string{ns},
 			labels:           cs.labels,
 			annotationFields: cs.annotationFields,

@@ -114,7 +114,7 @@ spec:
 			Expect(d).Should(MatchJSON(`
 			{
 				"sources": {
-				  "d8_cluster_test-source": {
+				  "d8_cluster_source_test-source": {
 					"type": "kubernetes_logs",
 					"extra_label_selector": "app=test,tier in (cache)",
 					"extra_field_selector": "metadata.namespace=tests-whispers",
@@ -138,7 +138,7 @@ spec:
 					  "stream"
 					],
 					"inputs": [
-					  "d8_cluster_test-source"
+					  "d8_cluster_source_test-source"
 					],
 					"merge_strategies": {
 					  "message": "concat"
@@ -233,7 +233,7 @@ spec:
 				  }
 				},
 				"sinks": {
-				  "d8_cluster_test-es-dest": {
+				  "d8_cluster_sink_test-es-dest": {
 					"type": "elasticsearch",
 					"inputs": [
 					  "d8_tf_test-source_11"
@@ -396,7 +396,7 @@ spec:
 			Expect(d).Should(MatchJSON(`
 			{
 				"sources": {
-				  "d8_cluster_test-source_test-es-dest": {
+				  "d8_cluster_source_test-source_test-es-dest": {
 					"type": "kubernetes_logs",
 					"extra_label_selector": "app=test",
 					"extra_field_selector": "metadata.namespace=tests-whispers",
@@ -412,7 +412,7 @@ spec:
 					},
 					"glob_minimum_cooldown_ms": 1000
 				  },
-				  "d8_cluster_test-source_test-logstash-dest": {
+				  "d8_cluster_source_test-source_test-logstash-dest": {
 					"type": "kubernetes_logs",
 					"extra_label_selector": "app=test",
 					"extra_field_selector": "metadata.namespace=tests-whispers",
@@ -428,7 +428,7 @@ spec:
 					},
 					"glob_minimum_cooldown_ms": 1000
 				  },
-				  "d8_cluster_test-source_test-loki-dest": {
+				  "d8_cluster_source_test-source_test-loki-dest": {
 					"type": "kubernetes_logs",
 					"extra_label_selector": "app=test",
 					"extra_field_selector": "metadata.namespace=tests-whispers",
@@ -452,7 +452,7 @@ spec:
 					  "stream"
 					],
 					"inputs": [
-					  "d8_cluster_test-source_test-es-dest"
+					  "d8_cluster_source_test-source_test-es-dest"
 					],
 					"merge_strategies": {
 					  "message": "concat"
@@ -551,7 +551,7 @@ spec:
 					  "stream"
 					],
 					"inputs": [
-					  "d8_cluster_test-source_test-logstash-dest"
+					  "d8_cluster_source_test-source_test-logstash-dest"
 					],
 					"merge_strategies": {
 					  "message": "concat"
@@ -650,7 +650,7 @@ spec:
 					  "stream"
 					],
 					"inputs": [
-					  "d8_cluster_test-source_test-loki-dest"
+					  "d8_cluster_source_test-source_test-loki-dest"
 					],
 					"merge_strategies": {
 					  "message": "concat"
@@ -718,7 +718,7 @@ spec:
 				  }
 				},
 				"sinks": {
-				  "d8_cluster_test-es-dest": {
+				  "d8_cluster_sink_test-es-dest": {
 					"type": "elasticsearch",
 					"inputs": [
 					  "d8_tf_test-source_test-es-dest_11"
@@ -754,7 +754,7 @@ spec:
 					"bulk_action": "index",
 					"mode": "normal"
 				  },
-				  "d8_cluster_test-logstash-dest": {
+				  "d8_cluster_sink_test-logstash-dest": {
 					"type": "socket",
 					"inputs": [
 					  "d8_tf_test-source_test-logstash-dest_11"
@@ -781,7 +781,7 @@ spec:
 					  "enabled": true
 					}
 				  },
-				  "d8_cluster_test-loki-dest": {
+				  "d8_cluster_sink_test-loki-dest": {
 					"type": "loki",
 					"inputs": [
 					  "d8_tf_test-source_test-loki-dest_8"
@@ -807,7 +807,7 @@ spec:
 					  "foo": "bar",
 					  "image": "{{ image }}",
 					  "namespace": "{{ namespace }}",
-					  "node": "{{ node_name }}",
+					  "node": "{{ node }}",
 					  "pod": "{{ pod }}",
 					  "pod_ip": "{{ pod_ip }}",
 					  "pod_labels": "{{ pod_labels }}",
@@ -891,7 +891,7 @@ spec:
 			Expect(d).Should(MatchJSON(`
 			{
 				"sources": {
-				  "d8_clusterns_tests-whispers_test-source": {
+				  "d8_clusterns_source_tests-whispers_test-source": {
 					"type": "kubernetes_logs",
 					"extra_label_selector": "app=test",
 					"extra_field_selector": "metadata.namespace=tests-whispers",
@@ -907,7 +907,7 @@ spec:
 					},
 					"glob_minimum_cooldown_ms": 1000
 				  },
-				  "d8_clusterns_tests-whistlers_test-source": {
+				  "d8_clusterns_source_tests-whistlers_test-source": {
 					"type": "kubernetes_logs",
 					"extra_label_selector": "app=test",
 					"extra_field_selector": "metadata.namespace=tests-whistlers",
@@ -931,8 +931,8 @@ spec:
 					  "stream"
 					],
 					"inputs": [
-					  "d8_clusterns_tests-whispers_test-source",
-					  "d8_clusterns_tests-whistlers_test-source"
+					  "d8_clusterns_source_tests-whispers_test-source",
+					  "d8_clusterns_source_tests-whistlers_test-source"
 					],
 					"merge_strategies": {
 					  "message": "concat"
@@ -985,7 +985,7 @@ spec:
 				  }
 				},
 				"sinks": {
-				  "d8_cluster_test-es-dest": {
+				  "d8_cluster_sink_test-es-dest": {
 					"type": "elasticsearch",
 					"inputs": [
 					  "d8_tf_test-source_5"
@@ -1114,7 +1114,7 @@ spec:
 			Expect(d).Should(MatchJSON(`
 			{
 				"sources": {
-				"d8_namespaced_tests-whispers_whispers-logs_loki-storage": {
+				"d8_namespaced_source_tests-whispers_whispers-logs_loki-storage": {
 				  "type": "kubernetes_logs",
 				  "extra_label_selector": "app=test",
 				  "extra_field_selector": "metadata.namespace=tests-whispers",
@@ -1130,7 +1130,7 @@ spec:
 				  },
 				  "glob_minimum_cooldown_ms": 1000
 				},
-				"d8_namespaced_tests-whispers_whispers-logs_test-es-dest": {
+				"d8_namespaced_source_tests-whispers_whispers-logs_test-es-dest": {
 				  "type": "kubernetes_logs",
 				  "extra_label_selector": "app=test",
 				  "extra_field_selector": "metadata.namespace=tests-whispers",
@@ -1154,7 +1154,7 @@ spec:
 					"stream"
 				  ],
 				  "inputs": [
-					"d8_namespaced_tests-whispers_whispers-logs_loki-storage"
+					"d8_namespaced_source_tests-whispers_whispers-logs_loki-storage"
 				  ],
 				  "merge_strategies": {
 					"message": "concat"
@@ -1226,7 +1226,7 @@ spec:
 					"stream"
 				  ],
 				  "inputs": [
-					"d8_namespaced_tests-whispers_whispers-logs_test-es-dest"
+					"d8_namespaced_source_tests-whispers_whispers-logs_test-es-dest"
 				  ],
 				  "merge_strategies": {
 					"message": "concat"
@@ -1321,7 +1321,7 @@ spec:
 				}
 			  },
 			  "sinks": {
-				"d8_cluster_loki-storage": {
+				"d8_cluster_sink_loki-storage": {
 				  "type": "loki",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_loki-storage_8"
@@ -1346,7 +1346,7 @@ spec:
 					"foo": "bar",
 					"image": "{{ image }}",
 					"namespace": "{{ namespace }}",
-					"node": "{{ node_name }}",
+					"node": "{{ node }}",
 					"pod": "{{ pod }}",
 					"pod_ip": "{{ pod_ip }}",
 					"pod_labels": "{{ pod_labels }}",
@@ -1356,7 +1356,7 @@ spec:
 				  "remove_label_fields": true,
 				  "out_of_order_action": "rewrite_timestamp"
 				},
-				"d8_cluster_test-es-dest": {
+				"d8_cluster_sink_test-es-dest": {
 				  "type": "elasticsearch",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_test-es-dest_11"

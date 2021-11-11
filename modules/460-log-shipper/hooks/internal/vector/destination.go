@@ -75,19 +75,19 @@ func (cs *commonDestinationSettings) GetName() string {
 func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
 	spec := cspec.Loki
 	common := commonDestinationSettings{
-		Name: "d8_cluster_" + name,
+		Name: "d8_cluster_sink_" + name,
 		Type: "loki",
+	}
+
+	common.Buffer = buffer{
+		Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
+		Type: "disk",
 	}
 
 	LokiENC := LokiEncoding{
 		Codec:           "text",
 		TimestampFormat: "rfc3339",
 		OnlyFields:      []string{"message"},
-	}
-
-	common.Buffer = buffer{
-		Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-		Type: "disk",
 	}
 
 	if spec.Auth.Password != "" {
@@ -125,7 +125,7 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 		"container":  "{{ container }}",
 		"image":      "{{ image }}",
 		"pod":        "{{ pod }}",
-		"node":       "{{ node_name }}",
+		"node":       "{{ node }}",
 		"pod_ip":     "{{ pod_ip }}",
 		"stream":     "{{ stream }}",
 		"pod_labels": "{{ pod_labels }}",
@@ -171,7 +171,7 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 	var ESBatch batch
 
 	common := commonDestinationSettings{
-		Name: "d8_cluster_" + name,
+		Name: "d8_cluster_sink_" + name,
 		Type: "elasticsearch",
 	}
 
@@ -270,7 +270,7 @@ func NewLogstashDestination(name string, cspec v1alpha1.ClusterLogDestinationSpe
 	var enabledTLS bool
 
 	common := commonDestinationSettings{
-		Name: "d8_cluster_" + name,
+		Name: "d8_cluster_sink_" + name,
 		Type: "socket",
 	}
 
