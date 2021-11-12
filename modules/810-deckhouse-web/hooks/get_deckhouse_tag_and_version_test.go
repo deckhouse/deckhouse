@@ -26,7 +26,7 @@ import (
 var _ = Describe("Modules :: deckhouse-web :: hooks :: get_deckhouse_tag_and_version ::", func() {
 
 	const (
-		initValuesString       = `{"deckhouseWeb":{"deckhouseTag":"","deckhouseVersion":"","deckhouseEdition":"","internal":{}}}`
+		initValuesString       = `{"deckhouseWeb":{"internal":{"deckhouseReleaseChannel":"","deckhouseVersion":"","deckhouseEdition":""}}}`
 		initConfigValuesString = `{}`
 
 		stateWithStableChannel = `
@@ -45,6 +45,19 @@ spec:
       containers:
       - name: deckhouse
         image: registry.deckhouse.io/deckhouse/ce:stable
+---
+apiVersion: v1
+data:
+  deckhouse: |
+    bundle: Default
+    logLevel: Info
+    releaseChannel: Stable
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+  name: deckhouse
+  namespace: d8-system
 `
 		stateWithAbsentAnnotations = `
 ---
@@ -72,9 +85,8 @@ spec:
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal(""))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal(""))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseEdition").String()).To(Equal(""))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseVersion").String()).To(Equal(""))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseEdition").String()).To(Equal(""))
 		})
 	})
 
@@ -87,8 +99,7 @@ spec:
 		It("Hook must not fail with an absent version annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal("unknown"))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal("sometag"))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseVersion").String()).To(Equal("unknown"))
 		})
 	})
 
@@ -101,30 +112,27 @@ spec:
 		It("Hook must not fail with an absent edition annotation", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseEdition").String()).To(Equal("unknown"))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal("sometag"))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseEdition").String()).To(Equal("unknown"))
 		})
 	})
 
 	Context("Deckhouse on a release channel", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateWithStableChannel))
+			f.ConfigValuesSetFromYaml("deckhouse", []byte(`{
+				"bundle": "Default", 
+				"logLevel": "Info", 
+				"releaseChannel": "Stable"
+			}`))
+
 			f.RunHook()
 		})
 
-		It("Hook must not fail, version, edition and channel should be set", func() {
+		It("Hook must not fail, version, edition, tag and channel should be set", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Get("0.snapshots.d8_deployment.0.filterResult").String()).To(MatchJSON(`
-{
-	"tag": "stable",
-	"version": "1.25.1",
-	"edition": "CE"
-}
-`))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseTag").String()).To(Equal("stable"))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseVersion").String()).To(Equal("1.25.1"))
-			Expect(f.ValuesGet("deckhouseWeb.deckhouseEdition").String()).To(Equal("CE"))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseVersion").String()).To(Equal("1.25.1"))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseEdition").String()).To(Equal("CE"))
+			Expect(f.ValuesGet("deckhouseWeb.internal.deckhouseReleaseChannel").String()).To(Equal("Stable"))
 		})
 	})
 

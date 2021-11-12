@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/copy_custom_certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/delete_not_matching_certificate_secret"
 )
 
-var _ = copy_custom_certificate.RegisterHook("common")
+var _ = delete_not_matching_certificate_secret.RegisterHook("common", "d8-system")

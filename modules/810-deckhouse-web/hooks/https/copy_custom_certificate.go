@@ -20,4 +20,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/copy_custom_certificate"
 )
 
-var _ = copy_custom_certificate.RegisterHook("common")
+var _ = copy_custom_certificate.RegisterHook("deckhouseWeb")

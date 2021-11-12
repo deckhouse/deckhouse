@@ -8,5 +8,5 @@ metadata:
 {{ include "helm_lib_module_labels" (list . (dict "app" "deckhouse-web")) | indent 2 }}
 data:
   data.json: >
-    {"channel":"{{ $.Values.deckhouseWeb.deckhouseTag }}", "version":"{{ $.Values.deckhouseWeb.deckhouseVersion }}", "edition":"{{ $.Values.deckhouseWeb.deckhouseEdition }}"}
+    {"channel":"{{ $.Values.deckhouseWeb.internal.deckhouseReleaseChannel }}", "version":"{{ $.Values.deckhouseWeb.internal.deckhouseVersion }}", "edition":"{{ $.Values.deckhouseWeb.internal.deckhouseEdition }}"}
 {{- end }}
