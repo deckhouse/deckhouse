@@ -31,6 +31,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -64,7 +65,11 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 		input.LogEntry.Debug("Release channel does not set.")
 		return nil
 	}
-	releaseChannelName := releaseChannelNameRaw.String()
+	// move release channel to kebab-case because CI makes tags in kebab-case
+	// Alpha -> alpha
+	// EarlyAccess -> early-access
+	// etc...
+	releaseChannelName := strcase.ToKebab(releaseChannelNameRaw.String())
 	repo := input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
 	var previousImageHash string
 	previousHashRaw, exists := input.Values.GetOk("deckhouse.internal.releaseVersionImageHash")
@@ -78,7 +83,7 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	image, err := regCli.Image(strings.ToLower(releaseChannelName))
+	image, err := regCli.Image(releaseChannelName)
 	if err != nil {
 		return err
 	}
