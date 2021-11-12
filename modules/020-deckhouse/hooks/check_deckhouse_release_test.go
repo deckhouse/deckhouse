@@ -29,8 +29,10 @@ import (
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/iancoleman/strcase"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -123,4 +125,20 @@ func TestSort(t *testing.T) {
 		}
 	}
 
+}
+
+func TestKebabCase(t *testing.T) {
+	cases := map[string]string{
+		"Alpha":       "alpha",
+		"Beta":        "beta",
+		"EarlyAccess": "early-access",
+		"Stable":      "stable",
+		"RockSolid":   "rock-solid",
+	}
+
+	for original, kebabed := range cases {
+		result := strcase.ToKebab(original)
+
+		assert.Equal(t, result, kebabed)
+	}
 }
