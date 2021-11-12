@@ -8,9 +8,10 @@ services:
     environment:
       VROUTER_DEFAULT_GROUP: "v1"
       VROUTER_DEFAULT_CHANNEL: "latest"
+      VROUTER_DEFAULT_CHANNEL_FOR_DEFAULT_GROUP: "latest"
       VROUTER_USE_LATEST_CHANNEL: "true"
       VROUTER_URL_VALIDATION: "false"
-      VROUTER_LISTEN_PORT: "80"
+      VROUTER_LISTEN_PORT: "8080"
       VROUTER_LOG_LEVEL: "debug"
       VROUTER_PATH_STATIC: "/app/root"
       VROUTER_PATH_CHANNELS_FILE: "releasedata/channels.yaml"
@@ -25,7 +26,6 @@ services:
       - "2345:2345"
     volumes:
       - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
-      - ".helm/releasechannels.json:/app/releasechannels/releasechannels.json:ro"
   front:
     image: nginx:latest
     volumes:
