@@ -20,7 +20,6 @@ fi
 {{- end }}
 systemctl disable nginx
 
-
 # Disable default nginx vhost
 if systemctl is-active --quiet nginx ; then
 {{- if ne .runType "ImageBuilding" }}

@@ -16,7 +16,7 @@ apiVersions:
         type: string
       bundle:
         type: string
-        enum: [ubuntu-lts, centos-7, debian]
+        enum: [ubuntu-lts, centos, debian]
       kubernetesVersion:
         type: string
       cri:

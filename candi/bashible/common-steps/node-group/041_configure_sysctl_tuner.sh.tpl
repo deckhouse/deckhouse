@@ -64,7 +64,7 @@ sysctl -w kernel.numa_balancing=0 ; # disable the overly smart NUMA node balance
 sysctl -w fs.inotify.max_user_watches=524288 # Increase inotify (https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers#the-technical-details)
 sysctl -w fs.inotify.max_user_instances=5120
 sysctl -w kernel.pid_max=2000000
-{{- if eq .bundle "centos-7" }}
+{{- if eq .bundle "centos" }}
 sysctl -w fs.may_detach_mounts=1; # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
 {{- end }}
 # kubelet parameters

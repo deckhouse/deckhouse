@@ -15,7 +15,7 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := index .k8s .kubernetesVersion "cniVersion" | toString | replace "." "" }}
 bb-rp-remove kubeadm
-bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCniCentos7%s" $kubernetesCniVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubeletCentos7%s" $kubernetesVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectlCentos7%s" $kubernetesVersion) | toString }}"
+bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCniCentos%s" $kubernetesCniVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubeletCentos%s" $kubernetesVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectlCentos%s" $kubernetesVersion) | toString }}"
 
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]] && systemctl is-active -q kubelet; then
   # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations

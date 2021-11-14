@@ -12,18 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if .packagesProxy.uri }}
-yum-config-manager --save --setopt=proxy={{ .packagesProxy.uri }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy=_none_
-{{- end }}
-{{- if .packagesProxy.username }}
-yum-config-manager --save --setopt=proxy_username={{ .packagesProxy.username }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy_username=
-{{- end }}
-{{- if .packagesProxy.password }}
-yum-config-manager --save --setopt=proxy_password={{ .packagesProxy.password }} main
-{{- else }}
-yum-config-manager --save --setopt=proxy_password=
-{{- end }}
+if bb-is-centos-version? 7 ; then
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxCentos71202 }}"
+fi
+if bb-is-centos-version? 8 ; then
+  bb-rp-install "nginx:{{ .images.registrypackages.nginxCentos81202 }}"
+fi

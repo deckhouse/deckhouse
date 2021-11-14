@@ -28,8 +28,17 @@ post-install() {
 }
   {{- end }}
 
-desired_version={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "desiredVersion" | quote }}
-allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "kernel" "generic" "allowedPattern" | quote }}
+{{- range $key, $value := index .k8s .kubernetesVersion "bashible" "centos" }}
+  {{- $centosVersion := toString $key }}
+  {{- if $value.kernel.generic }}
+    {{- if or $value.kernel.generic.desiredVersion $value.kernel.generic.allowedPattern }}
+if bb-is-centos-version? {{ $centosVersion }} ; then
+  desired_version={{ $value.kernel.generic.desiredVersion | quote }}
+  allowed_versions_pattern={{ $value.kernel.generic.allowedPattern | quote }}
+fi
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
@@ -52,7 +61,7 @@ if [[ "$should_install_kernel" == true ]]; then
   bb-yum-install "kernel-${desired_version}"
   packages_to_remove="$(rpm -q kernel | grep -Ev "^kernel-${desired_version}$" || true)"
 else
-  packages_to_remove="$(rpm -q kernel | grep -Ev "$allowed_versions_pattern | ^kernel-${version_in_use}$" || true)"
+  packages_to_remove="$(rpm -q kernel | grep -Ev "$allowed_versions_pattern" | grep -Ev "^kernel-${version_in_use}$" || true)"
 fi
 
 if [ -n "$packages_to_remove" ]; then

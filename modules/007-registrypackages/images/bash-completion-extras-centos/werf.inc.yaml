@@ -1,10 +1,11 @@
+{{- $centos_version := "7" }}
 {{- $version := "2.1-11" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}{{ $centos_version }}-{{ $image_version }}
 from: {{ env "BASE_SCRATCH" }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}{{ $centos_version }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -13,7 +14,7 @@ import:
   - uninstall
   before: setup
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}{{ $centos_version }}-artifact-{{ $image_version }}
 from: {{ env "BASE_ALPINE" }}
 git:
   - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -26,4 +27,3 @@ shell:
   - apk add --no-cache curl
   setup:
   - curl -sL "https://mirrors.xtom.ee/epel/7/x86_64/Packages/b/bash-completion-extras-{{ $version }}.el7.noarch.rpm" --output /bash-completion-extras.noarch.rpm
-
