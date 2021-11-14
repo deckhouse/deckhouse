@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-kubernetes_version="{{ printf "%s.%s" (.kubernetesVersion | toString ) (index .k8s .kubernetesVersion "patch" | toString) }}"
-kubernetes_cni_version="{{ index .k8s .kubernetesVersion "cni_version" | toString }}"
-
+{{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
+{{- $kubernetesCniVersion := index .k8s .kubernetesVersion "cniVersion" | toString | replace "." "" }}
 bb-rp-remove kubeadm
-
-bb-rp-install "kubernetes-cni:${kubernetes_cni_version}-ubuntu" "kubelet:${kubernetes_version}-ubuntu" "kubectl:${kubernetes_version}-ubuntu"
+bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCniUbuntu%s" $kubernetesCniVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubeletUbuntu%s" $kubernetesVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectlUbuntu%s" $kubernetesVersion) | toString }}"
 
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" && ! -f /etc/systemd/system/kubelet.service.d/10-deckhouse.conf ]]; then
   # stop kubelet immediately after the first install to prevent joining to the cluster with wrong configurations

@@ -39,7 +39,7 @@ if bb-yum-package? docker-ce; then
   kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}') 2>/dev/null || true
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
-  bb-rp-remove docker-ce containerd.io
+  bb-rp-remove docker-ce containerd-io
   rm -rf /var/lib/docker/ /var/run/docker.sock /var/lib/containerd/ /etc/docker /etc/containerd/config.toml
   # Pod kubelet-eviction-thresholds-exporter in cri=Docker mode mounts /var/run/containerd/containerd.sock, /var/run/containerd/containerd.sock will be a directory and newly installed containerd won't run. Same thing with crictl.
   rm -rf /var/run/containerd /usr/local/bin/crictl
@@ -48,8 +48,10 @@ if bb-yum-package? docker-ce; then
   bb-flag-set reboot
 fi
 
-desired_version={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "desiredVersion" | quote }}
-allowed_versions_pattern={{ index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "allowedPattern" | quote }}
+{{- $desired_version := index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "desiredVersion" }}
+{{- $allowed_versions_pattern := index .k8s .kubernetesVersion "bashible" "centos" "7" "containerd" "allowedPattern" }}
+desired_version={{ $desired_version | quote }}
+allowed_versions_pattern={{ $allowed_versions_pattern | quote }}
 
 if [[ -z $desired_version ]]; then
   bb-log-error "Desired version must be set"
@@ -73,10 +75,11 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  containerd_version="$(sed "s/containerd.io-/containerd.io:/" <<< "${desired_version}")"
-  crictl_version="crictl:{{ .kubernetesVersion }}"
-  containerd_werf_edition_version="containerd-werf-edition:v1.4.6-werf-fix.2"
-  bb-rp-install "${containerd_version}" "${crictl_version}" "${containerd_werf_edition_version}"
+  containerd_tag="{{ index .images.registrypackages (printf "containerdCentos7%s" ($desired_version | replace "containerd.io-" "" | replace "." "_" | replace "-" "_" | camelcase )) }}"
+  crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
+  containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
+
+  bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}" "containerd-flant-edition:${containerd_fe_tag}"
 
   mkdir -p /etc/systemd/system/containerd.service.d
   bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF

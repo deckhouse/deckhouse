@@ -1,0 +1,31 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - crictl
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - curl -sL https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{ $version }}.0/crictl-v{{ $version }}.0-linux-amd64.tar.gz --output - | tar -zxvf -
+  - chmod +x /crictl /install /uninstall
+{{- end }}

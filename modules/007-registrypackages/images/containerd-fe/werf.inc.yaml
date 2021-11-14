@@ -1,0 +1,40 @@
+{{- $version := "1.4.6" }}
+{{- $containerd_version := printf "v%s+werf-fix.2" $version }}
+{{- $image_version := $version | replace "." "-" }}
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - containerd
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ env "BASE_GOLANG_16_BUSTER" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y patch libbtrfs-dev
+  install:
+  - mkdir -p /go/src/github.com/containerd
+  - cd /go/src/github.com/containerd
+  - git clone https://github.com/containerd/containerd.git
+  - cd containerd
+  - git checkout tags/v{{ $version }}
+  - test -d /patches && for patchfile in /patches/*.patch ; do patch -p1 < ${patchfile}; done
+  - GO111MODULE=auto make bin/containerd
+  - mv bin/containerd /containerd
+  setup:
+  - chmod +x /containerd /install /uninstall

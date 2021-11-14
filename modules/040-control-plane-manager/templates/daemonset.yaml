@@ -2,17 +2,23 @@
 {{- $kubeImageTagSuffix := .Values.controlPlaneManager.internal.effectiveKubernetesVersion | replace "." "" }}
 
 {{- $images := dict }}
-{{- range $component := list (list "kubeApiserver" "kube-apiserver") (list "kubeControllerManager" "kube-controller-manager") (list "kubeScheduler" "kube-scheduler") }}
-  {{- $_ := set $images (index $component 1) (printf "%s:%s" $.Values.global.modulesImages.registry (index $.Values.global.modulesImages.tags.controlPlaneManager (printf "%s%s" (index $component 0) $kubeImageTagSuffix)) ) }}
+{{- range $component := list "kubeApiserver" "kubeControllerManager" "kubeScheduler" }}
+  {{- $componentWithSuffix := printf "%s%s" $component $kubeImageTagSuffix }}
+  {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.tags.controlPlaneManager $componentWithSuffix) }}
 {{- end }}
-{{- $_ := set $images "kube-apiserver-healthcheck" (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.kubeApiserverHealthcheck) }}
-{{- $_ := set $images "etcd" (printf "%s:%s" .Values.global.modulesImages.registry .Values.global.modulesImages.tags.controlPlaneManager.etcd) }}
+{{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.tags.controlPlaneManager.kubeApiserverHealthcheck }}
+{{- $_ := set $images "etcd" $.Values.global.modulesImages.tags.controlPlaneManager.etcd }}
+
+{{- $registry := dict }}
+{{- $_ := set $registry "address" $.Values.global.modulesImages.registryAddress }}
+{{- $_ := set $registry "path" $.Values.global.modulesImages.registryPath }}
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
 {{- $_ := set $tpl_context "runType" "Normal" }}
 {{- $_ := set $tpl_context "etcd" (dict "existingCluster" true) }}
-{{- $_ := set $tpl_context "images" $images }}
+{{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
+{{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "apiserver" dict }}
@@ -191,9 +197,9 @@ spec:
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
-{{- range $name, $image := $images }}
+{{- range $name, $imageTag := $images }}
       - name: image-holder-{{ $name | kebabcase }}
-        image: {{ $image }}
+        image: {{ $.Values.global.modulesImages.registry }}:{{ $imageTag }}
         command:
         - /pause
 {{- end }}

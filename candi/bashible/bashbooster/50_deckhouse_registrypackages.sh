@@ -14,10 +14,9 @@
 
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 # shellcheck disable=SC2153
-bb-var BB_RP_PREFIX "${REGISTRY_PATH%/*}/binaries"
 
-# check if image installed
-# bb-rp-is-installed? image tag
+# check if package installed
+# bb-rp-is-installed? package tag
 bb-rp-is-installed?() {
   if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
     local INSTALLED_TAG=""
@@ -30,7 +29,7 @@ bb-rp-is-installed?() {
 }
 
 # get token from registry auth
-# bb-rp-get-token image
+# bb-rp-get-token
  bb-rp-get-token() {
   local AUTH=""
   local AUTH_HEADER=""
@@ -45,45 +44,45 @@ bb-rp-is-installed?() {
   AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
   AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
   # shellcheck disable=SC2086
-  # Remove leading / from BB_RP_PREFIX due to scope format -> scope=repository:sys/binaries/jq:pull
-  curl --retry 3 -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX#/}/${1}:pull" | jq -r '.token'
+  # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
+  curl --retry 3 -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | jq -r '.token'
 }
 
 # fetch manifest from registry and get list of digests
-# bb-rp-get-digests crictl v1.19
+# bb-rp-get-digests tag
 bb-rp-get-digests() {
   local TOKEN=""
-  TOKEN="$(bb-rp-get-token "${1}")"
+  TOKEN="$(bb-rp-get-token)"
   curl --retry 3 -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/manifests/${2}" | jq -r '.layers[].digest'
+			"${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | jq -r '.layers[-1].digest'
 }
 
 # Fetch digest from registry
-# bb-rp-fetch-digest image digest outfile
+# bb-rp-fetch-digest digest outfile
 bb-rp-fetch-digest() {
   local TOKEN=""
-  TOKEN="$(bb-rp-get-token "${1}")"
-  curl --retry 3 -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
+  TOKEN="$(bb-rp-get-token)"
+  curl --retry 3 -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
 }
 
-# download image digests, unpack them and run install script
-# bb-rp-install crictl:v1.19
+# download package digests, unpack them and run install script
+# bb-rp-install package:tag
 bb-rp-install() {
-  for IMAGE_WITH_TAG in "$@"; do
-    local IMAGE=""
+  for PACKAGE_WITH_TAG in "$@"; do
+    local PACKAGE=""
     local TAG=""
-    IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_TAG}")"
-    TAG="$(awk -F ":" '{print $2}' <<< "${IMAGE_WITH_TAG}")"
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_TAG}")"
+    TAG="$(awk -F ":" '{print $2}' <<< "${PACKAGE_WITH_TAG}")"
 
     # shellcheck disable=SC2211
-    if bb-rp-is-installed? "${IMAGE}" "${TAG}"; then
+    if bb-rp-is-installed? "${PACKAGE}" "${TAG}"; then
       continue
     fi
 
     local DIGESTS=""
-    DIGESTS="$(bb-rp-get-digests "${IMAGE}" "${TAG}")"
+    DIGESTS="$(bb-rp-get-digests "${TAG}")"
 
     local TMPDIR=""
     TMPDIR="$(mktemp -d)"
@@ -92,44 +91,44 @@ bb-rp-install() {
     for DIGEST in ${DIGESTS}; do
       local TMPFILE=""
       TMPFILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${IMAGE}" "${DIGEST}" "${TMPFILE}"
+      bb-rp-fetch-digest "${DIGEST}" "${TMPFILE}"
       tar -xf "${TMPFILE}" -C "${TMPDIR}"
       rm -f "${TMPFILE}"
     done
 
-    bb-log-info "Installing package '${IMAGE_WITH_TAG}'"
+    bb-log-info "Installing package '${PACKAGE}'"
     # run install script
     # shellcheck disable=SC2164
     pushd "${TMPDIR}" >/dev/null
     ./install
-     bb-exit-on-error "Failed to install package '${IMAGE_WITH_TAG}'"
+     bb-exit-on-error "Failed to install package '${PACKAGE}'"
     # shellcheck disable=SC2164
     popd >/dev/null
 
     # Write tag to hold file
-    mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}"
-    echo "${TAG}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}/tag"
+    mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    echo "${TAG}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/tag"
     # copy install/uninstall scripts to hold dir
-    cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}"
+    cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     # cleanup
     rm -rf "${TMPDIR}"
 
-    bb-event-fire "bb-package-installed" "${IMAGE_WITH_TAG}"
+    bb-event-fire "bb-package-installed" "${PACKAGE}"
   done
 }
 
 # run uninstall script from hold dir
-# bb-rp-remove crictl
+# bb-rp-remove package
 bb-rp-remove() {
-  for IMAGE in "$@"; do
-    if [[ -f "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${IMAGE:?}/uninstall" ]]; then
-      bb-log-info "Removing package '${IMAGE}'"
+  for PACKAGE in "$@"; do
+    if [[ -f "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${PACKAGE:?}/uninstall" ]]; then
+      bb-log-info "Removing package '${PACKAGE}'"
       # shellcheck disable=SC1090
-      . "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${IMAGE:?}/uninstall"
-      bb-exit-on-error "Failed to remove package '${IMAGE}'"
+      . "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${PACKAGE:?}/uninstall"
+      bb-exit-on-error "Failed to remove package '${PACKAGE}'"
       # cleanup
-      rm -rf "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${IMAGE:?}"
-      bb-event-fire "bb-package-removed" "${IMAGE}"
+      rm -rf "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${PACKAGE:?}"
+      bb-event-fire "bb-package-removed" "${PACKAGE}"
     fi
   done
 }
