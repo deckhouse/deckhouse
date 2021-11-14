@@ -48,6 +48,7 @@ git:
   group: jekyll
   excludePaths:
   - '**/*.sh'
+  - LOCAL_DEV.md
   - werf*.yaml
   - docker-compose.yml
   - .werf

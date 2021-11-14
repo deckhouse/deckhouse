@@ -5,18 +5,28 @@ Don't forget to clone repo firstly.
 1. Free 80 port to bind
 
 3. Open console and start documentation container 
-```shell
-cd docs/documentation
-source $(trdl use werf 1.2 ea)
-docker network create deckhouse
-werf compose up
-```
+   ```shell
+   source $(trdl use werf 1.2 ea)
+   cd docs/documentation
+   docker network create deckhouse
+   export BASE_NGINX_ALPINE=nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555
+   export BASE_JEKYLL=jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34 
+   werf compose up --follow --docker-compose-command-options='-d'
+   ```
 3. Open separate console and start site container 
-```shell
-cd docs/site
-source $(trdl use werf 1.2 ea)
-werf compose up
-```
+   ```shell
+   source $(trdl use werf 1.2 ea)
+   cd docs/site
+   export BASE_NGINX_ALPINE=nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555
+   export BASE_JEKYLL=jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34 
+   werf compose up --follow --docker-compose-command-options='-d'
+   ```
+4. Open http://localhost
+
+5. Don't forget to stop documentation and site containers by running:
+   ```shell
+   werf compose down
+   ``` 
 
 ## How to debug
 
