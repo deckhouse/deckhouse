@@ -1,0 +1,1 @@
+../../ubuntu-lts/all/010_disable_unattended_upgrades.sh.tpl

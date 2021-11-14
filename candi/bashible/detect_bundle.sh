@@ -26,6 +26,10 @@ if [ -e /etc/os-release ]; then
       echo "ubuntu-lts"
       exit 0
     ;;
+    debian-9|debian-10|debian-11|astra-2.12.*)
+      echo "debian"
+      exit 0
+    ;;
     "-")
       >&2 echo "ERROR: Can't determine OS! No ID and VERSION_ID in /etc/os-release."
       exit 1

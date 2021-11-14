@@ -5,7 +5,7 @@
   {{- $critools_package := "https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64//Packages/67ffa375b03cea72703fe446ff00963919e8fce913fbc4bb86f06d1475a6bdf9-cri-tools-1.19.0-0.x86_64.rpm" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: spotify/scratch
+from: {{ env "BASE_SCRATCH" }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /

@@ -60,6 +60,52 @@ bashible: &bashible
         gcp:
           desiredVersion: "5.4.0-1029-gcp"
           allowedPattern: ""
+  debian:
+    '9':
+      docker:
+        desiredVersion: "docker-ce=5:19.03.15~3-0~debian-stretch"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.4.3-1"
+          allowedPattern: "containerd.io=1.[234]"
+      containerd:
+        desiredVersion: "containerd.io=1.4.3-1"
+        allowedPattern: "containerd.io=1.[4]"
+      kernel:
+        generic:
+          desiredVersion: "4.9.0-17-amd64"
+          allowedPattern: ""
+        astra:
+          desiredVersion: "4.15.3-141-generic"
+          allowedPattern: "4.15|5.4|5.10"
+    '10':
+      docker:
+        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-buster"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.4.6-1"
+          allowedPattern: "containerd.io=1.[234]"
+      containerd:
+        desiredVersion: "containerd.io=1.4.6-1"
+        allowedPattern: "containerd.io=1.[4]"
+      kernel:
+        generic:
+          desiredVersion: "4.19.0-18-amd64"
+          allowedPattern: ""
+    '11':
+      docker:
+        desiredVersion: "docker-ce=5:20.10.12~3-0~debian-bullseye"
+        allowedPattern: ""
+        containerd:
+          desiredVersion: "containerd.io=1.4.6-1"
+          allowedPattern: "containerd.io=1.[234]"
+      containerd:
+        desiredVersion: "containerd.io=1.4.6-1"
+        allowedPattern: "containerd.io=1.[4]"
+      kernel:
+        generic:
+          desiredVersion: "5.10.0-10-amd64"
+          allowedPattern: ""
   centos:
     '7':
       docker:
