@@ -1,0 +1,35 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $critools_package := "https://packages.cloud.google.com/apt/pool/cri-tools_1.19.0-00_amd64_b6fdfd86c8a3665ab10b9bd9565354977cd5abbaefeb2ee953bc4a13fe7d3326.deb" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ printf "%s%s" $version $patch | replace "." "-" }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ printf "%s%s" $version $patch | replace "." "-" }}
+  add: /
+  to: /
+  includePaths:
+  - kubeadm_amd64.deb
+  - cri-tools_amd64.deb
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ printf "%s%s" $version $patch | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubeadm_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
+  - curl -sL ${DEB_PACKAGE} --output /kubeadm_amd64.deb
+  - curl -sL {{ $critools_package }} --output /cri-tools_amd64.deb
+{{- end }}
+

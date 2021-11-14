@@ -6,8 +6,10 @@ metadata:
   namespace: kube-system
   annotations:
     control-plane-manager.deckhouse.io/kubernetes-version: {{ $.clusterConfiguration.kubernetesVersion | quote }}
-{{- if hasKey . "images" }}
-  {{- if hasKey $.images "kube-scheduler" }}
+{{- if hasKey $ "images" }}
+  {{- if hasKey $.images "controlPlaneManager" }}
+    {{- $imageWithVersion := printf "kubeScheduler%s" ($.clusterConfiguration.kubernetesVersion | replace "." "") }}
+    {{- if hasKey $.images.controlPlaneManager $imageWithVersion }}
 ---
 apiVersion: v1
 kind: Pod
@@ -17,7 +19,8 @@ metadata:
 spec:
   containers:
     - name: kube-scheduler
-      image: {{ pluck "kube-scheduler" $.images | first }}
+      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
+    {{- end }}
   {{- end }}
 {{- end }}
 ---

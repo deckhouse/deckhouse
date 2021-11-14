@@ -1,0 +1,100 @@
+clusterDomain: cluster.local
+clusterDNSAddress: 10.222.0.10
+cloudProvider:
+  instanceClassKind: OpenStackInstanceClass
+  machineClassKind: OpenStackMachineClass
+  openstack:
+    connection:
+      authURL: https://cloud.flant.com/v3/
+      domainName: Default
+      password: XuBqbY3BMnR4xC24
+      region: HetznerFinland
+      tenantName: d-romanenko
+      username: d-romanenko
+    externalNetworkNames:
+      - public
+    instances:
+      imageName: ubuntu-20-04-cloud-amd64
+      mainNetwork: dev
+      securityGroups:
+        - dev
+      sshKeyPairName: dev
+    internalNetworkNames:
+      - dev
+    podNetworkMode: DirectRoutingWithPortSecurityEnabled
+  type: openstack
+  zones:
+    - nova
+apiserverEndpoints:
+  - 192.168.199.95:6443
+kubernetesCA: |
+  -----BEGIN CERTIFICATE-----
+  MIIC5zCCAc+gAwIBAgIBADANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwprdWJl
+  cm5ldGVzMB4XDTIxMTIxMjIwNTU0NFoXDTMxMTIxMDIwNTU0NFowFTETMBEGA1UE
+  AxMKa3ViZXJuZXRlczCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbO
+  CiyiTAYfqM4NQ4yzujwsu3fTkjUy2KAtqU7YCfyCI5w7duM+LZQ0mHTyutkpPVd4
+  RGoL1flmRftG4JrO7Aaq93hvJjwKNUfyDTTxLJ1nAgeaeoujmMKk8lQ0AnYO9ZBA
+  iPvNhwt0lFqZjfC05rA0cmcCSVgYjlje5uIibmAzrPjbX+fLM+WLx/38WkfeXdYf
+  Q24tHQ97pQFLDTUtN+c+rOcqTCv3gnVCY1Ch/tsBkO52Vp0+xV4r/60S7R/SoGPm
+  HXJnRT7cD4PUnK1hsjAHh25PfBFJDwvbTF8WSXjgVyGi93EaVcK2s/Es1vq589KR
+  M6oyyxwcY/PVU0j92rECAwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB
+  /wQFMAMBAf8wHQYDVR0OBBYEFMqSkTe137lnwzpGih+J02LrrjU4MA0GCSqGSIb3
+  DQEBCwUAA4IBAQA2h9t8SO8P4iM+srB4kPWfFoq27Dg9cmwc/RwkdbejG5+W3GpY
+  F+M0B+O1d9DLiJAH49NpWBcS/xFM6Y29hvw8AqyH3mXH30z7+QPaZg0EY02IkkkJ
+  3APoyYyei7TMi8frFmjJ8IVWvgbcgsDSM/g48WXz3PvNbyPEUIg/2U6l7pbXzCGj
+  0zqjHb/YMt3sHduxxrtS6Mn6iD/sMISVvrfS+BNsw0+NigxPzx93Js+7feUfcuUJ
+  ngxaFavOM/ZprjJ7mHO4TyMg41Gcsfyx6BEDmImo+uot6rRRFktPXqM4RgOePwis
+  HW4aGSY2ySKj+IQWAgKuJdVQhWsa7w028IA6
+  -----END CERTIFICATE-----
+
+Template:
+  BasePath: node-manager/templates
+  Name: node-manager/templates/bashible-apiserver/deployment.yaml
+allowedBundles:
+  - ubuntu-lts
+  - centos-7
+allowedKubernetesVersions:
+  - "1.16"
+  - "1.17"
+  - "1.18"
+  - "1.19"
+  - "1.20"
+  - "1.21"
+nodeGroups:
+  - cri:
+      type: Containerd
+    disruptions:
+      approvalMode: Manual
+    kubernetesVersion: "1.21"
+    manualRolloutID: ""
+    name: master
+    nodeTemplate:
+      labels:
+        node-role.kubernetes.io/master: ""
+      taints:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+    nodeType: CloudPermanent
+    updateEpoch: "1639390209"
+  - cloudInstances:
+      classReference:
+        kind: OpenStackInstanceClass
+        name: worker
+      maxPerZone: 2
+      minPerZone: 2
+      zones:
+        - nova
+    cri:
+      type: Docker
+    disruptions:
+      approvalMode: Automatic
+    instanceClass:
+      flavorName: m1.large
+      imageName: ubuntu-20-04-cloud-amd64
+      mainNetwork: dev
+    kubernetesVersion: "1.21"
+    manualRolloutID: ""
+    name: worker
+    nodeType: CloudEphemeral
+    updateEpoch: "1639390505"
+nodeStatusUpdateFrequency: 10

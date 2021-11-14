@@ -321,19 +321,24 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	images := make(map[string]interface{})
-	if app.DontUsePublicControlPlaneImages {
-		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
-		images["etcd"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["etcd"])
-		images["kube-apiserver"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["kubeApiserver"+k8s])
-		images["kube-controller-manager"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["kubeControllerManager"+k8s])
-		images["kube-scheduler"] = fmt.Sprintf("%s%s:%s", m.Registry.Address, m.Registry.Path, m.Images["controlPlaneManager"]["kubeScheduler"+k8s])
+	registryData, err := m.ParseRegistryData()
+	if err != nil {
+		return nil, err
 	}
 
-	images["kube-apiserver-healthcheck"] = fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["controlPlaneManager"]["kubeApiserverHealthcheck"])
+	result["registry"] = registryData
 
-	result["images"] = images
+	images := m.Images
 
+	if !app.DontUsePublicControlPlaneImages {
+		k8s := strings.Replace(fmt.Sprintf("%s", data["kubernetesVersion"]), ".", "", 1)
+		delete(images["controlPlaneManager"], "etcd")
+		delete(images["controlPlaneManager"], "kubeApiserver"+k8s)
+		delete(images["controlPlaneManager"], "kubeControllerManager"+k8s)
+		delete(images["controlPlaneManager"], "kubeScheduler"+k8s)
+	}
+
+	result["images"] = images.ConvertToMap()
 	return result, nil
 }
 
@@ -395,10 +400,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	}
 	configForBashibleBundleTemplate["registry"] = registryData
 
-	configForBashibleBundleTemplate["images"] = make(map[string]interface{})
-	if app.DontUsePublicControlPlaneImages {
-		configForBashibleBundleTemplate["images"] = map[string]interface{}{"pause": fmt.Sprintf("%s:%s", m.DeckhouseConfig.ImagesRepo, m.Images["common"]["pause"])}
+	images := m.Images
+	if !app.DontUsePublicControlPlaneImages {
+		delete(images["common"], "pause")
 	}
+	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 
 	return configForBashibleBundleTemplate, nil
 }
@@ -603,4 +609,12 @@ func getDNSAddress(serviceCIDR string) string {
 	}
 
 	return clusterDNS
+}
+
+func (i *ImagesTags) ConvertToMap() map[string]interface{} {
+	res := make(map[string]interface{})
+	for k, v := range *i {
+		res[k] = v
+	}
+	return res
 }

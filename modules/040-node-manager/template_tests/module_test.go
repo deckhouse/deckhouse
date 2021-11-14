@@ -51,6 +51,8 @@ modulesImages:
       machineControllerManager: imagehash
     common:
       kubeRbacProxy: imagehash
+    registrypackages:
+      jq16: imagehash
 discovery:
   d8SpecificNodeCountByRole:
     master: 3

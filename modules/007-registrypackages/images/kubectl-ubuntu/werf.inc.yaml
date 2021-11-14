@@ -1,0 +1,32 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ printf "%s%s" $version $patch | replace "." "-" }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ printf "%s%s" $version $patch | replace "." "-" }}
+  add: /
+  to: /
+  includePaths:
+  - kubectl_amd64.deb
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ printf "%s%s" $version $patch | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - DEB_PACKAGE="https://packages.cloud.google.com/apt/$(curl https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages | grep kubectl_{{ printf "%s.%s" $version $patch }}-00  | awk '{print $2}')"
+  - curl -sL ${DEB_PACKAGE} --output /kubectl_amd64.deb
+{{- end }}
+

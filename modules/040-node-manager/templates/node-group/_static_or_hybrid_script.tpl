@@ -49,6 +49,10 @@ chmod +x /var/lib/bashible/cloud-provider-bootstrap-networks-{{ $bundle }}.sh
   {{- $_ := set $bashible_bootstrap_script_tpl_context "Files" $context.Files }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "allowedBundles" $context.Values.nodeManager.allowedBundles }}
   {{- $_ := set $bashible_bootstrap_script_tpl_context "registry" (dict "address" $context.Values.global.modulesImages.registryAddress "path" $context.Values.global.modulesImages.registryPath "scheme" $context.Values.global.modulesImages.registryScheme "ca" $context.Values.global.modulesImages.registryCA "dockerCfg" $context.Values.global.modulesImages.registryDockercfg) }}
+  {{- /* For centos bootstrap script jq package tag is needed */ -}}
+  {{- $images := dict }}
+  {{- $images := set $images "registrypackages" (dict "jq16" $context.Values.global.modulesImages.tags.registrypackages.jq16) }}
+  {{- $_ := set $bashible_bootstrap_script_tpl_context "images" $images }}
 cat > /var/lib/bashible/bootstrap.sh <<"END"
 {{ if $adopt }}
   {{- include "node_group_bashible_bootstrap_script_noninteractive" $bashible_bootstrap_script_tpl_context }}

@@ -98,7 +98,6 @@ if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-
 bb-sync-file /var/lib/kubelet/config.yaml - << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration

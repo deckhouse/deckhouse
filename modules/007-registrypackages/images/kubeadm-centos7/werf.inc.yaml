@@ -1,0 +1,34 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $critools_package := "https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64//Packages/67ffa375b03cea72703fe446ff00963919e8fce913fbc4bb86f06d1475a6bdf9-cri-tools-1.19.0-0.x86_64.rpm" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ printf "%s%s" $version $patch | replace "." "-" }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ printf "%s%s" $version $patch | replace "." "-" }}
+  add: /
+  to: /
+  includePaths:
+  - kubeadm.x86_64.rpm
+  - cri-tools.x86_64.rpm
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ printf "%s%s" $version $patch | replace "." "-" }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - RPM_PACKAGE="$(curl -s https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/repodata/primary.xml | grep "<location href=" | grep "kubeadm-{{ printf "%s.%s" $version $patch }}-0" | awk -F "\"" '{print $2}')"
+  - curl -sL https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64/${RPM_PACKAGE} --output /kubeadm.x86_64.rpm
+  - curl -sL {{ $critools_package }} --output /cri-tools.x86_64.rpm
+{{- end }}

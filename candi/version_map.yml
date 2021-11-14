@@ -79,7 +79,7 @@ k8s:
   '1.16':
     status: end-of-life
     patch: 15
-    cni_version: 0.8.6
+    cniVersion: 0.8.6
     bashible: *bashible
     ccm:
       openstack: 5dcb9bbd77a3595781e6a9fb366fdc205aaabf7c
@@ -102,7 +102,7 @@ k8s:
   '1.17':
     status: intermediate
     patch: 17
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible
     controlPlane:
       # etcd: sha256 digest isn't needed because this component is compiled from source
@@ -113,7 +113,7 @@ k8s:
   '1.18':
     status: intermediate
     patch: 20
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible
     controlPlane:
       # etcd: sha256 digest isn't needed because this component is compiled from source
@@ -124,7 +124,7 @@ k8s:
   '1.19':
     status: available
     patch: 16
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: &bashible_k8s_ge_1_19
       <<: *bashible
       ubuntu:
@@ -174,7 +174,7 @@ k8s:
   '1.20':
     status: available
     patch: 13
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.20.1
@@ -198,7 +198,7 @@ k8s:
   '1.21':
     status: available
     patch: 7
-    cni_version: 0.8.7
+    cniVersion: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
       openstack: v1.21.0

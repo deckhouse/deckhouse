@@ -40,7 +40,7 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   # Remove mounts
   umount $(mount | grep "/run/containerd" | cut -f3 -d" ") 2>/dev/null || true
   bb-apt-remove docker.io
-  bb-rp-remove docker-ce containerd.io
+  bb-rp-remove docker-ce containerd-io
   rm -rf /var/lib/docker/ /var/run/docker.sock /var/lib/containerd/ /etc/docker /etc/containerd/config.toml
   # Pod kubelet-eviction-thresholds-exporter in cri=Docker mode mounts /var/run/containerd/containerd.sock, /var/run/containerd/containerd.sock will be a directory and newly installed containerd won't run. Same thing with crictl.
   rm -rf /var/run/containerd /usr/local/bin/crictl
@@ -48,13 +48,17 @@ if bb-apt-package? docker-ce || bb-apt-package? docker.io; then
   bb-log-info "Setting reboot flag due to cri being updated"
   bb-flag-set reboot
 fi
-
+{{- $desired_version := "" }}
+{{- $allowed_versions_pattern := "" }}
+{{- $k8s_bundle := index .k8s .kubernetesVersion }}
 {{- range $key, $value := index .k8s .kubernetesVersion "bashible" "ubuntu" }}
   {{- $ubuntuVersion := toString $key }}
   {{- if or $value.containerd.desiredVersion $value.containerd.allowedPattern }}
 if bb-is-ubuntu-version? {{ $ubuntuVersion }} ; then
-  desired_version={{ $value.containerd.desiredVersion | quote }}
-  allowed_versions_pattern={{ $value.containerd.allowedPattern | quote }}
+    {{- $desired_version = $value.containerd.desiredVersion }}
+    {{- $allowed_versions_pattern = $value.containerd.allowedPattern }}
+  desired_version={{ $desired_version | quote }}
+  allowed_versions_pattern={{ $allowed_versions_pattern | quote }}
 fi
   {{- end }}
 {{- end }}
@@ -82,10 +86,20 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  containerd_version="$(sed "s/containerd.io=/containerd.io:/" <<< "${desired_version}")-$(bb-get-ubuntu-codename)"
-  crictl_version="crictl:{{ .kubernetesVersion }}"
-  containerd_werf_edition_version="containerd-werf-edition:v1.4.6-werf-fix.2"
-  bb-rp-install "${containerd_version}" "${crictl_version}" "${containerd_werf_edition_version}"
+  if bb-is-ubuntu-version? 16.04 ; then
+    containerd_tag="{{- index .images.registrypackages (printf "containerdUbuntu%sXenial" ($desired_version | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+  elif bb-is-ubuntu-version? 18.04 ; then
+    containerd_tag="{{- index .images.registrypackages (printf "containerdUbuntu%sBionic" ($desired_version | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+  elif bb-is-ubuntu-version? 20.04 ; then
+    containerd_tag="{{- index .images.registrypackages (printf "containerdUbuntu%sFocal" ($desired_version | replace "containerd.io=" "" | replace "." "" | replace "-" "")) }}"
+  else
+    bb-log-error "Unsupported ubuntu version"
+    exit 1
+  fi
+  crictl_tag="{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}"
+  containerd_fe_tag="{{ index .images.registrypackages "containerdFe146" | toString }}"
+
+  bb-rp-install "containerd-io:${containerd_tag}" "crictl:${crictl_tag}" "containerd-flant-edition:${containerd_fe_tag}"
 
   mkdir -p /etc/systemd/system/containerd.service.d
   bb-sync-file /etc/systemd/system/containerd.service.d/override.conf - << EOF

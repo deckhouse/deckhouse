@@ -41,6 +41,18 @@ apiVersions:
             type: string
           auth:
             type: string
+          address:
+            type: string
+          path:
+            type: string
+          scheme:
+            type: string
+          ca:
+            type: string
+          dockerCfg:
+            type: string
+      images:
+        type: object
       clusterBootstrap:
         type: object
         properties:
@@ -108,7 +120,7 @@ apiVersions:
             properties:
               patch:
                 type: [string, number]
-              cni_version:
+              cniVersion:
                 type: string
               bashible: *bashible
               ccm:

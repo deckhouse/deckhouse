@@ -6,8 +6,10 @@ metadata:
   namespace: kube-system
   annotations:
     control-plane-manager.deckhouse.io/kubernetes-version: {{ $.clusterConfiguration.kubernetesVersion | quote }}
-{{- if hasKey . "images" }}
-  {{- if hasKey $.images "kube-apiserver" }}
+{{- if hasKey $ "images" }}
+  {{- if hasKey $.images "controlPlaneManager" }}
+    {{- $imageWithVersion := printf "kubeApiserver%s" ($.clusterConfiguration.kubernetesVersion | replace "." "") }}
+    {{- if hasKey $.images.controlPlaneManager $imageWithVersion }}
 ---
 apiVersion: v1
 kind: Pod
@@ -17,7 +19,8 @@ metadata:
 spec:
   containers:
     - name: kube-apiserver
-      image: {{ pluck "kube-apiserver" $.images | first }}
+      image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
@@ -59,8 +62,9 @@ spec:
   {{- end }}
 {{- end }}
 
-{{- if hasKey . "images" }}
-  {{- if hasKey $.images "kube-apiserver-healthcheck" }}
+{{- if hasKey $ "images" }}
+  {{- if hasKey $.images "controlPlaneManager" }}
+    {{- if hasKey $.images.controlPlaneManager "kubeApiserverHealthcheck" }}
 ---
 apiVersion: v1
 kind: Pod
@@ -95,7 +99,7 @@ spec:
         port: 3990
         scheme: HTTP
   - name: healthcheck
-    image: {{ pluck "kube-apiserver-healthcheck" $.images | first }}
+    image: {{ printf "%s%s:%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubeApiserverHealthcheck") }}
     resources:
       requests:
         cpu: "{{ div (mul $millicpu 2) 100 }}m"
@@ -146,5 +150,6 @@ spec:
     hostPath:
       path: /etc/kubernetes/pki/apiserver-kubelet-client.key
       type: File
+    {{- end }}
   {{- end }}
 {{- end }}

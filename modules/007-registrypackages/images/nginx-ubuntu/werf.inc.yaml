@@ -1,0 +1,29 @@
+{{- $version := "1.20.2" }}
+{{- range $distro := tuple "focal" "bionic" "xenial" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}-{{ $distro }}
+from: spotify/scratch
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}-{{ $distro }}
+  add: /
+  to: /
+  includePaths:
+  - nginx_amd64.deb
+  - install
+  - uninstall
+  before: setup
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}-{{ $distro }}
+from: {{ env "BASE_ALPINE" }}
+git:
+  - add: /modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache curl
+  setup:
+  - curl -sL "https://nginx.org/packages/ubuntu/pool/nginx/n/nginx/nginx_{{ $version }}-1~{{ $distro }}_amd64.deb" --output /nginx_amd64.deb
+{{- end }}

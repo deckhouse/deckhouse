@@ -72,3 +72,12 @@ bb-deckhouse-get-disruptive-update-approval() {
     bb-log-info "Disruption approved!"
     bb-flag-set disruption
 }
+
+bb-is-ubuntu-version?() {
+  local ubuntu_version=$1
+  if [ "$(source /etc/os-release; echo ${VERSION_ID})" == "${ubuntu_version}" ] ; then
+    return 0
+  else
+    return 1
+  fi
+}

@@ -38,10 +38,9 @@ REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth }}")"
 REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.dockerCfg }}" | python -c 'import json; import sys; dockerCfg = sys.stdin.read(); parsed = json.loads(dockerCfg); parsed["auths"]["'${REGISTRY_ADDRESS}'"].setdefault("auth", ""); print(parsed["auths"]["'${REGISTRY_ADDRESS}'"]["auth"]);' | base64 -d)"
 {{- end }}
 BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages"
-BB_RP_PREFIX="${REGISTRY_PATH%/*}/binaries"
 {{- /*
 # check if image installed
-# bb-rp-is-installed? image tag
+# bb-rp-is-installed? package tag
 */}}
 bb-rp-is-installed?() {
   if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
@@ -55,7 +54,7 @@ bb-rp-is-installed?() {
 }
 {{- /*
 # get token from registry auth
-# bb-rp-get-token image
+# bb-rp-get-token
 */}}
 bb-rp-get-token() {
   local AUTH=""
@@ -71,50 +70,50 @@ bb-rp-get-token() {
   AUTH_REALM="$(awk -F "," '{split($1,s,"\""); print s[2]}' <<< "${AUTH_HEADER}")"
   AUTH_SERVICE="$(awk -F "," '{split($2,s,"\""); print s[2]}' <<< "${AUTH_HEADER}" | sed "s/ /+/g")"
 {{- /*
-  # Remove leading / from BB_RP_PREFIX due to scope format -> scope=repository:sys/binaries/jq:pull
+  # Remove leading / from REGISTRY_PATH due to scope format -> scope=repository:deckhouse/fe:pull
 */}}
-  curl --retry 3 -k -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${BB_RP_PREFIX#/}/${1}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
+  curl --retry 3 -k -fsSL ${AUTH} "${AUTH_REALM}?service=${AUTH_SERVICE}&scope=repository:${REGISTRY_PATH#/}:pull" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["token"]);'
 }
 {{- /*
 # fetch manifest from registry and get list of digests
-# bb-rp-get-digests crictl v1.19
+# bb-rp-get-digests tag
 */}}
 bb-rp-get-digests() {
   local TOKEN=""
-  TOKEN="$(bb-rp-get-token "${1}")"
+  TOKEN="$(bb-rp-get-token)"
   curl --retry 3 -k -fsSL \
 			-H "Authorization: Bearer ${TOKEN}" \
 			-H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-			"${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/manifests/${2}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); [sys.stdout.write(layer["digest"]) for layer in parsed["layers"]]'
+        "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/manifests/${1}" | python -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc); print(parsed["layers"][-1]["digest"])'
 }
 {{- /*
 # Fetch digest from registry
-# bb-rp-fetch-digest image digest outfile
+# bb-rp-fetch-digest digest outfile
 */}}
 bb-rp-fetch-digest() {
   local TOKEN=""
-  TOKEN="$(bb-rp-get-token "${1}")"
-  curl --retry 3 -k -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${BB_RP_PREFIX}/${1}/blobs/${2}" -o "${3}"
+  TOKEN="$(bb-rp-get-token)"
+  curl --retry 3 -k -sSLH "Authorization: Bearer ${TOKEN}" "${SCHEME}://${REGISTRY_ADDRESS}/v2${REGISTRY_PATH}/blobs/${1}" -o "${2}"
 }
 {{- /*
-# download image digests, unpack them and run install script
-# bb-rp-install crictl:v1.19
+# download package digests, unpack them and run install script
+# bb-rp-install package:tag
 */}}
 bb-rp-install() {
   shopt -u failglob
 
-  for IMAGE_WITH_TAG in "$@"; do
-    local IMAGE=""
+  for PACKAGE_WITH_TAG in "$@"; do
+    local PACKAGE=""
     local TAG=""
-    IMAGE="$(awk -F ":" '{print $1}' <<< "${IMAGE_WITH_TAG}")"
-    TAG="$(awk -F ":" '{print $2}' <<< "${IMAGE_WITH_TAG}")"
+    PACKAGE="$(awk -F ":" '{print $1}' <<< "${PACKAGE_WITH_TAG}")"
+    TAG="$(awk -F ":" '{print $2}' <<< "${PACKAGE_WITH_TAG}")"
 
-    if bb-rp-is-installed? "${IMAGE}" "${TAG}"; then
+    if bb-rp-is-installed? "${PACKAGE}" "${TAG}"; then
       continue
     fi
 
     local DIGESTS=""
-    DIGESTS="$(bb-rp-get-digests "${IMAGE}" "${TAG}")"
+    DIGESTS="$(bb-rp-get-digests "${TAG}")"
 
     local TMPDIR=""
     TMPDIR="$(mktemp -d)"
@@ -122,7 +121,7 @@ bb-rp-install() {
     for DIGEST in ${DIGESTS}; do
       local TMPFILE=""
       TMPFILE="$(mktemp -u)"
-      bb-rp-fetch-digest "${IMAGE}" "${DIGEST}" "${TMPFILE}"
+      bb-rp-fetch-digest "${DIGEST}" "${TMPFILE}"
       tar -xf "${TMPFILE}" -C "${TMPDIR}"
       rm -f "${TMPFILE}"
     done
@@ -132,9 +131,9 @@ bb-rp-install() {
     # shellcheck disable=SC2164
     popd >/dev/null
 
-    mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}"
-    echo "${TAG}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}/tag"
-    cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${IMAGE}"
+    mkdir -p "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
+    echo "${TAG}" > "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}/tag"
+    cp "${TMPDIR}/install" "${TMPDIR}/uninstall" "${BB_RP_INSTALLED_PACKAGES_STORE}/${PACKAGE}"
     rm -rf "${TMPDIR}"
   done
 
@@ -154,6 +153,6 @@ done
 {{- /*
 # install jq from deckhouse registry
 */}}
-bb-rp-install "jq:1.6"
+bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
 
 mkdir -p /var/lib/bashible/

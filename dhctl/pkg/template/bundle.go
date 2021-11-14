@@ -42,7 +42,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	dataForLog := make(map[string]interface{})
 	for k, v := range data {
 		switch k {
-		case "k8s", "bashible":
+		case "k8s", "bashible", "images":
 			// Hide fields from the version map
 			dataForLog[k] = "<hidden>"
 		default:

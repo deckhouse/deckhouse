@@ -875,52 +875,14 @@ Bashible supports installing software from registry images, but we need to prepa
 
 #### Example
 We need to install jq binary to nodes.
-Let's prepare image.
-Download jq binary:
-```shell
-mkdir package
-cd package
-curl -sL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 --output jq && chmod +x jq
-cd ..
-```
-Prepare install and uninstall scripts:
-```shell
-cat <<EOF > package/install
-#!/bin/bash
-set -Eeo pipefail
-cp jq /usr/local/bin
-EOF
-chmod +x package/install
-
-cat <<EOF > package/uninstall
-#!/bin/bash
-set -Eeo pipefail
-rm -f /usr/local/bin/jq
-EOF
-chmod +x package/uninstall
-```
-Prepare Dockerfile:
-```dockerfile
-cat <<EOF > Dockerfile
-FROM scratch
-COPY ./package/* /
-EOF
-```
-Build Docker image:
-```shell
-docker build -t ${REGISTRY_HOST}/deckhouse/binaries/jq:1.6 .
-```
-Push image to repository:
-```shell
-docker push -t ${REGISTRY_HOST}/deckhouse/binaries/jq:1.6
-```
-* ```${REGISTRY_HOST}``` - docker registry, where we push all deckhouse images. 
-* ```deckhouse/binaries``` - hardcoded path to images.
+[How to build jq.](https://github.com/deckhouse/modules/007-registrypackages/jq)
 
 To install this image in bashible script we must use special helper function:
 ```shell
-bb-rp-install "jq:1.6"
+bb-rp-install "jq:{{ .images.registrypackages.jq16 }}"
 ```
+* `{{ .images.registrypackages.jq16 }}` is autofilled from deckhouse global values.
+
 To uninstall:
 ```shell
 bb-rp-remove "jq"
@@ -931,24 +893,3 @@ hold directory ```/var/cache/registrypackages```.
 
 Helper function ```bb-rb-remove``` executes uninstall script from ```/var/cache/registrypackages/{IMAGE}``` and
 removes dir ```/var/cache/registrypackages/{IMAGE}```.
-
-If we need to install some deb/rpm packages, we pack them to image and write more complex install/uninstall scripts:
-```shell
-cat <<EOF > package/install
-#!/bin/bash
-set -Eeo pipefail
-dpkg -i -E nginx_1.20.1-1~bionic_amd64.deb
-apt-mark hold nginx
-EOF
-chmod +x package/install
-
-cat <<EOF > package/uninstall
-#!/bin/bash
-set -Eeo pipefail
-apt-mark unhold nginx
-dpkg -r nginx
-EOF
-chmod +x package/uninstall
-```
-
-[Additional scripts to build and push registry package images](https://github.com/deckhouse/deckhouse/candi/tools/registrypackages).
