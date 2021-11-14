@@ -26,8 +26,8 @@ _on_containerd_config_changed() {
   {{- end }}
   {{- $sandbox_image := "k8s.gcr.io/pause:3.2" }}
   {{- if .images }}
-    {{- if .images.pause }}
-      {{- $sandbox_image = .images.pause }}
+    {{- if .images.common.pause }}
+      {{- $sandbox_image = printf "%s%s:%s" .registry.address .registry.path .images.common.pause }}
     {{- end }}
   {{- end }}
 # generated using `containerd config default` by containerd version `containerd containerd.io 1.4.3 269548fa27e0089a8b8278fc4fc781d7f65a939b`

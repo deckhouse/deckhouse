@@ -70,6 +70,10 @@ spec:
           - name: certs
             mountPath: /var/certs
             readOnly: false
+          - name: dependency-files
+            mountPath: /var/files
+          - name: tmp
+            mountPath: /tmp
         ports:
           - name: https
             containerPort: 10423
@@ -90,33 +94,37 @@ spec:
         - name: certs
           secret:
             secretName: bashible-api-server-tls
+        - name: dependency-files
+          configMap:
+            name: bashible-apiserver-files
+        - name: tmp
+          emptyDir: {}
 
-{{- define "bashible_context_data" }}
-{{- range $bundle := $.Values.nodeManager.allowedBundles }}
-  {{- range $ng := $.Values.nodeManager.internal.nodeGroups }}
-    bashible-{{ $bundle }}-{{ $ng.name }}:
-{{ include "bashible_context"  (list $ $bundle $ng) | indent 6 }}
-    bundle-{{ $bundle }}-{{ $ng.name }}:
-{{ include "bundle_ng_context" (list $ $bundle $ng) | indent 6 }}
-  {{- end }}
-  {{- range $kubernetes_version := $.Values.nodeManager.allowedKubernetesVersions }}
-    bundle-{{ $bundle }}-{{ $kubernetes_version }}:
-{{ include "bundle_k8s_version_context" (list $ $bundle $kubernetes_version) | indent 6 }}
-  {{- end }}
-{{- end }}
-    images:
-      pause: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.common.pause }}
-    versionMap:
-{{ .Files.Get "candi/version_map.yml" | indent 6 }}
-    registry:
-      address: {{ $.Values.global.modulesImages.registryAddress }}
-      path: {{ $.Values.global.modulesImages.registryPath }}
-      scheme: {{ $.Values.global.modulesImages.registryScheme }}
-  {{- if $.Values.global.modulesImages.registryCA }}
-      ca: |
-{{ $.Values.global.modulesImages.registryCA | indent 8 }}
-  {{- end }}
-      dockerCfg: {{ $.Values.global.modulesImages.registryDockercfg }}
+
+{{- define "bashible_input_data" }}
+    clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
+    clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
+    {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    cloudProvider:
+{{ $.Values.nodeManager.internal.cloudProvider | toYaml | indent 6 }}
+    {{- end }}
+    {{- if hasKey $.Values.global.clusterConfiguration "packagesProxy" }}
+    packagesProxy:
+{{ $.Values.global.clusterConfiguration.packagesProxy | toYaml | indent 6 }}
+    {{- end }}
+    apiserverEndpoints:
+{{ $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | indent 6 }}
+    {{- if $.Values.nodeManager.internal.kubernetesCA }}
+    kubernetesCA: |
+{{ $.Values.nodeManager.internal.kubernetesCA | indent 6 }}
+    {{- end }}
+    allowedBundles:
+{{ $.Values.nodeManager.allowedBundles | toYaml | indent 6 }}
+    allowedKubernetesVersions:
+{{ $.Values.nodeManager.allowedKubernetesVersions | toYaml | indent 6 }}
+    nodeGroups:
+{{ $.Values.nodeManager.internal.nodeGroups | toYaml | indent 6 }}
+    nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
 {{- end }}
 ---
 apiVersion: v1
@@ -126,5 +134,18 @@ metadata:
   namespace: d8-cloud-instance-manager
 {{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
 data:
-  context.yaml: |-
-{{ include "bashible_context_data" . | b64enc | indent 4 }}
+  input.yaml: |-
+{{ include "bashible_input_data" . | b64enc | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bashible-apiserver-files
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | indent 2 }}
+data:
+  version_map.yml: |-
+{{ .Files.Get "candi/version_map.yml" | indent 4 }}
+  images_tags.json: |-
+{{ .Files.Get "images_tags.json" | indent 4 }}
+

@@ -343,6 +343,7 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 			Labels: map[string]string{
 				"heritage":                     "deckhouse",
 				"app.kubernetes.io/managed-by": "Helm",
+				"app":                          "registry",
 			},
 			Annotations: map[string]string{
 				"meta.helm.sh/release-name":      "deckhouse",

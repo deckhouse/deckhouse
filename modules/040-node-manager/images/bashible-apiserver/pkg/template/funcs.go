@@ -118,7 +118,7 @@ func fromYAML(str string) map[string]interface{} {
 // it tolerates errors. It will insert the returned error message string as
 // the first and only item in the returned array.
 func fromYAMLArray(str string) []interface{} {
-	a := []interface{}{}
+	a := make([]interface{}, 0)
 
 	if err := yaml.Unmarshal([]byte(str), &a); err != nil {
 		a = []interface{}{err.Error()}
@@ -175,7 +175,7 @@ func fromJSON(str string) map[string]interface{} {
 // it tolerates errors. It will insert the returned error message string as
 // the first and only item in the returned array.
 func fromJSONArray(str string) []interface{} {
-	a := []interface{}{}
+	a := make([]interface{}, 0)
 
 	if err := json.Unmarshal([]byte(str), &a); err != nil {
 		a = []interface{}{err.Error()}

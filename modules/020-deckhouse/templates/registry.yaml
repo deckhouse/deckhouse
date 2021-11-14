@@ -9,7 +9,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{- /* Helm checks changes only in .dockerconfigjson field, so if other field changes, helm don't change secret. Checksum resolve this. */}}
     checksum: {{ printf $.Values.global.modulesImages.registryDockercfg $.Values.global.modulesImages.registryAddress $.Values.global.modulesImages.registryPath $.Values.global.modulesImages.registryScheme $.Values.global.modulesImages.registryCA | sha256sum }}
-{{ include "helm_lib_module_labels" (list .) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "registry")) | indent 2 }}
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: {{ $.Values.global.modulesImages.registryDockercfg }}
