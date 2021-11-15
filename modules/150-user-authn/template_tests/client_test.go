@@ -44,7 +44,8 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
 	Context("With DexClient in values", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.dexClientCRDs", `
-- id: dex-client-grafana:test-grafana
+- id: dex-client-grafana@test-grafana
+  encodedID: "m5zgcztbnzq4x4u44scceizf"
   name: grafana
   namespace: test-grafana
   spec:
@@ -52,9 +53,10 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
     redirectURIs:
     - "https://grafana.example.com/callback"
     secret: "123456789"
-  encodedID: "m5zgcztbnzq4x4u44scceizf"
+  legacyID: dex-client-grafana:test-grafana
+  legacyEncodedID: "m5zgcztbnzq4x4u44scceizfxxx"
   clientSecret: test
-- id: dex-client-opendistro:test
+- id: dex-client-opendistro@test
   name: "opendistro"
   namespace: test
   spec:
@@ -62,22 +64,38 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
     - "https://opendistro.example.com/callback"
   clientSecret: test
   encodedID: "n5ygk3tenfzxi4tpzpzjzzeeeirsk"
+  legacyID: dex-client-opendistro:test
+  legacyEncodedID: "m5zgcztbnzq4x4u44scceizfyyy"
 `)
 			hec.HelmRender()
 		})
 		It("Should create OAuth2Client objects", func() {
 			clientGrafana := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "m5zgcztbnzq4x4u44scceizf")
 			Expect(clientGrafana.Exists()).To(BeTrue())
-			Expect(clientGrafana.Field("id").String()).To(Equal("dex-client-grafana:test-grafana"))
+			Expect(clientGrafana.Field("id").String()).To(Equal("dex-client-grafana@test-grafana"))
 			Expect(clientGrafana.Field("secret").String()).To(Equal("test"))
 			Expect(clientGrafana.Field("redirectURIs").String()).To(MatchJSON(`["https://grafana.example.com/callback"]`))
 			Expect(hec.KubernetesResource("Secret", "test-grafana", "dex-client-grafana").Exists()).To(BeTrue())
 
+			clientGrafanaLegacy := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "m5zgcztbnzq4x4u44scceizfxxx")
+			Expect(clientGrafanaLegacy.Exists()).To(BeTrue())
+			Expect(clientGrafanaLegacy.Field("id").String()).To(Equal("dex-client-grafana:test-grafana"))
+			Expect(clientGrafanaLegacy.Field("secret").String()).To(Equal("test"))
+			Expect(clientGrafanaLegacy.Field("redirectURIs").String()).To(MatchJSON(`["https://grafana.example.com/callback"]`))
+			Expect(hec.KubernetesResource("Secret", "test-grafana", "dex-client-grafana").Exists()).To(BeTrue())
+
 			clientOpendistro := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "n5ygk3tenfzxi4tpzpzjzzeeeirsk")
 			Expect(clientOpendistro.Exists()).To(BeTrue())
-			Expect(clientOpendistro.Field("id").String()).To(Equal("dex-client-opendistro:test"))
+			Expect(clientOpendistro.Field("id").String()).To(Equal("dex-client-opendistro@test"))
 			Expect(clientOpendistro.Field("secret").String()).To(Equal("test"))
 			Expect(clientOpendistro.Field("redirectURIs").String()).To(MatchJSON(`["https://opendistro.example.com/callback"]`))
+			Expect(hec.KubernetesResource("Secret", "test", "dex-client-opendistro").Exists()).To(BeTrue())
+
+			clientOpendistroLegacy := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "m5zgcztbnzq4x4u44scceizfyyy")
+			Expect(clientOpendistroLegacy.Exists()).To(BeTrue())
+			Expect(clientOpendistroLegacy.Field("id").String()).To(Equal("dex-client-opendistro:test"))
+			Expect(clientOpendistroLegacy.Field("secret").String()).To(Equal("test"))
+			Expect(clientOpendistroLegacy.Field("redirectURIs").String()).To(MatchJSON(`["https://opendistro.example.com/callback"]`))
 			Expect(hec.KubernetesResource("Secret", "test", "dex-client-opendistro").Exists()).To(BeTrue())
 		})
 	})
