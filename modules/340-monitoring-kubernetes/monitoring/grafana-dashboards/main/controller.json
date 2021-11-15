@@ -793,7 +793,7 @@
         "thresholds": [
           {
             "color": "#99440a",
-            "tooltip": "Some container restart",
+            "tooltip": "Some container is not running",
             "value": "5"
           },
           {
