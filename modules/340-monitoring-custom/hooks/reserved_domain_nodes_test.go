@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -83,18 +85,15 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, labels and taints should be selected", func() {
+		It("Hook must not fail, Only expire metrics should be sent", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Array()).Should(HaveLen(1))
-			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult").String()).To(MatchJSON(`
-{
-  "name": "system",
-  "usedLabelsAndTaints": [
-	"system"
-  ]
-}
-`))
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(1))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
 		})
 	})
 
@@ -104,18 +103,26 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, labels should be selected", func() {
+		It("Hook must not fail, should get 2 metrics - expire and about stateful node", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Array()).Should(HaveLen(1))
-			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult").String()).To(MatchJSON(`
-{
-  "name": "stateful",
-  "usedLabelsAndTaints": [
-	"stateful"
-  ]
-}
-`))
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(2))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
+
+			// second is metrics
+			expectedMetric := operation.MetricOperation{
+				Name:   "reserved_domain_nodes",
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "stateful",
+				},
+			}
+			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))
 		})
 	})
 
@@ -125,18 +132,26 @@ spec:
 			f.RunHook()
 		})
 
-		It("Hook must not fail, taints should be selected", func() {
+		It("Hook must not fail, should get 2 metrics - expire and about database node", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.BindingContexts.Array()).Should(HaveLen(1))
-			Expect(f.BindingContexts.Get("0.snapshots.nodes.0.filterResult").String()).To(MatchJSON(`
-{
-  "name": "database",
-  "usedLabelsAndTaints": [
-	"database"
-  ]
-}
-`))
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(2))
+
+			// first is expiration
+			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Action: "expire",
+			}))
+
+			// second is metrics
+			expectedMetric := operation.MetricOperation{
+				Name:   "reserved_domain_nodes",
+				Action: "set",
+				Value:  pointer.Float64Ptr(1.0),
+				Labels: map[string]string{
+					"name": "database",
+				},
+			}
+			Expect(ops[1]).To(BeEquivalentTo(expectedMetric))
 		})
 	})
 
