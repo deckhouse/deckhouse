@@ -361,12 +361,15 @@ func GetMasterHostsIPs() ([]string, error) {
 
 func SaveBastionHostToCache(host string) {
 	if err := cache.Global().Save(BastionHostCacheKey, []byte(host)); err != nil {
-		log.DebugF("Cannot save ssh hosts %v", err)
+		log.ErrorF("Cannot save ssh hosts: %v\n", err)
 	}
 }
 
 func GetBastionHostFromCache() string {
-	host := cache.Global().Load(BastionHostCacheKey)
+	host, err := cache.Global().Load(BastionHostCacheKey)
+	if err != nil {
+		log.ErrorF("Cannot load bastion host: %v", err)
+	}
 	return string(host)
 }
 

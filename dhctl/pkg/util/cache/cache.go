@@ -73,12 +73,12 @@ func (s *StateCache) SaveStruct(name string, v interface{}) error {
 }
 
 // InCache checks is file in cache or not
-func (s *StateCache) InCache(name string) bool {
+func (s *StateCache) InCache(name string) (bool, error) {
 	info, err := os.Stat(s.GetPath(name))
 	if os.IsNotExist(err) {
-		return false
+		return false, nil
 	}
-	return !info.IsDir()
+	return !info.IsDir(), nil
 }
 
 func (s *StateCache) Clean() {
@@ -125,24 +125,21 @@ func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
 }
 
 func (s *StateCache) Delete(name string) {
-	if s.InCache(name) {
+	ok, _ := s.InCache(name)
+	if ok {
 		_ = os.Remove(s.GetPath(name))
 	}
 }
 
-func (s *StateCache) Load(name string) []byte {
-	content, err := ioutil.ReadFile(s.GetPath(name))
-	if err != nil {
-		log.ErrorLn(err.Error())
-	}
-	return content
+func (s *StateCache) Load(name string) ([]byte, error) {
+	return ioutil.ReadFile(s.GetPath(name))
 }
 
 // LoadStruct loads go struct from the cache
 func (s *StateCache) LoadStruct(name string, v interface{}) error {
-	d := s.Load(name)
-	if d == nil {
-		return fmt.Errorf("can't load struct")
+	d, err := s.Load(name)
+	if err != nil {
+		return fmt.Errorf("can't load struct for key %s: %v", name, err)
 	}
 
 	return gob.NewDecoder(bytes.NewBuffer(d)).Decode(v)
@@ -172,16 +169,22 @@ func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
 	return nil
 }
 
+func (s *StateCache) NeedIntermediateSave() bool {
+	// cache use one file with terraform
+	return false
+}
+
 // DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
 func (d *DummyCache) Save(n string, c []byte) error            { return nil }
-func (d *DummyCache) InCache(n string) bool                    { return false }
+func (d *DummyCache) InCache(n string) (bool, error)           { return false, nil }
 func (d *DummyCache) Clean()                                   {}
 func (d *DummyCache) CleanWithExceptions(e ...string)          {}
 func (d *DummyCache) Delete(n string)                          {}
-func (d *DummyCache) Load(n string) []byte                     { return nil }
+func (d *DummyCache) Load(n string) ([]byte, error)            { return nil, nil }
 func (d *DummyCache) LoadStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) SaveStruct(n string, v interface{}) error { return nil }
 func (d *DummyCache) GetPath(n string) string                  { return "" }
 func (d *DummyCache) Iterate(func(string, []byte) error) error { return nil }
+func (d *DummyCache) NeedIntermediateSave() bool               { return false }

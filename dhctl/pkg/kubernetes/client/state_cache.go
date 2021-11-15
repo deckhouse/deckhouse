@@ -28,6 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	typedv1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	kuberetry "k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -39,7 +40,6 @@ func labelKey(name string) string {
 }
 
 type StateCache struct {
-	secret     *v1.Secret
 	secretsAPI typedv1core.SecretInterface
 
 	labels map[string]string
@@ -60,22 +60,26 @@ func NewK8sStateCache(client *KubernetesClient, namespace, secretName, tmpDir st
 }
 
 func (c *StateCache) Init() error {
-	secret, err := c.populateSecret()
-	if err != nil {
-		return err
-	}
-
-	if secret.Data == nil {
-		secret.Data = make(map[string][]byte)
-	}
-
-	c.secret = secret
-	return nil
+	_, err := c.populateSecret()
+	return err
 }
 
 func (c *StateCache) WithLabels(labels map[string]string) *StateCache {
 	c.labels = labels
 	return c
+}
+
+func (c *StateCache) getSecret() (*v1.Secret, error) {
+	s, err := c.populateSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	if s.Data == nil {
+		s.Data = make(map[string][]byte)
+	}
+
+	return s, nil
 }
 
 func (c *StateCache) populateSecret() (*v1.Secret, error) {
@@ -145,32 +149,47 @@ func (c *StateCache) populateSecret() (*v1.Secret, error) {
 	return secret, nil
 }
 
-func (c *StateCache) update(secretToUpdate *v1.Secret) error {
-	var lastErr error
-	err := retry.NewSilentLoop("save cache secret", 3, 2*time.Second).Run(func() error {
-		updatedSecret, err := c.secretsAPI.Update(context.TODO(), secretToUpdate, metav1.UpdateOptions{})
-		if err == nil {
-			c.secret = updatedSecret
-			return nil
+func (c *StateCache) update(action func(map[string][]byte) map[string][]byte) error {
+	return kuberetry.RetryOnConflict(kuberetry.DefaultBackoff, func() error {
+		s, err := c.getSecret()
+		if err != nil {
+			return err
 		}
 
-		lastErr = err
+		s.Data = action(s.Data)
+
+		_, err = c.secretsAPI.Update(context.TODO(), s, metav1.UpdateOptions{})
+
 		return err
 	})
+}
+
+func (c *StateCache) get(s *v1.Secret, key string) ([]byte, error) {
+	data := s.Data[key]
+	decodedData, err := base64.StdEncoding.DecodeString(string(data))
 	if err != nil {
-		return lastErr
+		log.ErrorF("Cannot decode cache %s val %v\n", key, err)
+		return nil, err
 	}
 
-	return nil
+	return decodedData, nil
+}
+
+func (c *StateCache) prepareContent(content []byte) []byte {
+	// todo remove encoding
+	buf := make([]byte, base64.StdEncoding.EncodedLen(len(content)))
+	base64.StdEncoding.Encode(buf, content)
+
+	return buf
 }
 
 func (c *StateCache) Save(name string, content []byte) error {
-	encContent := []byte(base64.StdEncoding.EncodeToString(content))
+	buf := c.prepareContent(content)
 
-	secretToUpdate := c.secret.DeepCopy()
-	secretToUpdate.Data[name] = encContent
-
-	return c.update(secretToUpdate)
+	return c.update(func(curState map[string][]byte) map[string][]byte {
+		curState[name] = buf
+		return curState
+	})
 }
 
 func (c *StateCache) SaveStruct(name string, v interface{}) error {
@@ -183,58 +202,55 @@ func (c *StateCache) SaveStruct(name string, v interface{}) error {
 	return c.Save(name, b.Bytes())
 }
 
-func (c *StateCache) Load(name string) []byte {
-	data, ok := c.secret.Data[name]
-	if !ok {
-		return nil
-	}
-
-	decodedData, err := base64.StdEncoding.DecodeString(string(data))
+func (c *StateCache) Load(name string) ([]byte, error) {
+	s, err := c.getSecret()
 	if err != nil {
-		log.ErrorF("Cannot decode cache %s val %v\n", name, err)
-		return nil
+		log.ErrorF("Cannot get secret %s val %v\n", name, err)
+		return nil, err
 	}
 
-	return decodedData
+	return c.get(s, name)
 }
 
 func (c *StateCache) LoadStruct(name string, v interface{}) error {
-	d := c.Load(name)
-	if d == nil {
-		return fmt.Errorf("can't load struct")
+	d, err := c.Load(name)
+	if err != nil {
+		return err
 	}
 
 	return gob.NewDecoder(bytes.NewBuffer(d)).Decode(v)
 }
 
 func (c *StateCache) Delete(name string) {
-	secretToUpdate := c.secret.DeepCopy()
-	delete(secretToUpdate.Data, name)
+	err := c.update(func(curState map[string][]byte) map[string][]byte {
+		delete(curState, name)
 
-	err := c.update(secretToUpdate)
+		return curState
+	})
+
 	if err != nil {
 		log.ErrorF("Cannot delete cache %s val %v\n", name, err)
 	}
 }
 
 func (c *StateCache) CleanWithExceptions(excludeKeys ...string) {
-	secretToUpdate := c.secret.DeepCopy()
-	newState := map[string][]byte{
-		state.TombstoneKey: []byte("yes"),
-	}
-
-	for _, k := range excludeKeys {
-		v, ok := secretToUpdate.Data[k]
-		if !ok {
-			continue
+	err := c.update(func(curState map[string][]byte) map[string][]byte {
+		newState := map[string][]byte{
+			state.TombstoneKey: c.prepareContent([]byte("yes")),
 		}
 
-		newState[k] = v
-	}
+		for _, k := range excludeKeys {
+			v, ok := curState[k]
+			if !ok {
+				continue
+			}
 
-	secretToUpdate.Data = newState
+			newState[k] = v
+		}
 
-	err := c.update(secretToUpdate)
+		return newState
+	})
+
 	if err != nil {
 		log.ErrorF("Cannot clean cache %v\n", err)
 	}
@@ -249,19 +265,31 @@ func (c *StateCache) GetPath(name string) string {
 }
 
 func (c *StateCache) Iterate(action func(string, []byte) error) error {
-	if len(c.secret.Data) == 0 {
+	s, err := c.getSecret()
+	if err != nil {
+		return err
+	}
+
+	data := s.Data
+
+	if len(data) == 0 {
 		return nil
 	}
 
 	keys := make([]string, 0)
-	for name := range c.secret.Data {
+	for name := range data {
 		keys = append(keys, name)
 	}
 
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		err := action(k, c.secret.Data[k])
+		d, err := c.get(s, k)
+		if err != nil {
+			return err
+		}
+
+		err = action(k, d)
 		if err != nil {
 			return err
 		}
@@ -270,7 +298,17 @@ func (c *StateCache) Iterate(action func(string, []byte) error) error {
 	return nil
 }
 
-func (c *StateCache) InCache(name string) bool {
-	_, ok := c.secret.Data[name]
-	return ok
+func (c *StateCache) InCache(name string) (bool, error) {
+	s, err := c.getSecret()
+	if err != nil {
+		return false, err
+	}
+	_, ok := s.Data[name]
+
+	return ok, nil
+}
+
+func (c *StateCache) NeedIntermediateSave() bool {
+	// cache store in k8s secret, need sync every intermediate states
+	return true
 }

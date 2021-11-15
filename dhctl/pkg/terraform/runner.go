@@ -26,13 +26,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -91,20 +90,33 @@ type Runner struct {
 	stopped bool
 }
 
-func NewRunner(provider, prefix, layout, step string) *Runner {
-	return &Runner{
+func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *Runner {
+	r := &Runner{
 		prefix:         prefix,
 		step:           step,
 		name:           step,
 		workingDir:     buildTerraformPath(provider, layout, step),
 		confirm:        input.NewConfirmation,
-		stateCache:     cache.Global(),
+		stateCache:     stateCache,
 		changeSettings: ChangeActionSettings{},
 	}
+
+	var destinations []SaverDestination
+	cacheDest := getCacheDestination(r)
+	if cacheDest != nil {
+		destinations = []SaverDestination{cacheDest}
+	}
+
+	r.stateSaver = NewStateSaver(destinations)
+	return r
 }
 
-func NewRunnerFromConfig(cfg *config.MetaConfig, step string) *Runner {
-	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step)
+func NewRunnerFromConfig(cfg *config.MetaConfig, step string, stateCache state.Cache) *Runner {
+	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step, stateCache)
+}
+
+func NewImmutableRunnerFromConfig(cfg *config.MetaConfig, step string) *Runner {
+	return NewRunner(cfg.ProviderName, cfg.ClusterPrefix, cfg.Layout, step, cache.Dummy())
 }
 
 func (r *Runner) WithCache(cache state.Cache) *Runner {
@@ -181,8 +193,10 @@ func (r *Runner) WithSkipChangesOnDeny(flag bool) *Runner {
 	return r
 }
 
-func (r *Runner) WithIntermediateStateSaver(saver *StateSaver) *Runner {
-	r.stateSaver = saver
+// WithAdditionalStateSaverDestination
+// by default we use intermediate save state to cache destination
+func (r *Runner) WithAdditionalStateSaverDestination(destinations ...SaverDestination) *Runner {
+	r.stateSaver.addDestinations(destinations...)
 	return r
 }
 
@@ -196,7 +210,12 @@ func (r *Runner) Init() error {
 		stateName := r.stateName()
 		r.statePath = r.stateCache.GetPath(stateName)
 
-		if r.stateCache.InCache(stateName) {
+		hasState, err := r.stateCache.InCache(stateName)
+		if err != nil {
+			return err
+		}
+
+		if hasState {
 			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
 			if !r.allowedCachedState {
 				var isConfirm bool
@@ -217,9 +236,13 @@ func (r *Runner) Init() error {
 				}
 			}
 
-			stateData := r.stateCache.Load(stateName)
+			stateData, err := r.stateCache.Load(stateName)
+			if err != nil {
+				return err
+			}
+
 			if len(stateData) > 0 {
-				err := ioutil.WriteFile(r.statePath, stateData, 0o600)
+				err := fs.WriteContentIfNeed(r.statePath, stateData)
 				if err != nil {
 					err := fmt.Errorf("can't write terraform state for runner %s: %s", r.step, err)
 					log.ErrorLn(err)
@@ -281,15 +304,11 @@ func (r *Runner) Apply() error {
 	}
 
 	return log.Process("default", "terraform apply ...", func() error {
-		var err error
-
-		if r.stateSaver != nil {
-			err = r.stateSaver.Start(r)
-			if err != nil {
-				return err
-			}
-			defer r.stateSaver.Stop()
+		err := r.stateSaver.Start(r)
+		if err != nil {
+			return err
 		}
+		defer r.stateSaver.Stop()
 
 		skip, err := r.handleChanges()
 		if err != nil {
@@ -318,27 +337,9 @@ func (r *Runner) Apply() error {
 			)
 		}
 
-		var allErrs *multierror.Error
-
 		_, err = r.execTerraform(args...)
-		if err != nil {
-			allErrs = multierror.Append(allErrs, err)
-			// yes, no return, we need to add state to cache anyway
-		}
 
-		data, err := r.getState()
-		if err != nil {
-			allErrs = multierror.Append(allErrs, err)
-			// don't get state - return all errors
-			return allErrs.ErrorOrNil()
-		}
-
-		err = r.stateCache.Save(r.stateName(), data)
-		if err != nil {
-			allErrs = multierror.Append(allErrs, err)
-		}
-
-		return allErrs.ErrorOrNil()
+		return err
 	})
 }
 
@@ -434,15 +435,11 @@ func (r *Runner) Destroy() error {
 	// TODO: why is this line here?
 	// r.stopped = true
 	return log.Process("default", "terraform destroy ...", func() error {
-		var err error
-
-		if r.stateSaver != nil {
-			err = r.stateSaver.Start(r)
-			if err != nil {
-				return err
-			}
-			defer r.stateSaver.Stop()
+		err := r.stateSaver.Start(r)
+		if err != nil {
+			return err
 		}
+		defer r.stateSaver.Stop()
 
 		args := []string{
 			"destroy",
@@ -507,7 +504,7 @@ func (r *Runner) Stop() {
 		time.Sleep(50 * time.Millisecond)
 	}
 	// Wait until the StateSaver saves the Secret for Apply and Destroy commands.
-	if r.stateSaver != nil && r.stateSaver.IsStarted() {
+	if r.stateSaver.IsStarted() {
 		<-r.stateSaver.DoneCh()
 	}
 }

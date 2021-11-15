@@ -75,7 +75,12 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 }
 
 func (g *DeckhouseDestroyer) DeleteResources() error {
-	if g.state.IsResourcesDestroyed() {
+	resourcesDestroyed, err := g.state.IsResourcesDestroyed()
+	if err != nil {
+		return err
+	}
+
+	if resourcesDestroyed {
 		log.WarnLn("Resources was destroyed. Skip it")
 		return nil
 	}

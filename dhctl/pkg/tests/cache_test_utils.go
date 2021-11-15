@@ -35,22 +35,42 @@ func assertCacheKeys(t *testing.T, stateCache state.Cache, expectedKeys []string
 func RunStateCacheTests(t *testing.T, stateCache state.Cache) {
 	var err error
 
-	err = stateCache.Save("test", []byte(`test-1`))
+	type testCase struct {
+		key   string
+		value []byte
+	}
+
+	simpleKeys := []testCase{
+		{key: "test", value: []byte(`test-1`)},
+		{key: "test.tfstate", value: []byte(`test-2`)},
+		{key: "test2.tfstate", value: []byte(`test-3`)},
+	}
+
+	for _, k := range simpleKeys {
+		err = stateCache.Save(k.key, k.value)
+		require.NoError(t, err)
+
+		ok, err := stateCache.InCache(k.key)
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		content, err := stateCache.Load(k.key)
+
+		require.NoError(t, err)
+		require.Equal(t, k.value, content)
+	}
+
+	var iterateValues []testCase
+	err = stateCache.Iterate(func(k string, v []byte) error {
+		iterateValues = append(iterateValues, testCase{
+			key:   k,
+			value: v,
+		})
+
+		return nil
+	})
 	require.NoError(t, err)
-
-	err = stateCache.Save("test.tfstate", []byte(`test-2`))
-	require.NoError(t, err)
-
-	err = stateCache.Save("test2.tfstate", []byte(`test-3`))
-	require.NoError(t, err)
-
-	require.Equal(t, true, stateCache.InCache("test"))
-	require.Equal(t, true, stateCache.InCache("test.tfstate"))
-	require.Equal(t, true, stateCache.InCache("test2.tfstate"))
-
-	require.Equal(t, []byte("test-1"), stateCache.Load("test"))
-	require.Equal(t, []byte("test-2"), stateCache.Load("test.tfstate"))
-	require.Equal(t, []byte("test-3"), stateCache.Load("test2.tfstate"))
+	require.Equal(t, iterateValues, simpleKeys)
 
 	structForTest := map[string]int{"abc": 10, "def": 1000, "xyz": 10}
 	err = stateCache.SaveStruct("test-struct", structForTest)

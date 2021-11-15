@@ -38,9 +38,8 @@ func (r *BaseInfraTerraformController) Destroy(clusterState []byte, sanityCheck 
 		return err
 	}
 
-	baseRunner := terraform.NewRunnerFromConfig(r.metaConfig, "base-infrastructure").
+	baseRunner := terraform.NewRunnerFromConfig(r.metaConfig, "base-infrastructure", r.stateCache).
 		WithVariables(r.metaConfig.MarshalConfig()).
-		WithCache(r.stateCache).
 		WithAllowedCachedState(true).
 		WithAutoApprove(sanityCheck)
 	tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)

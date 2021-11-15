@@ -75,10 +75,9 @@ func (r *NodeGroupTerraformController) DestroyNode(name string, nodeState []byte
 	}
 
 	nodeIndex, _ := getIndexFromNodeName(name)
-	nodeRunner := terraform.NewRunnerFromConfig(r.metaConfig, step).
+	nodeRunner := terraform.NewRunnerFromConfig(r.metaConfig, step, r.stateCache).
 		WithVariables(r.metaConfig.NodeGroupConfig(r.nodeGroupName, nodeIndex, "")).
 		WithName(name).
-		WithCache(r.stateCache).
 		WithAllowedCachedState(true).
 		WithAutoApprove(autoApprove)
 
