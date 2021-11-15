@@ -1,6 +1,6 @@
 global:
   scrape_interval: 5m
-  scrape_timeout: 4m
+  scrape_timeout: 3m
   evaluation_interval: 5m
 {{- if (hasKey .Values.prometheus.internal.alertmanagers "main") }}
 alerting:
