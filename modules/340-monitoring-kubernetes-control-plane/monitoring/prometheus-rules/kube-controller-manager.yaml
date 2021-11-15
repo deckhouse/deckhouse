@@ -7,7 +7,7 @@
       severity: critical
     annotations:
       plk_protocol_version: "1"
-      description: There is no running K8S controller manager. Deployments and replication
+      description: There is no running kube-controller-manager. Deployments and replication
         controllers are not making progress.
       runbook: https://coreos.com/tectonic/docs/latest/troubleshooting/controller-recovery.html#recovering-a-controller-manager
       summary: Controller manager is down
