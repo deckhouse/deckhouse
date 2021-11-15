@@ -6,18 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package template_tests
 
 import (
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
 
 func checkImageAvailabilityObjects(hec *Config, exist bool) {
 	matcher := BeFalse()
@@ -48,18 +41,22 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 	Context("With imageAvailability.exporterEnabled", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+			hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 			hec.HelmRender()
 		})
 		It("Should add desired objects", func() {
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 			checkImageAvailabilityObjects(hec, true)
 		})
 	})
 	Context("Without imageAvailability.exporterEnabled", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", false)
+			hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
 			hec.HelmRender()
 		})
 		It("Should not deploy desired objects", func() {
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 			checkImageAvailabilityObjects(hec, false)
 		})
 	})

@@ -1,0 +1,71 @@
+type: object
+properties:
+  imageAvailability:
+    type: object
+    default: {}
+    description: |
+      Settings for monitoring the availability of images in the cluster.
+    properties:
+      exporterEnabled:
+        type: boolean
+        default: true
+        description: |
+          Enables imageAvailabilityExporter.
+      skipRegistryCertVerification:
+        type: boolean
+        default: false
+        description: |
+          Whether to skip the verification of the container registry certificate.
+      ignoredImages:
+        type: array
+        x-examples:
+        - ["alpine:3.10", "alpine:3.2"]
+        description: |
+          A list of images to ignore when checking the presence in the registry, e.g., `alpine:3.12` or `quay.io/test/test:v1.1`.
+        items:
+          type: string
+  events:
+    type: object
+    default: {}
+    description: |
+      Settings for monitoring the events in the Kubernetes cluster.
+    properties:
+      exporterEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enables eventsExporter.
+      severityLevel:
+        type: string
+        description: |
+          Whether to expose only crutial events.
+        enum: ["All", "OnlyWarnings"]
+        default: "OnlyWarnings"
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
