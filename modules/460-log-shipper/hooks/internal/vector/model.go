@@ -192,7 +192,7 @@ type elasticsearchDestination struct {
 
 	BulkAction string `json:"bulk_action,omitempty"`
 
-	Mode string `json:"mode"`
+	Mode string `json:"mode,omitempty"`
 }
 
 type logstashDestination struct {

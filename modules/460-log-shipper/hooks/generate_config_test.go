@@ -267,8 +267,7 @@ spec:
 					"compression": "gzip",
 					"index": "logs-%F",
 					"pipeline": "testpipe",
-					"bulk_action": "index",
-					"mode": "normal"
+					"bulk_action": "index"
 				  }
 				}
 			  }
@@ -751,8 +750,7 @@ spec:
 					},
 					"compression": "gzip",
 					"index": "logs-%F",
-					"bulk_action": "index",
-					"mode": "normal"
+					"bulk_action": "index"
 				  },
 				  "d8_cluster_sink_test-logstash-dest": {
 					"type": "socket",
@@ -1018,8 +1016,7 @@ spec:
 					},
 					"compression": "gzip",
 					"index": "logs-%F",
-					"bulk_action": "index",
-					"mode": "normal"
+					"bulk_action": "index"
 				  }
 				}
 			  }
@@ -1378,8 +1375,7 @@ spec:
 				  },
 				  "compression": "gzip",
 				  "index": "logs-%F",
-				  "bulk_action": "index",
-				  "mode": "normal"
+				  "bulk_action": "index"
 				}
 			  }
 			}

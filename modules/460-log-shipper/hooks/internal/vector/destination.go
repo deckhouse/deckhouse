@@ -261,7 +261,8 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		Index:                     spec.Index,
 		Pipeline:                  spec.Pipeline,
 		BulkAction:                "index",
-		Mode:                      "normal",
+		// We do not neet this field for vector 0.14
+		//Mode:                      "normal",
 	}
 }
 
