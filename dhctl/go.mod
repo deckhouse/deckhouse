@@ -10,9 +10,9 @@ require (
 	github.com/flant/kube-client v0.0.6
 	github.com/flant/logboek v0.3.4
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/go-openapi/spec v0.19.3
-	github.com/go-openapi/strfmt v0.19.3
-	github.com/go-openapi/validate v0.19.7
+	github.com/go-openapi/spec v0.19.8
+	github.com/go-openapi/strfmt v0.19.5
+	github.com/go-openapi/validate v0.19.12
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
@@ -26,7 +26,7 @@ require (
 	golang.org/x/sys v0.0.0-20210414055047-fe65e336abe0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/satori/go.uuid.v1 v1.2.0
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.19.11
 	k8s.io/apiextensions-apiserver v0.19.11
@@ -36,8 +36,8 @@ require (
 	sigs.k8s.io/yaml v1.2.0
 )
 
-// not working, need to migrate to github.com/alecthomas/kingpin in shell-operator and others
-//replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin v1.3.8-0.20200415155012-da8c62ac9989
+// Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
+replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
 
 // replace with master branch to work with single dash
 replace gopkg.in/alecthomas/kingpin.v2 => github.com/alecthomas/kingpin v1.3.8-0.20200323085623-b6657d9477a6
