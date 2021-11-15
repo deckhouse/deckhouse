@@ -69,8 +69,53 @@ func (c *Config) IsRegistryAccessRequired() bool {
 	return c.Registry.DockerCfg != ""
 }
 
-func deckhouseDeploymentFromConfig(cfg *Config) *appsv1.Deployment {
-	return manifests.DeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
+func prepareDeckhouseDeploymentForUpdate(kubeCl *client.KubernetesClient, cfg *Config, manifestForUpdate *appsv1.Deployment) (*appsv1.Deployment, error) {
+	resDeployment := manifestForUpdate
+	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).Run(func() error {
+		currentManifestInCluster, err := kubeCl.AppsV1().Deployments(manifestForUpdate.GetNamespace()).Get(context.TODO(), manifestForUpdate.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		// Parametrize existing Deployment manifest to prevent redundant restarting
+		// of deckhouse's Pod if params are not changed between dhctl executions.
+		// deployTime is a 'write once' parameter, so it is preserved for this check.
+		//
+		// It helps to reduce wait time on bootstrap process restarting,
+		// and prevents a race condition when deckhouse's Pod is scheduled
+		// on the non-approved node, so the bootstrap process never finishes.
+		deployTime := manifests.GetDeckhouseDeployTime(currentManifestInCluster)
+		params := deckhouseDeploymentParamsFromCfg(cfg)
+		params.DeployTime = deployTime
+		resDeployment = manifests.ParametrizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
+
+		return nil
+	})
+
+	return resDeployment, err
+}
+
+func controllerDeploymentTask(kubeCl *client.KubernetesClient, cfg *Config) actions.ManifestTask {
+	return actions.ManifestTask{
+		Name: `Deployment "deckhouse"`,
+		Manifest: func() interface{} {
+			return CreateDeckhouseDeploymentManifest(cfg)
+		},
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), metav1.CreateOptions{})
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			preparedManifest, err := prepareDeckhouseDeploymentForUpdate(kubeCl, cfg, manifest.(*appsv1.Deployment))
+			if err != nil {
+				return err
+			}
+
+			_, err = kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), preparedManifest, metav1.UpdateOptions{})
+
+			return err
+		},
+	}
 }
 
 func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) error {
@@ -291,20 +336,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *Config) erro
 		})
 	}
 
-	tasks = append(tasks, actions.ManifestTask{
-		Name: `Deployment "deckhouse"`,
-		Manifest: func() interface{} {
-			return deckhouseDeploymentFromConfig(cfg)
-		},
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), metav1.CreateOptions{})
-			return err
-		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), manifest.(*appsv1.Deployment), metav1.UpdateOptions{})
-			return err
-		},
-	})
+	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
 	return log.Process("default", "Create Manifests", func() error {
 		for _, task := range tasks {
@@ -346,26 +378,24 @@ func WaitForReadiness(kubeCl *client.KubernetesClient) error {
 }
 
 func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *Config) error {
-	task := actions.ManifestTask{
-		Name: `Deployment "deckhouse"`,
-		Manifest: func() interface{} {
-			return manifests.DeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
-		},
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(context.TODO(), manifest.(*appsv1.Deployment), metav1.CreateOptions{})
-			return err
-		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.AppsV1().Deployments("d8-system").Update(context.TODO(), manifest.(*appsv1.Deployment), metav1.UpdateOptions{})
-			return err
-		},
-	}
+	task := controllerDeploymentTask(kubeCl, cfg)
 
 	return log.Process("default", "Create Deployment", task.CreateOrUpdate)
 }
 
+func deckhouseDeploymentParamsFromCfg(cfg *Config) manifests.DeckhouseDeploymentParams {
+	return manifests.DeckhouseDeploymentParams{
+		Registry:         cfg.GetImage(),
+		LogLevel:         cfg.LogLevel,
+		Bundle:           cfg.Bundle,
+		IsSecureRegistry: cfg.IsRegistryAccessRequired(),
+	}
+}
+
 func CreateDeckhouseDeploymentManifest(cfg *Config) *appsv1.Deployment {
-	return manifests.DeckhouseDeployment(cfg.GetImage(), cfg.LogLevel, cfg.Bundle, cfg.IsRegistryAccessRequired())
+	params := deckhouseDeploymentParamsFromCfg(cfg)
+
+	return manifests.DeckhouseDeployment(params)
 }
 
 func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {

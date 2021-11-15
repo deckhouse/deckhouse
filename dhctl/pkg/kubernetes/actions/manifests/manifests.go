@@ -36,10 +36,115 @@ import (
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
 	deckhouseRegistryVolumeName = "registrysecret"
+
+	deployTimeEnvVarName   = "KUBERNETES_DEPLOYED"
+	deployTimeEnvVarFormat = time.RFC3339
 )
 
+type DeckhouseDeploymentParams struct {
+	Bundle           string
+	Registry         string
+	LogLevel         string
+	DeployTime       time.Time
+	IsSecureRegistry bool
+}
+
+func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
+	deployTime := time.Time{}
+	for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if env.Name != deployTimeEnvVarName {
+			continue
+		}
+
+		timeAsString := deployment.Spec.Template.Spec.Containers[0].Env[i].Value
+		t, err := time.Parse(deployTimeEnvVarFormat, timeAsString)
+		if err == nil {
+			deployTime = t
+		}
+
+		break
+	}
+
+	return deployTime
+}
+
+func ParametrizeDeckhouseDeployment(deployment *appsv1.Deployment, params DeckhouseDeploymentParams) *appsv1.Deployment {
+	deployment.Spec.Template.Spec.Containers[0].Image = params.Registry
+
+	deployTime := params.DeployTime
+	if deployTime.IsZero() {
+		deployTime = time.Now()
+	}
+
+	for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+		switch env.Name {
+		case "LOG_LEVEL":
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = params.LogLevel
+		case "DECKHOUSE_BUNDLE":
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = params.Bundle
+		case deployTimeEnvVarName:
+			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = deployTime.Format(deployTimeEnvVarFormat)
+		}
+	}
+
+	if params.IsSecureRegistry {
+		deployment.Spec.Template.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+			{Name: deckhouseRegistrySecretName},
+		}
+
+		// set volume
+
+		volumeToSet := apiv1.Volume{
+			Name: deckhouseRegistryVolumeName,
+			VolumeSource: apiv1.VolumeSource{
+				Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
+			},
+		}
+
+		volumeIndx := -1
+
+		for i := range deployment.Spec.Template.Spec.Volumes {
+			if deployment.Spec.Template.Spec.Volumes[i].Name == deckhouseRegistryVolumeName {
+				volumeIndx = i
+				break
+			}
+		}
+
+		if volumeIndx < 0 {
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, volumeToSet)
+		} else {
+			deployment.Spec.Template.Spec.Volumes[volumeIndx] = volumeToSet
+		}
+
+		// set volume mount
+
+		volumeMountToSet := apiv1.VolumeMount{
+			Name:      deckhouseRegistryVolumeName,
+			MountPath: "/etc/registrysecret",
+			ReadOnly:  true,
+		}
+
+		volumeMountIndx := -1
+
+		for i := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+			if deployment.Spec.Template.Spec.Containers[0].VolumeMounts[i].Name == deckhouseRegistryVolumeName {
+				volumeMountIndx = i
+				break
+			}
+		}
+
+		if volumeMountIndx < 0 {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMountToSet)
+		} else {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts[volumeMountIndx] = volumeMountToSet
+		}
+	}
+
+	return deployment
+}
+
 //nolint:funlen
-func DeckhouseDeployment(registry, logLevel, bundle string, isSecureRegistry bool) *appsv1.Deployment {
+func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseDeployment := `
 kind: Deployment
 apiVersion: apps/v1
@@ -105,6 +210,11 @@ spec:
           value: "yes"
         - name: KUBERNETES_DEPLOYED
           value: PLACEHOLDER
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /.kube
+          name: kube
         ports:
         - containerPort: 9650
           name: self
@@ -126,48 +236,22 @@ spec:
         node-role.kubernetes.io/master: ""
       tolerations:
       - operator: Exists
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - emptyDir:
+          medium: Memory
+        name: kube
 `
 
 	var deployment appsv1.Deployment
-	_ = yaml.Unmarshal([]byte(deckhouseDeployment), &deployment)
-
-	deployment.Spec.Template.Spec.Containers[0].Image = registry
-
-	for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
-		switch env.Name {
-		case "LOG_LEVEL":
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = logLevel
-		case "DECKHOUSE_BUNDLE":
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = bundle
-		case "KUBERNETES_DEPLOYED":
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = time.Now().Format(time.RFC3339)
-		}
+	err := yaml.Unmarshal([]byte(deckhouseDeployment), &deployment)
+	if err != nil {
+		panic(err)
 	}
 
-	if isSecureRegistry {
-		deployment.Spec.Template.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
-			{Name: deckhouseRegistrySecretName},
-		}
-
-		deployment.Spec.Template.Spec.Volumes = []apiv1.Volume{
-			{
-				Name: deckhouseRegistryVolumeName,
-				VolumeSource: apiv1.VolumeSource{
-					Secret: &apiv1.SecretVolumeSource{SecretName: deckhouseRegistrySecretName},
-				},
-			},
-		}
-
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []apiv1.VolumeMount{
-			{
-				Name:      deckhouseRegistryVolumeName,
-				MountPath: "/etc/registrysecret",
-				ReadOnly:  true,
-			},
-		}
-	}
-
-	return &deployment
+	return ParametrizeDeckhouseDeployment(&deployment, params)
 }
 
 func DeckhouseNamespace(name string) *apiv1.Namespace {
