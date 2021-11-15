@@ -76,7 +76,8 @@ spec:
 
 				Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
-  "id": "dex-client-opendistro:test",
+  "id": "dex-client-opendistro@test",
+  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -90,7 +91,8 @@ spec:
     ],
     "trustedPeers": ["opendistro-sibling"]
   },
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "legacyID": "dex-client-opendistro:test",
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "clientSecret": "test"
 }]`))
 			})
@@ -139,12 +141,18 @@ spec:
 
 					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
-  "id": "dex-client-opendistro:test",
+  "id": "dex-client-opendistro@test",
+  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
   "name": "opendistro",
   "namespace": "test",
-  "spec": {"redirectURIs": ["https://opendistro.example.com/callback"]},
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
-  "clientSecret": "test"
+  "spec": {
+    "redirectURIs": [
+      "https://opendistro.example.com/callback"
+    ]
+  },
+  "clientSecret": "test",
+  "legacyID": "dex-client-opendistro:test",
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji"
 }]`))
 				})
 			})
@@ -200,19 +208,23 @@ spec:
 		It("Should synchronize objects and fill internal values", func() {
 			Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchUnorderedJSON(`
 [{
-  "id": "dex-client-grafana:test-grafana",
+  "id": "dex-client-grafana@test-grafana",
+  "encodedID": "mrsxqlldnruwk3tufvtxeylgmfxgcqdumvzxillhojqwmylomhf7fhheqqrcgji",
+  "legacyID": "dex-client-grafana:test-grafana",
+  "legacyEncodedID": "mrsxqlldnruwk3tufvtxeylgmfxgcotumvzxillhojqwmylomhf7fhheqqrcgji",
   "name": "grafana",
   "namespace": "test-grafana",
   "spec": {"redirectURIs": ["https://grafana.example.com/callback"]},
-  "encodedID": "mrsxqlldnruwk3tufvtxeylgmfxgcotumvzxillhojqwmylomhf7fhheqqrcgji",
   "clientSecret": "test"
 },
 {
-  "id": "dex-client-opendistro:test",
+  "id": "dex-client-opendistro@test",
+  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "legacyID": "dex-client-opendistro:test",
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "name": "opendistro",
   "namespace": "test",
   "spec": {"redirectURIs": ["https://opendistro.example.com/callback"]},
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "clientSecret": "test"
 }]`))
 		})

@@ -30,13 +30,19 @@ import (
 )
 
 type DexClient struct {
-	ID        string                 `json:"id"`
+	ID        string `json:"id"`
+	EncodedID string `json:"encodedID"`
+
 	Name      string                 `json:"name"`
 	Namespace string                 `json:"namespace"`
 	Spec      map[string]interface{} `json:"spec"`
 
-	Secret    string `json:"clientSecret"`
-	EncodedID string `json:"encodedID"`
+	Secret string `json:"clientSecret"`
+
+	// LegacyID and LegacyEncodedID is formatted with a colons delimiter which is impossible to use as a
+	//   basic auth credentials part
+	LegacyID        string `json:"legacyID"`
+	LegacyEncodedID string `json:"legacyEncodedID"`
 }
 
 type DexClientSecret struct {
@@ -58,13 +64,17 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	name := obj.GetName()
 	namespace := obj.GetNamespace()
 
-	id := fmt.Sprintf("dex-client-%s:%s", name, namespace)
+	id := fmt.Sprintf("dex-client-%s@%s", name, namespace)
+	legacyID := fmt.Sprintf("dex-client-%s:%s", name, namespace)
+
 	return DexClient{
-		ID:        id,
-		EncodedID: encoding.ToFnvLikeDex(id),
-		Name:      name,
-		Namespace: namespace,
-		Spec:      spec,
+		ID:              id,
+		LegacyID:        legacyID,
+		EncodedID:       encoding.ToFnvLikeDex(id),
+		LegacyEncodedID: encoding.ToFnvLikeDex(legacyID),
+		Name:            name,
+		Namespace:       namespace,
+		Spec:            spec,
 	}, nil
 }
 
@@ -77,7 +87,7 @@ func applyDexClientSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	name := obj.GetName()
 	namespace := obj.GetNamespace()
 
-	id := fmt.Sprintf("%s:%s", name, namespace)
+	id := fmt.Sprintf("%s@%s", name, namespace)
 	return DexClientSecret{
 		ID:        id,
 		Name:      name,
