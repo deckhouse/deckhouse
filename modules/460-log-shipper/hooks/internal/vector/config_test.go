@@ -333,7 +333,6 @@ func TestConfig_3(t *testing.T) {
       },
 	  "compression": "gzip",
     "bulk_action": "index",
-    "mode": "normal",
     "index": "{{ kubernetes.namespace }}-%F",
     "pipeline": "test-pipe"
     }
