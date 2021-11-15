@@ -143,6 +143,10 @@ function main() {
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
     get_bundle bashible "${BUNDLE}.${NODE_GROUP}" "${MAX_RETRIES}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
+      >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
+      exit 1
+    fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
     export BASHIBLE_SKIP_UPDATE=yes
     $BOOTSTRAP_DIR/bashible-new.sh --no-lock
