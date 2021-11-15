@@ -17,7 +17,7 @@ limitations under the License.
 /*
 
 User-stories:
-1. There is deployment with labels k8s-app=kube-dns in kube-system namespace, hook must store its name to `global.discovery.clusterDNSImplementation`.
+1. There is deployment with labels k8s-app=kube-dns or k8s-app=coredns in kube-system namespace, hook must store its name to `global.discovery.clusterDNSImplementation`.
 
 */
 
@@ -81,6 +81,31 @@ spec:
         name: kube-dns
         resources: {}
 `
+
+		kubeDNSMCSDeployment = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: coredns
+  name: coredns
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: coredns
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        k8s-app: coredns
+    spec:
+      containers:
+      - image: coredns
+        name: coredns
+        resources: {}
+`
 	)
 	f := HookExecutionConfigInit(
 		`{"monitoringKubernetes":{"internal":{}},"global":{"enabledModules":[]}}`,
@@ -115,6 +140,18 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(kubeDNSDeployment))
 			f.ValuesSetFromYaml("global.enabledModules", []byte(`["kube-dns"]`))
+			f.RunHook()
+		})
+
+		It("monitoringKubernetes.internal.clusterDNSImplementation must be 'coredns'", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("monitoringKubernetes.internal.clusterDNSImplementation").String()).To(Equal("coredns"))
+		})
+	})
+
+	Context("KubeDNS module disabled. Managed MCS cluster with stock deployment", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(kubeDNSMCSDeployment))
 			f.RunHook()
 		})
 
