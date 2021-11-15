@@ -16,6 +16,8 @@ package terraform
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/fsnotify/fsnotify"
 
@@ -24,17 +26,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-type StateSaver struct {
-	runner      *Runner
-	saveStateFn func(outputs *PipelineOutputs) error
-	watcher     *fsnotify.Watcher
-	doneCh      chan struct{}
-	stopped     bool
+type SaverDestination interface {
+	SaveState(outputs *PipelineOutputs) error
 }
 
-func NewStateSaver(saveStateFn func(outputs *PipelineOutputs) error) *StateSaver {
+type StateSaver struct {
+	saversLock         sync.RWMutex
+	saversDestinations []SaverDestination
+
+	runner  *Runner
+	watcher *fsnotify.Watcher
+	doneCh  chan struct{}
+	stopped bool
+}
+
+func NewStateSaver(destinations []SaverDestination) *StateSaver {
 	return &StateSaver{
-		saveStateFn: saveStateFn,
+		saversDestinations: destinations,
 	}
 }
 
@@ -44,9 +52,14 @@ func (s *StateSaver) Start(runner *Runner) error {
 	if s.stopped {
 		return nil
 	}
-	if s.saveStateFn == nil {
+
+	s.saversLock.RLock()
+	defer s.saversLock.RUnlock()
+
+	if len(s.saversDestinations) == 0 {
 		return nil
 	}
+
 	if s.watcher != nil {
 		return nil
 	}
@@ -72,9 +85,16 @@ func (s *StateSaver) Start(runner *Runner) error {
 
 // Stop is blocked until doneCh is closed.
 func (s *StateSaver) Stop() {
+	if s.stopped {
+		return
+	}
+
 	s.stopped = true
 	if s.watcher != nil {
-		s.watcher.Close()
+		err := s.watcher.Close()
+		if err != nil {
+			log.DebugF("State file watcher did not close: %v \n", err)
+		}
 		// Wait until saves are completed.
 		<-s.doneCh
 	}
@@ -89,6 +109,9 @@ func (s *StateSaver) DoneCh() chan struct{} {
 }
 
 func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
+	s.saversLock.RLock()
+	defer s.saversLock.RUnlock()
+
 	if s.runner == nil {
 		log.ErrorF("Possible bug!!! The state watcher got fs event while not started!")
 	}
@@ -100,7 +123,9 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	if app.IsDebug {
 		fs.CreateFileBackup(event.Name)
 	}
-	if s.saveStateFn == nil {
+
+	if len(s.saversDestinations) == 0 {
+		log.DebugF("Not found state saversDestinations. Skip. %s\n", event.Name)
 		return
 	}
 
@@ -111,14 +136,65 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	}
 
 	log.DebugLn("Save intermediate state...")
+	wg := &sync.WaitGroup{}
+	hasError := int32(0)
+	for _, saver := range s.saversDestinations {
+		svr := saver
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-	err = s.saveStateFn(outputs)
-	if err != nil {
-		log.ErrorF("Save intermediate state: %v\n", err)
-		return
+			err = svr.SaveState(outputs)
+			if err != nil {
+				log.ErrorF("Save intermediate state error: %v\n", err)
+				atomic.StoreInt32(&hasError, 1)
+				return
+			}
+		}()
 	}
 
-	if s.stopped || s.runner.stopped {
-		log.InfoF("Terraform state is saved.\n")
+	wg.Wait()
+
+	if (s.stopped || s.runner.stopped) && hasError == 0 {
+		log.DebugF("Terraform state is saved.\n")
+	}
+}
+
+func (s *StateSaver) addDestinations(destinations ...SaverDestination) {
+	s.saversLock.Lock()
+	defer s.saversLock.Unlock()
+
+	s.saversDestinations = append(s.saversDestinations, destinations...)
+}
+
+var _ SaverDestination = &cacheDestination{}
+
+type cacheDestination struct {
+	runner *Runner
+}
+
+func (d *cacheDestination) SaveState(outputs *PipelineOutputs) error {
+	if len(outputs.TerraformState) == 0 {
+		log.DebugF("state is empty. Skip\n")
+		return nil
+	}
+	name := d.runner.stateName()
+	log.DebugF("Intermediate save state %s in cache...\n", name)
+	err := d.runner.stateCache.Save(name, outputs.TerraformState)
+	msg := fmt.Sprintf("Intermediate state %s in cache was saved\n", name)
+	if err != nil {
+		msg = fmt.Sprintf("Intermediate state %s in cache was not saved: %v\n", name, err)
+	}
+	log.DebugF(msg)
+	return err
+}
+
+func getCacheDestination(runner *Runner) *cacheDestination {
+	if !runner.stateCache.NeedIntermediateSave() {
+		return nil
+	}
+
+	return &cacheDestination{
+		runner: runner,
 	}
 }

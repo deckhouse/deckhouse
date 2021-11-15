@@ -203,20 +203,36 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 		stateCache := cache.Global()
 
-		if !stateCache.InCache("uuid") {
+		hasUUID, err := stateCache.InCache("uuid")
+		if err != nil {
+			return err
+		}
+
+		if !hasUUID {
 			return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
 		}
 
-		_ = log.Process("common", "Get cluster UUID from the cache", func() error {
-			metaConfig.UUID = string(stateCache.Load("uuid"))
+		err = log.Process("common", "Get cluster UUID from the cache", func() error {
+			uuid, err := stateCache.Load("uuid")
+			if err != nil {
+				return err
+			}
+			metaConfig.UUID = string(uuid)
 			log.InfoF("Cluster UUID: %s\n", metaConfig.UUID)
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 
 		var destroyer Destroyer
 
 		err = log.Process("common", "Choice abort type", func() error {
-			if ok := stateCache.InCache(operations.ManifestCreatedInClusterCacheKey); !ok || app.ForceAbortFromCache {
+			ok, err := stateCache.InCache(operations.ManifestCreatedInClusterCacheKey)
+			if err != nil {
+				return err
+			}
+			if !ok || app.ForceAbortFromCache {
 				log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, app.ForceAbortFromCache))
 				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
 				destroyer = infrastructure.NewClusterInfra(terraStateLoader, stateCache)
@@ -313,15 +329,14 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClau
 			stateCache.Delete(state.TombstoneKey)
 		}
 
-		clusterUUID, err := generateClusterUUID()
+		clusterUUID, err := generateClusterUUID(stateCache)
 		if err != nil {
 			return err
 		}
 		metaConfig.UUID = clusterUUID
 
 		return log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
-				WithCache(stateCache).
+			baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
 				WithVariables(metaConfig.MarshalConfig()).
 				WithAutoApprove(true)
 			tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)

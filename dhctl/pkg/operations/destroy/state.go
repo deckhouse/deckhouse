@@ -28,7 +28,7 @@ func NewDestroyState(stateCache state.Cache) *State {
 	}
 }
 
-func (s *State) IsResourcesDestroyed() bool {
+func (s *State) IsResourcesDestroyed() (bool, error) {
 	return s.cache.InCache(resourcesDestroyedKey)
 }
 

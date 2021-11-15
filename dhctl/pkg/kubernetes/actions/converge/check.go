@@ -67,7 +67,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 		return terraform.PlanHasNoChanges, fmt.Errorf("kubernetes cluster has no state")
 	}
 
-	baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+	baseRunner := terraform.NewImmutableRunnerFromConfig(metaConfig, "base-infrastructure").
 		WithVariables(metaConfig.MarshalConfig()).
 		WithState(clusterState).
 		WithAutoApprove(true)
@@ -82,7 +82,7 @@ func checkNodeState(metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOpti
 		return terraform.PlanHasNoChanges, fmt.Errorf("can't extract index from terraform state secret, skip %s", nodeName)
 	}
 
-	nodeRunner := terraform.NewRunnerFromConfig(metaConfig, nodeGroup.Step).
+	nodeRunner := terraform.NewImmutableRunnerFromConfig(metaConfig, nodeGroup.Step).
 		WithVariables(metaConfig.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithState(nodeGroup.State[nodeName]).
 		WithName(nodeName)

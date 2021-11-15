@@ -15,8 +15,11 @@
 package fs
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"reflect"
 )
 
 func CreateFileWithContent(path, content string) error {
@@ -45,4 +48,17 @@ func TouchFile(path string) error {
 	}
 
 	return nil
+}
+
+func WriteContentIfNeed(file string, newContent []byte) error {
+	curContent, err := ioutil.ReadFile(file)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	if reflect.DeepEqual(curContent, newContent) {
+		return nil
+	}
+
+	return ioutil.WriteFile(file, newContent, 0o600)
 }

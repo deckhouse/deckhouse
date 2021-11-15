@@ -25,6 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -54,6 +56,8 @@ type Runner struct {
 
 	excludedNodes map[string]bool
 	skipPhases    map[Phase]bool
+
+	stateCache dstate.Cache
 }
 
 func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner) *Runner {
@@ -64,6 +68,7 @@ func NewRunner(kubeCl *client.KubernetesClient, lockRunner *InLockRunner) *Runne
 
 		excludedNodes: make(map[string]bool),
 		skipPhases:    make(map[Phase]bool),
+		stateCache:    cache.Global(),
 	}
 }
 
@@ -168,7 +173,7 @@ func (r *Runner) converge() error {
 	}
 
 	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
-		controller := NewConvergeController(r.kubeCl, metaConfig)
+		controller := NewConvergeController(r.kubeCl, metaConfig, r.stateCache)
 		controller.WithChangeSettings(r.changeSettings)
 		controller.WithExcludedNodes(r.excludedNodes)
 
@@ -190,14 +195,14 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 			return fmt.Errorf("kubernetes cluster has no state")
 		}
 
-		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+		baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", r.stateCache).
 			WithVariables(metaConfig.MarshalConfig()).
 			WithState(clusterState).
 			WithAutoDismissDestructiveChanges(r.changeSettings.AutoDismissDestructive).
 			WithAutoApprove(r.changeSettings.AutoApprove)
 		tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
 
-		baseRunner.WithIntermediateStateSaver(NewClusterStateSaver(r.kubeCl))
+		baseRunner.WithAdditionalStateSaverDestination(NewClusterStateSaver(r.kubeCl))
 
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 		if err != nil {
@@ -248,6 +253,8 @@ type Controller struct {
 	changeSettings *terraform.ChangeActionSettings
 
 	excludedNodes map[string]bool
+
+	stateCache dstate.Cache
 }
 
 type NodeGroupGroupOptions struct {
@@ -258,12 +265,13 @@ type NodeGroupGroupOptions struct {
 	State       map[string][]byte
 }
 
-func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) *Controller {
+func NewConvergeController(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, stateCache dstate.Cache) *Controller {
 	return &Controller{
 		client:         kubeCl,
 		config:         metaConfig,
 		changeSettings: &terraform.ChangeActionSettings{},
 		excludedNodes:  make(map[string]bool),
+		stateCache:     stateCache,
 	}
 }
 
@@ -412,7 +420,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		return nil
 	}
 
-	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step).
+	nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 		WithVariables(c.config.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 		WithSkipChangesOnDeny(true).
 		WithState(state).
@@ -435,7 +443,7 @@ func (c *Controller) updateNode(nodeGroup *NodeGroupGroupOptions, nodeName strin
 		nodeGroupSettingsFromConfig = c.config.FindTerraNodeGroup(nodeGroup.Name)
 	}
 
-	nodeRunner.WithIntermediateStateSaver(NewNodeStateSaver(c.client, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+	nodeRunner.WithAdditionalStateSaverDestination(NewNodeStateSaver(c.client, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
 
 	outputs, err := terraform.ApplyPipeline(nodeRunner, nodeName, extractOutputFunc)
 	if err != nil {
@@ -493,7 +501,7 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 			continue
 		}
 
-		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step).
+		nodeRunner := terraform.NewRunnerFromConfig(c.config, nodeGroup.Step, c.stateCache).
 			WithVariables(cfg.NodeGroupConfig(nodeGroup.Name, int(index), nodeGroup.CloudConfig)).
 			WithState(state).
 			WithName(name).
@@ -503,7 +511,7 @@ func (c *Controller) deleteRedundantNodes(nodeGroup *NodeGroupGroupOptions, sett
 
 		tomb.RegisterOnShutdown(name, nodeRunner.Stop)
 
-		nodeRunner.WithIntermediateStateSaver(NewNodeStateSaver(c.client, name, nodeGroup.Name, nil))
+		nodeRunner.WithAdditionalStateSaverDestination(NewNodeStateSaver(c.client, name, nodeGroup.Name, nil))
 
 		if err := terraform.DestroyPipeline(nodeRunner, name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", name, err))

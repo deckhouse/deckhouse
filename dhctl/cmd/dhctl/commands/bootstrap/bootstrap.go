@@ -63,23 +63,32 @@ func printBanner() {
 	log.InfoLn(banner)
 }
 
-func generateClusterUUID() (string, error) {
+func generateClusterUUID(stateCache state.Cache) (string, error) {
 	var clusterUUID string
 	err := log.Process("bootstrap", "Cluster UUID", func() error {
-		if !cache.Global().InCache("uuid") {
+		ok, err := stateCache.InCache("uuid")
+		if err != nil {
+			return err
+		}
+
+		if !ok {
 			genClusterUUID, err := uuid.NewRandom()
 			if err != nil {
 				return fmt.Errorf("can't create cluster UUID: %v", err)
 			}
 
 			clusterUUID = genClusterUUID.String()
-			err = cache.Global().Save("uuid", []byte(clusterUUID))
+			err = stateCache.Save("uuid", []byte(clusterUUID))
 			if err != nil {
 				return err
 			}
 			log.InfoF("Generated cluster UUID: %s\n", clusterUUID)
 		} else {
-			clusterUUID = string(cache.Global().Load("uuid"))
+			clusterUUIDBytes, err := stateCache.Load("uuid")
+			if err != nil {
+				return err
+			}
+			clusterUUID = string(clusterUUIDBytes)
 			log.InfoF("Cluster UUID from cache: %s\n", clusterUUID)
 		}
 		return nil
@@ -186,9 +195,11 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 			return fmt.Errorf(cacheMessage, cachePath, err)
 		}
 
+		stateCache := cache.Global()
+
 		if app.DropCache {
-			cache.Global().Clean()
-			cache.Global().Delete(state.TombstoneKey)
+			stateCache.Clean()
+			stateCache.Delete(state.TombstoneKey)
 		}
 
 		// after verifying configs and cache ask password
@@ -204,7 +215,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 
 		printBanner()
 
-		clusterUUID, err := generateClusterUUID()
+		clusterUUID, err := generateClusterUUID(stateCache)
 		if err != nil {
 			return err
 		}
@@ -219,7 +230,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 		var devicePath string
 		if metaConfig.ClusterType == config.CloudClusterType {
 			err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure").
+				baseRunner := terraform.NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache).
 					WithVariables(metaConfig.MarshalConfig()).
 					WithAutoApprove(true)
 				tomb.RegisterOnShutdown("base-infrastructure", baseRunner.Stop)
@@ -230,7 +241,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 				}
 
 				masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node").
+				masterRunner := terraform.NewRunnerFromConfig(metaConfig, "master-node", stateCache).
 					WithVariables(metaConfig.NodeGroupConfig("master", 0, "")).
 					WithName(masterNodeName).
 					WithAutoApprove(true)

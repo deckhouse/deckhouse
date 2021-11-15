@@ -119,9 +119,10 @@ func getLocalConvergeLockIdentity(pref string) string {
 	const cacheKey = "lock-identifier"
 
 	cache := statecache.Global()
-	if cache.InCache(cacheKey) {
-		id := cache.Load(cacheKey)
-		if len(id) > 0 {
+
+	if hasID, err := cache.InCache(cacheKey); err == nil && hasID {
+		id, err := cache.Load(cacheKey)
+		if err == nil && len(id) > 0 {
 			return string(id)
 		}
 	}

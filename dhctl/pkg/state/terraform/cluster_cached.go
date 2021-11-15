@@ -47,7 +47,13 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig() (*config.MetaConfig, error) 
 	confirmation := input.NewConfirmation().
 		WithMessage("Do you want to continue with Cluster configuration from local cache?").
 		WithYesByDefault()
-	if s.stateCache.InCache("cluster-config") && confirmation.Ask() {
+
+	ok, err := s.stateCache.InCache("cluster-config")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok && confirmation.Ask() {
 		if err := s.stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
 			return nil, err
 		}
@@ -99,7 +105,12 @@ func (s *KubeTerraStateLoader) getNodesState() (map[string]converge.NodeGroupTer
 		WithMessage("Do you want to continue with Nodes state from local cache?").
 		WithYesByDefault()
 
-	if s.stateCache.InCache("nodes-state") && confirmation.Ask() {
+	ok, err := s.stateCache.InCache("nodes-state")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok && confirmation.Ask() {
 		if err := s.stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 			return nil, err
 		}
@@ -129,9 +140,14 @@ func (s *KubeTerraStateLoader) getClusterState() ([]byte, error) {
 		WithMessage("Do you want to continue with Cluster state from local cache?").
 		WithYesByDefault()
 
-	if s.stateCache.InCache("cluster-state") && confirmation.Ask() {
-		clusterState = s.stateCache.Load("cluster-state")
-		if len(clusterState) == 0 {
+	ok, err := s.stateCache.InCache("cluster-state")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok && confirmation.Ask() {
+		clusterState, err = s.stateCache.Load("cluster-state")
+		if err != nil || len(clusterState) == 0 {
 			return nil, fmt.Errorf("can't load cluster state from cache")
 		}
 	} else {

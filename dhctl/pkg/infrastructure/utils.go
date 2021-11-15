@@ -17,13 +17,14 @@ package infrastructure
 import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 
 func saveInCacheIfNotExists(cache state.Cache, name string, state []byte) error {
-	if cache.InCache(name) {
-		return nil
-	}
-
-	if err := cache.Save(name, state); err != nil {
+	ok, err := cache.InCache(name)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	if ok {
+		return nil
+	}
+
+	return cache.Save(name, state)
 }

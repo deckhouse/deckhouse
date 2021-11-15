@@ -19,6 +19,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -58,9 +61,44 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 }
 
 func newTestRunnerWithChanges() *Runner {
-	r := NewRunner("a", "b", "c", "d")
+	r := NewRunner("a", "b", "c", "d", &cache.DummyCache{})
 	r.changesInPlan = PlanHasChanges
 	return r
+}
+
+func TestRunnerCreatesStateSaver(t *testing.T) {
+	tests := []struct {
+		name         string
+		cache        state.Cache
+		destinations int
+	}{
+		{
+			name:         "Dummy cache does create saver with empty destinations",
+			cache:        &cache.DummyCache{},
+			destinations: 0,
+		},
+
+		{
+			name:         "File cache does create saver with empty destinations",
+			cache:        &cache.StateCache{},
+			destinations: 0,
+		},
+
+		{
+			name:         "K8s cache does create saver with one destination",
+			cache:        &client.StateCache{},
+			destinations: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := NewRunner("a", "b", "c", "d", tc.cache)
+			require.NotNil(t, runner)
+			require.NotNil(t, runner.stateSaver)
+			require.Len(t, runner.stateSaver.saversDestinations, tc.destinations)
+		})
+	}
 }
 
 func TestCheckRunnerHandleChanges(t *testing.T) {

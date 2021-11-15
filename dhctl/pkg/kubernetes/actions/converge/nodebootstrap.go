@@ -19,6 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -42,15 +43,13 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	nodeConfig := cfg.NodeGroupConfig(nodeGroupName, index, cloudConfig)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 
-	runner := terraform.NewRunnerFromConfig(cfg, step).
+	// TODO pass cache as argument or better refact func
+	runner := terraform.NewRunnerFromConfig(cfg, step, cache.Global()).
 		WithVariables(nodeConfig).
 		WithName(nodeName).
-		WithAutoApprove(true)
+		WithAutoApprove(true).
+		WithAdditionalStateSaverDestination(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
-
-	if isConverge {
-		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings))
-	}
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
 	if err != nil {
@@ -83,16 +82,13 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 
 	nodeConfig := cfg.NodeGroupConfig(MasterNodeGroupName, index, cloudConfig)
 
-	runner := terraform.NewRunnerFromConfig(cfg, "master-node").
+	// TODO pass cache as argument or better refact func
+	runner := terraform.NewRunnerFromConfig(cfg, "master-node", cache.Global()).
 		WithVariables(nodeConfig).
 		WithName(nodeName).
-		WithAutoApprove(true)
+		WithAutoApprove(true).
+		WithAdditionalStateSaverDestination(NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil))
 	tomb.RegisterOnShutdown(nodeName, runner.Stop)
-
-	// Node group settings are not required for master node secret.
-	if isConverge {
-		runner.WithIntermediateStateSaver(NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil))
-	}
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {

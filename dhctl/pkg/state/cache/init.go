@@ -72,7 +72,12 @@ func choiceCache(identity string) (state.Cache, error) {
 		return nil, err
 	}
 
-	if k8sCache.InCache(state.TombstoneKey) {
+	hasTombstone, err := k8sCache.InCache(state.TombstoneKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if hasTombstone {
 		return nil, fmt.Errorf("Cache exchaused")
 	}
 
@@ -93,4 +98,8 @@ func Init(identity string) error {
 
 func Global() state.Cache {
 	return globalCache
+}
+
+func Dummy() state.Cache {
+	return &cache.DummyCache{}
 }

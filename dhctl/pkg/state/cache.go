@@ -20,7 +20,7 @@ type Cache interface {
 	Save(string, []byte) error
 	SaveStruct(string, interface{}) error
 
-	Load(string) []byte
+	Load(string) ([]byte, error)
 	LoadStruct(string, interface{}) error
 
 	Delete(string)
@@ -29,5 +29,7 @@ type Cache interface {
 
 	GetPath(string) string
 	Iterate(func(string, []byte) error) error
-	InCache(string) bool
+	InCache(string) (bool, error)
+
+	NeedIntermediateSave() bool
 }
