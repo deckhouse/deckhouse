@@ -1,4 +1,0 @@
-extendedMonitoring:
-  imageAvailability:
-    exporterEnabled: true
-    skipRegistryCertVerification: false

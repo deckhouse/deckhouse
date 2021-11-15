@@ -2,18 +2,11 @@
 title: "Модуль extended-monitoring: настройки"
 ---
 
-## Параметры `image-availability-exporter`
+## Параметры
 
-* `imageAvailability` — настройки мониторинга доступности образов в кластере.
-  * `exporterEnabled` — включен ли imageAvailabilityExporter
-    * Формат — bool. По умолчанию, `true`.
-  * `ignoredImages` — список имён образов, наличие которых не надо проверять в registry. Например, `alpine:3.12` или `quay.io/test/test:v1.1`.
-    * Формат — массив строк.
-    * Опциональный параметр.
-  * `skipRegistryCertVerification` — пропускать ли проверку сертификата container registry.
-    * Формат — bool. По умолчанию, `false`.
+<!-- SCHEMA -->
 
-## Параметры `extended-monitoring-exporter`
+## Как использовать `extended-monitoring-exporter`
 
 Чтобы включить экспортирование extended-monitoring метрик, нужно навесить на Namespace аннотацию `extended-monitoring.flant.com/enabled` любым удобным способом, например:
 - добавить в проект соответствующий helm-чарт (рекомендуемый)

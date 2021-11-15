@@ -2,18 +2,11 @@
 title: "The extended-monitoring module: configuration"
 ---
 
-## Parameters of the `image-availability-exporter`
+## Parameters
 
-* `imageAvailability` — settings for monitoring the availability of images in the cluster;
-  * `exporterEnabled` — enables imageAvailabilityExporter;
-    * Format — boolean. It is set to `true` by default;
-  * `ignoredImages` — a list of images to ignore when checking the presence in the registry, e.g., `alpine:3.12` or `quay.io/test/test:v1.1`;
-    * Format — an array of strings;
-    * An optional parameter;
-  * `skipRegistryCertVerification` — whether to skip the verification of the container registry certificate;
-    * Format — boolean. It is set to `false` by default;.
+<!-- SCHEMA -->
 
-## Parameters of the `extended-monitoring-exporter`
+## How to use `extended-monitoring-exporter`
 
 Attach the `extended-monitoring.flant.com/enabled` annotation to the Namespace to enable the export of extended monitoring metrics. You can do it by:
 - adding the appropriate helm-chart to the project (recommended method);

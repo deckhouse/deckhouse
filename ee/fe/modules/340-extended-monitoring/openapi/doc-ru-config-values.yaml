@@ -1,0 +1,34 @@
+properties:
+  imageAvailability:
+    description: |
+      Настройки для мониторинга доступности образов в кластере.
+    properties:
+      exporterEnabled:
+        description: |
+          Включен ли imageAvailabilityExporter.
+      skipRegistryCertVerification:
+        description: |
+          Пропускать ли валидацию TLS-сертификата для Docker Registry.
+      ignoredImages:
+        description: |
+          Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
+  events:
+    description: |
+      Настройки для мониторинга event'ов в кластере Kubernetes.
+    properties:
+      exporterEnabled:
+        description: |
+          Включен ли eventsExporter.
+      severityLevel:
+        description: |
+          Enables eventsExporter.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
