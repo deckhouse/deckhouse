@@ -1,0 +1,28 @@
+version: 2
+
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    labels:
+      - "type/dependencies"
+      - "area/core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  - package-ecosystem: "gomod"
+    directory: "/dhctl"
+    labels:
+      - "type/dependencies"
+      - "area/cli"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    labels:
+      - "type/dependencies"
+      - "area/dx"
+    schedule:
+      interval: "daily"
