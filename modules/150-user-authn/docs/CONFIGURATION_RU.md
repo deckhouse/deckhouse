@@ -45,19 +45,19 @@ data:
     * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 * `tolerations` — как в Kubernetes в `spec.tolerations` у pod'ов.
     * Если ничего не указано или указано `false` — будет [использоваться автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
-* `ingressClass` — класс Ingress-контроллера, который используется для dex и kubeconfig-generator.
+* `ingressClass` — класс Ingress-контроллера, который используется для Dex и kubeconfig-generator.
   * Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
-* `https` — выбираем, какой тип сертификата использовать для dex и kubeconfig-generator.
+* `https` — выбираем, какой тип сертификата использовать для Dex и kubeconfig-generator.
   * При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
   * `mode` — режим работы HTTPS:
     * `Disabled` — при данном значении модуль автоматически отключается.
-    * `CertManager` — dex и kubeconfig-generator будут работать по HTTPS и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
-    * `CustomCertificate` — dex и kubeconfig-generator будут работать по HTTPS используя сертификат из namespace `d8-system`;
-    * `OnlyInURI` — dex и kubeconfig-generator будут работать по HTTP (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
+    * `CertManager` — Dex и kubeconfig-generator будут работать по HTTPS и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`;
+    * `CustomCertificate` — Dex и kubeconfig-generator будут работать по HTTPS используя сертификат из namespace `d8-system`;
+    * `OnlyInURI` — Dex и kubeconfig-generator будут работать по HTTP (подразумевая, что перед ними стоит внешний https балансер, который терминирует https) и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
   * `certManager`
-    * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
+    * `clusterIssuerName` — указываем, какой ClusterIssuer использовать для Dex и kubeconfig-generator (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои).
   * `customCertificate`
-    * `secretName` — указываем имя secret'а в namespace `d8-system`, который будет использоваться для dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+    * `secretName` — указываем имя secret'а в namespace `d8-system`, который будет использоваться для Dex и kubeconfig-generator (данный секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
 * `controlPlaneConfigurator` — настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-manager](../../modules/040-control-plane-manager/).
   * `enabled` — использовать ли control-plane-manager для настройки OIDC в kube-apiserver.
     * По умолчанию `true`.
@@ -71,11 +71,11 @@ data:
     * Формат — обычный текст, без base64.
     * Необязательный параметр.
 
-Автоматический деплой [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения и подключения его к dex происходит при создании Custom Resource [`DexAuthenticator`](cr.html#dexauthenticator).
+Автоматический деплой [oauth2-proxy](https://github.com/pusher/oauth2_proxy) в namespace вашего приложения и подключения его к Dex происходит при создании Custom Resource [`DexAuthenticator`](cr.html#dexauthenticator).
 
 **Важно!** Так как использование OpenID Connect по протоколу HTTP является слишком значительной угрозой безопасности (что подтверждается, например, тем что kubernetes api-сервер не поддерживает работу с OIDC по HTTP), данный модуль можно установить только при включенном HTTPS (`https.mode` выставить в отличное от `Disabled` значение или на уровне кластера, или в самом модуле).
 
-**Важно!** При включении данного модуля аутентификация во всех веб-интерфейсах перестанет использовать HTTP Basic Auth и переключится на dex (который, в свою очередь, будет использовать настроенные вами внешние провайдеры).
+**Важно!** При включении данного модуля аутентификация во всех веб-интерфейсах перестанет использовать HTTP Basic Auth и переключится на Dex (который, в свою очередь, будет использовать настроенные вами внешние провайдеры).
 Для настройки kubectl необходимо перейти по адресу: `https://kubeconfig.<modules.publicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell команды к себе в консоль.
 
 **Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](usage.html#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-manager](../../modules/040-control-plane-manager/), который включён по умолчанию.

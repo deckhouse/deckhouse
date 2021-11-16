@@ -16,55 +16,6 @@ title: "The user-authn module: usage"
 ```
 {% endraw %}
 
-## An example of the `DexAuthenticator` CR
-
-{% raw %}
-```yaml
-apiVersion: deckhouse.io/v1
-kind: DexAuthenticator
-metadata:
-  name: my-cool-app # the authenticator's Pods will be prefixed with my-cool-app
-  namespace: my-cool-namespace # the namespace where the dex-authenticator will be deployed
-spec:
-  applicationDomain: "my-app.kube.my-domain.com" # the domain used for your app
-  sendAuthorizationHeader: false # whether to send the `Authorization: Bearer` header to the application (comes in handy with auth_request in nginx)
-  applicationIngressCertificateSecretName: "ingress-tls" # the name of the secret with the tls certificate
-  applicationIngressClassName: "nginx"
-  keepUsersLoggedInFor: "720h"
-  allowedGroups:
-  - everyone
-  - admins
-  whitelistSourceRanges:
-  - 1.1.1.1
-  - 192.168.0.0/24
-```
-{% endraw %}
-
-After the `DexAuthenticator` CR is created in the cluster, Kubernetes will make the necessary deployment, service, ingress, secret in the specified namespace.
-Add the following annotations to your app's Ingress resource to connect your application to dex:
-
-{% raw %}
-```yaml
-annotations:
-  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-  nginx.ingress.kubernetes.io/auth-url: https://my-cool-app-dex-authenticator.my-cool-namespace.svc.{{ cluster domain, e.g., | cluster.local }}/dex-authenticator/auth
-  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-```
-{% endraw %}
-
-### Setting up CIDR-based restrictions
-
-DexAuthenticator does not have a built-in system for allowing the user authentication based on its IP address. Instead, you can use annotations for Ingress resources:
-
-* If you want to restrict access by IP and use dex for authentication, add the following annotation with a comma-separated list of allowed CIDRs:
-```yaml
-nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1`
-```
-* Add the following annotation if you want to exclude users from specific networks from passing authentication via dex, and force users from all other networks to authenticate via dex:
-```yaml
-nginx.ingress.kubernetes.io/satisfy: "any"
-```
-
 ## Configuring a provider
 ### Github
 
@@ -227,7 +178,7 @@ Specify the generated user path and password in the `bindDN` and `bindPW` fields
 1. You can omit these settings of anonymous read access is configured for LDAP.
 2. Enter the password into the `bindPW` in the plain text format. Strategies involving the passing of hashed passwords are not supported.
 
-## Configuring the OAuth2 client in dex for connecting an application
+## Configuring the OAuth2 client in Dex for connecting an application
 
 This configuration is suitable for applications that can independently perform oauth2 authentication without using an oauth2 proxy.
 The [`DexClient`](cr.html#dexclient) custom resource enables applications to use dex.
@@ -251,7 +202,7 @@ spec:
 ```
 {% endraw %}
 
-After the DexClient CR is created, dex will register a client with a `dex-client-myname@mynamespace` ID (clientID).
+After the DexClient CR is created, Dex will register a client with a `dex-client-myname@mynamespace` ID (clientID).
 
 The client access password (clientSecret) will be stored in the secret object:
 {% raw %}
@@ -268,6 +219,7 @@ data:
 {% endraw %}
 
 ## An example of creating a static user:
+
 {% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -284,34 +236,3 @@ spec:
   ttl: 24h
 ```
 {% endraw %}
-
-## External access to the Kubernetes API
-
-In the `deckhouse` ConfigMap configure `publishAPI`:
-
-{% raw %}
-```yaml
-  userAuthn: |
-    publishAPI:
-      enable: true
-```
-{% endraw %}
-
-You can access a web interface at `kubeconfig.%publicDomainTemplate%` that allows you to generate `kubeconfig`
-and use it for kubectl or any number of other Kubernetes API clients.
-
-## Configuring kube-apiserver
-
-You need to configure the kube-apiserver so that dashboard and kubeconfig-generator modules can work in the cluster. A dedicated  [control-plane-manager](../../modules/040-control-plane-manager/) module can help you with this.
-
-{% offtopic title="kube-apiserver arguments that will be configured" %}
-
-* --oidc-client-id=kubernetes
-* --oidc-groups-claim=groups
-* --oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/
-* --oidc-username-claim=email
-
-If self-signed certificates are used, dex will get one more argument. At the same time, the CA file will be mounted to the apiserver's Pod:
-
-* --oidc-ca-file=/etc/kubernetes/oidc-ca.crt
-{% endofftopic %}

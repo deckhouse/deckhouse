@@ -45,19 +45,19 @@ data:
     * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling);
 * `tolerations` — the same as in the Pod's `spec.tolerations` parameter in Kubernetes;
     * If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling);
-* `ingressClass` — the Ingress controller class used for dex and kubeconfig-generator;
+* `ingressClass` — the Ingress controller class used for Dex and kubeconfig-generator;
   * An optional parameter; by default, the `modules.ingressClass` global value is used;
-* `https` — selects the type of certificate to use for dex and kubeconfig-generator;
+* `https` — selects the type of certificate to use for Dex and kubeconfig-generator;
   * This parameter completely overrides the `global.modules.https` settings;
   * `mode` — the HTTPS usage mode:
     * `Disabled` — the module is automatically disabled;
-    * `CertManager` — dex and kubeconfig-generator will run over HTTPS and get a certificate using clusterissuer as specified by the `certManager.clusterIssuerName` parameter;
-    * `CustomCertificate` — dex and kubeconfig-generator will run over HTTPS using the certificate from the `d8-system` namespace;
-    * `OnlyInURI` — dex and kubeconfig-generator will run over HTTP (thinking that there is an external HTTPS load balancer in front of them that terminates HTTPS). All the links in the `user-authn` will be generated using the HTTPS scheme.
+    * `CertManager` — Dex and kubeconfig-generator will run over HTTPS and get a certificate using clusterissuer as specified by the `certManager.clusterIssuerName` parameter;
+    * `CustomCertificate` — Dex and kubeconfig-generator will run over HTTPS using the certificate from the `d8-system` namespace;
+    * `OnlyInURI` — Dex and kubeconfig-generator will run over HTTP (thinking that there is an external HTTPS load balancer in front of them that terminates HTTPS). All the links in the `user-authn` will be generated using the HTTPS scheme.
   * `certManager`
-    * `clusterIssuerName` — what ClusterIssuer to use for dex and kubeconfig-generator (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own);
+    * `clusterIssuerName` — what ClusterIssuer to use for Dex and kubeconfig-generator (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own);
   * `customCertificate`
-    * `secretName` — the name of the secret in the `d8-system`, namespace that will be used for dex & kubeconfig-generator (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)) format;
+    * `secretName` — the name of the secret in the `d8-system`, namespace that will be used for Dex & kubeconfig-generator (this secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)) format;
 * `controlPlaneConfigurator` — parameters of the [control-plane-manager](../../modules/040-control-plane-manager/) module;
   * `enabled` — defines if the control-plane-manager module should be used to configure OIDC for the kube-apiserver;
     * It is set to `true` by default;
@@ -75,6 +75,6 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 
 **Caution!** Since using OpenID Connect over HTTP poses a significant threat to security (the fact that Kubernetes API server doesn't support OICD over HTTP confirms that), this module can only be installed if HTTPS is enabled (to do this, set the `https.mode` parameter to the value other than `Disabled` either at the cluster level or in the module).
 
-**Caution!** Note that when this module is enabled, authentication in all web interfaces will be switched from HTTP Basic Auth to dex (the latter, in turn, will use the external providers that you have defined). To configure kubectl, go to `https://kubeconfig.<modules.publicDomainTemplate>/`, log in to your external provider's account and copy the shell commands to your console.
+**Caution!** Note that when this module is enabled, authentication in all web interfaces will be switched from HTTP Basic Auth to Dex (the latter, in turn, will use the external providers that you have defined). To configure kubectl, go to `https://kubeconfig.<modules.publicDomainTemplate>/`, log in to your external provider's account and copy the shell commands to your console.
 
 **Caution!** Note that the API server requires [additional configuration](usage.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](../../modules/040-control-plane-manager/) module (enabled by default) automates this process.
