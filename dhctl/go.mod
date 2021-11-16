@@ -14,7 +14,7 @@ require (
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/validate v0.19.12
 	github.com/google/uuid v1.1.2
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/peterbourgon/mergemap v0.0.0-20130613134717-e21c03b7a721
 	github.com/pkg/errors v0.9.1
