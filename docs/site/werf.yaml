@@ -37,7 +37,7 @@ ansible:
       shell: |
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config _config.yml --trace
+        jekyll build -d /app/_site/ --config _config.yml
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/site/
