@@ -1,6 +1,7 @@
 @import "components/common/_variables.scss";
 
 .product-intro {
+    position: relative;
     background: $color-smooth;
     overflow: hidden;
     margin-bottom: 100px;
@@ -97,4 +98,37 @@
         }
     }
     &__actions {}
+
+    &__certificate {
+        position: absolute;
+        left: 0;
+        bottom: 220px;
+        display: flex;
+        align-items: center;
+        width: fit-content;
+        box-sizing: border-box;
+        border: 2px solid $color-alt;
+        border-left: none;
+
+        &--pic {
+            height: 62px;
+            padding: 14px 0;
+            padding-left: 100px;
+
+            & svg {
+                width: 46px;
+                height: 62px;
+            }
+        }
+
+        &--text {
+            padding-right: 20px;
+            padding-left: 25px;
+
+            & span {
+                display: block;
+                color: $color-alt;
+            }
+        }
+    }
 }
