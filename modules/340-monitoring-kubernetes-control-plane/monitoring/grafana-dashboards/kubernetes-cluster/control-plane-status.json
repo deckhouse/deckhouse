@@ -15,8 +15,8 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1556702760576,
+  "id": 57,
+  "iteration": 1637061768986,
   "links": [],
   "panels": [
     {
@@ -29,6 +29,12 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -111,6 +117,12 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -171,7 +183,7 @@
         }
       ],
       "thresholds": "50,80",
-      "title": "Controller Mangers UP",
+      "title": "Controller Managers UP",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -193,6 +205,12 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "datasource": "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -266,87 +284,179 @@
       "valueName": "avg"
     },
     {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(50, 172, 45, 0.97)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(245, 54, 54, 0.9)"
-      ],
-      "datasource": "$ds_prometheus",
-      "format": "percent",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": true,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 300
+              }
+            ]
+          }
+        },
+        "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 10,
         "w": 6,
         "x": 18,
         "y": 0
       },
-      "id": 4,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
+      "id": 35,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+        "showUnfilled": true,
+        "text": {}
       },
-      "tableColumn": "",
+      "pluginVersion": "7.4.2",
       "targets": [
         {
-          "expr": "topk(1, (sum by(node) (rate(apiserver_request_count{code!~\"2..\"}[$__range])) / sum by(node) (rate(apiserver_request_count[$__range]))) * 100)",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "refId": "A",
-          "step": 600
-        }
-      ],
-      "thresholds": "5,10",
-      "title": "API Server Request Error Rate",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
+          "expr": "count(kube_namespace_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Namespaces",
+          "refId": "N"
+        },
         {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
+          "expr": "count(kube_daemonset_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "DaemonSets",
+          "refId": "C"
+        },
+        {
+          "expr": "count(kube_deployment_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Deployments",
+          "refId": "D"
+        },
+        {
+          "expr": "count(kube_statefulset_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "StatefulSets",
+          "refId": "M"
+        },
+        {
+          "expr": "count(kube_replicaset_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "ReplicaSets",
+          "refId": "B"
+        },
+        {
+          "expr": "count(kube_pod_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Pods",
+          "refId": "K"
+        },
+        {
+          "expr": "count(kube_verticalpodautoscaler_labels)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "VPA",
+          "refId": "O"
+        },
+        {
+          "expr": "count(kube_poddisruptionbudget_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "PDB",
+          "refId": "Q"
+        },
+        {
+          "expr": "count(kube_persistentvolumeclaim_info)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "PVC",
+          "refId": "J"
+        },
+        {
+          "expr": "count(kube_persistentvolume_info)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "PV",
+          "refId": "I"
+        },
+        {
+          "expr": "count(kube_cronjob_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "CronJobs",
+          "refId": "F"
+        },
+        {
+          "expr": "count(kube_job_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Jobs",
+          "refId": "G"
+        },
+        {
+          "expr": "count(kube_secret_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Secrets",
+          "refId": "P"
+        },
+        {
+          "expr": "count(kube_configmap_created)",
+          "interval": "",
+          "legendFormat": "ConfigMaps",
+          "refId": "A"
+        },
+        {
+          "expr": "count(kube_service_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Services",
+          "refId": "L"
+        },
+        {
+          "expr": "count(kube_endpoint_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Endpoints",
+          "refId": "E"
+        },
+        {
+          "expr": "count(kube_node_created)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Nodes",
+          "refId": "H"
         }
       ],
-      "valueName": "avg"
+      "title": "Kubernetes Resources Count",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {}
+        }
+      ],
+      "type": "bargauge"
     },
     {
       "cacheTimeout": null,
@@ -357,6 +467,13 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -436,6 +553,13 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -515,6 +639,13 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -573,7 +704,7 @@
         }
       ],
       "thresholds": "",
-      "title": "Scheduler count",
+      "title": "Schedulers count",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -586,853 +717,17 @@
       "valueName": "avg"
     },
     {
-      "cards": {
-        "cardPadding": null,
-        "cardRound": null
-      },
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateSpectral",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "tsbuckets",
-      "datasource": "$ds_prometheus",
+      "collapsed": false,
+      "datasource":  "$ds_prometheus",
       "gridPos": {
-        "h": 7,
+        "h": 1,
         "w": 24,
         "x": 0,
         "y": 10
       },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 7,
-      "legend": {
-        "show": false
-      },
-      "links": [],
-      "reverseYBuckets": false,
-      "targets": [
-        {
-          "expr": "sum(rate(apiserver_request_latencies_bucket[$__interval_sx4])) by (le)",
-          "format": "heatmap",
-          "intervalFactor": 1,
-          "legendFormat": "{{ le }}",
-          "refId": "A",
-          "step": 30
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "API Server Request Duration",
-      "tooltip": {
-        "show": true,
-        "showHistogram": true
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "xBucketNumber": null,
-      "xBucketSize": null,
-      "yAxis": {
-        "decimals": null,
-        "format": "µs",
-        "logBase": 1,
-        "max": null,
-        "min": null,
-        "show": true,
-        "splitFactor": null
-      },
-      "yBucketBound": "auto",
-      "yBucketNumber": null,
-      "yBucketSize": null
-    },
-    {
-      "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      },
-      "id": 13,
-      "panels": [
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 0,
-            "y": 18
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 14,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": "verb",
-          "repeatDirection": "h",
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "LIST",
-              "value": "LIST"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 6,
-            "y": 18
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 15,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "WATCH",
-              "value": "WATCH"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 12,
-            "y": 18
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 16,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "PUT",
-              "value": "PUT"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 18,
-            "y": 18
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 17,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "DELETE",
-              "value": "DELETE"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 0,
-            "y": 25
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 18,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "GET",
-              "value": "GET"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 6,
-            "y": 25
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 19,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "POST",
-              "value": "POST"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 12,
-            "y": 25
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 20,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "CREATE",
-              "value": "CREATE"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 18,
-            "y": 25
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 21,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "UPDATE",
-              "value": "UPDATE"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 0,
-            "y": 32
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 22,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "PATCH",
-              "value": "PATCH"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        },
-        {
-          "cards": {
-            "cardPadding": null,
-            "cardRound": null
-          },
-          "color": {
-            "cardColor": "#b4ff00",
-            "colorScale": "sqrt",
-            "colorScheme": "interpolateSpectral",
-            "exponent": 0.5,
-            "mode": "spectrum"
-          },
-          "dataFormat": "tsbuckets",
-          "datasource": "$ds_prometheus",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 6,
-            "y": 32
-          },
-          "heatmap": {},
-          "hideZeroBuckets": false,
-          "highlightCards": true,
-          "id": 23,
-          "legend": {
-            "show": false
-          },
-          "links": [],
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1556702760574,
-          "repeatPanelId": 14,
-          "reverseYBuckets": false,
-          "scopedVars": {
-            "verb": {
-              "selected": false,
-              "text": "CONNECT",
-              "value": "CONNECT"
-            }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(apiserver_request_latencies_bucket{verb=\"$verb\"}[$__interval_sx4])) by (le)",
-              "format": "heatmap",
-              "intervalFactor": 1,
-              "legendFormat": "{{ le }}",
-              "refId": "A",
-              "step": 30
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "$verb",
-          "tooltip": {
-            "show": true,
-            "showHistogram": true
-          },
-          "type": "heatmap",
-          "xAxis": {
-            "show": true
-          },
-          "xBucketNumber": null,
-          "xBucketSize": null,
-          "yAxis": {
-            "decimals": null,
-            "format": "µs",
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true,
-            "splitFactor": null
-          },
-          "yBucketBound": "auto",
-          "yBucketNumber": null,
-          "yBucketSize": null
-        }
-      ],
-      "title": "API Server Request Duration by verb",
-      "type": "row"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 18
-      },
-      "id": 25,
+      "id": 46,
       "panels": [],
-      "title": "API Server statistics",
+      "title": "Kube-apiserver",
       "type": "row"
     },
     {
@@ -1440,15 +735,23 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 11
       },
-      "id": 5,
+      "hiddenSeries": false,
+      "id": 31,
       "legend": {
         "avg": false,
         "current": false,
@@ -1460,31 +763,33 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pointradius": 5,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "cluster:scheduler_e2e_scheduling_latency_seconds:quantile",
-          "format": "time_series",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "quantile {{ quantile }}",
-          "refId": "A",
-          "step": 60
+          "legendFormat": "{{instance}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "End to end scheduling latency",
+      "title": "Kube-apiserver CPU Usage",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1500,15 +805,17 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:566",
           "format": "short",
-          "label": null,
+          "label": "CPU Usage",
           "logBase": 1,
           "max": null,
           "min": null,
           "show": true
         },
         {
-          "format": "dtdurations",
+          "$$hashKey": "object:567",
+          "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1526,15 +833,23 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$ds_prometheus",
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 11
       },
-      "id": 6,
+      "hiddenSeries": false,
+      "id": 33,
       "legend": {
         "avg": false,
         "current": false,
@@ -1546,39 +861,32 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pointradius": 5,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(node) (rate(apiserver_request_count{code!~\"2..\"}[$__interval_sx4]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Error Rate",
-          "refId": "A",
-          "step": 60
-        },
-        {
-          "expr": "sum by(node) (rate(apiserver_request_count[$__interval_sx4]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Request Rate",
-          "refId": "B",
-          "step": 60
+          "expr": "process_resident_memory_bytes{job=\"kube-apiserver\", instance=~\"$instance:.*\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "API Server Request Rates",
+      "title": "Kube-apiserver Memory Usage",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1594,6 +902,301 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:732",
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:733",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "hiddenSeries": false,
+      "id": 29,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max by (verb) (rate(apiserver_request_duration_seconds_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_request_duration_seconds_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{verb}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver latency",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:286",
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:287",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "hiddenSeries": false,
+      "id": 36,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "max by (verb, resource) (rate(apiserver_response_sizes_sum{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4])/rate(apiserver_response_sizes_count{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver response sizes",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:339",
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:340",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "hiddenSeries": false,
+      "id": 27,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by(verb, resource) (rate(apiserver_request_total{verb!~\"CONNECT|WATCH\", verb=~\"$verb\", instance=~\"$instance:.*\", resource=~\"$resource\"}[$__interval_sx4]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-apiserver requests rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:339",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1602,6 +1205,423 @@
           "show": true
         },
         {
+          "$$hashKey": "object:340",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource":  "$ds_prometheus",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 44,
+      "title": "Kube-scheduler",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "hiddenSeries": false,
+      "id": 37,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-scheduler CPU Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:566",
+          "format": "short",
+          "label": "CPU Usage",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:567",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "hiddenSeries": false,
+      "id": 38,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"kube-scheduler\", instance=~\"$instance:.*\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-scheduler Memory Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:732",
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:733",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource":  "$ds_prometheus",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 42,
+      "panels": [],
+      "title": "Kube-controller-manager",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "hiddenSeries": false,
+      "id": 39,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__interval_sx4])",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-controller-manager CPU Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:566",
+          "format": "short",
+          "label": "CPU Usage",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:567",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource":  "$ds_prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "hiddenSeries": false,
+      "id": 40,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Kube-controller-manager Memory Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:732",
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:733",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1617,16 +1637,19 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 18,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "text": "default",
-          "value": "default"
+          "selected": false,
+          "text": "main",
+          "value": "main"
         },
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Prometheus",
@@ -1634,28 +1657,107 @@
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
+        "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
-          "text": "All",
+          "selected": false,
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
         },
-        "datasource": "$ds_prometheus",
-        "definition": "label_values(apiserver_request_latencies_bucket, verb)",
-        "hide": 2,
+        "datasource":  "$ds_prometheus",
+        "definition": "label_values(up{job=\"kube-apiserver\"}, instance)",
+        "description": null,
+        "error": null,
+        "hide": 0,
         "includeAll": true,
-        "label": "Verb",
+        "label": "Instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"kube-apiserver\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/(.*):.*/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource":  "$ds_prometheus",
+        "definition": "label_values(apiserver_request_total, resource)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "Resource",
+        "multi": true,
+        "name": "resource",
+        "options": [],
+        "query": {
+          "query": "label_values(apiserver_request_total, resource)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource":  "$ds_prometheus",
+        "definition": "label_values(apiserver_request_total{verb!~\"CONNECT|WATCH\"}, verb)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "VERB",
         "multi": true,
         "name": "verb",
         "options": [],
-        "query": "label_values(apiserver_request_latencies_bucket, verb)",
+        "query": {
+          "query": "label_values(apiserver_request_total{verb!~\"CONNECT|WATCH\"}, verb)",
+          "refId": "StandardVariableQuery"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1699,6 +1801,6 @@
   },
   "timezone": "",
   "title": "Control Plane Status",
-  "uid": "3yqtXDziz",
-  "version": 1
+  "uid": "3yqtXDzia",
+  "version": 12
 }
