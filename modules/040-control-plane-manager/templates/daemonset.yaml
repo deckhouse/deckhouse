@@ -173,8 +173,10 @@ spec:
         readinessProbe:
           exec:
             command:
-            - cat
-            - /tmp/ready
+            - readiness-check
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 8
         resources:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | indent 12 }}
