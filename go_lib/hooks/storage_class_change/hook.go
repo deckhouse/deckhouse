@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"github.com/iancoleman/strcase"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -208,10 +209,10 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		effectiveStorageClass = input.ConfigValues.Get(configValuesPath).String()
 	}
 
-	var internalValuesPath = fmt.Sprintf("%s.internal.effectiveStorageClass", args.ModuleName)
+	var internalValuesPath = fmt.Sprintf("%s.internal.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName))
 
 	if args.InternalValuesSubPath != "" {
-		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", args.ModuleName, args.InternalValuesSubPath)
+		internalValuesPath = fmt.Sprintf("%s.internal.%s.effectiveStorageClass", strcase.ToLowerCamel(args.ModuleName), args.InternalValuesSubPath)
 	}
 
 	if len(effectiveStorageClass) == 0 {
