@@ -62,7 +62,7 @@ jobs:
       ok: steps.pr.outputs.ok
 
   milestones:
-    if: needs.filter.outputs.ok == "ok"
+    if: needs.filter.outputs.ok
     name: Open Milestones
     runs-on: ubuntu-latest
     needs: filter
@@ -74,7 +74,7 @@ jobs:
         run: |
           # We expect the number of simultaneously open milestones will not exceed 10.
           # https://docs.github.com/en/rest/reference/issues#milestones
-          milestones="$(gh api 'repos/${{ github.repository }}/milestones?state=open&per_page=100'
+          milestones="$(gh api 'repos/${{ github.repository }}/milestones?state=open&per_page=100')"
 
           count="$(echo $milestones | jq '. | length')"
 
