@@ -26,13 +26,11 @@ apiServer:
     pathType: DirectoryOrCreate
 {{- end }}
   extraArgs:
-{{- /* TODO: uncomment in the next release !!!
 {{- if ne .runType "ClusterBootstrap" }}
 # kubelet-certificate-authority flag should be set after bootstrap of first master.
 # This flag affects logs from kubelets, for period of time between kubelet start and certificate request approve by Deckhouse hook.
     kubelet-certificate-authority: "/etc/kubernetes/pki/ca.crt"
 {{- end }}
-*/}}
     anonymous-auth: "false"
 {{- if semverCompare ">= 1.21" .clusterConfiguration.kubernetesVersion }}
     feature-gates: "EndpointSliceTerminatingCondition=true"
