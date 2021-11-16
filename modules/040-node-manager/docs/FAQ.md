@@ -48,23 +48,31 @@ kubectl label node <node_name> node.deckhouse.io/group-
 
 This is only needed if you have to move a static node from one cluster to another. Be aware that these operations remove local storage data. If you just need to change NodeGroup you have to follow [this instruction](#how-do-i-change-the-node-group-of-a-static-node).
 
-1. Stop all the services:
-   ```shell
-   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl stop bashible.service bashible.timer
-   systemctl stop kubelet.service
-   systemctl stop docker
-   ```
-2. Unmount all mounted partitions:
+1. Delete the node from the Kubernetes cluster:
+    ```shell
+    kubectl drain <node> --ignore-daemonsets --delete-local-data
+    kubectl delete node <node>
+    ```
+1. Stop all the services and running containers:
+    ```shell
+    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
+    systemctl stop bashible.service bashible.timer
+    systemctl stop kubelet.service
+    systemctl stop containerd
+    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
+    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+    ```
+1. Unmount all mounted partitions:
    ```shell
    for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
    ```
-3. Delete all directories and files:
+1. Delete all directories and files:
    ```shell
    rm -rf /var/lib/bashible
    rm -rf /etc/kubernetes
    rm -rf /var/lib/kubelet
-   rm -rf /var/lib/docker
+   rm -rf /var/lib/docker 
+   rm -rf /var/lib/containerd
    rm -rf /etc/cni
    rm -rf /var/lib/cni
    rm -rf /var/lib/etcd
@@ -73,7 +81,7 @@ This is only needed if you have to move a static node from one cluster to anothe
    rm -rf /etc/systemd/system/sysctl-tuner*
    rm -rf /etc/systemd/system/kubelet*
    ```
-4. Delete all interfaces:
+1. Delete all interfaces:
    ```shell
    ifconfig cni0 down
    ifconfig flannel.1 down
@@ -81,17 +89,18 @@ This is only needed if you have to move a static node from one cluster to anothe
    ip link delete cni0
    ip link delete flannel.1
    ```
-5. Cleanup systemd:
+1. Cleanup systemd:
    ```shell
    systemctl daemon-reload
    systemctl reset-failed
    ```
-6. Start Docker:
+1. Start CRI:
    ```shell
-   systemctl start docker
+   systemctl start containerd
+   systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
-7. [Run](#how-do-i-automatically-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
-8. Turn on all the services:
+1. [Run](#how-do-i-automatically-add-a-static-node-to-a-cluster) the `bootstrap.sh` script.
+1. Turn on all the services:
    ```shell
    systemctl start kubelet.service
    systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
@@ -127,29 +136,30 @@ If you have a GPU-enabled node and want to configure Docker to work with the `no
 Create a `NodeGroup` with the following parameters:
 
 ```shell
-docker:
-  manage: false
-operatingSystem:
-  manageKernel: false
+  cri:
+    type: NotManaged
+  operatingSystem:
+    manageKernel: false
 ```
 
 Then put the node under the control of `node-manager`.
 
 ## NodeGroup parameters and their result
 
-| The NodeGroup parameter       | Disruption update    | Node provisioning | Kubelet restart |
-| ----------------------------- | -------------------- | ----------------- | --------------- |
-| operatingSystem.manageKernel  | + (true) / - (false) | -                 | -               |
-| kubelet.maxPods               | -                    | -                 | +               |
-| kubelet.rootDir               | -                    | -                 | +               |
-| docker.maxConcurrentDownloads | +                    | -                 | +               |
-| docker.manage                 | + (true) / - (false) | -                 | -               |
-| nodeTemplate                  | -                    | -                 | -               |
-| chaos                         | -                    | -                 | -               |
-| kubernetesVersion             | -                    | -                 | +               |
-| static                        | -                    | -                 | +               |
-| disruptions                   | -                    | -                 | -               |
-| cloudInstances.classReference | -                    | +                 | -               |
+| The NodeGroup parameter               | Disruption update          | Node provisioning | Kubelet restart |
+|---------------------------------------|----------------------------|-------------------|-----------------|
+| operatingSystem.manageKernel          | + (true) / - (false)       | -                 | -               |
+| kubelet.maxPods                       | -                          | -                 | +               |
+| kubelet.rootDir                       | -                          | -                 | +               |
+| cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
+| cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
+| cri.type                              | - (NotManaged) / + (other) | -                 | -               |
+| nodeTemplate                          | -                          | -                 | -               |
+| chaos                                 | -                          | -                 | -               |
+| kubernetesVersion                     | -                          | -                 | +               |
+| static                                | -                          | -                 | +               |
+| disruptions                           | -                          | -                 | -               |
+| cloudInstances.classReference         | -                          | +                 | -               |
 
 Refer to the description of the [NodeGroup](cr.html#nodegroup) custom resource for more information about the parameters.
 

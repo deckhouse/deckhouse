@@ -47,23 +47,31 @@ kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
 
 Это необходимо только в том случае, если вам нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если вам просто нужно изменить NodeGroup, вы должны следовать [этой инструкции](#как-изменить-node-group-у-статичного-узла).
 
-1. Остановить все сервисы:
-   ```shell
-   systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
-   systemctl stop bashible.service bashible.timer
-   systemctl stop kubelet.service
-   systemctl stop docker
-   ```
-2. Удалить маунты:
+1. Удалить ноду из кластера Kubernetes:
+    ```shell
+    kubectl drain <node> --ignore-daemonsets --delete-local-data
+    kubectl delete node <node>
+    ```
+1. Остановить все сервисы и запущенные контейнеры:
+    ```shell
+    systemctl stop kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
+    systemctl stop bashible.service bashible.timer
+    systemctl stop kubelet.service
+    systemctl stop containerd
+    systemctl list-units --full --all | grep -q docker.service && systemctl stop docker
+    kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
+    ```
+1. Удалить маунты:
    ```shell
    for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
    ```
-3. Удалить директории и файлы:
+1. Удалить директории и файлы:
    ```shell
    rm -rf /var/lib/bashible
    rm -rf /etc/kubernetes
    rm -rf /var/lib/kubelet
    rm -rf /var/lib/docker
+   rm -rf /var/lib/containerd
    rm -rf /etc/cni
    rm -rf /var/lib/cni
    rm -rf /var/lib/etcd
@@ -72,7 +80,7 @@ kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
    rm -rf /etc/systemd/system/sysctl-tuner*
    rm -rf /etc/systemd/system/kubelet*
    ```
-4. Удалить интерфейсы:
+1. Удалить интерфейсы:
    ```shell
    ifconfig cni0 down
    ifconfig flannel.1 down
@@ -80,17 +88,18 @@ kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
    ip link delete cni0
    ip link delete flannel.1
    ```
-5. Очистить systemd:
+1. Очистить systemd:
    ```shell
    systemctl daemon-reload
    systemctl reset-failed
    ```
-6. Запустить Docker:
+1. Запустить обратно CRI:
    ```shell
-   systemctl start docker
+   systemctl start containerd
+   systemctl list-units --full --all | grep -q docker.service && systemctl start docker
    ```
-7. [Запустить](#как-автоматически-добавить-статичный-узел-в-кластер) скрипт `bootstrap.sh`.
-8. Включить все сервисы обратно:
+1. [Запустить](#как-автоматически-добавить-статичный-узел-в-кластер) скрипт `bootstrap.sh`.
+1. Включить все сервисы обратно:
    ```shell
    systemctl start kubelet.service
    systemctl start kubernetes-api-proxy.service kubernetes-api-proxy-configurator.service kubernetes-api-proxy-configurator.timer
@@ -129,29 +138,30 @@ journalctl -fu bashible`
 Создать `NodeGroup` с такими параметрами:
 
 ```shell
-docker:
-  manage: false
-operatingSystem:
-  manageKernel: false
+  cri:
+    type: NotManaged
+  operatingSystem:
+    manageKernel: false
 ```
 
 После чего, добавить узел под управление `node-manager`.
 
 ## Какие параметры NodeGroup к чему приводят?
 
-| Параметр NG                   | Disruption update    | Перезаказ узлов | Рестарт kubelet |
-| ----------------------------- | -------------------- | --------------- | --------------- |
-| operatingSystem.manageKernel  | + (true) / - (false) | -               | -               |
-| kubelet.maxPods               | -                    | -               | +               |
-| kubelet.rootDir               | -                    | -               | +               |
-| docker.maxConcurrentDownloads | +                    | -               | +               |
-| docker.manage                 | + (true) / - (false) | -               | -               |
-| nodeTemplate                  | -                    | -               | -               |
-| chaos                         | -                    | -               | -               |
-| kubernetesVersion             | -                    | -               | +               |
-| static                        | -                    | -               | +               |
-| disruptions                   | -                    | -               | -               |
-| cloudInstances.classReference | -                    | +               | -               |
+| Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
+|---------------------------------------|----------------------------|-------------------|-----------------|
+| operatingSystem.manageKernel          | + (true) / - (false)       | -                 | -               |
+| kubelet.maxPods                       | -                          | -                 | +               |
+| kubelet.rootDir                       | -                          | -                 | +               |
+| cri.containerd.maxConcurrentDownloads | -                          | -                 | +               |
+| cri.docker.maxConcurrentDownloads     | +                          | -                 | +               |
+| cri.type                              | - (NotManaged) / + (other) | -                 | -               |
+| nodeTemplate                          | -                          | -                 | -               |
+| chaos                                 | -                          | -                 | -               |
+| kubernetesVersion                     | -                          | -                 | +               |
+| static                                | -                          | -                 | +               |
+| disruptions                           | -                          | -                 | -               |
+| cloudInstances.classReference         | -                          | +                 | -               |
 
 Подробно о всех параметрах можно прочитать в описании custom resource [NodeGroup](cr.html#nodegroup)
 
