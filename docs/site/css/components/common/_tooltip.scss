@@ -1,0 +1,7 @@
+.tippy-box[data-theme~='custom'] {
+  background-color: #000;
+}
+
+.tippy-box[data-theme~='custom'][data-placement^='top'] > .tippy-arrow::before {
+  border-top-color: #000;
+}
