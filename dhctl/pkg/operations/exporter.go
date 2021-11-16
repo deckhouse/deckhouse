@@ -230,7 +230,9 @@ func (c *ConvergeExporter) getStatistic() *converge.Statistics {
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
-		return nil
+
+		// We still want to return collected statistic in case of error, because the error returned from
+		// the CheckState call is a combination of errors from all terraform runs.
 	}
 
 	return statistic
