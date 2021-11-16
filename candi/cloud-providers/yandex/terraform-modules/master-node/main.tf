@@ -40,9 +40,25 @@ locals {
   external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? local.external_subnet_ids[var.nodeIndex] : null
 
   external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
-  external_ip_address        = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] : null
   assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
 
+}
+
+
+resource "yandex_vpc_address" "addr" {
+  count = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
+  name  = join("-", [local.prefix, "master", var.nodeIndex])
+
+  external_ipv4_address {
+    zone_id = local.internal_subnet.zone
+  }
+}
+
+locals {
+  # null if local.external_ip_addresses is empty
+  # yandex_vpc_address.addr[0].external_ipv4_address[0].address if local.external_ip_addresses == Auto
+  # local.external_ip_addresses[var.nodeIndex] if local.external_ip_addresses contain IP-addresses
+  external_ip_address = length(local.external_ip_addresses) > 0 ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? yandex_vpc_address.addr[0].external_ipv4_address[0].address : local.external_ip_addresses[var.nodeIndex] : null
 }
 
 resource "yandex_compute_disk" "kubernetes_data" {
@@ -97,7 +113,7 @@ resource "yandex_compute_instance" "master" {
   network_interface {
     subnet_id      = local.internal_subnet.id
     nat            = local.assign_external_ip_address
-    nat_ip_address = local.assign_external_ip_address && (local.external_ip_address != "Auto") ? local.external_ip_address : null
+    nat_ip_address = local.assign_external_ip_address ? local.external_ip_address : null
   }
 
   network_acceleration_type = local.network_type
