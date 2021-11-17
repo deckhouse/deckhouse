@@ -190,7 +190,7 @@ Deckhouse поддерживает [множество](/ru/documentation/v1/mod
 Внешняя аутентификация для Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
-Настройте [`publishAPI`](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api), установите локально kubectl и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
+Настройте [`publishAPI`](/ru/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api), установите локально kubectl и создайте `kubeconfig` для внешнего доступа к API в веб-интерфейсе `kubeconfig.example.com`.
 </div>
 </div>
 

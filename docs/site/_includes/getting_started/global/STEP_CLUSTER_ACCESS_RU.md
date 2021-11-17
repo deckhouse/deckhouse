@@ -9,7 +9,7 @@ Deckhouse только что завершил процесс установки
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/ru/documentation/v1/modules/150-user-authn/usage.html#внешний-доступ-к-kubernetes-api) к Kubernetes API позже.
+Вы можете запускать kubectl на master-узле от пользователя root. Это не безопасный способ, и мы рекомендуем настроить [внешний доступ](/ru/documentation/v1/modules/150-user-authn/faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) к Kubernetes API позже.
 {% snippetcut %}
 ```shell
 sudo -i

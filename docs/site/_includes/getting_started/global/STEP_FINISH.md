@@ -181,7 +181,7 @@ External authentication for the Kubernetes API
 </h3>
 <div class="cards-item__text" markdown="1">
 Configure
-[`publishAPI`](/en/documentation/v1/modules/150-user-authn/usage.html#external-access-to-the-kubernetes-api), download kubectl
+[`publishAPI`](/en/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api), download kubectl
 and create a `kubeconfig` file for external access to the API using the web interface available at `kubeconfig.example.com`.
 </div>
 </div>
