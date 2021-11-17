@@ -839,7 +839,9 @@ entries:
                 ru: Описание
                 en: Description
               url: /modules/600-secret-copier/
-    - title: Bare Metal Support
+    - title:
+        en: Bare Metal Support
+        ru: Поддержка Bare Metal
       versionType: ee
       folders:
         - title: keepalived
@@ -863,7 +865,7 @@ entries:
                   url: /modules/450-keepalived/configuration.html
                 - title: Custom Resources
                   url: /modules/450-keepalived/cr.html
-        - title: Local Path Provisioner
+        - title: local-path-provisioner
           folders:
             - title:
                 ru: Описание
