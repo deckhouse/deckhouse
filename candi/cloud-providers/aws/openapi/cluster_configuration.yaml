@@ -260,7 +260,7 @@ apiVersions:
                     description: Instance EBS disk type.
                     example: "gp2"
                     type: string
-                    enum: [gp2, io2, io1, st1, sc1]
+                    enum: [gp3, gp2, io2, io1, st1, sc1]
                   diskSizeGb:
                     description: Instance disk size in gigabytes.
                     example: 20
