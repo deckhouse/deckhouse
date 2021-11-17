@@ -188,13 +188,14 @@ spec:
   portForwarding: true
 ```
 
-## Configuring kube-apiserver
+## Configuring kube-apiserver for multi-tenancy mode
 
-For the `enableMultiTenancy` parameter to work correctly, you need to configure kube-apiserver. A dedicated [control-plane-manager](../../modules/040-control-plane-manager/) module can help you with this.
+The multi-tenancy mode, which allows you to restrict access to namespaces, is enabled by the `enableMultiTenancy` module's parameter.
 
-{% offtopic title="Changes that will be made to the manifest" %}
+Working in multi-tenancy mode requires enabling the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and configuring a `kube-apiserver.` All actions necessary for the multi-tenancy mode are performed **automatically** by the [control-plane-manager](../../modules/040-control-plane-manager/) module; no additional steps are required.
 
-* The `--authorization-mode` argument will be modified: the Webhook method will be added in front of the RBAC method (e.g., --authorization-mode=Node,Webhook,RBAC);
+Changes to the `kube-apiserver` manifest that will occur after enabling multi-tenancy mode:
+* The `--authorization-mode` argument will be modified: the Webhook method will be added in front of the RBAC method (e.g., `--authorization-mode=Node,Webhook,RBAC`);
 * The `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml` will be added;
 * The `volumeMounts` parameter will be added:
 
@@ -211,7 +212,6 @@ For the `enableMultiTenancy` parameter to work correctly, you need to configure 
       path: /etc/kubernetes/authorization-webhook-config.yaml
       type: FileOrCreate
   ```
-{% endofftopic %}
 
 ## How do I check that a user has access?
 Execute the command below with the following parameters:

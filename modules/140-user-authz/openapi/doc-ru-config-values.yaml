@@ -1,9 +1,9 @@
 properties:
   enableMultiTenancy:
     description: |
-      Включить авторизацию по namespace.
+      Включить авторизацию по namespace (режим — multi-tenancy).
 
-      Так как данная опция реализована через [плагин авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), то потребуется дополнительная [настройка kube-apiserver](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/usage.html#настройка-kube-apiserver). Для автоматизации этого процесса используйте модуль [control-plane-manager](https://deckhouse.io/ru/documentation/v1/modules/040-control-plane-manager/).
+      Все настройки `kube-apiserver`, необходимые для работы авторизации по namespace, выполняются автоматически модулем [control-plane-manager](https://deckhouse.io/ru/documentation/v1/modules/040-control-plane-manager/) ([подробнее](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/usage.html#настройка-kube-apiserver-для-работы-в-режиме-multi-tenancy)).
 
       **Доступно только в версии Enterprise Edition.**
   controlPlaneConfigurator:
