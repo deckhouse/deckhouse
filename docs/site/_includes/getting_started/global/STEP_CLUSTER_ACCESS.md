@@ -9,7 +9,7 @@ To do, so you need to get master IP either from dhctl logs or from cloud provide
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
-You can run kubectl on master node from the `root` user. This is not secure way and we recommend to configure [external access](/en/documentation/v1/modules/150-user-authn/usage.html#external-access-to-the-kubernetes-api) to Kubernetes API later.
+You can run kubectl on master node from the `root` user. This is not secure way and we recommend to configure [external access](/en/documentation/v1/modules/150-user-authn/faq.html#how-can-i-generate-a-kubeconfig-and-access-kubernetes-api) to Kubernetes API later.
 {% snippetcut %}
 ```shell
 sudo -i
