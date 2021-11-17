@@ -307,7 +307,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.16"
+              kubernetesVersion: "1.19"
               cri:
                 type: "Docker"
               cloudInstances:
