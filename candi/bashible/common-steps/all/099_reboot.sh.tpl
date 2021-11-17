@@ -40,23 +40,49 @@ if bb-flag? reboot; then
   # Why don't we start kubelet when we bootstrap node (in some cases)?
   # We want bootstrap node fully, reboot it and after reboot join node into cluster.
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-
     # Our task is to force setting Node status to NotReady to prevent unwanted schedulings during reboot.
-    # We could update .status.conditions directly, but:
-    # * kubectl can't edit status subresource by design (related discussion https://github.com/kubernetes/kubectl/issues/564).
-    # * curl in CentOS can't read kubelet client certificate key from /var/lib/kubelet/pki/kubelet-client-current.pem due to libnss bug.
-    # * wget in CentOS has no --method argument, so we cant use PATCH HTTP request.
-    # The solution — to delete Lease object for our node and handle this event with Deckhouse hook modules/040-node-manager/hooks/node_lease_handler.
-    bb-log-info "Deleting node Lease resource..."
     attempt=0
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf -n kube-node-lease delete lease "${HOSTNAME}"; do
+    while true; do
       attempt=$(( attempt + 1 ))
-      if [ "$attempt" -gt "2" ]; then
-        bb-log-warning "Can't delete node Lease resource. Node status won't be set to NotReady."
+      if [[ ${attempt} -gt 3 ]]; then
+        bb-log-warning "Can't update Node status condition to NotReady. Will reboot as is."
         break
       fi
-      bb-log-info "Retrying delete node Lease resource..."
-      sleep 1
+
+      bb-log-info "Setting node status to NotReady..."
+
+      url="https://127.0.0.1:6445/api/v1/nodes/${HOSTNAME}"
+      ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem | jq -r '.status.conditions | to_entries[] | select(.value.type == "Ready") | .key')"
+
+      # if ready_condition_key don't exist continue
+      if [[ -z "${ready_condition_key}" ]]; then
+        bb-log-warning "failed to get ready condition from node"
+        sleep 2
+        continue
+      fi
+
+      patch="$(jq -ns --arg ready_condition_key "${ready_condition_key}" --arg current_time "`date -u +'%Y-%m-%dT%H:%M:%SZ'`" '
+      [
+        {
+          "op": "replace",
+          "path": ("/status/conditions/" + $ready_condition_key),
+          "value": {
+            "type": "Ready",
+            "status": "False",
+            "lastHeartbeatTime": $current_time,
+            "lastTransitionTime": $current_time,
+            "reason": "KubeletReady",
+            "message": "Status NotReady was set by bashible during reboot step (candi/bashible/common-steps/all/099_reboot.sh)"
+          }
+        }
+      ]')"
+
+      if d8-curl -s -f -X PATCH "$url/status" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem --data "${patch}"  --header "Content-Type: application/json-patch+json" >/dev/null; then
+        break
+      fi
+
+      bb-log-warning "failed to patch node ready condition"
+      sleep 2
     done
   fi
   {{- end }}
