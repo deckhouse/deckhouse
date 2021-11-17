@@ -50,7 +50,7 @@ git:
   - '**/*.sh'
   - LOCAL_DEV.md
   - werf*.yaml
-  - docker-compose.yml
+  - docker-compose*.yml
   - .werf
   - .helm
   - backend
@@ -78,7 +78,7 @@ ansible:
         chdir: /go/src/app
 git:
   - url: https://github.com/flant/web-router.git
-    tag: v1.0.6
+    tag: v1.0.7
     add: /
     to: /go/src/app
     stageDependencies:
