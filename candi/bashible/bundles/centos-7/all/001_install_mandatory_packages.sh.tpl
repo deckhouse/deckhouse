@@ -20,6 +20,6 @@ bb-yum-install yum-plugin-versionlock
 
 bb-yum-install ${SYSTEM_PACKAGES} ${KUBERNETES_DEPENDENCIES}
 
-bb-rp-install "jq:1.6" "bash-completion-extras:2.1-11-centos7" "inotify-tools:3.14-9-centos7"
+bb-rp-install "jq:1.6" "bash-completion-extras:2.1-11-centos7" "inotify-tools:3.14-9-centos7" "curl:7.79.1"
 
 bb-yum-remove yum-cron

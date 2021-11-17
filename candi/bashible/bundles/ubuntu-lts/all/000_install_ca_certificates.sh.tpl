@@ -15,6 +15,14 @@
 # Avoid problems with expired ca-certificates
 bb-apt-install --force ca-certificates
 
+# Hack for Ubuntu 16.04
+if bb-is-ubuntu-version? 16.04 ; then
+  if grep -q "^mozilla\/DST_Root_CA_X3.crt$" /etc/ca-certificates.conf; then
+    sed -i "/mozilla\/DST_Root_CA_X3.crt/d" /etc/ca-certificates.conf
+    update-ca-certificates --fresh
+  fi
+fi
+
 {{- if .registry.ca }}
 bb-event-on 'registry-ca-changed' '_update_ca_certificates'
 function _update_ca_certificates() {
