@@ -2,13 +2,13 @@ groups:
  - name: "v1"
    channels:
     - name: alpha
-      version: latest
+      version: v1.26.0-beta.2
     - name: beta
-      version: latest
+      version: v1.26.0-beta.2
     - name: ea
-      version: latest
+      version: v1.26.0-beta.0
     - name: stable
-      version: latest
+      version: v1.25.6
     - name: rock-solid
-      version: latest
+      version: v1.25.6
 
