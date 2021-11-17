@@ -38,7 +38,7 @@ EOF
 
 function __main__ {
   for i in $(context::jq -r '.snapshots.ngs | keys[]'); do
-    if context::jq -er --argjson i "$i" '.snapshots.ngs[$i].filterResult.migrated == false'; then
+    if context::jq -er --argjson i "$i" '.snapshots.ngs[$i].filterResult.migrated == false' >/dev/null 2>&1; then
       ng_name="$(context::jq -r --argjson i "$i" '.snapshots.ngs[$i].object.metadata.name')"
       fltr='.|
         .spec.disruptions.approvalMode = (
