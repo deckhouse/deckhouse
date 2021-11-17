@@ -82,7 +82,7 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  containerd_version="$(sed "s/containerd.io=/containerd.io:/" <<< "${desired_version}")-$(lsb_release -cs)"
+  containerd_version="$(sed "s/containerd.io=/containerd.io:/" <<< "${desired_version}")-$(bb-get-ubuntu-codename)"
   crictl_version="crictl:{{ .kubernetesVersion }}"
   containerd_werf_edition_version="containerd-werf-edition:v1.4.6-werf-fix.2"
   bb-rp-install "${containerd_version}" "${crictl_version}" "${containerd_werf_edition_version}"

@@ -100,7 +100,7 @@ if [[ "$should_install_containerd" == true ]]; then
 
   bb-deckhouse-get-disruptive-update-approval
 
-  containerd_version="$(sed "s/=/:/" <<< "${desired_version_containerd}")-$(lsb_release -cs)"
+  containerd_version="$(sed "s/=/:/" <<< "${desired_version_containerd}")-$(bb-get-ubuntu-codename)"
   bb-rp-install "${containerd_version}"
 fi
 

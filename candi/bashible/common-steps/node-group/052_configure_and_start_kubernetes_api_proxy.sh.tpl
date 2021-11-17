@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if eq .bundle "ubuntu-lts" }}
-bb-rp-install "nginx:1.20.1-$(lsb_release -cs)"
+bb-rp-install "nginx:1.20.1-$(bb-get-ubuntu-codename)"
 {{- else if eq .bundle "centos-7" }}
 bb-rp-install "nginx:1.20.1-centos7"
 {{- end }}
