@@ -217,7 +217,7 @@ func createDeploymentObject() *appsv1.Deployment {
 					Containers: []v1.Container{
 						{
 							Name:  "pause",
-							Image: "k8s.gcr.io/supa-dupa-pause:3.1",
+							Image: "k8s.gcr.io/upmeter-nonexistent:3.1415",
 							Command: []string{
 								"/pause",
 							},

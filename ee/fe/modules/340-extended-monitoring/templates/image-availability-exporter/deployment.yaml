@@ -49,9 +49,14 @@ spec:
         image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.extendedMonitoring.imageAvailabilityExporter }}
         args:
         - --bind-address=127.0.0.1:8080
+        # The exporter checks for string equality.
+        # https://github.com/deckhouse/k8s-image-availability-exporter/blob/b1589b40c18290b9d105f0ac39ddc3fc554884d9/pkg/registry_checker/checker.go#L212
+        # Among known inexisting images, there is the one from Upmeter probe where we don't want a container to start.
+  {{- $ignoredImages := list "k8s.gcr.io/upmeter-nonexistent:3.1415" }}
   {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
-        - --ignored-images={{ .Values.extendedMonitoring.imageAvailability.ignoredImages | join "," | quote }}
+    {{- $ignoredImages = concat $ignoredImages .Values.extendedMonitoring.imageAvailability.ignoredImages }}
   {{- end }}
+        - '--ignored-images={{ $ignoredImages | join "," }}'
   {{- if .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
         - --skip-registry-cert-verification={{ .Values.extendedMonitoring.imageAvailability.skipRegistryCertVerification }}
   {{- end }}
