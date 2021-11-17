@@ -63,4 +63,42 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 			checkImageAvailabilityObjects(hec, false)
 		})
 	})
+
+	Context("imageAvailability.ignoredImages", func() {
+		Context("Empty", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.HelmRender()
+			})
+			It("Should contain default ignored images", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				ignoredImagesArg := deploy.Field("spec.template.spec.containers.0.args.1").String()
+
+				Expect(ignoredImagesArg).To(Equal("--ignored-images=k8s.gcr.io/upmeter-nonexistent:3.1415"))
+			})
+		})
+
+		Context("Filled", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.ignoredImages", []string{
+					"a.b.com/zzz:9.7.1",
+					"cr.k8s.io/xx-yy:4.3.1",
+				})
+				hec.HelmRender()
+			})
+			It("Should contain default and additional ignored images", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				ignoredImagesArg := deploy.Field("spec.template.spec.containers.0.args.1").String()
+
+				Expect(ignoredImagesArg).To(Equal("--ignored-images=k8s.gcr.io/upmeter-nonexistent:3.1415,a.b.com/zzz:9.7.1,cr.k8s.io/xx-yy:4.3.1"))
+			})
+		})
+	})
 })
