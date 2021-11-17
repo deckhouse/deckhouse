@@ -53,7 +53,7 @@ EOF
 function __main__() {
   if context::jq -e '
     ([.snapshots.keepalived_instances[].filterResult.spec.vrrpInstances[].id] | unique | length) !=
-    ([.snapshots.keepalived_instances[].filterResult.spec.vrrpInstances[].id] | length)'
+    ([.snapshots.keepalived_instances[].filterResult.spec.vrrpInstances[].id] | length)' >/dev/null 2>&1
   then
     >&2 echo "ERROR: All vrrpInstances[].id in all KeepalivedInstances must be unique cluster-wide."
     exit 1
