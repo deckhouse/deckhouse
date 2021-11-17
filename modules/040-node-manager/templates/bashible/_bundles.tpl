@@ -17,6 +17,13 @@
   {{- $_ := set $registry "dockerCfg" $context.Values.global.modulesImages.registryDockercfg }}
 
   {{- $tpl_context_common := ($context.Files.Get "candi/version_map.yml" | fromYaml) }}
+  {{- if $context.Values.nodeManager.allowedKubernetesVersions }}
+    {{- $k8s_section := dict }}
+    {{- range $k8s_name := $context.Values.nodeManager.allowedKubernetesVersions }}
+      {{- $_ := set $k8s_section $k8s_name (get $tpl_context_common "k8s" | pluck $k8s_name | first) }}
+    {{- end }}
+    {{- $_ := set $tpl_context_common "k8s" $k8s_section }}
+  {{- end }}
   {{- $_ := set $tpl_context_common "runType"        "Normal" }}
   {{- $_ := set $tpl_context_common "Template"       $context.Template }}
   {{- $_ := set $tpl_context_common "normal"         $normal }}
