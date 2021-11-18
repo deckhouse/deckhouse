@@ -122,6 +122,8 @@ Below, you can find instructions on how to apply this policy.
                 "iam:GetRole",
                 "iam:GetRolePolicy",
                 "iam:ListInstanceProfilesForRole",
+                "iam:ListRolePolicies",
+                "iam:ListAttachedRolePolicies",
                 "iam:PassRole",
                 "iam:PutRolePolicy",
                 "iam:RemoveRoleFromInstanceProfile",
