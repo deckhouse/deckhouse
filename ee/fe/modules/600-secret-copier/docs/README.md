@@ -20,3 +20,7 @@ Also, it synchronizes the secrets every night and makes sure they are identical 
 ### What do I need to configure?
 
 All you need to do is to create a secret with the `secret-copier.deckhouse.io/enabled: ""` label in the default namespace.
+
+### How to synchronize Secret to some selected namespaces instead of all namespaces?
+
+Specify namespace label-selector in the value of the `secret-copier.deckhouse.io/target-namespace-selector` annotation. For example: `secret-copier.deckhouse.io/target-namespace-selector: "app=custom"`. The module will create a copy of that Secret in all namespaces that matches the label-selector. 
