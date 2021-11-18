@@ -22,3 +22,4 @@ logShipperEnabled: true
 localPathProvisionerEnabled: true
 upmeterEnabled: true
 podReloaderEnabled: true
+chronyEnabled: true

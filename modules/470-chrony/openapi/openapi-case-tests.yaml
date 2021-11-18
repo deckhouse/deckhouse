@@ -1,0 +1,13 @@
+positive:
+  config_values:
+  - vpa:
+      maxCPU: "100m"
+      maxMemory: "100"
+  - ntpServers:
+    - pool.ntp.org
+    - ntp.ubuntu.com
+negative:
+  config_values:
+  - vpa:
+      maxCPU: "123Hz"
+      maxMemory: "3445J"
