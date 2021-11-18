@@ -1,5 +1,5 @@
 {{- /* Usage: {{ include "helm_lib_module_labels" (list . (dict "app" "test" "component" "testing")) }} */ -}}
-{{- /* returns decckhouse labels */ -}}
+{{- /* returns deckhouse labels */ -}}
 {{- define "helm_lib_module_labels" }}
   {{- $context := index . 0 -}} {{- /* Dot object (.) with .Values, .Chart, etc */ -}}
 labels:

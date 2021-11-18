@@ -70,6 +70,11 @@ func skipObjectContainerIfNeeded(o *storage.StoreObject, c *v1.Container) bool {
 		o.Unstructured.GetName() == "node-local-dns" && c.Name == "coredns" {
 		return true
 	}
+	// Chrony listens :123 port in hostNetwork
+	if o.Unstructured.GetKind() == "DaemonSet" && o.Unstructured.GetNamespace() == "d8-chrony" &&
+		o.Unstructured.GetName() == "chrony" && c.Name == "chrony" {
+		return true
+	}
 
 	return false
 }

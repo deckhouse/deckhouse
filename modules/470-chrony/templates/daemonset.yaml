@@ -1,0 +1,110 @@
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: chrony
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: chrony
+  updatePolicy:
+    updateMode: {{ .Values.chrony.vpa.updateMode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "chrony"
+      maxAllowed:
+        cpu: {{ .Values.chrony.vpa.maxCPU | quote }}
+        memory: {{ .Values.chrony.vpa.maxMemory | quote }}
+{{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: chrony
+  namespace: d8-chrony
+{{ include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | indent 2 }}
+spec:
+{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  selector:
+    matchLabels:
+      app: chrony
+      tier: node
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chrony
+  namespace: d8-{{ .Chart.Name }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "chrony")) | indent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: chrony
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: chrony
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- include "helm_lib_priority_class" (tuple . "cluster-low") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      containers:
+      - name: chrony
+{{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_TIME" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "SETGID" "SETUID" "SETPCAP" "NET_BIND_SERVICE" "NET_RAW" "SYS_CHROOT" "MKNOD" "AUDIT_WRITE" "SETFCAP")) | indent 8 }}
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.chrony.chrony }}
+        env:
+        - name: NTP_SERVERS
+          value: {{ join " " .Values.chrony.ntpServers | quote }}
+        ports:
+        - name: ntp
+          containerPort: 123
+          protocol: UDP
+        readinessProbe:
+          exec:
+            command:
+              - chronyc
+              - tracking
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - chronyc
+            - tracking
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: tz-config
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: tzdata-config
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: chrony
+          mountPath: /run/chrony
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
+      volumes:
+      - name: tz-config
+        hostPath:
+          path: /etc/localtime
+      - name: tzdata-config
+        hostPath:
+          path: /etc/timezone
+      - name: chrony
+        emptyDir: {}
+
