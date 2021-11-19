@@ -57,14 +57,3 @@ You can globally define a metric using the Cluster resource, while the Namespace
 
 ### `ClusterDaemonSetMetric` (not available to users)
 {{ cr_spec }}
-
-## PrometheusRule
-
-* `.metadata.namespace` —  is set to `d8-monitoring` in all cases;
-* `.metadata.labels.prometheus —  is set to  `main` in all cases;
-* `.metadata.labels.component —  is set to  `rules` in all cases;
-* `.spec.groups:
-    * `name` — the name according to the recommended template (e.g., `prometheus-metrics-adapter.mymetric`);
-    * `rules`:
-      * `record` — the name of the metric;
-      * `expr` — a request, the results of which will be passed to the final metric.
