@@ -138,7 +138,6 @@ Prod Main Deploy:
     - main
   except:
     - schedules
-  when: manual
 
 Prod Doc Deploy:
   <<: *web_base_deploy
@@ -150,20 +149,9 @@ Prod Doc Deploy:
     url: https://deckhouse.io
   only:
     - main
+    - tags
   except:
     - schedules
-  when: manual
-
-Prod Doc Tag Deploy:
-  <<: *web_base_deploy
-  variables:
-    WERF_KUBECONFIG_BASE64: "${KUBECONFIG_BASE64_PROD}"
-    WERF_DIR: "docs/documentation"
-  environment:
-    name: web-production
-    url: https://deckhouse.io
-  only:
-    - tags
 
 Web cleanup:
   stage: cleanup_registry
