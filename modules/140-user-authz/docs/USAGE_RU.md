@@ -189,22 +189,23 @@ spec:
   portForwarding: true
 ```
 
-## Настройка kube-apiserver
+### Настройка `kube-apiserver` для работы в режиме multi-tenancy
 
-Для корректной работы параметра `enableMultiTenancy` необходимо настроить kube-apiserver. Для этого предусмотрен специальный модуль [control-plane-manager](../../modules/040-control-plane-manager/).
+Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается [параметром](configuration.html) `enableMultiTenancy` модуля. 
 
-{% offtopic title="Изменения манифеста, которые произойдут" %}
+Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/040-control-plane-manager/), никаких ручных действий не требуется.
 
-* Будет поправлен аргумент `--authorization-mode`, добавится перед методом RBAC метод Webhook (например, --authorization-mode=Node,Webhook,RBAC).
-* Добавится `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`.
-* Добавится `volumeMounts`:
+Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
+* Исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например — `--authorization-mode=Node,Webhook,RBAC`).
+* Добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`.
+* Добавление `volumeMounts`:
 
   ```yaml
   - name: authorization-webhook-config
     mountPath: /etc/kubernetes/authorization-webhook-config.yaml
     readOnly: true
   ```
-* Добавится `volumes`:
+* Добавление `volumes`:
 
   ```yaml
   - name:authorization-webhook-config
@@ -212,13 +213,12 @@ spec:
       path: /etc/kubernetes/authorization-webhook-config.yaml
       type: FileOrCreate
   ```
-{% endofftopic %}
 
 ## Как проверить, что у пользователя есть доступ?
 Необходимо выполнить следующую команду, в которой будут указаны:
-* `resourceAttributes` (как в RBAC) - к чему мы проверяем доступ
-* `user` - имя пользователя
-* `groups` - группы пользователя
+* `resourceAttributes` (как в RBAC) — к чему мы проверяем доступ
+* `user` — имя пользователя
+* `groups` — группы пользователя
 
 P.S. При совместном использовании с модулем `user-authn`, группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации)
 

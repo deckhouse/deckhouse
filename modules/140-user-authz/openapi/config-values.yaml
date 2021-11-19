@@ -4,9 +4,9 @@ properties:
     type: boolean
     default: false
     description: |
-      Enable namespace-based authorization.
+      Enable namespace-based authorization (multi-tenancy mode).
 
-      Since this option is implemented via the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), you will need to perform an additional configuration of [kube-apiserver](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/faq.html#configuring-kube-apiserver). You can use the [control-plane-manager](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/) module to automate this process.
+      All the `kube-apiserver` settings required for namespace-based authorization are performed automatically by the [control-plane-manager](https://deckhouse.io/en/documentation/v1/modules/040-control-plane-manager/) module ([more details](https://deckhouse.io/en/documentation/v1/modules/140-user-authz/usage.html#configuring-kube-apiserver-for-multi-tenancy-mode)).
 
       **Available in Enterprise Edition only.**
     x-doc-default: false
