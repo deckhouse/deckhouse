@@ -261,6 +261,10 @@
   - '*'
   verbs:
   - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
 {{- end -}}
 
 ---
