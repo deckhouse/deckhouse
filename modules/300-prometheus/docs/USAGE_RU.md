@@ -104,7 +104,7 @@ type: Opaque
 data:
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
-Далее остается только добавить Datasource в Grafana:
+Далее остается только добавить data source в Grafana:
 
 **В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>/trickster/main/`**
 

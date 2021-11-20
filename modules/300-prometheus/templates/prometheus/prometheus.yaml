@@ -119,6 +119,7 @@ spec:
       prometheus: main
   secrets:
   - prometheus-scraper-tls
+  - alertmanagers-tls-config
   rules:
     alert:
       resendDelay: 29s

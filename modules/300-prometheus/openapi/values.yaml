@@ -198,6 +198,44 @@ properties:
                 - action: keep
                   regex: "prometheus_build_.*"
                   sourceLabels: [ "__name__" ]
+      alerting:
+        type: object
+        default: {}
+        properties:
+          alertmanagers:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                scheme:
+                  type: string
+                target:
+                  type: string
+                path:
+                  type: string
+                  default: "/"
+                basicAuth:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    password:
+                      type: string
+                bearerToken:
+                  type: string
+                tlsConfig:
+                  type: object
+                  properties:
+                    ca:
+                      type: string
+                    cert:
+                      type: string
+                    key:
+                      type: string
+                    insecureSkipVerify:
+                      type: boolean
       alertmanagers:
         type: object
         default: {}

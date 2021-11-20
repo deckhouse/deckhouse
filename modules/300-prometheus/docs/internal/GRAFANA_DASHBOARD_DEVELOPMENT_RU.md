@@ -78,7 +78,7 @@ search: grafana разработка графиков
 
 В наших Grafana может быть доступно несколько Prometheus'ов (с разной степенью детализации данных и разным периодом хранения), а значит должна быть возможность удобного выбора сервера Prometheus. Чтобы это сделать, нужно:
 * [создать](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_variable.jpg) переменную `$ds_prometheus`
-* в каждой панели [указать](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_select_in_panel.jpg) именно `$ds_prometheus` в качестве Datasource, а не один из конкретных Prometheus'ов
+* в каждой панели [указать](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_select_in_panel.jpg) именно `$ds_prometheus` в качестве data source, а не один из конкретных Prometheus'ов
 
 ### Graph Tooltip должен быть в режиме Shared crosshair
 

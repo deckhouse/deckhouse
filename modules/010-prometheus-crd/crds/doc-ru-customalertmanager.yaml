@@ -1,0 +1,22 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Ресурс для подключения дополнительных Alertmanagers к Prometheus.
+          properties:
+            spec:
+              properties:
+                external:
+                  properties:
+                    address:
+                      description: 'URL внешнего сервиса Alertmanager.'
+                    service:
+                      description: 'Сервис Alertmanager внутри kubernetes кластера.'
+                    basicAuth:
+                      description: 'Настройки Basic авторизации.'
+                    bearerToken:
+                      description: 'Bearer токен.'
+                    tls:
+                      desciption: 'Настройки TLS.'
