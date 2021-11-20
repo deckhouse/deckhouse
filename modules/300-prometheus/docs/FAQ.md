@@ -42,8 +42,8 @@ subsets:
 
 ## How do I create custom Grafana dashboards?
 
-The custom Grafana dashboards can be added to the project using the infrastructure as a code approach.
-To add your dashboard to Grafana, create the dedicated [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition) custom resource in the cluster.
+Custom Grafana dashboards can be added to the project using the infrastructure as a code approach.
+To add your dashboard to Grafana, create the dedicated [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition) Custom Resource in the cluster.
 
 An example:
 ```yaml
@@ -73,8 +73,7 @@ spec:
 The `CustomPrometheusRules` resource allows you to add alerts.
 
 Parameters:
-
-`groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+- `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 An example:
 ```yaml
@@ -94,8 +93,8 @@ spec:
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```
-### How do I provision additional Grafana Datasources?
-The `GrafanaAdditionalDatasource` allows you to provision additional Grafana Datasources.
+### How do I provision additional Grafana data sources?
+The `GrafanaAdditionalDatasource` allows you to provision additional Grafana data sources.
 
 A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
 
@@ -121,41 +120,40 @@ spec:
 ## How do I enable secure access to metrics?
 To enable secure access to metrics, we strongly recommend using **kube-rbac-proxy**.
 
-## How do I add an additional alertmanager?
+## How do I add an additional Alertmanager?
 
-Create a service with the `prometheus.deckhouse.io/alertmanager: main` that points to your Alertmanager.
+Create a Custom Resource `CustomAlertmanager`, it can point to Alertmanager through the FQDN or Kubernetes service
 
-Optional annotations:
-* `prometheus.deckhouse.io/alertmanager-path-prefix` — the prefix to add to HTTP requests;
-  * It is set to "/" by default.
-
-**Caution!** Currently, only the plain HTTP scheme is supported.
-
-An example:
+FQDN Alertmanager example:
 ```yaml
-apiVersion: v1
-kind: Service
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
 metadata:
-  name: my-alertmanager
-  namespace: my-monitoring
-  labels:
-    prometheus.deckhouse.io/alertmanager: main
-  annotations:
-    prometheus.deckhouse.io/alertmanager-path-prefix: /myprefix/
+  name: my-fqdn-alertmanager
 spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: http
-  selector:
-    app: my-alertmanager
+  external:
+    address: https://alertmanager.mycompany.com/myprefix
+  type: External
 ```
-**Caution!!**  If you create Endpoint for a Service manually (e.g., to use an external alertmanager), you must specify the port name both in the Service and in Endpoints.
 
-## How do I ignore unnecessary alerts in alertmanager?
+Alertmanager with a Kubernetes service:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: my-service-alertmanager
+spec:
+  external:
+    service: 
+      namespace: myns
+      name: my-alertmanager
+      path: /myprefix/
+  type: External
+```
+
+Refer to the description of the [CustomAlertmanager](cr.html#customalertmanager) Custom Resource for more information about the parameters.
+
+## How do I ignore unnecessary alerts in Alertmanager?
 
 The solution comes down to configuring alert routing in the Alertmanager.
 

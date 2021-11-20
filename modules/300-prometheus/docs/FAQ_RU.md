@@ -42,7 +42,7 @@ subsets:
 
 ## Как добавить дополнительные dashboard'ы в вашем проекте?
 
-Добавление пользовательских dashboard'ов для Grafana в deckhouse реализовано при помощи подхода infrastructure as a code.
+Добавление пользовательских dashboard'ов для Grafana в Deckhouse реализовано при помощи подхода infrastructure as a code.
 Чтобы ваш dashboard появился в Grafana, необходимо создать в кластере специальный ресурс — [`GrafanaDashboardDefinition`](cr.html#grafanadashboarddefinition).
 
 Пример:
@@ -73,8 +73,7 @@ spec:
 Для добавления алертов существует специальный ресурс — `CustomPrometheusRules`.
 
 Параметры:
-
-`groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает с [аналогичной в prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+- `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает с [аналогичной в prometheus-operator](https://github.com/coreos/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 Пример:
 ```yaml
@@ -94,8 +93,8 @@ spec:
       expr: |
         ceph_health_status{job="rook-ceph-mgr"} > 1
 ```
-### Как подключить дополнительные Datasource для Grafana?
-Для подключения дополнительных datasource'ов к Grafana добавлен специальный ресурс - `GrafanaAdditionalDatasource`.
+### Как подключить дополнительные data source для Grafana?
+Для подключения дополнительных data source к Grafana существует специальный ресурс — `GrafanaAdditionalDatasource`.
 
 Параметры ресурса подробно описаны в [документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
 
@@ -121,41 +120,40 @@ spec:
 ## Как обеспечить безопасный доступ к метрикам?
 Для обеспечения безопасности настоятельно рекомендуем использовать **kube-rbac-proxy**.
 
-## Как добавить дополнительный alertmanager?
+## Как добавить дополнительный Alertmanager?
 
-Создать сервис с лейблом `prometheus.deckhouse.io/alertmanager: main`, который указывает на ваш Alertmanager.
+Создать Custom Resource `CustomAlertmanager`, который может указывать на Alertmanager по FQDN или через сервис в Kubernetes-кластере.
 
-Опциональные аннотации:
-* `prometheus.deckhouse.io/alertmanager-path-prefix` — префикс, который будет добавлен к HTTP-запросам.
-  * По умолчанию — "/".
-
-**Важно!** На данный момент поддерживается только plain HTTP схема.
-
-Пример:
+Пример FQDN Alertmanager:
 ```yaml
-apiVersion: v1
-kind: Service
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
 metadata:
-  name: my-alertmanager
-  namespace: my-monitoring
-  labels:
-    prometheus.deckhouse.io/alertmanager: main
-  annotations:
-    prometheus.deckhouse.io/alertmanager-path-prefix: /myprefix/
+  name: my-fqdn-alertmanager
 spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: http
-  selector:
-    app: my-alertmanager
+  external:
+    address: https://alertmanager.mycompany.com/myprefix
+  type: External
 ```
-**Важно!!** если вы создаете Endpoints для Service вручную (например для использования внешнего alertmanager'а), обязательно указывать имя порта (name) и в Service, и в Endpoints.
 
-## Как в alertmanager игнорировать лишние алерты?
+Пример Alertmanager с Kubernetes service:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: my-service-alertmanager
+spec:
+  external:
+    service: 
+      namespace: myns
+      name: my-alertmanager
+      path: /myprefix/
+  type: External
+```
+
+Подробно о всех параметрах можно прочитать в описании Сustom Resource [CustomAlertmanager](cr.html#customalertmanager)
+
+## Как в Alertmanager игнорировать лишние алерты?
 
 Решение сводится к настройке маршрутизации алертов в вашем Alertmanager.
 
@@ -187,15 +185,15 @@ route:
 
 Наиболее [полный ответ](https://www.robustperception.io/keep-it-simple-scrape_interval-id) на этот вопрос даёт разработчик Prometheus Brian Brazil.
 Если коротко, то разные scrapeInterval'ы принесут следующие проблемы:
-* Увеличение сложности конфигурации
-* Проблемы при написании запросов и создании графиков
-* Короткие интервалы больше похожи на профилирование приложения, и, скорее всего, Prometheus не самый подходящий инструмент для этого
+* Увеличение сложности конфигурации;
+* Проблемы при написании запросов и создании графиков;
+* Короткие интервалы больше похожи на профилирование приложения, и, скорее всего, Prometheus — не самый подходящий инструмент для этого.
 
-Наиболее разумное значение для scrapeInterval находится в диапазоне 10-60s.
+Наиболее разумное значение для scrapeInterval находится в диапазоне 10-60 секунд.
 
 ## Как ограничить потребление ресурсов Prometheus?
 
-Чтобы избежать ситуаций когда VPA запрашивает для Prometheus или Longterm Prometheus ресурсов больше чем есть на выделенном для этого узле, можно явно ограничить VPA с помощью [параметров модуля](configuration.html):
+Чтобы избежать ситуаций, когда VPA запрашивает для Prometheus или Longterm Prometheus ресурсов больше чем есть на выделенном для этого узле, можно явно ограничить VPA с помощью [параметров модуля](configuration.html):
 - `vpa.longtermMaxCPU`
 - `vpa.longtermMaxMemory`
 - `vpa.maxCPU`

@@ -32,9 +32,9 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Prometheus hooks :: alertmanager discovery ::", func() {
+var _ = Describe("Prometheus hooks :: alertmanager discovery :: deprecated services", func() {
 	const (
-		initValuesString       = `{"prometheus": {"internal": {}}}`
+		initValuesString       = `{"prometheus": {"internal": {"alerting": {}}}}`
 		initConfigValuesString = `{}`
 	)
 
@@ -97,6 +97,7 @@ spec:
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "CustomAlertmanager", false)
 
 	Context("Cluster has non-special services", func() {
 		BeforeEach(func() {
@@ -104,9 +105,8 @@ spec:
 			f.RunHook()
 		})
 
-		It("snapshots must be empty; prometheus.internal.alertmanagers must be '{}'", func() {
+		It("prometheus.internal.alertmanagers must be '{}'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Get("0.snapshots.alertmanager_services").Array()).To(BeEmpty())
 			Expect(f.ValuesGet("prometheus.internal.alertmanagers").Exists()).ToNot(BeTrue())
 		})
 	})

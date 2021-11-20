@@ -78,7 +78,7 @@ You must always [explicitly specify the job](prometheus_rules_development.html#s
 
 Our Grafanas may have several Prometheus instances available (with different data granularity and storage periods). That means that the user must be able to choose the Prometheus server. To do this, you need to:
 * [create](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_variable.jpg) a `$ds_prometheus` variable;
-* [set](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_select_in_panel.jpg) the `$ds_prometheus` as the Datasource in each panel (instead of setting the specific Prometheus instance).
+* [set](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_select_in_panel.jpg) the `$ds_prometheus` as the data source in each panel (instead of setting the specific Prometheus instance).
 
 ### Graph Tooltip must be in Shared crosshair mode
 
