@@ -68,4 +68,13 @@
     color: transparentize($color-main, 0.5);
     display: block;
   }
+
+  .invalid-message {
+    color: red;
+    display: none;
+  }
+
+  .active {
+    display: block;
+  }
 }
