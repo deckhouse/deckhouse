@@ -1,5 +1,5 @@
 ---
-title: "Модуль upmeter: пример конфигурации remote_write"
+title: "Модуль upmeter: пример конфигурации"
 ---
 
 ## Пример конфигурации remote_write
