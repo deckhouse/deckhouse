@@ -22,9 +22,17 @@ function restoreData() {
 }
 
 $(document).ready(function(){
+  let publicDomainTemplatePattern = /^([a-zA-Z0-9][a-zA-Z0-9-.]+)?%s([a-zA-Z0-9-]+)?\.[a-zA-Z0-9-.]+/;
   restoreData();
 	$('#clusterdomain').change(function(){
-		sessionStorage.setItem('dhctl-domain', $(this).val());
+	    if (!$(this).val().match(publicDomainTemplatePattern)) {
+            $(this).addClass('invalid');
+            $(this).parent().find('.invalid-message').addClass('active');
+        } else {
+            $(this).removeClass('invalid');
+            $(this).parent().find('.invalid-message').removeClass('active');
+            sessionStorage.setItem('dhctl-domain', $(this).val());
+        }
 	});
 	$('#resourceprefix').change(function(){
 		sessionStorage.setItem('dhctl-prefix', $(this).val());

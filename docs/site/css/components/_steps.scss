@@ -33,10 +33,9 @@
                 color: #999 !important;
             }
             &_active {
-                background: $color-inverse;
                 font-weight: $font-weight-semibold;
-                border-color: $color-alt;
-                color: $color-alt;
+                background: $color-alt;
+                color: $color-inverse !important;
             }
             &_past {
                 font-weight: $font-weight-semibold;
