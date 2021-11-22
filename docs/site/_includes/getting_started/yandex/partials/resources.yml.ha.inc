@@ -7,17 +7,18 @@ spec:
     classReference:
       kind: YandexInstanceClass
       name: worker
-    maxPerZone: 2
-    minPerZone: 2
+    maxPerZone: 1
+    minPerZone: 1
     # [<en>] you might consider changing this
     # [<ru>] возможно, захотите изменить
     zones:
     - ru-central1-a
+    - ru-central1-b
   disruptions:
     approvalMode: Automatic
   nodeTemplate:
     labels:
-      node-role.deckhouse.io/worker: ""
+      node.deckhouse.io/group: worker
   nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
@@ -43,7 +44,7 @@ spec:
   ingressClass: nginx
   inlet: LoadBalancer
   nodeSelector:
-    node-role.deckhouse.io/worker: ""
+    node.deckhouse.io/group: worker
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

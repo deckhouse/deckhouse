@@ -49,11 +49,6 @@ spec:
     zones:
     - *!CHANGE_ZONE_TAG_NAME*
     - *!CHANGE_ANOTHER_ZONE_TAG_NAME*
-  nodeTemplate:
-    # [<en>] similar to the standard metadata.labels field
-    # [<ru>] аналогично стандартному полю metadata.labels
-    labels:
-      node-role.deckhouse.io/worker: ""
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of instance class for worker nodes
