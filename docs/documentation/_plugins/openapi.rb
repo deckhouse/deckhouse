@@ -1,10 +1,6 @@
 module Jekyll
   module Openapi
 
-    def format_key_name(name)
-      "<code class=\"highlighter-rouge\">#{name}</code>"
-    end
-
     #
     # Return localised description
     # the source parameter is for object without i18n structure and for legacy support
@@ -87,22 +83,23 @@ module Jekyll
 
         if attributes.has_key?('x-doc-default')
             if attributes['x-doc-default'].is_a?(Array)
-                result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['x-doc-default'].to_json}`"))
+                result.push(sprintf(%q(<span class="resources__attr_name">%s:</span><code>%s</code>), get_i18n_term("default_value").capitalize, attributes['x-doc-default'].to_json))
             else
                 if attributes['type'] == 'string'
-                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `\"#{attributes['x-doc-default']}\"`"))
+                    result.push(sprintf(%q(<span class="resources__attr_name">%s:</span><code>"%s"</code>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 else
-                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['x-doc-default']}`"))
+                    result.push(sprintf(%q(<span class="resources__attr_name">%s:</span><code>%s</code>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 end
             end
         elsif attributes.has_key?('default')
             if attributes['default'].is_a?(Array)
+                result.push(sprintf(%q(<span class="resources__attr_name">%s:</span><code>%s</code>), get_i18n_term("default_value").capitalize, attributes['default'].to_json))
                 result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default'].to_json}`"))
             else
                 if attributes['type'] == 'string'
-                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `\"#{attributes['default']}\"`"))
+                    result.push(sprintf(%q(<span class="resources__attr_name">%s:</span><code>"%s"</code>), get_i18n_term("default_value").capitalize, attributes['default']))
                 else
-                    result.push(converter.convert('**' + get_i18n_term("default_value").capitalize + ":** `#{attributes['default']}`"))
+                    result.push(sprintf(%q(<span class="resources__attr_name">%s:</span><code>%s</code>), get_i18n_term("default_value").capitalize, attributes['default']))
                 end
             end
         end
@@ -117,7 +114,7 @@ module Jekyll
         end
 
         if attributes['minimum'] || attributes['maximum']
-            range = '**' + get_i18n_term("allowed_values").capitalize + ':** `'
+            range = '<span class="resources__attr_name">' + get_i18n_term("allowed_values").capitalize + ':</span> `'
             if attributes['minimum']
               comparator = attributes['exclusiveMinimum'] ? '<' : '<='
               range += "#{attributes['minimum'].to_json} #{comparator} "
@@ -132,19 +129,19 @@ module Jekyll
         end
 
         if attributes['enum']
-            enum_result = '**' + get_i18n_term("allowed_values").capitalize
+            enum_result = '<span class="resources__attr_name">' + get_i18n_term("allowed_values").capitalize
             if name == "" and parent['type'] == 'array'
                 enum_result += ' ' + get_i18n_term("allowed_values_of_array")
             end
-            result.push(converter.convert(enum_result + ':** ' + [*attributes['enum']].map { |e| "`#{e}`" }.join(', ')))
+            result.push(enum_result + ':</span> '+ converter.convert([*attributes['enum']].map { |e| "`#{e}`" }.join(', ')))
         end
 
         if attributes['pattern']
-            result.push(converter.convert('**' + get_i18n_term("pattern").capitalize + ":** `#{attributes['pattern']}`"))
+            result.push(sprintf(%q(<span class="resources__attr_name">%s:</span> %s),get_i18n_term("pattern").capitalize, converter.convert("`#{attributes['pattern']}`")))
         end
 
         if attributes['minLength'] || attributes['maxLength']
-            description = '**' + get_i18n_term('length').capitalize + ':** `'
+            description = %Q(<span class="resources__attr_name">#{get_i18n_term('length').capitalize}</span>:)
             if attributes['minLength']
               description += "#{attributes['minLength'].to_json}"
             end
@@ -170,7 +167,7 @@ module Jekyll
             exampleObject = attributes['x-examples']
         end
         if exampleObject != nil
-            example =  '**' + get_i18n_term('example').capitalize + ':** ' +
+            example =  %Q(<span class="resources__attr_name">#{get_i18n_term('example').capitalize}:</span>) +
                         if exampleObject.is_a?(Hash) && exampleObject.has_key?('oneOf')
                             exampleObject['oneOf'].map { |e| "`#{e.to_json}`" }.join(' ' + get_i18n_term('or') + ' ')
                         elsif exampleObject.is_a?(Array) || exampleObject.is_a?(Hash)
@@ -190,12 +187,12 @@ module Jekyll
         end
 
         if parent.has_key?('required') && parent['required'].include?(name)
-            result.push(converter.convert('**' + get_i18n_term('required_value_sentence')  + '**'))
+            result.push(%Q(<span class="resources__attr_name required">#{get_i18n_term('required_value_sentence')}</span>))
         elsif attributes.has_key?('x-doc-required')
             if attributes['x-doc-required']
-                result.push(converter.convert('**' + get_i18n_term('required_value_sentence')  + '**'))
+                result.push(%Q(<span class="resources__attr_name required">#{get_i18n_term('required_value_sentence')}</span>))
             else
-                result.push(converter.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
+                result.push(%Q(<span class="resources__attr_name not_required">#{get_i18n_term('not_required_value_sentence')}</span>))
             end
         else
             # Not sure if there will always be an optional value here...
@@ -225,24 +222,25 @@ module Jekyll
               end
             end
 
-            if attributes_type != ''
-                if attributes.is_a?(Hash) and attributes.has_key?("items")
-                    name_text = format_key_name(name)+ ' (<i>' +  format_type(attributes_type, attributes["items"]["type"]) + '</i>)'
-                else
-                    name_text = format_key_name(name)+ ' (<i>' +  format_type(attributes_type, nil) + '</i>)'
-                end
+            if attributes['x-doc-deprecated']
+                name_text = sprintf(%q(<span class="resources__prop_name deprecated">%s</span>), name)
             else
-                name_text = format_key_name(name)
+                name_text = sprintf(%q(<span class="resources__prop_name">%s</span>), name)
             end
 
-            if attributes['x-doc-deprecated']
-                name_text = name_text + ' <span class="deprecated">' + get_i18n_term('deprecated').upcase + '!</span>'
+            if attributes_type != ''
+                if attributes.is_a?(Hash) and attributes.has_key?("items")
+                    name_text += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributes_type, attributes["items"]["type"]))
+                else
+                    name_text += sprintf(%q(<span class="resources__prop_type">%s</span>), format_type(attributes_type, nil))
+                end
             end
 
             result.push(name_text)
         end
 
-        result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
+#         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
+        result.push('<p>',format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage), '</p>') if attributes.is_a?(Hash)
 
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
@@ -379,7 +377,7 @@ module Jekyll
                             input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
                        result.push(converter.convert(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"]))
                        else
-                           result.push(converter.convert(item["schema"]["openAPIV3Schema"]["description"]))
+                           result.push('<div class="resources__prop_description">' + converter.convert(item["schema"]["openAPIV3Schema"]["description"]) + '</div>')
                        end
                     end
 

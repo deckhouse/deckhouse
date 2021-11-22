@@ -1,0 +1,28 @@
+@import "components/common/_variables.scss";
+
+.resources {
+    &__prop_description {
+      margin: 0.3rem 0 0 0;
+      line-height: 1.2rem;
+      font-size: 0.9rem;
+    }
+    &__prop_name {
+      color: #000000;
+      font-weight: bolder;
+      background: none;
+      font-size: revert;
+      padding: 0;
+    }
+    &__prop_type {
+      margin-left: 1rem;
+      color: #999999;
+      font-style: normal;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+    }
+    &__attr_name {
+      font-weight: 400 !important;
+      font-style: italic;
+      color: #08a;
+    }
+}
