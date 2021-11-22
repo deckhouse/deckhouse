@@ -287,6 +287,22 @@ spec:
                 maxReplicas:
                   description: |
                     Максимально количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
+                defaultSSLCertificate:
+                  description: |
+                    Этот сертификат используется, в случаях обращений на `catch-all` сервер (запросы, для которых на найден подходящщий Ingress) и для Ingress–ресурсов, в которых не задан `secretName` в секции `tls:`.
+
+                    По–умолчанию будет использоваться самоподписанный сертификат.
+                  properties:
+                    secretRef:
+                      description: |
+                        Ссылка на Secret для передачи Ingress Controller.
+                      properties:
+                        name:
+                          description: |
+                            Имя секрета, содержащего SSL–сертификат.
+                        namespace:
+                          description: |
+                            Имя namespace, в котором находится секрет с SSL—сертификатом.
     - name: v1
       served: true
       storage: false
