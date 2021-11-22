@@ -121,10 +121,6 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) 
 		allErrs = multierror.Append(allErrs, fmt.Errorf("node goups in Kubernetes cluster not found: %w", err))
 	}
 
-	if allErrs != nil && allErrs.Len() > 0 {
-		return &statistics, allErrs.ErrorOrNil()
-	}
-
 	// We have no nodeTemplate settings for master nodes
 	statistics.NodeTemplates = append(statistics.NodeTemplates, NodeGroupCheckResult{Name: "master", Status: OKStatus})
 
