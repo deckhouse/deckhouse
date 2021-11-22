@@ -11,8 +11,11 @@ document.addEventListener("DOMContentLoaded", function() {
     /**
     * AnchorJS
     */
+    console.log("HI1");
     if (window.anchors_disabled != true) {
         anchors.add('h2,h3,h4,h5');
+        console.log("HI2");
+        anchors.add('.anchored');
     }
 
 });
