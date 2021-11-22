@@ -165,11 +165,6 @@ spec:
     # [<ru>] возможно, захотите изменить
     zones:
       - eu-central-1a
-  nodeTemplate:
-    # [<en>] similar to the standard metadata.labels field
-    # [<ru>] аналогично стандартному полю metadata.labels
-    labels:
-      node-role.deckhouse.io/worker: ""
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of nginx ingress controller

@@ -90,9 +90,6 @@ spec:
     - ru-central1-c
   disruptions:
     approvalMode: Automatic
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/worker: ""
   nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1

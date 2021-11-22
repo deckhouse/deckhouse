@@ -101,7 +101,7 @@ spec:
       kind: OpenStackInstanceClass
       name: system
     maxPerZone: 2
-    minPerZone: 3
+    minPerZone: 2
     zones:
     - DP1
   disruptions:
@@ -144,7 +144,7 @@ spec:
   cloudInstances:
     classReference:
       kind: OpenStackInstanceClass
-      name: system
+      name: worker
     maxPerZone: 1
     minPerZone: 1
     # [<en>] you might consider changing this
@@ -153,9 +153,6 @@ spec:
     - DP1
   disruptions:
     approvalMode: Automatic
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/worker: ""
 ---
 # [<en>] section containing the parameters of nginx ingress controller
 # [<en>] version of the Deckhouse API

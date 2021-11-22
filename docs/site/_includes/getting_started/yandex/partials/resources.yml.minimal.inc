@@ -17,7 +17,7 @@ spec:
     approvalMode: Automatic
   nodeTemplate:
     labels:
-      node-role.deckhouse.io/worker: ""
+      node.deckhouse.io/group: worker
   nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
@@ -43,7 +43,7 @@ spec:
   ingressClass: nginx
   inlet: LoadBalancer
   nodeSelector:
-    node-role.deckhouse.io/worker: ""
+    node.deckhouse.io/group: worker
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

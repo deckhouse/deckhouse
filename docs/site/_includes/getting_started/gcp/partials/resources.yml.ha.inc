@@ -42,7 +42,7 @@ spec:
     # [<en>] similar to the standard metadata.labels field
     # [<ru>] аналогично стандартному полю metadata.labels
     labels:
-      node-role.deckhouse.io/worker: ""
+      node.deckhouse.io/group: worker
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of nginx ingress controller
@@ -63,7 +63,7 @@ spec:
   # [<en>] describes on which nodes the component will be located
   # [<ru>] описывает, на каких узлах будет находиться компонент
   nodeSelector:
-    node-role.deckhouse.io/worker: ""
+    node.deckhouse.io/group: worker
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
