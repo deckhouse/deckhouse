@@ -1,13 +1,13 @@
-diff --git a/build.go b/build.go
-index 4fcb08e6d8..bafea6a143 100644
---- a/build.go
-+++ b/build.go
-@@ -300,7 +300,7 @@ func ldflags() string {
-        var b bytes.Buffer
-        b.WriteString("-w")
-        b.WriteString(fmt.Sprintf(" -X main.version=%s", version))
--       b.WriteString(fmt.Sprintf(" -X main.commit=%s", getGitSha()))
-+       b.WriteString(fmt.Sprintf(" -X main.commit=%s", "fix_heatmap,feat_extra_vars"))
-        b.WriteString(fmt.Sprintf(" -X main.buildstamp=%d", buildStamp()))
-        b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", getGitBranch()))
-        if v := os.Getenv("LDFLAGS"); v != "" {
+diff --git a/pkg/build/cmd.go b/pkg/build/cmd.go
+index 5817cee065..a7a19cc30e 100644
+--- a/pkg/build/cmd.go
++++ b/pkg/build/cmd.go
+@@ -243,7 +243,7 @@ func ldflags(opts BuildOpts) (string, error) {
+ 	b.WriteString(fmt.Sprintf(" -X main.version=%s", opts.version))
+ 	b.WriteString(fmt.Sprintf(" -X main.commit=%s", getGitSha()))
+ 	b.WriteString(fmt.Sprintf(" -X main.buildstamp=%d", buildStamp))
+-	b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", getGitBranch()))
++	b.WriteString(fmt.Sprintf(" -X main.buildBranch=%s", "fix_heatmap,feat_extra_vars"))
+ 	if v := os.Getenv("LDFLAGS"); v != "" {
+ 		b.WriteString(fmt.Sprintf(" -extldflags \"%s\"", v))
+ 	}

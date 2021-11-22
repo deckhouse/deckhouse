@@ -1,8 +1,8 @@
 diff --git a/public/app/plugins/datasource/prometheus/datasource.ts b/public/app/plugins/datasource/prometheus/datasource.ts
-index 3ff3d58a63..16e5712d13 100644
+index f090e947aa..66bdd6503c 100644
 --- a/public/app/plugins/datasource/prometheus/datasource.ts
 +++ b/public/app/plugins/datasource/prometheus/datasource.ts
-@@ -395,6 +395,23 @@ export class PrometheusDatasource extends DataSourceApi<PromQuery, PromOptions>
+@@ -446,6 +446,23 @@ export class PrometheusDatasource extends DataSourceApi<PromQuery, PromOptions>
          ...this.getRangeScopedVars(options.range),
        });
      }
@@ -27,15 +27,15 @@ index 3ff3d58a63..16e5712d13 100644
 
      let expr = target.expr;
 diff --git a/public/app/plugins/datasource/prometheus/promql.ts b/public/app/plugins/datasource/prometheus/promql.ts
-index 96cab5fed6..f5db6209e8 100644
+index 2550c90b99..9925adbd3c 100644
 --- a/public/app/plugins/datasource/prometheus/promql.ts
 +++ b/public/app/plugins/datasource/prometheus/promql.ts
-@@ -4,6 +4,8 @@ import { CompletionItem } from '@grafana/ui';
+@@ -5,6 +5,8 @@ import { CompletionItem } from '@grafana/ui';
+ // @see public/app/plugins/datasource/loki/language_provider.ts
  export const RATE_RANGES: CompletionItem[] = [
-   { label: '$__interval', sortText: '$__interval' },
-   { label: '$__rate_interval', sortText: '$__rate_interval' },
+   { label: '$__interval', sortValue: '$__interval' },
 +  { label: '$__interval_sx3', sortText: '$__interval_sx3' },
 +  { label: '$__interval_sx4', sortText: '$__interval_sx4' },
-   { label: '1m', sortText: '00:01:00' },
-   { label: '5m', sortText: '00:05:00' },
-   { label: '10m', sortText: '00:10:00' },
+   { label: '$__rate_interval', sortValue: '$__rate_interval' },
+   { label: '$__range', sortValue: '$__range' },
+   { label: '1m', sortValue: '00:01:00' },
