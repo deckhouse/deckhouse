@@ -231,28 +231,20 @@ spec:
         type: AverageValue
         averageValue: 80 # Если в среднем по деплойменту 80% воркеров заняты, скейлимся
 ```
-{% raw %}
-
-## Скейлинг по внешним метрикам
-
-**Важно!** Настраивать скейлинг по внешним метрикам (добавлять PrometheusRule в namespace d8-monitoring) корректно ТОЛЬКО из некоторого инфраструктурного репозитария, но никак не из репозиториев приложений. Всячески старайтесь вместо этого использовать, например, NamespaceMetric.
+{% endraw %}
 
 ### Регистрируем внешние метрики в Kubernetes API
 
 Prometheus-metrics-adapter поддерживает механизм `externalRules`, с помощью которого можно определять кастомные PromQL-запросы и регистрировать их как метрики. В наших инсталляциях мы добавили универсальное правило, которое позволяет создавать свои метрики без внесения настроек в prometheus-metrics-adapter — "любая метрика в Prometheus с именем `kube_adapter_metric_<name>` будет зарегистрирована в API под именем `<name>`". То есть, остаётся либо написать exporter, который будет экспортировать подобную метрику, либо создать [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) в Prometheus, которое будет агрегировать вашу метрику на основе других метрик.
 
-Пример PrometheusRule:
+Пример CustomPrometheusRules:
 
 {% raw %}
 ```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
 metadata:
-  name: prometheus-metrics-adapter-mymetric # Рекомендованный шаблон для названия вашего PrometheusRule.
-  namespace: d8-monitoring # Важно!
-  labels:
-    prometheus: main # Важно!
-    component: rules # Важно!
+  name: prometheus-metrics-adapter-mymetric # Рекомендованный шаблон для названия вашего CustomPrometheusRules.
 spec:
   groups:
   - name: prometheus-metrics-adapter.mymetric # Рекомендованный шаблон.
@@ -297,20 +289,16 @@ spec:
 
 ### Пример с размером очереди в Amazon SQS
 
-**Важно!** Для интеграции с SQS вам понадобится установка экспортера – нужно завести отдельный "служебный" git-репозитарий для этих целей (или, лучше, использовать "инфраструктурный" репозитарий) и разместить в нем установку этого экспортера и создание необходимого PrometheusRule, таким образом интегрировав кластер. Если же вам нужно настроить автомасштабирование только для одного приложения (особенно живущего в одном неймспейсе), лучше ставить экспортер вместе с этим приложением и воспользоваться NamespaceMetrics.
+**Важно!** Для интеграции с SQS вам понадобится установка экспортера – нужно завести отдельный "служебный" git-репозитарий для этих целей (или, лучше, использовать "инфраструктурный" репозитарий) и разместить в нем установку этого экспортера и создание необходимого CustomPrometheusRules, таким образом интегрировав кластер. Если же вам нужно настроить автомасштабирование только для одного приложения (особенно живущего в одном неймспейсе), лучше ставить экспортер вместе с этим приложением и воспользоваться NamespaceMetrics.
 
 В Amazon SQS работает очередь "send_forum_message". Если сообщений в очереди больше 42 — скейлимся. Для получения метрик из Amazon SQS понадобится экспортер, для примера — [sqs-exporter](https://github.com/ashiddo11/sqs-exporter).
 
 {% raw %}
 ```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
 metadata:
   name: prometheus-metrics-adapter-sqs-messages-visible # Рекомендованное название — prometheus-metrics-adapter-<metric name>
-  namespace: d8-monitoring # Важно!
-  labels:
-    prometheus: main # Важно!
-    component: rules # Важно!
 spec:
   groups:
   - name: prometheus-metrics-adapter.sqs_messages_visible # Рекомендованный шаблон.
@@ -334,7 +322,7 @@ spec:
   - type: External
     external:
       metric:
-        name: sqs_messages_visible # Должен совпадать с PrometheusRule record без префикса 'kube_adapter_metric_'
+        name: sqs_messages_visible # Должен совпадать с CustomPrometheusRules record без префикса 'kube_adapter_metric_'
         selector:
           matchLabels:
             queue: send_forum_messages

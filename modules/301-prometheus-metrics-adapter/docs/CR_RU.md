@@ -57,14 +57,3 @@ search: autoscaler, HorizontalPodAutoscaler
 
 ### `ClusterDaemonSetMetric` (недоступен пользователям)
 {{ cr_spec }}
-
-## PrometheusRule
-
-* `.metadata.namespace` — всегда `d8-monitoring`;
-* `.metadata.labels.prometheus — всегда  `main`;
-* `.metadata.labels.component — всегда  `rules`;
-* `.spec.groups:
-    * `name` — имя, согласно рекомендованному шаблону (например `prometheus-metrics-adapter.mymetric`.
-    * `rules`:
-      * `record` — название метрики.
-      * `expr` — запрос, результаты которого попадут в итоговую метрику.

@@ -233,26 +233,18 @@ spec:
 ```
 {% raw %}
 
-## External metrics-based scaling
-
-**Caution!** The ONLY correct way of configuring external metrics-based scaling (adding PrometheusRule to the d8-monitoring namespace) requires the usage of some infrastructure repository and not application repos. Try to use, e.g., NamespaceMetric instead.
-
 ### Registering external metrics with the Kubernetes API
 
 Prometheus-metrics-adapter supports the `externalRules` mechanism. Using it, you can create custom PromQL requests and register them as metrics. In our installations, we have implemented a universal rule that allows you to create your metrics without using prometheus-metrics-adapter — "any Prometheus metric called `kube_adapter_metric_<name>` will be registered in the API under the `<name>`". In other words, all you need is to either write an exporter (to export the metric) or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
 
-An example of PrometheusRule:
+An example of CustomPrometheusRules:
 
 {% raw %}
 ```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
 metadata:
-  name: prometheus-metrics-adapter-mymetric # The recommended template for naming your PrometheusRule.
-  namespace: d8-monitoring # Pay attention!
-  labels:
-    prometheus: main # Pay attention!
-    component: rules # Pay attention!
+  name: prometheus-metrics-adapter-mymetric # The recommended template for naming your CustomPrometheusRules.
 spec:
   groups:
   - name: prometheus-metrics-adapter.mymetric # recommended template
@@ -297,14 +289,14 @@ spec:
 
 ### Example of scaling based on the Amazon SQS queue size
 
-**Caution!** Note that an exporter is required to integrate with SQS. For this, create a separate "service" git repository (or you can use an "infrastructure" repository) and put the installation of this exporter as well as the script to create the necessary PrometheusRule into this repository. If you need to configure autoscaling for a single application (especially if it runs in a single namespace), we recommend putting the exporter together with the application and using NamespaceMetrics.
+**Caution!** Note that an exporter is required to integrate with SQS. For this, create a separate "service" git repository (or you can use an "infrastructure" repository) and put the installation of this exporter as well as the script to create the necessary CustomPrometheusRules into this repository. If you need to configure autoscaling for a single application (especially if it runs in a single namespace), we recommend putting the exporter together with the application and using NamespaceMetrics.
 
 Suppose there is a "send_forum_message" queue in Amazon SQS. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. Also, you will need an exporter to collect Amazon SQS metrics (say, [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)).
 
 {% raw %}
 ```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
 metadata:
   name: prometheus-metrics-adapter-sqs-messages-visible # the recommended name — prometheus-metrics-adapter-<metric name>
   namespace: d8-monitoring # Pay attention!
@@ -334,7 +326,7 @@ spec:
   - type: External
     external:
       metric:
-        name: sqs_messages_visible # Must match PrometheusRule record name without 'kube_adapter_metric_' prefix.
+        name: sqs_messages_visible # Must match CustomPrometheusRules record name without 'kube_adapter_metric_' prefix.
         selector:
           matchLabels:
             queue: send_forum_messages
