@@ -56,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app":                       "controller",
 				},
 			},
-			FilterFunc: applyDaemonsetFilter,
+			FilterFunc: applyDaemonSetFilter,
 		},
 		{
 			Name:                         "proxy",
@@ -74,7 +74,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app":                       "proxy-failover",
 				},
 			},
-			FilterFunc: applyDaemonsetFilter,
+			FilterFunc: applyDaemonSetFilter,
 		},
 		{
 			Name:                         "failover",
@@ -92,7 +92,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app":                    "controller",
 				},
 			},
-			FilterFunc: applyDaemonsetFilter,
+			FilterFunc: applyDaemonSetFilter,
 		},
 	},
 }, dependency.WithExternalDependencies(safeControllerUpdate))
@@ -103,7 +103,7 @@ type IngressFilterResult struct {
 	Status   appsv1.DaemonSetStatus `json:"status"`
 }
 
-func applyDaemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	ds := &appsv1.DaemonSet{}
 
 	err := sdk.FromUnstructured(obj, ds)
@@ -173,24 +173,24 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 
 		if proxyReady && controllerReady {
 			if controllerNeedUpdate {
-				err = daemonSetPairSafeUpdateDeletePodInDs("d8-ingress-nginx", fmt.Sprintf("controller-%s", controller.Name), dc, input)
+				err = daemonSetDeletePodInDs(input, "d8-ingress-nginx", fmt.Sprintf("controller-%s", controller.Name), dc)
 				if err != nil {
 					return err
 				}
 			} else if proxyNeedUpdate {
-				err = daemonSetPairSafeUpdateDeletePodInDs("d8-ingress-nginx", fmt.Sprintf("proxy-%s-failover", controller.Name), dc, input)
+				err = daemonSetDeletePodInDs(input, "d8-ingress-nginx", fmt.Sprintf("proxy-%s-failover", controller.Name), dc)
 				if err != nil {
 					return err
 				}
 			}
 		}
 
-		err = daemonSetPairSafeUpdateDeleteAllNotUpdatedCrashloopbackPodsInDs("d8-ingress-nginx", fmt.Sprintf("controller-%s", controller.Name), dc)
+		err = daemonSetDeleteCrashLoopBackPods(input, "d8-ingress-nginx", fmt.Sprintf("controller-%s", controller.Name), dc)
 		if err != nil {
 			return err
 		}
 
-		err = daemonSetPairSafeUpdateDeleteAllNotUpdatedCrashloopbackPodsInDs("d8-ingress-nginx", fmt.Sprintf("proxy-%s-failover", controller.Name), dc)
+		err = daemonSetDeleteCrashLoopBackPods(input, "d8-ingress-nginx", fmt.Sprintf("proxy-%s-failover", controller.Name), dc)
 		if err != nil {
 			return err
 		}
@@ -200,7 +200,7 @@ func safeControllerUpdate(input *go_hook.HookInput, dc dependency.Container) (er
 	return nil
 }
 
-func daemonSetPairSafeUpdateDeletePodInDs(namespace, dsName string, dc dependency.Container, input *go_hook.HookInput) error {
+func daemonSetDeletePodInDs(input *go_hook.HookInput, namespace, dsName string, dc dependency.Container) error {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -222,13 +222,13 @@ func daemonSetPairSafeUpdateDeletePodInDs(namespace, dsName string, dc dependenc
 
 	err = k8.CoreV1().Pods(namespace).Delete(context.TODO(), podNameToKill, metav1.DeleteOptions{})
 	if err != nil {
-		fmt.Println(err)
+		input.LogEntry.Error(err)
 	}
 
 	return nil
 }
 
-func daemonSetPairSafeUpdateDeleteAllNotUpdatedCrashloopbackPodsInDs(namespace, dsName string, dc dependency.Container) error {
+func daemonSetDeleteCrashLoopBackPods(input *go_hook.HookInput, namespace, dsName string, dc dependency.Container) error {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -256,7 +256,7 @@ func daemonSetPairSafeUpdateDeleteAllNotUpdatedCrashloopbackPodsInDs(namespace, 
 	for _, podName := range podsToKill {
 		err = k8.CoreV1().Pods(namespace).Delete(context.TODO(), podName, metav1.DeleteOptions{})
 		if err != nil {
-			fmt.Println(err)
+			input.LogEntry.Error(err)
 		}
 	}
 
