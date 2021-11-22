@@ -109,7 +109,10 @@ spec:
                                 - token
                     endpoint:
                       type: string
-                      description: The base URL of the Loki instance.
+                      description: |
+                        The base URL of the Loki instance.
+
+                        *HINT* Vector automatically adds `/loki/api/v1/push` into URL during data transmission.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
