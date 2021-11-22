@@ -18,8 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"os/exec"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -44,18 +42,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, setInternalValues)
 
-func cidrToRegex(cidr string) (string, error) {
-	cmd := exec.Command("rgxg", "cidr", cidr)
-
-	stdout, err := cmd.CombinedOutput()
-	stdoutTrimmed := strings.TrimSuffix(string(stdout), "\n")
-	if err != nil {
-		return stdoutTrimmed, err
-	}
-
-	return stdoutTrimmed, nil
-}
-
 func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
@@ -66,28 +52,77 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, fmt.Errorf("ingress controller %s has no spec field", name)
 	}
 
-	acceptRequestsFromCIDRs, _, err := unstructured.NestedStringSlice(spec, "acceptRequestsFrom")
+	// Set default values in order to save compatibility
+	setDefaultEmptyObject("config", spec)
+
+	inlet, _, err := unstructured.NestedString(spec, "inlet")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get acceptRequestsFrom from ingress controller spec: %v", err)
+		return nil, fmt.Errorf("cannot get inlet from ingress controller spec: %v", err)
 	}
 
-	var acceptRequestsFromRegexes []string
-	for _, acceptFromCidr := range acceptRequestsFromCIDRs {
-		rgxp, err := cidrToRegex(acceptFromCidr)
-		if err != nil {
-			return nil, fmt.Errorf("error run rgxg: %v", err)
-		}
-		acceptRequestsFromRegexes = append(acceptRequestsFromRegexes, "~"+strings.ReplaceAll(rgxp, "\\", ""))
+	setDefaultEmptyObjectOnCondition("loadBalancer", spec, inlet == "LoadBalancer")
+	setDefaultEmptyObjectOnCondition("loadBalancerWithProxyProtocol", spec, inlet == "LoadBalancerWithProxyProtocol")
+	setDefaultEmptyObjectOnCondition("hostPort", spec, inlet == "HostPort")
+	setDefaultEmptyObjectOnCondition("hostPortWithProxyProtocol", spec, inlet == "HostPortWithProxyProtocol")
+	setDefaultEmptyObjectOnCondition("hostWithFailover", spec, inlet == "HostWithFailover")
+
+	setDefaultEmptyObject("hstsOptions", spec)
+	setDefaultEmptyObject("geoIP2", spec)
+	setDefaultEmptyObject("resourcesRequests", spec)
+
+	mode, _, err := unstructured.NestedString(spec, "resourcesRequests", "mode")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get resourcesRequests.mode from ingress controller spec: %v", err)
 	}
 
-	if len(acceptRequestsFromRegexes) > 0 {
-		err := unstructured.SetNestedStringSlice(spec, acceptRequestsFromRegexes, "acceptRequestsFrom")
+	if mode == "" {
+		err := unstructured.SetNestedField(spec, "VPA", "resourcesRequests", "mode")
 		if err != nil {
-			return nil, fmt.Errorf("cannot set acceptRequestsFrom for ingress controller spec: %v", err)
+			return nil, fmt.Errorf("cannot set resourcesRequests.mode from ingress controller spec: %v", err)
 		}
+	}
+
+	resourcesRequests, _, err := unstructured.NestedMap(spec, "resourcesRequests")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get resourcesRequests from ingress controller spec: %v", err)
+	}
+
+	setDefaultEmptyObject("static", resourcesRequests)
+	setDefaultEmptyObject("vpa", resourcesRequests)
+
+	vpa, _, err := unstructured.NestedMap(resourcesRequests, "vpa")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get resourcesRequests.vpa from ingress controller spec: %v", err)
+	}
+
+	setDefaultEmptyObject("cpu", vpa)
+	setDefaultEmptyObject("memory", vpa)
+
+	err = unstructured.SetNestedMap(resourcesRequests, vpa, "vpa")
+	if err != nil {
+		return nil, fmt.Errorf("cannot set resourcesRequests.vpa from ingress controller spec: %v", err)
+	}
+
+	err = unstructured.SetNestedMap(spec, resourcesRequests, "resourcesRequests")
+	if err != nil {
+		return nil, fmt.Errorf("cannot set resourcesRequests from ingress controller spec: %v", err)
 	}
 
 	return Controller{Name: name, Spec: spec}, nil
+}
+
+func setDefaultEmptyObject(key string, obj map[string]interface{}) {
+	if _, ok := obj[key]; !ok {
+		obj[key] = make(map[string]interface{})
+	}
+}
+
+func setDefaultEmptyObjectOnCondition(key string, obj map[string]interface{}, condition bool) {
+	if condition {
+		setDefaultEmptyObject(key, obj)
+	} else {
+		obj[key] = make(map[string]interface{})
+	}
 }
 
 func setInternalValues(input *go_hook.HookInput) error {
