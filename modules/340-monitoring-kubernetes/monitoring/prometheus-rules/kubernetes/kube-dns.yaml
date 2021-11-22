@@ -1,6 +1,6 @@
 - name: kubernetes.dns
   rules:
-  - alert: KubernetesDnsDown
+  - alert: KubernetesDnsTargetDown
     expr: absent(up{job="kube-dns"} == 1)
     labels:
       severity_level: "5"
@@ -10,10 +10,9 @@
       plk_markup_format: "markdown"
       plk_pending_until_firing_for: "5m"
       description: |-
-        No working pods of kube-dns service exist in the cluster. DNS is not working!
-        Applications can't get addresses of internal services and external domains.
+        Prometheus is unable to collect metrics from kube-dns. Thus its status is unknown.
 
         To debug the problem, use the following commands:
         1. `kubectl -n kube-system describe deployment -l k8s-app=kube-dns`
         2. `kubectl -n kube-system describe pod -l k8s-app=kube-dns`
-      summary: Kube-dns or CoreDNS doesn't work.
+      summary: Kube-dns or CoreDNS are not under monitoring.
