@@ -18,49 +18,12 @@ package scheduler
 
 import (
 	"math"
-	"math/rand"
 	"sort"
-	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
-func NewNodeSelector(state State) NodeFilterPipe {
-	return NodeFilterPipe{
-		&filterByAvailability{},
-		&filterByZone{state: state},
-		&filterByMinSts{state: state},
-		&nodeShuffler{},
-	}
-}
-
-type NodeFilter interface {
-	Filter([]snapshot.Node, string) []snapshot.Node
-}
-
-// NodeFilterPipe is the sequential wrapper for other node filters. A result of each filter is
-// passed to the next one.  The filters do not share knowledge about each other. Filters are
-// responsible to handle empty input their own way.
-type NodeFilterPipe []NodeFilter
-
-func (pipe NodeFilterPipe) Filter(nodes []snapshot.Node, x string) []snapshot.Node {
-	for _, filter := range pipe {
-		nodes = filter.Filter(nodes, x)
-	}
-	return nodes
-}
-
-// filterByAvailability filters nodes that are available for scheduling
-type filterByAvailability struct{}
-
-func (f *filterByAvailability) Filter(nodes []snapshot.Node, _ string) []snapshot.Node {
-	return applyFilter(nodes, func(node snapshot.Node) bool {
-		return node.Schedulable
-	})
-}
-
-// filterByAvailability chooses a zone and returns nodes from that zone
+// filterByZone chooses the best zone and returns nodes from that zone
 type filterByZone struct {
 	state State
 }
@@ -185,92 +148,6 @@ func (s byName) Swap(i, j int) {
 
 func (s byName) Less(i, j int) bool {
 	return s[i].name < s[j].name
-}
-
-// filterByMinSts returns nodes with minimal sts count
-type filterByMinSts struct {
-	state State
-}
-
-func (f *filterByMinSts) Filter(nodes []snapshot.Node, x string) []snapshot.Node {
-	destinations := f.selectNodes(nodes, x)
-	return applyFilter(nodes, func(node snapshot.Node) bool {
-		return destinations.Has(node.Name)
-	})
-}
-
-func (f *filterByMinSts) selectNodes(nodes []snapshot.Node, x string) set.Set {
-	var (
-		stsPerNode  = map[string]int{}
-		currentNode = f.state[x].Node
-	)
-
-	// Collect nodes of interest
-	for _, n := range nodes {
-		if n.Name == currentNode {
-			// Our goal is to probe new node if possible
-			continue
-		}
-		stsPerNode[n.Name] = 0
-	}
-
-	if len(stsPerNode) == 0 {
-		// No new nodes to consider
-		return set.New(currentNode)
-	}
-
-	// Count sts, skip current one from consideration
-	for _, sts := range f.state {
-		if sts.Node == "" || sts.Node == currentNode {
-			continue
-		}
-		stsPerNode[sts.Node]++
-	}
-
-	dests := selectKeysByMinValue(stsPerNode)
-
-	return set.New(dests...)
-}
-
-// applyFilter implements the boilerplate of filtering a Node slice
-func applyFilter(nodes []snapshot.Node, filter func(snapshot.Node) bool) []snapshot.Node {
-	filtered := make([]snapshot.Node, 0)
-	for _, node := range nodes {
-		if !filter(node) {
-			continue
-		}
-		filtered = append(filtered, node)
-	}
-	return filtered
-}
-
-// nodeShuffler shuffles the list of nodes, and does not filter any of
-type nodeShuffler struct{}
-
-func (f nodeShuffler) Filter(nodes []snapshot.Node, _ string) []snapshot.Node {
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(nodes), func(i, j int) { nodes[i], nodes[j] = nodes[j], nodes[i] })
-	return nodes
-}
-
-func selectKeysByMinValue(kv map[string]int) []string {
-	// Find minimum value
-	min := math.MaxInt32
-	for _, v := range kv {
-		if min > v {
-			min = v
-		}
-	}
-
-	// Collect keys
-	ks := make([]string, 0)
-	for k, v := range kv {
-		if v == min {
-			ks = append(ks, k)
-		}
-	}
-
-	return ks
 }
 
 // Spread calculates the distribution of the total number among buckets. When a demand becomes zero,

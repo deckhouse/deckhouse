@@ -19,7 +19,6 @@ package scheduler
 import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
@@ -76,7 +75,7 @@ func (c *kubeCleaner) Clean(x string, curSts, newSts *XState) {
 		// - If nothing changed for the StatefulSet and PVC, we should not tolerate failing pod.
 		// - If something changed while the pod is not running, we should take care of the pod specifically.
 		//   See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#forced-rollback
-		deletePod = deleteSTS || deletePVC || (podExists && pod.Phase != v1.PodRunning)
+		deletePod = deleteSTS || deletePVC || (podExists && !pod.Ready)
 	)
 
 	if deleteSTS {

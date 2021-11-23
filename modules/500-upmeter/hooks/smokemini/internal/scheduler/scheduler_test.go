@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	snapshot "github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
@@ -117,7 +116,7 @@ func Test_scheduler_cleaning(t *testing.T) {
 				pods: append(fakePods(4), snapshot.Pod{
 					Index:   "e",
 					Node:    named("node", 5),
-					Phase:   v1.PodPending,
+					Ready:   false,
 					Created: time.Now(),
 				}),
 				image:        image,
