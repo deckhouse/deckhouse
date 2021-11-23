@@ -815,7 +815,6 @@ entries:
     - title:
         en: Little things
         ru: Приятные мелочи
-      versionType: experimental
       folders:
         - title: basic-auth
           versionType: experimental
@@ -832,6 +831,16 @@ entries:
                 ru: Примеры
                 en: Usage
               url: /modules/500-basic-auth/usage.html
+        - title: chrony
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/470-chrony/
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/470-chrony/configuration.html
         - title: secret-copier
           versionType: experimental
           folders:
