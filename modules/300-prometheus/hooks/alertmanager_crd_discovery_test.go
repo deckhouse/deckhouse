@@ -107,7 +107,7 @@ spec:
 
 		It("prometheus.internal.alertmanagers must be '{}'", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("prometheus.internal.alertmanagers").Exists()).ToNot(BeTrue())
+			Expect(f.ValuesGet("prometheus.internal.alertmanagers").String()).To(Equal("{}"))
 		})
 	})
 

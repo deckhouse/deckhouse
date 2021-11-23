@@ -165,11 +165,7 @@ func crdAlertmanagerHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	if len(serviceDeclaredAlertmanagers) > 0 {
-		input.Values.Set("prometheus.internal.alertmanagers", serviceDeclaredAlertmanagers)
-	} else {
-		input.Values.Remove("prometheus.internal.alertmanagers")
-	}
+	input.Values.Set("prometheus.internal.alertmanagers", serviceDeclaredAlertmanagers)
 
 	return nil
 }
