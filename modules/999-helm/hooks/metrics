@@ -30,7 +30,7 @@ EOF
 
 function __on_startup() {
   cluster_version=$(values::get global.discovery.kubernetesVersion)
-  if semver::gt "$cluster_version" "1.16" ; then
+  if semver::gt "$cluster_version" "1.22" ; then
     return 0
   fi
 
@@ -57,30 +57,48 @@ function __on_startup() {
 function __main__() {
   unsupported_versions='
     {
-      "Deployment": {
-        "apps/v1beta1": "",
-        "apps/v1beta2": "",
-        "extensions/v1beta1": ""
+      "MutatingWebhookConfiguration": {
+        "admissionregistration.k8s.io/v1beta1": ""
       },
-      "StatefulSet": {
-        "apps/v1beta1": "",
-        "apps/v1beta2": ""
+      "ValidatingWebhookConfiguration": {
+        "admissionregistration.k8s.io/v1beta1": ""
       },
-      "DaemonSet": {
-        "apps/v1beta1": "",
-        "apps/v1beta2": "",
-        "extensions/v1beta1": ""
+      "CustomResourceDefinition": {
+        "apiextensions.k8s.io/v1beta1": ""
       },
-      "ReplicaSet": {
-        "apps/v1beta1": "",
-        "apps/v1beta2": "",
-        "extensions/v1beta1": ""
+      "Ingress": {
+        "extensions/v1beta1": "",
+        "networking.k8s.io/v1beta1": ""
       },
-      "NetworkPolicy": {
-        "extensions/v1beta1": ""
+      "IngressClass": {
+        "networking.k8s.io/v1beta1": ""
       },
-      "PodSecurityPolicy": {
-        "extensions/v1beta1": ""
+      "ClusterRole": {
+        "rbac.authorization.k8s.io/v1beta1": ""
+      },
+      "ClusterRoleBinding": {
+        "rbac.authorization.k8s.io/v1beta1": ""
+      },
+      "Role": {
+        "rbac.authorization.k8s.io/v1beta1": ""
+      },
+      "RoleBinding": {
+        "rbac.authorization.k8s.io/v1beta1": ""
+      },
+      "PriorityClass": {
+        "scheduling.k8s.io/v1beta1": ""
+      },
+      "CSIDriver": {
+        "storage.k8s.io/v1beta1": ""
+      },
+      "CSINode": {
+        "storage.k8s.io/v1beta1": ""
+      },
+      "StorageClass": {
+        "storage.k8s.io/v1beta1": ""
+      },
+      "VolumeAttachment": {
+        "storage.k8s.io/v1beta1": ""
       }
     }
   '

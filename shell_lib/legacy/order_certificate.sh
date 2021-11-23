@@ -68,11 +68,12 @@ function legacy::common_hooks::certificates::order_certificate::main() {
   cfssl_result=$(jo CN=${common_name} names="$group" key="$(jo algo=ecdsa size=256)" | cfssl genkey -)
   cfssl_result_csr=$(echo "$cfssl_result" | jq .csr -r | base64 | tr -d '\n')
   csr=$(cat <<EOF
-apiVersion: certificates.k8s.io/v1beta1
+apiVersion: certificates.k8s.io/v1
 kind: CertificateSigningRequest
 metadata:
   name: ${common_name}
 spec:
+  signerName: kubernetes.io/kube-apiserver-client
   request: ${cfssl_result_csr}
   usages:
   - digital signature

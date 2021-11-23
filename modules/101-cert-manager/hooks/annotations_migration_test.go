@@ -30,7 +30,7 @@ var _ = Describe("Modules :: cert-manager :: hooks :: annotations_migration ::",
 	Context("Ingress with legacy annotation", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(`
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -64,7 +64,7 @@ metadata:
   name: d8-cert-manager-migrated
   namespace: d8-cert-manager
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -90,7 +90,7 @@ metadata:
 		BeforeEach(func() {
 			f.KubeStateSet(`
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -124,9 +124,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: test
-          servicePort: 8080
+          service:
+            name: test
+            port:
+              number: 8080
         path: /
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - test.ru

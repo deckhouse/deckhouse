@@ -372,7 +372,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcd_debugging_mvcc_db_total_size_in_bytes{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}",
+          "expr": "etcd_mvcc_db_total_size_in_bytes{job=\"etcd3\", namespace=\"$namespace\", service=\"$service\", pod=~\"$pod\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",

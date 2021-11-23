@@ -27,7 +27,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -72,7 +72,8 @@ type OrderCertificateRequest struct {
 	CommonName string
 	SANs       []string
 	Groups     []string
-	Usages     []certificatesv1beta1.KeyUsage
+	Usages     []certificatesv1.KeyUsage
+	SignerName string
 
 	ValueName   string
 	ModuleName  string
@@ -84,9 +85,10 @@ func (r *OrderCertificateRequest) DeepCopy() OrderCertificateRequest {
 		Namespace:  r.Namespace,
 		SecretName: r.SecretName,
 		CommonName: r.CommonName,
+		SignerName: r.SignerName,
 		SANs:       append(make([]string, 0, len(r.SANs)), r.SANs...),
 		Groups:     append(make([]string, 0, len(r.Groups)), r.Groups...),
-		Usages:     append(make([]certificatesv1beta1.KeyUsage, 0, len(r.Usages)), r.Usages...),
+		Usages:     append(make([]certificatesv1.KeyUsage, 0, len(r.Usages)), r.Usages...),
 
 		ValueName:   r.ValueName,
 		ModuleName:  r.ModuleName,
@@ -228,16 +230,20 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 		request.WaitTimeout = certificateWaitTimeoutDefault
 	}
 
-	if request.Usages == nil {
-		request.Usages = []certificatesv1beta1.KeyUsage{
-			certificatesv1beta1.UsageDigitalSignature,
-			certificatesv1beta1.UsageKeyEncipherment,
-			certificatesv1beta1.UsageClientAuth,
+	if len(request.Usages) == 0 {
+		request.Usages = []certificatesv1.KeyUsage{
+			certificatesv1.UsageDigitalSignature,
+			certificatesv1.UsageKeyEncipherment,
+			certificatesv1.UsageClientAuth,
 		}
 	}
 
+	if request.SignerName == "" {
+		request.SignerName = certificatesv1.KubeAPIServerClientSignerName
+	}
+
 	// Delete existing CSR from the cluster.
-	_ = k8.CertificatesV1beta1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
+	_ = k8.CertificatesV1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
 
 	csrPEM, key, err := certificate.GenerateCSR(input.LogEntry, request.CommonName,
 		certificate.WithGroups(request.Groups...),
@@ -247,41 +253,38 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	}
 
 	// Create new CSR in the cluster.
-	csr := &certificatesv1beta1.CertificateSigningRequest{
+	csr := &certificatesv1.CertificateSigningRequest{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CertificateSigningRequest",
-			APIVersion: "certificates.k8s.io/v1beta1",
+			APIVersion: "certificates.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: request.CommonName,
 		},
-		Spec: certificatesv1beta1.CertificateSigningRequestSpec{
-			Request: csrPEM,
-			Usages:  request.Usages,
+		Spec: certificatesv1.CertificateSigningRequestSpec{
+			Request:    csrPEM,
+			Usages:     request.Usages,
+			SignerName: request.SignerName,
 		},
 	}
 
 	// Create CSR.
-	req, err := k8.CertificatesV1beta1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
+	req, err := k8.CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error creating CertificateSigningRequest: %v", err)
 	}
 
 	// Add CSR approved status.
 	csr.Status.Conditions = append(csr.Status.Conditions,
-		certificatesv1beta1.CertificateSigningRequestCondition{
-			Type:           certificatesv1beta1.CertificateApproved,
-			Reason:         "HookApprove",
-			Message:        "This CSR was approved by a hook.",
-			LastUpdateTime: metav1.Now(),
+		certificatesv1.CertificateSigningRequestCondition{
+			Type:    certificatesv1.CertificateApproved,
+			Status:  v1.ConditionTrue,
+			Reason:  "HookApprove",
+			Message: "This CSR was approved by a hook.",
 		})
-	_, err = k8.CertificatesV1beta1().CertificateSigningRequests().UpdateStatus(context.TODO(), csr, metav1.UpdateOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("error updating status of CertificateSigningRequest: %v", err)
-	}
 
 	// Approve CSR.
-	_, err = k8.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(context.TODO(), csr, metav1.UpdateOptions{})
+	_, err = k8.CertificatesV1().CertificateSigningRequests().UpdateApproval(context.TODO(), request.CommonName, csr, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error approving of CertificateSigningRequest: %v", err)
 	}
@@ -295,7 +298,7 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	}
 
 	// Delete CSR.
-	_ = k8.CertificatesV1beta1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
+	_ = k8.CertificatesV1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
 
 	info := CertificateInfo{Certificate: string(crtPEM), Key: string(key), CertificateUpdated: true}
 

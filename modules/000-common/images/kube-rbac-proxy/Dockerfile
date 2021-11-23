@@ -1,11 +1,22 @@
 ARG BASE_ALPINE
-FROM flant/kube-rbac-proxy:v0.1.1@sha256:d8ce260d21190440b30fbe34c24824c8bef0f7afc9b4c3895823c11716e7a2ff as artifact
+ARG BASE_GOLANG_16_ALPINE
+
+FROM $BASE_GOLANG_16_ALPINE as build
+WORKDIR /src/
+RUN apk add --no-cache git patch make
+RUN wget https://github.com/brancz/kube-rbac-proxy/archive/v0.11.0.tar.gz -O - | tar -xz --strip-components=1 -C /src
+COPY patches/stale-cache.patch /src
+COPY patches/config.patch /src
+COPY patches/livez.patch /src
+RUN patch -p1 < /src/stale-cache.patch && \
+    patch -p1 < /src/config.patch && \
+    patch -p1 < /src/livez.patch && \
+    make build && \
+    cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
 
 FROM $BASE_ALPINE
-COPY --from=artifact /kube-rbac-proxy /kube-rbac-proxy
-
-EXPOSE 8080
-
-ADD entrypoint.sh /
-
+RUN apk add -U --no-cache ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=build /kube-rbac-proxy /kube-rbac-proxy
+COPY entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
+EXPOSE 8080

@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: kiali-rewrite
@@ -31,9 +31,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: kiali
-          servicePort: http
+          service:
+            name: kiali
+            port:
+              name: http
         path: /
+        pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:
@@ -41,7 +44,7 @@ spec:
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "istio-ingress-tls") }}
   {{- end }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: kiali
@@ -71,9 +74,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: kiali
-          servicePort: http
+          service:
+            name: kiali
+            port:
+              name: http
         path: /kiali/
+        pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:

@@ -10,14 +10,14 @@ git:
     to: /iptables-wrapper-installer.sh
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  {{- if semverCompare "<1.21" $version }}
+  {{- if semverCompare "=1.21" $version }}
+    add: /src/_output/bin/kube-proxy
+    to: /usr/local/bin/kube-proxy
+  {{- else }}
     add: /usr/local/bin
     to: /usr/local/bin
     includePaths:
       - kube-proxy
-  {{- else }}
-    add: /src/_output/bin/kube-proxy
-    to: /usr/local/bin/kube-proxy
   {{- end }}
     before: setup
 shell:
@@ -27,9 +27,7 @@ shell:
     - /iptables-wrapper-installer.sh
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  {{- if semverCompare "<1.21" $version }}
-from: k8s.gcr.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeProxy }}
-  {{- else }}
+  {{- if semverCompare "=1.21" $version }}
 from: {{ env "BASE_GOLANG_16_ALPINE" }}
 git:
   - add: /modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -52,5 +50,7 @@ shell:
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
   - make all WHAT=cmd/kube-proxy
+  {{- else }}
+from: k8s.gcr.io/kube-proxy:v{{ printf "%s.%s" $version $patch }}@{{ $value.controlPlane.kubeProxy }}
   {{- end }}
 {{- end }}

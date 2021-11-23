@@ -347,7 +347,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcd_debugging_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
+          "expr": "etcd_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",

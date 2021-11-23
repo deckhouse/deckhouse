@@ -20,19 +20,10 @@ if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
  # Workaround for running kubectl before global hook global-hooks/discovery/kubernetes_version running
- kubernetes_version="$(/usr/local/bin/kubectl-1.17 version -o json | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
+ kubernetes_version="$(/usr/local/bin/kubectl-1.20 version -o json | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
 fi
 
 case "$kubernetes_version" in
-  1.16.*)
-    kubectl_version="1.17"
-    ;;
-  1.17.*)
-    kubectl_version="1.17"
-    ;;
-  1.18.*)
-    kubectl_version="1.17"
-    ;;
   1.19.*)
     kubectl_version="1.20"
     ;;
@@ -40,6 +31,9 @@ case "$kubernetes_version" in
     kubectl_version="1.20"
     ;;
   1.21.*)
+    kubectl_version="1.20"
+    ;;
+  1.22.*)
     kubectl_version="1.20"
     ;;
   *)

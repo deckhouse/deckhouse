@@ -18,7 +18,11 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare "<1.22" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
+    {{- else }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
+    {{- end }}
 git:
   - add: /modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
@@ -30,11 +34,7 @@ shell:
   - apk add --no-cache make bash git mercurial patch rsync
   install:
   - mkdir /src
-    {{- if semverCompare "=1.16" $version }}
-  - wget https://github.com/flant/cloud-provider-aws/archive/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    {{- else }}
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    {{- end }}
     {{- if semverCompare "=1.19" $version }}
   - mkdir /src/legacy-cloud-providers
   - wget https://github.com/kubernetes/legacy-cloud-providers/archive/v0.19.3.tar.gz -O - | tar -xz --strip-components=1 -C /src/legacy-cloud-providers/

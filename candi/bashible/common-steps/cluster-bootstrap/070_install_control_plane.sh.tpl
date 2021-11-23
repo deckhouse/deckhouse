@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $experimentalOption := "--experimental-patches" -}}
-{{- if semverCompare "<1.19" .kubernetesVersion -}}
-  {{- $experimentalOption = "--experimental-kustomize" -}}
+{{- $experimentalOption := "--patches" -}}
+{{- if semverCompare "<1.22" .kubernetesVersion -}}
+  {{- $experimentalOption = "--experimental-patches" -}}
 {{- end }}
 
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml

@@ -4,7 +4,7 @@
       {{- fail "HTTPS is mandatory for spiffe endpoint" }}
     {{- end }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: metadata-exporter
@@ -18,9 +18,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: metadata-exporter
-          servicePort: http
+          service:
+            name: metadata-exporter
+            port:
+              name: http
         path: /metadata/
+        pathType: ImplementationSpecific
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:

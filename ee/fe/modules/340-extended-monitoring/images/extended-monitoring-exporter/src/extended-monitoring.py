@@ -160,7 +160,7 @@ class AnnotatedPod(Annotated):
 
 class AnnotatedIngress(Annotated):
     kind = "Ingress"
-    api = kubernetes.client.ExtensionsV1beta1Api()
+    api = kubernetes.client.NetworkingV1Api()
 
     @classmethod
     def list(cls, namespace):

@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "annotated_ingress",
-			ApiVersion:                   "networking.k8s.io/v1beta1",
+			ApiVersion:                   "networking.k8s.io/v1",
 			Kind:                         "Ingress",
 			LabelSelector:                nonDeckhouseHeritageLabelSelector,
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
@@ -140,7 +140,7 @@ func handleLegacyAnnotatedIngress(input *go_hook.HookInput) error {
 
 		input.PatchCollector.MergePatch(
 			annotationsPatch,
-			"networking.k8s.io/v1beta1",
+			"networking.k8s.io/v1",
 			"Ingress",
 			ingress.Namespace,
 			ingress.Name,

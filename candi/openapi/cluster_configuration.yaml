@@ -52,10 +52,10 @@ apiVersions:
       kubernetesVersion:
         type: string
         enum:
-        - "1.16"
         - "1.19"
         - "1.20"
         - "1.21"
+        - "1.22"
       packagesProxy:
         type: object
         additionalProperties: false

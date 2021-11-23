@@ -12,7 +12,7 @@ properties:
     properties:
       effectiveKubernetesVersion:
         type: string
-        enum: ["1.16", "1.17", "1.18", "1.19", "1.20", "1.21"]
+        enum: ["1.19", "1.20", "1.21", "1.22"]
       etcdServers:
         type: array
         items:

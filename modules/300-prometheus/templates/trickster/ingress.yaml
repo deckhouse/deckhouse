@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: trickster
@@ -41,7 +41,10 @@ spec:
     http:
       paths:
       - path: /trickster(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
-          serviceName: trickster
-          servicePort: https
+          service:
+            name: trickster
+            port:
+              name: https
 {{- end }}

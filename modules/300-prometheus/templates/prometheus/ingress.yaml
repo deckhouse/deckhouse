@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: prometheus
@@ -42,17 +42,26 @@ spec:
     http:
       paths:
       - path: /prometheus(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
-          serviceName: prometheus
-          servicePort: https
+          service:
+            name: prometheus
+            port:
+              name: https
   {{- if (include "helm_lib_ha_enabled" .) }}
       - path: /prometheus-main-0(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
-          serviceName: prometheus-main-0
-          servicePort: https
+          service:
+            name: prometheus-main-0
+            port:
+              name: https
       - path: /prometheus-main-1(/|$)(.*)
+        pathType: ImplementationSpecific
         backend:
-          serviceName: prometheus-main-1
-          servicePort: https
+          service:
+            name: prometheus-main-1
+            port:
+              name: https
   {{- end }}
 {{- end }}

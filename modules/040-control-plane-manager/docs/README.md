@@ -53,26 +53,24 @@ The `control-plane` nodes are scaled automatically using the `node-role.kubernet
 
 ## Version control
 
-The **patch version** of any control plane component (i.e. within the minor version, for example, from 1.15.3 to 1.15.8) is upgraded automatically along with the Deckhouse version.
+The **patch version** of any control plane component (i.e. within the minor version, for example, from 1.19.3 to 1.19.8) is upgraded automatically along with the Deckhouse version.
 
 The upgrade of a **minor version** of any control plane component is performed in a safe way. You just need to specify the desired minor version in the `control plane` settings. Deckhouse implements a smart strategy for changing the versions of `control plane` components if the desired version does not match the current one:
 - When upgrading:
-  - The upgrades are performed **sequentially**, one minor version at a time: 1.16 -> 1.17, 1.17 -> 1.18, 1.18 -> 1.19, 1.19 -> 1.20, 1.20 -> 1.21;
+  - The upgrades are performed **sequentially**, one minor version at a time: 1.19 -> 1.20, 1.20 -> 1.21, 1.21 -> 1.22;
   - You cannot proceed to the next version until all the `control plane` components have been successfully upgraded to the current one;
   - The version to upgrade to can only be one minor version ahead of the kubelet versions on the nodes.
 - When downgrading:
-  - The downgrade is performed **sequentially**, one minor version at a time: 1.21 -> 1.20, 1.20 -> 1.19, 1.19 -> 1.18, 1.18 -> 1.17, 1.17 -> 1.16;
+  - The downgrade is performed **sequentially**, one minor version at a time: 1.22 -> 1.21, 1.21 -> 1.20, 1.20 -> 1.19;
   - Master nodes cannot have a lower version than workers: the downgrade isn't possible if the kubelet versions on the nodes aren't downgraded yet;
   - When downgrading, the component version can only be one version behind the highest ever used minor version of the control plane components.
-    - Suppose, `maxUsedControlPlaneVersion = 1.16`. In this case, the lowest possible version of the control plane components is `1.15`.
+    - Suppose, `maxUsedControlPlaneVersion = 1.20`. In this case, the lowest possible version of the control plane components is `1.19`.
 
 ### Supported Kubernetes versions
 
 | Kubernetes version | Starting point |  Ending point
 |---|---|---|
-| 1.16 | Yes | Yes |
-| 1.17 | Yes | Yes |
-| 1.18 | Yes | Yes |
 | 1.19 | Yes | Yes |
 | 1.20 | Yes | Yes |
-| 1.21 | No | Yes |
+| 1.21 | Yes | Yes |
+| 1.22 | No | Yes |

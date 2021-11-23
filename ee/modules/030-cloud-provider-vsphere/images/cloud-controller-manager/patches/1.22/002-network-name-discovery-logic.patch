@@ -1,0 +1,238 @@
+Index: pkg/cloudprovider/vsphere/nodemanager.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/vsphere/nodemanager.go b/pkg/cloudprovider/vsphere/nodemanager.go
+--- a/pkg/cloudprovider/vsphere/nodemanager.go	(revision 1bce29c3d4ce0ae819249b6c827adb93ad5a3370)
++++ b/pkg/cloudprovider/vsphere/nodemanager.go	(revision af6bb22f1c299bc8b96d51d798fa4828a66eb4c1)
+@@ -228,8 +228,8 @@
+
+ 	var internalNetworkSubnet *net.IPNet
+ 	var externalNetworkSubnet *net.IPNet
+-	var internalVMNetworkName string
+-	var externalVMNetworkName string
++	var internalVMNetworkNames []string
++	var externalVMNetworkNames []string
+
+ 	if nm.cfg != nil {
+ 		if nm.cfg.Nodes.InternalNetworkSubnetCIDR != "" {
+@@ -244,8 +244,14 @@
+ 				return err
+ 			}
+ 		}
+-		internalVMNetworkName = nm.cfg.Nodes.InternalVMNetworkName
+-		externalVMNetworkName = nm.cfg.Nodes.ExternalVMNetworkName
++		internalVMNetworkNames, err = parseNetworkNames(nm.cfg.Nodes.InternalVMNetworkName)
++		if err != nil {
++			return err
++		}
++		externalVMNetworkNames, err = parseNetworkNames(nm.cfg.Nodes.ExternalVMNetworkName)
++		if err != nil {
++			return err
++		}
+ 	}
+
+ 	addrs := []v1.NodeAddress{}
+@@ -259,21 +265,27 @@
+
+ 	nonVNICDevices := collectNonVNICDevices(oVM.Guest.Net)
+ 	for _, v := range nonVNICDevices {
+-		klog.V(6).Infof("internalVMNetworkName = %s", internalVMNetworkName)
+-		klog.V(6).Infof("externalVMNetworkName = %s", externalVMNetworkName)
++		klog.V(6).Infof("internalVMNetworkName = %s", internalVMNetworkNames)
++		klog.V(6).Infof("externalVMNetworkName = %s", externalVMNetworkNames)
+ 		klog.V(6).Infof("v.Network = %s", v.Network)
+
+-		if (internalVMNetworkName != "" && !strings.EqualFold(internalVMNetworkName, v.Network)) &&
+-			(externalVMNetworkName != "" && !strings.EqualFold(externalVMNetworkName, v.Network)) {
+-			klog.V(4).Infof("Skipping device because vNIC Network=%s doesn't match internal=%s or external=%s network names",
+-				v.Network, internalVMNetworkName, externalVMNetworkName)
++		if (len(internalVMNetworkNames) > 0 && !ArrayContainsCaseInsensitive(internalVMNetworkNames, v.Network)) &&
++			(len(externalVMNetworkNames) > 0 && !ArrayContainsCaseInsensitive(externalVMNetworkNames, v.Network)) {
++			klog.V(4).Infof("Skipping device because vNIC Network=%s doesn't exists in internal=%s or external=%s network names",
++				v.Network, internalVMNetworkNames, externalVMNetworkNames)
+ 		}
+ 	}
+
+ 	existingNetworkNames := toNetworkNames(nonVNICDevices)
+-	if internalVMNetworkName != "" && externalVMNetworkName != "" {
+-		if !ArrayContainsCaseInsensitive(existingNetworkNames, internalVMNetworkName) &&
+-			!ArrayContainsCaseInsensitive(existingNetworkNames, externalVMNetworkName) {
++	if len(internalVMNetworkNames) > 0 && len(externalVMNetworkNames) > 0 {
++		found := false
++		for _, nn := range existingNetworkNames {
++			if ArrayContainsCaseInsensitive(internalVMNetworkNames, nn) ||
++				ArrayContainsCaseInsensitive(externalVMNetworkNames, nn) {
++				found = true
++			}
++		}
++		if !found {
+ 			return fmt.Errorf("unable to find suitable IP address for node")
+ 		}
+ 	}
+@@ -288,8 +300,8 @@
+ 			ipFamily,
+ 			internalNetworkSubnet,
+ 			externalNetworkSubnet,
+-			internalVMNetworkName,
+-			externalVMNetworkName,
++			internalVMNetworkNames,
++			externalVMNetworkNames,
+ 		)
+
+ 		klog.V(6).Infof("ipFamily: %q discovered Internal: %q discoveredExternal: %q",
+@@ -347,8 +359,8 @@
+ // matching has the highest precedence.
+ //
+ // If subnet matches are not found, or if subnets are not provided, then an
+-// attempt is made to select ipAddrNetworkNames that match the givent network
+-// names. Network name matching has the second highest precedence.
++// attempt is made to select ipAddrNetworkNames that match the given network
++// names. Network names matching has the second-highest precedence.
+ //
+ // If ipAddrNetworkNames are not found by subnet nor network name matching, then
+ // the first ipAddrNetworkName of the desired family is returned as both the
+@@ -357,7 +369,7 @@
+ // If either of these IPs cannot be discovered, nil will be returned instead.
+ func discoverIPs(ipAddrNetworkNames []*ipAddrNetworkName, ipFamily string,
+ 	internalNetworkSubnet, externalNetworkSubnet *net.IPNet,
+-	internalVMNetworkName, externalVMNetworkName string) (internal *ipAddrNetworkName, external *ipAddrNetworkName) {
++	internalVMNetworkNames, externalVMNetworkNames []string) (internal *ipAddrNetworkName, external *ipAddrNetworkName) {
+
+ 	ipFamilyMatches := collectMatchesForIPFamily(ipAddrNetworkNames, ipFamily)
+
+@@ -374,15 +386,15 @@
+ 			klog.V(2).Infof("Adding External IP by AddressMatching: %s", discoveredExternal.ipAddr)
+ 		}
+
+-		if discoveredInternal == nil && internalVMNetworkName != "" {
+-			discoveredInternal = findNetworkNameMatch(ipFamilyMatches, internalVMNetworkName)
++		if discoveredInternal == nil && len(internalVMNetworkNames) > 0 {
++			discoveredInternal = findNetworkNameMatch(ipFamilyMatches, internalVMNetworkNames)
+ 			if discoveredInternal != nil {
+ 				klog.V(2).Infof("Adding Internal IP by NetworkName: %s", discoveredInternal.ipAddr)
+ 			}
+ 		}
+
+-		if discoveredExternal == nil && externalVMNetworkName != "" {
+-			discoveredExternal = findNetworkNameMatch(ipFamilyMatches, externalVMNetworkName)
++		if discoveredExternal == nil && len(externalVMNetworkNames) > 0 {
++			discoveredExternal = findNetworkNameMatch(ipFamilyMatches, externalVMNetworkNames)
+ 			if discoveredExternal != nil {
+ 				klog.V(2).Infof("Adding External IP by NetworkName: %s", discoveredExternal.ipAddr)
+ 			}
+@@ -425,6 +437,20 @@
+ 	return toReturn
+ }
+
++// parseNetworkNames converts a comma delimited string of NetworkNames to
++// a slice of string pointers.
++func parseNetworkNames(netsString string) ([]string, error) {
++	if netsString != "" {
++		netStringSlice := strings.Split(netsString, ",")
++		subnets := make([]string, len(netStringSlice))
++		for i, netString := range netStringSlice {
++			subnets[i] = strings.TrimSpace(netString)
++		}
++		return subnets, nil
++	}
++	return nil, nil
++}
++
+ // toIPAddrNetworkNames maps an array of GuestNicInfo to and array of *ipAddrNetworkName.
+ func toIPAddrNetworkNames(guestNicInfos []types.GuestNicInfo) []*ipAddrNetworkName {
+ 	var candidates []*ipAddrNetworkName
+@@ -489,23 +515,31 @@
+ 		if len(subnetMatches) > 0 {
+ 			return subnetMatches[0]
+ 		}
+-		return nil
+ 	}
+ 	return nil
+ }
+
+ // findNetworkNameMatch finds the first *ipAddrNetworkName that matches the
+ // given network name, ignoring case.
+-func findNetworkNameMatch(ipAddrNetworkNames []*ipAddrNetworkName, networkName string) *ipAddrNetworkName {
+-	if networkName != "" {
+-		networkNameMatches := filter(ipAddrNetworkNames, func(candidate *ipAddrNetworkName) bool {
++func findNetworkNameMatch(ipAddrNetworkNames []*ipAddrNetworkName, networkNames []string) *ipAddrNetworkName {
++	for _, networkName := range networkNames {
++		match := findFirst(ipAddrNetworkNames, func(candidate *ipAddrNetworkName) bool {
+ 			return strings.EqualFold(networkName, candidate.networkName)
+ 		})
+
+-		if len(networkNameMatches) > 0 {
+-			return networkNameMatches[0]
++		if match != nil {
++			return match
+ 		}
+-		return nil
++	}
++	return nil
++}
++
++// findFirst returns the first occurance that matches the given predicate
++func findFirst(ipAddrNetworkNames []*ipAddrNetworkName, predicate func(*ipAddrNetworkName) bool) *ipAddrNetworkName {
++	for _, item := range ipAddrNetworkNames {
++		if predicate(item) {
++			return item
++		}
+ 	}
+ 	return nil
+ }
+Index: pkg/cloudprovider/vsphere/nodemanager_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/vsphere/nodemanager_test.go b/pkg/cloudprovider/vsphere/nodemanager_test.go
+--- a/pkg/cloudprovider/vsphere/nodemanager_test.go	(revision 1bce29c3d4ce0ae819249b6c827adb93ad5a3370)
++++ b/pkg/cloudprovider/vsphere/nodemanager_test.go	(revision af6bb22f1c299bc8b96d51d798fa4828a66eb4c1)
+@@ -1261,6 +1261,36 @@
+ 			},
+ 			expectedErrorSubstring: "unable to find suitable IP address for node",
+ 		},
++		{
++			testName: "ByNetworkAsCollection",
++			setup: testSetup{
++				ipFamilyPriority: []string{"ipv4"},
++				cpiConfig: &ccfg.CPIConfig{
++					Nodes: ccfg.Nodes{
++						InternalVMNetworkName: "intnet0,intnet1",
++						ExternalVMNetworkName: "extnet0,extnet1",
++					},
++				},
++				networks: []vimtypes.GuestNicInfo{
++					{
++						Network:   "foo-bar",
++						IpAddress: []string{"10.0.0.1"},
++					},
++					{
++						Network:   "extnet1",
++						IpAddress: []string{"100.0.0.1"},
++					},
++					{
++						Network:   "intnet1",
++						IpAddress: []string{"192.168.0.1"},
++					},
++				},
++			},
++			expectedIPs: []v1.NodeAddress{
++				{Type: "InternalIP", Address: "192.168.0.1"},
++				{Type: "ExternalIP", Address: "100.0.0.1"},
++			},
++		},
+ 	}
+
+ 	for _, testcase := range testcases {
+@@ -1516,7 +1546,7 @@
+ 		{networkName: "bar", ipAddr: "192.168.1.1"},
+ 	}
+
+-	match := findNetworkNameMatch(ipAddrNetworkNames, "bar")
++	match := findNetworkNameMatch(ipAddrNetworkNames, []string{"bar"})
+
+ 	if match.networkName != "bar" || match.ipAddr != "::1" {
+ 		t.Errorf("failed: expected a match of name \"bar\" with an ipAddr of \"::1\", but got: %s %s", match.networkName, match.ipAddr)

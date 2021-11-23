@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -39,9 +39,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: dashboard
-          servicePort: https
+          service:
+            name: dashboard
+            port:
+              name: https
         path: /
+        pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
   - hosts:

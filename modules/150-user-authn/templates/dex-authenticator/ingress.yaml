@@ -1,7 +1,7 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -22,9 +22,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: {{ $crd.name }}-dex-authenticator
-          servicePort: 443
+          service:
+            name: {{ $crd.name }}-dex-authenticator
+            port:
+              number: 443
         path: /dex-authenticator
+        pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
     {{- if $crd.spec.applicationIngressCertificateSecretName }}
   tls:
@@ -36,7 +39,7 @@ spec:
 
   {{- if $crd.spec.signOutURL }}
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
@@ -52,9 +55,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: {{ $crd.name }}-dex-authenticator
-          servicePort: 443
+          service:
+            name: {{ $crd.name }}-dex-authenticator
+            port:
+              number: 443
         path: {{ $crd.spec.signOutURL }}
+        pathType: ImplementationSpecific
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
       {{- if $crd.spec.applicationIngressCertificateSecretName }}
   tls:

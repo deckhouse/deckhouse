@@ -18,7 +18,11 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  {{- if semverCompare "<1.22" $version }}
 from: {{ env "BASE_GOLANG_ALPINE" }}
+  {{- else }}
+from: {{ env "BASE_GOLANG_16_ALPINE" }}
+  {{- end }}
 shell:
   beforeInstall:
     - apk add --no-cache make bash git mercurial patch rsync

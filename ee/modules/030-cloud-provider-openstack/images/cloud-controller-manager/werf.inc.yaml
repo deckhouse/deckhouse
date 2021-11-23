@@ -21,7 +21,11 @@ docker:
   ENTRYPOINT: ["/bin/openstack-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare "<1.22" $version }}
 from: {{ env "BASE_GOLANG_BUSTER" }}
+    {{- else }}
+from: {{ env "BASE_GOLANG_16_BUSTER" }}
+    {{- end }}
 git:
   - add: /ee/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches

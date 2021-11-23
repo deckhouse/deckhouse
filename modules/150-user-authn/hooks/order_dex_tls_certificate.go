@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/order_certificate"
 )
@@ -27,18 +27,20 @@ var _ = order_certificate.RegisterOrderCertificateHook(
 		{
 			Namespace:  "d8-user-authn",
 			SecretName: "dex-tls",
-			CommonName: "dex.d8-user-authn",
+			CommonName: "system:node:dex.d8-user-authn",
 			SANs: []string{
 				"dex.d8-user-authn",
 				"dex.d8-user-authn.svc",
 				order_certificate.ClusterDomainSAN("dex.d8-user-authn.svc"),
 				order_certificate.PublicDomainSAN("dex"),
 			},
-			Usages: []certificatesv1beta1.KeyUsage{
-				certificatesv1beta1.UsageDigitalSignature,
-				certificatesv1beta1.UsageKeyEncipherment,
-				certificatesv1beta1.UsageServerAuth,
+			Usages: []certificatesv1.KeyUsage{
+				certificatesv1.UsageDigitalSignature,
+				certificatesv1.UsageKeyEncipherment,
+				certificatesv1.UsageServerAuth,
 			},
+			Groups:     []string{"system:nodes"},
+			SignerName: certificatesv1.KubeletServingSignerName,
 			ValueName:  "internal.dexTLS",
 			ModuleName: "userAuthn",
 		},

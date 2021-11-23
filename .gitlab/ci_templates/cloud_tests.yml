@@ -55,45 +55,45 @@
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
     - PROVIDER: Azure
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
     - PROVIDER: GCP
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
     - PROVIDER: Yandex.Cloud
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
     - PROVIDER: OpenStack
       LAYOUT:
         - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
   artifacts: &artifacts
@@ -117,45 +117,45 @@
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
     - PROVIDER: Azure
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
     - PROVIDER: GCP
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
     - PROVIDER: Yandex.Cloud
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
     - PROVIDER: OpenStack
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
   artifacts: *artifacts
@@ -171,35 +171,35 @@
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
     - PROVIDER: Azure
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
     - PROVIDER: GCP
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
     - PROVIDER: Yandex.Cloud
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
     - PROVIDER: OpenStack
       LAYOUT:
       - WithoutNAT
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
   artifacts: *artifacts
@@ -258,9 +258,9 @@
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
   artifacts: &vsphere_artifacts
@@ -284,9 +284,9 @@
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
   artifacts: *vsphere_artifacts
@@ -302,7 +302,7 @@
       LAYOUT:
       - Standard
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
   artifacts: *vsphere_artifacts
@@ -359,9 +359,9 @@
       LAYOUT:
       - Static
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Docker"
   artifacts: &static_artifacts
@@ -384,9 +384,9 @@
       LAYOUT:
       - Static
       KUBERNETES_VERSION:
-      - "1.19"
       - "1.20"
       - "1.21"
+      - "1.22"
       CRI:
       - "Containerd"
   artifacts: *static_artifacts
@@ -402,7 +402,7 @@
       LAYOUT:
       - Static
       KUBERNETES_VERSION:
-      - "1.20"
+      - "1.21"
       CRI:
       - "Containerd"
   artifacts: *static_artifacts
