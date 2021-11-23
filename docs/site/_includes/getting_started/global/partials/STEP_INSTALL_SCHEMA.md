@@ -16,7 +16,7 @@ You will need:
    - at least 4 CPU cores;
    - at least 8 GB of RAM;
    - at least 40 GB of disk space for the cluster and etcd data;
-   - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7. 
+   - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7;
    - HTTPS-access to the container registry `registry.deckhouse.io` (it is also possible to use a [third-party registry](/en/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry));
    - SSH key access from the **personal computer** (section 1). 
 
@@ -27,6 +27,14 @@ You will need:
    Depending on the purpose of the cluster, you may need additional nodes, for example, dedicated nodes for monitoring, a load balancer, etc.    
 {%- endif %}
 
+   If any node (node group) will have the monitoring role ([more details](/en/documentation/v1/#advanced-scheduling)) then the minimum requirements for such a node are as follows:
+   - at least 4 CPU cores;
+   - at least 8 GB of RAM;
+   - OS: Ubuntu Linux 16.04/18.04/20.04 LTS or CentOS 7; 
+   - HTTPS-access to the container registry `registry.deckhouse.io` (it is also possible to use a [third-party registry](/en/documentation/v1/deckhouse-faq.html#how-do-i-configure-deckhouse-to-use-a-third-party-registry)).
+
+   > By default, the default storage class defined in the cluster is used as storage for system components (or `emptydir`, if it is not defined). You can specify the storage class using the global parameter [storageClass](/en/documentation/v1/deckhouse-configure-global.html#parameters).  
+ 
 The presentation below is an overview of the actions that will be required to install Deckhouse Platform. While it's totally fine to skip it, we recommend that you watch it to get a better understanding during the following steps.
 
 Please also note, it's just a brief, rough overview. The actual actions and commands to be executed will be given during next steps.
