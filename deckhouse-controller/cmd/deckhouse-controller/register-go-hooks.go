@@ -7,6 +7,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/450-keepalived/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/450-network-gateway/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-openvpn/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/600-secret-copier/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
