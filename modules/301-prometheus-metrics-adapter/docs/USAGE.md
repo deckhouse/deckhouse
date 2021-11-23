@@ -13,14 +13,14 @@ To configure an HPA, you need to:
 There are three types of metrics in terms of an HPA:
 * [classic](#classic-resource-consumption-based-scaling) — these have the "Resource" type (`.spec.metrics[].type`) and are used to scale based on memory and CPU consumption;
 * [custom](#custom-metrics-based-scaling) — these have the "Pods" or "Object" type (`.spec.metrics[].type`).
-* [external](#external-metrics-based-scaling) — these have the "Resource" type (`.spec.metrics[].type`).
+* [external](#using-external-metrics-with-hpa) — these have the "External" type (`.spec.metrics[].type`).
 
 ## What scaling type should I prefer?
 
 1. The typical use-cases of a [classic](#classic-resource-consumption-based-scaling) type are pretty obvious.
 1. Suppose you have a single application, the source of metrics is located inside the Namespace, and it is associated with one of the objects. In this case, we recommend using the [custom](#custom-metrics-based-scaling) Namespace-scoped metrics.
 1. Use [custom](#custom-metrics-based-scaling) Cluster-wide metrics if multiple applications use the same metric associated with one of the objects, and the metric's source belongs to the Application Namespace. Such metrics can help you combine common infrastructure components into a separate ("infra") deployment.
-1. Use [external](#external-metrics-based-scaling) metrics if the source of the metric does not belong to the App Namespace. These can be, for example, cloud provider or SaaS-related metrics.
+1. Use [external](#using-external-metrics-with-hpa) metrics if the source of the metric does not belong to the App Namespace. These can be, for example, cloud provider or SaaS-related metrics.
 
 **Caution!** We strongly recommend using either 1. [classic](#classic-resource-consumption-based-scaling) metrics or 2. [custom](#custom-metrics-based-scaling) metrics defined in the Namespace. In this case, you can define the entire configuration of the application (including the autoscaling logic) in the repository of the application. Options 3 and 4 should only be considered if you have a large collection of identical microservices.
 
@@ -231,7 +231,7 @@ spec:
         type: AverageValue
         averageValue: 80 # Scale up if, on average, 80% of workers in the deployment are running at full capacity 
 ```
-{% raw %}
+{% endraw %}
 
 ### Registering external metrics with the Kubernetes API
 
