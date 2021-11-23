@@ -81,7 +81,7 @@ data:
       "RemovePodsViolatingTopologySpreadConstraint":
         enabled: true
 {{- else }}
-      "RemovePodsViolatiRemovePodsViolatingTopologySpreadConstraintngNodeAffinity":
+      "RemovePodsViolatingTopologySpreadConstraint":
         enabled: false
 {{- end }}
 
