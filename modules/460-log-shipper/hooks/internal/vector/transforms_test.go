@@ -88,7 +88,7 @@ func TestTransformSnippet(t *testing.T) {
 		data, err := json.Marshal(tr)
 		require.NoError(t, err)
 
-		assert.JSONEq(t, `[{"condition":"exists(.parsed_data.info)", "inputs":["testit"], "type":"filter"}, {"condition":"if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity)\n { data, err = to_string(.parsed_data.severity)\n if err != null {\n false\n } else {\n includes([\"aaa\",42], data)\n } }\n else\n {\n includes([\"aaa\",42], .parsed_data.severity)\n }", "inputs":["d8_tf_testit_0"], "type":"filter"}]`, string(data))
+		assert.JSONEq(t, `[{"condition":"exists(.parsed_data.info)", "inputs":["testit"], "type":"filter"}, {"condition":"if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) { data, err = to_string(.parsed_data.severity); if err != null { false; } else { includes([\"aaa\",42], data); }; } else { includes([\"aaa\",42], .parsed_data.severity); }", "inputs":["d8_tf_testit_0"], "type":"filter"}]`, string(data))
 	})
 
 	t.Run("Test extra labels", func(t *testing.T) {
