@@ -120,3 +120,59 @@ spec:
   loki:
     endpoint: http://loki.loki:3100
 ```
+
+## Migration from Promtail to Log-Shipper
+
+Path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
+
+**Vector** will add this PATH automatically during working with Loki destination.
+
+## Working with Grafana Cloud
+
+This documentation expects that you have [created API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
+
+![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
+
+Firstly you should encode your token with base64.
+
+```bash
+echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
+```
+
+Then you can create **ClusterLogDestination**
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  loki:
+    auth:
+      password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
+      strategy: Basic
+      user: "<YOUR-GRAFANACLOUD-USER>"
+    endpoint: <YOUR-GRAFANACLOUD-URL> # For example https://logs-prod-us-central1.grafana.net or https://logs-prod-eu-west-0.grafana.net
+  type: Loki
+```
+
+Now you can create PodLogginConfig or ClusterPodLoggingConfig and send logs to **Grafana Cloud**.
+
+## Adding Loki source to Deckhouse Grafana
+
+You can work with Loki from embeded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource)
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: loki
+spec:
+  access: Proxy
+  basicAuth: false
+  jsonData:
+    maxLines: 5000
+    timeInterval: 30s
+  type: loki
+  url: http://loki.loki:3100
+```

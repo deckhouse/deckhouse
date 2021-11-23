@@ -27,7 +27,10 @@ spec:
                         user:
                           description: Имя пользователя, используемое при Basic-аутентификации.
                     endpoint:
-                      description: URL для подключения к Loki.
+                      description: |
+                        URL для подключения к Loki.
+
+                        *Важно* Vector автоматически добавляет `/loki/api/v1/push` к URL при отправке данных.
                     tls:
                       description: Настройки защищённого TLS соединения.
                       properties:
