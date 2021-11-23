@@ -203,17 +203,7 @@ func CreateTransformsFromFilter(filters []v1alpha1.LogFilter) (transforms []impl
 					Type: "filter",
 				},
 				DynamicArgsMap: map[string]interface{}{
-					"condition": fmt.Sprintf(`if is_boolean(.parsed_data.%s) || is_float(.parsed_data.%s)
- { data, err = to_string(.parsed_data.%s)
- if err != null {
- false
- } else {
- includes(%s, data)
- } }
- else
- {
- includes(%s, .parsed_data.%s)
- }`, filter.Field, filter.Field, filter.Field, valuesAsString, valuesAsString, filter.Field),
+					"condition": fmt.Sprintf(`if is_boolean(.parsed_data.%s) || is_float(.parsed_data.%s) { data, err = to_string(.parsed_data.%s); if err != null { false; } else { includes(%s, data); }; } else { includes(%s, .parsed_data.%s); }`, filter.Field, filter.Field, filter.Field, valuesAsString, valuesAsString, filter.Field),
 				},
 			})
 		case v1alpha1.LogFilterOpNotIn:
@@ -226,15 +216,7 @@ func CreateTransformsFromFilter(filters []v1alpha1.LogFilter) (transforms []impl
 					Type: "filter",
 				},
 				DynamicArgsMap: map[string]interface{}{
-					"condition": fmt.Sprintf(`if is_boolean(.parsed_data.%s) || is_float(.parsed_data.%s)
- { data, err = to_string(.parsed_data.%s)
- if err != null {
- true
- } else {
- !includes(%s, data)
- } } else {
- !includes(%s, .parsed_data.%s)
- }`, filter.Field, filter.Field, filter.Field, valuesAsString, valuesAsString, filter.Field),
+					"condition": fmt.Sprintf(`if is_boolean(.parsed_data.%s) || is_float(.parsed_data.%s) { data, err = to_string(.parsed_data.%s); if err != null { true; } else { !includes(%s, data); }; } else { !includes(%s, .parsed_data.%s); }`, filter.Field, filter.Field, filter.Field, valuesAsString, valuesAsString, filter.Field),
 				},
 			})
 		case v1alpha1.LogFilterOpRegex:
