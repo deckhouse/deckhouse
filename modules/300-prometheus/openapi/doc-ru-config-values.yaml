@@ -89,7 +89,7 @@ properties:
           - `Disabled` — в данном Grafana/Prometheus будут работать только по HTTP.
           - `CertManager` — Grafana/Prometheus будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Grafana/Prometheus будут работать по https используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Grafana/Prometheus будет работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
       certManager:
         properties:
           clusterIssuerName:
