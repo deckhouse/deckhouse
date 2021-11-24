@@ -26,25 +26,14 @@ spec:
 ```
 
 ## Пример для AWS (Network Load Balancer)
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
- name: main
-spec:
-  ingressClass: "nginx"
-  inlet: "LoadBalancer"
-  loadBalancer:
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 
-```
-## Пример для AWS (Network Load Balancer), Ingress-узлы находятся не во всех зонах
+При создании балансера будут использованы все доступные в кластере зоны.
 
-В таком случае нужно указать аннотацию, в которой перечислены все идентификаторы подсетей, где необходимо создать Listener'ы. Подсети должны соответствовать зонам, где находятся Ingress-узлы.
-Список текущих подсетей, которые используются для конкретной инсталляции можно получить так: `kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
+В каждой зоне балансер получает публичный IP. Если в зоне есть инстанс с ingress-контроллером, A-запись с IP-адресом балансера из этой зоны автоматически добавляется к доменному имени балансера.
 
-**Внимание!** Добавление аннотации на существующий Service не сработает, необходимо будет его пересоздать.
+Если в зоне не остается инстансов с ingress-контроллером, тогда IP автоматически убирается из DNS.
+
+В случае если в зоне всего один инстанс с ingress-контроллером, при перезапуске пода, IP-адрес балансера этой зоны будет временно исключен из DNS.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -57,7 +46,6 @@ spec:
   loadBalancer:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-      service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo, subnet-bar"
 ```
 
 ## Пример для GCP

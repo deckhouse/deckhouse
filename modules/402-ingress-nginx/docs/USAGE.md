@@ -26,25 +26,14 @@ spec:
 ```
 
 ## An example for AWS (Network Load Balancer)
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
- name: main
-spec:
-  ingressClass: "nginx"
-  inlet: "LoadBalancer"
-  loadBalancer:
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 
-```
-## An example for AWS (Network Load Balancer), Ingress nodes are not present in all zones
+When creating a balancer, all zones available in the cluster will be used.
 
-In this particular case, you need to create an annotation with all the subnet IDs where Listeners must be created. The subnets must correspond to the zones where the Ingress nodes are located.
-You can get the list of subnets for a specific installation using the following command: `kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'`.
+In each zone, the balancer receives a public IP. If there is an instance with an ingress controller in the zone, an A-record with the balancer's IP address from this zone is automatically added to the balancer's domain name.
 
-**Caution!** Note that attaching an annotation to a running Service will not work; you will need to recreate it.
+When there are no instances with an ingress controller in the zone, then the IP is automatically removed from the DNS.
+
+If there is only one instance with an ingress controller in a zone, when the pod is restarted, the IP address of the balancer of this zone will be temporarily excluded from DNS.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -57,7 +46,6 @@ spec:
   loadBalancer:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-      service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo, subnet-bar"
 ```
 
 ## An example for GCP
