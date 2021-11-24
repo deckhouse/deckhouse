@@ -21,6 +21,8 @@
         box-sizing: border-box;
         padding: 30px;
         margin: 0 25px;
+        padding-bottom: 9999px;
+        margin-bottom: -9999px;
         &-header {
             margin-bottom: $spacing-l;
             display: flex;
@@ -40,9 +42,9 @@
         }
         &-info {
             margin-bottom: $spacing-l;
-            &:last-child {
-                margin-bottom: 0px;
-            }
+            // &:last-child {
+            //     margin-bottom: 0px;
+            // }
             &-label {
                 margin-bottom: $spacing-s;
                 font-weight: $font-weight-semibold;
@@ -92,5 +94,9 @@
         &:before {
             content: '→'
         }
+    }
+
+    .slick-track {
+        overflow: hidden;
     }
 }
