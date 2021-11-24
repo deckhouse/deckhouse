@@ -112,9 +112,9 @@ dhctl does two things to connect to Kubernetes API:
 * Opens SSH tunnel to the kubectl proxy process.
 
 After successfully connection to the Kubernetes API, `dhctl` creates or updates:
-* Cluster Role `cluster-administrator`
+* Cluster Role `cluster-admin`
 * Service Account for `deckhouse`
-* Cluster Role Binding for `cluster-administrator` the `deckhouse` service account
+* Cluster Role Binding for `cluster-admin` the `deckhouse` service account
 * Secret with a docker registry credentials `deckhouse-registry`
 * ConfigMap for `deckhouse`
 * Deployment for `deckhouse`
