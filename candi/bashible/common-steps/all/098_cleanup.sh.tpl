@@ -28,3 +28,4 @@ rm -f "$BB_YUM_UNHANDLED_PACKAGES_STORE"
 find /.kubeadm.checksum -mmin +120 -delete >/dev/null 2>&1 || true
 
 rm -f /var/lib/bashible/first_run
+

@@ -19,6 +19,12 @@ if [ ! -f "$kubeconfig" ]; then
   exit 0
 fi
 
+# if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
+# this step runs normally after node reboot.
+if bb-flag? disruption && bb-flag? reboot; then
+  exit 0
+fi
+
 virtualization="$(virt-what | awk 'FNR <= 1')"
 if [[ "$virtualization" == "" ]]; then
   virtualization="unknown"

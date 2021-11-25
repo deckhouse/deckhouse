@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if systemctl list-units | grep -q rpcbind.socket; then
+if systemctl list-units --no-legend --plain --no-pager | grep -q rpcbind.socket; then
   systemctl stop rpcbind.socket
   systemctl disable rpcbind.socket
 fi
 
-if systemctl list-units | grep -q rpcbind.service; then
+if systemctl list-units --no-legend --plain --no-pager | grep -q rpcbind.service; then
   systemctl stop rpcbind.service
   systemctl disable rpcbind.service
 fi

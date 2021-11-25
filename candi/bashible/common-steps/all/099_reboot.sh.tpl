@@ -36,10 +36,11 @@ if bb-flag? reboot; then
   # When we bootstrap node we do not start kubelet, if node need to reboot.
   # If kubelet does not start in first time, /etc/kubernetes/kubelet.conf file will not created.
   # This is normally, after reboot kubelet will start and file will be created.
-  # If kubelet is not started (on bootstrap), node will not join into cluster and we do not need to delete lease.
+  # If kubelet is not started (on bootstrap), node will not join into cluster and we dont need to set the status of node to NotReady.
   # Why don't we start kubelet when we bootstrap node (in some cases)?
   # We want bootstrap node fully, reboot it and after reboot join node into cluster.
-  if [ -f /etc/kubernetes/kubelet.conf ] ; then
+
+  if [[ -f "/etc/kubernetes/kubelet.conf" ]]; then
     # Our task is to force setting Node status to NotReady to prevent unwanted schedulings during reboot.
     attempt=0
     while true; do
@@ -52,7 +53,10 @@ if bb-flag? reboot; then
       bb-log-info "Setting node status to NotReady..."
 
       url="https://127.0.0.1:6445/api/v1/nodes/${HOSTNAME}"
-      ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem | jq -r '.status.conditions | to_entries[] | select(.value.type == "Ready") | .key')"
+      ready_condition_key=""
+      if d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem > /dev/null; then
+        ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem | jq -r '.status.conditions | to_entries[] | select(.value.type == "Ready") | .key')"
+      fi
 
       # if ready_condition_key don't exist continue
       if [[ -z "${ready_condition_key}" ]]; then
@@ -86,10 +90,11 @@ if bb-flag? reboot; then
     done
   fi
   {{- end }}
-
+  bb-flag-unset disruption
   shutdown -r now
 fi
 {{- else }}
+bb-flag-unset disruption
 # to prevent extra reboot during first "Normal" run.
 bb-flag-unset reboot
 {{- end }}
