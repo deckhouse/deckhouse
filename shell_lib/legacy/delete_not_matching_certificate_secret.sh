@@ -31,7 +31,7 @@ function legacy::common_hooks::https::delete_not_matching_certificate_secret::ma
       certificate_issuer_name=$(values::get_first_defined ${module_name}.https.certManager.clusterIssuerName global.modules.https.certManager.clusterIssuerName)
       if [ ! -z "${certificate_issuer_name}" ] ; then
         if kubectl -n ${namespace} get secret ingress-tls > /dev/null 2>&1 ; then
-          secret_issuer_name=$(kubectl -n ${namespace} get secret ingress-tls -o json | jq -r '.metadata.annotations."certmanager.k8s.io/issuer-name"')
+          secret_issuer_name=$(kubectl -n ${namespace} get secret ingress-tls -o json | jq -r '.metadata.annotations."cert-manager.io/issuer-name" // .metadata.annotations."certmanager.k8s.io/issuer-name"')
           if [ "${secret_issuer_name}" != "${certificate_issuer_name}" ] ; then
             kubectl -n ${namespace} delete secret ingress-tls > /dev/null 2>&1
           fi

@@ -18,11 +18,12 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -36,15 +37,11 @@ const (
 	metricsGroup = "orphan_secrets_metrics_hook"
 )
 
-type secretMeta struct {
-	SecretName string
-	Namespace  string
-}
-
 func applySecretMetaFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return secretMeta{
-		Namespace:  obj.GetNamespace(),
-		SecretName: obj.GetName(),
+	return secretInfo{
+		Namespace:   obj.GetNamespace(),
+		Name:        obj.GetName(),
+		Annotations: obj.GetAnnotations(),
 	}, nil
 }
 
@@ -74,9 +71,9 @@ func applyCertMetaFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 		return nil, fmt.Errorf("cannot cast spec.SecretName for certificate")
 	}
 
-	return secretMeta{
-		Namespace:  obj.GetNamespace(),
-		SecretName: secretName,
+	return secretInfo{
+		Namespace: obj.GetNamespace(),
+		Name:      secretName,
 	}, nil
 }
 
@@ -85,7 +82,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       certsMetricSnapshot,
-			ApiVersion: "certmanager.k8s.io/v1alpha1",
+			ApiVersion: "cert-manager.io/v1",
 			Kind:       "Certificate",
 			FilterFunc: applyCertMetaFilter,
 		},
@@ -95,11 +92,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			FilterFunc: applySecretMetaFilter,
-			LabelSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
+			FieldSelector: &types.FieldSelector{
+				MatchExpressions: []types.FieldSelectorRequirement{
 					{
-						Key:      "certmanager.k8s.io/certificate-name",
-						Operator: metav1.LabelSelectorOpExists,
+						Field:    "type",
+						Operator: "Equals",
+						Value:    "kubernetes.io/tls",
 					},
 				},
 			},
@@ -107,30 +105,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, orphanSecretsMetrics)
 
-func secretsMetricKeyFun(m *secretMeta) string {
-	return fmt.Sprintf("%s/%s", m.Namespace, m.SecretName)
-}
-
 func orphanSecretsMetrics(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricsGroup)
 
 	// in jq filter we see diff secret wit certs
 	// so, we need iterate over certs and check key in certs map
-	certs := set.New()
+	certSlugs := set.New()
 
-	for _, sm := range input.Snapshots[certsMetricSnapshot] {
-		meta := sm.(secretMeta)
-		key := secretsMetricKeyFun(&meta)
-		// we do not need to store meta
-		// cert meta and secret meta must equal
-		// here we need store only (hash-)key
-		certs.Add(key)
+	for _, c := range input.Snapshots[certsMetricSnapshot] {
+		certSlugs.Add(c.(secretInfo).slugify())
 	}
 
-	for _, sm := range input.Snapshots[secretsMetricsSnapshot] {
-		secretMetaVal := sm.(secretMeta)
-		key := secretsMetricKeyFun(&secretMetaVal)
-		if certs.Has(key) {
+	for _, s := range input.Snapshots[secretsMetricsSnapshot] {
+		secretInfoVal := s.(secretInfo)
+
+		// Skip Secrets that are not related to cert-manager.
+		_, hasLbl := secretInfoVal.Annotations[certificateNameKey]
+		if !hasLbl {
+			continue
+		}
+
+		secretSlug := secretInfoVal.slugify()
+		if certSlugs.Has(secretSlug) {
+			continue
+		}
+
+		// Skip metric for Orphan Secrets in d8-.* namespaces to mute alerts on them.
+		// Those Secrets be automatically deleted after expire by `orphan_secrets_cleaner.go`.
+		if strings.HasPrefix(secretInfoVal.Namespace, "d8-") {
 			continue
 		}
 
@@ -138,8 +140,8 @@ func orphanSecretsMetrics(input *go_hook.HookInput) error {
 			"d8_orphan_secrets_without_corresponding_certificate_resources",
 			1.0,
 			map[string]string{
-				"namespace":   secretMetaVal.Namespace,
-				"secret_name": secretMetaVal.SecretName,
+				"namespace":   secretInfoVal.Namespace,
+				"secret_name": secretInfoVal.Name,
 			},
 			metrics.WithGroup(metricsGroup),
 		)

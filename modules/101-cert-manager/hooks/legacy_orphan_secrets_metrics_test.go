@@ -25,22 +25,22 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func assertCleanMetricsOnly(f *HookExecutionConfig) {
+func assertLegacyCleanMetricsOnly(f *HookExecutionConfig) {
 	ops := f.MetricsCollector.CollectedMetrics()
 	Expect(len(ops)).To(BeEquivalentTo(1))
 
 	// first is expiration
 	Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-		Group:  metricsGroup,
+		Group:  legacyMetricsGroup,
 		Action: "expire",
 	}))
 }
 
-var _ = Describe("Modules :: cert-manager :: hooks :: orphan_secrets_metrics ::", func() {
+var _ = Describe("Modules :: cert-manager :: hooks :: legacy_orphan_secrets_metrics ::", func() {
 	const (
 		stateCertificates = `
 ---
-apiVersion: cert-manager.io/v1
+apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
   annotations:
@@ -52,7 +52,7 @@ metadata:
     heritage: deckhouse
     module: dashboard
   name: dashboard
-  namespace: non-d8-dashboard
+  namespace: d8-dashboard
 spec:
   acme:
     config:
@@ -77,20 +77,22 @@ data:
 kind: Secret
 metadata:
   annotations:
-    cert-manager.io/alt-names: dashboard.test
-    cert-manager.io/certificate-name: dashboard
-    cert-manager.io/common-name: dashboard.test
-    cert-manager.io/ip-sans: ""
-    cert-manager.io/issuer-kind: ClusterIssuer
-    cert-manager.io/issuer-name: letsencrypt
+    certmanager.k8s.io/alt-names: dashboard.test
+    certmanager.k8s.io/certificate-name: dashboard
+    certmanager.k8s.io/common-name: dashboard.test
+    certmanager.k8s.io/ip-sans: ""
+    certmanager.k8s.io/issuer-kind: ClusterIssuer
+    certmanager.k8s.io/issuer-name: letsencrypt
+  labels:
+    certmanager.k8s.io/certificate-name: dashboard
   name: ingress-tls
-  namespace: non-d8-dashboard
+  namespace: d8-dashboard
 type: kubernetes.io/tls
 `
 	)
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
-	f.RegisterCRD("cert-manager.io", "v1", "Certificate", true)
+	f.RegisterCRD("certmanager.k8s.io", "v1alpha1", "Certificate", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -114,18 +116,18 @@ type: kubernetes.io/tls
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  metricsGroup,
+				Group:  legacyMetricsGroup,
 				Action: "expire",
 			}))
 
 			// second is metrics
 			expectedMetric := operation.MetricOperation{
 				Name:   "d8_orphan_secrets_without_corresponding_certificate_resources",
-				Group:  metricsGroup,
+				Group:  legacyMetricsGroup,
 				Action: "set",
 				Value:  pointer.Float64Ptr(1.0),
 				Labels: map[string]string{
-					"namespace":   "non-d8-dashboard",
+					"namespace":   "d8-dashboard",
 					"secret_name": "ingress-tls",
 				},
 			}
@@ -140,7 +142,7 @@ type: kubernetes.io/tls
 		})
 
 		It("expire orphan metrics for group only", func() {
-			assertCleanMetricsOnly(f)
+			assertLegacyCleanMetricsOnly(f)
 		})
 	})
 
@@ -151,7 +153,7 @@ type: kubernetes.io/tls
 		})
 
 		It("expire orphan metrics for group only", func() {
-			assertCleanMetricsOnly(f)
+			assertLegacyCleanMetricsOnly(f)
 		})
 	})
 })
