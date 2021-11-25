@@ -15,6 +15,24 @@ There are three types of metrics in terms of an HPA:
 * [custom](#custom-metrics-based-scaling) — these have the "Pods" or "Object" type (`.spec.metrics[].type`).
 * [external](#using-external-metrics-with-hpa) — these have the "External" type (`.spec.metrics[].type`).
 
+**Caution!** During scale, HPA uses different approaches [by default](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior):
+* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **up** the target, it happens immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation — scale speed. During 15 seconds, the Pods can either double their number or if there are less than 4 Pods now, maximum four new Pods will be added.
+* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **down** the target, it happens smoothly. During 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300), HPA collects suggestions about scaling and finally chooses the largest value. There aren't scale-down speed limitations.
+
+If you have metric flapping problems which lead to unwanted scales, there are options:
+* If your metric is based on a PromQL query, you can use an aggregation function like `avg_over_time()` to smooth out the fluctuations. Example [below](#example-of-using-unstable-custom-metric).
+* You can increase `spec.behavior.scaleUp.stabilizationWindowSeconds` in `HorisontalPodAutoscaler` resource. In this case, HPA collects scale suggestions during the period and finally chooses the minimal value. In other words, this solution is identical using the `min_over_time(<stabilizationWindowSeconds>)` aggregating function only when the metric is growing up, and HPA decides to scale **up**. For scaling **down**, it is usually enough standard Stabilisation Window settings. Example [below](#classic-resource-consumption-based-scaling).
+* You can also tighten the scale-up speed with `spec.behavior.scaleUp.policies` settings.
+
+**Caution!** During scale, HPA uses different approaches [by default](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior):
+* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **up** the target, it happens immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation — scale speed. During 15 seconds, the Pods can either double their number or if there are less than 4 Pods now, maximum four new Pods will be added.
+* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that HPA must scale **down** the target, it happens smoothly. During 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300), HPA collects suggestions about scaling and finally chooses the largest value. There aren't scale-down speed limitations.
+
+If you have metric flapping problems which lead to unwanted scales, there are options:
+* If your metric is based on a PromQL query, you can use an aggregation function like `avg_over_time()` to smooth out the fluctuations. Example [below](#example-of-using-unstable-custom-metric).
+* You can increase `spec.behavior.scaleUp.stabilizationWindowSeconds` in `HorisontalPodAutoscaler` resource. In this case, HPA collects scale suggestions during the period and finally chooses the minimal value. In other words, this solution is identical using the `min_over_time(<stabilizationWindowSeconds>)` aggregating function only when the metric is growing up, and HPA decides to scale **up**. For scaling **down**, it is usually enough standard Stabilisation Window settings. Example [below](#classic-resource-consumption-based-scaling).
+* You can also tighten the scale-up speed with `spec.behavior.scaleUp.policies` settings.
+
 ## What scaling type should I prefer?
 
 1. The typical use-cases of a [classic](#classic-resource-consumption-based-scaling) type are pretty obvious.
@@ -44,6 +62,9 @@ spec:
   # "min and max values
   minReplicas: 1
   maxReplicas: 10
+  behavior:                           # if short-term spikes of CPU usage are regular for the application,
+    scaleUp:                          # you can postpone the scaling decision to be sure if it is necessary
+      stabilizationWindowSeconds: 300 # (by default, scaling up occurs immediately)
   metrics:
   # scaling based on CPU and Memory consumption
   - type: Resource
@@ -122,7 +143,7 @@ spec:
 
 In the case of the `Pods` metric type, the process is more complex. First, metrics with the appropriate labels (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...) will be collected for all the Pods of the resource to scale. Next, HPA will calculate the average value based on these metrics and will use it for scaling. See the example [below](#examples-of-using-custom-metrics-of-the-pods-type).
 
-## Example of using RabbitMQ queue size-based custom metrics
+#### Example of using RabbitMQ queue size-based custom metrics
 
 Suppose there is a "send_forum_message" queue in RabbitMQ, and this message broker is exposed as an "rmq" service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue.
 
@@ -163,7 +184,48 @@ spec:
 ```
 {% endraw %}
 
-## Examples of using custom metrics of the `Pods` type
+#### Example of using unstable custom metric
+
+Improvement for example above. Suppose there is a "send_forum_message" queue in RabbitMQ, and this message broker is exposed as an "rmq" service. Then, suppose, we want to scale up the cluster if there are more than 42 messages in the queue. At the same time, we do not want to react to short-term spikes, for this we use MQL-function `avg_over_time()`.
+
+{% raw %}
+```yaml
+apiVersion: deckhouse.io/v1beta1
+kind: ServiceMetric
+metadata:
+  name: rmq-queue-forum-messages
+  namespace: mynamespace
+spec:
+  query: sum (avg_over_time(rabbitmq_queue_messages{<<.LabelMatchers>>,queue=~"send_forum_message",vhost="/"}[5m])) by (<<.GroupBy>>)
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta2
+metadata:
+  name: myhpa
+  namespace: mynamespace
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myconsumer
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Object
+    object:
+      describedObject:
+        apiVersion: v1
+        kind: Service
+        name: rmq
+      metric:
+        name: rmq-queue-forum-messages
+      target:
+        type: Value
+        value: 42
+```
+{% endraw %}
+
+#### Examples of using custom metrics of the `Pods` type
 
 Suppose we want the average number of php-fpm workers in the "mybackend" deployment to be no more than 5.
 

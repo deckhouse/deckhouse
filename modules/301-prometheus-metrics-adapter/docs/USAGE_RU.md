@@ -15,6 +15,24 @@ search: autoscaler, HorizontalPodAutoscaler
 * [кастомные](#скейлинг-по-кастомным-метрикам) — с типами (`.spec.metrics[].type`) "Pods" или "Object".
 * [внешние](#применяем-внешние-метрики-в-hpa) — с типом (`.spec.metrics[].type`) "External".
 
+**Важно!** [По умолчанию](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA использует разные подходы при масштабировании в ту или иную сторону:
+* Если метрики [говорят](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) о том, что надо скейлиться **вверх**, то это происходит немедленно (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). Единственное ограничение — скорость прироста, за 15 секунд поды могут максимум либо удвоиться, либо, если подов меньше 4-х, то прибавляется 4шт.
+* Если метрики [говорят](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) о том, что надо скейлиться **вниз**, то это происходит плавно. В течение пяти минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300) собираются предложения о новом количестве реплик и по итогу выбирается самое большое значание. Ограничений на количество "уволенных" подов за раз нет.
+
+Если есть проблемы с флаппингом метрик и наблюдается взрывной рост ненужных реплик у приложения, то есть разные подходы:
+* Если метрика определена PromQL-запросом, то обернуть его агрегирующей функцией, например, `avg_over_time()`. Пример [ниже](#пример-использования-нестабильной-кастомной-метрики).
+* Увеличить `spec.behavior.scaleUp.stabilizationWindowSeconds` в ресурсе `HorizontalPodAutoscaler` — в этом случае, в течение обозначенного периода будут собираться предложения об увеличении количества реприк и по итогу будет выбрано самое скромное предложение. Иными словами, это решение тождественно применению аггрегирующей функции `min_over_time(<stabilizationWindowSeconds>)`, но только в случае если метрика растёт и требуется скейлинг **вверх**. Для скейлинга **вниз** как правило достаточно стандартных настроек. Пример [ниже](#классический-скейлинг-по-потреблению-ресурсов).
+* Сильнее ограничить скорость прироста новых реплик с помощью `spec.behavior.scaleUp.policies`.
+
+**Важно!** [По умолчанию](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA использует разные подходы при масштабировании в ту или иную сторону:
+* Если метрики [говорят](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) о том, что надо скейлиться **вверх**, то это происходит немедленно (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). Единственное ограничение — скорость прироста, за 15 секунд поды могут максимум либо удвоиться, либо, если подов меньше 4-х, то прибавляется 4шт.
+* Если метрики [говорят](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) о том, что надо скейлиться **вниз**, то это происходит плавно. В течение пяти минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300) собираются предложения о новом количестве реплик и по итогу выбирается самое большое значание. Ограничений на количество "уволенных" подов за раз нет.
+
+Если есть проблемы с флаппингом метрик и наблюдается взрывной рост ненужных реплик у приложения, то есть разные подходы:
+* Если метрика определена PromQL-запросом, то обернуть его агрегирующей функцией, например, `avg_over_time()`. Пример [ниже](#пример-использования-нестабильной-кастомной-метрики).
+* Увеличить `spec.behavior.scaleUp.stabilizationWindowSeconds` в ресурсе `HorizontalPodAutoscaler` — в этом случае, в течение обозначенного периода будут собираться предложения об увеличении количества реприк и по итогу будет выбрано самое скромное предложение. Иными словами, это решение тождественно применению аггрегирующей функции `min_over_time(<stabilizationWindowSeconds>)`, но только в случае если метрика растёт и требуется скейлинг **вверх**. Для скейлинга **вниз** как правило достаточно стандартных настроек. Пример [ниже](#классический-скейлинг-по-потреблению-ресурсов).
+* Сильнее ограничить скорость прироста новых реплик с помощью `spec.behavior.scaleUp.policies`.
+
 ## Какой тип скейлинга мне подойдёт?
 
 1. С [классическим](#классический-скейлинг-по-потреблению-ресурсов) всё понятно.
@@ -44,6 +62,9 @@ spec:
   # "от" и "до"
   minReplicas: 1
   maxReplicas: 10
+  behavior:                           # если приложению характерны кратковременные скачки потребления CPU,
+    scaleUp:                          # можно отложить принятие решения о скейлинге дабы убедиться, что он необходим
+      stabilizationWindowSeconds: 300 # (по умолчанию скейлинг вверх происходит немедленно)
   metrics:
   # скейлимся по CPU и Memory
   - type: Resource
@@ -122,7 +143,7 @@ spec:
 
 C `Pods` сложнее — из ресурса, который скейлит HPA, будут извлечены все Pod'ы и по каждому будет собраны метрики с соответствующими лейблами (`namespace=XXX,pod=YYY-sadiq`,`namespace=XXX,pod=YYY-e3adf`,...). Из этих метрик HPA посчитает среднее и использует для скейлинга. См. [пример ниже](#примеры-с-использованием-кастомных-метрик-типа-pods).
 
-## Пример использования кастомных метрик с размером очереди RabbitMQ
+#### Пример использования кастомных метрик с размером очереди RabbitMQ
 
 Имеем очередь "send_forum_message" в RabbitMQ, для которого зарегистрирован сервис "rmq". Если сообщений в очереди больше 42 — скейлимся.
 
@@ -163,7 +184,49 @@ spec:
 ```
 {% endraw %}
 
-## Примеры с использованием кастомных метрик типа `Pods`
+#### Пример использования нестабильной кастомной метрики
+
+Улучшение примера выше. Имеем очередь "send_forum_message" в RabbitMQ, для которого зарегистрирован сервис "rmq". Если сообщений в очереди больше 42 — скейлимся.
+При этом мы не хотим реагировать на кратковременные вспышки, для этого усредняем метрику с помощью MQL-функции `avg_over_time()`.
+
+{% raw %}
+```yaml
+apiVersion: deckhouse.io/v1beta1
+kind: ServiceMetric
+metadata:
+  name: rmq-queue-forum-messages
+  namespace: mynamespace
+spec:
+  query: sum (avg_over_time(rabbitmq_queue_messages{<<.LabelMatchers>>,queue=~"send_forum_message",vhost="/"}[5m])) by (<<.GroupBy>>)
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta2
+metadata:
+  name: myhpa
+  namespace: mynamespace
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myconsumer
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Object
+    object:
+      describedObject:
+        apiVersion: v1
+        kind: Service
+        name: rmq
+      metric:
+        name: rmq-queue-forum-messages
+      target:
+        type: Value
+        value: 42
+```
+{% endraw %}
+
+#### Примеры с использованием кастомных метрик типа `Pods`
 
 Хотим, чтобы среднее количество php-fpm-воркеров в деплойменте "mybackend" было не больше 5.
 
