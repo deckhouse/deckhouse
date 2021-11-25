@@ -70,3 +70,9 @@ func WithCSRKeyRequest(keyRequest *csr.KeyRequest) Option {
 		request.KeyRequest = keyRequest
 	}
 }
+
+func WithNames(names ...csr.Name) Option {
+	return func(request *csr.CertificateRequest) {
+		request.Names = append(request.Names, names...)
+	}
+}
