@@ -91,14 +91,10 @@ func (c *smokeMiniChecker) Check() check.Error {
 		return check.ErrUnknown("failed to resolve smoke-mini IPs: %v", lookupErr)
 	}
 
-	success := make(chan struct{})
-	failures := make(chan error)
-
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), c.httpTimeout)
 
 	wg.Add(len(ips))
-
 	go func(wg *sync.WaitGroup) {
 		// Sync requesting goroutines
 
@@ -111,6 +107,7 @@ func (c *smokeMiniChecker) Check() check.Error {
 		cancel()
 	}(&wg)
 
+	results := make(chan error)
 	for _, ip := range ips {
 		go func(wg *sync.WaitGroup, ip string) {
 			defer wg.Done()
@@ -125,19 +122,10 @@ func (c *smokeMiniChecker) Check() check.Error {
 
 			err := c.request(rctx, ip)
 
-			logger.WithError(err).Debugf("got result")
-
 			select {
+			case results <- err:
 			case <-rctx.Done():
-				logger.Debugf("cancelled")
-			default:
-				if err != nil {
-					logger.Debugf("sending failure")
-					failures <- err
-					return
-				}
-				logger.Debugf("sending success")
-				success <- struct{}{}
+				logger.Debugf("cancelled: %s", rctx.Err())
 			}
 		}(&wg, ip)
 	}
@@ -147,18 +135,17 @@ func (c *smokeMiniChecker) Check() check.Error {
 loop:
 	for {
 		select {
-		case <-success:
-			logger.Debugf("got success, cancelling parent context")
-			cancel()
+		case err := <-results:
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			logger.Debugf("success, cancelling parent context")
 			return nil
 
-		case err := <-failures:
-			logger.Debugf("got failure")
-			errs = append(errs, err)
-
 		case <-ctx.Done():
-			logger.Debugf("parent context cancelled")
-			// Either success, or all requests finished, or the time is out
+			logger.Debugf("parent context cancelled: %v", ctx.Err())
+			// Either all requests finished, or the time is out
 			if err := ctx.Err(); err != nil {
 				logger.WithError(err).Debugf("parent context error")
 				errs = append(errs, err)
@@ -167,6 +154,7 @@ loop:
 		}
 	}
 
+	// Report failure reasons
 	msgs := make([]string, len(errs))
 	for i, e := range errs {
 		msgs[i] = e.Error()
@@ -186,11 +174,11 @@ func (c *smokeMiniChecker) request(ctx context.Context, ip string) error {
 		return err
 	}
 
-	//nolint:bodyclose
 	res, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s reponded with %d", u.String(), res.StatusCode)

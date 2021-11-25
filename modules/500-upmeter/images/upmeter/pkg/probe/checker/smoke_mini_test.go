@@ -26,24 +26,18 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 )
 
 func Test_smokeMiniAvailable(t *testing.T) {
 	// Running tests with race detector can lead to fail if the timeout is too small (e.g. 10ms)
-	timeout := 25 * time.Millisecond
 
-	s200 := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) { rw.WriteHeader(200) }))
-	s500 := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) { rw.WriteHeader(500) }))
-	slow200 := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		time.Sleep(timeout / 11 * 10) // ~91% of timeout
-		rw.WriteHeader(200)
-	}))
-	tooSlow200 := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		time.Sleep(2 * timeout)
-		rw.WriteHeader(200)
-	}))
-
-	logger := newDummyLogger()
+	var (
+		logger  = newDummyLogger()
+		timeout = 25 * time.Millisecond
+		slow    = timeout / 11 * 10 // ~91%
+		tooLate = 2 * timeout
+	)
 
 	noError := func(t *testing.T, err error) {
 		assert.NoError(t, err)
@@ -55,48 +49,77 @@ func Test_smokeMiniAvailable(t *testing.T) {
 	tests := []struct {
 		name    string
 		servers []*httptest.Server
-		cancel  bool
+		cancel  bool // cause context cancelling by inexising endpoint
 		assert  func(*testing.T, error)
 	}{
 		{
 			name:    "single responding server leads to success",
-			servers: []*httptest.Server{s200},
+			servers: []*httptest.Server{respondWith(200)},
 			assert:  noError,
 		},
 		{
 			name:    "single slowly responding server leads to success",
-			servers: []*httptest.Server{slow200},
+			servers: []*httptest.Server{respondSlowlyWith(slow, 200)},
 			assert:  noError,
 		},
 		{
 			name:    "single error-responding server leads to error",
-			servers: []*httptest.Server{s500},
+			servers: []*httptest.Server{respondWith(500)},
 			assert:  hasError,
 		},
 		{
 			name:    "single hanging server leads to error",
-			servers: []*httptest.Server{tooSlow200},
+			servers: []*httptest.Server{respondSlowlyWith(tooLate, 200)},
 			assert:  hasError,
 		},
 		{
-			name:    "fast 200 among failing servers leads to success",
-			servers: []*httptest.Server{tooSlow200, s200, s500},
-			assert:  noError,
+			name: "fast 200 among failing servers leads to success",
+			servers: []*httptest.Server{
+				respondSlowlyWith(tooLate, 200),
+				respondWith(200),
+				respondWith(500),
+			},
+			assert: noError,
 		},
 		{
-			name:    "slow 200 among failing servers leads to success",
-			servers: []*httptest.Server{tooSlow200, slow200, s500},
-			assert:  noError,
+			name: "slow 200 among failing servers leads to success",
+			servers: []*httptest.Server{
+				respondSlowlyWith(tooLate, 200),
+				respondSlowlyWith(slow, 200),
+				respondWith(500),
+			},
+			assert: noError,
 		},
 		{
 			name:   "inexisintg endpoint leads to error",
 			cancel: true,
 			assert: hasError,
 		},
+		{
+			name: "inexisintg endpoint with good server leads to success",
+			servers: []*httptest.Server{
+				respondSlowlyWith(slow, 200),
+			},
+			cancel: true,
+			assert: noError,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer goleak.VerifyNone(t,
+				// klog
+				goleak.IgnoreTopFunction("k8s.io/klog.(*loggingT).flushDaemon"),
+				// httputil.Server
+				goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
+			)
+
+			defer func() {
+				for _, s := range tt.servers {
+					s.Close()
+				}
+			}()
+
 			checker := &smokeMiniChecker{
 				path:        "/",
 				httpTimeout: timeout,
@@ -142,4 +165,20 @@ func newDummyLogger() *logrus.Entry {
 	logger.SetOutput(ioutil.Discard)
 
 	return logrus.NewEntry(logger)
+}
+
+//nolint:unparam
+
+func respondWith(status int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.WriteHeader(status)
+	}))
+}
+
+//nolint:unparam
+func respondSlowlyWith(timeout time.Duration, status int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		time.Sleep(timeout)
+		rw.WriteHeader(status)
+	}))
 }
