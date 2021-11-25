@@ -52,8 +52,9 @@ func discoveryPromscaleScrapeInterval(input *go_hook.HookInput) error {
 	intervalInSeconds := 30
 	if len(intervalScrapSnap) > 0 {
 		interval, err := time.ParseDuration(intervalScrapSnap[0].(string))
-		if err == nil {
+		if err != nil {
 			input.LogEntry.Warnf("Prometheus scrape interval from ConfigMap was ignored. Use default: %vs. Cannot parse duration: %v", intervalInSeconds, err)
+		} else {
 			intervalInSeconds = int(interval.Seconds())
 		}
 	}
