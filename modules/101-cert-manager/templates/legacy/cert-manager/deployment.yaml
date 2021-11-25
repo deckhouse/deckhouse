@@ -51,7 +51,7 @@ spec:
           - --webhook-ca-secret=cert-manager-webhook-ca
           - --webhook-serving-secret=cert-manager-webhook-tls
           - --webhook-dns-names=legacy-cert-manager-webhook,legacy-cert-manager-webhook.d8-cert-manager,legacy-cert-manager-webhook.d8-cert-manager.svc
-          - --controllers=issuers,clusterissuers,certificates,ingress-shim,orders,challenges
+          - --controllers=issuers,clusterissuers,certificates,orders,challenges
           - --acme-http01-solver-resource-limits-cpu=0
           - --acme-http01-solver-resource-request-cpu=0
           - "--acme-http01-solver-image={{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.certManager.legacyCertManagerAcmeSolver }}"
