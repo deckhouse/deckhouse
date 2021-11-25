@@ -41,6 +41,7 @@ modulesImages:
     common:
       kubeRbacProxy: tagstring
     certManager:
+      annotationsConverter: tagstring
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
@@ -48,6 +49,7 @@ modulesImages:
       legacyCertManagerWebhook: legacystring
       legacyCertManagerCainjector: legacystring
 discovery:
+  kubernetesVersion: "1.19.5"
   clusterMasterCount: 1
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
@@ -68,6 +70,7 @@ modulesImages:
     common:
       kubeRbacProxy: tagstring
     certManager:
+      annotationsConverter: tagstring
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
@@ -75,6 +78,7 @@ modulesImages:
       legacyCertManagerWebhook: legacystring
       legacyCertManagerCainjector: legacystring
 discovery:
+  kubernetesVersion: "1.19.5"
   clusterMasterCount: 5
   clusterControlPlaneIsHighlyAvailable: true
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
@@ -96,6 +100,7 @@ modulesImages:
     common:
       kubeRbacProxy: tagstring
     certManager:
+      annotationsConverter: tagstring
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
@@ -103,6 +108,7 @@ modulesImages:
       legacyCertManagerWebhook: legacystring
       legacyCertManagerCainjector: legacystring
 discovery:
+  kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
   d8SpecificNodeCountByRole:
@@ -123,6 +129,7 @@ modulesImages:
     common:
       kubeRbacProxy: tagstring
     certManager:
+      annotationsConverter: tagstring
       certManagerController: tagstring
       certManagerWebhook: tagstring
       certManagerCainjector: tagstring
@@ -130,6 +137,7 @@ modulesImages:
       legacyCertManagerWebhook: legacystring
       legacyCertManagerCainjector: legacystring
 discovery:
+  kubernetesVersion: "1.19.5"
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   clusterVersion: 1.15.4
   d8SpecificNodeCountByRole:
