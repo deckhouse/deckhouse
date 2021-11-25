@@ -100,14 +100,18 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 		r.Hosts = []string{
 			"cert-manager-webhook.d8-cert-manager.svc",
 			"legacy-cert-manager-webhook.d8-cert-manager.svc",
+			"annotations-converter-webhook.d8-cert-manager.svc",
 			"cert-manager-webhook.d8-cert-manager",
 			"legacy-cert-manager-webhook.d8-cert-manager",
+			"annotations-converter-webhook.d8-cert-manager",
 			"cert-manager-webhook",
 			"legacy-cert-manager-webhook",
+			"annotations-converter-webhook",
 		}
 		r.Names = []csr.Name{
 			{O: "cert-manager-webhook.d8-cert-manager"},
 			{O: "legacy-cert-manager-webhook.d8-cert-manager"},
+			{O: "annotations-converter-webhook.d8-cert-manager"},
 		}
 	})
 	if err != nil {
@@ -121,7 +125,11 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
 		"cert-manager-webhook",
 		*ca,
-		certificate.WithGroups("cert-manager.d8-cert-manager", "legacy-cert-manager.d8-cert-manager"),
+		certificate.WithGroups(
+			"cert-manager.d8-cert-manager",
+			"legacy-cert-manager.d8-cert-manager",
+			"annotations-converter-webhook.d8-cert-manager",
+		),
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,
@@ -129,10 +137,13 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certif
 		certificate.WithSANs(
 			"cert-manager-webhook.d8-cert-manager.svc",
 			"legacy-cert-manager-webhook.d8-cert-manager.svc",
+			"annotations-converter-webhook.d8-cert-manager.svc",
 			"cert-manager-webhook.d8-cert-manager",
 			"legacy-cert-manager-webhook.d8-cert-manager",
+			"annotations-converter-webhook.d8-cert-manager",
 			"cert-manager-webhook",
 			"legacy-cert-manager-webhook",
+			"annotations-converter-webhook",
 		),
 	)
 	if err != nil {
@@ -183,7 +194,7 @@ func genWebhookCerts(input *go_hook.HookInput) error {
 		}
 		// migrate from previous legacy version
 		// this 'else' branch could be removed when we will remove legacy cert-manager
-		if ca.Subject.CommonName != "cert-manager-webhook" {
+		if ca.Subject.CommonName != "cert-manager-webhook" || !has(ca.Subject.Organization, "annotations-converter-webhook.d8-cert-manager") {
 			var err error
 			caAuthority, err = genWebhookCa(input.LogEntry)
 			if err != nil {
@@ -209,4 +220,14 @@ func genWebhookCerts(input *go_hook.HookInput) error {
 	input.Values.Set("certManager.internal.webhookKey", tlsAuthority.Key)
 
 	return nil
+}
+
+func has(s []string, key string) bool {
+	for _, v := range s {
+		if v == key {
+			return true
+		}
+	}
+
+	return false
 }
