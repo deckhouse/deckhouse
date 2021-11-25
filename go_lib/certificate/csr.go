@@ -44,7 +44,7 @@ func GenerateCSR(logger *logrus.Entry, cn string, options ...Option) (csrPEM, ke
 	defer log.SetOutput(logWriter)
 
 	csrPEM, key, err = g.ProcessRequest(request)
-	if err != nil {
+	if err != nil && logger != nil {
 		logger.Errorln(buf.String())
 	}
 

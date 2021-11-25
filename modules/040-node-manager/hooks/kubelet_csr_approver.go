@@ -188,12 +188,8 @@ func nodeServingCert(csr *cv1.CertificateSigningRequest, x509cr *x509.Certificat
 		return fmt.Errorf("org does not match: %s", x509cr.Subject.Organization)
 	}
 
-	if len(x509cr.DNSNames) < 1 {
-		return fmt.Errorf("field DNSNames is absent")
-	}
-
-	if len(x509cr.IPAddresses) < 1 {
-		return fmt.Errorf("field IPAddresses is absent")
+	if len(x509cr.IPAddresses)+len(x509cr.DNSNames) < 1 {
+		return fmt.Errorf("field IPAddresses or DNSNames must be set")
 	}
 
 	if len(x509cr.EmailAddresses) > 0 {

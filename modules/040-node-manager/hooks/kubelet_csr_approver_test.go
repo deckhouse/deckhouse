@@ -17,48 +17,39 @@ limitations under the License.
 package hooks
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/base64"
-	"encoding/pem"
-	"fmt"
-	"net"
 
+	"github.com/cloudflare/cfssl/csr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	cv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var (
-	csrTemplate = `
-apiVersion: certificates.k8s.io/v1
-kind: CertificateSigningRequest
-metadata:
-  creationTimestamp: null
-  generateName: csr-
-  name: csr-96llc
-spec:
-  groups:
-  - system:nodes
-  - system:authenticated
-  request: %s
-  signerName: kubernetes.io/kubelet-serving
-  usages:
-  - digital signature
-  - key encipherment
-  - server auth
-  username: system:node:dev-master-0
-`
-	csr1 *cv1.CertificateSigningRequest
-)
+func newKubeCSR(org string, cn string, dnsNames []string, ipAddresses []string) *cv1.CertificateSigningRequest {
+	csrPEM, _, _ := certificate.GenerateCSR(nil, cn, certificate.WithNames(csr.Name{O: org}), certificate.WithCSRKeyRequest(&csr.KeyRequest{A: "rsa", S: 2048}), certificate.WithSANs(dnsNames...), certificate.WithSANs(ipAddresses...))
+
+	return &cv1.CertificateSigningRequest{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CertificateSigningRequest",
+			APIVersion: "certificates.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kubelet-csr",
+		},
+		Spec: cv1.CertificateSigningRequestSpec{
+			Username:   "system:node:dev-master-0",
+			SignerName: "kubernetes.io/kubelet-serving",
+			Request:    csrPEM,
+			Usages:     []cv1.KeyUsage{cv1.UsageDigitalSignature, cv1.UsageKeyEncipherment, cv1.UsageServerAuth},
+			Groups:     []string{"system:nodes", "system:authenticated"},
+		},
+	}
+}
 
 var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
@@ -74,80 +65,98 @@ var _ = Describe("Modules :: nodeManager :: hooks :: kubelet_csr_approver ::", f
 		})
 	})
 
-	Context("Cluster with proper csr", func() {
+	Context("Cluster with proper csr, with IPAddresses and DNSNames", func() {
 		BeforeEach(func() {
-			var (
-				buf       bytes.Buffer
-				csrBytes  []byte
-				base64Csr string
-			)
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"node1"}, []string{"1.2.3.4"})
+			csrYaml, _ := yaml.Marshal(csr)
 
-			keyBytes, _ := rsa.GenerateKey(rand.Reader, 1024)
-			x509cr := x509.CertificateRequest{
-				Subject: pkix.Name{
-					Organization: []string{"system:nodes"},
-					CommonName:   "system:node:dev-master-0",
-				},
-				DNSNames:    []string{"system:nodes"},
-				IPAddresses: []net.IP{net.ParseIP("1.2.3.4")},
-			}
-			csrBytes, _ = x509.CreateCertificateRequest(rand.Reader, &x509cr, keyBytes)
-			_ = pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
-			base64Csr = base64.StdEncoding.EncodeToString(buf.Bytes())
-			csrRequiredApproval := fmt.Sprintf(csrTemplate, base64Csr)
-
-			_ = yaml.Unmarshal([]byte(csrRequiredApproval), &csr1)
-
-			f.BindingContexts.Set(f.KubeStateSet(csrRequiredApproval))
-			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr1, metav1.CreateOptions{})
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 
 			f.RunHook()
 		})
 
 		It("Must be executed successfully and approve csr", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "csr-96llc", metav1.GetOptions{})
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(csr.Status.Conditions[0].Type).To(Equal(cv1.CertificateApproved))
 		})
 	})
 
-	Context("Cluster with wrong csr (Organization and DNSNames must match 'system:nodes')", func() {
+	Context("Cluster with proper csr, with IPAddresses and without DNSNames", func() {
 		BeforeEach(func() {
-			var (
-				buf       bytes.Buffer
-				csrBytes  []byte
-				base64Csr string
-			)
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", nil, []string{"1.2.3.4"})
+			csrYaml, _ := yaml.Marshal(csr)
 
-			keyBytes, _ := rsa.GenerateKey(rand.Reader, 1024)
-			x509cr := x509.CertificateRequest{
-				Subject: pkix.Name{
-					Organization: []string{"foobar"},
-					CommonName:   "system:node:dev-master-0",
-				},
-				DNSNames:    []string{"foobar"},
-				IPAddresses: []net.IP{net.ParseIP("1.2.3.4")},
-			}
-			csrBytes, _ = x509.CreateCertificateRequest(rand.Reader, &x509cr, keyBytes)
-			_ = pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
-			base64Csr = base64.StdEncoding.EncodeToString(buf.Bytes())
-			csrRequiredApproval := fmt.Sprintf(csrTemplate, base64Csr)
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 
-			_ = yaml.Unmarshal([]byte(csrRequiredApproval), &csr1)
+			f.RunHook()
+		})
 
-			f.BindingContexts.Set(f.KubeStateSet(csrRequiredApproval))
-			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr1, metav1.CreateOptions{})
+		It("Must be executed successfully and approve csr", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(csr.Status.Conditions[0].Type).To(Equal(cv1.CertificateApproved))
+		})
+	})
+
+	Context("Cluster with proper csr, without IPAddresses and with DNSNames", func() {
+		BeforeEach(func() {
+			csr := newKubeCSR("system:nodes", "system:node:dev-master-0", []string{"foobar"}, nil)
+			csrYaml, _ := yaml.Marshal(csr)
+
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("Must be executed successfully and approve csr", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(csr.Status.Conditions[0].Type).To(Equal(cv1.CertificateApproved))
+		})
+	})
+
+	Context("Cluster with wrong csr (Organization must match 'system:nodes')", func() {
+		BeforeEach(func() {
+			csr := newKubeCSR("foobar", "system:node:dev-master-0", []string{"foobar"}, []string{"1.2.3.4"})
+			csrYaml, _ := yaml.Marshal(csr)
+
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
 
 			f.RunHook()
 		})
 
 		It("Must be executed successfully and don't approve csr", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "csr-96llc", metav1.GetOptions{})
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			Expect(csr.Status.Conditions).To(BeNil())
 		})
 	})
 
+	Context("Cluster with wrong csr (CommonName must start with 'system:node:')", func() {
+		BeforeEach(func() {
+			csr := newKubeCSR("system:nodes", "dev-master-0", []string{"foobar"}, []string{"1.2.3.4"})
+			csrYaml, _ := yaml.Marshal(csr)
+
+			f.BindingContexts.Set(f.KubeStateSet(string(csrYaml)))
+			_, _ = f.KubeClient().CertificatesV1().CertificateSigningRequests().Create(context.TODO(), csr, metav1.CreateOptions{})
+
+			f.RunHook()
+		})
+
+		It("Must be executed successfully and don't approve csr", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			csr, err := f.KubeClient().CertificatesV1().CertificateSigningRequests().Get(context.TODO(), "kubelet-csr", metav1.GetOptions{})
+			Expect(err).To(BeNil())
+			Expect(csr.Status.Conditions).To(BeNil())
+		})
+	})
 })
