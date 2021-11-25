@@ -21,6 +21,7 @@ All you need to do is to attach the `node-role.kubernetes.io/master: ""` label t
       ```shell
       systemctl stop containerd
       systemctl disable containerd
+      kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
       ```
 
    * If the deletion may result in etcd losing its quorum (the 2 -> 1 mirgation), stop kubelet on the node (without stopping the etcd container):

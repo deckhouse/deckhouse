@@ -23,6 +23,7 @@ title: "Управление control plane: FAQ"
        ```shell
        systemctl stop containerd
        systemctl disable containerd
+       kill $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
        ```
    * Если удаление нарушает кворум (переход 2 -> 1), - остановите kubelet на узле (не останавливая контейнер с etcd):
      ```shell
