@@ -89,7 +89,7 @@ function __main__() {
 
     if [[ ("${newCRIType}" != "${oldCRIType}") && ("${endpointsCount}" -lt 3) ]]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to change cri.type in master node group for cluster with apiserver endpoints < 3"}
+{"allowed":true, "warnings":["it is disruptive to change cri.type in master node group for cluster with apiserver endpoints < 3"]}
 EOF
       return 0
     fi

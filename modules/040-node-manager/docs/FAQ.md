@@ -294,3 +294,92 @@ done
 ```
 
 You need to restart `kubelet` after pulling the images.
+
+## How to change CRI for node-group?
+
+Set node-group`cri.type` to `Docker` or `Containerd`.
+NodeGroup YAML example:
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  cri:
+    type: Containerd
+```
+
+Also, this operation can be done with patch:
+
+* Containerd:
+  ```shell
+  kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  ```
+
+* Docker:
+  ```shell
+  kubectl patch nodegroup <node-group name> --type merge -p '{"spec":{"cri":{"type":"Docker"}}}'
+  ```
+
+> ⛔ **_Attention!!!_** You cannot set `cri.type` for node-groups, created using `dhctl`, node-group `master` for example.
+
+After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
+is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
+node updates or requires manual confirmation.
+
+## How to change CRI for whole cluster?
+It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
+
+Also, this operation can be done with patch:
+* Containerd
+```shell
+data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Docker/Containerd/" | base64 -w0)"
+kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+```
+* Docker
+```shell
+data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/Docker/" | base64 -w0)"
+kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+```
+
+If it is necessary to leave some node-group on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this node-group,
+as described [here](#how-to-change-cri-for-node-group).
+
+> ⛔ **_Attention!!!_** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes!!!
+> If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!!!
+> The preferred option is to make a multi-master and change the CRI type!!!
+
+When changing the CRI in the cluster, additional steps are required for the master nodes:
+
+* Docker -> Containerd
+
+* For each master node in turn, it will be necessary:
+1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+```shell
+kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+```
+2. Wait for the updated master node to switch to Ready state.
+* Containerd -> Docker
+
+Before changing the `defaultCRI`, it is necessary to config the docker on each master node:
+```shell
+mkdir -p ~/docker && kubectl -n d8-system get secret deckhouse-registry -o json | jq -r '.data.".dockerconfigjson"' | base64 -d > ~/.docker/config.json
+```
+
+For each master node in turn, it will be necessary:
+1. If the master node-group `approvalMode` is set to `Manual`, confirm the disruption:
+```shell
+kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+```
+2. After updating the CRI and reboot, run the command:
+```shell
+for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+  docker pull $image
+done
+```
+3. Wait for the updated master node to switch to Ready state.
+4. Remove docker config from the updated master node:
+```shell
+rm -f ~/.docker/config.json
+```

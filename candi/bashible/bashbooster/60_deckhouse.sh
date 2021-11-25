@@ -21,6 +21,10 @@ bb-deckhouse-get-disruptive-update-approval() {
         return 0
     fi
 
+    if bb-flag? disruption; then
+      return 0
+    fi
+
     bb-log-info "Disruption required, asking for approval"
 
     bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
@@ -66,4 +70,5 @@ bb-deckhouse-get-disruptive-update-approval() {
     done
 
     bb-log-info "Disruption approved!"
+    bb-flag-set disruption
 }

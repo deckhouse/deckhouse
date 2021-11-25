@@ -14,7 +14,7 @@
 
 # Chrony module synchronizes the time on all nodes, so systemd-timesyncd system unit isn't used and must be disabled.
 
-if systemctl --no-pager | grep -q systemd-timesyncd; then
+if systemctl --no-legend --plain --no-pager | grep -q systemd-timesyncd; then
   systemctl stop systemd-timesyncd
   systemctl disable systemd-timesyncd
 fi

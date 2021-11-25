@@ -14,6 +14,12 @@
 
 {{- if eq .runType "Normal" }}
 
+# if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
+# this step runs normally after node reboot.
+if bb-flag? disruption && bb-flag? reboot; then
+  exit 0
+fi
+
 function get_node_users_secret() {
   local secret="node-users"
   local attempt=0
