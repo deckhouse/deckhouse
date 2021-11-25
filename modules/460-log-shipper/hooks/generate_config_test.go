@@ -211,14 +211,14 @@ spec:
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_7": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n false\n } else {\n includes([\"wvrr\"], data)\n } }\n else\n {\n includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_6"
 					],
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_8": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n true\n } else {\n !includes([\"wvrr\"], data)\n } } else {\n !includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_7"
 					],
@@ -524,14 +524,14 @@ spec:
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_test-es-dest_7": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n false\n } else {\n includes([\"wvrr\"], data)\n } }\n else\n {\n includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_test-es-dest_6"
 					],
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_test-es-dest_8": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n true\n } else {\n !includes([\"wvrr\"], data)\n } } else {\n !includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_test-es-dest_7"
 					],
@@ -623,14 +623,14 @@ spec:
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_test-logstash-dest_7": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n false\n } else {\n includes([\"wvrr\"], data)\n } }\n else\n {\n includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_test-logstash-dest_6"
 					],
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_test-logstash-dest_8": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n true\n } else {\n !includes([\"wvrr\"], data)\n } } else {\n !includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_test-logstash-dest_7"
 					],
@@ -688,14 +688,14 @@ spec:
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_test-loki-dest_5": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n false\n } else {\n includes([\"wvrr\"], data)\n } }\n else\n {\n includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_test-loki-dest_4"
 					],
 					"type": "filter"
 				  },
 				  "d8_tf_test-source_test-loki-dest_6": {
-					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n true\n } else {\n !includes([\"wvrr\"], data)\n } } else {\n !includes([\"wvrr\"], .parsed_data.foo)\n }",
+					"condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
 					"inputs": [
 					  "d8_tf_test-source_test-loki-dest_5"
 					],
@@ -1175,7 +1175,7 @@ spec:
 				  "source": " structured, err1 = parse_json(.message) \n if err1 == null { \n   .parsed_data = structured \n } \n",
 				  "type": "remap"
 				},
-				"d8_tf_tests-whispers_whispers-logs_loki-storage_3": {
+				  "d8_tf_tests-whispers_whispers-logs_loki-storage_3": {
 				  "condition": "exists(.parsed_data.foo)",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_loki-storage_2"
@@ -1190,14 +1190,14 @@ spec:
 				  "type": "filter"
 				},
 				"d8_tf_tests-whispers_whispers-logs_loki-storage_5": {
-				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n false\n } else {\n includes([\"wvrr\"], data)\n } }\n else\n {\n includes([\"wvrr\"], .parsed_data.foo)\n }",
+				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_loki-storage_4"
 				  ],
 				  "type": "filter"
 				},
 				"d8_tf_tests-whispers_whispers-logs_loki-storage_6": {
-				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n true\n } else {\n !includes([\"wvrr\"], data)\n } } else {\n !includes([\"wvrr\"], .parsed_data.foo)\n }",
+				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_loki-storage_5"
 				  ],
@@ -1216,7 +1216,7 @@ spec:
 					"d8_tf_tests-whispers_whispers-logs_loki-storage_7"
 				  ],
 				  "type": "filter"
-				},
+				},			  
 				"d8_tf_tests-whispers_whispers-logs_test-es-dest_0": {
 				  "group_by": [
 					"file",
@@ -1296,14 +1296,14 @@ spec:
 				  "type": "filter"
 				},
 				"d8_tf_tests-whispers_whispers-logs_test-es-dest_7": {
-				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n false\n } else {\n includes([\"wvrr\"], data)\n } }\n else\n {\n includes([\"wvrr\"], .parsed_data.foo)\n }",
+				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_test-es-dest_6"
 				  ],
 				  "type": "filter"
 				},
 				"d8_tf_tests-whispers_whispers-logs_test-es-dest_8": {
-				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo)\n { data, err = to_string(.parsed_data.foo)\n if err != null {\n true\n } else {\n !includes([\"wvrr\"], data)\n } } else {\n !includes([\"wvrr\"], .parsed_data.foo)\n }",
+				  "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
 				  "inputs": [
 					"d8_tf_tests-whispers_whispers-logs_test-es-dest_7"
 				  ],
