@@ -241,8 +241,8 @@ func createDeploymentObject(agentId string) *appsv1.Deployment {
 						},
 					},
 					NodeSelector: map[string]string{
-						"gpu-flavour": "RTX-ON",
-						"cpu-flavour": "QuantumContinuum",
+						"label-to-avoid":          "scheduling-this-pod-on-any-node",
+						"upmeter-only-tests-that": "controller-manager-creates-pods",
 					},
 					Tolerations: []v1.Toleration{
 						{Operator: v1.TolerationOpExists},
