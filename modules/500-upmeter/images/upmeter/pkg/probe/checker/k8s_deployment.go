@@ -29,6 +29,8 @@ import (
 	"d8.io/upmeter/pkg/probe/util"
 )
 
+const agentLabelKey = "upmeter-agent"
+
 // DeploymentLifecycle is a checker constructor and configurator
 type DeploymentLifecycle struct {
 	Access                    k8s.Access
@@ -43,6 +45,7 @@ type DeploymentLifecycle struct {
 
 func (c DeploymentLifecycle) Checker() check.Checker {
 	return &deploymentLifecycleChecker{
+		agentId:                   util.AgentUniqueId(),
 		access:                    c.Access,
 		namespace:                 c.Namespace,
 		deploymentCreationTimeout: c.DeploymentCreationTimeout,
@@ -55,6 +58,7 @@ func (c DeploymentLifecycle) Checker() check.Checker {
 }
 
 type deploymentLifecycleChecker struct {
+	agentId                   string
 	access                    k8s.Access
 	namespace                 string
 	deploymentCreationTimeout time.Duration
@@ -74,7 +78,7 @@ func (c *deploymentLifecycleChecker) BusyWith() string {
 }
 
 func (c *deploymentLifecycleChecker) Check() check.Error {
-	deployment := createDeploymentObject()
+	deployment := createDeploymentObject(c.agentId)
 	c.checker = c.new(deployment)
 	return c.checker.Check()
 }
@@ -88,8 +92,14 @@ func (c *deploymentLifecycleChecker) Check() check.Error {
  6. wait for the pod to disappear       (podDisappearTimeout, retry each 1 sec)
 */
 func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Checker {
+	name := deployment.GetName()
+
 	pingControlPlane := newControlPlaneChecker(c.access, c.controlPlaneAccessTimeout)
-	collectGarbage := newGarbageCollectorCheckerByName(c.access, deployment.Kind, c.namespace, deployment.GetName(), c.garbageCollectionTimeout)
+
+	// Clean all prior garbage that could be left by agent restarts. We rely on agent ID in
+	// assumption that master nodes are not a subject for renamimg.
+	labels := map[string]string{agentLabelKey: c.agentId}
+	collectGarbage := newGarbageCollectorCheckerByLabels(c.access, deployment.Kind, c.namespace, labels, c.garbageCollectionTimeout)
 
 	createDeployment := withTimeout(
 		&deploymentCreationChecker{
@@ -102,14 +112,16 @@ func (c *deploymentLifecycleChecker) new(deployment *appsv1.Deployment) check.Ch
 
 	deleteDeployment := withTimeout(
 		&deploymentDeletionChecker{
-			access:     c.access,
-			namespace:  c.namespace,
-			deployment: deployment,
+			access:    c.access,
+			namespace: c.namespace,
+			name:      name,
 		},
 		c.deploymentDeletionTimeout,
 	)
 
-	podListOptions := listOptsByLabels(map[string]string{"app": deployment.Name})
+	// Track pods only created by current deployment since the deployment name consists of agent
+	// ID and random tail.
+	podListOptions := listOptsByLabels(map[string]string{"deployment": name})
 
 	verifyPodExists := withRetryEachSeconds(
 		&pendingPodChecker{
@@ -160,29 +172,30 @@ func (c *deploymentCreationChecker) Check() check.Error {
 }
 
 type deploymentDeletionChecker struct {
-	access     k8s.Access
-	namespace  string
-	deployment *appsv1.Deployment
+	access    k8s.Access
+	namespace string
+	name      string
 }
 
 func (c *deploymentDeletionChecker) BusyWith() string {
-	return fmt.Sprintf("deleting deployment %s/%s", c.namespace, c.deployment.Name)
+	return fmt.Sprintf("deleting deployment %s/%s", c.namespace, c.name)
 }
 
 func (c *deploymentDeletionChecker) Check() check.Error {
 	client := c.access.Kubernetes()
 
-	err := client.AppsV1().Deployments(c.namespace).Delete(c.deployment.Name, &metav1.DeleteOptions{})
+	err := client.AppsV1().Deployments(c.namespace).Delete(c.name, &metav1.DeleteOptions{})
 	if err != nil {
-		return check.ErrFail("failed to delete deployment/%s: %v", c.deployment.Name, err)
+		return check.ErrFail("failed to delete deployment/%s: %v", c.name, err)
 	}
 
 	return nil
 }
 
-func createDeploymentObject() *appsv1.Deployment {
+func createDeploymentObject(agentId string) *appsv1.Deployment {
 	name := util.RandomIdentifier("upmeter-controller-manager")
 	replicas := int32(1)
+
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -192,8 +205,8 @@ func createDeploymentObject() *appsv1.Deployment {
 			Name: name,
 			Labels: map[string]string{
 				"heritage":      "upmeter",
-				"app":           "upmeter-controller-manager",
-				"upmeter-agent": util.AgentUniqueId(),
+				"app":           "upmeter-agent",
+				agentLabelKey:   agentId,
 				"upmeter-group": "control-plane",
 				"upmeter-probe": "controller-manager",
 			},
@@ -202,15 +215,19 @@ func createDeploymentObject() *appsv1.Deployment {
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"upmeter-agent": util.AgentUniqueId(),
-					"app":           name,
+					agentLabelKey:   agentId,
+					"upmeter-group": "control-plane",
+					"upmeter-probe": "controller-manager",
 				},
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"upmeter-agent": util.AgentUniqueId(),
-						"app":           name,
+						"app":           "upmeter-agent",
+						agentLabelKey:   agentId,
+						"upmeter-group": "control-plane",
+						"upmeter-probe": "controller-manager",
+						"deployment":    name,
 					},
 				},
 				Spec: v1.PodSpec{
