@@ -38,8 +38,9 @@ const (
 	// EvictionKind represents the kind of evictions object
 	EvictionKind = "Eviction"
 	// EvictionSubresource represents the kind of evictions object as pod's subresource
-	EvictionSubresource = "pods/eviction"
-	podSkipMsgTemplate  = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
+	EvictionSubresource      = "pods/eviction"
+	podSkipMsgTemplate       = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
+	PodEvictionRetryInterval = 20 * time.Second
 )
 
 // Helper contains the parameters to control the behaviour of drainer
@@ -253,7 +254,12 @@ func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodF
 				select {
 				case <-ctx.Done():
 					// return here or we'll leak a goroutine.
-					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: global timeout reached: %v", pod.Name, pod.Namespace, globalTimeout)
+					err := d.DeletePod(pod)
+					if err != nil {
+						returnCh <- fmt.Errorf("error when deleting pods/%q -n %q: global timeout reached: %v, err: %v", pod.Name, pod.Namespace, globalTimeout, err)
+						return
+					}
+					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: global timeout reached: %v, pod was deleted", pod.Name, pod.Namespace, globalTimeout)
 					return
 				default:
 				}
@@ -277,8 +283,8 @@ func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodF
 					returnCh <- nil
 					return
 				} else if apierrors.IsTooManyRequests(err) {
-					fmt.Fprintf(d.ErrOut, "error when evicting pods/%q -n %q (will retry after 5s): %v\n", activePod.Name, activePod.Namespace, err)
-					time.Sleep(5 * time.Second)
+					fmt.Fprintf(d.ErrOut, "error when evicting pods/%q -n %q (will retry after %s): %v\n", activePod.Name, activePod.Namespace, PodEvictionRetryInterval.String(), err)
+					time.Sleep(PodEvictionRetryInterval)
 				} else if !activePod.ObjectMeta.DeletionTimestamp.IsZero() && apierrors.IsForbidden(err) && apierrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
 					// an eviction request in a deleting namespace will throw a forbidden error,
 					// if the pod is already marked deleted, we can ignore this error, an eviction
@@ -287,8 +293,8 @@ func (d *Helper) evictPods(pods []corev1.Pod, policyGroupVersion string, getPodF
 				} else if apierrors.IsForbidden(err) && apierrors.HasStatusCause(err, corev1.NamespaceTerminatingCause) {
 					// an eviction request in a deleting namespace will throw a forbidden error,
 					// if the pod is not marked deleted, we retry until it is.
-					fmt.Fprintf(d.ErrOut, "error when evicting pod %q (will retry after 5s): %v\n", activePod.Name, err)
-					time.Sleep(5 * time.Second)
+					fmt.Fprintf(d.ErrOut, "error when evicting pod %q (will retry after %s): %v\n", activePod.Name, PodEvictionRetryInterval.String(), err)
+					time.Sleep(PodEvictionRetryInterval)
 				} else {
 					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: %v", activePod.Name, activePod.Namespace, err)
 					return

@@ -31,9 +31,8 @@ func NewDrainer(kubeClient kubernetes.Interface, errOut io.Writer) *Helper {
 		IgnoreAllDaemonSets: true,
 		DeleteEmptyDirData:  true, // same as DeleteLocalData
 		GracePeriodSeconds:  -1,
-		// If a pod is not evicted in 20 seconds, retry the eviction next time the
-		// machine gets reconciled again (to allow other machines to be reconciled).
-		Timeout: 30 * time.Second,
+		// If a pod is not evicted in 5 minutes, delete pod
+		Timeout: 5 * time.Minute,
 		Out:     ioutil.Discard,
 		ErrOut:  errOut,
 	}
