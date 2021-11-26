@@ -51,6 +51,19 @@ func newGarbageCollectorCheckerByName(access k8s.Access, kind, namespace, name s
 	}
 }
 
+func newGarbageCollectorCheckerByLabels(access k8s.Access, kind, namespace string, labels map[string]string, timeout time.Duration) check.Checker {
+	return &garbageCollectorChecker{
+		access:    access,
+		namespace: namespace,
+		kind:      kind,
+		listOpts:  listOptsByLabels(labels),
+		timeout:   timeout,
+
+		// inner state
+		firstRun: true,
+	}
+}
+
 func (c *garbageCollectorChecker) BusyWith() string {
 	return fmt.Sprintf("collecting garbage of %s/%s, listOpts=%s", c.namespace, c.kind, c.listOpts)
 }
