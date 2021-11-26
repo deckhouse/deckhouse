@@ -10700,7 +10700,9 @@
   "refresh": "30s",
   "schemaVersion": 18,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "ingress"
+  ],
   "templating": {
     "list": [
       {

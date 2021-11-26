@@ -5030,7 +5030,9 @@
   "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "main"
+  ],
   "templating": {
     "list": [
       {

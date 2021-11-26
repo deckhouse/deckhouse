@@ -54,12 +54,29 @@ spec:
         {{- end }}
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"
+        {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.prometheus.auth.externalAuthentication }}
         - name: GF_AUTH_PROXY_ENABLED
+          value: "true"
+        - name: GF_AUTH_PROXY_HEADER_NAME
+          value: "X-Auth-Request-Email"
+        - name: GF_AUTH_PROXY_AUTO_SIGN_UP
+          value: "true"
+        - name: GF_USERS_ALLOW_SIGN_UP
           value: "false"
+        - name: GF_USERS_AUTO_ASSIGN_ROLE
+          value: "true"
+        - name: GF_USERS_AUTO_ASSIGN_ORG_ROLE
+          value: "Admin"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "false"
+        {{- else }}
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        - name: GF_AUTH_PROXY_ENABLED
+          value: "false"
         - name: GF_AUTH_ANONYMOUS_ORG_ROLE
           value: "Admin"
+        {{- end }}
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_USERS_DEFAULT_THEME
@@ -74,6 +91,9 @@ spec:
           value: /var/lib/grafana/data
         - name: GF_PATHS_PLUGINS
           value: /etc/grafana/plugins
+        # Changing this path is required to avoid showing excessive Grafana getting started guide
+        - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+          value: "/usr/share/grafana/public/dashboards/grafana_home_dashboard.json"
         - name: GF_SERVER_HTTP_ADDR
           value: "127.0.0.1"
         - name: GF_METRICS_ENABLED
@@ -117,6 +137,8 @@ spec:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_only_logs" . | indent 12 }}
         volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana/data
         - name: shared-dashboards-folder
           mountPath: /etc/grafana/dashboards
         - name: tmp

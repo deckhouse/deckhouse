@@ -20,16 +20,16 @@ WORKDIR /usr/src/app
 RUN apk add --no-cache patch
 RUN wget https://github.com/grafana/grafana/archive/v8.2.4.tar.gz -O - | tar -xz  --strip-components=1
 # Extra '__interval_*' vars for prometheus datasource.
-COPY ./feat_prometheus_extra_vars.patch .
+COPY ./patches/feat_prometheus_extra_vars.patch .
 RUN patch -p1 < ./feat_prometheus_extra_vars.patch
 # Fix heatmap render: constant bucket widths for fast-forward datasource.
-COPY ./fix_heatmap_thin_bars_on_ff.patch .
+COPY ./patches/fix_heatmap_thin_bars_on_ff.patch .
 RUN patch -p1 < ./fix_heatmap_thin_bars_on_ff.patch
 # Set more useful version than 'dev'. There are tabs in patch, so -l is used.
-COPY ./build_go.patch .
+COPY ./patches/build_go.patch .
 RUN patch -p1 -l < ./build_go.patch
 # Patch to copy bundled plugins at start from ro directory to rw.
-COPY ./run_sh.patch .
+COPY ./patches/run_sh.patch .
 RUN patch -p1 < ./run_sh.patch
 
 
@@ -130,6 +130,10 @@ RUN echo "Fetch flant-statusmap-panel v${STATUSMAP_VERSION}" && \
     curl -LSsO https://github.com/flant/grafana-statusmap/releases/download/v${STATUSMAP_VERSION}/${STATUSMAP_ARCHIVE} && \
     unzip ${STATUSMAP_ARCHIVE} -d "${GF_PATHS_PLUGINS}" && \
     rm ${STATUSMAP_ARCHIVE}
+
+# Home Dashboard
+COPY ./grafana_home_dashboard.json /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
+COPY ./web/deckhouse-platform.svg /usr/share/grafana/public/img/deckhouse-logo.svg
 
 EXPOSE 3000
 # Patched entrypoint script.
