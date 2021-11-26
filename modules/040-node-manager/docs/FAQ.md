@@ -29,6 +29,7 @@ To switch an existing static node to another node-group, you need to change its 
 
 ```shell
 kubectl label node --overwrite <node_name> node.deckhouse.io/group=<group_name>
+kubectl label node <node_name> node-role.kubernetes.io/<group_name>-
 ```
 
 The changes will not be applied instantly. One of the deckhouse hooks is responsible for updating the state of NodeGroup objects. It subscribes to node changes.
