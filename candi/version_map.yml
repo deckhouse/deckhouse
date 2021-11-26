@@ -123,7 +123,7 @@ k8s:
       kubeProxy: sha256:d1be1ae53829a1ac6a1bdb274bb8eddac325eef50f2a30e5add44179423bd90d
   '1.19':
     status: available
-    patch: 13
+    patch: 16
     cni_version: 0.8.7
     bashible: &bashible_k8s_ge_1_19
       <<: *bashible
@@ -169,11 +169,11 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:ff131a993bf2db7ac8d57928152d36cca16b2aaa64dfef44f8aa69811adaec7a
-      kubeProxy: sha256:2f06ab7e7897d2dafeef064f4c4edf79ef6166055041486860c2df42343f60b9
+      kubeScheduler: sha256:1a335251eaef4e209d5757da0bf5499ecdce6e65413f7cb92ff4cc633d6fc7dd
+      kubeProxy: sha256:092f9526686d27964d17be772c42cde086690209cc8aea10c49991456eb879c2
   '1.20':
     status: available
-    patch: 9
+    patch: 13
     cni_version: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -193,11 +193,11 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiserver: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:6fdb12580353b6cd59de486ca650e3ba9270bc8d52f1d3052cd9bb1d4f28e189
-      kubeProxy: sha256:5d2be61150535ed37b7a5fa5a8239f89afee505ab2fae05247447851eed710a8
+      kubeScheduler: sha256:f47e67e53dca3c2a715a85617cbea768a7c69ebbd41556c0b228ce13434c5fc0
+      kubeProxy: sha256:df40eaf6eaa87aa748974e102fad6865bfaa01747561e4d01a701ae69e7c785d
   '1.21':
     status: available
-    patch: 3
+    patch: 7
     cni_version: 0.8.7
     bashible: *bashible_k8s_ge_1_19
     ccm:
@@ -217,5 +217,5 @@ k8s:
       # etcd: sha256 digest isn't needed because this component is compiled from source
       # kubeApiServer: sha256 digest isn't needed because this component is compiled from source
       # kubeControllerManager: sha256 digest isn't needed because this component is compiled from source
-      kubeScheduler: sha256:a8c4084db3b381f0806ea563c7ec842cc3604c57722a916c91fb59b00ff67d63
-      kubeProxy: sha256:53af05c2a6cddd32cebf5856f71994f5d41ef2a62824b87f140f2087f91e4a38
+      kubeScheduler: sha256:415afb38d7d610177753f1bd62fd6ef1bf3eec85cc17e100735775d7b7de1ccf
+      kubeProxy: sha256:ed16fc3467873e99ad90389160330b57eed80ad71faec5bba154059ced8dd6f8
