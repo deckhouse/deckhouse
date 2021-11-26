@@ -42,7 +42,7 @@ type EpisodeSummary struct {
 	Downtimes []check.DowntimeIncident `json:"downtimes"`
 }
 
-func newEmptyStatusInfo(stepRange ranges.Range) *EpisodeSummary {
+func newEpisodeSummary(stepRange ranges.Range) *EpisodeSummary {
 	return &EpisodeSummary{
 		TimeSlot:  stepRange.From,
 		StartDate: time.Unix(stepRange.From, 0).Format(time.RFC3339),
@@ -134,8 +134,9 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 	episodes = combineEpisodesByTimeslot(episodes)
 
 	// Create table with empty statuses for each probe
+	//     Group  ->  Probe  ->  Slot -> *EpisodeSummary
 	// map[string]map[string]map[int64]*EpisodeSummary
-	statuses := CreateEmptyStatusesTable(episodes, stepRanges, ref)
+	statuses := newSummaryTable(episodes, stepRanges, ref)
 
 	// Sum up episodes for each probe by Start within each step range.
 	// TODO various optimizations can be applied here.
@@ -152,6 +153,7 @@ func calculateStatuses(episodes []check.Episode, incidents []check.DowntimeIncid
 
 	updateMute(statuses, incidents, stepRanges)
 
+	// Calculate group-level summaries including __total__
 	calculateTotalForPeriod(statuses, stepRanges)
 
 	return transformTimestampedMapsToSortedArrays(statuses, ref)
@@ -177,7 +179,7 @@ func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
 		for _, indices := range timeslots {
 			ep := episodes[indices[0]]
 			for _, index := range indices {
-				ep = ep.Combine(episodes[index], 300)
+				ep = ep.Combine(episodes[index], 5*time.Minute)
 			}
 			newEpisodes = append(newEpisodes, ep)
 		}
@@ -186,17 +188,25 @@ func combineEpisodesByTimeslot(episodes []check.Episode) []check.Episode {
 	return newEpisodes
 }
 
+// calculateTotalForStepRange calculates a group episode for a range. It combines group's probes
+// into one "__total__" probe. In webui it is presented as a cloumn summary for probes in a group.
+//
+// The total episode calculation statuses:
+//      - up      - min uptime within probes
+//      - down    - longest possible downtime
+//      - unknown - max measured time excluding up and down calculated above
+//      - nodata  - unoccupied time left after other three calculations
+//
+// NOTE: this episode summary is just a representation. It cannot be used for further uptime
+// calculation of a group in a given timerange. Total summary varies depending on the chosen set of
+// steps within the same time period.
 func calculateTotalForStepRange(statuses map[string]map[string]map[int64]*EpisodeSummary, stepRange ranges.Range) {
-	// Combine group's probes into one "__total__" probe
 	for group, probes := range statuses {
-		totalStatusInfo := newEmptyStatusInfo(stepRange)
+		totalStatusInfo := newEpisodeSummary(stepRange)
 
-		// Total Up is a minimum known Up
-		// Total Down is a minimum knownSeconds - total Up
-		// Total Unknown is a step seconds - minimum known seconds
 		var (
-			uptimes, downtimes, unknowntimes []time.Duration
-			maxKnown, maxAvail               time.Duration
+			uptimes, downtimes []time.Duration
+			maxKnown, maxAvail time.Duration
 		)
 
 		for probe, infos := range probes {
@@ -211,7 +221,6 @@ func calculateTotalForStepRange(statuses map[string]map[string]map[int64]*Episod
 
 			uptimes = append(uptimes, info.Up)
 			downtimes = append(downtimes, info.Down)
-			unknowntimes = append(unknowntimes, info.Unknown)
 
 			maxKnown = utime.Longest(maxKnown, info.Known())
 			maxAvail = utime.Longest(maxAvail, info.Avail())
@@ -264,8 +273,8 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 	for group := range statuses {
 		for _, stepRange := range stepRanges {
 			var (
-				stepDuration     = stepRange.Diff()
-				muteDuration     time.Duration
+				step             = stepRange.Diff()
+				muted            time.Duration
 				relatedDowntimes []check.DowntimeIncident
 			)
 
@@ -275,28 +284,28 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 				if m == 0 {
 					continue
 				}
-				muteDuration = utime.Longest(muteDuration, m)
+				muted = utime.Longest(muted, m)
 				relatedDowntimes = append(relatedDowntimes, incident)
 			}
 
-			// Apply muteDuration to all probes in group.
+			// Apply `muted` to all probes in group.
 			for probeName := range statuses[group] {
 				status := statuses[group][probeName][stepRange.From]
 
 				status.Downtimes = relatedDowntimes
 
 				// Mute Unknown first
-				if muteDuration <= status.Unknown {
-					status.Unknown -= muteDuration
-					status.Muted = muteDuration
+				if muted <= status.Unknown {
+					status.Unknown -= muted
+					status.Muted = muted
 					continue
 				}
 
 				// Mute Down
-				if muteDuration <= status.Unknown+status.Down {
-					status.Down -= muteDuration - status.Unknown
+				if muted <= status.Unknown+status.Down {
+					status.Down -= muted - status.Unknown
 					status.Unknown = 0
-					status.Muted = muteDuration
+					status.Muted = muted
 					continue
 				}
 
@@ -304,24 +313,24 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 				if status.NoData == 0 {
 					status.Unknown = 0
 					status.Down = 0
-					if muteDuration+status.Up > stepDuration {
-						status.Muted = stepDuration - status.Up
+					if muted+status.Up > step {
+						status.Muted = step - status.Up
 					} else {
-						status.Muted = muteDuration
+						status.Muted = muted
 					}
 					continue
 				}
 
 				// Mute Nodata if interval in incident is more than sum of known seconds.
 				if status.NoData > 0 {
-					knownSeconds := status.Unknown + status.Down + status.Up
-					if muteDuration-knownSeconds > 0 {
+					measured := status.Unknown + status.Down + status.Up
+					if muted-measured > 0 {
 						// Do not mute 'Up' seconds
-						status.Muted = muteDuration - status.Up
+						status.Muted = muted - status.Up
 						status.Unknown = 0
 						status.Down = 0
 						// decrease no data
-						status.NoData -= muteDuration - knownSeconds
+						status.NoData -= muted - measured
 						if status.NoData < 0 {
 							// This should not happen
 							status.NoData = 0
@@ -333,28 +342,31 @@ func updateMute(statuses map[string]map[string]map[int64]*EpisodeSummary, incide
 	}
 }
 
+// calculateTotalForPeriod calculates the total for a probe for the whole time range. It webui, it
+// is rendered in the right-most 'Total' column for probes. It is the sum of all stats in the row.
 func calculateTotalForPeriod(statuses map[string]map[string]map[int64]*EpisodeSummary, ranges []ranges.Range) {
 	start := ranges[0].From
 	end := ranges[len(ranges)-1].To
-	for groupName := range statuses {
-		for probeName := range statuses[groupName] {
+	for group := range statuses {
+		for probe := range statuses[group] {
 			totalStatus := &EpisodeSummary{
 				TimeSlot:  -1, // -1 indicates it is a total
 				StartDate: time.Unix(start, 0).Format(time.RFC3339),
 				EndDate:   time.Unix(end, 0).Format(time.RFC3339),
 			}
 
-			for _, info := range statuses[groupName][probeName] {
+			for _, info := range statuses[group][probe] {
 				totalStatus.add(info)
 			}
 
-			statuses[groupName][probeName][-1] = totalStatus
+			statuses[group][probe][-1] = totalStatus
 		}
 	}
 }
 
-func CreateEmptyStatusesTable(episodes []check.Episode, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string]map[int64]*EpisodeSummary {
-	// Create empty statuses for each probe.
+// Create empty statuses for each probe.
+// Group -> Probe -> Slot -> *EpisodeSummary
+func newSummaryTable(episodes []check.Episode, stepRanges []ranges.Range, ref check.ProbeRef) map[string]map[string]map[int64]*EpisodeSummary {
 	statuses := map[string]map[string]map[int64]*EpisodeSummary{}
 
 	for _, episode := range episodes {
@@ -372,7 +384,7 @@ func CreateEmptyStatusesTable(episodes []check.Episode, stepRanges []ranges.Rang
 		}
 
 		for _, stepRange := range stepRanges {
-			statuses[group][probe][stepRange.From] = newEmptyStatusInfo(stepRange)
+			statuses[group][probe][stepRange.From] = newEpisodeSummary(stepRange)
 		}
 	}
 
@@ -386,11 +398,10 @@ func CreateEmptyStatusesTable(episodes []check.Episode, stepRanges []ranges.Rang
 
 		if _, ok := statuses[group][TotalProbeName]; !ok {
 			statuses[group][TotalProbeName] = map[int64]*EpisodeSummary{}
+		}
 
-			// TODO why it is in the scope of this "if"
-			for _, stepRange := range stepRanges {
-				statuses[group][TotalProbeName][stepRange.From] = newEmptyStatusInfo(stepRange)
-			}
+		for _, stepRange := range stepRanges {
+			statuses[group][TotalProbeName][stepRange.From] = newEpisodeSummary(stepRange)
 		}
 	}
 
