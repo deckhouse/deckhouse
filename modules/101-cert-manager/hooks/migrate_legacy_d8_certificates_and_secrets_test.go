@@ -48,6 +48,19 @@ metadata:
   name: nginx
   namespace: default
 `
+		stateNewD8Certificate = `
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+  name: dashboard
+  namespace: d8-dashboard
+spec:
+  secretName: ingress-tls
+`
 		stateSecrets = `
 ---
 apiVersion: v1
@@ -86,6 +99,7 @@ data:
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("certmanager.k8s.io", "v1alpha1", "Certificate", true)
+	f.RegisterCRD("cert-manager.io", "v1", "Certificate", true)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -103,18 +117,46 @@ data:
 			f.RunHook()
 		})
 
-		It("removes d8 Certificate, migrates its Secret, resources in ns/default should be untouched", func() {
+		It("removes d8 Certificate, its Secret shouldn't be migrated, resources in ns/default should be untouched", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.KubernetesResource("Certificate", "d8-dashboard", "dashboard").Exists()).To(BeFalse())
 			d8Secret := f.KubernetesResource("Secret", "d8-dashboard", "ingress-tls")
-			Expect(d8Secret.Field(`metadata.annotations`).String()).To(MatchYAML(`app.domain.com/test: custom`))
-			Expect(d8Secret.Field(`metadata.labels`).String()).To(MatchYAML(`test: custom`))
+			Expect(d8Secret.Field(`metadata.annotations`).String()).To(MatchYAML(`{ app.domain.com/test: custom, certmanager.k8s.io/certificate-name: dashboard }`))
+			Expect(d8Secret.Field(`metadata.labels`).String()).To(MatchYAML(`{ test: custom, certmanager.k8s.io/certificate-name: dashboard }`))
 
 			Expect(f.KubernetesResource("Certificate", "default", "nginx").Exists()).To(BeTrue())
 			otherSecret := f.KubernetesResource("Secret", "default", "nginx-tls")
 			Expect(otherSecret.Field(`metadata.annotations`).String()).To(MatchYAML(`certmanager.k8s.io/certificate-name: nginx`))
 			Expect(otherSecret.Field(`metadata.labels`).String()).To(MatchYAML(`certmanager.k8s.io/certificate-name: nginx`))
+		})
+	})
+	Context("Secrets in cluster, Certificate not in cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNamespace + stateSecrets))
+			f.RunHook()
+		})
+
+		It("Secret shouldn't be migrated", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			d8Secret := f.KubernetesResource("Secret", "d8-dashboard", "ingress-tls")
+			Expect(d8Secret.Field(`metadata.annotations`).String()).To(MatchYAML(`{ app.domain.com/test: custom, certmanager.k8s.io/certificate-name: dashboard }`))
+			Expect(d8Secret.Field(`metadata.labels`).String()).To(MatchYAML(`{ test: custom, certmanager.k8s.io/certificate-name: dashboard }`))
+		})
+	})
+	Context("Secrets in cluster, the new D8 Certificate in cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNamespace + stateNewD8Certificate + stateSecrets))
+			f.RunHook()
+		})
+
+		It("migrates Secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			d8Secret := f.KubernetesResource("Secret", "d8-dashboard", "ingress-tls")
+			Expect(d8Secret.Field(`metadata.annotations`).String()).To(MatchYAML(`app.domain.com/test: custom`))
+			Expect(d8Secret.Field(`metadata.labels`).String()).To(MatchYAML(`test: custom`))
 		})
 	})
 })
