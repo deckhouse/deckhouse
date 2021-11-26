@@ -22,6 +22,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/101-cert-manager/hooks/internal"
 )
 
@@ -38,6 +40,10 @@ type legacySecretInfo struct {
 	Namespace   string
 	Annotations map[string]string
 	Labels      map[string]string
+}
+
+func (m legacySecretInfo) slugify() string {
+	return fmt.Sprintf("%s/%s", m.Namespace, m.Name)
 }
 
 func applyLegacySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -53,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("certificates"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "certificates",
+			Name:       "certificates_legacy",
 			ApiVersion: "certmanager.k8s.io/v1alpha1",
 			Kind:       "Certificate",
 			LabelSelector: &metav1.LabelSelector{
@@ -71,6 +77,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			FilterFunc: applyLegacyCertManagerCRFilter,
+		},
+		{
+			Name:       "certificates",
+			ApiVersion: "cert-manager.io/v1",
+			Kind:       "Certificate",
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "heritage",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"deckhouse"},
+					},
+					{
+						Key:      "app.kubernetes.io/managed-by",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"Helm"},
+					},
+				},
+			},
+			FilterFunc: applyCertMetaFilter,
 		},
 		{
 			Name:       "secrets",
@@ -99,11 +125,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeLegacyCerts)
 
 func removeLegacyCerts(input *go_hook.HookInput) error {
-	snapCerts := input.Snapshots["certificates"]
-	for _, sn := range snapCerts {
+	snapCertsLegacy := input.Snapshots["certificates_legacy"]
+	for _, sn := range snapCertsLegacy {
 		cert := sn.(legacyObject)
 
 		input.PatchCollector.Delete("certmanager.k8s.io/v1alpha1", "Certificate", cert.Namespace, cert.Name)
+	}
+
+	// Before removing annotations from Secrets all old Certificates should be deleted.
+	if len(snapCertsLegacy) != 0 {
+		return nil
+	}
+
+	certsNewSecretSlugs := set.New()
+	for _, sn := range input.Snapshots["certificates"] {
+		certsNewSecretSlugs.Add(sn.(secretInfo).slugify())
 	}
 
 	snapSecrets := input.Snapshots["secrets"]
@@ -112,6 +148,16 @@ func removeLegacyCerts(input *go_hook.HookInput) error {
 
 		// We are migrating Secrets only in d8-.* namespaces.
 		if !strings.HasPrefix(secret.Namespace, "d8-") {
+			continue
+		}
+
+		// We are migrating only Secrets that has referenced Certificate:
+		// - of the new apiVersion;
+		// - having label heritage=deckhouse;
+		//
+		// That covers the case when user can have custom Ingress with legacy Certificate for our components.
+		secretSlug := secret.slugify()
+		if !certsNewSecretSlugs.Has(secretSlug) {
 			continue
 		}
 
