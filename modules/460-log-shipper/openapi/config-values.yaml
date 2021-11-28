@@ -1,5 +1,10 @@
 type: object
 properties:
+  debug:
+    type: boolean
+    default: false
+    description: |
+      Enable or disable debug logging for vector agent. Default: `false`.
   resourcesRequests:
     required: ["mode"]
     type: object
@@ -49,7 +54,7 @@ properties:
                   - type: string
                     pattern: "^[0-9]+m?$"
                   - type: number
-                x-examples: [ 3, "300m" ]
+                x-examples: [3, "300m"]
                 description: |
                   Maximum allowed CPU requests.
                 default: "500m"
@@ -58,7 +63,7 @@ properties:
                   - type: string
                     pattern: "^[0-9]+m?$"
                   - type: number
-                x-examples: [ 5, "500m" ]
+                x-examples: [5, "500m"]
                 description: |
                   Minimum allowed CPU requests.
                 default: "50m"
@@ -73,7 +78,7 @@ properties:
                   - type: string
                     pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
                   - type: number
-                x-examples: [ "32Mi", 3000 ]
+                x-examples: ["32Mi", 3000]
                 description: |
                   Maximum allowed memory requests.
                 default: "2048Mi"
@@ -82,7 +87,7 @@ properties:
                   - type: string
                     pattern: "^[0-9]+(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$"
                   - type: number
-                x-examples: [ "4Mi", 400 ]
+                x-examples: ["4Mi", 400]
                 description: |
                   Minimum allowed memory requests.
                 default: "64Mi"
