@@ -145,26 +145,22 @@ func TestConfig_1(t *testing.T) {
         "only_fields": ["message"]
       },
       "endpoint": "http://testmeip:9000",
-      "buffer": {
-        "max_size": 104857600,
-        "type": "disk"
-      },
-	  "healthcheck": {
+      "healthcheck": {
         "enabled": false
-	  },
-	  "labels": {
-		"container": "{{ container }}",
-		"image": "{{ image }}",
-		"namespace": "{{ namespace }}",
-		"node": "{{ node }}",
-		"pod": "{{ pod }}",
-		"pod_ip": "{{ pod_ip }}",
-		"stream": "{{ stream }}",
-		"pod_labels": "{{ pod_labels }}",
-		"pod_owner": "{{ pod_owner }}"
-	  },
-	  "remove_label_fields": true,
-	  "out_of_order_action": "rewrite_timestamp"
+      },
+      "labels": {
+        "container": "{{ container }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "stream": "{{ stream }}",
+        "pod_labels": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}"
+      },
+      "remove_label_fields": true,
+      "out_of_order_action": "rewrite_timestamp"
     }
   }
 }
@@ -254,10 +250,6 @@ func TestConfig_2(t *testing.T) {
       "healthcheck": {
         "enabled": false
       },
-      "buffer": {
-        "max_size": 104857600,
-        "type": "disk"
-      },
       "tls": {
           "ca_file": "-----BEGIN CERTIFICATE-----\nMIIC0DCCAbigAwIBAgIUSmTpJQESJpl0nCQPkHpoO/wslhUwDQYJKoZIhvcNAQEL\nBQAwETEPMA0GA1UEAwwGdWJ1bnR1MB4XDTIwMDMxNTExMzcwN1oXDTMwMDMxMzEx\nMzcwN1owETEPMA0GA1UEAwwGdWJ1bnR1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAzNjtX5hklYzf+Obx52Paq0gIP4S/u1OKhS+zx1xDGlqPYtjL7p3a\neBFzDRppXcra8YWL97JtnaPzvduyoEEiTYvkWrrwM6szH8+dGH1MTfCRGKZQrXHL\nnT6HRv7s/TFcJ6Fg2R505vzPS+bxWgvfdZR1cTmALwd2YNde1p4wPfW+89MJxYX0\ndXrM/VM88cpRsVRlP6HyLLs562BnPsWJYTAeLpmI/NW/a3zc1Czh0nPruOoQ84dE\nVTjbuNL0yH3Yj3OW/KhlIbRn1zoYXxPwQgKl2xKgHHXyDAD/fr3/KNH8+gh+6QMA\nu6sPY1Xf2GXCJkXZuURG3mpidfYzzjU/+wIDAQABoyAwHjAJBgNVHRMEAjAAMBEG\nA1UdEQQKMAiCBnVidW50dTANBgkqhkiG9w0BAQsFAAOCAQEAIcBO2GzXEMYlu510\nD22JZqdtyALuER+fDptwnKHKeRawiYNYNJWATeRXsF1IINxHYRQcye8G8TMhbMVk\nvOhV0DzE1Qv4HY2jSJ6mydhAhQKAQSeHVvHou7/Al3FT5Oz92iFore4B+aFFYyI6\nayKtYvW/LpOu1i07Ty/DVY0TB7/0oc+wn3zPTdWvcUJ/Ka+SiMJXvfqhRgDx+AQT\nsnY2JzFHSiY/V7UccAHlZaQO7rscv9gfCDtDg/AU1RmB+L9h3cru0ki16ISxLo6P\nRlc+xbMFjJ0fhbyrJt8sJhQkfzrHf6IUzf/xiNmPGekOj/eZG1l089DrFLhOpM6R\nvukJXQ==\n-----END CERTIFICATE-----\n",
           "crt_file": "-----BEGIN CERTIFICATE-----\nMIIC0DCCAbigAwIBAgIUSmTpJQESJpl0nCQPkHpoO/wslhUwDQYJKoZIhvcNAQEL\nBQAwETEPMA0GA1UEAwwGdWJ1bnR1MB4XDTIwMDMxNTExMzcwN1oXDTMwMDMxMzEx\nMzcwN1owETEPMA0GA1UEAwwGdWJ1bnR1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAzNjtX5hklYzf+Obx52Paq0gIP4S/u1OKhS+zx1xDGlqPYtjL7p3a\neBFzDRppXcra8YWL97JtnaPzvduyoEEiTYvkWrrwM6szH8+dGH1MTfCRGKZQrXHL\nnT6HRv7s/TFcJ6Fg2R505vzPS+bxWgvfdZR1cTmALwd2YNde1p4wPfW+89MJxYX0\ndXrM/VM88cpRsVRlP6HyLLs562BnPsWJYTAeLpmI/NW/a3zc1Czh0nPruOoQ84dE\nVTjbuNL0yH3Yj3OW/KhlIbRn1zoYXxPwQgKl2xKgHHXyDAD/fr3/KNH8+gh+6QMA\nu6sPY1Xf2GXCJkXZuURG3mpidfYzzjU/+wIDAQABoyAwHjAJBgNVHRMEAjAAMBEG\nA1UdEQQKMAiCBnVidW50dTANBgkqhkiG9w0BAQsFAAOCAQEAIcBO2GzXEMYlu510\nD22JZqdtyALuER+fDptwnKHKeRawiYNYNJWATeRXsF1IINxHYRQcye8G8TMhbMVk\nvOhV0DzE1Qv4HY2jSJ6mydhAhQKAQSeHVvHou7/Al3FT5Oz92iFore4B+aFFYyI6\nayKtYvW/LpOu1i07Ty/DVY0TB7/0oc+wn3zPTdWvcUJ/Ka+SiMJXvfqhRgDx+AQT\nsnY2JzFHSiY/V7UccAHlZaQO7rscv9gfCDtDg/AU1RmB+L9h3cru0ki16ISxLo6P\nRlc+xbMFjJ0fhbyrJt8sJhQkfzrHf6IUzf/xiNmPGekOj/eZG1l089DrFLhOpM6R\nvukJXQ==\n-----END CERTIFICATE-----\n",
@@ -319,10 +311,6 @@ func TestConfig_3(t *testing.T) {
       },
       "tls": {
         "verify_hostname": true
-      },
-      "buffer": {
-        "max_size": 104857600,
-        "type": "disk"
       },
       "batch": {
           "timeout_secs": 1,

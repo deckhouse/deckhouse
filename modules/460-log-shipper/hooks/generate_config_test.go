@@ -241,10 +241,6 @@ spec:
 					"healthcheck": {
 					  "enabled": false
 					},
-					"buffer": {
-					  "max_size": 104857600,
-					  "type": "disk"
-					},
 					"endpoint": "http://192.168.1.1:9200",
 					"encoding": {
 					  "timestamp_format": "rfc3339"
@@ -725,10 +721,6 @@ spec:
 					"healthcheck": {
 					  "enabled": false
 					},
-					"buffer": {
-					  "max_size": 104857600,
-					  "type": "disk"
-					},
 					"endpoint": "http://192.168.1.1:9200",
 					"encoding": {
 					  "timestamp_format": "rfc3339"
@@ -760,10 +752,6 @@ spec:
 					"healthcheck": {
 					  "enabled": false
 					},
-					"buffer": {
-					  "max_size": 104857600,
-					  "type": "disk"
-					},
 					"address": "192.168.199.252:9009",
 					"encoding": {
 					  "codec": "json",
@@ -786,10 +774,6 @@ spec:
 					],
 					"healthcheck": {
 					  "enabled": false
-					},
-					"buffer": {
-					  "max_size": 104857600,
-					  "type": "disk"
 					},
 					"encoding": {
 					  "codec": "text",
@@ -990,10 +974,6 @@ spec:
 					],
 					"healthcheck": {
 					  "enabled": false
-					},
-					"buffer": {
-					  "max_size": 104857600,
-					  "type": "disk"
 					},
 					"endpoint": "http://192.168.1.1:9200",
 					"encoding": {
@@ -1326,10 +1306,6 @@ spec:
 				  "healthcheck": {
 					"enabled": false
 				  },
-				  "buffer": {
-					"max_size": 104857600,
-					"type": "disk"
-				  },
 				  "encoding": {
 					"codec": "text",
 					"only_fields": [
@@ -1360,10 +1336,6 @@ spec:
 				  ],
 				  "healthcheck": {
 					"enabled": false
-				  },
-				  "buffer": {
-					"max_size": 104857600,
-					"type": "disk"
 				  },
 				  "endpoint": "http://192.168.1.1:9200",
 				  "encoding": {
