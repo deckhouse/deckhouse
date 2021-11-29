@@ -139,18 +139,23 @@ Below, you can find instructions on how to apply this policy.
 
 ## Configuring IAM via the web interface
 
-* IAM -> Create `Customer Managed Policy`
+* Open `Identity and Access Management (IAM)`
+* Open the `Policies` page and click `Create Policy`
 * Select the `JSON` tab and insert the policy
-* Click `Review Policy`
-* Enter a name (e.g., `D8CloudProviderAWS`)`
+* Click `Next: Tags`
+* Click `Next: Review`
+* Enter a policy name in the `Name` field (e.g., `D8CloudProviderAWS`)
 * Click `Create Policy`
-* IAM -> Create an IAM User
-* Enter a name (e.g., `deckhouse`)
-* Select `Programmatic access`
+* Open the `Users` page of IAM and click `Add users`
+* Enter a name in the `User name` field (e.g., `deckhouse`)
+* Select `Access key - Programmatic access` in the `Select AWS credential type` area 
 * Click `Next: Permissions`
 * Select the `Attach existing policies directly` tab
-* Search for `D8CloudProviderAWS` and click the checkbox next to it
-* Click `Next`...
+* Search (use the `Filter policies` field) for the policy name entered above (e.g., `D8CloudProviderAWS`) and click the checkbox next to it
+* Click `Next: Tags`
+* Click `Next: Review`
+* Click `Create user`
+* Save credentials (`Access key ID` and `Secret access key`)
 
 ## Configuring IAM via the CLI
 
