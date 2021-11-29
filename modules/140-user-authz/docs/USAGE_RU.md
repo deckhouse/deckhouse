@@ -215,29 +215,32 @@ spec:
   ```
 
 ## Как проверить, что у пользователя есть доступ?
+
 Необходимо выполнить следующую команду, в которой будут указаны:
 * `resourceAttributes` (как в RBAC) — к чему мы проверяем доступ
 * `user` — имя пользователя
-* `groups` — группы пользователя
+* `group` — группы пользователя
 
 P.S. При совместном использовании с модулем `user-authn`, группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации)
 
 ```bash
-cat  <<EOF | 2>&1 kubectl create -v=8 -f - | tail -2 \
-  | grep "Response Body" | awk -F"Response Body:" '{print $2}' \
-  | jq -rc .status
-apiVersion: authorization.k8s.io/v1
-kind: SubjectAccessReview
-spec:
-  resourceAttributes:
-    namespace: d8-monitoring
-    verb: get
-    group: ""
-    resource: "pods"
-  user: "user@gmail.com"
-  groups:
-  - Everyone
-  - Admins
+cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
+{
+  "apiVersion": "authorization.k8s.io/v1",
+  "kind": "SubjectAccessReview",
+  "spec": {
+    "resourceAttributes": {
+      "namespace": "",
+      "verb": "watch",
+      "version": "v1",
+      "resource": "pods"
+    },
+    "user": "system:kube-controller-manager",
+    "group": [
+      "Admins"
+    ]
+  }
+}
 EOF
 ```
 
@@ -246,7 +249,44 @@ EOF
 ```json
 {
   "allowed": true,
-  "reason": "RBAC: allowed by ClusterRoleBinding \"user-authz:myuser:super-admin\" of ClusterRole \"user-authz:super-admin\" to User \"user@gmail.com\""
+  "reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-controller-manager\" of ClusterRole \"system:kube-controller-manager\" to User \"system:kube-controller-manager\""
+}
+```
+
+Если в вашем кластере включен режим **multitenancy**, вам нужно выполнить еще одну проверку, чтобы убедиться, что у пользователя есть доступ в namespace:
+
+```bash
+cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
+{
+  "apiVersion": "authorization.k8s.io/v1",
+  "kind": "SubjectAccessReview",
+  "spec": {
+    "resourceAttributes": {
+      "namespace": "",
+      "verb": "watch",
+      "version": "v1",
+      "resource": "pods"
+    },
+    "user": "system:kube-controller-manager",
+    "group": [
+      "Admins"
+    ]
+  }
+}
+EOF
+```
+
+```json
+{
+  "allowed": false
+}
+```
+Сообщение `allowed: false` значит что webhook не блокирует запрос. В случае блокировки запроса webhook'ом вы увидите, например, следующее сообщение:
+```json
+{
+  "allowed": false,
+  "denied": true,
+  "reason": "making cluster scoped requests for namespaced resources are not allowed"
 }
 ```
 

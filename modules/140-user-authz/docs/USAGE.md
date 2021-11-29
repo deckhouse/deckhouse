@@ -214,29 +214,32 @@ Changes to the `kube-apiserver` manifest that will occur after enabling multi-te
   ```
 
 ## How do I check that a user has access?
+
 Execute the command below with the following parameters:
 * `resourceAttributes` (the same as in RBAC) - target resources;
 * `user` - the name of the user;
-* `groups` - user groups;
+* `group` - user groups;
 
 P.S. You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`kubectl -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized).
 
 ```bash
-cat  <<EOF | 2>&1 kubectl create -v=8 -f - | tail -2 \
-  | grep "Response Body" | awk -F"Response Body:" '{print $2}' \
-  | jq -rc .status
-apiVersion: authorization.k8s.io/v1
-kind: SubjectAccessReview
-spec:
-  resourceAttributes:
-    namespace: d8-monitoring
-    verb: get
-    group: ""
-    resource: "pods"
-  user: "user@gmail.com"
-  groups:
-  - Everyone
-  - Admins
+cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
+{
+  "apiVersion": "authorization.k8s.io/v1",
+  "kind": "SubjectAccessReview",
+  "spec": {
+    "resourceAttributes": {
+      "namespace": "",
+      "verb": "watch",
+      "version": "v1",
+      "resource": "pods"
+    },
+    "user": "system:kube-controller-manager",
+    "group": [
+      "Admins"
+    ]
+  }
+}
 EOF
 ```
 
@@ -245,13 +248,50 @@ You will see if access is allowed and what role is used:
 ```json
 {
   "allowed": true,
-  "reason": "RBAC: allowed by ClusterRoleBinding \"user-authz:myuser:super-admin\" of ClusterRole \"user-authz:super-admin\" to User \"user@gmail.com\""
+  "reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-controller-manager\" of ClusterRole \"system:kube-controller-manager\" to User \"system:kube-controller-manager\""
+}
+```
+
+If the **multitenancy** mode is enabled in your cluster, you need to perform another check to be sure that the user has access to the namespace:
+
+```bash
+cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
+{
+  "apiVersion": "authorization.k8s.io/v1",
+  "kind": "SubjectAccessReview",
+  "spec": {
+    "resourceAttributes": {
+      "namespace": "",
+      "verb": "watch",
+      "version": "v1",
+      "resource": "pods"
+    },
+    "user": "system:kube-controller-manager",
+    "group": [
+      "Admins"
+    ]
+  }
+}
+EOF
+```
+
+```json
+{
+  "allowed": false
+}
+```
+The `allowed: false` message means that the webhook doesn't block access. In case of webhook denying the request, you will see, e.g., the following message:
+```json
+{
+  "allowed": false,
+  "denied": true,
+  "reason": "making cluster scoped requests for namespaced resources are not allowed"
 }
 ```
 
 ## Customizing rights of pre-installed AccessLevels
 
-If you want to grant more privileges to a specific AccessLevel, you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` anootation.
+If you want to grant more privileges to a specific AccessLevel, you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
 An example:
 
