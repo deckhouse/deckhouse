@@ -48,13 +48,13 @@ func TestTransformSnippet(t *testing.T) {
 		tr, err := BuildTransformsFromMapSlice("testit", transforms)
 		require.NoError(t, err)
 
-		assert.Len(t, tr, 6)
+		assert.Len(t, tr, 5)
 		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
 
 		data, err := json.Marshal(tr)
 		require.NoError(t, err)
 
-		assert.JSONEq(t, `[{"inputs":["testit"],"group_by":["file","stream"],"merge_strategies": {"message":"concat"}, "type": "reduce", "starts_when": " match!(.message, r'^Traceback|^[ ]+|(ERROR|INFO|DEBUG|WARN)') || match!(.message, r'^((([a-zA-Z\\-0-9]+)_([a-zA-Z\\-0-9]+)\\s)|(([a-zA-Z\\-0-9]+)\\s)|(.{0}))(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[|^(\\{\\s{0,1}\")|^(\\d{2}-\\w{3}-\\d{4}\\s\\d{2}:\\d{2}:\\d{2}\\.{0,1}\\d{2,3})\\s(\\w+)|^([A-Z][0-9]{0,4}\\s\\d{2}:\\d{2}:\\d{2}\\.\\d{0,6})') || match!(.message, r'^[^\\s]') " },{"inputs":[ "d8_tf_testit_0" ],"source":" if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\") \n } \n  if exists(.pod_labels.\"pod-template-hash\") { \n   del(.pod_labels.\"pod-template-hash\") \n } \n if exists(.kubernetes) { \n   del(.kubernetes) \n } \n if exists(.file) { \n   del(.file) \n } \n","type":"remap", "drop_on_abort": false},{"inputs":["d8_tf_testit_1"],"source":" structured, err1 = parse_json(.message) \n if err1 == null { \n   .parsed_data = structured \n } \n","type":"remap", "drop_on_abort": false},{"hooks": {"process":"process"}, "inputs":["d8_tf_testit_2"], "source":"\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend\n", "type":"lua", "version":"2"},{"inputs":[ "d8_tf_testit_3" ],"source":" if exists(.parsed_data.app) { .app=.parsed_data.app } \n .foo=\"bar\" \n","type":"remap", "drop_on_abort": false},{"inputs":[ "d8_tf_testit_4" ],"source":" if exists(.parsed_data) { \n   del(.parsed_data) \n } \n","type":"remap", "drop_on_abort": false}]`, string(data))
+		assert.JSONEq(t, `[{"inputs":[ "testit" ],"source":" if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\") \n } \n  if exists(.pod_labels.\"pod-template-hash\") { \n   del(.pod_labels.\"pod-template-hash\") \n } \n if exists(.kubernetes) { \n   del(.kubernetes) \n } \n if exists(.file) { \n   del(.file) \n } \n","type":"remap", "drop_on_abort": false},{"inputs":["d8_tf_testit_0"],"source":" structured, err1 = parse_json(.message) \n if err1 == null { \n   .parsed_data = structured \n } \n","type":"remap", "drop_on_abort": false},{"hooks": {"process":"process"}, "inputs":["d8_tf_testit_1"], "source":"\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend\n", "type":"lua", "version":"2"},{"inputs":[ "d8_tf_testit_2" ],"source":" if exists(.parsed_data.app) { .app=.parsed_data.app } \n .foo=\"bar\" \n","type":"remap", "drop_on_abort": false},{"inputs":[ "d8_tf_testit_3" ],"source":" if exists(.parsed_data) { \n   del(.parsed_data) \n } \n","type":"remap", "drop_on_abort": false}]`, string(data))
 	})
 
 	t.Run("Test filters", func(t *testing.T) {
@@ -113,5 +113,40 @@ func TestTransformSnippet(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.JSONEq(t, `[{"inputs":["testit"], "type":"remap", "drop_on_abort": false, "source": " if exists(.parsed_data.\"pay-load\"[0].a) { .aaa=.parsed_data.\"pay-load\"[0].a } \n .aba=\"bbb\" \n if exists(.parsed_data.test.\"pay.lo.ad\".\"hel.lo\".world) { .aca=.parsed_data.test.\"pay.lo.ad\".\"hel.lo\".world } \n if exists(.parsed_data.\"pay.lo\".test) { .adc=.parsed_data.\"pay.lo\".test } \n if exists(.parsed_data.test.\"pay.lo\") { .add=.parsed_data.test.\"pay.lo\" } \n if exists(.parsed_data.\"pay.lo\"[3].\"te.st\") { .bdc=.parsed_data.\"pay.lo\"[3].\"te.st\" } \n"}]`, string(data))
+	})
+
+	t.Run("Test multiline 1", func(t *testing.T) {
+		multilineTransforms := CreateMultiLinaeTransforms(v1alpha1.MultiLineParserNone)
+		transforms := make([]impl.LogTransform, 0)
+		transforms = append(transforms, multilineTransforms...)
+
+		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		require.NoError(t, err)
+
+		assert.Len(t, tr, 0)
+
+		data, err := json.Marshal(tr)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `[]`, string(data))
+	})
+
+	t.Run("Test multiline 2", func(t *testing.T) {
+		transforms := make([]impl.LogTransform, 0)
+
+		multilineTransforms := CreateMultiLinaeTransforms(v1alpha1.MultiLineParserGeneral)
+
+		transforms = append(transforms, multilineTransforms...)
+
+		tr, err := BuildTransformsFromMapSlice("testit", transforms)
+		require.NoError(t, err)
+
+		assert.Len(t, tr, 1)
+		assert.Equal(t, (tr[0].GetInputs())[0], "testit")
+
+		data, err := json.Marshal(tr)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `[{"group_by":["file", "stream"], "inputs":["testit"], "merge_strategies":{"message":"concat"}, "starts_when":" if exists(.message) { if length(.message) > 0 { matched, err = match(.message, r'^[^\\s\\t]'); if err != null { false; } else { matched; }; } else { false; }; } else { false; } ", "type":"reduce"}]`, string(data))
 	})
 }

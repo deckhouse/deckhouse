@@ -30,23 +30,6 @@ import (
 
 // Create default transforms
 func CreateDefaultTransforms(dest v1alpha1.ClusterLogDestination) []impl.LogTransform {
-	// default multiline transform
-	var multiLineTransform DynamicTransform = DynamicTransform{
-		CommonTransform: CommonTransform{
-			Type: "reduce",
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"group_by": []string{
-				"file",
-				"stream",
-			},
-			"merge_strategies": map[string]string{
-				"message": "concat",
-			},
-			"starts_when": " match!(.message, r'^Traceback|^[ ]+|(ERROR|INFO|DEBUG|WARN)') || match!(.message, r'^((([a-zA-Z\\-0-9]+)_([a-zA-Z\\-0-9]+)\\s)|(([a-zA-Z\\-0-9]+)\\s)|(.{0}))(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[|^(\\{\\s{0,1}\")|^(\\d{2}-\\w{3}-\\d{4}\\s\\d{2}:\\d{2}:\\d{2}\\.{0,1}\\d{2,3})\\s(\\w+)|^([A-Z][0-9]{0,4}\\s\\d{2}:\\d{2}:\\d{2}\\.\\d{0,6})') || match!(.message, r'^[^\\s]') ",
-		},
-	}
-
 	// default cleanup transform
 	var cleanUpTransform DynamicTransform = DynamicTransform{
 		CommonTransform: CommonTransform{
@@ -128,10 +111,8 @@ end
 		},
 	}
 
-	// default multiline transform
-	transforms := []impl.LogTransform{&multiLineTransform}
 	// default cleanup transform
-	transforms = append(transforms, &cleanUpTransform)
+	transforms := []impl.LogTransform{&cleanUpTransform}
 	// default transform for json
 	transforms = append(transforms, &JSONParseTransform)
 	// Adding specific storage transforms
@@ -167,6 +148,40 @@ func CreateDefaultCleanUpTransforms(dest v1alpha1.ClusterLogDestination) []impl.
 		transforms = append(transforms, &cleanParsedDataTransform)
 	}
 	return transforms
+}
+
+// Create multiline transforms
+func CreateMultiLinaeTransforms(multiLineType v1alpha1.MultiLineParserType) []impl.LogTransform {
+	// default multiline transform
+	var multiLineTransform DynamicTransform = DynamicTransform{
+		CommonTransform: CommonTransform{
+			Type: "reduce",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"group_by": []string{
+				"file",
+				"stream",
+			},
+			"merge_strategies": map[string]string{
+				"message": "concat",
+			},
+		},
+	}
+
+	switch multiLineType {
+	case v1alpha1.MultiLineParserGeneral:
+		multiLineTransform.DynamicArgsMap["starts_when"] = " if exists(.message) { if length(.message) > 0 { matched, err = match(.message, r'^[^\\s\\t]'); if err != null { false; } else { matched; }; } else { false; }; } else { false; } "
+	case v1alpha1.MultiLineParserBackslash:
+		multiLineTransform.DynamicArgsMap["ends_when"] = " matched, err = match(.message, r'[^\\\\]$'); if err != null { false; } else { matched; } "
+	case v1alpha1.MultiLineParserLogWithTime:
+		multiLineTransform.DynamicArgsMap["starts_when"] = " matched, err = match(.message, r'^\\[?((((19|20)([2468][048]|[13579][26]|0[48])|2000)-02-29|((19|20)[0-9]{2}-(0[4678]|1[02])-(0[1-9]|[12][0-9]|30)|(19|20)[0-9]{2}-(0[1359]|11)-(0[1-9]|[12][0-9]|3[01])|(19|20)[0-9]{2}-02-(0[1-9]|1[0-9]|2[0-8])))\\s([01][0-9]|2[0-3]):([012345][0-9]):([012345][0-9])|20\\d\\d-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(0[1-9]|[1-2][0-9]|3[01])\\s([01][0-9]|2[0-3]):([012345][0-9]):([012345][0-9])|(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2}\\s+([01][0-9]|2[0-3]):([012345][0-9]):([012345][0-9])|(?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[\\+-]\\d{2}:\\d{2})?|\\p{L}{2}\\s\\d{1,2}\\s\\p{L}{3}\\s\\d{4}\\s([01][0-9]|2[0-3]):([012345][0-9]):([012345][0-9]))'); if err != null { false; } else { matched; } "
+	case v1alpha1.MultiLineParserMultilineJSON:
+		multiLineTransform.DynamicArgsMap["starts_when"] = " matched, err = match(.message, r'^\\{'); if err != null { false; } else { matched; } "
+	default:
+		return []impl.LogTransform{}
+	}
+
+	return []impl.LogTransform{&multiLineTransform}
 }
 
 // Create transforms from filter
