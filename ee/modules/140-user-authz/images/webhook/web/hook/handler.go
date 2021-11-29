@@ -134,10 +134,6 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 	if err != nil {
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.logger.Println(err)
-
-		request.Status.Denied = true
-		request.Status.Reason = internalErrorReason
-
 	} else if namespaced && hasLimitedNamespaces(entry) {
 		// we should not allow cluster scoped requests for namespaced objects if namespaces access is limited
 		request.Status.Denied = true
