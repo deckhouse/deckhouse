@@ -140,18 +140,23 @@ title: "Cloud provider — AWS: подготовка окружения"
 
 ## Настройка IAM через веб-интерфейс
 
-* IAM -> Создать `Customer Managed Policy`
-* Выбрать вкладку `JSON` и вставить спецификацию выше.
-* `Review Policy`
-* Задать имя, например `D8CloudProviderAWS`
-* `Create Policy`
-* IAM -> Создать IAM User
-* Задать имя, например, `deckhouse`
-* Выбрать `Programmatic access`
-* Next: Permissions
-* Выбрать вкладку `Attach existing policies directly`
-* Вбить в поиск `D8CloudProviderAWS` и поставить галку
-* Next и далее по интуиции
+* Откройте `Identity and Access Management (IAM)`
+* Перейдите в раздел `Policies` и нажмите `Create Policy`
+* Выберите вкладку `JSON` и вставьте приведенную выше спецификацию.
+* Нажмите `Next: Tags`
+* Нажмите `Next: Review`
+* Задайте название политики в поле `Name` (например, `D8CloudProviderAWS`)
+* Нажмите `Create Policy`
+* Перейдите в раздел `Users` IAM и нажмите `Add users`
+* Задайте имя в поле `User name` (например, `deckhouse`)
+* В разделе `Select AWS credential type`, выберите `Access key - Programmatic access`
+* Нажмите `Next: Permissions`
+* Выберите вкладку `Attach existing policies directly`
+* Введите в поле поиска (`Filter policies`) имя политики, указанное на предыдущих шагах (например, `D8CloudProviderAWS`), и в полученном списке отметьте checkbox напротив искомой политики
+* Нажмите `Next: Tags`
+* Нажмите `Next: Review`
+* Нажмите `Create user`
+* Сохраните полученные `Access key ID` и `Secret access key`
 
 ## Настройка IAM через CLI
 
