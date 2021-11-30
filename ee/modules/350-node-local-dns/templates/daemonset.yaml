@@ -70,7 +70,7 @@ spec:
             command:
             - /liveness.sh
           periodSeconds: 1
-          timeoutSeconds: 3
+          timeoutSeconds: 9
         lifecycle:
           preStop:
             exec:
