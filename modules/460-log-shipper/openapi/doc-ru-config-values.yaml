@@ -1,5 +1,8 @@
 type: object
 properties:
+  debug:
+    description: |
+      Включить или выключить отладочные логи для агента vector. По умолчанию: `false`.
   resourcesRequests:
     description: |
       Настройки максимальных значений CPU и memory, которые может запросить Pod при выборе узла (если VPA выключен, максимальные значения становятся желаемыми).

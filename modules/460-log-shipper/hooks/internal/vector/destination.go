@@ -79,10 +79,12 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 		Type: "loki",
 	}
 
-	common.Buffer = buffer{
-		Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-		Type: "disk",
-	}
+	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
+	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
+	// common.Buffer = buffer{
+	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
+	//	Type: "disk",
+	// }
 
 	LokiENC := LokiEncoding{
 		Codec:           "text",
@@ -175,10 +177,12 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		Type: "elasticsearch",
 	}
 
-	common.Buffer = buffer{
-		Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-		Type: "disk",
-	}
+	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
+	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
+	// common.Buffer = buffer{
+	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
+	//	Type: "disk",
+	// }
 
 	ESBatch = batch{
 		MaxSize:     10 * 1024 * 1024, // 10MiB in bytes for elasticsearch bulk api
@@ -275,10 +279,12 @@ func NewLogstashDestination(name string, cspec v1alpha1.ClusterLogDestinationSpe
 		Type: "socket",
 	}
 
-	common.Buffer = buffer{
-		Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
-		Type: "disk",
-	}
+	// Disable buffer. It is buggy. Vector developers know about problems with buffer.
+	// More info about buffer rewriting here - https://github.com/vectordotdev/vector/issues/9476
+	// common.Buffer = buffer{
+	//	Size: 100 * 1024 * 1024, // 100MiB in bytes for vector persistent queue
+	//	Type: "disk",
+	// }
 
 	if spec.TLS.CAFile != "" {
 		res, _ := base64.StdEncoding.DecodeString(spec.TLS.CAFile)
