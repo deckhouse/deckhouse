@@ -1,3 +1,0 @@
-{{- if .Values.global.enabledModules | has "prometheus" }}
-  {{- include "helm_lib_prometheus_rules" (list . "kube-nginx-ingress") }}
-{{- end }}

@@ -21,17 +21,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/400-nginx-ingress
-  to: /deckhouse/modules/400-nginx-ingress
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/fe/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   excludePaths:

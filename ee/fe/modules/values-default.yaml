@@ -1,6 +1,5 @@
 # FE Bundle "Default"
 monitoringApplicationsEnabled: true
 extendedMonitoringEnabled: true
-nginxIngressEnabled: true
 secretCopierEnabled: true
 flantIntegrationEnabled: true
