@@ -49,6 +49,11 @@ resource "google_compute_router_nat" "kube" {
     name                    = google_compute_subnetwork.kube.self_link
     source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
   }
+  lifecycle {
+    ignore_changes = [
+      log_config
+    ]
+  }
 }
 
 module "firewall" {
