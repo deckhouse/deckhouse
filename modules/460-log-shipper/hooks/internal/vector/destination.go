@@ -171,6 +171,7 @@ func NewLokiDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) i
 func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinationSpec) impl.LogDestination {
 	spec := cspec.Elasticsearch
 	var ESBatch batch
+	var BulkAction string = "index"
 
 	common := commonDestinationSettings{
 		Name: "d8_cluster_sink_" + name,
@@ -253,6 +254,10 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		VerifyHostname: spec.TLS.VerifyHostname,
 	}
 
+	if spec.IndexSettings.Type == "Datastream" {
+		BulkAction = "create"
+	}
+
 	return &elasticsearchDestination{
 		commonDestinationSettings: common,
 		Auth:                      EsAuth,
@@ -264,7 +269,8 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		Compression:               "gzip",
 		Index:                     spec.Index,
 		Pipeline:                  spec.Pipeline,
-		BulkAction:                "index",
+		BulkAction:                BulkAction,
+		DocType:                   spec.IndexSettings.DocType,
 		// We do not neet this field for vector 0.14
 		//Mode:                      "normal",
 	}

@@ -71,6 +71,13 @@ spec:
                       description: Имя pipeline, который будет применён к данным перед записью в индекс.
                     endpoint:
                       description: Адрес инстанса elasticsearch.
+                    indexSettings:
+                      description: Настройки индексов
+                      properties:
+                        type:
+                          description: Использовать для хранения index'ы или [datastream'ы](https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
+                        docType:
+                          description: Тип документа. Это актуально для Elasticsearch <= 6.X.
                     tls:
                       description: Настройки защищённого TLS соединения.
                       properties:

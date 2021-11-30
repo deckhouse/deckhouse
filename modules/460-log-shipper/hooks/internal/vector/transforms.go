@@ -111,6 +111,17 @@ end
 		},
 	}
 
+	// data stream elasticsearch transform
+	var DataStreamTransform DynamicTransform = DynamicTransform{
+		CommonTransform: CommonTransform{
+			Type: "remap",
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        `."@timestamp" = del(.timestamp)`,
+			"drop_on_abort": false,
+		},
+	}
+
 	// default cleanup transform
 	transforms := []impl.LogTransform{&cleanUpTransform}
 	// default transform for json
@@ -122,6 +133,10 @@ end
 			extraFieldsTransform := GenExtraFieldsTransform(dest.Spec.ExtraLabels)
 			transforms = append(transforms, &extraFieldsTransform)
 		}
+	}
+
+	if dest.Spec.Type == DestElasticsearch && dest.Spec.Elasticsearch.IndexSettings.Type == "Datastream" {
+		transforms = append(transforms, &DataStreamTransform)
 	}
 
 	return transforms

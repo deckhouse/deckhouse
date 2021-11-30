@@ -214,6 +214,17 @@ spec:
                     endpoint:
                       type: string
                       description: The base URL of the Elasticsearch instance.
+                    indexSettings:
+                      type: object
+                      description: Index specific settings.
+                      properties:
+                        type:
+                          type: string
+                          enum: ["Normal", "Datastream"]
+                          description: Use for storage indexes or [datastreams](https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
+                        docType:
+                          type: string
+                          description: Document type. This is only relevant for Elasticsearch <= 6.X.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.
