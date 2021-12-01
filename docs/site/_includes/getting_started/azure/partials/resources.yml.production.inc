@@ -224,6 +224,10 @@ spec:
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: "LoadBalancer"
+  # [<en>] describes on which nodes the component will be located
+  # [<ru>] описывает, на каких узлах будет находиться компонент
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

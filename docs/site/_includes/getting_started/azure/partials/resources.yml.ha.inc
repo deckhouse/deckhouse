@@ -76,6 +76,10 @@ spec:
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: "LoadBalancer"
+  # [<en>] describes on which nodes the component will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
+  nodeSelector:
+    node.deckhouse.io/group: worker
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

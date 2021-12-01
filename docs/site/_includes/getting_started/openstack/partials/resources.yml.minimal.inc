@@ -55,11 +55,6 @@ spec:
     - DP1
   disruptions:
     approvalMode: Automatic
-  nodeTemplate:
-    # [<en>] similar to the standard metadata.labels field
-    # [<ru>] аналогично стандартному полю metadata.labels
-    labels:
-      node.deckhouse.io/group: worker
 ---
 # [<en>] section containing the parameters of nginx ingress controller
 # [<en>] version of the Deckhouse API
@@ -76,8 +71,8 @@ spec:
   # [<en>] the way traffic goes to cluster from the outer network
   # [<ru>] способ поступления трафика из внешнего мира
   inlet: LoadBalancer
-  # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает, на каких узлах будет находиться компонент
+  # [<en>] describes on which nodes the component will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker
 ---

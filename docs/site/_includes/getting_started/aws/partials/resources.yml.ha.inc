@@ -54,11 +54,6 @@ spec:
     # [<ru>] возможно, захотите изменить
     zones:
       - eu-central-1a
-  nodeTemplate:
-    # [<en>] similar to the standard metadata.labels field
-    # [<ru>] аналогично стандартному полю metadata.labels
-    labels:
-      node-role.deckhouse.io/worker: ""
   nodeType: CloudEphemeral
 ---
 # [<en>] section containing the parameters of nginx ingress controller
@@ -83,10 +78,10 @@ spec:
       # [<en>] provision Network Load Balancer for the Ingress Controller Service
       # [<ru>] использовать Network Load Balancer для сервиса Ingress контроллера
       service.beta.kubernetes.io/aws-load-balancer-type: nlb
-  # [<en>] describes on which nodes the component will be located
-  # [<ru>] описывает, на каких узлах будет находиться компонент
+  # [<en>] describes on which nodes the component will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
-    node-role.deckhouse.io/worker: ""
+    node.deckhouse.io/group: worker
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
