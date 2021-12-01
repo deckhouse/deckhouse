@@ -41,6 +41,9 @@ spec:
                   type: string
                   description: Deckhouse version.
                   example: 'v1.24.20'
+                applyAfter:
+                  type: string
+                  description: Marks release as a part of canary release. This release will be delayed until this time.
             status:
               type: object
               properties:
@@ -50,6 +53,7 @@ spec:
                     - Pending
                     - Deployed
                     - Outdated
+                    - Suspended
                   description: Current status of the release.
                 transitionTime:
                   type: string
@@ -69,6 +73,10 @@ spec:
           jsonPath: .status.phase
           type: string
           description: 'Current release status.'
+        - name: applyAfter
+          jsonPath: .spec.applyAfter
+          type: string
+          description: 'This release will be applied after this time.'
         - name: transitionTime
           jsonPath: .status.transitionTime
           type: date

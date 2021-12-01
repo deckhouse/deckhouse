@@ -25,6 +25,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -32,10 +33,14 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spaolacci/murmur3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/modules/020-deckhouse/hooks/internal/v1alpha1"
 )
 
@@ -65,53 +70,49 @@ func checkReleases(input *go_hook.HookInput, dc dependency.Container) error {
 		input.LogEntry.Debug("Release channel does not set.")
 		return nil
 	}
+
 	// move release channel to kebab-case because CI makes tags in kebab-case
 	// Alpha -> alpha
 	// EarlyAccess -> early-access
 	// etc...
 	releaseChannelName := strcase.ToKebab(releaseChannelNameRaw.String())
-	repo := input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
+
+	releaseChecker, err := NewDeckhouseReleaseChecker(input, dc, releaseChannelName)
+	if err != nil {
+		return errors.Wrap(err, "create DeckhouseReleaseChecker failed")
+	}
+
 	var previousImageHash string
 	previousHashRaw, exists := input.Values.GetOk("deckhouse.internal.releaseVersionImageHash")
 	if exists {
 		previousImageHash = previousHashRaw.String()
 	}
 
-	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), GetCA(input), IsHTTP(input))
+	newImageHash, err := releaseChecker.FetchReleaseMetadata(previousImageHash)
 	if err != nil {
 		return err
 	}
 
-	image, err := regCli.Image(releaseChannelName)
-	if err != nil {
-		return err
+	// no new image found
+	if newImageHash == "" {
+		return nil
 	}
 
-	var digestExists bool
-	digest, err := image.Digest()
-	if err == nil {
-		digestExists = true
-		if previousImageHash == digest.String() {
-			// image has not been changed
-			return nil
-		}
+	releaseName := strings.ReplaceAll(releaseChecker.releaseMetadata.Version, ".", "-")
+
+	// run only if it's a canary release
+	var applyAfter *time.Time
+	if releaseChecker.IsCanaryRelease() {
+		clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
+		applyAfter = releaseChecker.CalculateReleaseDelay(clusterUUID)
 	}
 
-	meta, err := fetchReleaseMetadata(input, image)
-	if err != nil {
-		return err
-	}
-
-	if meta.Version == "" {
-		return fmt.Errorf("version not found. Probably image is broken or layer is not exist")
-	}
-
-	newSemver, err := semver.NewVersion(meta.Version)
+	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return err
 	}
+	input.Values.Set("deckhouse.internal.releaseVersionImageHash", newImageHash)
 
 	snap := input.Snapshots["releases"]
 	releases := make([]deckhouseReleaseUpdate, 0, len(snap))
@@ -132,14 +133,22 @@ releaseLoop:
 
 		case release.Version.Equal(newSemver):
 			input.LogEntry.Debugf("Release with version %s already exists", release.Version)
+			if releaseChecker.releaseMetadata.Suspend {
+				p := map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]string{
+							"release.deckhouse.io/suspended": "true",
+						},
+					},
+				}
+				input.PatchCollector.MergePatch(p, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", release.Name)
+			}
 			return nil
 
 		default:
 			break releaseLoop
 		}
 	}
-
-	releaseName := strings.ReplaceAll(meta.Version, ".", "-")
 
 	release := &v1alpha1.DeckhouseRelease{
 		TypeMeta: metav1.TypeMeta{
@@ -150,20 +159,22 @@ releaseLoop:
 			Name: releaseName,
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
-			Version: meta.Version,
+			Version:    releaseChecker.releaseMetadata.Version,
+			ApplyAfter: applyAfter,
 		},
 		Approved: false,
 	}
 
-	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
-	if digestExists {
-		input.Values.Set("deckhouse.internal.releaseVersionImageHash", digest.String())
+	if releaseChecker.releaseMetadata.Suspend {
+		release.ObjectMeta.Annotations = map[string]string{"release.deckhouse.io/suspended": "true"}
 	}
+
+	input.PatchCollector.Create(release, object_patch.IgnoreIfExists())
 
 	return nil
 }
 
-func fetchReleaseMetadata(input *go_hook.HookInput, image v1.Image) (releaseMetadata, error) {
+func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releaseMetadata, error) {
 	var meta releaseMetadata
 
 	layers, err := image.Layers()
@@ -179,7 +190,7 @@ func fetchReleaseMetadata(input *go_hook.HookInput, image v1.Image) (releaseMeta
 	for _, layer := range layers {
 		size, err := layer.Size()
 		if err != nil {
-			input.LogEntry.Warnf("couldn't calculate layer size")
+			dcr.logger.Warnf("couldn't calculate layer size")
 		}
 		if size == 0 {
 			// skip some empty werf layers
@@ -193,7 +204,7 @@ func fetchReleaseMetadata(input *go_hook.HookInput, image v1.Image) (releaseMeta
 		tarReader, err = untarLayer(rc)
 		if err != nil {
 			rc.Close()
-			input.LogEntry.Warnf("layer is invalid: %s", err)
+			dcr.logger.Warnf("layer is invalid: %s", err)
 			continue
 		}
 		rc.Close()
@@ -228,8 +239,15 @@ func untarLayer(rc io.Reader) (io.Reader, error) {
 }
 
 type releaseMetadata struct {
-	Version     string `json:"version"`
-	ReleaseDate string `json:"release_date"`
+	Version string                    `json:"version"`
+	Canary  map[string]canarySettings `json:"canary"`
+	Suspend bool                      `json:"suspend"`
+}
+
+type canarySettings struct {
+	Enabled  bool     `json:"enabled"`
+	Waves    uint     `json:"waves"`
+	Interval Duration `json:"interval"` // in minutes
 }
 
 func GetCA(input *go_hook.HookInput) string {
@@ -239,4 +257,110 @@ func GetCA(input *go_hook.HookInput) string {
 func IsHTTP(input *go_hook.HookInput) bool {
 	registryScheme := input.Values.Get("global.modulesImages.registryScheme").String()
 	return registryScheme == "http"
+}
+
+type DeckhouseReleaseChecker struct {
+	registryClient cr.Client
+	logger         *logrus.Entry
+
+	releaseChannel  string
+	releaseMetadata releaseMetadata
+}
+
+func (dcr *DeckhouseReleaseChecker) IsCanaryRelease() bool {
+	settings := dcr.releaseCanarySettings()
+	return settings.Enabled
+}
+
+func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
+	return dcr.releaseMetadata.Canary[dcr.releaseChannel]
+}
+
+func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (digestHash string, err error) {
+	image, err := dcr.registryClient.Image(dcr.releaseChannel)
+	if err != nil {
+		return "", err
+	}
+
+	imageDigest, err := image.Digest()
+	if err != nil {
+		return "", err
+	}
+	if previousImageHash == imageDigest.String() {
+		// image has not been changed
+		return "", nil
+	}
+
+	releaseMeta, err := dcr.fetchReleaseMetadata(image)
+	if err != nil {
+		return "", err
+	}
+	if releaseMeta.Version == "" {
+		return "", fmt.Errorf("version not found. Probably image is broken or layer is not exist")
+	}
+
+	dcr.releaseMetadata = releaseMeta
+
+	return imageDigest.String(), nil
+}
+
+func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(clusterUUID string) *time.Time {
+	hash := murmur3.Sum64([]byte(clusterUUID + dcr.releaseMetadata.Version))
+	wave := hash % uint64(dcr.releaseCanarySettings().Waves)
+
+	if wave != 0 {
+		delay := time.Duration(wave) * dcr.releaseCanarySettings().Interval.Duration
+		applyAfter := time.Now().UTC().Add(delay)
+		return &applyAfter
+	}
+
+	return nil
+}
+
+func NewDeckhouseReleaseChecker(input *go_hook.HookInput, dc dependency.Container, releaseChannel string) (*DeckhouseReleaseChecker, error) {
+	repo := input.Values.Get("global.modulesImages.registry").String() // host/ns/repo
+
+	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
+	regCli, err := dc.GetRegistryClient(path.Join(repo, "release-channel"), GetCA(input), IsHTTP(input))
+	if err != nil {
+		return nil, err
+	}
+
+	dcr := &DeckhouseReleaseChecker{
+		registryClient: regCli,
+		logger:         input.LogEntry,
+		releaseChannel: releaseChannel,
+	}
+
+	return dcr, nil
+}
+
+// custom type for appropriate json marshalling / unmarshalling (like "15m")
+type Duration struct {
+	time.Duration
+}
+
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var v interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	switch value := v.(type) {
+	case float64:
+		d.Duration = time.Duration(value)
+		return nil
+	case string:
+		var err error
+		d.Duration, err = time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.New("invalid duration")
+	}
 }

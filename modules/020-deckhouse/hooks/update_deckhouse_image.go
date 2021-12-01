@@ -159,21 +159,33 @@ func filterDeckhouseRelease(unstructured *unstructured.Unstructured) (go_hook.Fi
 		return nil, err
 	}
 
+	var hasSuspendAnnotation bool
+	if v, ok := release.Annotations["release.deckhouse.io/suspended"]; ok {
+		if v == "true" {
+			hasSuspendAnnotation = true
+		}
+	}
+
 	return deckhouseReleaseUpdate{
-		Name:           release.Name,
-		Version:        semver.MustParse(release.Spec.Version),
-		Phase:          release.Status.Phase,
-		ManualApproved: release.Approved,
-		StatusApproved: release.Status.Approved,
+		Name:                 release.Name,
+		Version:              semver.MustParse(release.Spec.Version),
+		ApplyAfter:           release.Spec.ApplyAfter,
+		Phase:                release.Status.Phase,
+		ManualApproved:       release.Approved,
+		StatusApproved:       release.Status.Approved,
+		HasSuspendAnnotation: hasSuspendAnnotation,
 	}, nil
 }
 
 type deckhouseReleaseUpdate struct {
 	Name           string
 	Version        *semver.Version
+	ApplyAfter     *time.Time
 	Phase          string
 	ManualApproved bool
 	StatusApproved bool
+
+	HasSuspendAnnotation bool
 }
 
 type byVersion []deckhouseReleaseUpdate
@@ -301,10 +313,20 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 		// "Deployed" shows only Actual (current) release. All previous releases are marked as Outdated
 		// It's much more comfortable to observe DeckhouseReleases like this because by default they are sorted by Name
 		// and sometimes it's a bit weird for semver names. This statuses shows you the real view of releases
-		case v1alpha1.PhaseOutdated:
+		case v1alpha1.PhaseOutdated, v1alpha1.PhaseSuspended:
 			// pass
 
 		case v1alpha1.PhasePending:
+			// skip suspended releases
+			if rl.HasSuspendAnnotation {
+				sp := statusPatch{
+					Phase:          v1alpha1.PhaseSuspended,
+					TransitionTime: now,
+				}
+				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+				continue
+			}
+
 			if i < currentDeployedReleaseIndex {
 				// some old release, for example - when downgrade the release channel
 				// mark it as Outdated
@@ -316,8 +338,11 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				continue
 			}
 
-			if i != currentDeployedReleaseIndex+1 {
-				continue
+			if rl.ApplyAfter != nil {
+				if time.Now().UTC().Before(*rl.ApplyAfter) {
+					input.LogEntry.Infof("Release %s is postponed by canary process. Waiting", rl.Name)
+					return nil
+				}
 			}
 
 			// always deploy Patch releases
@@ -330,6 +355,16 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 			// apply patch - update deployment
 			applyRelease(input, rl, now)
 
+			// mark previous release as outdated
+			if currentDeployedReleaseIndex != -1 {
+				currentDeployedRelease := releases[currentDeployedReleaseIndex]
+				sp := statusPatch{
+					Phase:          v1alpha1.PhaseOutdated,
+					Approved:       currentDeployedRelease.StatusApproved,
+					TransitionTime: now,
+				}
+				input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentDeployedRelease.Name, object_patch.WithSubresource("/status"))
+			}
 			return nil
 
 		case v1alpha1.PhaseDeployed:
@@ -341,16 +376,7 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 		}
 	}
 
-	if currentDeployedReleaseIndex != -1 {
-		// mark previous release as outdated
-		currentDeployedRelease := releases[currentDeployedReleaseIndex]
-		sp := statusPatch{
-			Phase:          v1alpha1.PhaseOutdated,
-			Approved:       currentDeployedRelease.StatusApproved,
-			TransitionTime: now,
-		}
-		input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentDeployedRelease.Name, object_patch.WithSubresource("/status"))
-	} else {
+	if currentDeployedReleaseIndex == -1 {
 		// self-healing, if deployed release was deleted
 		// no deployed releases found - deploy first pending release
 		for _, rl := range releases {
