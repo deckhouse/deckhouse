@@ -62,13 +62,14 @@ func (ws Windows) IsAllowed(t time.Time) bool {
 
 // IsAllowed check if specified window is allowed at the moment or not
 func (uw Window) IsAllowed(now time.Time) bool {
+	now = now.UTC()
 	// input is validated through the openapi spec
 	// we must have only a valid time here
 	fromInput, _ := time.Parse(hh_mm, uw.From)
 	toInput, _ := time.Parse(hh_mm, uw.To)
 
-	fromTime := time.Date(now.Year(), now.Month(), now.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, now.Location())
-	toTime := time.Date(now.Year(), now.Month(), now.Day(), toInput.Hour(), toInput.Minute(), 0, 0, now.Location())
+	fromTime := time.Date(now.Year(), now.Month(), now.Day(), fromInput.Hour(), fromInput.Minute(), 0, 0, time.UTC)
+	toTime := time.Date(now.Year(), now.Month(), now.Day(), toInput.Hour(), toInput.Minute(), 0, 0, time.UTC)
 
 	updateToday := uw.isTodayAllowed(now, uw.Days)
 

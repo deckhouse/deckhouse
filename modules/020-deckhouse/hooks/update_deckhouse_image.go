@@ -391,7 +391,7 @@ func isUpdatePermitted(windowsData []byte) (bool, error) {
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.Local)
+		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
 	}
 
 	windows, err := update.FromJSON(windowsData)
