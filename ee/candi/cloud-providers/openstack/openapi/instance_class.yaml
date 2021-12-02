@@ -32,6 +32,9 @@ spec:
                     Flavor of OpenStack servers.
 
                     Get a list of all available flavors: `openstack flavor list`.
+                    For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
+                    Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
+
                   example: m1.medium
                   type: string
                 imageName:
