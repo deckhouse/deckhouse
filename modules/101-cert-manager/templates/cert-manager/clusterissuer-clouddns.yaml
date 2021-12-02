@@ -16,7 +16,7 @@ spec:
       name: clouddns-tls-key
     solvers:
     - dns01:
-        clouddns:
+        cloudDNS:
           {{ $serviceAccount := .Values.certManager.cloudDNSServiceAccount | b64dec | fromJson}}
           {{- if and (hasKey $serviceAccount "project_id") ($serviceAccount.project_id) }}
           project: {{ $serviceAccount.project_id | quote }}
