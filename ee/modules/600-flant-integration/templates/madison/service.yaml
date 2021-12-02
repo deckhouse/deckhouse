@@ -5,7 +5,7 @@ kind: Service
 metadata:
   name: madison-proxy
   namespace: d8-monitoring
-{{ include "helm_lib_module_labels" (list . (dict "app" "madison-proxy" "prometheus.deckhouse.io/alertmanager" "main")) | indent 2 }}
+{{ include "helm_lib_module_labels" (list . (dict "app" "madison-proxy")) | indent 2 }}
 spec:
   type: ClusterIP
   clusterIP: None
@@ -16,4 +16,16 @@ spec:
     targetPort: http
   selector:
     app: madison-proxy
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: madison-proxy
+{{ include "helm_lib_module_labels" (list . (dict "app" "madison-proxy")) | indent 2 }}
+spec:
+  type: External
+  external:
+    service:
+      namespace: d8-monitoring
+      name: madison-proxy
 {{- end }}
