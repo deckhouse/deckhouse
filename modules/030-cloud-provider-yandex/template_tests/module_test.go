@@ -82,6 +82,8 @@ const moduleValues = `
     - name: network-ssd-nonreplicated
       type: network-ssd-nonreplicated
     providerDiscoveryData:
+      apiVersion: deckhouse.io/v1
+      kind: YandexCloudDiscoveryData
       zones: ["zonea", "zoneb"]
       zoneToSubnetIdMap:
         zonea: aaa
@@ -92,16 +94,27 @@ const moduleValues = `
       routeTableID: testest
       region: myreg
     providerClusterConfiguration:
-      sshPublicKey: mysshkey
+      apiVersion: deckhouse.io/v1
+      existingNetworkID: enpma5uvcfbkuac1i1jb
+      kind: YandexClusterConfiguration
+      layout: WithNATInstance
       masterNodeGroup:
+        replicas: 1
         instanceClass:
+          cores: 2
           imageID: test
+          memory: 4096
       provider:
-        serviceAccountJSON: '{"my": "json"}'
+        cloudID: test
         folderID: myfoldid
+        serviceAccountJSON: '{"my": "json"}'
+      withNATInstance:
+        internalSubnetID: test
+        natInstanceExternalAddress: 84.201.160.148
+      nodeNetworkCIDR: 10.100.0.1/24
+      sshPublicKey: mysshkey
       labels:
         test: test
-      nodeNetworkCIDR: 10.100.0.1/24
 `
 
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {

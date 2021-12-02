@@ -48,6 +48,12 @@ properties:
       kubernetesVersion:
         type: string
         x-examples: [1.16.5, 1.19.5]
+      podSubnetCIDR:
+        type: string
+        x-examples: [ 127.0.0.1/24 ]
+      clusterUUID:
+        type: string
+        x-examples: [db74c734-3a68-11ec-ae11-fb594fdec307]
       kubernetesVersions:
         type: array
         x-examples:

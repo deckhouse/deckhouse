@@ -22,12 +22,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-aws :: hooks :: aws_cluster_configuration ::", func() {
+var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: yandex_cluster_configuration ::", func() {
 	const (
 		initValuesString = `
 global:
@@ -98,6 +97,8 @@ sshPublicKey: ssh-rsa test
 withNATInstance:
   internalSubnetID: test
   natInstanceExternalAddress: 84.201.160.148
+nodeNetworkCIDR: 84.201.160.148/31
+sshPublicKey: ssh-rsa AAAAAbbbb
 `
 
 		// wrong cc
@@ -151,7 +152,7 @@ data:
 		It("Hook should fail with errors", func() {
 			Expect(a).To(Not(ExecuteSuccessfully()))
 
-			Expect(a.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: document must contain "kind" and "apiVersion" fields`))
+			Expect(a.GoHookError.Error()).Should(ContainSubstring(`kube-system/d8-provider-cluster-configuration`))
 		})
 	})
 
@@ -191,13 +192,13 @@ ru-central1-c: test
 		It("All values should be gathered from discovered data", func() {
 			Expect(c).To(Not(ExecuteSuccessfully()))
 
-			Expect(c.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: validate cloud_discovery_data: Document validation failed:`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.region is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.routeTableID is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.defaultLbTargetGroupNetworkId is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.zones is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.zoneToSubnetIdMap is required`))
-			Expect(c.Session.Err).Should(gbytes.Say(`.shouldAssignPublicIPAddress is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`validate cloud-provider-discovery-data.json: Loading schema file: Document validation failed`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.region is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.routeTableID is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.defaultLbTargetGroupNetworkId is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.zones is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.zoneToSubnetIdMap is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.shouldAssignPublicIPAddress is required`))
 		})
 	})
 
@@ -211,13 +212,13 @@ ru-central1-c: test
 		It("All values should be gathered from discovered data", func() {
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
-			Expect(d.Session.Err).Should(gbytes.Say(`deckhouse-controller: error: config validation: Document validation failed`))
-			Expect(d.Session.Err).Should(gbytes.Say(`must validate one and only one schema \(oneOf\). Found none valid`))
-			Expect(d.Session.Err).Should(gbytes.Say(`layout should be one of \[Standard WithoutNAT\]`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.masterNodeGroup is required`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.nodeNetworkCIDR is required`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.sshPublicKey is required`))
-			Expect(d.Session.Err).Should(gbytes.Say(`.provider is required`))
+			Expect(d.GoHookError.Error()).To(ContainSubstring(`validate cloud-provider-cluster-configuration.yaml: config validation: Document validation failed`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`must validate one and only one schema (oneOf). Found none valid`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`layout should be one of [Standard WithoutNAT]`))
+			// Expect(d.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.nodeNetworkCIDR is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.sshPublicKey is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
 		})
 	})
 })
