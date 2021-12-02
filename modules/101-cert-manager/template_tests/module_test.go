@@ -431,13 +431,13 @@ podAntiAffinity:
 			clusterIssuer := f.KubernetesResource("ClusterIssuer", "d8-cert-manager", "clouddns")
 			Expect(clusterIssuer.Exists()).To(BeTrue())
 			if clusterIssuer.Field("apiVersion").String() == "cert-manager.io/v1" {
-				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.clouddns.project").String()).To(Equal("project-209317"))
-				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
-				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
+				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.project").String()).To(Equal("project-209317"))
+				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
+				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
 			} else {
-				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.project").String()).To(Equal("project-209317"))
-				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
-				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.cloudDNS.project").String()).To(Equal("project-209317"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.cloudDNS.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
 			}
 		})
 	})
