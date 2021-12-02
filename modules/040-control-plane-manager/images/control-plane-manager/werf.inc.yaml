@@ -12,6 +12,9 @@ import:
     includePaths:
     - kubeadm-*
     before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
+    add: /usr/local/bin/etcdctl
+    before: setup
 git:
   - add: /modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/control-plane-manager
     to: /control-plane-manager
@@ -49,3 +52,6 @@ shell:
   - mv _output/bin/kubeadm /usr/local/bin/kubeadm-{{ $version }}
   {{- end }}
 {{- end }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-etcd-artifact
+from: {{ env "BASE_ETCD" }}

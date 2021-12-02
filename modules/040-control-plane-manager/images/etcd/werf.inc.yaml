@@ -22,4 +22,4 @@ docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: k8s.gcr.io/etcd:3.4.13-0@sha256:4ad90a11b55313b182afc186b9876c8e891531b8db4c9bf1541953021618d0e2
+from: {{ env "BASE_ETCD" }}
