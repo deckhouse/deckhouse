@@ -5,40 +5,43 @@
   {{- if eq $scrapeType "service" }}
     {{ $label = "__meta_kubernetes_endpoint_ready" }}
   {{- end }}
+
+# Check whether pod is ready or the annotation on it allows scarping unready pods
 - sourceLabels: [{{ $label }}, __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_allows_unready_pods]
   regex: ^(.*)true(.*)$
   action: keep
+
 - replacement: ${1}:${2}
   sourceLabels: [ __address__, __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_port]
   regex: ([^:]+)(?::\d+)?;(\d+)
   targetLabel: __address__
-- sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_label_prometheus_custom_target]
-  replacement: custom-$1
-  regex: (.+)
-  targetLabel: job
+
+# Filter objects and set job name for both legacy and brand new annotations (the old annotation has priority)
 - sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_label_prometheus_deckhouse_io_custom_target]
   regex: (.+)
   replacement: custom-$1
   targetLabel: job
+
 - regex: endpoint
   action: labeldrop
+
+# We do not differentiate containers on the discovery. The only thing matters is a combination of the pod id / port.
+# This is a fix for a bag with the duplicated endpoints for pod monitors.
+- regex: container
+  action: labeldrop
+
+# Set path and query parameters from annotations, e.g. /path?and_query=true
 - sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_path]
   regex: (.+)
   targetLabel: __metrics_path__
 - action: labelmap
   regex: __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_query_param_(.+)
   replacement: __param_${1}
+
+# Set sample limit from the annotation (only works with the patched Prometheus)
 - sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_sample_limit]
   regex: (.+)
   targetLabel: __sample_limit__
-{{- end }}
-
-{{- define "unlimited_samples" }}
-  {{- $scrapeType := index . 0 }}
-  {{- $action := index . 1 }}
-- sourceLabels: [__meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_unlimited_samples]
-  regex: ^true$
-  action: {{ $action }}
 {{- end }}
 
 {{- define "endpoint_by_container_port_name" }}
@@ -82,16 +85,19 @@ tlsConfig:
 - sourceLabels: [{{ $label }}]
   regex: "https-metrics"
   action: drop
+
 - sourceLabels:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
   - {{ $label }}
   regex: "^true;;(.*)|;;http-metrics$"
   action: keep
+
   {{ else }}
 - sourceLabels: [{{ $label }}]
   regex: "http-metrics"
   action: drop
+
 - sourceLabels:
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_port
   - __meta_kubernetes_{{ $scrapeType }}_annotationpresent_prometheus_deckhouse_io_tls
@@ -99,9 +105,11 @@ tlsConfig:
   regex: "^true;true;(.*)|;;https-metrics$"
   action: keep
   {{ end }}
+
 {{- end }}
 
-{{- define "label_selector" }}
+# Label selector for services is a little complicated because we need to support old and new formats
+{{- define "service_label_selector" }}
 - sourceLabels: [__meta_kubernetes_service_label_prometheus_deckhouse_io_custom_target, __meta_kubernetes_service_label_prometheus_custom_target]
   regex: "^(.+);|;(.+)$"
   action: keep

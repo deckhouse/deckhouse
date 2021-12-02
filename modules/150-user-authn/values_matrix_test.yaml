@@ -179,6 +179,7 @@ userAuthn:
           encodedName: test
           namespace: test-namespace
           spec:
+            signOutURL: "/logout"
             applicationDomain: test.example.com
             applicationIngressCertificateSecretName: test-tls
             applicationIngressClassName: not-nginx

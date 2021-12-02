@@ -40,6 +40,7 @@ spec:
   applicationDomain: "$(module::public_domain grafana)"
   applicationIngressCertificateSecretName: "$(module::https_secret_name "ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
+  signOutURL: "/logout"
   $allowedGroups
 EOF
   else

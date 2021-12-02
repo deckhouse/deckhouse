@@ -55,6 +55,9 @@ spec:
                   type: string
                   description: 'Ingress class that serves your application ingress resource.'
                   example: 'nginx'
+                signOutURL:
+                  type: string
+                  description: 'Provide the URL from which requests will be proxied to the Dex authenticator sign out URL.'
                 keepUsersLoggedInFor:
                   type: string
                   description: |

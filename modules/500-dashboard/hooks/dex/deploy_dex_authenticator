@@ -42,6 +42,7 @@ spec:
   sendAuthorizationHeader: true
   applicationIngressCertificateSecretName: "$(module::https_secret_name "ingress-tls")"
   applicationIngressClassName: "$(module::ingress_class)"
+  signOutURL: "/logout"
 EOF
   else
     if kubectl -n d8-dashboard get dexauthenticator dashboard >/dev/null 2>/dev/null; then

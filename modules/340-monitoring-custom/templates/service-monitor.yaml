@@ -10,7 +10,7 @@ spec:
   endpoints:
   # HTTP target with samples limited to 1000
   - relabelings:
-{{ include "label_selector" . | indent 4 }}
+{{ include "service_label_selector" . | indent 4 }}
 {{ include "keep_targets_for_schema" (list "service" "http") | indent 4}}
 {{ include "endpoint_by_service_port_name" "http" | indent 4 }}
 {{ include "base_relabeling" "service" | indent 4 }}
@@ -19,7 +19,7 @@ spec:
   - scheme: https
 {{ include "tls_config" . | indent 4 }}
     relabelings:
-{{ include "label_selector" . | indent 4 }}
+{{ include "service_label_selector" . | indent 4 }}
 {{ include "keep_targets_for_schema" (list "service" "https") | indent 4 }}
 {{ include "endpoint_by_service_port_name" "https" | indent 4 }}
 {{ include "base_relabeling" "service" | indent 4 }}
