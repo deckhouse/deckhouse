@@ -435,9 +435,9 @@ podAntiAffinity:
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
 				Expect(clusterIssuer.Field("spec.acme.solvers.0.dns01.cloudDNS.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
 			} else {
-				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.cloudDNS.project").String()).To(Equal("project-209317"))
-				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.cloudDNS.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
-				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.cloudDNS.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.project").String()).To(Equal("project-209317"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.name").String()).To(Equal("clouddns"))
+				Expect(clusterIssuer.Field("spec.acme.dns01.providers.0.clouddns.serviceAccountSecretRef.key").String()).To(Equal("key.json"))
 			}
 		})
 	})
