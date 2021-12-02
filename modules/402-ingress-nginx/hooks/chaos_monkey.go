@@ -19,13 +19,11 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,12 +33,14 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-type DeploymentFilterResult struct {
-	ControllerName string
-	LabelSelector  map[string]string
+type ingressDaemonSetFilterResult struct {
+	ControllerName  string
+	LabelSelector   map[string]string
+	DesiredReplicas int32
+	ReadyReplicas   int32
 }
 
-type IngressControllerChaosConfig struct {
+type ingressControllerChaosConfig struct {
 	ControllerName     string
 	ChaosMonkeyEnabled bool
 }
@@ -60,12 +60,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 		},
 		{
-			Name:       "deployments",
+			Name:       "daemonsets",
 			ApiVersion: "apps/v1",
-			Kind:       "Deployment",
+			Kind:       "DaemonSet",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{namespace},
+					MatchNames: []string{"d8-ingress-nginx"},
 				},
 			},
 			LabelSelector: &metav1.LabelSelector{
@@ -73,7 +73,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"app": "controller",
 				},
 			},
-			FilterFunc:                   applyDeploymentFilter,
+			FilterFunc:                   applyIngressDaemonSetFilter,
 			ExecuteHookOnSynchronization: pointer.BoolPtr(false),
 			ExecuteHookOnEvents:          pointer.BoolPtr(false),
 		},
@@ -91,99 +91,81 @@ func chaosMonkeyApplyControllerFilter(obj *unstructured.Unstructured) (go_hook.F
 		return nil, fmt.Errorf(`failed to get "spec.chaosEnabled" field from object %+v: %s`, *obj, err)
 	}
 
-	return IngressControllerChaosConfig{ControllerName: ingressControllerName, ChaosMonkeyEnabled: chaosEnabled}, nil
+	return ingressControllerChaosConfig{
+		ControllerName:     ingressControllerName,
+		ChaosMonkeyEnabled: chaosEnabled,
+	}, nil
 }
 
-func applyDeploymentFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	d := &appsv1.Deployment{}
+func applyIngressDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	d := &appsv1.DaemonSet{}
 
 	err := sdk.FromUnstructured(obj, d)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 
-	return DeploymentFilterResult{
-		ControllerName: d.Labels["name"],
-		LabelSelector:  d.Spec.Selector.MatchLabels,
+	return ingressDaemonSetFilterResult{
+		ControllerName:  d.Labels["name"],
+		LabelSelector:   d.Spec.Selector.MatchLabels,
+		DesiredReplicas: d.Status.DesiredNumberScheduled,
+		ReadyReplicas:   d.Status.NumberReady,
 	}, nil
 }
 
 func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) (err error) {
 	controllers := input.Snapshots["controllers"]
-	deployments := input.Snapshots["deployments"]
+	daemonsets := input.Snapshots["daemonsets"]
+
+	chaosMonkeyEnabled := make(map[string]bool)
+	for _, c := range controllers {
+		controller := c.(ingressControllerChaosConfig)
+		chaosMonkeyEnabled[controller.ControllerName] = controller.ChaosMonkeyEnabled
+	}
 
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	for _, c := range controllers {
-		controller := c.(IngressControllerChaosConfig)
-		if !controller.ChaosMonkeyEnabled {
+	for _, ds := range daemonsets {
+		res := ds.(ingressDaemonSetFilterResult)
+		if !chaosMonkeyEnabled[res.ControllerName] {
+			input.LogEntry.Debugf("chaos monkey is disabled for controller %q, skipping", res.ControllerName)
 			continue
 		}
 
-		selector, err := getPodSelector(controller.ControllerName, deployments)
-		if err != nil {
+		if res.DesiredReplicas != res.ReadyReplicas {
+			input.LogEntry.Debugf("controller %q replicase aren't ready %d/%d, skipping", res.ControllerName, res.ReadyReplicas, res.DesiredReplicas)
 			continue
 		}
 
-		podList, err := kubeClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.FormatLabels(selector)})
+		podList, err := kubeClient.CoreV1().
+			Pods(namespace).
+			List(context.TODO(), metav1.ListOptions{LabelSelector: labels.FormatLabels(res.LabelSelector)})
 		if err != nil {
 			return err
 		}
 
-		if len(podList.Items) == 0 {
+		if len(podList.Items) < 2 {
+			input.LogEntry.Debugf("at least two pods for controller %q are required, skipping", res.ControllerName)
 			return nil
 		}
 
-		podToEvict := getPodWithMostNeighbors(podList)
-		if podToEvict == nil {
-			return nil
+		oldestPod := podList.Items[0]
+		for _, pod := range podList.Items {
+			if pod.CreationTimestamp.Before(&oldestPod.CreationTimestamp) {
+				oldestPod = pod
+			}
 		}
 
-		err = kubeClient.CoreV1().Pods(namespace).Evict(context.TODO(), &v1beta1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: podToEvict.Name}})
+		err = kubeClient.CoreV1().
+			Pods(namespace).
+			Evict(context.TODO(), &v1beta1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: oldestPod.Name}})
 		if err != nil {
-			input.LogEntry.Infof("can't Evict Ingress Controller's Pod %s/%s due to PDB constraints: %s", podToEvict.Namespace, podToEvict.Name, err)
+			input.LogEntry.Infof("can't evict ingress controller pod %q: %v", oldestPod.Name, err)
 		}
 	}
 
 	return nil
-}
-
-func getPodWithMostNeighbors(podList *v1.PodList) *v1.Pod {
-	var (
-		nodeNameToPodMapping = make(map[string]int)
-		podsWithNode         = make([]v1.Pod, 0, len(podList.Items))
-	)
-
-	for _, pod := range podList.Items {
-		if nodeName := pod.Spec.NodeName; len(nodeName) != 0 {
-			nodeNameToPodMapping[nodeName]++
-			podsWithNode = append(podsWithNode, pod)
-		}
-	}
-
-	sort.Slice(podsWithNode, func(i, j int) bool {
-		return podsWithNode[i].CreationTimestamp.Before(&podsWithNode[j].CreationTimestamp)
-	})
-
-	for _, pod := range podsWithNode {
-		if nodeNameToPodMapping[pod.Spec.NodeName] > 1 {
-			return &pod
-		}
-	}
-
-	return nil
-}
-
-func getPodSelector(controllerName string, deployments []go_hook.FilterResult) (map[string]string, error) {
-	for _, d := range deployments {
-		deployment := d.(DeploymentFilterResult)
-		if deployment.ControllerName == controllerName {
-			return deployment.LabelSelector, nil
-		}
-	}
-
-	return nil, fmt.Errorf("deployment for ingress controller %v not found", controllerName)
 }
