@@ -146,7 +146,9 @@ type HookExecutionConfig struct {
 	ValuesValidator          *validation.ValuesValidator
 	GoHookError              error
 	GoHookBindingActions     []go_hook.BindingAction
-	MetricsCollector         TestMetricsCollector
+
+	MetricsCollector TestMetricsCollector
+	PatchCollector   *object_patch.PatchCollector
 
 	Session      *gexec.Session
 	LogrusOutput *gbytes.Buffer
@@ -687,6 +689,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 
 	// make spec generator to reproduce behavior with deferred object mutations like in addon-operator
 	patchCollector := object_patch.NewPatchCollector()
+	hec.PatchCollector = patchCollector
 
 	hookInput := &go_hook.HookInput{
 		Snapshots:        formattedSnapshots,
