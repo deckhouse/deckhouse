@@ -3,7 +3,7 @@ index 0b6a6c373..c6bb86049 100644
 --- a/internal/ingress/controller/checker.go
 +++ b/internal/ingress/controller/checker.go
 @@ -36,10 +36,6 @@ func (n NGINXController) Name() string {
- 
+
  // Check returns if the nginx healthz endpoint is returning ok (status code 200)
  func (n *NGINXController) Check(_ *http.Request) error {
 -	if n.isShuttingDown {
@@ -14,16 +14,24 @@ index 0b6a6c373..c6bb86049 100644
  	fs, err := proc.NewFS("/proc", false)
  	if err != nil {
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index af1e5027d..7c5c702fe 100644
+index af1e5027d..160021dc0 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -381,6 +381,10 @@ func (n *NGINXController) Stop() error {
+@@ -381,6 +381,18 @@ func (n *NGINXController) Stop() error {
  		return fmt.Errorf("shutdown already in progress")
  	}
- 
+
 +	// this patch replace ShutdownGracePeriod flag from newer versions
 +	// it's required for graceful LB shutdown with EndpointSliceTermination
-+	time.Sleep(120 * time.Second)
++	grace := os.Getenv("SHUTDOWN_GRACE_PERIOD")
++	if grace != "" {
++		graceSeconds, err := strconv.Atoi(grace)
++		if err != nil {
++			graceSeconds = 120
++		}
++
++		time.Sleep(time.Duration(graceSeconds) * time.Second)
++	}
 +
  	klog.Info("Shutting down controller queues")
  	close(n.stopCh)

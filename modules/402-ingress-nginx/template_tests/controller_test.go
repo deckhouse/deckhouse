@@ -153,6 +153,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
 cpu: 100m
 ephemeral-storage: 150Mi
 memory: 200Mi`))
+			Expect(testD.Field("spec.template.spec.containers.0.env").Array()).ToNot(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"120"}`)))
 
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
@@ -204,6 +205,7 @@ memory: 200Mi`))
 
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/controller-version`).String()).To(Equal(`0.33`))
 			Expect(testNextDaemonSet.Field(`metadata.annotations.ingress-nginx-controller\.deckhouse\.io/inlet`).String()).To(Equal(`HostPortWithProxyProtocol`))
+			Expect(testNextDaemonSet.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"60"}`)))
 
 			var testNextArgs []string
 			for _, result := range testNextDaemonSet.Field("spec.template.spec.containers.0.args").Array() {
@@ -236,6 +238,7 @@ memory: 500Mi`))
 			Expect(mainDS.Field("spec.updateStrategy.type").String()).To(Equal("OnDelete"))
 			Expect(mainDS.Field("spec.template.spec.hostNetwork").String()).To(Equal("true"))
 			Expect(mainDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(mainDS.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"0"}`)))
 
 			vpaSolid := hec.KubernetesResource("VerticalPodAutoscaler", "d8-ingress-nginx", "controller-solid")
 			Expect(vpaSolid.Exists()).To(BeTrue())

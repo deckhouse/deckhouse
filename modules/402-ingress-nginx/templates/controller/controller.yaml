@@ -10,6 +10,12 @@
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $defaultGracePeriod := 60 }}
+{{- if $loadBalancer }}
+  {{- $defaultGracePeriod = 120 }}
+{{- else if eq $crd.spec.inlet "HostWithFailover" }}
+  {{- $defaultGracePeriod = 0 }}
+{{- end }}
 
 ---
 apiVersion: policy/v1beta1
@@ -142,6 +148,10 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
+        {{- if semverCompare "=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+        - name: SHUTDOWN_GRACE_PERIOD
+          value: {{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod | quote }}
+        {{- end }}
   {{- if semverCompare ">=0.33" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
     {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
@@ -175,8 +185,8 @@ spec:
         - --https-port=443
         - --update-status=true
         {{- if semverCompare ">=0.46" ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-        # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully. This period is hardcoded for v0.33
-        - --shutdown-grace-period=120
+        # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
+        - --shutdown-grace-period={{ $crd.spec.waitLoadBalancerOnTerminating | default $defaultGracePeriod }}
         {{- end }}
         {{- if or (ne $crd.spec.inlet "HostWithFailover") (and (eq $crd.spec.inlet "HostWithFailover") ($failover)) }}
         # we don't disable it if validation is disabled because it will lead to deployment rollout
@@ -203,7 +213,7 @@ spec:
               command: [ "/bin/bash", "-c", "echo -n ok > /tmp/healthz" ]
           preStop:
             exec:
-              command: [ "/bin/bash", "-c", "rm -f /tmp/healthz && sleep {{ $crd.spec.waitLoadBalancerOnTerminating }} && /wait-shutdown" ]
+              command: [ "/bin/bash", "-c", "rm -f /tmp/healthz && /wait-shutdown" ]
   {{- else }}
           preStop:
             exec:
