@@ -28,15 +28,16 @@ function kube_token() {
 }
 
 function etcd_members() {
-  kubectl exec -n kube-system \
-    --request-timeout="${timeout_in_seconds}s" \
-    -it "etcd-$HOSTNAME" \
-    --token=$(kube_token) -- \
-      etcdctl member list \
-        --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-        --key=/etc/kubernetes/pki/etcd/healthcheck-client.key \
-        --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt \
-        -w simple
+  dial_timeout=1
+  command_timeout=$(($timeout_in_seconds-$dial_timeout))
+
+  etcdctl member list \
+    --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+    --key=/etc/kubernetes/pki/etcd/healthcheck-client.key \
+    --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt \
+    --dial-timeout="${dial_timeout}s" \
+    --command-timeout="${command_timeout}s" \
+    -w simple
 
     return $?
 }
