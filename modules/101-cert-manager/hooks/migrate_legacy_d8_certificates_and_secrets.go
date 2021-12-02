@@ -60,6 +60,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{
 		Order: 10,
 	},
+	OnAfterHelm: &go_hook.OrderedConfig{
+		Order: 10,
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "certificates_legacy",

@@ -33,7 +33,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: internal.Queue("metrics"),
+	Queue: internal.Queue("metrics_legacy"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       certsMetricSnapshot,
