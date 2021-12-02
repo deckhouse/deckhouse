@@ -28,7 +28,6 @@ user chrony
 cmdallow 127/8
 allow 127/8
 bindaddress 127.0.0.1
-pool ${NTP_SERVER} iburst
 driftfile /var/run/chrony/chrony.drift
 makestep 1.0 3
 rtcsync
