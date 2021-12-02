@@ -44,6 +44,9 @@ spec:
                 whitelistSourceRanges:
                   description: |
                     Список CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу
+                signOutURL:
+                  description: |
+                    Передайте URL приложения, запросы с которого будут проксированы на URL выхода у Dex authenticator.'
                 nodeSelector:
                   description: |
                     Определяет `nodeSelector` для Pod'ов `dex-authenticator`.

@@ -33,4 +33,35 @@ spec:
     secretName: {{ $crd.spec.applicationIngressCertificateSecretName }}
     {{- end }}
   {{- end }}
+
+  {{- if $crd.spec.signOutURL }}
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: {{ $crd.spec.applicationIngressClassName }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+  name: {{ $crd.name }}-dex-authenticator-sign-out
+  namespace: {{ $crd.namespace }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | indent 2 }}
+spec:
+  rules:
+  - host: {{ $crd.spec.applicationDomain }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ $crd.name }}-dex-authenticator
+          servicePort: 443
+        path: {{ $crd.spec.signOutURL }}
+    {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
+      {{- if $crd.spec.applicationIngressCertificateSecretName }}
+  tls:
+  - hosts:
+    - {{ $crd.spec.applicationDomain }}
+    secretName: {{ $crd.spec.applicationIngressCertificateSecretName }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
