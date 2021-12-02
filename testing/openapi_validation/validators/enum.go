@@ -65,6 +65,14 @@ var (
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
+		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.zones.items",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.zones.items",
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.zones.items",
+		},
 		"modules/035-cni-flannel/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.podNetworkMode",

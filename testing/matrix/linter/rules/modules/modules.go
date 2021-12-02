@@ -196,8 +196,8 @@ func getModulePaths(modulesDir string) ([]string, error) {
 			return fmt.Errorf("file access '%s': %v", path, err)
 		}
 
-		// Ignore root path and non-dirs
-		if path == modulesDir || !info.IsDir() {
+		// Ignore non-dirs
+		if !info.IsDir() {
 			return nil
 		}
 
@@ -209,6 +209,13 @@ func getModulePaths(modulesDir string) ([]string, error) {
 		if isExistsOnFilesystem(path, ChartConfigFilename) {
 			chartDirs = append(chartDirs, path)
 		}
+
+		// root path can be module dir, if we run one module for local testing
+		// usually, root dir contains another modules and should not be ignored
+		if path == modulesDir {
+			return nil
+		}
+
 		return filepath.SkipDir
 	})
 
