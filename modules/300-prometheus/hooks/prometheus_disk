@@ -161,7 +161,7 @@ function calculate_disk_size_and_retention() {
     if values::has prometheus.internal.prometheus${prometheus_name^}.diskUsage; then
       disk_usage="$(values::get prometheus.internal.prometheus${prometheus_name^}.diskUsage)"
 
-      if [ "$volume_expansion_mode" != "offline" ] && [ "$is_sc_allow_expansion" == "true" ] && (( $disk_usage > 90 )) ; then
+      if [ "$volume_expansion_mode" != "offline" ] && [ "$is_sc_allow_expansion" == "true" ] && (( $disk_usage > 77 )) ; then
         new_pvc_size_gigabytes=$(( pvc_size_gigabytes + 5 ))
 
         disk_resize_limit_gigabytes="300"
