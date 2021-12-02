@@ -72,9 +72,12 @@ spec:
                 waitLoadBalancerOnTerminating:
                   x-kubernetes-int-or-string: true
                   type: integer
-                  default: 60
                   description: |
                     The number of seconds before the /healthz location will start to return a 500 code when the pod enters the Terminating state.
+                    This parameter has default values:
+                      - 0s - for HostWithFailover
+                      - 60s - for HostPort and HostPortWithProxyProtocol
+                      - 120s - for LoadBalancer and LoadBalancerWithProxyProtocol
                 chaosMonkey:
                   type: boolean
                   default: false
