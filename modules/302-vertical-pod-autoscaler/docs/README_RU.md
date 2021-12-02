@@ -38,4 +38,4 @@ VPA состоит из 3х компонентов:
 
 При изменении ресурсов компонентом Updater это происходит с помощью [Eviction API](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/#the-eviction-api), поэтому учитываются `Pod Disruption Budget` для обновляемых Pod'ов.
 
-![Архитектура VPA](https://raw.githubusercontent.com/kubernetes/community/master/contributors/design-proposals/autoscaling/images/vpa-architecture.png)
+![Архитектура VPA](https://raw.githubusercontent.com/kubernetes/design-proposals-archive/acc25e14ca83dfda4f66d8cb1f1b491f26e78ffe/autoscaling/images/vpa-architecture.png)
