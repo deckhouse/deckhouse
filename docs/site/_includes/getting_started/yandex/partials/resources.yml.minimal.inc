@@ -42,6 +42,8 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
+  # [<en>] describes on which nodes the component will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<ru>] описывает, на каких узлах будет находиться компонент. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker
 ---
