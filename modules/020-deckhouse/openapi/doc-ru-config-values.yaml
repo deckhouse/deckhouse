@@ -29,9 +29,9 @@ properties:
         items:
           properties:
             from:
-              description: Время начала окна обновления.
+              description: Время начала окна обновления (в часовом поясе UTC).
             to:
-              description: Время окончания окна обновления.
+              description: Время окончания окна обновления (в часовом поясе UTC).
             days:
               description: Дни недели, в которые применяется окно обновлений.
   nodeSelector:

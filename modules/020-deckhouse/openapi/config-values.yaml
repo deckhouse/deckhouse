@@ -60,12 +60,12 @@ properties:
               type: string
               pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
               example: '13:00'
-              description: Start time of the update window.
+              description: Start time of the update window (UTC timezone).
             to:
               type: string
               pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
               example: '18:30'
-              description: End time of the update window.
+              description: End time of the update window (UTC timezone).
             days:
               type: array
               description: The days of the week on which the update window is applied.

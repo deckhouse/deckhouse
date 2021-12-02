@@ -464,12 +464,12 @@ spec:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
                                 example: '13:00'
-                                desription: 'Start time of disruptive update window.'
+                                desription: 'Start time of disruptive update window (UTC timezone).'
                               to:
                                 type: string
                                 pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
                                 example: '18:30'
-                                description: 'End time of disruptive update window.'
+                                description: 'End time of disruptive update window (UTC timezone).'
                               days:
                                 type: array
                                 description: 'Days of the week when node could be updated.'
