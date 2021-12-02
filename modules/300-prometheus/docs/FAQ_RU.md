@@ -198,3 +198,128 @@ route:
 - `vpa.longtermMaxMemory`
 - `vpa.maxCPU`
 - `vpa.maxMemory`
+
+## Как получить доступ к метрикам Prometheus из Lens?
+
+> ⛔ **_Внимание!!!_** Использование данной конфигурации создает сервис в котором метрики Prometheus доступны без авторизации.
+
+Для обеспечения доступа Lens к метрикам Prometheus необходимо выполнить деплой ресурсов в кластере:
+<details>
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lens-proxy
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-lens-proxy
+  namespace: lens-proxy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-lens-proxy:prometheus-access
+rules:
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["prometheuses/http"]
+  resourceNames: ["main", "longterm"]
+  verbs: ["get", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-lens-proxy:prometheus-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-lens-proxy:prometheus-access
+subjects:
+- kind: ServiceAccount
+  name: prometheus-lens-proxy
+  namespace: lens-proxy
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-lens-proxy-sa
+  namespace: lens-proxy
+  annotations:
+    kubernetes.io/service-account.name: prometheus-lens-proxy
+type: kubernetes.io/service-account-token
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-lens-proxy-conf
+  namespace: lens-proxy
+data:
+  prometheus.conf.template: |
+    server {
+      listen 80 default_server;
+      location / {
+        proxy_http_version 1.1;
+        proxy_set_header Authorization "Bearer ${BEARER_TOKEN}";
+        proxy_pass https://prometheus.d8-monitoring:9090/;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-lens-proxy
+  namespace: lens-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-lens-proxy
+  template:
+    metadata:
+      labels:
+        app: prometheus-lens-proxy
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21.4-alpine
+        env:
+        - name: BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: prometheus-lens-proxy-sa
+              key: token
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /etc/nginx/templates
+          readOnly: true
+          name: prometheus-lens-proxy-conf
+      serviceAccountName: prometheus-lens-proxy
+      volumes:
+      - name: prometheus-lens-proxy-conf
+        configMap:
+          name: prometheus-lens-proxy-conf
+          items:
+            - key: prometheus.conf.template
+              path: prometheus.conf.template
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-lens-proxy
+  namespace: lens-proxy
+spec:
+  selector:
+    app: prometheus-lens-proxy
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
+```
+</details>
+
+После деплоя ресурсов метрики Prometheus будут доступны по адресу `lens-proxy/prometheus-lens-proxy:8080`.
+
