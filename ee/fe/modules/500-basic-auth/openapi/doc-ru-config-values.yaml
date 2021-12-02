@@ -1,0 +1,31 @@
+type: object
+properties:
+  locations:
+    description: |
+      Eсли нам необходимо создать несколько location'ов для разных приложений с разной авторизацией, то добавляем данный параметр.
+    items:
+      properties:
+        location:
+          description: Это location, для которого будут определяться `whitelist` и `users`, в конфиге nginx `root` заменяется на `/`.
+        whitelist:
+          description: Список IP адресов и подсетей для которых разрешена авторизация без логина/пароля.
+        users:
+          description: |
+            Список пользователей в формате `username: "password"`.
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
