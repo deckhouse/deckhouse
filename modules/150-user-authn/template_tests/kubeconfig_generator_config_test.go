@@ -50,7 +50,7 @@ func assertDefaultCluster(cl gjson.Result) {
 	Expect(cl.Get("client_secret").String()).To(Equal("kubernetesDexClientAppSecretPlainstring"))
 	Expect(cl.Get("issuer").String()).To(Equal("https://dex.example.com/"))
 	Expect(cl.Get("k8s_master_uri").String()).To(Equal("https://api.example.com"))
-	Expect(cl.Get("name").String()).To(Equal("example.com"))
+	Expect(cl.Get("name").String()).To(Equal("api.example.com"))
 	Expect(cl.Get("redirect_uri").String()).To(Equal("https://kubeconfig.example.com/callback/"))
 	Expect(cl.Get("short_description").String()).To(Equal("https://api.example.com"))
 	Expect(cl.Get("scopes.0").String()).To(Equal("audience:server:client_id:kubernetes"))
@@ -137,7 +137,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubeconfig-generator-
 
 					jsonBytes := assertCreateConfig(hec)
 
-					Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("kubeconfigGeneratorMasterCAText\n"))
+					Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("kubeconfigGeneratorMasterCAText"))
 				})
 			})
 
@@ -152,7 +152,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubeconfig-generator-
 
 						jsonBytes := assertCreateConfig(hec)
 
-						Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("kubernetesCAPlainstring\n"))
+						Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("kubernetesCAPlainstring"))
 					})
 				})
 
@@ -166,7 +166,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubeconfig-generator-
 
 						jsonBytes := assertCreateConfig(hec)
 
-						Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("publishedAPIKubeconfigGeneratorMasterCAText\n"))
+						Expect(gjson.GetBytes(jsonBytes, "clusters.0.k8s_ca_pem").String()).To(Equal("publishedAPIKubeconfigGeneratorMasterCAText"))
 					})
 				})
 
@@ -227,7 +227,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubeconfig-generator-
 					Expect(cl.Get("client_secret").String()).To(Equal("kubernetesDexClientAppSecretPlainstring"))
 					Expect(cl.Get("issuer").String()).To(Equal("https://dex.example.com/"))
 					Expect(cl.Get("k8s_master_uri").String()).To(Equal(a.masterURI))
-					Expect(cl.Get("name").String()).To(Equal(fmt.Sprintf("example.com.%v", a.id)))
+					Expect(cl.Get("name").String()).To(Equal(fmt.Sprintf(a.id)))
 					Expect(cl.Get("redirect_uri").String()).To(Equal(fmt.Sprintf("https://kubeconfig.example.com/callback/%v", i)))
 					Expect(cl.Get("short_description").String()).To(Equal(a.desc))
 					Expect(cl.Get("scopes.0").String()).To(Equal("audience:server:client_id:kubernetes"))
@@ -239,7 +239,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubeconfig-generator-
 
 				jsonBytes := assertCreateConfig(hec)
 
-				Expect(gjson.GetBytes(jsonBytes, "clusters.1.k8s_ca_pem").String()).To(Equal(fmt.Sprintf("%v\n", apis[0].masterCA)))
+				Expect(gjson.GetBytes(jsonBytes, "clusters.1.k8s_ca_pem").String()).To(Equal(apis[0].masterCA))
 			})
 
 			It("Should render k8s_ca_pem param as kubernetesCA if masterCA is not present", func() {
@@ -247,7 +247,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubeconfig-generator-
 
 				jsonBytes := assertCreateConfig(hec)
 
-				Expect(gjson.GetBytes(jsonBytes, "clusters.2.k8s_ca_pem").String()).To(Equal("kubernetesCAPlainstring\n"))
+				Expect(gjson.GetBytes(jsonBytes, "clusters.2.k8s_ca_pem").String()).To(Equal("kubernetesCAPlainstring"))
 			})
 		})
 	})
