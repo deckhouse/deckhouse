@@ -165,7 +165,8 @@
         Usually, this alert means that the Deckhouse Pod is having difficulties with connecting to the Internet.
 
   - alert: D8DeckhouseQueueIsHung
-    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*"}[__SCRAPE_INTERVAL_X_3__])) > 10
+    expr: max by (pod, instance, queue) (min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector"}[__SCRAPE_INTERVAL_X_3__])) != 0
+    for: 20m
     labels:
       severity_level: "7"
       tier: cluster
@@ -179,7 +180,7 @@
       plk_labels_as_annotations: "instance,pod"
       summary: The {{ $labels.queue }} Deckhouse queue has hung; there are {{ $value }} task(s) in the queue.
       description: |
-        Deckhouse cannot process the {{ $labels.queue }} queue with {{ $value }} tasks piled up.
+        Deckhouse cannot finish processing of the {{ $labels.queue }} queue with {{ $value }} tasks piled up.
 
         Please, refer to the corresponding logs: `kubectl -n d8-system logs -f -l app=deckhouse`.
 
