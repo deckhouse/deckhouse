@@ -427,9 +427,6 @@ spec:
                     The section with parameters of custom HTTP errors.
 
                     All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all Ingress nginx controllers**.
-                    * `serviceName` — the name of the service to use as the custom default backend.
-                    * `namespace` — the name of the namespace where the custom default backend service is running.
-                    * `codes` — a list of response codes (an array) for which the request will be redirected to the custom default backend.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:
