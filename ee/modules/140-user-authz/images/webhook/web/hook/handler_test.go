@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"fmt"
+	"io/ioutil"
 	"log"
 	"regexp"
 	"testing"
@@ -113,6 +115,20 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{},
 		},
 		{
+			Name:  "Cluster scoped. Bad request - group and version are empty",
+			Group: []string{"normal"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "",
+				Version:   "",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "webhook: bad request, group and groupVersion are empty",
+			},
+		},
+		{
 			Name:  "ClusterScoped",
 			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
@@ -124,6 +140,34 @@ func TestAuthorizeRequest(t *testing.T) {
 			ResultStatus: WebhookRequestStatus{
 				Denied: false,
 				Reason: "",
+			},
+		},
+		{
+			Name:  "Cluster scoped. Without version. Version exists",
+			Group: []string{"normal"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "test",
+				Version:   "",
+				Resource:  "object2",
+				Namespace: "",
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: false,
+				Reason: "",
+			},
+		},
+		{
+			Name:  "Cluster scoped. Without version. Version does not exists",
+			Group: []string{"normal"},
+			Attributes: WebhookResourceAttributes{
+				Group:     "not.exists",
+				Version:   "",
+				Resource:  "object1",
+				Namespace: "",
+			},
+			ResultStatus: WebhookRequestStatus{
+				Denied: true,
+				Reason: "webhook: kubernetes api request error",
 			},
 		},
 		{
@@ -190,13 +234,16 @@ func TestAuthorizeRequest(t *testing.T) {
 			allRegex, _ := regexp.Compile("^.*$")
 
 			handler := &Handler{
-				logger: &log.Logger{},
+				logger: log.New(ioutil.Discard, "", 0),
 				cache: &dummyCache{
 					data: map[string]map[string]bool{
 						"test/v1": {
 							"object1": true,
 							"object2": false,
 						},
+					},
+					preferredVersions: map[string]string{
+						"test": "v1",
 					},
 				},
 				directory: map[string]map[string]DirectoryEntry{
@@ -244,11 +291,20 @@ func TestAuthorizeRequest(t *testing.T) {
 }
 
 type dummyCache struct {
-	data map[string]map[string]bool
+	data              map[string]map[string]bool
+	preferredVersions map[string]string
 }
 
 func (d *dummyCache) Get(api, key string) (bool, error) {
 	return d.data[api][key], nil
+}
+
+func (d *dummyCache) GetPreferredVersion(group string) (string, error) {
+	if v, ok := d.preferredVersions[group]; ok {
+		return v, nil
+	}
+
+	return "", fmt.Errorf("not found")
 }
 
 func TestWrapRegexpTest(t *testing.T) {
