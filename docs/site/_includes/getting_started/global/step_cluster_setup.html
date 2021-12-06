@@ -20,6 +20,7 @@
       If using existing certificates (including Self-Signed), you need to change the <a href="/en/documentation/v1/deckhouse-configure-global.html#parameters">global settings</a> in the <code>modules.https</code> section.
     </span>
   </div>
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
   <div class="form__row">
     <label class="label" title="Specify the prefix that will be used when creating resources in the cloud">
       Cloud resources prefix
@@ -46,8 +47,10 @@
        This key is passed to the cloud provider during the virtual machine creation process.
     </span>
   </div>
+{%- endunless %}
 </div>
 
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
 <!-- include getting_started/aws/STEP_PREP_CONF_RU.md -->
 ## Select layout
 
@@ -89,6 +92,8 @@ Preset — the structure of nodes in the cluster. There are several pre-defined 
 {{ preset[1].description[page.lang] }}
 </div>
 {% endfor %}
+{%- endunless %}
+
 
 <script type="text/javascript">
 {% include getting_started/global/partials/getting-started-setup.js.liquid %}

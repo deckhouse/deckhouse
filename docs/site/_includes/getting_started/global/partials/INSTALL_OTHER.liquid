@@ -1,21 +1,21 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container, as well as SSH keys for access to the master nodes. Run on the **[personal computer](step2.html#installation-process)**:
+Use a Docker image to install the **Deckhouse Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %}, as well as SSH keys for access to the master nodes{% endif %}. Run on the **[personal computer](step2.html#installation-process)**:
 
 {%- if revision == 'ee' %}
 {% snippetcut selector="docker-login" %}
 ```text
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+{% endif %}{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
 {% endsnippetcut %}
 {% else %}
 {% snippetcut %}
 ```shell
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" \
-{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/" \
+{% endif %}{% if page.platform_type == "existing" %} -v "$PWD/kubeconfig:/kubeconfig" \
 {% endif %}{% if page.platform_type == "cloud" %} -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 {% endsnippetcut %}
@@ -86,5 +86,16 @@ dhctl bootstrap-phase abort \
 {%- endif %}
 
 After the installation is complete, you will be returned to the command line.
+
+{% if page.platform_type == "existing" -%}
+To create an Ingress controller and a user for cluster internal services, run the following command:
+{% snippetcut %}
+```shell
+dhctl bootstrap-phase create-resources \
+  --kubeconfig=/kubeconfig \
+  --resources /resources.yaml
+```
+{% endsnippetcut %}
+{%- endif %}
 
 Almost everything is ready for a fully-fledged Deckhouse Platform to work!
