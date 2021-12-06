@@ -25,6 +25,7 @@ const (
 	noNamespaceAccessReason      = "user has no access to the namespace"
 	namespaceLimitedAccessReason = "making cluster scoped requests for namespaced resources are not allowed"
 	internalErrorReason          = "webhook: kubernetes api request error"
+	badRequestReason             = "webhook: bad request, group and groupVersion are empty"
 )
 
 var _ http.Handler = (*Handler)(nil)
@@ -121,10 +122,35 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 	return request
 }
 
+func (h *Handler) fillDenyRequest(request *WebhookRequest, reason, logEntry string) *WebhookRequest {
+	if logEntry != "" {
+		h.logger.Println(logEntry)
+	}
+
+	request.Status.Denied = true
+	request.Status.Reason = reason
+
+	return request
+}
+
 func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *DirectoryEntry) *WebhookRequest {
 	// if resource is not nil and namespace is nil
 	apiGroup := request.Spec.ResourceAttributes.Version
 	group := request.Spec.ResourceAttributes.Group
+
+	if apiGroup == "" {
+		if group == "" {
+			// could not check whether resource is namespaced or not (from cache) - deny access
+			return h.fillDenyRequest(request, badRequestReason, "")
+		}
+
+		var err error
+		apiGroup, err = h.cache.GetPreferredVersion(group)
+		if err != nil {
+			// could not check whether resource is namespaced or not (from cache) - deny access
+			return h.fillDenyRequest(request, internalErrorReason, err.Error())
+		}
+	}
 
 	if group != "" {
 		apiGroup = group + "/" + apiGroup
@@ -133,15 +159,11 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 	namespaced, err := h.cache.Get(apiGroup, request.Spec.ResourceAttributes.Resource)
 	if err != nil {
 		// could not check whether resource is namespaced or not (from cache) - deny access
-		h.logger.Println(err)
-
-		request.Status.Denied = true
-		request.Status.Reason = internalErrorReason
+		h.fillDenyRequest(request, internalErrorReason, err.Error())
 
 	} else if namespaced && hasLimitedNamespaces(entry) {
 		// we should not allow cluster scoped requests for namespaced objects if namespaces access is limited
-		request.Status.Denied = true
-		request.Status.Reason = namespaceLimitedAccessReason
+		h.fillDenyRequest(request, namespaceLimitedAccessReason, "")
 	}
 
 	return request
