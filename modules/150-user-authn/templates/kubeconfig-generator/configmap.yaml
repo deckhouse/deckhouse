@@ -74,5 +74,5 @@ data:
   scopes:
   - audience:server:client_id:kubernetes
 
-  k8s_ca_pem: {{ $cluster.masterCA }}
+  k8s_ca_pem: {{ $cluster.masterCA | quote }}
 {{- end }}
