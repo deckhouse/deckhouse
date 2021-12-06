@@ -82,6 +82,9 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		userAuthzWebhookURLPath = "controlPlaneManager.apiserver.authz.webhookURL"
 		userAuthzWebhookCAPath  = "controlPlaneManager.apiserver.authz.webhookCA"
 
+		userAuthenticationWebhookURLPath = "controlPlaneManager.apiserver.authn.webhookURL"
+		userAuthenticationWebhookCAPath  = "controlPlaneManager.apiserver.authn.webhookCA"
+
 		userAuthnOIDCIssuerURLPath     = "controlPlaneManager.apiserver.authn.oidcIssuerURL"
 		userAuthnOIDCIssuerAddressPath = "controlPlaneManager.apiserver.authn.oidcIssuerAddress"
 		userAuthnOIDCIssuerCAPath      = "controlPlaneManager.apiserver.authn.oidcCA"
@@ -89,9 +92,6 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 
 	authzWebhookURLExists := input.ConfigValues.Exists(userAuthzWebhookURLPath)
 	authzWebhookCAExists := input.ConfigValues.Exists(userAuthzWebhookCAPath)
-
-	authnOIDCIssuerExists := input.ConfigValues.Exists(userAuthnOIDCIssuerURLPath)
-	authnOIDCCAExists := input.ConfigValues.Exists(userAuthnOIDCIssuerCAPath)
 
 	if !authzWebhookURLExists && !authzWebhookCAExists {
 		// nothing was configured by hand
@@ -104,10 +104,13 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		}
 	}
 
+	authnOIDCIssuerExists := input.ConfigValues.Exists(userAuthnOIDCIssuerURLPath)
+	authnOIDCCAExists := input.ConfigValues.Exists(userAuthnOIDCIssuerCAPath)
+
 	if !authnOIDCIssuerExists && !authnOIDCCAExists {
 		// nothing was configured by hand
-		if len(authNData) > 0 {
-			input.Values.Set(userAuthnOIDCIssuerURLPath, authNData["oidcIssuerURL"])
+		if issuerURL, ok := authNData["oidcIssuerURL"]; ok {
+			input.Values.Set(userAuthnOIDCIssuerURLPath, issuerURL)
 			input.Values.Set(userAuthnOIDCIssuerCAPath, input.Values.Get("global.discovery.kubernetesCA").String())
 			if address, ok := authNData["oidcIssuerAddress"]; ok {
 				input.Values.Set(userAuthnOIDCIssuerAddressPath, address)
@@ -116,6 +119,20 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 			input.Values.Remove(userAuthnOIDCIssuerURLPath)
 			input.Values.Remove(userAuthnOIDCIssuerCAPath)
 			input.Values.Remove(userAuthnOIDCIssuerAddressPath)
+		}
+	}
+
+	authnWebhookURLExists := input.ConfigValues.Exists(userAuthenticationWebhookURLPath)
+	authnWebhookCAExists := input.ConfigValues.Exists(userAuthenticationWebhookCAPath)
+
+	if !authnWebhookURLExists && !authnWebhookCAExists {
+		// nothing was configured by hand
+		if webhookURL, ok := authNData["url"]; ok {
+			input.Values.Set(userAuthenticationWebhookURLPath, webhookURL)
+			input.Values.Set(userAuthenticationWebhookCAPath, authNData["ca"])
+		} else {
+			input.Values.Remove(userAuthenticationWebhookURLPath)
+			input.Values.Remove(userAuthenticationWebhookCAPath)
 		}
 	}
 

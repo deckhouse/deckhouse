@@ -55,6 +55,16 @@ properties:
             type: string
             description: |
               OIDC provider CA.
+          webhookURL:
+            type: string
+            description: |
+              Authentication webhook URL.
+            x-examples:
+              - "https://127.0.0.1:40443/"
+          webhookCA:
+            type: string
+            description: |
+              Authorization webhook CA.
       authz:
         type: object
         default: {}
