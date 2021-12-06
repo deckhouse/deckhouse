@@ -32,6 +32,7 @@ const (
 
 type Cache interface {
 	Get(string, string) (bool, error)
+	GetPreferredVersion(group string) (string, error)
 }
 
 var _ Cache = (*NamespacedDiscoveryCache)(nil)
@@ -39,15 +40,36 @@ var _ Cache = (*NamespacedDiscoveryCache)(nil)
 type cacheEntry struct {
 	TTL     time.Duration
 	AddTime time.Time
-
-	Data map[string]bool
 }
 
 func newCacheEntry(addTime time.Time) *cacheEntry {
 	return &cacheEntry{
 		AddTime: addTime,
-		Data:    make(map[string]bool),
 		TTL:     defaultTTL,
+	}
+}
+
+type namespacedCacheEntry struct {
+	*cacheEntry
+	Data map[string]bool
+}
+
+func newNamespacedCacheEntry(addTime time.Time) *namespacedCacheEntry {
+	return &namespacedCacheEntry{
+		cacheEntry: newCacheEntry(addTime),
+		Data:       make(map[string]bool),
+	}
+}
+
+type preferredVersionCacheEntry struct {
+	*cacheEntry
+	Version string
+}
+
+func newPreferredVersionCacheEntry(addTime time.Time, version string) *preferredVersionCacheEntry {
+	return &preferredVersionCacheEntry{
+		cacheEntry: newCacheEntry(addTime),
+		Version:    version,
 	}
 }
 
@@ -57,7 +79,10 @@ type NamespacedDiscoveryCache struct {
 	client *http.Client
 
 	mu   sync.RWMutex
-	data map[string]*cacheEntry
+	data map[string]*namespacedCacheEntry
+
+	muPv              sync.RWMutex
+	preferredVersions map[string]*preferredVersionCacheEntry
 
 	now func() time.Time
 
@@ -66,9 +91,10 @@ type NamespacedDiscoveryCache struct {
 
 func NewNamespacedDiscoveryCache(logger *log.Logger) *NamespacedDiscoveryCache {
 	c := &NamespacedDiscoveryCache{
-		logger: logger,
-		data:   make(map[string]*cacheEntry),
-		now:    time.Now,
+		logger:            logger,
+		data:              make(map[string]*namespacedCacheEntry),
+		preferredVersions: make(map[string]*preferredVersionCacheEntry),
+		now:               time.Now,
 
 		kubernetesAPIAddress: kubernetesAPIAddress,
 	}
@@ -109,29 +135,13 @@ func (c *NamespacedDiscoveryCache) initClient() {
 }
 
 func (c *NamespacedDiscoveryCache) renewCacheOnce(apiGroup string, req *http.Request) error {
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("renew cache requesting: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("renew cache decoding response: %w", err)
-	}
-
-	if resp.StatusCode/100 > 2 {
-		return fmt.Errorf("kube response error: %s", respBody)
-	}
-
 	var groupedResp Response
-	err = json.Unmarshal(respBody, &groupedResp)
+	_, err := c.execRequest(req, "renew namespaced cache", &groupedResp)
 	if err != nil {
-		return fmt.Errorf("renew cache decoding response: %w", err)
+		return err
 	}
 
-	cache := newCacheEntry(c.now())
+	cache := newNamespacedCacheEntry(c.now())
 	for _, resource := range groupedResp.Resources {
 		cache.Data[resource.Name] = resource.Namespaced
 	}
@@ -163,7 +173,67 @@ func (c *NamespacedDiscoveryCache) renewCache(apiGroup string) error {
 	})
 }
 
-func (c *NamespacedDiscoveryCache) getFromCache(apiGroup string) (*cacheEntry, bool) {
+func (c *NamespacedDiscoveryCache) requestPreferredVersion(group string) (string, error) {
+	path := "/apis/" + group
+
+	preferredVersion := ""
+
+	err := Retry(func() (bool, error) {
+		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+path, nil)
+		if err != nil {
+			return false, fmt.Errorf("request preferred version build error: %w", err)
+		}
+
+		var apiGroup APIGroupResponse
+		rawRespBody, err := c.execRequest(req, "request preferred version", &apiGroup)
+		if err != nil {
+			return true, err
+		}
+
+		preferredVersion = apiGroup.PreferredVersion.Version
+		if preferredVersion == "" {
+			return true, fmt.Errorf("empty preffered version parsed from kube response: %s", rawRespBody)
+		}
+
+		return false, nil
+	})
+
+	return preferredVersion, err
+}
+
+func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group string) string {
+	c.muPv.RLock()
+	defer c.muPv.RUnlock()
+
+	entry, ok := c.preferredVersions[group]
+
+	if ok && !c.isEntryExpired(entry.cacheEntry) {
+		return entry.Version
+	}
+
+	return ""
+}
+
+func (c *NamespacedDiscoveryCache) GetPreferredVersion(group string) (string, error) {
+	version := c.preferredVersionFromCache(group)
+	if version != "" {
+		return version, nil
+	}
+
+	version, err := c.requestPreferredVersion(group)
+	if err != nil {
+		return "", err
+	}
+
+	c.muPv.Lock()
+	defer c.muPv.Unlock()
+
+	c.preferredVersions[group] = newPreferredVersionCacheEntry(c.now(), version)
+
+	return version, nil
+}
+
+func (c *NamespacedDiscoveryCache) getFromCache(apiGroup string) (*namespacedCacheEntry, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -182,7 +252,7 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 		}
 
 		namespacedInfo, _ = c.getFromCache(apiGroup)
-	case c.now().After(namespacedInfo.AddTime.Add(namespacedInfo.TTL)):
+	case c.isEntryExpired(namespacedInfo.cacheEntry):
 		// cache is expired
 		if err := c.renewCache(apiGroup); err != nil {
 			// if there is an error, we could just use stale cache
@@ -210,6 +280,35 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	return namespaced, nil
 }
 
+func (c *NamespacedDiscoveryCache) isEntryExpired(e *cacheEntry) bool {
+	return c.now().After(e.AddTime.Add(e.TTL))
+}
+
+func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string, result interface{}) (string, error) {
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("%s: requesting error: %w", logTag, err)
+	}
+
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("%s: decoding response error: %w", logTag, err)
+	}
+
+	if resp.StatusCode/100 > 2 {
+		return "", fmt.Errorf("%s: kube response error: %s", logTag, respBody)
+	}
+
+	err = json.Unmarshal(respBody, result)
+	if err != nil {
+		return "", fmt.Errorf("%s: do not unmarshal response: %w", logTag, err)
+	}
+
+	return string(respBody), nil
+}
+
 // Resource is a single entry of the /apis/.../... endpoint response.
 type Resource struct {
 	Name       string `json:"name"`
@@ -219,4 +318,16 @@ type Resource struct {
 // Response is a /apis/.../... endpoint response.
 type Response struct {
 	Resources []Resource `json:"resources"`
+}
+
+type PreferredVersion struct {
+	// groupVersion specifies the API group and version in the form "group/version"
+	GroupVersion string `json:"groupVersion"`
+	// version specifies the version in the form of "version". This is to save
+	// the clients the trouble of splitting the GroupVersion.
+	Version string `json:"version"`
+}
+
+type APIGroupResponse struct {
+	PreferredVersion PreferredVersion `json:"preferredVersion"`
 }

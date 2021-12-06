@@ -77,6 +77,50 @@ func TestCacheGet(t *testing.T) {
 	}
 }
 
+func TestCachePreferredVersionGet(t *testing.T) {
+	cache := newTestPreferredVersionCache()
+
+	const group = "acme.cert-manager.io"
+	const expectedVersion = "v1"
+
+	version := cache.preferredVersionFromCache(group)
+	if version != "" {
+		t.Fatalf("cache does not empty")
+	}
+
+	version, err := cache.GetPreferredVersion(group)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if version != expectedVersion {
+		t.Fatalf("acme.cert-manager.io: %v != %v", version, expectedVersion)
+	}
+
+	version = cache.preferredVersionFromCache(group)
+	if version == "" {
+		t.Fatal("version for group does not save in cache")
+	}
+
+	now := cache.now()
+	// change client here to not be able to update the cache
+	cache.now = func() time.Time { return now.Add(time.Hour * 3) }
+
+	version = cache.preferredVersionFromCache(group)
+	if version != "" {
+		t.Fatalf("version does not expire")
+	}
+
+	version, err = cache.GetPreferredVersion(group)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if version != expectedVersion {
+		t.Fatalf("acme.cert-manager.io did not get after expire: %v != %v", version, expectedVersion)
+	}
+}
+
 func TestCacheGetIfNoResource(t *testing.T) {
 	cache := newTestCache()
 
@@ -142,7 +186,28 @@ func newTestCache() *NamespacedDiscoveryCache {
 	cache.now = func() time.Time { return now }
 
 	cache.logger = log.New(ioutil.Discard, "", log.LstdFlags)
-	cache.data = make(map[string]*cacheEntry)
+	cache.data = make(map[string]*namespacedCacheEntry)
+	cache.preferredVersions = make(map[string]*preferredVersionCacheEntry)
+
+	server.Config.ErrorLog = cache.logger
+
+	return &cache
+}
+
+func newTestPreferredVersionCache() *NamespacedDiscoveryCache {
+	server := newPreferredVersionTestServer()
+
+	cache := NamespacedDiscoveryCache{}
+
+	cache.client = server.Client()
+	cache.kubernetesAPIAddress = server.URL
+
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	cache.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	cache.data = make(map[string]*namespacedCacheEntry)
+	cache.preferredVersions = make(map[string]*preferredVersionCacheEntry)
 
 	server.Config.ErrorLog = cache.logger
 
@@ -155,6 +220,42 @@ func newTestServer() *httptest.Server {
 		w.Write([]byte(testResponse))
 	}))
 }
+
+func newPreferredVersionTestServer() *httptest.Server {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(preferredVersionResponse))
+	}))
+}
+
+const preferredVersionResponse = `{
+  "kind": "APIGroup",
+  "apiVersion": "v1",
+  "name": "acme.cert-manager.io",
+  "versions": [
+    {
+      "groupVersion": "acme.cert-manager.io/v1",
+      "version": "v1"
+    },
+    {
+      "groupVersion": "acme.cert-manager.io/v1beta1",
+      "version": "v1beta1"
+    },
+    {
+      "groupVersion": "acme.cert-manager.io/v1alpha3",
+      "version": "v1alpha3"
+    },
+    {
+      "groupVersion": "acme.cert-manager.io/v1alpha2",
+      "version": "v1alpha2"
+    }
+  ],
+  "preferredVersion": {
+    "groupVersion": "acme.cert-manager.io/v1",
+    "version": "v1"
+  }
+}
+`
 
 const testResponse = `{
   "kind": "APIResourceList",
