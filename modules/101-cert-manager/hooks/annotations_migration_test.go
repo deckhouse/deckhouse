@@ -45,6 +45,8 @@ metadata:
 
 		It("Ingress annotations should change", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(HaveLen(1))
+
 			ing := f.KubernetesResource("Ingress", "default", "test")
 			Expect(ing.Field("metadata.annotations.kubernetes\\.io/tls-acme").Exists()).To(BeTrue())
 			Expect(ing.Field("metadata.annotations.certmanager\\.k8s\\.io/cluster-issuer").String()).To(Equal("letsencrypt"))
@@ -104,6 +106,9 @@ metadata:
 
 		It("Ingress annotations should not change", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			// Check that hook did not generate excessive patches for object that should not be mutated
+			Expect(f.PatchCollector.Operations()).To(HaveLen(0))
+
 			ing := f.KubernetesResource("Ingress", "default", "test")
 			Expect(ing.Field("metadata.annotations.kubernetes\\.io/tls-acme").Exists()).To(BeTrue())
 			Expect(ing.Field("metadata.annotations.certmanager\\.k8s\\.io/cluster-issuer").String()).To(Equal("letsencrypt"))
