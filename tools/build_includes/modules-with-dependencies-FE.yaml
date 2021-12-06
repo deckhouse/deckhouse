@@ -9,11 +9,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/400-nginx-ingress
-  to: /deckhouse/modules/400-nginx-ingress
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/fe/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   stageDependencies:

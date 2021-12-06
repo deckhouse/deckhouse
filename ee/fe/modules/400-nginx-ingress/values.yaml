@@ -1,4 +1,0 @@
-nginxIngress:
-  additionalControllers: []
-  rewriteTargetMigration: false
-  internal: {}

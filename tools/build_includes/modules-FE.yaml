@@ -3,8 +3,6 @@
   to: /deckhouse/modules/340-extended-monitoring
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
-- add: /ee/fe/modules/400-nginx-ingress
-  to: /deckhouse/modules/400-nginx-ingress
 - add: /ee/fe/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
 - add: /ee/fe/modules/450-network-gateway
