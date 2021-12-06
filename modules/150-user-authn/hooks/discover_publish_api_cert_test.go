@@ -18,111 +18,144 @@ package hooks
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+type inputPublishAPICACert struct {
+	manifests      string
+	httpMode       string
+	publishAPIMode string
+}
+
 var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
 	f := HookExecutionConfigInit(
-		`{"userAuthn":{"internal": {}, "https": {"mode": "CertManager"}}}`,
+		`{"userAuthn":{"publishAPI": {"enabled": true, "https":{"mode": "SelfSigned"}}, "internal": {}, "https": {"mode": "CertManager"}}}`,
 		"",
 	)
+	selfSignedCertSecret := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-tls-selfsigned
+  namespace: d8-user-authn
+data:
+  ca.crt: a3ViZXJuZXRlcy10bHMtc2VsZnNpZ25lZA==
+`
+	certManagerCertSecret := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-tls
+  namespace: d8-user-authn
+data:
+  ca.crt: a3ViZXJuZXRlcy10bHM=
+`
+	customCertSecret := `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-tls-customcertificate
+  namespace: d8-user-authn
+data:
+  ca.crt: a3ViZXJuZXRlcy10bHMtY3VzdG9tY2VydGlmaWNhdGU=
+`
 
-	Context("Empty cluster", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(""))
+	DescribeTable("publishAPI discovery cert",
+		func(in inputPublishAPICACert, out string) {
+			f.BindingContexts.Set(f.KubeStateSet(in.manifests))
+			f.ValuesSet("userAuthn.publishAPI.https.mode", in.publishAPIMode)
+			f.ValuesSet("userAuthn.https.mode", in.httpMode)
+
 			f.RunHook()
-		})
 
-		It("Should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-		})
-
-		Context("After adding secret", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kubernetes-tls
-  namespace: d8-user-authn
-data:
-  ca.crt: dGVzdA==
-`, 2))
-				f.RunHook()
-			})
-
-			It("Should add internal values", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-				Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("test"))
-			})
-
-			Context("After updating secret", func() {
-				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kubernetes-tls
-  namespace: d8-user-authn
-data:
-  ca.crt: dGVzdC1uZXh0
-`, 2))
-					f.RunHook()
-				})
-
-				It("Should update internal values", func() {
-					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-
-					Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("test-next"))
-				})
-			})
-		})
-	})
-
-	Context("Cluster with secret", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kubernetes-tls
-  namespace: d8-user-authn
-data:
-  ca.crt: dGVzdA==
-`, 2))
-			f.RunHook()
-		})
-		It("Should add internal values", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("test"))
-		})
-	})
-
-	Context("Cluster with secret with OnlyInURI mode", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kubernetes-tls
-  namespace: d8-user-authn
-data:
-  ca.crt: dGVzdA==
-`, 2))
-			f.ValuesSet("userAuthn.https.mode", "OnlyInURI")
-			f.RunHook()
-		})
-
-		It("Should not add values", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
-			Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(""))
-		})
-	})
+			Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(out))
+		},
+		Entry("On first start: SelfSigned",
+			inputPublishAPICACert{
+				manifests:      "",
+				publishAPIMode: "SelfSigned",
+				httpMode:       "CertManager",
+			},
+			"",
+		),
+		Entry("With every secret: SelfSigned",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
+				publishAPIMode: "SelfSigned",
+				httpMode:       "CertManager",
+			},
+			"kubernetes-tls-selfsigned",
+		),
+		Entry("Without secret for self signed: SelfSigned",
+			inputPublishAPICACert{
+				manifests:      certManagerCertSecret + customCertSecret,
+				publishAPIMode: "SelfSigned",
+				httpMode:       "CertManager",
+			},
+			"",
+		),
+		Entry("On first start: SelfSigned",
+			inputPublishAPICACert{
+				manifests:      "",
+				publishAPIMode: "SelfSigned",
+				httpMode:       "CertManager",
+			},
+			"",
+		),
+		Entry("With every secret: Global: CertManager",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
+				publishAPIMode: "Global",
+				httpMode:       "CertManager",
+			},
+			"kubernetes-tls",
+		),
+		Entry("Without secret for cert manager: Global: CertManager",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + customCertSecret,
+				publishAPIMode: "Global",
+				httpMode:       "CertManager",
+			},
+			"",
+		),
+		Entry("With every secret: Global: CustomCertificate",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
+				publishAPIMode: "Global",
+				httpMode:       "CustomCertificate",
+			},
+			"kubernetes-tls-customcertificate",
+		),
+		Entry("Without secret for custom certificate: Global: CustomCertificate",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + certManagerCertSecret,
+				publishAPIMode: "Global",
+				httpMode:       "CustomCertificate",
+			},
+			"",
+		),
+		Entry("With every secret: Global: OnlyInURI",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
+				publishAPIMode: "Global",
+				httpMode:       "OnlyInURI",
+			},
+			"",
+		),
+		Entry("Without secret: Global: OnlyInURI",
+			inputPublishAPICACert{
+				manifests:      "",
+				publishAPIMode: "Global",
+				httpMode:       "OnlyInURI",
+			},
+			"",
+		),
+	)
 })

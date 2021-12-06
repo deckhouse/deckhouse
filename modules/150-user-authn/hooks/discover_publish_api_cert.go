@@ -34,16 +34,17 @@ type PublishAPICert struct {
 }
 
 func applyPublishAPICertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
+	s := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, s)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
 	}
 
-	return PublishAPICert{Name: obj.GetName(), Data: secret.Data["ca.crt"]}, nil
+	return PublishAPICert{Name: obj.GetName(), Data: s.Data["ca.crt"]}, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "secret",
@@ -55,7 +56,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kubernetes-tls", "kubernetes-tls-customcertificate"},
+				MatchNames: []string{
+					"kubernetes-tls",
+					"kubernetes-tls-selfsigned",
+					"kubernetes-tls-customcertificate",
+				},
 			},
 			FilterFunc: applyPublishAPICertFilter,
 		},
@@ -63,25 +68,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverPublishAPICA)
 
 func discoverPublishAPICA(input *go_hook.HookInput) error {
-	secretPath := "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA"
+	var (
+		secretPath = "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA"
+		modePath   = "userAuthn.publishAPI.https.mode"
+	)
 
-	caSecrets, ok := input.Snapshots["secret"]
-	if !ok {
-		return nil
+	caCertificates := make(map[string][]byte)
+	for _, s := range input.Snapshots["secret"] {
+		publishCert := s.(PublishAPICert)
+		caCertificates[publishCert.Name] = publishCert.Data
 	}
 
-	if module.GetHTTPSMode("userAuthn", input) == "OnlyInURI" {
-		input.Values.Remove(secretPath)
-		return nil
+	var cert []byte
+
+	switch input.Values.Get(modePath).String() {
+	case "Global":
+		switch module.GetHTTPSMode("userAuthn", input) {
+		case "CertManager":
+			cert = caCertificates["kubernetes-tls"]
+		case "CustomCertificate":
+			cert = caCertificates["kubernetes-tls-customcertificate"]
+		case "OnlyInURI", "Disabled":
+		}
+	case "SelfSigned":
+		cert = caCertificates["kubernetes-tls-selfsigned"]
 	}
 
-	secret, ok := caSecrets[0].(PublishAPICert)
-	if !ok {
-		return fmt.Errorf("cannot convert secret to publish api secret")
-	}
-
-	if len(secret.Data) > 0 {
-		input.Values.Set(secretPath, string(secret.Data))
+	if len(cert) > 0 {
+		input.Values.Set(secretPath, string(cert))
 	} else {
 		input.Values.Remove(secretPath)
 	}
