@@ -1,1 +1,1 @@
-{% include getting_started/global/select_revision.html %}
+{% include getting_started/global/partials/select_revision.html.liquid %}
