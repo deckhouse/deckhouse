@@ -34,16 +34,22 @@ properties:
           oidcIssuerAddress:
             description: |
               Сетевой адрес OIDC-провайдера.
+          webhookURL:
+            description: |
+              URL аутентификационного webhook'а.
+          webhookCA:
+            description: |
+              CA аутентификационного webhook'a.
       authz:
         description: |
           Параметры авторизации клиентов Kubernetes API. По умолчанию подтягиваются из ConfigMap, устанавливаемого модулем [`user-authz`](https://deckhouse.io/ru/documentation/v1/modules/140-user-authz/)
         properties:
           webhookURL:
             description: |
-              URL authorization webhook'а.
+              URL авторизациионного webhook'а.
           webhookCA:
             description: |
-              CA authorization webhook'a.
+              CA авторизациионного webhook'a.
       loadBalancer:
         description: |
           Если указано, будет создан сервис с типом `LoadBalancer` (`d8-control-plane-apiserver` в ns `kube-system`).

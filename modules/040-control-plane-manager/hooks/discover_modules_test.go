@@ -25,12 +25,12 @@ import (
 
 var _ = Describe("Modules :: controler-plane-manager :: hooks :: discover_modules ::", func() {
 	const (
-		configMap = `
+		authzConfigMap = `
 ---
 apiVersion: v1
 data:
-  url: test
-  ca: test
+  url: https://authz-webhook-only.url
+  ca: authz-webhook-ca-only
 kind: ConfigMap
 metadata:
   name: cm
@@ -38,12 +38,37 @@ metadata:
   labels:
     control-plane-configurator: ""
 `
-		configMapAdded = `
+		authnWebhookConfigMapAdded = `
+apiVersion: v1
+data:
+  url: https://authn-webhook-only.url
+  ca: authn-webhook-ca-only
+kind: ConfigMap
+metadata:
+  name: cm
+  namespace: d8-user-authn
+  labels:
+    control-plane-configurator: ""
+`
+
+		authnOIDCConfigMapAdded = `
+apiVersion: v1
+data:
+  oidcIssuerURL: https://oids-issuer-only.url
+  oidcIssuerAddress: 1.1.1.1
+kind: ConfigMap
+metadata:
+  name: cm
+  namespace: d8-user-authn
+  labels:
+    control-plane-configurator: ""
+`
+		authzAndAuthzFullConfigMapAdded = `
 ---
 apiVersion: v1
 data:
-  url: testtest
-  ca: testtest
+  url: https://authz-webhook.url
+  ca: authz-webhook-ca
 kind: ConfigMap
 metadata:
   name: cm
@@ -55,6 +80,8 @@ apiVersion: v1
 data:
   oidcIssuerURL: test
   oidcIssuerAddress: 8.8.8.8
+  url: https://authn-webhook.url
+  ca: authn-webhook-ca
 kind: ConfigMap
 metadata:
   name: cm
@@ -71,7 +98,7 @@ controlPlaneManager:
     authz: {}
 global:
   discovery:
-    kubernetesCA: globaltesttest
+    kubernetesCA: kubernetesCATest
 `
 
 	Context("Empty cluster", func() {
@@ -90,16 +117,79 @@ global:
 			Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").Exists()).ToNot(BeTrue())
 		})
 
-		Context("Someone added d8-cloud-instance-manager-cloud-provider", func() {
+		Context("Someone added configmap with control-plane-configurator label in d8-user-authz namespace", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(configMap))
+				f.BindingContexts.Set(f.KubeStateSet(authzConfigMap))
 				f.RunHook()
 			})
 
-			It("controlPlaneManager.x values must be filled with data from ConfigMap", func() {
+			It("controlPlaneManager.authz values must be filled with data from ConfigMap", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("test"))
-				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("test"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("https://authz-webhook-only.url"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("authz-webhook-ca-only"))
+			})
+
+			It("controlPlaneManager.apiserver.authn values for must not set", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").Exists()).ToNot(BeTrue())
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").Exists()).ToNot(BeTrue())
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").Exists()).ToNot(BeTrue())
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookURL").Exists()).ToNot(BeTrue())
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookCA").Exists()).ToNot(BeTrue())
+			})
+		})
+
+		Context("Someone added configmap with control-plane-configurator label in d8-user-authn namespace", func() {
+			Context("with webhook settings only", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(authnWebhookConfigMapAdded))
+					f.RunHook()
+				})
+
+				It("controlPlaneManager.apiserver.authn values for webhook must be filled with data from ConfigMap", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookURL").String()).To(Equal("https://authn-webhook-only.url"))
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookCA").String()).To(Equal("authn-webhook-ca-only"))
+				})
+
+				It("controlPlaneManager.apiserver.authn values for oidc issuer must not be set", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").Exists()).ToNot(BeTrue())
+				})
+
+				It("controlPlaneManager.authz values must be not set", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").Exists()).ToNot(BeTrue())
+				})
+			})
+
+			Context("with oidc provider settings only", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(authnOIDCConfigMapAdded))
+					f.RunHook()
+				})
+
+				It("controlPlaneManager.apiserver.authn values for oidc issuer must be filled with data from ConfigMap", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").String()).To(Equal("https://oids-issuer-only.url"))
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").String()).To(Equal("kubernetesCATest"))
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").String()).To(Equal("1.1.1.1"))
+				})
+
+				It("controlPlaneManager.apiserver.authn values for webhook must be not set", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookURL").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookCA").Exists()).ToNot(BeTrue())
+				})
+
+				It("controlPlaneManager.authz values must be not set", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").Exists()).ToNot(BeTrue())
+				})
 			})
 		})
 	})
@@ -108,29 +198,31 @@ global:
 		f := HookExecutionConfigInit(values, `{}`)
 
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(configMap))
+			f.BindingContexts.Set(f.KubeStateSet(authzConfigMap))
 			f.RunHook()
 		})
 
 		It("controlPlaneManager.x values must be filled with data from ConfigMap", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("test"))
-			Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("test"))
+			Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("https://authz-webhook-only.url"))
+			Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("authz-webhook-ca-only"))
 		})
 
 		Context("ConfigMap was added", func() {
 			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(configMapAdded))
+				f.BindingContexts.Set(f.KubeStateSet(authzAndAuthzFullConfigMapAdded))
 				f.RunHook()
 			})
 
 			It("controlPlaneManager.x values must be filled with data from ConfigMap", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("testtest"))
-				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("testtest"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("https://authz-webhook.url"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").String()).To(Equal("authz-webhook-ca"))
 				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").String()).To(Equal("test"))
-				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").String()).To(Equal("globaltesttest"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").String()).To(Equal("kubernetesCATest"))
 				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").String()).To(Equal("8.8.8.8"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookURL").String()).To(Equal("https://authn-webhook.url"))
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookCA").String()).To(Equal("authn-webhook-ca"))
 			})
 
 			Context("ConfigMaps were deleted", func() {
@@ -146,6 +238,8 @@ global:
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerURL").Exists()).ToNot(BeTrue())
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcCA").Exists()).ToNot(BeTrue())
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.oidcIssuerAddress").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookURL").Exists()).ToNot(BeTrue())
+					Expect(f.ValuesGet("controlPlaneManager.apiserver.authn.webhookCA").Exists()).ToNot(BeTrue())
 				})
 			})
 		})

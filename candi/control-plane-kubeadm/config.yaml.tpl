@@ -67,6 +67,9 @@ apiServer:
     authorization-mode: Node,Webhook,RBAC
     authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
   {{- end -}}
+  {{ if .apiserver.authnWebhookURL }}
+    authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
+  {{- end -}}
   {{- if .apiserver.auditPolicy }}
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
     audit-log-path: /var/log/kube-audit/audit.log
