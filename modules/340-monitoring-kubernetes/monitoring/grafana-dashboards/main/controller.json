@@ -8,15 +8,23 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "editable": false,
+  "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1634206028569,
+  "iteration": 1638376609495,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": null,
@@ -28,7 +36,9 @@
           },
           "custom": {
             "align": null,
-            "filterable": false
+            "displayMode": "auto",
+            "filterable": false,
+            "minWidth": 70
           },
           "decimals": 2,
           "displayName": "",
@@ -80,6 +90,10 @@
               {
                 "id": "custom.align",
                 "value": null
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 250
               }
             ]
           },
@@ -156,44 +170,24 @@
                 "id": "mappings",
                 "value": [
                   {
-                    "from": "",
-                    "id": 1,
-                    "text": "Off",
-                    "to": "",
-                    "type": 1,
-                    "value": "0"
-                  },
-                  {
-                    "from": "",
-                    "id": 2,
-                    "text": "Initial",
-                    "to": "",
-                    "type": 1,
-                    "value": "1"
-                  },
-                  {
-                    "from": "",
-                    "id": 3,
-                    "text": "Auto",
-                    "to": "",
-                    "type": 1,
-                    "value": "2"
-                  },
-                  {
-                    "from": "",
-                    "id": 4,
-                    "text": "Recreate",
-                    "to": "",
-                    "type": 1,
-                    "value": "3"
-                  },
-                  {
-                    "from": "",
-                    "id": 5,
-                    "text": "-",
-                    "to": "",
-                    "type": 1,
-                    "value": "5"
+                    "options": {
+                      "0": {
+                        "text": "Off"
+                      },
+                      "1": {
+                        "text": "Initial"
+                      },
+                      "2": {
+                        "text": "Auto"
+                      },
+                      "3": {
+                        "text": "Recreate"
+                      },
+                      "5": {
+                        "text": "-"
+                      }
+                    },
+                    "type": "value"
                   }
                 ]
               }
@@ -605,7 +599,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "expr": "sum by (pod) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}[$__range]) )",
@@ -869,12 +863,6 @@
         ]
       },
       "datasource": "$ds_prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -980,7 +968,6 @@
       "description": "The number of Pod restarts",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1018,7 +1005,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1093,6 +1080,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1112,7 +1103,6 @@
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1150,7 +1140,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1232,7 +1222,6 @@
       "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1268,7 +1257,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1365,7 +1354,6 @@
       "description": "This graph shows the requested CPU resources higher than the actual CPU consumption. In other words, it shows CPU resources that can be \"freed\" without affecting the service.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1401,7 +1389,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1481,7 +1469,6 @@
       "description": "This graph shows the requested CPU resources lower than the actual CPU consumption. In other words, it shows CPU resources that need to be \"reserved\" for the service to run smoothly.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1517,7 +1504,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1599,7 +1586,6 @@
       "description": "The absence of data on the graph means that container resources are not set",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1633,8 +1619,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1709,6 +1698,10 @@
     {
       "collapsed": true,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1753,3164 +1746,6 @@
           "renderer": "flot",
           "repeat": "pod",
           "repeatDirection": "h",
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-49prx",
-              "value": "madison-sidekiq-cable-587d54c7d4-49prx"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 43
-          },
-          "id": 118,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-57tp2",
-              "value": "madison-sidekiq-cable-587d54c7d4-57tp2"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 43
-          },
-          "id": 119,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-6ldjl",
-              "value": "madison-sidekiq-cable-587d54c7d4-6ldjl"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 43
-          },
-          "id": 120,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-7sh48",
-              "value": "madison-sidekiq-cable-587d54c7d4-7sh48"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 52
-          },
-          "id": 121,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-7wmfv",
-              "value": "madison-sidekiq-cable-587d54c7d4-7wmfv"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 52
-          },
-          "id": 122,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-8jzc7",
-              "value": "madison-sidekiq-cable-587d54c7d4-8jzc7"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 52
-          },
-          "id": 123,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-dfd5b",
-              "value": "madison-sidekiq-cable-587d54c7d4-dfd5b"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 52
-          },
-          "id": 124,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-dtk6q",
-              "value": "madison-sidekiq-cable-587d54c7d4-dtk6q"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 61
-          },
-          "id": 125,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-f4l65",
-              "value": "madison-sidekiq-cable-587d54c7d4-f4l65"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 61
-          },
-          "id": 126,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-fjqrr",
-              "value": "madison-sidekiq-cable-587d54c7d4-fjqrr"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 61
-          },
-          "id": 127,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-j2c5b",
-              "value": "madison-sidekiq-cable-587d54c7d4-j2c5b"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 61
-          },
-          "id": 128,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-jlnh9",
-              "value": "madison-sidekiq-cable-587d54c7d4-jlnh9"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 70
-          },
-          "id": 129,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-klc47",
-              "value": "madison-sidekiq-cable-587d54c7d4-klc47"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 70
-          },
-          "id": 130,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-rfc6t",
-              "value": "madison-sidekiq-cable-587d54c7d4-rfc6t"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 70
-          },
-          "id": 131,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-rwkdc",
-              "value": "madison-sidekiq-cable-587d54c7d4-rwkdc"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 70
-          },
-          "id": 132,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-sj7pv",
-              "value": "madison-sidekiq-cable-587d54c7d4-sj7pv"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 79
-          },
-          "id": 133,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-tgrl5",
-              "value": "madison-sidekiq-cable-587d54c7d4-tgrl5"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 79
-          },
-          "id": 134,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-vjncg",
-              "value": "madison-sidekiq-cable-587d54c7d4-vjncg"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 79
-          },
-          "id": 135,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-vx88d",
-              "value": "madison-sidekiq-cable-587d54c7d4-vx88d"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 79
-          },
-          "id": 136,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-wn864",
-              "value": "madison-sidekiq-cable-587d54c7d4-wn864"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 0,
-            "y": 88
-          },
-          "id": 137,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-x7zk9",
-              "value": "madison-sidekiq-cable-587d54c7d4-x7zk9"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 88
-          },
-          "id": 138,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-x97cb",
-              "value": "madison-sidekiq-cable-587d54c7d4-x97cb"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 88
-          },
-          "id": 139,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-xdnm8",
-              "value": "madison-sidekiq-cable-587d54c7d4-xdnm8"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Usage",
-              "color": "#629e51"
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598"
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17"
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Usage",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\", namespace=\"$namespace\", resource=\"cpu\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_cpu_cores{node=~\"$node\", namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "B"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 0,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 88
-          },
-          "id": 140,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557846990024,
-          "repeatPanelId": 62,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "madison-sidekiq-cable-587d54c7d4-xnbzk",
-              "value": "madison-sidekiq-cable-587d54c7d4-xnbzk"
-            }
-          },
           "seriesOverrides": [
             {
               "alias": "Usage",
@@ -5010,6 +1845,10 @@
     {
       "collapsed": true,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5054,394 +1893,6 @@
           "renderer": "flot",
           "repeat": "pod",
           "repeatDirection": "h",
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "etcd-kube-a-1",
-              "value": "etcd-kube-a-1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_system_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (rate(container_cpu_user_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 44
-          },
-          "id": 112,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557826846531,
-          "repeatPanelId": 11,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "kube-apiserver-kube-a-1",
-              "value": "kube-apiserver-kube-a-1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_system_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (rate(container_cpu_user_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 44
-          },
-          "id": 113,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557826846531,
-          "repeatPanelId": 11,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "kube-controller-manager-kube-a-1",
-              "value": "kube-controller-manager-kube-a-1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Total",
-              "bars": false,
-              "stack": false
-            },
-            {
-              "alias": "System",
-              "color": "#e24d42"
-            },
-            {
-              "alias": "User",
-              "color": "#1f78c1"
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum by(pod) (rate(container_cpu_system_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "System",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by(pod) (rate(container_cpu_user_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "User",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by(pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__interval_sx4]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Total",
-              "refId": "D"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The total value may not equal the sum of system and user times because of the kernel's cgroup accounting peculiarities. Read more here: https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 44
-          },
-          "id": 114,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": false,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "null",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557826846531,
-          "repeatPanelId": 11,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "kube-scheduler-kube-a-1",
-              "value": "kube-scheduler-kube-a-1"
-            }
-          },
           "seriesOverrides": [
             {
               "alias": "Total",
@@ -5531,6 +1982,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5550,7 +2005,6 @@
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -5584,8 +2038,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5665,7 +2122,6 @@
       "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -5697,8 +2153,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5810,7 +2269,6 @@
       "description": "This graph shows the requested Memory resources higher than the actual Memory consumption. In other words, it shows Memory resources that can be \"freed\" without affecting the service.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -5842,8 +2300,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -5924,7 +2385,6 @@
       "description": "This graph shows the requested Memory resources higher than the actual Memory consumption. In other words, it shows Memory resources that need to be \"reserved\" for the service to run smoothly.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -5956,8 +2416,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6032,6 +2495,10 @@
     {
       "collapsed": true,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -6078,13 +2545,6 @@
           "renderer": "flot",
           "repeat": "pod",
           "repeatDirection": "h",
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "etcd-kube-a-1",
-              "value": "etcd-kube-a-1"
-            }
-          },
           "seriesOverrides": [
             {
               "alias": "Working set bytes without kmem",
@@ -6185,588 +2645,6 @@
             },
             {
               "expr": "sum by(pod) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Kmem",
-              "refId": "H"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 6,
-            "y": 64
-          },
-          "id": 115,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557826846531,
-          "repeatPanelId": 19,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "kube-apiserver-kube-a-1",
-              "value": "kube-apiserver-kube-a-1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes without kmem",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Kmem",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_rss{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_cache{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_swap{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes without kmem",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container!=\"POD\", resource=\"memory\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "E"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "F"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "G"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Kmem",
-              "refId": "H"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 12,
-            "y": 64
-          },
-          "id": 116,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557826846531,
-          "repeatPanelId": 19,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "kube-controller-manager-kube-a-1",
-              "value": "kube-controller-manager-kube-a-1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes without kmem",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Kmem",
-              "color": "rgb(255, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_rss{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_cache{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_swap{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes without kmem",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container!=\"POD\", resource=\"memory\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "E"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "F"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "G"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Kmem",
-              "refId": "H"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "$pod",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "bytes",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "$ds_prometheus",
-          "description": "The Working set bytes metric is the actual memory used by the container, as it includes active file memory. When its value approaches the limit, the container can be killed by the OOMKiller. This value can be higher than the sum RSS and Cache since not all active file memory is Cache.",
-          "fill": 1,
-          "gridPos": {
-            "h": 9,
-            "w": 6,
-            "x": 18,
-            "y": 64
-          },
-          "id": 117,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "sort": "avg",
-            "sortDesc": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "repeat": null,
-          "repeatDirection": "h",
-          "repeatIteration": 1557826846531,
-          "repeatPanelId": 19,
-          "scopedVars": {
-            "pod": {
-              "selected": false,
-              "text": "kube-scheduler-kube-a-1",
-              "value": "kube-scheduler-kube-a-1"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "Working set bytes without kmem",
-              "color": "rgb(0, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Kmem",
-              "color": "rgb(255, 0, 0)",
-              "dashes": true,
-              "fill": 0,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Limits",
-              "color": "#c15c17",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "Requests",
-              "color": "#f4d598",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            },
-            {
-              "alias": "VPA Target",
-              "color": "#447ebc",
-              "dashes": true,
-              "fill": 0,
-              "lines": false,
-              "linewidth": 2,
-              "stack": false
-            }
-          ],
-          "spaceLength": 10,
-          "stack": true,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_rss{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "RSS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_cache{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Cache",
-              "refId": "B"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_swap{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Swap",
-              "refId": "C"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Working set bytes without kmem",
-              "refId": "D"
-            },
-            {
-              "expr": "sum by (pod)\n(\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}\n  * on (controller_type, controller_name) group_left()\n  sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container!=\"POD\", resource=\"memory\"}[$__interval_sx3]))\n)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "VPA Target",
-              "refId": "E"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_limits_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Limits",
-              "refId": "F"
-            },
-            {
-              "expr": "sum by(pod) (avg_over_time(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "Requests",
-              "refId": "G"
-            },
-            {
-              "expr": "sum by (pod) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\", container!=\"POD\"}[$__interval_sx3]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Kmem",
@@ -6821,6 +2699,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -6841,7 +2723,6 @@
       "description": "This graph shows Network Receive (except for the hostNetwork Pods)",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -6873,8 +2754,11 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -6954,7 +2838,6 @@
       "description": "This graph shows Network Transmit (except for the hostNetwork Pods)",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -6986,8 +2869,11 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7061,6 +2947,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -7080,7 +2970,6 @@
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -7112,8 +3001,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7192,7 +3084,6 @@
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -7224,8 +3115,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7299,6 +3193,10 @@
     {
       "collapsed": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -7319,7 +3217,6 @@
       "description": "This graph does not show any localstorage-related information due to incorrectly calculating the occupied space on localstorage disks",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -7351,8 +3248,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7425,7 +3325,6 @@
       "description": "This graph does not show any localstorage-related information due to incorrectly calculating the occupied space on localstorage disks",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -7457,8 +3356,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7531,7 +3433,6 @@
       "description": "This graph does not show any localstorage-related information due to incorrectly calculating the occupied space on localstorage disks",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -7563,8 +3464,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
-      "pluginVersion": "7.4.2",
+      "pluginVersion": "8.2.3",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -7632,6 +3536,10 @@
     {
       "collapsed": true,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -7972,13 +3880,6 @@
           "renderer": "flot",
           "repeat": "persistentvolumeclaim",
           "repeatDirection": "h",
-          "scopedVars": {
-            "persistentvolumeclaim": {
-              "selected": false,
-              "text": "prometheus-main-db-prometheus-main-0",
-              "value": "prometheus-main-db-prometheus-main-0"
-            }
-          },
           "seriesOverrides": [
             {
               "alias": "Total",
@@ -8060,8 +3961,8 @@
       "type": "row"
     }
   ],
-  "refresh": "30s",
-  "schemaVersion": 27,
+  "refresh": "",
+  "schemaVersion": 32,
   "style": "dark",
   "tags": [
     "main"
@@ -8118,7 +4019,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -8149,7 +4049,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -8157,9 +4056,9 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "deploy/d8-kube-dns",
-          "value": "deploy/d8-kube-dns"
+          "selected": true,
+          "text": "ds/d8-control-plane-manager",
+          "value": "ds/d8-control-plane-manager"
         },
         "datasource": "$ds_prometheus",
         "definition": "label_values(kube_controller_pod{node=~\"$node\", namespace=~\"$namespace\"}, controller)",
@@ -8180,7 +4079,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -8215,7 +4113,6 @@
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -8250,7 +4147,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -8289,5 +4185,5 @@
   "timezone": "",
   "title": "Namespace / Controller",
   "uid": "IRPuf4ymk1",
-  "version": 3
+  "version": 1
 }
