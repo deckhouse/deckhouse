@@ -1,0 +1,120 @@
+# on every push to dev branches
+name: Build and test for dev branches
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'release-*'
+      - 'alpha'
+      - 'beta'
+      - 'early-access'
+      - 'stable'
+      - 'rock-solid'
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
+
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}-dev
+  cancel-in-progress: true
+
+jobs:
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+  build_modules_images_fe:
+    name: Build Modules Images FE
+    needs:
+      - git_info
+{!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
+
+  go_generate:
+    name: Go Generate
+    needs:
+      - git_info
+{!{ tmpl.Exec "go_generate_template" . | strings.Indent 4 }!}
+
+  build_fe:
+    name: Build FE
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - go_generate
+{!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
+
+  doc_web_build:
+    name: Doc web build
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - build_modules_images_fe
+{!{ tmpl.Exec "doc_web_build_template" . | strings.Indent 4 }!}
+
+  main_web_build:
+    name: Main web build
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - build_modules_images_fe
+{!{ tmpl.Exec "main_web_build_template" . | strings.Indent 4 }!}
+
+  tests:
+    name: Tests
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+{!{ tmpl.Exec "tests_template" "unit" | strings.Indent 4 }!}
+
+  matrix_tests:
+    name: Matrix tests
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+{!{ tmpl.Exec "tests_template" "matrix" | strings.Indent 4 }!}
+
+  dhctl_tests:
+    name: Dhctl Tests
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+{!{ tmpl.Exec "tests_template" "dhctl" | strings.Indent 4 }!}
+
+  golangci_lint:
+    name: GolangCI Lint
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+{!{ tmpl.Exec "tests_template" "golangci_lint" | strings.Indent 4 }!}
+
+  openapi_test_cases:
+    name: OpenAPI Test Cases
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+{!{ tmpl.Exec "tests_template" "openapi_test_cases" | strings.Indent 4 }!}
+
+  web_links_test:
+    name: Web links test
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "web_links_test_template" | strings.Indent 4 }!}
+
+  validators:
+    name: Validators
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+{!{ tmpl.Exec "tests_template" "validators" | strings.Indent 4 }!}

@@ -89,7 +89,8 @@
   stage: testing
   script:
   - pwd
-  - ./testing/validate_no_cyrillic.sh ${CI_PROJECT_ID} ${CI_COMMIT_SHA} ${FOX_ACCESS_TOKEN}
+  - "export SKIP_LABEL_NAME='Content: Cyrillic'"
+  - ./.gitlab/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh "${FOX_ACCESS_TOKEN}"
   except:
   - schedules
   - alpha
@@ -105,7 +106,8 @@
 .Content Validation template:
   stage: testing
   script:
-  - ./testing/validate_doc_changes.sh ${FOX_ACCESS_TOKEN}
+  - export SKIP_LABEL_NAME='Skip doc validation'
+  - ./.gitlab/scripts/validation_run.sh ./testing/validate_doc_changes.sh "${FOX_ACCESS_TOKEN}"
   except:
   - schedules
   - alpha
@@ -121,7 +123,8 @@
 .Copyright Validation template:
   stage: testing
   script:
-  - ./testing/validate_copyright.sh ${FOX_ACCESS_TOKEN}
+    - export SKIP_LABEL_NAME='Skip copyright validation'
+    - ./.gitlab/scripts/validation_run.sh ./testing/validate_copyright.sh "${FOX_ACCESS_TOKEN}"
   except:
   - schedules
   - alpha
@@ -163,7 +166,7 @@
       cp -Rf ${_TMPDIR}/site/doc/images/ ${_TMPDIR}/site/doc/en/
       cp -Rf ${_TMPDIR}/site/doc/js/ ${_TMPDIR}/site/doc/en/
       docker run --rm -v "${_TMPDIR}/site:/src:ro" klakegg/html-proofer:3.19.1 --allow-hash-href --check-html --empty-alt-ignore \
-         --url_ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+         --url-ignore "/localhost/,/https\:\/\/t.me/,/gitlab.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
          --url-swap "https\:\/\/deckhouse.io\/:/,\/ru\/documentation\/$:/doc/ru/,\/ru\/documentation\/v1\/:/doc/ru/,\/en\/documentation\/$:/doc/en/,\/en\/documentation\/v1\/:/doc/en/,\/docs\/documentation\/images\/:/doc/images/" ${1}
   after_script:
   - |

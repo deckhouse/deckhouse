@@ -19,7 +19,7 @@ The changelog toolchain consists of these files
     actions/
         milestone-changelog/
             action.yml
-    scripts/
+    scripts/js/
         changelog-command-validate.js
     workflows/
         changelog-command-dispatch.yml

@@ -26,6 +26,8 @@ venv/
 # modules_images tags
 /modules/images-tags.yaml
 /modules/images-tags-*.yaml
+/modules/images_tags.json
+/modules/images_tags_*.json
 
 # local development deckhouse binary
 /deckhouse/deckhouse

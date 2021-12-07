@@ -1,0 +1,64 @@
+{!{ define "update_comment_on_start" }!}
+{!{- $workflowName := . -}!}
+- name: Update comment on start
+  if: github.event_name == 'workflow_dispatch'
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    script: |
+      const name = '{!{ $workflowName }!}';
+
+      const ci = require('./.github/scripts/js/ci');
+      return await ci.updateCommentOnStart({github, context, core, name})
+{!{- end -}!}
+
+{!{ define "update_comment_on_finish" }!}
+{!{- $statusSource := index . 0 -}!}
+{!{- $name := index . 1 -}!}
+
+- name: Update comment on finish
+  if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+  continue-on-error: true
+  env:
+    NEEDS_CONTEXT: ${{ toJSON(needs) }}
+    JOB_CONTEXT: ${{ toJSON(job) }}
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    script: |
+      const statusSource = '{!{ $statusSource }!}';
+      const name = '{!{ $name }!}';
+      const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+      const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+
+      console.log(`needsContext: ${JSON.stringify(needsContext)}`);
+      console.log(`jobContext: ${JSON.stringify(jobContext)}`);
+
+      const ci = require('./.github/scripts/js/ci');
+      return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+{!{- end -}!}
+
+{!{/* This job checks if label is set on pr or issue and return should_run output. Also, all labels are returned as JSON. */}!}
+{!{ define "check_label_job" }!}
+{!{- $labelType := index . 0 -}!}
+{!{- $labelSubject := index . 1 -}!}
+
+check_label:
+  name: Check label
+  runs-on: ubuntu-latest
+  outputs:
+    should_run: ${{ steps.check_label.outputs.should_run }}
+    labels: ${{ steps.check_label.outputs.labels }}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - id: check_label
+      name: Check labels on push
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const labelType = '{!{ $labelType }!}';
+          const labelSubject = '{!{ $labelSubject }!}';
+
+          const ci = require('./.github/scripts/js/ci');
+          return await ci.checkLabel({github, context, core, labelType, labelSubject});
+{!{- end -}!}

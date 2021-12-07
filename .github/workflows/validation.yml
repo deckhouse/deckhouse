@@ -1,0 +1,123 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Run validation script on every push to dev branches.
+#
+# Validation scripts require  PR title, PR description and diff.
+# Title and description are available when PR is already created.
+# Diff content is fetched using 'diff_url' field in payload when PR is available.
+# If PR is not created, 'compare' field is used to get diff between base branch and dev branch.
+#
+# See also scripts/validation_run.sh.
+#
+
+name: Validations
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'release-*'
+      - 'alpha'
+      - 'beta'
+      - 'early-access'
+      - 'stable'
+      - 'rock-solid'
+
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}-validation
+  cancel-in-progress: true
+
+jobs:
+
+  # Get pull request info for validation scripts.
+  # Push event has no pull request information, so retrieve it with Rest API.
+  discover:
+    name: Prepare input for validation scripts
+    runs-on: ubuntu-latest
+    outputs:
+      run_no_cyrillic: ${{ steps.on_push.outputs.run_no_cyrillic }}
+      label_no_cyrillic: ${{ steps.on_push.outputs.label_no_cyrillic }}
+      run_doc_changes: ${{ steps.on_push.outputs.run_doc_changes }}
+      label_doc_changes: ${{ steps.on_push.outputs.label_doc_changes }}
+      run_copyright: ${{ steps.on_push.outputs.run_copyright }}
+      label_copyright: ${{ steps.on_push.outputs.label_copyright }}
+      pr_title: ${{ steps.on_push.outputs.pr_title }}
+      pr_description: ${{ steps.on_push.outputs.pr_description }}
+      diff_url: ${{ steps.on_push.outputs.diff_url }}
+
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+      - id: on_push
+        name: Check labels on push
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.checkValidationLabels({github, context, core});
+
+  no_cyrillic_validation:
+    name: No Cyrillic Validation
+    env:
+      VALIDATE_TITLE: ${{ needs.discover.outputs.pr_title }}
+      VALIDATE_DESCRIPTION: ${{ needs.discover.outputs.pr_description }}
+
+    needs:
+      - discover
+    if: needs.discover.outputs.run_no_cyrillic == 'true'
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      - name: Run check
+        env:
+          DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_no_cyrillic }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
+
+  doc_validation:
+    name: Documentation Validation
+
+    needs:
+      - discover
+    if: needs.discover.outputs.run_doc_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      - name: Run check
+        env:
+          DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_changes }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
+
+  copyright_validation:
+    name: Copyright Validation
+
+    needs:
+      - discover
+    if: needs.discover.outputs.run_copyright == 'true'
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+
+      - name: Run check
+        env:
+          DIFF_URL: ${{ needs.discover.outputs.diff_url }}
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_copyright }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh

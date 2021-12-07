@@ -1,0 +1,257 @@
+# on push to default branch or on tags
+{!{ $workflowName := "Build and test for release" }!}
+name: {!{ $workflowName }!}
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'Id of issue where label was set'
+        required: true
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'Id of comment in issue where to put workflow run status'
+        required: true
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
+
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}-release-build
+  cancel-in-progress: true
+
+jobs:
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+  comment_on_start:
+    name: Add comment on start
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_start" "Build and test for release" | strings.Indent 6 }!}
+
+  build_modules_images_fe:
+    name: Build Modules Images FE
+    needs:
+      - git_info
+      - comment_on_start
+{!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build Modules Images FE") | strings.Indent 6 }!}
+
+  build_modules_images_ee:
+    name: Build Modules Images EE
+    needs:
+      - git_info
+      - comment_on_start
+    if: ${{ github.ref != 'refs/heads/main' }}
+    env:
+      WERF_ENV: "EE"
+{!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build Modules Images EE") | strings.Indent 6 }!}
+
+  build_modules_images_ce:
+    name: Build Modules Images CE
+    needs:
+      - git_info
+      - comment_on_start
+    if: ${{ github.ref != 'refs/heads/main' }}
+    env:
+      WERF_ENV: "CE"
+{!{ tmpl.Exec "build_modules_images_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build Modules Images CE") | strings.Indent 6 }!}
+
+  go_generate:
+    name: Go Generate
+    needs:
+      - git_info
+{!{ tmpl.Exec "go_generate_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Go Generate") | strings.Indent 6 }!}
+
+  build_fe:
+    name: Build FE
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - go_generate
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build FE") | strings.Indent 6 }!}
+
+  build_ee:
+    name: Build EE
+    needs:
+      - git_info
+      - build_modules_images_ee
+      - go_generate
+    if: ${{ github.ref != 'refs/heads/main' }}
+    env:
+      WERF_ENV: "EE"
+{!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build EE") | strings.Indent 6 }!}
+
+  build_ce:
+    name: Build CE
+    needs:
+      - git_info
+      - build_modules_images_ce
+      - go_generate
+    if: ${{ github.ref != 'refs/heads/main' }}
+    env:
+      WERF_ENV: "CE"
+{!{ tmpl.Exec "build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Build CE") | strings.Indent 6 }!}
+
+  doc_web_build:
+    name: Doc web build
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - build_modules_images_fe
+{!{ tmpl.Exec "doc_web_build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Doc web build") | strings.Indent 6 }!}
+
+  main_web_build:
+    name: Main web build
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - build_modules_images_fe
+{!{ tmpl.Exec "main_web_build_template" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Main web build") | strings.Indent 6 }!}
+
+  tests:
+    name: Tests
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+    continue-on-error: true
+{!{ tmpl.Exec "tests_template" "unit" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Tests") | strings.Indent 6 }!}
+
+  matrix_tests:
+    name: Matrix tests
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+    continue-on-error: true
+{!{ tmpl.Exec "tests_template" "matrix" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Matrix tests") | strings.Indent 6 }!}
+
+  dhctl_tests:
+    name: Dhctl Tests
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+    continue-on-error: true
+{!{ tmpl.Exec "tests_template" "dhctl" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Dhctl Tests") | strings.Indent 6 }!}
+
+  golangci_lint:
+    name: GolangCI Lint
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+    continue-on-error: true
+{!{ tmpl.Exec "tests_template" "golangci_lint" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "GolangCI Lint") | strings.Indent 6 }!}
+
+  openapi_test_cases:
+    name: OpenAPI Test Cases
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+    continue-on-error: true
+{!{ tmpl.Exec "tests_template" "openapi_test_cases" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "OpenAPI Test Cases") | strings.Indent 6 }!}
+
+  web_links_test:
+    name: Web links test
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "web_links_test_template" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Web links test") | strings.Indent 6 }!}
+
+  validators:
+    name: Validators
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_fe
+    continue-on-error: true
+{!{ tmpl.Exec "tests_template" "validators" | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Validators") | strings.Indent 6 }!}
+
+  {!{/* Autodeploy site and docs to production env on push to main branch. */}!}
+  deploy_latest_web:
+    name: Deploy latest doc and site
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    continue-on-error: true
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
+    runs-on: self-hosted
+    steps:
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Deploy latest doc and site") | strings.Indent 6 }!}
+
+  {!{/* Autodeploy documentation to production and stage envs on a new tag */}!}
+  deploy_tagged_doc:
+    name: Deploy tagged documentation
+    needs:
+      - git_info
+      - doc_web_build
+    continue-on-error: true
+    if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
+    runs-on: self-hosted
+    steps:
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "stage" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,inline" "Deploy tagged doc") | strings.Indent 6 }!}
+
+  last_comment:
+    name: Update comment on finish
+    needs:
+      - git_info
+      - build_modules_images_fe
+      - build_modules_images_ee
+      - build_modules_images_ce
+      - go_generate
+      - build_fe
+      - build_ee
+      - build_ce
+      - doc_web_build
+      - main_web_build
+      - deploy_latest_web
+      - deploy_tagged_doc
+      - tests
+      - matrix_tests
+      - dhctl_tests
+      - golangci_lint
+      - openapi_test_cases
+      - web_links_test
+      - validators
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "workflow" $workflowName) | strings.Indent 6 }!}

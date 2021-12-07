@@ -730,5 +730,7 @@ image: release-channel-version
 from: spotify/scratch
 shell:
   install:
-  - 'echo "{\"version\": \"{{ env "CI_COMMIT_REF_NAME" }}\", \"release_date\": \"{{ env "CI_PIPELINE_CREATED_AT" }}\"}" > /version.json'
-
+  - |
+    version="{{ env "CI_COMMIT_REF_NAME" }}"
+    createdDate="{{ env "CI_PIPELINE_CREATED_AT" }}"
+    echo '{"version": "'${version}'", "release_date": "'${createdDate}'"}' > /version.json
