@@ -65,6 +65,7 @@ func GetHTTPSMode(moduleName string, input *go_hook.HookInput) string {
 	panic("https mode is not defined")
 }
 
+// IsEnabled check module on enable. moduleName should be in `kebab-case` without order prefix
 func IsEnabled(moduleName string, input *go_hook.HookInput) bool {
 	return set.NewFromValues(input.Values, "global.enabledModules").Has(moduleName)
 }

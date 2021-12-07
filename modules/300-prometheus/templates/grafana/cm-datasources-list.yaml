@@ -1,4 +1,6 @@
 ---
+# TODO remove after 1.32 release from 1.30 we use grafana-datasources secret
+# Leave this cm for prevent mount volume error while terminating pod
 apiVersion: v1
 kind: ConfigMap
 metadata:
