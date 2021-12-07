@@ -18,7 +18,7 @@ ARG BUNDLED_PLUGINS="grafana-image-renderer,petrslavotinek-carpetplot-panel,vona
 FROM $BASE_ALPINE as src-files
 WORKDIR /usr/src/app
 RUN apk add --no-cache patch
-RUN wget https://github.com/grafana/grafana/archive/v8.2.4.tar.gz -O - | tar -xz  --strip-components=1
+RUN wget https://github.com/grafana/grafana/archive/v8.2.7.tar.gz -O - | tar -xz  --strip-components=1
 # Extra '__interval_*' vars for prometheus datasource.
 COPY ./patches/feat_prometheus_extra_vars.patch .
 RUN patch -p1 < ./feat_prometheus_extra_vars.patch
