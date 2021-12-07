@@ -3,51 +3,51 @@
 
 locals {
   security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
-  volume_type_map = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
-  zone = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
-  volume_type = local.volume_type_map[local.zone]
-  flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
-  additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  volume_type_map      = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  actual_zones         = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
+  zone                 = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
+  volume_type          = local.volume_type_map[local.zone]
+  flavor_name          = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
+  root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  additional_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
 module "network_security_info" {
-  source = "../../../terraform-modules/network-security-info"
-  prefix = local.prefix
+  source  = "../../../terraform-modules/network-security-info"
+  prefix  = local.prefix
   enabled = local.network_security
 }
 
 module "master" {
-  source = "../../../terraform-modules/master"
-  prefix = local.prefix
-  node_index = var.nodeIndex
-  cloud_config = var.cloudConfig
-  flavor_name = local.flavor_name
-  root_disk_size = local.root_disk_size
-  additional_tags = local.additional_tags
-  image_name = local.image_name
-  keypair_ssh_name = data.openstack_compute_keypair_v2.ssh.name
-  network_port_ids = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
-  floating_ip_network = data.openstack_networking_network_v2.external.name
-  tags = local.tags
-  zone = local.zone
-  volume_type = local.volume_type
+  source              = "../../../terraform-modules/master"
+  prefix              = local.prefix
+  node_index          = var.nodeIndex
+  cloud_config        = var.cloudConfig
+  flavor_name         = local.flavor_name
+  root_disk_size      = local.root_disk_size
+  additional_tags     = local.additional_tags
+  image_name          = local.image_name
+  keypair_ssh_name    = data.openstack_compute_keypair_v2.ssh.name
+  network_port_ids    = list(local.network_security ? openstack_networking_port_v2.master_internal_with_security[0].id : openstack_networking_port_v2.master_internal_without_security[0].id)
+  floating_ip_network = lookup(local.standard, "bastion", {}) == {} ? data.openstack_networking_network_v2.external.name : ""
+  tags                = local.tags
+  zone                = local.zone
+  volume_type         = local.volume_type
 }
 
 module "kubernetes_data" {
-  source = "../../../terraform-modules/kubernetes-data"
-  prefix = local.prefix
-  node_index = var.nodeIndex
-  master_id = module.master.id
+  source      = "../../../terraform-modules/kubernetes-data"
+  prefix      = local.prefix
+  node_index  = var.nodeIndex
+  master_id   = module.master.id
   volume_type = local.volume_type
-  tags = local.tags
+  tags        = local.tags
 }
 
 module "security_groups" {
-  source = "../../../terraform-modules/security-groups"
-  security_group_names = local.security_group_names
-  layout_security_group_ids = module.network_security_info.security_group_ids
+  source                      = "../../../terraform-modules/security-groups"
+  security_group_names        = local.security_group_names
+  layout_security_group_ids   = module.network_security_info.security_group_ids
   layout_security_group_names = module.network_security_info.security_group_names
 }
 
@@ -70,9 +70,9 @@ data "openstack_networking_subnet_v2" "internal" {
 }
 
 resource "openstack_networking_port_v2" "master_internal_with_security" {
-  count = local.network_security ? 1 : 0
-  network_id = data.openstack_networking_network_v2.internal.id
-  admin_state_up = "true"
+  count              = local.network_security ? 1 : 0
+  network_id         = data.openstack_networking_network_v2.internal.id
+  admin_state_up     = "true"
   security_group_ids = module.security_groups.security_group_ids
   fixed_ip {
     subnet_id = data.openstack_networking_subnet_v2.internal.id
@@ -83,8 +83,8 @@ resource "openstack_networking_port_v2" "master_internal_with_security" {
 }
 
 resource "openstack_networking_port_v2" "master_internal_without_security" {
-  count = local.network_security ? 0 : 1
-  network_id = data.openstack_networking_network_v2.internal.id
+  count          = local.network_security ? 0 : 1
+  network_id     = data.openstack_networking_network_v2.internal.id
   admin_state_up = "true"
   fixed_ip {
     subnet_id = data.openstack_networking_subnet_v2.internal.id
