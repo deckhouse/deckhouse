@@ -353,6 +353,13 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                additionalLogFields:
+                  type: object
+                  description: |
+                    Additional fields to add to nginx logs. (map: key (string)).
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
                 resourcesRequests:
                   required: ['mode']
                   type: object

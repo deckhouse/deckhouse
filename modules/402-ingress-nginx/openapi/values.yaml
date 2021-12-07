@@ -195,6 +195,9 @@ properties:
                 additionalHeaders:
                   type: object
                   additionalProperties: true
+                additionalLogFields:
+                  type: object
+                  additionalProperties: true
                 resourcesRequests:
                   type: object
                   default: {}
