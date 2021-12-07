@@ -1,0 +1,234 @@
+{
+  "sources": {
+    "d8_namespaced_source_tests-whispers_whispers-logs_loki-storage": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "app=test",
+      "extra_field_selector": "metadata.namespace=tests-whispers",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "glob_minimum_cooldown_ms": 1000
+    },
+    "d8_namespaced_source_tests-whispers_whispers-logs_test-es-dest": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "app=test",
+      "extra_field_selector": "metadata.namespace=tests-whispers",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "glob_minimum_cooldown_ms": 1000
+    }
+  },
+  "transforms": {
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_0": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_namespaced_source_tests-whispers_whispers-logs_loki-storage"
+      ],
+      "source": " if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n }\n  if exists(.pod_labels.\"pod-template-hash\") {\n   del(.pod_labels.\"pod-template-hash\")\n }\n if exists(.kubernetes) {\n   del(.kubernetes)\n }\n if exists(.file) {\n   del(.file)\n }\n",
+      "type": "remap"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_1": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_0"
+      ],
+      "source": " structured, err1 = parse_json(.message)\n if err1 == null {\n   .parsed_data = structured\n }\n",
+      "type": "remap"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_2": {
+      "condition": "exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_1"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_3": {
+      "condition": "!exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_2"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_4": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_3"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_5": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_4"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_6": {
+      "condition": "match!(.parsed_data.foo, r'^wvrr')",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_5"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_loki-storage_7": {
+      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo)\n {\n { matched, err = match(.parsed_data.foo, r'^wvrr')\n if err != null {\n true\n } else {\n !matched\n }}\n } else {\n true\n }",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_6"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_0": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_namespaced_source_tests-whispers_whispers-logs_test-es-dest"
+      ],
+      "source": " if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n }\n  if exists(.pod_labels.\"pod-template-hash\") {\n   del(.pod_labels.\"pod-template-hash\")\n }\n if exists(.kubernetes) {\n   del(.kubernetes)\n }\n if exists(.file) {\n   del(.file)\n }\n",
+      "type": "remap"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_1": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_0"
+      ],
+      "source": " structured, err1 = parse_json(.message)\n if err1 == null {\n   .parsed_data = structured\n }\n",
+      "type": "remap"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_10": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_9"
+      ],
+      "source": " if exists(.parsed_data) {\n   del(.parsed_data)\n }\n",
+      "type": "remap"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_2": {
+      "hooks": {
+        "process": "process"
+      },
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_1"
+      ],
+      "source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend\n",
+      "type": "lua",
+      "version": "2"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_3": {
+      "drop_on_abort": false,
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_2"
+      ],
+      "source": " .foo=\"bar\" \n",
+      "type": "remap"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_4": {
+      "condition": "exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_3"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_5": {
+      "condition": "!exists(.parsed_data.foo)",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_4"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_6": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { false; } else { includes([\"wvrr\"], data); }; } else { includes([\"wvrr\"], .parsed_data.foo); }",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_5"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_7": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) { data, err = to_string(.parsed_data.foo); if err != null { true; } else { !includes([\"wvrr\"], data); }; } else { !includes([\"wvrr\"], .parsed_data.foo); }",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_6"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_8": {
+      "condition": "match!(.parsed_data.foo, r'^wvrr')",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_7"
+      ],
+      "type": "filter"
+    },
+    "d8_tf_tests-whispers_whispers-logs_test-es-dest_9": {
+      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo)\n {\n { matched, err = match(.parsed_data.foo, r'^wvrr')\n if err != null {\n true\n } else {\n !matched\n }}\n } else {\n true\n }",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_8"
+      ],
+      "type": "filter"
+    }
+  },
+  "sinks": {
+    "d8_cluster_sink_loki-storage": {
+      "type": "loki",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_loki-storage_7"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "text",
+        "only_fields": [
+          "message"
+        ],
+        "timestamp_format": "rfc3339"
+      },
+      "endpoint": "http://loki.loki:3100",
+      "labels": {
+        "container": "{{ container }}",
+        "foo": "bar",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
+      "remove_label_fields": true,
+      "out_of_order_action": "rewrite_timestamp"
+    },
+    "d8_cluster_sink_test-es-dest": {
+      "type": "elasticsearch",
+      "inputs": [
+        "d8_tf_tests-whispers_whispers-logs_test-es-dest_10"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "endpoint": "http://192.168.1.1:9200",
+      "encoding": {
+        "timestamp_format": "rfc3339"
+      },
+      "batch": {
+        "max_bytes": 10485760,
+        "timeout_secs": 1
+      },
+      "compression": "gzip",
+      "index": "logs-%F",
+      "bulk_action": "index"
+    }
+  }
+}

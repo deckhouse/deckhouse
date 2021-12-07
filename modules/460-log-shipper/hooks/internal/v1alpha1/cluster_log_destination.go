@@ -113,8 +113,9 @@ type ElasticsearchSpec struct {
 	Pipeline string `json:"pipeline,omitempty"`
 	Type     string `json:"type,omitempty"`
 
-	Auth          ElasticsearchAuthSpec          `json:"auth,omitempty"`
-	IndexSettings ElasticsearchIndexSettingsSpec `json:"indexSettings,omitempty"`
+	Auth              ElasticsearchAuthSpec `json:"auth,omitempty"`
+	DataStreamEnabled bool                  `json:"dataStreamEnabled"`
+	DocTypeSupport    bool                  `json:"docTypeSupport"`
 
 	TLS CommonTLSSpec `json:"tls,omitempty"`
 }

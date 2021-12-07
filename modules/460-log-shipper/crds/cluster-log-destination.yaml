@@ -214,17 +214,18 @@ spec:
                     endpoint:
                       type: string
                       description: The base URL of the Elasticsearch instance.
-                    indexSettings:
-                      type: object
-                      description: Index specific settings.
-                      properties:
-                        type:
-                          type: string
-                          enum: ["Normal", "Datastream"]
-                          description: Use for storage indexes or [datastreams](https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
-                        docType:
-                          type: string
-                          description: Document type. This is only relevant for Elasticsearch <= 6.X.
+                    dataStreamEnabled:
+                      type: boolean
+                      default: true
+                      description: |
+                        Use for storage indexes or datastreams (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
+                        Datastream usage is better as logs and metrics storage.
+                    docTypeSupport:
+                      type: boolean
+                      default: false
+                      description: |
+                        The doc_type for your index data. This is only relevant for Elasticsearch <= 6.X.
+                        If you are using >= 7.0 you do not need this option since Elasticsearch has removed doc_type mapping.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.

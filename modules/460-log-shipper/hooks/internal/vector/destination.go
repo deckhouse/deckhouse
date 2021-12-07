@@ -254,8 +254,13 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		VerifyHostname: spec.TLS.VerifyHostname,
 	}
 
-	if spec.IndexSettings.Type == "Datastream" {
+	if spec.DataStreamEnabled {
 		BulkAction = "create"
+	}
+
+	var docType string
+	if spec.DocTypeSupport {
+		docType = "_doc"
 	}
 
 	return &elasticsearchDestination{
@@ -270,7 +275,7 @@ func NewElasticsearchDestination(name string, cspec v1alpha1.ClusterLogDestinati
 		Index:                     spec.Index,
 		Pipeline:                  spec.Pipeline,
 		BulkAction:                BulkAction,
-		DocType:                   spec.IndexSettings.DocType,
+		DocType:                   docType,
 		// We do not neet this field for vector 0.14
 		//Mode:                      "normal",
 	}
