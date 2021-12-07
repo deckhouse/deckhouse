@@ -58,7 +58,7 @@ fi
 
 if grep -qv kubernetes-data /etc/fstab; then
   cat >> /etc/fstab << EOF
-LABEL=kubernetes-data           /mnt/kubernetes-data     ext4   defaults,discard        0 0
+LABEL=kubernetes-data           /mnt/kubernetes-data     ext4   defaults,discard,x-systemd.automount        0 0
 EOF
 fi
 
