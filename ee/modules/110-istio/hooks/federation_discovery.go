@@ -17,8 +17,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private/crd"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 )
@@ -119,7 +119,7 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: private.Queue("federation"),
+	Queue: internal.Queue("federation"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "federations",
@@ -171,7 +171,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		var publicMetadata crd.AlliancePublicMetadata
 		var privateMetadata crd.FederationPrivateMetadata
 
-		bodyBytes, statusCode, err := private.HTTPGet(dc.GetHTTPClient(), federationInfo.PublicMetadataEndpoint, "")
+		bodyBytes, statusCode, err := internal.HTTPGet(dc.GetHTTPClient(), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.LogEntry.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
@@ -213,7 +213,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		bodyBytes, statusCode, err = private.HTTPGet(dc.GetHTTPClient(), federationInfo.PrivateMetadataEndpoint, bearerToken)
+		bodyBytes, statusCode, err = internal.HTTPGet(dc.GetHTTPClient(), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.LogEntry.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)

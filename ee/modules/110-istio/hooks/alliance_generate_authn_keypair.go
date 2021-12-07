@@ -18,7 +18,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
 func applyKeypairFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -28,7 +28,7 @@ func applyKeypairFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, fmt.Errorf("cannot convert k8s secret to struct: %v", err)
 	}
 
-	return private.Keypair{
+	return internal.Keypair{
 		Pub:  string(secret.Data["pub.pem"]),
 		Priv: string(secret.Data["priv.pem"]),
 	}, nil
@@ -45,18 +45,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-remote-authn-keypair"},
 			},
-			NamespaceSelector: private.NsSelector(),
+			NamespaceSelector: internal.NsSelector(),
 		},
 	},
 }, generateKeypair)
 
 func generateKeypair(input *go_hook.HookInput) error {
-	var keypair private.Keypair
+	var keypair internal.Keypair
 
 	secrets := input.Snapshots["secret"]
 	if len(secrets) == 1 {
 		var ok bool
-		keypair, ok = secrets[0].(private.Keypair)
+		keypair, ok = secrets[0].(internal.Keypair)
 		if !ok {
 			return fmt.Errorf("cannot convert keypair in secret to struct")
 		}
@@ -86,7 +86,7 @@ func generateKeypair(input *go_hook.HookInput) error {
 		}
 		pubPEM := pem.EncodeToMemory(pubBlock)
 
-		keypair = private.Keypair{
+		keypair = internal.Keypair{
 			Pub:  string(pubPEM),
 			Priv: string(privPEM),
 		}

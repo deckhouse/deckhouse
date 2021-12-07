@@ -13,8 +13,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private/crd"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 )
 
@@ -113,7 +113,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: private.Queue("alliance"),
+	Queue: internal.Queue("alliance"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "federations",

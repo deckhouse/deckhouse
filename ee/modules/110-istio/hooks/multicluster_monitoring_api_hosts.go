@@ -14,7 +14,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -24,7 +24,7 @@ var (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: private.Queue("monitoring"),
+	Queue: internal.Queue("monitoring"),
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "* * * * *"},
 	},
@@ -56,7 +56,7 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 		apiHost := m.Get("apiHost").String()
 		apiJWT := m.Get("apiJWT").String()
 
-		bodyBytes, statusCode, err := private.HTTPGet(dc.GetHTTPClient(), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
+		bodyBytes, statusCode, err := internal.HTTPGet(dc.GetHTTPClient(), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
 		if err != nil {
 			input.LogEntry.Warnf("cannot fetch api host %s for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)

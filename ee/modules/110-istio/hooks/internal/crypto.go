@@ -3,7 +3,7 @@ Copyright 2021 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package private
+package internal
 
 type IstioCA struct {
 	Key   string `json:"key"`

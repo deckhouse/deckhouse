@@ -15,7 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"cacerts"},
 			},
-			NamespaceSelector: private.NsSelector(),
+			NamespaceSelector: internal.NsSelector(),
 		},
 	},
 }, generateCA)
@@ -42,7 +42,7 @@ func applyIstioCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, fmt.Errorf("cannot convert selfsigned ca secret to secret: %v", err)
 	}
 
-	return private.IstioCA{
+	return internal.IstioCA{
 		Cert:  string(secret.Data["ca-cert.pem"]),
 		Key:   string(secret.Data["ca-key.pem"]),
 		Chain: string(secret.Data["cert-chain.pem"]),
@@ -51,7 +51,7 @@ func applyIstioCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func generateCA(input *go_hook.HookInput) error {
-	var istioCA private.IstioCA
+	var istioCA internal.IstioCA
 
 	if input.Values.Exists("istio.ca") {
 		istioCA.Cert = input.Values.Get("istio.ca.cert").String()
@@ -70,7 +70,7 @@ func generateCA(input *go_hook.HookInput) error {
 		certs := input.Snapshots["secret_ca"]
 		if len(certs) == 1 {
 			var ok bool
-			istioCA, ok = certs[0].(private.IstioCA)
+			istioCA, ok = certs[0].(internal.IstioCA)
 			if !ok {
 				return fmt.Errorf("cannot convert certificate to certificate authority")
 			}

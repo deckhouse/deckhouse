@@ -16,8 +16,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private/crd"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 )
@@ -84,7 +84,7 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: private.Queue("multicluster"),
+	Queue: internal.Queue("multicluster"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "multiclusters",
@@ -115,7 +115,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		var publicMetadata crd.AlliancePublicMetadata
 		var privateMetadata crd.MulticlusterPrivateMetadata
 
-		bodyBytes, statusCode, err := private.HTTPGet(dc.GetHTTPClient(), multiclusterInfo.PublicMetadataEndpoint, "")
+		bodyBytes, statusCode, err := internal.HTTPGet(dc.GetHTTPClient(), multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.LogEntry.Warnf("cannot fetch public metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PublicMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
@@ -157,7 +157,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		bodyBytes, statusCode, err = private.HTTPGet(dc.GetHTTPClient(), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
+		bodyBytes, statusCode, err = internal.HTTPGet(dc.GetHTTPClient(), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.LogEntry.Warnf("cannot fetch private metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PrivateMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)

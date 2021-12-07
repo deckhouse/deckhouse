@@ -13,8 +13,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
-	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private/crd"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/madison"
 	_ "github.com/deckhouse/deckhouse/ee/modules/600-flant-integration/hooks/pricing"

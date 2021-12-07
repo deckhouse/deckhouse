@@ -18,8 +18,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private"
-	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/private/crd"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
+	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -67,14 +67,14 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: private.Queue("revisions-discovery"),
+	Queue: internal.Queue("revisions-discovery"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "istiooperators",
 			ApiVersion:        "install.istio.io/v1alpha1",
 			Kind:              "IstioOperator",
 			FilterFunc:        applyIstioOperatorFilter,
-			NamespaceSelector: private.NsSelector(),
+			NamespaceSelector: internal.NsSelector(),
 		},
 		{
 			Name:          "namespaces_global_revision",
@@ -148,17 +148,17 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 	revisionsToInstall = append(revisionsToInstall, globalRevision)
 	for _, ns := range input.Snapshots["namespaces_definite_revision"] {
 		nsInfo := ns.(NamespaceInfo)
-		if !private.Contains(revisionsToInstall, nsInfo.Revision) {
+		if !internal.Contains(revisionsToInstall, nsInfo.Revision) {
 			revisionsToInstall = append(revisionsToInstall, nsInfo.Revision)
 		}
 
-		if !private.Contains(applicationNamespaces, nsInfo.Name) {
+		if !internal.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)
 		}
 	}
 	for _, ns := range input.Snapshots["namespaces_global_revision"] {
 		nsInfo := ns.(NamespaceInfo)
-		if !private.Contains(applicationNamespaces, nsInfo.Name) {
+		if !internal.Contains(applicationNamespaces, nsInfo.Name) {
 			applicationNamespaces = append(applicationNamespaces, nsInfo.Name)
 		}
 	}
@@ -171,10 +171,10 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 		rev := pod.Labels["istio.io/rev"]
 		ns := pod.GetNamespace()
 
-		if !private.Contains(revisionsToInstall, rev) {
+		if !internal.Contains(revisionsToInstall, rev) {
 			revisionsToInstall = append(revisionsToInstall, rev)
 		}
-		if !private.Contains(applicationNamespaces, ns) {
+		if !internal.Contains(applicationNamespaces, ns) {
 			applicationNamespaces = append(applicationNamespaces, ns)
 		}
 	}
@@ -182,14 +182,14 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 	operatorRevisionsToInstall = append(operatorRevisionsToInstall, revisionsToInstall...)
 	for _, iop := range input.Snapshots["istiooperators"] {
 		iopInfo := iop.(IstioOperatorCrdInfo)
-		if !private.Contains(operatorRevisionsToInstall, iopInfo.Revision) {
+		if !internal.Contains(operatorRevisionsToInstall, iopInfo.Revision) {
 			operatorRevisionsToInstall = append(operatorRevisionsToInstall, iopInfo.Revision)
 		}
 	}
 
 	var unsupportedRevisions []string
 	for _, rev := range operatorRevisionsToInstall {
-		if !private.Contains(supportedRevisions, rev) {
+		if !internal.Contains(supportedRevisions, rev) {
 			unsupportedRevisions = append(unsupportedRevisions, rev)
 		}
 	}
