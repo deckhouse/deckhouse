@@ -1,0 +1,129 @@
+{!{ define "e2e_run_template" }!}
+{!{- $provider := index . 0 -}!}
+{!{- $script_arg := index . 1 -}!}
+{!{- $script := "script.sh" -}!}
+{!{- if eq $provider "aws" }!}
+  LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+  LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+{!{- else if eq $provider "gcp" }!}
+  LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
+{!{- else if eq $provider "azure" }!}
+  LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+  LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
+  LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
+  LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+{!{- else if eq $provider "yandex-cloud" }!}
+  LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
+  LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
+  LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+  LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+{!{- else if eq $provider "vsphere" }!}
+  LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
+  LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+{!{- end }!}
+run: |
+  echo "Workflow url: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+  werfRunProg=$(cat <<'END_WERF_RUN'
+
+  # WERF_REPO should be set by caller.
+  type werf && source $(werf ci-env github --verbose --as-file)
+
+  echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'werf run' ...
+  Use environment:
+    PREFIX=${PREFIX}
+    TMPPATH=${TMPPATH}
+    DEV_BRANCH=${CI_COMMIT_REF_NAME}
+    PROVIDER=${PROVIDER}
+    CRI=${CRI}
+    LAYOUT=${LAYOUT}
+    KUBERNETES_VERSION=${KUBERNETES_VERSION}
+    CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY}
+    JOB_STATUS=${JOB_STATUS}
+  "
+
+  git status
+
+  werf run dev/install --dev \
+  --docker-options=" \
+    -e CLOUD_TESTS_RUN_BOOTSTRAP_ONLY=${CLOUD_TESTS_RUN_BOOTSTRAP_ONLY} \
+    -e CLOUD_TESTS_RUN_ACTION=${CLOUD_TESTS_RUN_ACTION} \
+    -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+    -e PREFIX=${PREFIX} \
+    -e DEV_BRANCH=${CI_COMMIT_REF_NAME} \
+    -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+    -e CRI=${CRI} \
+    -e PROVIDER=${PROVIDER:-not_provided} \
+    -e LAYOUT=${LAYOUT:-not_provided} \
+    -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+{!{- if eq $provider "aws" }!}
+    -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
+    -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+{!{- else if eq $provider "gcp" }!}
+    -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+{!{- else if eq $provider "azure" }!}
+    -e LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
+    -e LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
+    -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
+    -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+{!{- else if eq $provider "yandex-cloud" }!}
+    -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
+    -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
+    -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+{!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
+    -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+{!{- else if eq $provider "vsphere" }!}
+    -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
+    -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+{!{- end }!}
+    -v $(pwd)/testing:/deckhouse/testing \
+    -v ${TMPPATH}:/tmp \
+    --user $(id -u):$(id -u) \
+    -v /etc/group:/etc/group:ro \
+    -v /etc/passwd:/etc/passwd:ro \
+    -v /etc/shadow:/etc/shadow:ro \
+    -w /deckhouse" -- \
+  bash /deckhouse/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}
+  END_WERF_RUN
+  )
+  # Run werf in a subshell to fix 'Cancel workflow'. Actually, better not press this button.
+  bash <<<"$werfRunProg"
+{!{- end -}!}
+
+
+{!{/*
+A job to check what e2e label was activated and
+set outputs to enable specified e2e job.
+
+It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
+*/}!}
+{!{ define "check_e2e_labels_job" }!}
+{!{- $ctx := . -}!}
+check_e2e_labels:
+  name: Check e2e labels
+  runs-on: ubuntu-latest
+  outputs:
+{!{ range $criName := $ctx.criNames }!}
+{!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
+{!{-     $cri := $criName | toLower -}!}
+{!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower }!}
+    {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
+{!{- end -}!}
+{!{- end }!}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Check e2e labels
+      id: check
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const provider = '{!{ $ctx.provider }!}';
+          const defaults = {!{ $ctx.defaults | toJSON }!};
+          const criNames = {!{ $ctx.criNames | toJSON }!};
+          const kubernetesVersions = {!{ $ctx.kubernetesVersions | toJSON }!};
+
+          const ci = require('./.github/scripts/js/ci');
+          return await ci.checkE2ELabels({github, context, core, provider, defaults, criNames, kubernetesVersions});
+
+{!{- end -}!}

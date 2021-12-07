@@ -1,0 +1,133 @@
+{!{ define "go_generate_template" }!}
+runs-on: ubuntu-latest
+steps:
+  {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
+
+  - name: Run go generate
+    run: |
+      docker run -v $(pwd):/deckhouse -w /deckhouse/tools ${BASE_GOLANG_ALPINE} go generate .
+      docker run -v $(pwd):/deckhouse -w /deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot ${BASE_GOLANG_ALPINE} go generate .
+
+  - name: Check generated code
+    run: |
+      git diff --exit-code
+{!{ end }!}
+
+{!{ define "build_modules_images_template" }!}
+runs-on: self-hosted
+steps:
+  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 2 }!}
+
+  - name: Build and push modules images
+    env:
+      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+      REPO_MCM_USER: ${{secrets.REPO_MCM_USER}}
+      REPO_MCM_TOKEN: ${{secrets.REPO_MCM_TOKEN}}
+    run: |
+      #export WERF_REPO="${DEV_REGISTRY_PATH}"
+      #type werf && source $(werf ci-env github --verbose --as-file)
+
+      ./modules_images_werf bp
+
+  #- name: Build and push modules images
+  #  if: always()
+  #  run: |
+  #    if [[ $WERF_DOCKER_CONFIG == $(pwd)/* ]] ; then
+  #      echo Cleanup temp docker config directory $WERF_DOCKER_CONFIG
+  #      rm -rf $WERF_DOCKER_CONFIG
+  #    fi
+
+  {!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "save_images_tags_json_to_cache_step" . | strings.Indent 2 }!}
+{!{ end }!}
+
+{!{ define "build_template" }!}
+runs-on: self-hosted
+steps:
+  {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_flant_registry_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "restore_images_tags_json_step" . | strings.Indent 2 }!}
+
+  - name: Build and push deckhouse images
+    env:
+      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+      CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+      CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+    run: |
+      ## Source: .gitlab/ci_templates/build.yml
+
+      if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
+
+      type werf && source $(werf ci-env github --verbose --as-file)
+
+      werf build
+
+      # Put tags on produced images and push to dev and release repositories.
+      docker pull $(werf stage image dev)
+      docker pull $(werf stage image dev/install)
+
+      REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+
+      if [[ -n "${CI_COMMIT_TAG}" ]]; then
+        echo "Publish images for tag ${CI_COMMIT_TAG}"
+        if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "Build for "$(echo "${DECKHOUSE_REGISTRY_HOST}" | tr 'a-z' 'A-Z')
+          werf build --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo $WERF_REPO;
+        fi;
+        if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+          DESTINATION_IMAGE=${DEV_REGISTRY_PATH}:${CI_COMMIT_TAG};
+          DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/install:${CI_COMMIT_TAG};
+        else
+          DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
+          DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
+        fi;
+        if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          docker image tag $(werf stage image dev) ${DECKHOUSE_DESTINATION_IMAGE};
+          docker image tag $(werf stage image dev/install) ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+          docker image tag $(werf stage image release-channel-version) ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE};
+          docker image push ${DECKHOUSE_DESTINATION_IMAGE};
+          docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE};
+          docker image push ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE};
+          docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
+          docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
+          docker image rmi ${DESTINATION_RELEASE_CHANNEL_VERSION_IMAGE} || true;
+        fi;
+        docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
+        docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
+        docker image push ${DESTINATION_IMAGE};
+        docker image push ${DESTINATION_INSTALL_IMAGE};
+        docker image rmi ${DESTINATION_IMAGE} || true;
+        docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
+      fi
+      if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+        echo "Publish images for branch ${CI_COMMIT_BRANCH}"
+        if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+          DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/dev:${CI_COMMIT_BRANCH};
+          DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/dev/install:${CI_COMMIT_BRANCH};
+        else
+          DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}/dev:${CI_COMMIT_BRANCH};
+          DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/dev/install:${CI_COMMIT_BRANCH};
+        fi;
+        docker image tag $(werf stage image dev) ${DESTINATION_IMAGE};
+        docker image tag $(werf stage image dev/install) ${DESTINATION_INSTALL_IMAGE};
+        docker image push ${DESTINATION_IMAGE};
+        docker image push ${DESTINATION_INSTALL_IMAGE};
+        docker image rmi ${DESTINATION_IMAGE} || true;
+        docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
+      fi
+{!{ end }!}

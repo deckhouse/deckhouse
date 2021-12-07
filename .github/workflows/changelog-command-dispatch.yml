@@ -21,7 +21,7 @@ jobs:
         with:
           result-encoding: json
           script: |
-            const validate = require('./.github/scripts/changelog-command-validate.js')
+            const validate = require('./.github/scripts/js/changelog-command-validate.js')
             return await validate({ github, core, context })
 
       - name: Slash Command Dispatch

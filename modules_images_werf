@@ -9,8 +9,10 @@ function bp() {
     pull
   fi
 
+  # Always push images to "dev" repository.
   werf build --config modules_images_werf.yaml --report-path images_tags_werf.json
-  if [[ -n "${CI_COMMIT_TAG}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+  # Push images to "release" repository on git tag.
+  if [[ -n "${GIT_TAG_NAME}" && -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
     REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
     werf build --config modules_images_werf.yaml --repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX} --secondary-repo ${WERF_REPO} --report-path images_tags_werf.json
   fi
@@ -48,42 +50,87 @@ function pull() {
     | xargs --no-run-if-empty -n 1 docker pull -q
 }
 
-! read -rd '' HELP_STRING <<"EOF"
+function usage() {
+cat <<"EOF"
 Usage: modules_images SUBCOMMAND [SUBCOMMAND OPTIONS]...
 
-Available subcommands: (for details, modules_images SUBCOMMAND --help)
+Available subcommands:
 
-modules_images bp
-modules_images cleanup
-modules_images pull
+modules_images bp      build and push all modules images
+
+modules_images cleanup run werf cleanup
+
+modules_images pull    pull all base images (get FROM images)
 EOF
+}
 
-type jq &>/dev/null || (echo "Please install jq (https://stedolan.github.io/jq/)"; exit 1)
+function setup_werf() {
+  ci_type=$1
 
-if [[ $# -eq 0 ]] ; then
-  echo "$HELP_STRING"
-  exit 1
-fi
+  if [[ -n $DECKHOUSE_DEV_REGISTRY_PASSWORD ]] ; then
+    echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null
+  fi
+  if [[ -n $DECKHOUSE_REGISTRY_PASSWORD ]] ; then
+    echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null
+  fi
+  if [[ -n $DECKHOUSE_REGISTRY_READ_PASSWORD ]] ; then
+    echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null
+  fi
 
-SUBCOMMAND=$1
-shift
+  # Github workflow uses werf/actions/install.
+  if [[ $ci_type == "gitlab" ]] ; then
+    type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
+  fi
 
-if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST}" ]]; then echo ${DECKHOUSE_DEV_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_DEV_REGISTRY_USER}" --password-stdin ${DECKHOUSE_DEV_REGISTRY_HOST} 2>/dev/null; fi
-if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then echo ${DECKHOUSE_REGISTRY_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_USER}" --password-stdin ${DECKHOUSE_REGISTRY_HOST} 2>/dev/null; fi
-if [[ -n "${DECKHOUSE_REGISTRY_READ_HOST}" ]]; then echo ${DECKHOUSE_REGISTRY_READ_PASSWORD} | docker login --username="${DECKHOUSE_REGISTRY_READ_USER}" --password-stdin ${DECKHOUSE_REGISTRY_READ_HOST} 2>/dev/null; fi
+  type werf && source $(werf ci-env $ci_type --config modules_images_werf.yaml --verbose --as-file)
 
-type multiwerf && source $(multiwerf use 1.2 ${WERF_CHANNEL:-ea} --as-file)
-type werf && source $(werf ci-env gitlab --verbose --as-file)
+  # There are 3 repositories, overwrite WERF_REPO to push to dev registry.
+  if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+    export WERF_REPO="${DEV_REGISTRY_PATH}"
+  fi
+}
 
-if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
+function main() {
+  if [[ $# -eq 0 ]] ; then
+    usage
+    exit 1
+  fi
 
-case "$SUBCOMMAND" in
-  bp )
-    bp $@ ;;
-  cleanup )
-    cleanup $@ ;;
-  pull )
-    pull $@ ;;
-  * )
-    echo "$HELP_STRING"; exit 1 ;;
-esac
+  # Check if jq is present.
+  type jq &>/dev/null || (echo "Please install jq (https://stedolan.github.io/jq/)"; exit 1)
+
+  ci_type=
+  GIT_TAG_NAME=
+  if [[ -n $GITLAB_CI ]] ; then
+    ci_type=gitlab
+    export GIT_TAG_NAME=${CI_COMMIT_TAG}
+  fi
+  if [[ -n $GITHUB_REPOSITORY ]] ; then
+    ci_type=github
+    gitTag=${GITHUB_REF#refs/tags/}
+    if [[ ${GITHUB_REF} == ${gitTag} ]] ; then
+      gitTag=
+    fi
+    export GIT_TAG_NAME=${gitTag}
+  fi
+  if [[ -z $ci_type ]] ; then
+    echo "CI type is not recognized." && exit 1
+  fi
+
+  setup_werf $ci_type
+
+  SUBCOMMAND=$1
+  shift
+  case "$SUBCOMMAND" in
+    bp )
+      bp $@ ;;
+    cleanup )
+      cleanup $@ ;;
+    pull )
+      pull $@ ;;
+    * )
+      usage; exit 1 ;;
+  esac
+}
+
+main $@

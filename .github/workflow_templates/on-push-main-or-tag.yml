@@ -1,0 +1,25 @@
+name: Run build on push to main or tag
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
+
+jobs:
+  # Find latest milestone, find issue with 'issue/release' label.
+  # Create comment "Start build, validation and tests"
+  # use issue_id, issue_number and comment_id to start a build workflow.
+  start_release_build_workflow:
+    name: Start build for release
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Find latest milestone and issue
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.startBuildAndTestWorkflow({github, context, core});

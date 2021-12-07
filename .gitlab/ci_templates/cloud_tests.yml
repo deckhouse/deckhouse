@@ -324,9 +324,10 @@
   - mkdir "/mnt/cloud-layouts/layouts/${CI_JOB_ID}"
   - |
     werf run dev/install --dev --docker-options="-e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} -e PREFIX=${CI_JOB_ID} -e DEV_BRANCH=${CI_COMMIT_REF_NAME} -e KUBERNETES_VERSION=${KUBERNETES_VERSION} -e CRI=${CRI} \
-      -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+      -e PROVIDER=${PROVIDER:-not_provided} -e LAYOUT=${LAYOUT:-not_provided} -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+      -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
       -v $(pwd)/testing:/deckhouse/testing -v /mnt/cloud-layouts/layouts/${CI_JOB_ID}:/tmp --user 999:999 -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro \
-      -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/static_script.sh
+      -v /etc/shadow:/etc/shadow:ro -w /deckhouse" -- bash /deckhouse/testing/cloud_layouts/script.sh
   after_script: &static_after_script
   - |
     if [[ ("$CI_COMMIT_REF_NAME" == "main") && ("$CI_JOB_STATUS" == "failed" || "$CI_JOB_STATUS" == "canceled") ]]; then

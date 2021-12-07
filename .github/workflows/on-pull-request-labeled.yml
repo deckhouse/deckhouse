@@ -1,0 +1,28 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# This workflow reacts to labels and restart workflows if needed.
+# Cloud layout tests and deploy web are restarted only when PR is labeled.
+# Validation workflow is restarted when PR is labeled or unlabeled.
+name: Rerun workflows for pull request
+
+on:
+  pull_request:
+    types: [labeled,unlabeled]
+
+jobs:
+  rerun_workflow_for_pull_request:
+    name: Rerun workflow for pull request
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout sources
+        uses: actions/checkout@v2.4.0
+      - name: Rerun workflow
+        uses: actions/github-script@v5.0.0
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.runWorkflowForPullRequest({github, context, core});

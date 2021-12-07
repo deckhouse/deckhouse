@@ -1,0 +1,232 @@
+{!{/*
+Multifile generator of e2e workflows.
+
+One workflow file for each provider.
+
+Workflow consists of jobs for each possible pair of CRI and Kubernetes version.
+Jobs are enabled according to outputs from check labels job.
+
+*/}!}
+
+{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "Openstack" "vSphere" "Static" -}!}
+{!{- $criNames := slice "Docker" "Containerd" -}!}
+{!{- $kubernetesVersions := slice "1.19" "1.20" "1.21" -}!}
+{!{- $defaults := dict "criName" "Containerd" "kubernetesVersion" "1.21" -}!}
+
+{!{- range $providerName := $providerNames -}!}
+{!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
+{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "defaults" $defaults }!}
+{!{-   $outFile := printf "e2e-%s.yml" $provider }!}
+{!{-   $outPath := filepath.Join (getenv "OUTDIR") $outFile }!}
+{!{-   tmpl.Exec "e2e_workflow_template" $ctx | file.Write $outPath }!}
+{!{- end -}!}
+
+
+{!{/* Template with e2e jobs for one provider. */}!}
+{!{- define "e2e_workflow_template" -}!}
+{!{- $ctx := . -}!}
+{!{- $workflowName := printf "e2e: %s" $ctx.providerName -}!}
+name: '{!{ $workflowName }!}'
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'release-*'
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'ID of issue where label was set'
+        required: true
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: true
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "image_versions_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "terraform_versions_envs" | strings.Indent 2 }!}
+
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}-e2e-{!{ $ctx.provider }!}
+  cancel-in-progress: true
+
+jobs:
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
+
+{!{/* Jobs for each CRI and Kubernetes version */}!}
+{!{- range $criName := $ctx.criNames -}!}
+{!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
+{!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" | toLower -}!}
+{!{-     $cri := $criName | toLower -}!}
+{!{-     $criEnv := $cri | toUpper -}!}
+{!{-     $isDefault := and (eq $ctx.defaults.criName $criName) (eq $ctx.defaults.kubernetesVersion $kubernetesVersion) -}!}
+{!{-     $layout := "WithoutNAT" -}!}
+{!{-     if eq $ctx.provider "azure"  -}!}
+{!{-       $layout = "Standard" -}!}
+{!{-     end -}!}
+{!{-     if eq $ctx.provider "static"  -}!}
+{!{-       $layout = "Static" -}!}
+{!{-     end -}!}
+{!{-     $jobCtx := coll.Merge $ctx (dict "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "isDefault" $isDefault) }!}
+{!{     tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
+{!{-   end -}!}
+{!{- end -}!}
+
+{!{ end -}!}
+
+
+{!{/* One e2e job. */}!}
+{!{- define "e2e_run_job_template" -}!}
+{!{- $ctx := . -}!}
+run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
+  name: "{!{ $ctx.criName }!}, k8s {!{ $ctx.kubernetesVersion }!}"
+  needs:
+    - check_e2e_labels
+    - git_info
+  if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
+  env:
+    PROVIDER: {!{ $ctx.providerName }!}
+    CRI: {!{ $ctx.criName }!}
+    LAYOUT: {!{ $ctx.layout }!}
+    KUBERNETES_VERSION: {!{ $ctx.kubernetesVersion }!}
+    EVENT_LABEL: ${{ github.event.label.name }}
+  runs-on: self-hosted
+  steps:
+    - name: Setup
+      id: setup
+      run: |
+        # Random delay to sparse 'update comment' steps in time.
+        delay=$[ $RANDOM % 5 ].$[ ( $RANDOM % 4 ) * 250 ]
+        echo Delay for $delay
+        sleep $delay
+
+        # Calculate unique prefix for e2e test.
+        prefix=${GITHUB_RUN_ID}-$(echo ${KUBERNETES_VERSION} | tr '.' '-')
+        echo "::set-output name=prefix::${prefix}"
+        echo "prefix=${prefix}"
+
+        # Create tmppath for test script.
+        tmppath=/mnt/cloud-layouts/layouts/${prefix}
+        if [[ -d "${tmppath}" ]] ; then
+          echo "Temporary dir already exists: ${tmppath}. ERROR!"
+          ls -la ${tmppath}
+          exit 1
+        else
+          echo "Create temporary dir for job: ${tmppath}."
+          mkdir -p "${tmppath}"
+        fi
+        echo "::set-output name=tmppath::${tmppath}"
+
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_start" (printf "%s, %s, k8s %s" $ctx.workflowName $ctx.criName $ctx.kubernetesVersion) | strings.Indent 4 }!}
+{!{ tmpl.Exec "restore_images_tags_json_from_cache_or_fail" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+
+    - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+        CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+        TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        PREFIX: ${{ steps.setup.outputs.prefix}}
+{!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
+
+    - name: Cleanup bootstrapped cluster
+      if: ${{ always() }}
+      env:
+        JOB_STATUS: ${{ job.status }}
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        WERF_REPO: ${{env.DEV_REGISTRY_PATH}}
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+        CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
+        TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        PREFIX: ${{ steps.setup.outputs.prefix}}
+{!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+
+    - name: Save test results
+      uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+      with:
+        name: test_output
+        path: |
+          modules/images_tags_${{env.WERF_ENV}}.json
+          testing/cloud_layouts/
+
+    - name: Cleanup temp directory
+      if: always()
+      env:
+        TMPPATH: ${{ steps.setup.outputs.tmppath}}
+      run: |
+        echo "Remove temporary directory '${TMPPATH}' ..."
+        if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+          rm -rf "${TMPPATH}"
+        else
+          echo Not a directory.
+        fi
+
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job" (printf "%s, Kubernetes %s" $ctx.workflowName $ctx.kubernetesVersion)) | strings.Indent 4 }!}
+
+    - name: Alert on fail in default branch
+      #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
+      if: ${{ always() }}
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+      run: |
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+        echo $WORKFLOW_URL
+
+        alertData=$(cat <<EOF
+        {
+          "labels": {
+            "severity_level": 7,
+            "trigger": "CloudLayoutTestFailed",
+            "provider": "${PROVIDER}",
+            "layout": "${LAYOUT}",
+            "cri": "${CRI}",
+            "kubernetes_version": "${KUBERNETES_VERSION}"
+          },
+          "annotations": {
+            "summary": "Cloud Layout Test failed",
+            "description": "Check Github workflow log for more information",
+            "plk_protocol_version": "1",
+            "plk_link_url/job": "${WORKFLOW_URL}",
+            "plk_link_title_en/job": "Github job run",
+            "plk_create_group_if_not_exists/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider",
+            "plk_grouped_by/cloudlayouttestfailed": "CloudLayoutTestFailedGroup,provider=~provider"
+          }
+        }
+        EOF
+        )
+        # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
+        cat <<EOF
+        curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
+          -H 'Content-Type: application/json' \
+          -d "${alertData}"
+        EOF
+
+{!{ end -}!}

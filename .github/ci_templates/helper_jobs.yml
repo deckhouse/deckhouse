@@ -1,0 +1,88 @@
+{!{ define "git_info_job" }!}
+git_info:
+  name: Get git info
+  runs-on: ubuntu-latest
+  outputs:
+    ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
+    ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
+    ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
+    ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
+    github_sha: ${{ steps.git_info.outputs.github_sha }}
+  steps:
+    - id: git_info
+      name: Get tag name and SHA
+      run: |
+        # Detect git tag for release.
+        gitTag=${GITHUB_REF#refs/tags/}
+        if [[ ${GITHUB_REF} == $gitTag ]] ; then
+          gitTag=
+        fi
+        echo "::set-output name=ci_commit_tag::${gitTag}"
+        echo "ci_commit_tag='${gitTag}'"
+
+        # Detect git branch.
+        gitBranch=${GITHUB_REF#refs/heads/}
+        if [[ ${GITHUB_REF} == $gitBranch ]] ; then
+          gitBranch=
+        fi
+        echo "::set-output name=ci_commit_branch::${gitBranch}"
+        echo "ci_commit_branch='${gitBranch}'"
+
+        # CI_COMMIT_REF_NAME for main werf.yaml
+        commitRefName=
+        [[ -n $gitBranch ]] && commitRefName=$gitBranch
+        [[ -n $gitTag ]] && commitRefName=$gitTag
+        echo "::set-output name=ci_commit_ref_name::${commitRefName}"
+        echo "ci_commit_ref_name='${commitRefName}'"
+
+        # CI_PIPELINE_CREATED_AT for main werf.yaml
+        pipelineCreatedAt=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
+        echo "::set-output name=ci_pipeline_created_at::${pipelineCreatedAt}"
+        echo "ci_pipeline_created_at='${pipelineCreatedAt}'"
+
+        # Determine sha of commit.
+        # push event
+        githubSha=${GITHUB_SHA}
+        echo "github_sha for push '${githubSha}'"
+        # workflow_dispatch event
+        if [[ -z $githubSha ]] ; then
+          githubSha = $(jq '.head_commit.id' "${GITHUB_EVENT_PATH}")
+          echo "github_sha for workflow_dispatch '${githubSha}'"
+        fi
+        echo "::set-output name=github_sha::$githubSha"
+        echo "github_sha='${githubSha}'"
+
+        # TODO do we need it for Github configuration?
+        # Set werf_repo if DEV_REGISTRY_PATH is defined
+        werfRepo=
+        if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+          werfRepo="${DEV_REGISTRY_PATH}"
+        fi
+        echo "::set-output name=werf_repo::$werfRepo"
+        echo "werf_repo='${werfRepo}'"
+
+{!{- end -}!}
+
+
+{!{ define "restore_images_tags_json_template" }!}
+images_tags_json:
+  name: Put images_tags_json into artifact
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: Restore from cache
+      id: images-tags-json
+      uses: actions/cache@v2
+      with:
+        path: modules/images_tags_${{env.WERF_ENV}}.json
+        key: ${{ github.sha }}-images-tags
+
+    - name: Fail if not found
+      if: steps.cache-primes.outputs.cache-hit != 'true'
+      run: |
+        echo images_tags json file not found in cache: restart build modules job.
+        exit 1
+
+{!{ tmpl.Exec "save_images_tags_json_step" . | strings.Indent 4 }!}
+{!{- end -}!}
+

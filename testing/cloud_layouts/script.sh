@@ -18,18 +18,18 @@ set -Eeo pipefail
 shopt -s inherit_errexit
 shopt -s failglob
 
-test_failed=""
-
 function abort_bootstrap_from_cache() {
-    dhctl bootstrap-phase abort \
-      --force-abort-from-cache \
-      --config "$cwd/configuration.yaml" \
-      --yes-i-am-sane-and-i-understand-what-i-am-doing
+  >&2 echo "Run abort_bootstrap_from_cache"
+  dhctl bootstrap-phase abort \
+    --force-abort-from-cache \
+    --config "$cwd/configuration.yaml" \
+    --yes-i-am-sane-and-i-understand-what-i-am-doing
 
-    return $?
+  return $?
 }
 
 function abort_bootstrap() {
+  >&2 echo "Run abort_bootstrap"
   dhctl bootstrap-phase abort \
     --ssh-user "$ssh_user" \
     --ssh-agent-private-keys "$ssh_private_key_path" \
@@ -40,6 +40,7 @@ function abort_bootstrap() {
 }
 
 function destroy_cluster() {
+  >&2 echo "Run destroy_cluster"
   dhctl destroy \
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --ssh-user "$ssh_user" \
@@ -49,154 +50,311 @@ function destroy_cluster() {
   return $?
 }
 
+function destroy_static_infra() {
+  >&2 echo "Run destroy_static_infra"
+
+  pushd "$cwd"
+  terraform destroy -input=false -auto-approve || exitCode=$?
+  popd
+
+  return $exitCode
+}
+
 function cleanup() {
-  cleanup_exit_code=0
+  if [[ "$PROVIDER" == "Static" ]]; then
+    >&2 echo "Run cleanup ... destroy terraform infra"
+    destroy_static_infra || exitCode=$?
+    return $exitCode
+  fi
 
-  if [[ -z "$master_ip" ]]; then
-     {
-       abort_bootstrap || abort_bootstrap_from_cache
-     } || cleanup_exit_code="$?"
+  # Check if 'dhctl bootstrap' was not started.
+  if [[ ! -f "$cwd/bootstrap.log" ]] ; then
+    >&2 echo "Run cleanup ... no bootstrap.log, no need to cleanup."
+    return 0
+  fi
+
+  >&2 echo "Run cleanup ..."
+  if ! master_ip="$(parse_master_ip_from_log)" ; then
+    >&2 echo "No master IP: try to abort without cache, then abort from cache"
+    abort_bootstrap || abort_bootstrap_from_cache
   else
-    {
-      destroy_cluster || abort_bootstrap_from_cache
-    } || cleanup_exit_code="$?"
+    >&2 echo "Master IP is '${master_ip}': try to destroy cluster, then abort from cache"
+    destroy_cluster || abort_bootstrap_from_cache
+  fi
+}
+
+function prepare_environment() {
+  root_wd="$(pwd)/testing/cloud_layouts"
+
+  if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
+    >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
+    return 1
   fi
 
-  if [[ -n "$test_failed" ]]; then
-    exit 1
+  cwd="$root_wd/$PROVIDER/$LAYOUT"
+  if [[ "$PROVIDER" == "Static" ]]; then
+    cwd="$root_wd/$PROVIDER"
+  fi
+  if [[ ! -d "$cwd" ]]; then
+    >&2 echo "There is no '${LAYOUT}' layout configuration for '${PROVIDER}' provider by path: $cwd"
+    return 1
   fi
 
-  exit "$cleanup_exit_code"
+  ssh_private_key_path="$cwd/sshkey"
+  rm -f "$ssh_private_key_path"
+  base64 -d <<< "$SSH_KEY" > "$ssh_private_key_path"
+  chmod 0600 "$ssh_private_key_path"
+
+  if [[ -z "$KUBERNETES_VERSION" ]]; then
+    # shellcheck disable=SC2016
+    >&2 echo 'KUBERNETES_VERSION environment variable is required.'
+    return 1
+  fi
+
+  if [[ -z "$CRI" ]]; then
+    # shellcheck disable=SC2016
+    >&2 echo 'CRI environment variable is required.'
+    return 1
+  fi
+
+  if [[ -z "$DEV_BRANCH" ]]; then
+    # shellcheck disable=SC2016
+    >&2 echo 'DEV_BRANCH environment variable is required.'
+    return 1
+  fi
+
+  if [[ -z "$PREFIX" ]]; then
+    # shellcheck disable=SC2016
+    >&2 echo 'PREFIX environment variable is required.'
+    return 1
+  fi
+
+  case "$PROVIDER" in
+  "Yandex.Cloud")
+    # shellcheck disable=SC2016
+    env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
+        SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    ssh_user="ubuntu"
+    ;;
+
+  "GCP")
+    # shellcheck disable=SC2016
+    env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    ssh_user="user"
+    ;;
+
+  "AWS")
+    # shellcheck disable=SC2016
+    env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    ssh_user="ubuntu"
+    ;;
+
+  "Azure")
+    # shellcheck disable=SC2016
+    env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
+        CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    ssh_user="azureuser"
+    ;;
+
+  "OpenStack")
+    # shellcheck disable=SC2016
+    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+    ssh_user="ubuntu"
+    ;;
+
+  "vSphere")
+    # shellcheck disable=SC2016
+    env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+    ssh_user="ubuntu"
+    ;;
+
+  "Static")
+    # shellcheck disable=SC2016
+    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        envsubst '$DECKHOUSE_DOCKERCFG $PREFIX $DEV_BRANCH $KUBERNETES_VERSION $CRI $OS_PASSWORD' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    # shellcheck disable=SC2016
+    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
+        envsubst '$PREFIX $OS_PASSWORD' \
+        <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
+    # "Hide" infra template from terraform.
+    mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
+
+    ssh_user="ubuntu"
+    ;;
+  esac
+
+  >&2 echo "Use configuration in directory '$cwd':"
+  >&2 ls -la $cwd
 }
-trap cleanup EXIT
 
-function fail_test() {
-  test_failed="true"
+function run-test() {
+  if [[ "$PROVIDER" == "Static" ]]; then
+    bootstrap_static || return $?
+  else
+    bootstrap || return $?
+  fi
+
+  wait_cluster_ready "$ssh_private_key_path" "$ssh_user" "${master_ip}"
 }
-trap fail_test ERR
 
-root_wd="$(pwd)/testing/cloud_layouts"
-cwd="$root_wd/$PROVIDER/$LAYOUT"
-if [[ ! -d "$cwd" ]]; then
-  >&2 echo "There is no cloud layout configuration by path: $cwd"
-  exit 1
-fi
+function bootstrap_static() {
+  >&2 echo "Run terraform to create nodes for Static cluster ..."
+  pushd "$cwd"
+  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  popd
 
-ssh_private_key_path="$cwd/sshkey"
-rm -f "$ssh_private_key_path"
-base64 -d <<< "$SSH_KEY" > "$ssh_private_key_path"
-chmod 0600 "$ssh_private_key_path"
+  if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+    >&2 echo "ERROR: can't parse master_ip from terraform.log"
+    return 1
+  fi
+  if ! system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+    >&2 echo "ERROR: can't parse system_ip from terraform.log"
+    return 1
+  fi
 
-if [[ -z "$KUBERNETES_VERSION" ]]; then
-  # shellcheck disable=SC2016
-  >&2 echo 'Provide ${KUBERNETES_VERSION}!'
-  exit 1
-fi
+  # Bootstrap
+  >&2 echo "Run dhctl bootstrap ..."
+  dhctl bootstrap --yes-i-want-to-drop-cache --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+  --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee "$cwd/bootstrap.log" || return $?
 
-if [[ -z "$CRI" ]]; then
-  # shellcheck disable=SC2016
-  >&2 echo 'Provide ${CRI}!'
-  exit 1
-fi
+  >&2 echo "==============================================================
 
-if [[ -z "$DEV_BRANCH" ]]; then
-  # shellcheck disable=SC2016
-  >&2 echo 'Provide ${DEV_BRANCH}!'
-  exit 1
-fi
-if [[ -z "$PREFIX" ]]; then
-  # shellcheck disable=SC2016
-  >&2 echo 'Provide ${PREFIX}!'
-  exit 1
-fi
+  Cluster bootstrapped. Register 'system' node and starting the test now.
 
-if [[ "$PROVIDER" == "Yandex.Cloud" ]]; then
-  # shellcheck disable=SC2016
-  env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
-      SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
-      KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+  If you'd like to pause the cluster deletion for debugging:
+   1. ssh to cluster: 'ssh $ssh_user@$master_ip'
+   2. execute 'kubectl create configmap pause-the-test'
 
-  ssh_user="ubuntu"
-elif [[ "$PROVIDER" == "GCP" ]]; then
-  # shellcheck disable=SC2016
-  env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" \
-      KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+=============================================================="
 
-  ssh_user="user"
-elif [[ "$PROVIDER" == "AWS" ]]; then
-  # shellcheck disable=SC2016
-  env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
-      KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+  >&2 echo 'Fetch registration script ...'
+  for ((i=0; i<10; i++)); do
+    bootstrap_system="$(ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash << "ENDSSH"
+set -Eeuo pipefail
+kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-system -o json | jq -r '.data."bootstrap.sh"'
+ENDSSH
+)" && break
+    >&2 echo "Attempt to get secret manual-bootstrap-for-system in d8-cloud-instance-manager namespace #$i failed. Sleeping 30 seconds..."
+    sleep 30
+  done
 
-  ssh_user="ubuntu"
-elif [[ "$PROVIDER" == "Azure" ]]; then
-  # shellcheck disable=SC2016
-  env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
-      CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" \
-      KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+  if [[ -z "$bootstrap_system" ]]; then
+    >&2 echo "Couldn't get secret manual-bootstrap-for-system in d8-cloud-instance-manager namespace."
+    return 1
+  fi
 
-  ssh_user="azureuser"
-elif [[ "$PROVIDER" == "OpenStack" ]]; then
-  # shellcheck disable=SC2016
-  env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-      KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-  ssh_user="ubuntu"
-elif [[ "$PROVIDER" == "vSphere" ]]; then
-  # shellcheck disable=SC2016
-  env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-      KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
-      envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN}' \
-      <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-  ssh_user="ubuntu"
-else
-  >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
-  exit 1
-fi
+  # shellcheck disable=SC2087
+  # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
+  ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$system_ip" sudo -i /bin/bash <<ENDSSH || true
+set -Eeuo pipefail
+base64 -d <<< "$bootstrap_system" | bash
+ENDSSH
 
-dhctl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
---resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee "$cwd/bootstrap.log"
+  registration_failed=
+  >&2 echo 'Waiting until Node registration finishes ...'
+  for ((i=1; i<=10; i++)); do
+    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+set -Eeuo pipefail
+kubectl get nodes
+kubectl get nodes -o json | jq -re '.items | length > 0' >/dev/null
+kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
+ENDSSH
+      registration_failed=""
+      break
+    else
+      registration_failed="true"
+      >&2 echo "Node registration is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      sleep 60
+    fi
+  done
 
-# TODO: parse not the output of terraform, but last output of dhctl
-if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$cwd/bootstrap.log")"; then
-  >&2 echo "ERROR: can't parse master_ip from bootstrap.log, attempting to abort bootstrap"
-  test_failed="true"
-  exit 1
-fi
+  if [[ $registration_failed == "true" ]] ; then
+    return 1
+  fi
+}
 
->&2 echo "Starting the process, if you'd like to pause the cluster deletion, ssh to cluster \"ssh $ssh_user@$master_ip\" and execute \"kubectl create configmap pause-the-test\""
+function bootstrap() {
+  >&2 echo "Run dhctl bootstrap ..."
+  dhctl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee "$cwd/bootstrap.log" || return $?
 
->&2 echo 'Waiting until Machine provisioning finishes'
-for ((i=0; i<10; i++)); do
-  if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+  if ! master_ip="$(parse_master_ip_from_log)"; then
+    return 1
+  fi
+
+  >&2 echo "==============================================================
+
+  Cluster bootstrapped. Starting the test now.
+
+  If you'd like to pause the cluster deletion for debugging:
+   1. ssh to cluster: 'ssh $ssh_user@$master_ip'
+   2. execute 'kubectl create configmap pause-the-test'
+
+=============================================================="
+
+  provisioning_failed=
+
+  >&2 echo 'Waiting until Machine provisioning finishes ...'
+  for ((i=1; i<=10; i++)); do
+    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
 set -Eeuo pipefail
 kubectl -n d8-cloud-instance-manager get machines
 kubectl -n d8-cloud-instance-manager get machine -o json | jq -re '.items | length > 0' >/dev/null
 kubectl -n d8-cloud-instance-manager get machines -o json|jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
 ENDSSH
-    test_failed=""
-    break
-  else
-    test_failed="true"
-    >&2 echo "Machine provisioning is still in progress (attempt #$i of 10). Sleeping 60 seconds..."
-    sleep 60
-  fi
-done
+      provisioning_failed=""
+      break
+    else
+      provisioning_failed="true"
+      >&2 echo "Machine provisioning is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      sleep 60
+    fi
+  done
 
-for ((i=0; i<3; i++)); do
-  if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<"ENDSSH"; then
+  if [[ $provisioning_failed == "true" ]] ; then
+    return 1
+  fi
+}
+
+# wait_cluster_ready constantly checks if cluster components become ready.
+#
+# Arguments:
+#  - ssh_private_key_path
+#  - ssh_user
+#  - master_ip
+function wait_cluster_ready() {
+  test_failed=
+
+  testScript=$(cat <<"END_SCRIPT"
 set -Eeuo pipefail
 
-function cleanup_delay() {
+function pause-the-test() {
   while true; do
     if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
       break
@@ -208,7 +366,7 @@ function cleanup_delay() {
   done
 }
 
-trap cleanup_delay EXIT
+trap pause-the-test EXIT
 
 for ((i=0; i<10; i++)); do
   smoke_mini_addr=$(kubectl -n d8-upmeter get ep smoke-mini -o json | jq -re '.subsets[].addresses[0] | .ip') && break
@@ -229,7 +387,8 @@ fi
 
 for ((i=0; i<10; i++)); do
   for path in api disk dns prometheus; do
-    result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")"
+    # if any path unaccessible, curl returns error exit code, and script fails, so we use || true to avoid script fail.
+    result="$(curl -m 5 -sS "${smoke_mini_addr}:8080/${path}")" || true
     printf -v "$path" "%s" "$result"
   done
 
@@ -269,7 +428,7 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  if [[ "$api" == "ok" && "$disk" == "ok" && "$dns" == "ok" && "$prometheus" == "ok" && "$ingress" == "ok" ]]; then
+  if [[ "$api:$disk:$dns:$prometheus:$ingress" == "ok:ok:ok:ok:ok" ]]; then
     exit 0
   fi
 
@@ -278,19 +437,69 @@ done
 
 >&2 echo 'Timeout waiting for checks to succeed'
 exit 1
-ENDSSH
-    test_failed=""
-    break
-  else
-    test_failed="true"
+END_SCRIPT
+)
 
-    >&2 echo "SSH #$i failed. Sleeping 30 seconds..."
-    sleep 30
-  fi
-done
+  testRunAttempts=3
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash <<<"${testScript}"; then
+      test_failed=""
+      break
+    else
+      test_failed="true"
+      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
+      sleep 30
+    fi
+  done
 
-ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
+  >&2 echo "Fetch Deckhouse logs after test ..."
+  ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i "$ssh_private_key_path" "$ssh_user@$master_ip" sudo -i /bin/bash > "$cwd/deckhouse.json.log" <<"ENDSSH"
 kubectl -n d8-system logs deploy/deckhouse
 ENDSSH
 
-exit 0
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+}
+
+function parse_master_ip_from_log() {
+  >&2 echo "  Detect master_ip from bootstrap.log ..."
+  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$cwd/bootstrap.log")"; then
+    >&2 echo "    ERROR: can't parse master_ip from bootstrap.log"
+    return 1
+  fi
+  echo "${master_ip}"
+}
+
+function main() {
+  >&2 echo "Start cloud test script"
+  if ! prepare_environment ; then
+    exit 2
+  fi
+
+  exitCode=0
+  case "${1}" in
+    run-test)
+      run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
+    ;;
+
+    cleanup)
+      cleanup || exitCode=$?
+    ;;
+
+    *)
+      # default action is bootstrap + cleanup
+      run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
+      # Ignore cleanup exit code, return exit code of bootstrap phase.
+      cleanup || true
+    ;;
+  esac
+  if [[ $exitCode == 0 ]]; then
+    echo "E2E test: Success!"
+  else
+    echo "E2E test: fail."
+  fi
+  exit $exitCode
+}
+
+main "$@"

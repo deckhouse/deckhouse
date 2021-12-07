@@ -1,0 +1,196 @@
+{!{- range $channel := slice "alpha" "beta" "early-access" "stable" "rock-solid" -}!}
+{!{- $ctx := dict "channel" $channel }!}
+{!{- $outFile := printf "deploy-%s.yml" $channel }!}
+{!{- $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
+{!{- tmpl.Exec "deploy_channel_workflow_template" $ctx | file.Write $outPath }!}
+{!{- end -}!}
+
+{!{- define "deploy_channel_workflow_template" -}!}
+{!{- $channel := .channel -}!}
+{!{- $workflowName := printf "Deploy to %s" $channel -}!}
+name: '{!{ $workflowName }!}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'Id of issue where label was set'
+        required: true
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'Id of comment in issue where to put workflow run status'
+        required: true
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+  DEPLOY_CHANNEL: {!{ .channel }!}
+
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ${{ github.ref }}-deploy-channel-{!{ .channel }!}
+  cancel-in-progress: true
+
+jobs:
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "check_label_job" (slice "deploy" .channel) | strings.Indent 2 }!}
+
+  run_deploy:
+    name: Deploy deckhouse to {!{ .channel }!} channel
+    environment:
+      name: {!{ .channel }!}
+    needs:
+      - check_label
+      - git_info
+    if: needs.check_label.outputs.should_run == 'true'
+    runs-on: self-hosted
+    steps:
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
+{!{ tmpl.Exec "restore_images_tags_json_from_cache_or_fail" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
+
+{!{/*
+Pull deckhouse images from cache, tag with channel name and push to dev and prod registries.
+Images:
+- deckhouse image
+- deckhouse/install image
+- deckhouse/release-channel image
+Destination registries:
+- DECKHOUSE_REGISTRY_HOST
+- DEV_REGISTRY_PATH
+*/}!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" }!}
+      - name: Publish release images for {!{ $werfEnv }!}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: {!{ $werfEnv }!}
+        run: |
+          ## Source: .gitlab/ci_templates/deploy.yml
+
+          # Some precautions.
+          if [[ -z $DEV_REGISTRY_PATH ]] ; then
+            echo "DEV_REGISTRY_PATH is not set!"
+            exit 1
+          fi
+          if [[ -z $WERF_ENV ]] ; then
+            echo "WERF_ENV is not set!"
+            exit 1
+          fi
+
+          # Variables
+          #   1. CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          echo "Registry suffix - ${REGISTRY_SUFFIX}"
+
+          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
+          RELEASE_CHANNEL={!{ $channel }!}
+          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          #   3. Source images from rw registry or from registry.
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            SOURCE_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+            SOURCE_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+            SOURCE_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          else
+            SOURCE_IMAGE=${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG};
+            SOURCE_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${CI_COMMIT_TAG};
+            SOURCE_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          fi
+
+          docker image pull ${SOURCE_IMAGE}
+          docker image pull ${SOURCE_INSTALL_IMAGE}
+          docker image pull ${SOURCE_RELEASE_VERSION_IMAGE}
+
+          #   4. Publish dev images to dev registry
+          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
+            DEV_DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+            DEV_DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+
+            echo "Push 'dev' image ${SOURCE_IMAGE} to ${DEV_DESTINATION_IMAGE}"
+            docker image tag ${SOURCE_IMAGE} ${DEV_DESTINATION_IMAGE}
+            docker image push ${DEV_DESTINATION_IMAGE}
+
+            echo "Delete local 'dev' image ${DEV_DESTINATION_IMAGE}"
+            docker image rmi ${DEV_DESTINATION_IMAGE} || true;
+
+            echo "Push 'dev install' ${SOURCE_INSTALL_IMAGE} to image ${DEV_DESTINATION_INSTALL_IMAGE}"
+            docker image tag ${SOURCE_INSTALL_IMAGE} ${DEV_DESTINATION_INSTALL_IMAGE}
+            docker image push ${DEV_DESTINATION_INSTALL_IMAGE}
+
+            echo "Delete local 'dev install' image ${DEV_DESTINATION_INSTALL_IMAGE}"
+            docker image rmi ${DEV_DESTINATION_INSTALL_IMAGE} || true;
+          fi
+
+          #   5. Publish prod images to rw registry
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DECKHOUSE_DESTINATION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
+            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          else
+            DECKHOUSE_DESTINATION_IMAGE=${CI_REGISTRY_IMAGE}:${RELEASE_CHANNEL};
+            DECKHOUSE_DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${RELEASE_CHANNEL};
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          fi
+
+          echo "Push 'prod' image ${SOURCE_IMAGE} to ${DECKHOUSE_DESTINATION_IMAGE}"
+          docker image tag ${SOURCE_IMAGE} ${DECKHOUSE_DESTINATION_IMAGE}
+          docker image push ${DECKHOUSE_DESTINATION_IMAGE}
+          echo "Delete local 'prod' image ${DECKHOUSE_DESTINATION_IMAGE}"
+          docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
+
+          echo "Push 'prod install' image ${SOURCE_INSTALL_IMAGE} to ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
+          docker image tag ${SOURCE_INSTALL_IMAGE} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+          docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+          echo "Delete local 'prod install' image ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
+          docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
+
+          echo "Push 'release version'  ${SOURCE_RELEASE_VERSION_IMAGE} to ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          docker image tag ${SOURCE_RELEASE_VERSION_IMAGE} ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
+
+          echo "Delete local source image ${SOURCE_IMAGE}"
+          docker image rmi ${SOURCE_IMAGE} || true
+          echo "Delete local 'install' source image ${SOURCE_INSTALL_IMAGE}"
+          docker image rmi ${SOURCE_INSTALL_IMAGE} || true
+          echo "Delete local 'release version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
+
+          echo "Deckhouse images published:"
+          echo "  Source: ${SOURCE_IMAGE}"
+          echo "  Prod: ${DECKHOUSE_DESTINATION_IMAGE}"
+          echo "  Dev: ${DEV_DESTINATION_IMAGE}"
+          echo "Install images published:"
+          echo "  Source: ${SOURCE_INSTALL_IMAGE}"
+          echo "  Prod: ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
+          echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
+          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+
+{!{- end }!}
+
+      - name: Update release branch
+        if: ${{ success() }}
+        continue-on-error: true
+        env:
+          RELEASE_BRANCH_NAME: {!{ .channel }!}
+        run: |
+          echo "Update branch ${RELEASE_BRANCH_NAME} to SHA:${{ needs.git_info.outputs.github_sha }}. Actor is ${GITHUB_ACTOR}."
+
+          git config --global user.name ${GITHUB_ACTOR}
+          git config --global user.email ${GITHUB_ACTOR}'@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${{secrets.BOATSWAIN_GITHUB_TOKEN}}@github.com/${{ github.repository }}
+          git checkout -b "${RELEASE_BRANCH_NAME}"
+          git push --force origin "${RELEASE_BRANCH_NAME}"
+
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job" $workflowName) | strings.Indent 6 }!}
+
+{!{ end -}!}

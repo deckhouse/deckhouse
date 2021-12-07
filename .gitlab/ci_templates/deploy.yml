@@ -28,16 +28,22 @@
   - docker image pull ${SOURCE_RELEASE_VERSION_IMAGE}
 # dev images
   - if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-      DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-      DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-      echo "Push ${SOURCE_IMAGE} to ${DESTINATION_IMAGE}";
-      docker image tag ${SOURCE_IMAGE} ${DESTINATION_IMAGE};
-      docker image push ${DESTINATION_IMAGE};
-      echo "Push ${SOURCE_INSTALL_IMAGE} to ${DESTINATION_INSTALL_IMAGE}";
-      docker image tag ${SOURCE_INSTALL_IMAGE} ${DESTINATION_INSTALL_IMAGE};
-      docker image push ${DESTINATION_INSTALL_IMAGE};
-      echo "Delete local image ${DESTINATION_IMAGE}" && docker image rmi ${DESTINATION_IMAGE};
-      echo "Delete local image ${DESTINATION_INSTALL_IMAGE}" && docker image rmi ${DESTINATION_INSTALL_IMAGE};
+      DEV_DESTINATION_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+      DEV_DESTINATION_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+
+      echo "Push 'dev' image ${SOURCE_IMAGE} to ${DEV_DESTINATION_IMAGE}"
+      docker image tag ${SOURCE_IMAGE} ${DEV_DESTINATION_IMAGE}
+      docker image push ${DEV_DESTINATION_IMAGE}
+
+      echo "Delete local 'dev' image ${DEV_DESTINATION_IMAGE}"
+      docker image rmi ${DEV_DESTINATION_IMAGE} || true;
+
+      echo "Push 'dev install' ${SOURCE_INSTALL_IMAGE} to image ${DEV_DESTINATION_INSTALL_IMAGE}"
+      docker image tag ${SOURCE_INSTALL_IMAGE} ${DEV_DESTINATION_INSTALL_IMAGE}
+      docker image push ${DEV_DESTINATION_INSTALL_IMAGE}
+
+      echo "Delete local 'dev install' image ${DEV_DESTINATION_INSTALL_IMAGE}"
+      docker image rmi ${DEV_DESTINATION_INSTALL_IMAGE} || true;
     fi
 # prod images
   - if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
@@ -49,21 +55,43 @@
       DECKHOUSE_DESTINATION_INSTALL_IMAGE=${CI_REGISTRY_IMAGE}/install:${RELEASE_CHANNEL};
       DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
     fi
-  - echo "Push ${SOURCE_IMAGE} to ${DECKHOUSE_DESTINATION_IMAGE}"
-  - docker image tag ${SOURCE_IMAGE} ${DECKHOUSE_DESTINATION_IMAGE}
-  - docker image push ${DECKHOUSE_DESTINATION_IMAGE}
-  - echo "Push ${SOURCE_INSTALL_IMAGE} to ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
-  - docker image tag ${SOURCE_INSTALL_IMAGE} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-  - docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-  - echo "Push ${SOURCE_RELEASE_VERSION_IMAGE} to ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
-  - docker image tag ${SOURCE_RELEASE_VERSION_IMAGE} ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-  - docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-  - echo "Delete local image ${DECKHOUSE_DESTINATION_IMAGE}" && docker image rmi ${DECKHOUSE_DESTINATION_IMAGE}
-  - echo "Delete local image ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}" && docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
-  - echo "Delete local image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}" && docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
-  - echo "Delete local image ${SOURCE_IMAGE}" && docker image rmi ${SOURCE_IMAGE}
-  - echo "Delete local image ${SOURCE_INSTALL_IMAGE}" && docker image rmi ${SOURCE_INSTALL_IMAGE}
-  - echo "Delete local image ${SOURCE_RELEASE_VERSION_IMAGE}" && docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE}
+
+  - echo "Push 'prod' ${SOURCE_IMAGE} to ${DECKHOUSE_DESTINATION_IMAGE}"
+    docker image tag ${SOURCE_IMAGE} ${DECKHOUSE_DESTINATION_IMAGE}
+    docker image push ${DECKHOUSE_DESTINATION_IMAGE}
+  - echo "Delete local 'prod' image ${DECKHOUSE_DESTINATION_IMAGE}"
+    docker image rmi ${DECKHOUSE_DESTINATION_IMAGE} || true;
+
+  - echo "Push 'prod install' image ${SOURCE_INSTALL_IMAGE} to ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
+    docker image tag ${SOURCE_INSTALL_IMAGE} ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+    docker image push ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}
+  - echo "Delete local 'prod install' image ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
+    docker image rmi ${DECKHOUSE_DESTINATION_INSTALL_IMAGE} || true;
+
+  - echo "Push 'release version'  ${SOURCE_RELEASE_VERSION_IMAGE} to ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+    docker image tag ${SOURCE_RELEASE_VERSION_IMAGE} ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+    docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+  - echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+    docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
+
+  - echo "Delete local source image ${SOURCE_IMAGE}"
+    docker image rmi ${SOURCE_IMAGE} || true
+  - echo "Delete local 'install' source image ${SOURCE_INSTALL_IMAGE}"
+    docker image rmi ${SOURCE_INSTALL_IMAGE} || true
+  - echo "Delete local 'release version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
+    docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
+
+  - |
+    echo "Deckhouse images published:"
+    echo "  Source: ${SOURCE_IMAGE}"
+    echo "  Prod: ${DECKHOUSE_DESTINATION_IMAGE}"
+    echo "  Dev: ${DEV_DESTINATION_IMAGE}"
+    echo "Install images published:"
+    echo "  Source: ${SOURCE_INSTALL_IMAGE}"
+    echo "  Prod: ${DECKHOUSE_DESTINATION_INSTALL_IMAGE}"
+    echo "  Dev: ${DEV_DESTINATION_INSTALL_IMAGE}"
+    echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+
   dependencies:
     - "Build Modules Images"
   when: manual

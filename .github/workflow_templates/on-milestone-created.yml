@@ -1,0 +1,18 @@
+name: 'New milestone: create issue'
+on:
+  milestone:
+    types: [created]
+
+jobs:
+  create_release_issue_for_milestone:
+    name: Create issue for milestone
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Create issue
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.createReleaseIssueForMilestone({github, context, core});

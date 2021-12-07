@@ -1,0 +1,104 @@
+{!{ define "checkout_step" }!}
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+{!{- end -}!}
+
+{!{ define "checkout_full_step" }!}
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    fetch-depth: 0
+{!{- end -}!}
+
+{!{ define "checkout_from_event_ref_step" }!}
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    ref: ${{ github.event.ref }}
+    fetch-depth: 0
+{!{- end -}!}
+
+{!{ define "login_dev_registry_step" }!}
+- name: Login to dev registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  with:
+    registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    logout: false
+{!{- end -}!}
+
+{!{ define "login_readonly_registry_step" }!}
+- name: Login to readonly registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  with:
+    registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+    username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+    password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+    logout: false
+{!{- end -}!}
+
+{!{ define "login_rw_registry_step" }!}
+- name: Login to rw registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  with:
+    registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+    logout: false
+{!{- end -}!}
+
+{!{ define "login_flant_registry_step" }!}
+- name: Login to flant registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  with:
+    registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+    username: ${{ secrets.FLANT_REGISTRY_USER }}
+    password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+    logout: false
+{!{- end -}!}
+
+{!{ define "werf_install_step" }!}
+- name: Install werf CLI
+  uses: {!{ index (ds "actions") "werf/actions/install" }!}
+  with:
+    channel: ${{env.WERF_CHANNEL}}
+{!{- end -}!}
+
+{!{ define "save_images_tags_json_step" }!}
+- name: Save images_tags file
+  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+  with:
+    name: images_tags_json_${{env.WERF_ENV}}
+    path: modules/images_tags_${{env.WERF_ENV}}.json
+{!{- end -}!}
+
+{!{ define "restore_images_tags_json_step" }!}
+- name: Restore images_tags file
+  uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+  with:
+    name: images_tags_json_${{env.WERF_ENV}}
+    path: modules
+{!{- end -}!}
+
+{!{ define "save_images_tags_json_to_cache_step" }!}
+- name: Save images_tags file
+  uses: {!{ index (ds "actions") "actions/cache" }!}
+  with:
+    path: modules/images_tags_${{env.WERF_ENV}}.json
+    key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+{!{- end -}!}
+
+{!{ define "restore_images_tags_json_from_cache_or_fail" }!}
+- name: Restore images_tags_json from cache
+  id: images-tags-json
+  uses: {!{ index (ds "actions") "actions/cache" }!}
+  with:
+    path: modules/images_tags_${{env.WERF_ENV}}.json
+    key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+- name: Fail if not found
+  if: steps.images-tags-json.outputs.cache-hit != 'true'
+  run: |
+    echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
+    exit 1
+{!{- end -}!}
