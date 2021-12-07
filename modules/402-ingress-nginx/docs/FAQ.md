@@ -176,3 +176,16 @@ spec:
     sourceRanges:
     - 192.168.0.0/24
 ```
+
+## How to add extra log fields to a nginx-controller
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: "nginx"
+  inlet: "LoadBalancer"
+  additionalLogFields:
+    my-cookie: "$cookie_MY_COOKIE"
+```

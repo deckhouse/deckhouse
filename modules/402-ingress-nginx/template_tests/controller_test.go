@@ -70,6 +70,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
       use-proxy-protocol: true
       load-balance: ewma
     ingressClass: nginx
+    additionalLogFields:
+      my-cookie: "$cookie_MY_COOKIE"
     validationEnabled: true
     controllerVersion: "0.26"
     inlet: LoadBalancer
@@ -155,7 +157,9 @@ ephemeral-storage: 150Mi
 memory: 200Mi`))
 			Expect(testD.Field("spec.template.spec.containers.0.env").Array()).ToNot(ContainElement(ContainSubstring(`{"name":"SHUTDOWN_GRACE_PERIOD","value":"120"}`)))
 
-			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config").Exists()).To(BeTrue())
+			cm := hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.log-format-upstream").String()).To(ContainSubstring(`"my-cookie": "$cookie_MY_COOKIE"`))
 			Expect(hec.KubernetesResource("ConfigMap", "d8-ingress-nginx", "test-custom-headers").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-ingress-nginx", "ingress-nginx-test-auth-tls").Exists()).To(BeTrue())
 

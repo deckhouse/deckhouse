@@ -131,6 +131,11 @@ data:
 
   log-format-escape-json: "true"
   log-format-upstream: '{
+  {{- if $crd.spec.additionalLogFields }}
+    {{- range $field, $value := $crd.spec.additionalLogFields }}
+    {{ $field | quote }}: {{ $value | quote }},
+    {{- end }}
+  {{- end }}
     "time": "$time_iso8601",
     "request_id": "$request_id",
     "user": "$remote_user",
