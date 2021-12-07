@@ -23,6 +23,16 @@ standard:
   - 4.2.2.2
   internalNetworkSecurity: true|false                     # optional, default true
   externalNetworkName: shared                             # required
+  bastion:
+    zone: ru2-b                                           # optional
+    volumeType: fast-ru-2b                                # optional
+    instanceClass:
+      flavorName: m1.large                                # required
+      imageName: ubuntu-20-04-cloud-amd64                 # required
+      rootDiskSize: 50                                    # optional, local disk is used if not specified
+      additionalTags:
+        severity: critical                                # optional
+        environment: production                           # optional
 masterNodeGroup:
   replicas: 3
   instanceClass:
