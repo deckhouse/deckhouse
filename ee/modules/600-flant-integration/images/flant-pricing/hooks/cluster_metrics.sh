@@ -44,7 +44,6 @@ function __main__() {
       "control_plane_version": "'$FP_CONTROL_PLANE_VERSION'",
       "minimal_kubelet_version": "'$FP_MINIMAL_KUBELET_VERSION'",
       "deckhouse_version": "'$FP_DECKHOUSE_VERSION'",
-      "pricing_plan": "'$FP_PLAN'",
       "pricing_cluster_type": "'$FP_CLUSTER_TYPE'"
     }
   }' | jq -rc >> $METRICS_PATH

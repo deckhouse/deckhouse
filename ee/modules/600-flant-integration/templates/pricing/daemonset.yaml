@@ -72,8 +72,6 @@ spec:
           value: {{ .Values.flantIntegration.internal.controlPlaneVersion | quote }}
         - name: FP_MINIMAL_KUBELET_VERSION
           value: {{ .Values.flantIntegration.internal.nodeStats.minimalKubeletVersion | quote }}
-        - name: FP_PLAN
-          value: {{ .Values.flantIntegration.plan | quote }}
         - name: FP_CLUSTER_TYPE
           value: {{ .Values.flantIntegration.internal.clusterType | quote }}
         - name: FP_MASTERS_COUNT
