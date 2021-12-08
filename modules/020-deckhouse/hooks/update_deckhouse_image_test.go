@@ -25,6 +25,26 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+var _ = FDescribe("tmppp", func() {
+	f := HookExecutionConfigInit(`{
+        "global": {
+          "modulesImages": {
+			"registry": "my.registry.com/deckhouse"
+		  }
+        },
+		"deckhouse": {
+			"bundle": "Default",
+    		"logLevel": "Info",
+    		"releaseChannel": "Stable",
+    		"update": {
+      			"mode": "Manual"
+			}
+		}
+}`, `{}`)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
+
+})
+
 var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
@@ -211,6 +231,36 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			Expect(f.KubernetesResource("Pod", "d8-system", "deckhouse-6f46df5bd7-nk4j7").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("Manual mode", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("deckhouse.update.mode", []byte(`"Manual"`))
+			f.ValuesDelete("deckhouse.update.windows")
+
+			f.KubeStateSet(newReleaseState)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should keep deckhouse deployment", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.26.2"))
+		})
+
+		Context("Second run of the hook in a Manual mode should not change state", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+				f.RunHook()
+			})
+
+			It("Should keep deckhouse deployment", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+				Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.26.2"))
+			})
+		})
+	})
 })
 
 var (
@@ -318,5 +368,57 @@ metadata:
   name: v1-25-1
 spec:
   version: "v1.25.1"
+`
+
+	newReleaseState = `
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-26-2
+spec:
+  version: v1.26.2
+status:
+  approved: true
+  phase: Deployed
+  transitionTime: "2021-12-08T08:34:01.292180321Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1-27-0
+spec:
+  version: v1.27.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: deckhouse-6f46df5bd7-nk4j7
+  namespace: d8-system
+  labels:
+    app: deckhouse
+spec:
+  containers:
+    - name: deckhouse
+      image: dev-registry.deckhouse.io/sys/deckhouse-oss/dev:1-26-2
+status:
+  containerStatuses:
+    - containerID: containerd://9990d3eccb8657d0bfe755672308831b6d0fab7f3aac553487c60bf0f076b2e3
+      imageID: dev-registry.deckhouse.io/sys/deckhouse-oss/dev@sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1
+      ready: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: d8-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: deckhouse
+          image: my.registry.com/deckhouse:v1.26.2
 `
 )
