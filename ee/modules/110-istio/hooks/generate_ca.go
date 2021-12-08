@@ -53,7 +53,7 @@ func applyIstioCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func generateCA(input *go_hook.HookInput) error {
 	var istioCA internal.IstioCA
 
-	if input.Values.Exists("istio.ca") {
+	if input.Values.Exists("istio.ca.cert") {
 		istioCA.Cert = input.Values.Get("istio.ca.cert").String()
 		istioCA.Key = input.Values.Get("istio.ca.key").String()
 		if input.Values.Exists("istio.ca.chain") {
@@ -75,11 +75,10 @@ func generateCA(input *go_hook.HookInput) error {
 				return fmt.Errorf("cannot convert certificate to certificate authority")
 			}
 		} else {
-			selfSignedCA, err := certificate.GenerateCA(input.LogEntry, "d8-istio", func(r *csr.CertificateRequest) {
-				r.Names = []csr.Name{
-					{O: "d8-istio"},
-				}
-			})
+			selfSignedCA, err := certificate.GenerateCA(input.LogEntry, "d8-istio", certificate.WithGroups("d8-istio"), certificate.WithKeyRequest(&csr.KeyRequest{
+				A: "rsa",
+				S: 2048,
+			}))
 			istioCA.Cert = selfSignedCA.Cert
 			istioCA.Key = selfSignedCA.Key
 			istioCA.Chain = selfSignedCA.Cert
