@@ -14,6 +14,7 @@ on:
       - 'early-access'
       - 'stable'
       - 'rock-solid'
+      - 'changelog/*'
 
 env:
 

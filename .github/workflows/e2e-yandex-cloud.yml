@@ -8,6 +8,12 @@ on:
     branches-ignore:
       - 'main'
       - 'release-*'
+      - 'alpha'
+      - 'beta'
+      - 'early-access'
+      - 'stable'
+      - 'rock-solid'
+      - 'changelog/*'
   workflow_dispatch:
     inputs:
       issue_id:
