@@ -185,7 +185,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.19
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, e2e-common]
     steps:
       - name: Setup
         id: setup
@@ -446,8 +446,7 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
 
       - name: Alert on fail in default branch
-        #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -479,12 +478,10 @@ jobs:
           }
           EOF
           )
-          # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-          cat <<EOF
+
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
-          EOF
 
 
   run_docker_1_20:
@@ -499,7 +496,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.20
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, e2e-common]
     steps:
       - name: Setup
         id: setup
@@ -760,8 +757,7 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
 
       - name: Alert on fail in default branch
-        #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -793,12 +789,10 @@ jobs:
           }
           EOF
           )
-          # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-          cat <<EOF
+
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
-          EOF
 
 
   run_docker_1_21:
@@ -813,7 +807,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.21
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, e2e-common]
     steps:
       - name: Setup
         id: setup
@@ -1074,8 +1068,7 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
 
       - name: Alert on fail in default branch
-        #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -1107,12 +1100,10 @@ jobs:
           }
           EOF
           )
-          # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-          cat <<EOF
+
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
-          EOF
 
 
   run_containerd_1_19:
@@ -1127,7 +1118,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.19
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, e2e-common]
     steps:
       - name: Setup
         id: setup
@@ -1388,8 +1379,7 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
 
       - name: Alert on fail in default branch
-        #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -1421,12 +1411,10 @@ jobs:
           }
           EOF
           )
-          # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-          cat <<EOF
+
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
-          EOF
 
 
   run_containerd_1_20:
@@ -1441,7 +1429,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.20
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, e2e-common]
     steps:
       - name: Setup
         id: setup
@@ -1702,8 +1690,7 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
 
       - name: Alert on fail in default branch
-        #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -1735,12 +1722,10 @@ jobs:
           }
           EOF
           )
-          # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-          cat <<EOF
+
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
-          EOF
 
 
   run_containerd_1_21:
@@ -1755,7 +1740,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: 1.21
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, e2e-common]
     steps:
       - name: Setup
         id: setup
@@ -2016,8 +2001,7 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
 
       - name: Alert on fail in default branch
-        #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-        if: ${{ always() }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -2049,10 +2033,8 @@ jobs:
           }
           EOF
           )
-          # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-          cat <<EOF
+
           curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
             -H 'Content-Type: application/json' \
             -d "${alertData}"
-          EOF
 
