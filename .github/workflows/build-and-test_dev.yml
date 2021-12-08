@@ -135,15 +135,6 @@ jobs:
           echo "::set-output name=github_sha::$githubSha"
           echo "github_sha='${githubSha}'"
 
-          # TODO do we need it for Github configuration?
-          # Set werf_repo if DEV_REGISTRY_PATH is defined
-          werfRepo=
-          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            werfRepo="${DEV_REGISTRY_PATH}"
-          fi
-          echo "::set-output name=werf_repo::$werfRepo"
-          echo "werf_repo='${werfRepo}'"
-
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
@@ -316,7 +307,6 @@ jobs:
           CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
         run: |
           ## Source: .gitlab/ci_templates/build.yml
-
           if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
@@ -502,8 +492,9 @@ jobs:
           image: tests
           args: 'go test -timeout=${{env.TEST_TIMEOUT}} -vet=off ./modules/... ./global-hooks/...'
         env:
+          WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-w /deckhouse'
-          WERF_REPO: ${{ needs.git_info.outputs.werf_repo }}
+          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
@@ -551,8 +542,9 @@ jobs:
           image: tests
           args: 'ginkgo -timeout=${{env.TEST_TIMEOUT}} -vet=off --slowSpecThreshold=30 ./testing/matrix/'
         env:
+          WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-w /deckhouse'
-          WERF_REPO: ${{ needs.git_info.outputs.werf_repo }}
+          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
@@ -600,8 +592,9 @@ jobs:
           image: dhctl-tests
           args: 'make ci'
         env:
+          WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl'
-          WERF_REPO: ${{ needs.git_info.outputs.werf_repo }}
+          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
@@ -649,8 +642,9 @@ jobs:
           image: tests
           args: 'sh -c "go generate tools/register.go && golangci-lint run"'
         env:
+          WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-w /deckhouse -e "TERM=xterm-256color"'
-          WERF_REPO: ${{ needs.git_info.outputs.werf_repo }}
+          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
@@ -698,8 +692,9 @@ jobs:
           image: tests
           args: 'ginkgo -vet=off ./testing/openapi_cases/'
         env:
+          WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-v ${{github.workspace}}:/deckhouse -w /deckhouse'
-          WERF_REPO: ${{ needs.git_info.outputs.werf_repo }}
+          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
@@ -850,8 +845,9 @@ jobs:
           image: tests
           args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
         env:
+          WERF_SKIP_BUILD: "true"
           WERF_DOCKER_OPTIONS: '-w /deckhouse'
-          WERF_REPO: ${{ needs.git_info.outputs.werf_repo }}
+          WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}

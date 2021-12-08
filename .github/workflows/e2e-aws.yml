@@ -144,15 +144,6 @@ jobs:
           echo "::set-output name=github_sha::$githubSha"
           echo "github_sha='${githubSha}'"
 
-          # TODO do we need it for Github configuration?
-          # Set werf_repo if DEV_REGISTRY_PATH is defined
-          werfRepo=
-          if [[ -n "${DEV_REGISTRY_PATH}" ]]; then
-            werfRepo="${DEV_REGISTRY_PATH}"
-          fi
-          echo "::set-output name=werf_repo::$werfRepo"
-          echo "werf_repo='${werfRepo}'"
-
   check_e2e_labels:
     name: Check e2e labels
     runs-on: ubuntu-latest
