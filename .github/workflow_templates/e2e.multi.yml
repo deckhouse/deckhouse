@@ -91,6 +91,10 @@ jobs:
 {!{/* One e2e job. */}!}
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
+{!{- $runsOnLabel := "e2e-common" -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $runsOnLabel = "e2e-vsphere" -}!}
+{!{- end -}!}
 run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
   name: "{!{ $ctx.criName }!}, k8s {!{ $ctx.kubernetesVersion }!}"
   needs:
@@ -103,7 +107,7 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
     LAYOUT: {!{ $ctx.layout }!}
     KUBERNETES_VERSION: {!{ $ctx.kubernetesVersion }!}
     EVENT_LABEL: ${{ github.event.label.name }}
-  runs-on: self-hosted
+  runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
     - name: Setup
       id: setup
@@ -195,8 +199,7 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job" (printf "%s, Kubernetes %s" $ctx.workflowName $ctx.kubernetesVersion)) | strings.Indent 4 }!}
 
     - name: Alert on fail in default branch
-      #if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
-      if: ${{ always() }}
+      if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (cancelled() || failure()) }}
       env:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
@@ -228,11 +231,9 @@ run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!}:
         }
         EOF
         )
-        # TODO uncomment curl (remove cat wrapper) after migration from Gitlab.
-        cat <<EOF
+
         curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" \
           -H 'Content-Type: application/json' \
           -d "${alertData}"
-        EOF
 
 {!{ end -}!}
