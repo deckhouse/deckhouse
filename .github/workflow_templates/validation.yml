@@ -19,6 +19,7 @@ on:
       - 'early-access'
       - 'stable'
       - 'rock-solid'
+      - 'changelog/*'
 
 # Analog of Gitlab's "interruptible: true" behaviour.
 # Note: Concurrency is currently in beta and subject to change.

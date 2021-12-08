@@ -10,6 +10,7 @@ on:
       - 'early-access'
       - 'stable'
       - 'rock-solid'
+      - 'changelog/*'
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
