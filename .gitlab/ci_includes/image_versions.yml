@@ -1,5 +1,6 @@
 # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
 # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
+# Note: update github workflows after edit! cd .github; ./render-workflows.sh
 variables:
   BASE_ALPINE: "${BASE_IMAGES_REGISTRY_PATH}alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
   BASE_DEBIAN: "${BASE_IMAGES_REGISTRY_PATH}debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"

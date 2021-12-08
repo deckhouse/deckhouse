@@ -1,3 +1,4 @@
+# Note: update github workflows after edit! cd .github; ./render-workflows.sh
 variables:
   TF_VERSION: 0.13.4
   TF_AWS_NAMESPACE: hashicorp
