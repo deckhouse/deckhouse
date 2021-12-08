@@ -67,7 +67,6 @@ steps:
       CI_PIPELINE_CREATED_AT: ${{needs.git_info.outputs.ci_pipeline_created_at}}
     run: |
       ## Source: .gitlab/ci_templates/build.yml
-
       if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
 
       type werf && source $(werf ci-env github --verbose --as-file)
