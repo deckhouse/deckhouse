@@ -25,26 +25,6 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("tmppp", func() {
-	f := HookExecutionConfigInit(`{
-        "global": {
-          "modulesImages": {
-			"registry": "my.registry.com/deckhouse"
-		  }
-        },
-		"deckhouse": {
-			"bundle": "Default",
-    		"logLevel": "Info",
-    		"releaseChannel": "Stable",
-    		"update": {
-      			"mode": "Manual"
-			}
-		}
-}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "DeckhouseRelease", false)
-
-})
-
 var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", func() {
 	f := HookExecutionConfigInit(`{
         "global": {
