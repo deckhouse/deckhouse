@@ -48,7 +48,6 @@ modules:
 const moduleValues = `
 contacts: 10
 doNotChargeForRockSolid: false
-plan: "Standard"
 planIsBoughtAsBundle: false
 auxiliaryCluster: false
 clusterType: Hybrid
@@ -86,7 +85,6 @@ internal:
 const moduleValuesNoLogs = `
 contacts: 10
 doNotChargeForRockSolid: false
-plan: "Standard"
 planIsBoughtAsBundle: false
 auxiliaryCluster: false
 clusterType: Hybrid
@@ -173,8 +171,6 @@ var _ = Describe("Module :: flant-integration :: helm template ::", func() {
   value: "1.19"
 - name: FP_MINIMAL_KUBELET_VERSION
   value: "1.19"
-- name: FP_PLAN
-  value: Standard
 - name: FP_CLUSTER_TYPE
   value: Hybrid
 - name: FP_MASTERS_COUNT

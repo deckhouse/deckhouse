@@ -16,7 +16,7 @@ properties:
     default: Standard
     x-examples: ["Standard"]
     description: |
-      Tariff plan.
+      **Unused.** Tariff plan.
   planIsBoughtAsBundle:
     type: boolean
     default: false
