@@ -43,7 +43,7 @@ EOF
 (cat /in/header
  echo '{!{ define "image_versions_envs" }!}
 {!{$BASE_IMAGES_REGISTRY_PATH := "registry.deckhouse.io/base_images/" }!}'
- grep '^#' /in/gitlab_ci_includes/image_versions.yml
+ grep '^#' /in/gitlab_ci_includes/image_versions.yml | grep -v Note
  cat <<'EOF' | gomplate --datasource image_versions=file:///in/gitlab_ci_includes/image_versions.yml
 {{- $vars := (ds "image_versions").variables -}}
 {{ range $k, $v := $vars }}
