@@ -203,10 +203,9 @@ To avoid situations when VPA requests more resources for Prometheus or Longterm 
 
 > ⛔ **_Attention!!!_** Using this configuration creates a service in which Prometheus metrics are available without authorization.
 
+To provide Lens access to Prometheus metrics, you need to create some resources in a cluster.
 
-To provide Lens access to Prometheus metrics, you need to deploy resources in cluster:
-<details>
-
+{% offtopic title="Resource templates to be created..." %}
 ```yaml
 ---
 apiVersion: v1
@@ -320,6 +319,6 @@ spec:
       port: 8080
       targetPort: 80
 ```
-</details>
+{% endofftopic %}
 
 After the resources deployment, Prometheus metrics will be available at address `lens-proxy/prometheus-lens-proxy:8080`.
