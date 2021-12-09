@@ -301,3 +301,40 @@ properties:
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
             default: "false"
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      Node selector for Upmeter server. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      -
+        - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      Node tolerations for Upmeter server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
