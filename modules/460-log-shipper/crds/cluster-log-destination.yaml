@@ -22,11 +22,9 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            CustomResource for storage in log-pipeline.
+            Describes setting for a log storage, which you can use in many log sources.
 
-            Each CR `ClusterLogDestination` descride one log storage, which you can use in many log sources.
-
-            `metadata.name` — is an upstream name, whick you should use in CR `ClusterLoggingConfig`.
+            `metadata.name` — is an upstream name, which you should use in CR [ClusterLoggingConfig](https://deckhouse.io/en/documentation/modules/460-log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               type: object
@@ -59,7 +57,7 @@ spec:
                 type:
                   type: string
                   enum: ["Loki", "Elasticsearch", "Logstash"]
-                  description: Set on of possible output destinations.
+                  description: Type of a log storage backend.
                 loki:
                   type: object
                   required:

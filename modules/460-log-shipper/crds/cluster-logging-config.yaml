@@ -22,7 +22,7 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            CustomResource for source in log-pipeline.
+            Describes a log source in log-pipeline.
 
             Each CustomResource `ClusterLoggingConfig` describes rules for log fetching from cluster.
           properties:
