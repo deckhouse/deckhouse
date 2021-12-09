@@ -137,7 +137,9 @@ func checkCyrillicLettersInString(line string) (string, bool) {
 	cursor = cyrPointerRe.ReplaceAllString(cursor, "^")
 	cursor = strings.TrimRight(cursor, "-")
 
-	return line + "\n" + cursor, true
+	const formatPrefix = "  "
+
+	return formatPrefix + line + "\n" + formatPrefix + cursor, true
 }
 
 // checkCyrillicLettersInArray returns a fancy message for each string in array that contains Cyrillic letters.
