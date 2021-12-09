@@ -45,8 +45,8 @@ spec:
 2. `Administrators` can get, edit, list, and delete objects on the cluster level and in the namespaces `prod` and `stage`.
 
 Because `Jane Doe` matches two rules, some calculations will be made:
-* She will have the most powerful accessLevel across all matching rules - `ClusterAdmin`.
-* The `limitNamesapces` options will be combined, so that Jane will have access to the following namespaces.
+* She will have the most powerful accessLevel across all matching rules — `ClusterAdmin`.
+* The `limitNamespaces` options will be combined, so that Jane will have access to the following namespaces.
 
 The resulting rights will be:
 ```yaml
