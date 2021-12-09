@@ -108,3 +108,8 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 2. Kubeconfig generator stores id token and refresh token to the kubeconfig file.
 
 3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration. 
+
+
+## How secure is Dex from brute-forcing my credentials?
+
+Only 20 authentication requests are allowed for a single user. If the limit exceeds, another login attempt will be allowed each six seconds.
