@@ -49,6 +49,7 @@ spec:
   nodeGroups:
   - master
   path: "/local"
+  reclaimPolicy: "Retain"
 `))
 				f.RunHook()
 			})
@@ -61,7 +62,8 @@ spec:
     "name": "local1",
     "spec": {
       "nodeGroups": ["master"],
-      "path": "/local"
+      "path": "/local",
+      "reclaimPolicy": "Retain"
     }
 }]`))
 			})
@@ -90,6 +92,7 @@ spec:
   - worker
   - system
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: "Delete"
 `))
 					f.RunHook()
 				})
@@ -102,7 +105,8 @@ spec:
     "name": "local1",
     "spec": {
       "nodeGroups": ["worker", "system"],
-      "path": "/opt/local-path-provisioner"
+      "path": "/opt/local-path-provisioner",
+      "reclaimPolicy": "Delete"
     }
 }]`))
 				})
@@ -123,6 +127,7 @@ spec:
   - master
   - worker
   path: "/opt/local-path-provisioner"
+  reclaimPolicy: "Delete"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
@@ -130,6 +135,7 @@ metadata:
   name: local2
 spec:
   path: "/local"
+  reclaimPolicy: "Retain"
 `))
 			f.RunHook()
 		})
@@ -140,13 +146,15 @@ spec:
     "name": "local1",
     "spec": {
       "nodeGroups": ["master", "worker"],
-      "path": "/opt/local-path-provisioner"
+      "path": "/opt/local-path-provisioner",
+      "reclaimPolicy": "Delete"
     }
   },
   {
     "name": "local2",
     "spec": {
-      "path": "/local"
+      "path": "/local",
+      "reclaimPolicy": "Retain"
     }
   }
 ]`))

@@ -5,8 +5,9 @@ ARG VERSION=0.0.21
 ARG COMMIT_REF=755e331a276d4dd26f84377db5504a38109df8fb
 
 RUN apk add --no-cache go git
-RUN git clone https://github.com/rancher/local-path-provisioner.git
-WORKDIR /local-path-provisioner
+RUN mkdir /src
+RUN git clone https://github.com/rancher/local-path-provisioner.git /src
+WORKDIR /src
 RUN git checkout "${COMMIT_REF}"
 
 # Do not create directory if not found (GH: #224)

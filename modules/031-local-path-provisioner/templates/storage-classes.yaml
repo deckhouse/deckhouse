@@ -9,7 +9,7 @@ metadata:
 provisioner: deckhouse.io/{{ $localPathProvisioner.name }}
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Delete
+reclaimPolicy: {{ $localPathProvisioner.spec.reclaimPolicy }}
   {{- if $localPathProvisioner.spec.nodeGroups }}
 allowedTopologies:
 - matchLabelExpressions:
