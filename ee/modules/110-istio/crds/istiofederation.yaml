@@ -65,34 +65,36 @@ spec:
                     publicLastFetchTimestamp:
                       type: string
                       format: date-time
-                    ingressGateways:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          address:
-                            type: string
-                          port:
-                            type: integer
-                    ingressGatewaysLastFetchTimestamp:
-                      format: date-time
-                      type: string
-                    publicServices:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          hostname:
-                            type: string
-                          ports:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                name:
-                                  type: string
-                                port:
-                                  type: integer
-                    publicServicesLastFetchTimestamp:
+                    private:
+                      type: object
+                      properties:
+                        ingressGateways:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              address:
+                                type: string
+                              port:
+                                type: integer
+                        publicServices:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              hostname:
+                                type: string
+                              ports:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    port:
+                                      type: integer
+                              virtualIP:
+                                type: string
+                    privateLastFetchTimestamp:
                       format: date-time
                       type: string

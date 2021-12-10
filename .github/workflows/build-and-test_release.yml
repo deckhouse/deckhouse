@@ -1339,7 +1339,7 @@ jobs:
           args: 'sh -c "go generate tools/register.go && golangci-lint run"'
         env:
           WERF_SKIP_BUILD: "true"
-          WERF_DOCKER_OPTIONS: '-w /deckhouse -e "TERM=xterm-256color"'
+          WERF_DOCKER_OPTIONS: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color"'
           WERF_REPO: ${{ env.DEV_REGISTRY_PATH }}
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}

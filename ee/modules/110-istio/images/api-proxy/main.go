@@ -1,13 +1,23 @@
+/*
+Copyright 2021 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -147,6 +157,11 @@ func httpHandlerReady(w http.ResponseWriter, r *http.Request) {
 
 func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 	// check if request was passed by ingress
+	if len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "Only requests with client certificate are allowed.", http.StatusUnauthorized)
+		return
+	}
+
 	if r.TLS.PeerCertificates[0].Subject.Organization[0] != "ingress-nginx:auth" {
 		http.Error(w, "Only requests from ingress are allowed.", http.StatusUnauthorized)
 		return
@@ -178,6 +193,52 @@ func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
+// ingress controller doesn't authenticate proxy for now
+func generateListenCert() (tls.Certificate, error) {
+	cert := &x509.Certificate{
+		SerialNumber: big.NewInt(1658),
+		Subject: pkix.Name{
+			CommonName: "istio-api-proxy",
+		},
+		DNSNames: []string{"api-proxy", "api-proxy.d8-istio", "api-proxy.d8-istio.svc"},
+
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+
+	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, cert, &certPrivKey.PublicKey, certPrivKey)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	certPEM := new(bytes.Buffer)
+	pem.Encode(certPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	})
+
+	certPrivKeyPEM := new(bytes.Buffer)
+	pem.Encode(certPrivKeyPEM, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
+	})
+
+	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivKeyPEM.Bytes())
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	return serverCert, nil
+}
+
 func main() {
 	listenAddr := "0.0.0.0:4443"
 
@@ -192,9 +253,9 @@ func main() {
 	kubeCertPool := x509.NewCertPool()
 	kubeCertPool.AppendCertsFromPEM(kubeCA)
 
-	listenCert, err := tls.LoadX509KeyPair("/listen-cert/tls.crt", "/listen-cert/tls.key")
+	listenCert, err := generateListenCert()
 	if err != nil {
-		logger.Fatalf("Could not load server certificates on: %v\n", err)
+		logger.Fatalf("Could not generate server certificates on: %v\n", err)
 	}
 
 	server := &http.Server{

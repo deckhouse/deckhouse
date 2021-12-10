@@ -227,8 +227,8 @@
   - if [[ -n "${DEV_REGISTRY_PATH}" ]]; then export WERF_REPO="${DEV_REGISTRY_PATH}"; fi
   - pwd
   - werf run tests
-    --docker-options="-w /deckhouse -e "TERM=xterm-256color""
-    -- sh -c "go generate tools/register.go && golangci-lint run"
+    --docker-options="-w /deckhouse -v $(pwd):/deckhouse -e "TERM=xterm-256color""
+    -- sh -c "golangci-lint run"
   except:
   - schedules
   - alpha

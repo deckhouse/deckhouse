@@ -6,13 +6,19 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Istio hooks :: discovery ::", func() {
+var _ = Describe("Istio hooks :: revisions_discovery ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
 
@@ -30,6 +36,7 @@ internal:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.applicationNamespaces").Array()).To(BeEmpty())
 			Expect(f.ValuesGet("istio.internal.revisionsToInstall").String()).To(MatchJSON(`["v1x2x3beta45"]`))
@@ -38,12 +45,12 @@ internal:
 		})
 	})
 
-	Context("Different namespaces with labels", func() {
+	Context("Different namespaces with labels and pods with labels", func() {
 		BeforeEach(func() {
 			values := `
 globalVersion: "1.1.0"
 internal:
-  supportedVersions: ["1.1.0","1.5.0","1.7.4","1.8.0","1.8.0-alpha.2","1.9.0","1.2.3-beta.45"]
+  supportedVersions: ["1.0.0","1.1.0","1.5.0","1.7.4","1.8.0","1.8.0-alpha.2","1.9.0","1.2.3-beta.45"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -134,13 +141,34 @@ metadata:
 spec:
   revision: v1x8x0alpha2
 `))
+
+			podWithRevisionYAML := `
+---
+# stale pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sp-aaa-bbb
+  namespace: ns-stale
+  labels:
+    istio.io/rev: v1x0x0
+`
+			var podWithRevision v1.Pod
+			_ = yaml.Unmarshal([]byte(podWithRevisionYAML), &podWithRevision)
+
+			_, err := dependency.TestDC.MustGetK8sClient().
+				CoreV1().
+				Pods("ns-stale").
+				Create(context.TODO(), &podWithRevision, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
 			f.RunHook()
 		})
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").String()).To(MatchJSON(`["d8-ns6","d8-ns7","kube-ns8","kube-ns9","ns1","ns2","ns3","ns4","ns5"]`))
-			Expect(f.ValuesGet("istio.internal.revisionsToInstall").String()).To(MatchJSON(`["v1x1x0","v1x5x0","v1x7x4","v1x8x0","v1x9x0"]`))
-			Expect(f.ValuesGet("istio.internal.operatorRevisionsToInstall").String()).To(MatchJSON(`["v1x1x0","v1x5x0","v1x7x4","v1x8x0","v1x8x0alpha2","v1x9x0"]`))
+			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns-stale", "ns1", "ns2", "ns3", "ns4", "ns5"}))
+			Expect(f.ValuesGet("istio.internal.revisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x0x0", "v1x1x0", "v1x5x0", "v1x7x4", "v1x8x0", "v1x9x0"}))
+			Expect(f.ValuesGet("istio.internal.operatorRevisionsToInstall").AsStringSlice()).To(Equal([]string{"v1x0x0", "v1x1x0", "v1x5x0", "v1x7x4", "v1x8x0", "v1x8x0alpha2", "v1x9x0"}))
 			Expect(f.ValuesGet("istio.internal.globalRevision").String()).To(Equal("v1x1x0"))
 		})
 	})
@@ -210,14 +238,7 @@ spec:
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 
-			stderrBuff := string(f.Session.Err.Contents())
-
-			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Unsupported revision v1x7x4.`))
-			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Unsupported revision v1x8x0alpha2.`))
-			Expect(stderrBuff).Should(ContainSubstring(`ERROR: Unsupported revision v1x9x0.`))
-
-			Expect(stderrBuff).ShouldNot(ContainSubstring(`ERROR: Unsupported revision v1x3x1.`))
-			Expect(stderrBuff).ShouldNot(ContainSubstring(`ERROR: Unsupported revision v1x1x0.`))
+			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x7x4,v1x8x0alpha2,v1x9x0]"))
 		})
 	})
 

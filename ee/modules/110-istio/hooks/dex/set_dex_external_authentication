@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
 source /deckhouse/shell_lib.sh
 
 function __config__() {
@@ -16,7 +19,6 @@ function __main__() {
       values::set istio.auth.externalAuthentication '{}'
       values::set istio.auth.externalAuthentication.authURL "https://istio-dex-authenticator.d8-istio.svc.$(values::get global.discovery.clusterDomain)/dex-authenticator/auth"
       values::set istio.auth.externalAuthentication.authSignInURL 'https://$host/dex-authenticator/sign_in'
-      values::set istio.auth.externalAuthentication.useBearerTokens "true"
       values::set istio.internal.deployDexAuthenticator "true"
     else
       values::unset istio.internal.deployDexAuthenticator
