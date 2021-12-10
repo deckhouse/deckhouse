@@ -22,9 +22,9 @@ This workflow checks generated sources, builds images, runs different tests
 
 Validates changes in source files:
 
-- check presence of license headers.
-- check simultaneous changes for English and Russian documentation.
-- check for accidental cyrillic letters in non documention files.
+- the presence of license headers
+- simultaneous changes in English and Russian documentation
+- accidental cyrillic letters in non-documention files
 
 ## e2e
 
