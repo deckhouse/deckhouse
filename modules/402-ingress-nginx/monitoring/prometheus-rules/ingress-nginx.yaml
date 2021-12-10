@@ -63,26 +63,6 @@
         Please, check Ingress controller's logs:
         `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`.
       summary: The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
-  - alert: D8NginxIngressDeprecated
-    expr: max(d8_nginx_ingress_deprecated > 0)
-    labels:
-      severity_level: "9"
-      # after migrating alert to new module, we have to use old module name in labels to
-      # avoid creating new events in Polk
-      d8_module: nginx_ingress
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_incident_initial_status: "todo"
-      description: |
-        The `nginx-ingress` module has been deprecated and is no longer supported.
-
-        Use the new `ingress-nginx` module instead:
-        * Carefully study the [documentation](https://deckhouse.io/en/documentation/modules/402-ingress-nginx/) and choose the suitable Inlet;
-        * Make sure that `rewrite-target-migration` (rwr) is disabled in the cluster;
-        * After the migration is complete, disable the `nginxIngress` module in Deckhouse ConfigMap (`nginxIngressEnabled: "false"`).
-      summary: |
-        This cluster uses the deprecated `nginx-ingress` module.
   - alert: D8IngressNginxControllerVersionDeprecated
     expr: sum by (controller_name, controller_version) (d8_ingress_nginx_controller{controller_version=~"0.25|0.26"})
     labels:

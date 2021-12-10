@@ -51,7 +51,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHQ=
+  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -101,7 +101,7 @@ spec:
   "allowAccessToKubernetes": false,
   "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
   "credentials": {
-    "cookieSecret": "testNext",
+    "cookieSecret": "testNexttestNexttestNext",
     "appDexSecret": "test"
   }
 }]`))
@@ -122,7 +122,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHQ=
+  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -155,7 +155,7 @@ spec:
   "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnmq4c2zdbonuge33bojsc2zdfpawwc5lunbsw45djmnqxi33szpzjzzeeeirsk",
   "credentials": {
-    "cookieSecret": "testNext",
+    "cookieSecret": "testNexttestNexttestNext",
     "appDexSecret": "test"
   }
 }]`))
@@ -176,7 +176,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHQ=
+  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -200,7 +200,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHQ=
+  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 `))
 			f.RunHook()
 		})
@@ -221,7 +221,7 @@ data:
   "allowAccessToKubernetes": false,
   "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
   "credentials": {
-    "cookieSecret": "testNext",
+    "cookieSecret": "testNexttestNexttestNext",
     "appDexSecret": "test"
   }
 }]`))

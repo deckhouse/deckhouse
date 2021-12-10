@@ -137,10 +137,8 @@ spec:
         - --silence-ping-logging
         - --session-store-type=redis
         - --redis-connection-url=redis://127.0.0.1/
-        - --exclude-logging-paths=/dex-authenticator/auth
         - --cookie-refresh={{ $context.Values.userAuthn.idTokenTTL | default "10m" }}
         - --cookie-expire={{ $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
-        - --cookie-refresh-token-only # store everything in redis except refresh token
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:

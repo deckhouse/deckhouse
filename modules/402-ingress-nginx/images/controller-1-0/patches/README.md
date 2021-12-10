@@ -1,6 +1,6 @@
 ## Patches
 
-## Healthcheck
+### Healthcheck
 
 After catching SIGTERM, ingress stops responding to the readiness probe.
 The combination of this patch and the `EndpointSliceTerminatingCondition` feature gate for kube-proxy helps us avoid
@@ -9,7 +9,7 @@ traffic loss on rollout updates.
 Backport of the behavior of the later versions of ingress nginx controller.
 The `sleep` is needed to gracefully shut down ingress controllers behind a cloud load balancer.
 
-## Nginx TPL
+### Nginx TPL
 
 * Enable our metrics collector instead of the default one.
 * Enable pcre_jit.
@@ -17,13 +17,16 @@ The `sleep` is needed to gracefully shut down ingress controllers behind a cloud
 
 We do not intend to make a PR to the upstream with these changes, because there are only our custom features.
 
-## Ingress information
+### Ingress information
 
 There are two patches to fix the problem with ingress names in logs and metrics.
 Unfortunately, the PR was declined in the upstream.
 https://github.com/kubernetes/ingress-nginx/pull/4367
 
-
-## Makefile
+### Makefile
 
 Run the build locally, not inside the container.
+
+### Always set auth cookie
+
+Without always option toggled, ingress-nginx does not set the cookie in case if backend returns >=400 code, which may lead to dex refresh token invalidation.

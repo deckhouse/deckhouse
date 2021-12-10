@@ -154,8 +154,13 @@ func getDexAuthenticator(input *go_hook.HookInput) error {
 		if !ok {
 			existedCredentials = Credentials{
 				AppDexSecret: pwgen.AlphaNum(20),
-				CookieSecret: pwgen.AlphaNum(20),
+				CookieSecret: pwgen.AlphaNum(24),
 			}
+		}
+
+		// Migrate all cookie secret from 20 bytes length to 24 bytes
+		if len(existedCredentials.CookieSecret) < 24 {
+			existedCredentials.CookieSecret = pwgen.AlphaNum(24)
 		}
 
 		dexAuthenticator.Credentials = existedCredentials
