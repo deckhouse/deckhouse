@@ -1,6 +1,16 @@
 # Workflows for development branches
 
-Development branches are all branches not matched to patterns: 'main', 'master' or 'release-*'.
+Development branches are all branches not matched to patterns:
+
+- 'main'
+- 'master'
+- 'release-*'
+- 'alpha'
+- 'beta'
+- 'early-access'
+- 'stable'
+- 'rock-solid'
+- 'changelog/*'
 
 Each pushed commit to development branch starts several workflows:
 
