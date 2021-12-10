@@ -1,5 +1,11 @@
 type: object
 properties:
+  additionalExternalNetworkIDs:
+    type: array
+    items:
+      type: string
+    default: []
+    description: Cписок Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node. Опциональный параметр.
   storageClass:
     type: object
     properties:
