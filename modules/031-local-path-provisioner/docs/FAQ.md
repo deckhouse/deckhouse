@@ -27,3 +27,23 @@ prometheus: |
 ```
 
 Wait for the restart of Prometheus Pods.
+
+## Why Pods not creating?
+
+If you have copied example, it will want to create volume on a system node, which probably has some taints, so pod **must** have corresponding tolerations.
+
+## Ho to change retention policy?
+
+At moment delete retention policy is hardcoded, and there is no way to change it [issue](https://github.com/deckhouse/deckhouse/issues/360)
+
+## Why folder not deleted from server after cleanup?
+
+If you do comething like `kubectl delete -f demo.yml` it does delete `LocalPathProvisioner` which is responsible for folder deletion, so in other words there is no one who will be able to run `rm -rf /mnt/kubernetes/demo` for you.
+
+For folders to be cleanup, make sure do delete corresponding pods and then persistent volume claims, so provisioner will catch up and cleanup folders for you.
+
+## How to spread volumes accross nodes?
+
+Provisioner itself does only one thing - creates folder, so actually you need to [spread pods accross nodes](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) instead.
+
+Take a look at examples, it have full example of statefulset deployment spread accross system nodes.
