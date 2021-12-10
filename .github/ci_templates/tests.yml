@@ -18,7 +18,7 @@ docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse/dhctl'
 
 {!{ define "golangci_lint_run_args" }!}
 args: 'sh -c "go generate tools/register.go && golangci-lint run"'
-docker_options: '-w /deckhouse -e "TERM=xterm-256color"'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color"'
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
