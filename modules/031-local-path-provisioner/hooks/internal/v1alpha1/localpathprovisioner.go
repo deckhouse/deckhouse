@@ -38,4 +38,7 @@ type LocalPathProvisionerSpec struct {
 
 	// Node root path for local path provisioner pvs.
 	Path string `json:"path"`
+
+	// Reclaim policy
+	ReclaimPolicy string `json:"reclaimPolicy"`
 }

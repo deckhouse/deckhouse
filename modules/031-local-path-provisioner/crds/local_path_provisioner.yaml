@@ -42,3 +42,9 @@ spec:
                 description: |
                   Node root path for PV's.
                 example: "/opt/local-path-provisioner"
+              reclaimPolicy:
+                type: string
+                enum: ["Retain", "Delete"]
+                default: "Retain"
+                description: |
+                  Retain policy for PV's.
