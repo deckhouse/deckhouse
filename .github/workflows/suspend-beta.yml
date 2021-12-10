@@ -2,29 +2,20 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-name: 'Deploy web to test'
+name: 'Suspend the beta'
 
 on:
   workflow_dispatch:
     inputs:
       issue_id:
-        description: 'ID of issue where label was set'
+        description: 'Id of issue where label was set'
         required: true
       issue_number:
         description: 'Number of issue where label was set'
         required: true
       comment_id:
-        description: 'ID of comment in issue where to put workflow run status'
+        description: 'Id of comment in issue where to put workflow run status'
         required: true
-      ci_commit_ref_name:
-        description: 'Git ref name for image tags'
-        required: false
-      pull_request_ref:
-        description: 'Git ref for checkout PR sources'
-        required: false
-      pull_request_sha:
-        description: 'Git SHA for restoring artifacts from cache'
-        required: false
 
 env:
 
@@ -44,52 +35,13 @@ env:
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
   # </template: werf_envs>
+  DEPLOY_CHANNEL: beta
 
-
-  # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
-  # https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
-  BASE_ALPINE: "registry.deckhouse.io/base_images/alpine:3.12.1@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a"
-  BASE_DEBIAN: "registry.deckhouse.io/base_images/debian:buster-20210111@sha256:b16f66714660c4b3ea14d273ad8c35079b81b35d65d1e206072d226c7ff78299"
-  BASE_ETCD: "k8s.gcr.io/etcd:3.4.13-0@sha256:4ad90a11b55313b182afc186b9876c8e891531b8db4c9bf1541953021618d0e2"
-  BASE_GOLANG_16_ALPINE: "registry.deckhouse.io/base_images/golang:1.16.3-alpine3.12@sha256:371dc6bf7e0c7ce112a29341b000c40d840aef1dbb4fdcb3ae5c0597e28f3061"
-  BASE_GOLANG_16_BUSTER: "registry.deckhouse.io/base_images/golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210"
-  BASE_GOLANG_17_ALPINE: "registry.deckhouse.io/base_images/golang:1.17.3-alpine3.14@sha256:78a88e6a712e60f9d942450e02508f3c0d8aa931853f02793a4c3aa30063eae0"
-  BASE_GOLANG_17_BUSTER: "registry.deckhouse.io/base_images/golang:1.17.3-buster@sha256:be7aa81b44dc85ddf4008bc5f3d5a5acfca8517620d0c4a393601c8e0495fb05"
-  BASE_GOLANG_ALPINE: "registry.deckhouse.io/base_images/golang:1.15.3-alpine3.12@sha256:df0119b970c8e5e9f0f5c40f6b55edddf616bab2b911927ebc3b361c469ea29c"
-  BASE_GOLANG_BUSTER: "registry.deckhouse.io/base_images/golang:1.15.3-buster@sha256:fb04edf20446eed8af9eb6137d02fdf607f47028a0a806131f8b175a09620aab"
-  BASE_JEKYLL: "registry.deckhouse.io/base_images/jekyll/jekyll:3.8@sha256:9521c8aae4739fcbc7137ead19f91841b833d671542f13e91ca40280e88d6e34"
-  BASE_NGINX_ALPINE: "registry.deckhouse.io/base_images/nginx:1.15.12-alpine@sha256:57a226fb6ab6823027c0704a9346a890ffb0cacde06bc19bbc234c8720673555"
-  BASE_NODE_16_ALPINE: "registry.deckhouse.io/base_images/node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
-  BASE_PYTHON_ALPINE: "registry.deckhouse.io/base_images/python:3.7.9-alpine3.12@sha256:8c224566c41fcc1674f9b78ff2a364a1209370a5b7e7619e8ead2bdcd0fd8b52"
-  BASE_SHELL_OPERATOR: "registry.deckhouse.io/base_images/flant/shell-operator:v1.0.1@sha256:51dbdbad17303c31265af389c6acc73d1b6b6c66bd2112542e09b42566ac05bf"
-  BASE_UBUNTU: "registry.deckhouse.io/base_images/ubuntu:bionic-20210118@sha256:ea188fdc5be9b25ca048f1e882b33f1bc763fb976a8a4fea446b38ed0efcbeba"
-
-  # Terraform settings
-  TF_AWS_NAMESPACE: hashicorp
-  TF_AWS_TYPE: aws
-  TF_AWS_VERSION: 3.56.0
-  TF_AZURE_NAMESPACE: hashicorp
-  TF_AZURE_TYPE: azurerm
-  TF_AZURE_VERSION: 2.36.0
-  TF_GCP_NAMESPACE: hashicorp
-  TF_GCP_TYPE: google
-  TF_GCP_VERSION: 3.48.0
-  TF_OPENSTACK_NAMESPACE: terraform-provider-openstack
-  TF_OPENSTACK_TYPE: openstack
-  TF_OPENSTACK_VERSION: 1.32.0
-  TF_VERSION: 0.13.4
-  TF_VSPHERE_NAMESPACE: hashicorp
-  TF_VSPHERE_TYPE: vsphere
-  TF_VSPHERE_VERSION: 2.0.2
-  TF_YANDEX_NAMESPACE: yandex-cloud
-  TF_YANDEX_TYPE: yandex
-  TF_YANDEX_VERSION: 0.45.1
-
-  # Analog of Gitlab's "interruptible: true" behaviour.
-  # Note: Concurrency is currently in beta and subject to change.
-  # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+# Analog of Gitlab's "interruptible: true" behaviour.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-deploy-web-test
+  group: ${{ github.ref }}-suspend-channel-beta
   cancel-in-progress: true
 
 jobs:
@@ -177,20 +129,22 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-            const labelType = 'deploy-web';
-            const labelSubject = 'test';
+            const labelType = 'suspend';
+            const labelSubject = 'beta';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkLabel({github, context, core, labelType, labelSubject});
   # </template: check_label_job>
 
-  run_web_deploy:
+  run_suspend:
+    name: Suspend deckhouse release on beta channel
+    environment:
+      name: beta
     needs:
-    - check_label
-    - git_info
+      - check_label
+      - git_info
     if: needs.check_label.outputs.should_run == 'true'
-    name: Deploy site
-    runs-on: [self-hosted, regular]
+    runs-on: self-hosted
     steps:
 
       # <template: checkout_from_event_ref_step>
@@ -207,7 +161,7 @@ jobs:
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
-            const name = 'Deploy web to test';
+            const name = 'Suspend the beta';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.updateCommentOnStart({github, context, core, name})
@@ -248,57 +202,150 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
-      # <template: login_flant_registry_step>
-      - name: Login to flant registry
+      # <template: login_rw_registry_step>
+      - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-          username: ${{ secrets.FLANT_REGISTRY_USER }}
-          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
-      # </template: login_flant_registry_step>
+      # </template: login_rw_registry_step>
 
-      # <template: deploy_site_template>
-      - name: Deploy site to test
-        uses: werf/actions/converge@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-test
-        env:
-          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
-          WERF_DIR: "docs/site"
-          WERF_RELEASE: "deckhouse-site"
-          WERF_NAMESPACE: deckhouse-web-test
-          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
-          WERF_SET_URL: "global.url=deckhouse.test.flant.com"
-          WERF_SET_WEB_ENV: "web.env=web-test"
-      # </template: deploy_site_template>
 
-      # <template: doc_version_template>
-      - name: Set documentation version
+
+      - name: Publish release images for CE
         env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: CE
         run: |
-          echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
-      # </template: doc_version_template>
-      # <template: deploy_doc_template>
-      - name: Deploy documentation to test
-        uses: werf/actions/converge@v1.2
-        with:
-          channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
-          env: web-test
+          # Some precautions.
+          if [[ -z $DEV_REGISTRY_PATH ]] ; then
+            echo "DEV_REGISTRY_PATH is not set!"
+            exit 1
+          fi
+          if [[ -z $WERF_ENV ]] ; then
+            echo "WERF_ENV is not set!"
+            exit 1
+          fi
+
+          # Variables
+          #   1. CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          echo "Registry suffix - ${REGISTRY_SUFFIX}"
+
+          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
+          RELEASE_CHANNEL=beta
+          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          #   3. Publish prod images to rw registry
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          else
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          fi
+
+          echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
+          cat <<EOF >Dockerfile
+          FROM spotify/scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t $DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE
+
+          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
+
+          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+      - name: Publish release images for EE
         env:
-          WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
-          WERF_DIR: "docs/documentation"
-          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
-          WERF_NAMESPACE: deckhouse-web-test
-          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
-          WERF_SET_URL: "global.url=deckhouse.test.flant.com"
-          WERF_SET_WEB_ENV: "web.env=web-test"
-      # </template: deploy_doc_template>
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: EE
+        run: |
+          # Some precautions.
+          if [[ -z $DEV_REGISTRY_PATH ]] ; then
+            echo "DEV_REGISTRY_PATH is not set!"
+            exit 1
+          fi
+          if [[ -z $WERF_ENV ]] ; then
+            echo "WERF_ENV is not set!"
+            exit 1
+          fi
+
+          # Variables
+          #   1. CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          echo "Registry suffix - ${REGISTRY_SUFFIX}"
+
+          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
+          RELEASE_CHANNEL=beta
+          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          #   3. Publish prod images to rw registry
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          else
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          fi
+
+          echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
+          cat <<EOF >Dockerfile
+          FROM spotify/scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t $DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE
+
+          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
+
+          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+      - name: Publish release images for FE
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: FE
+        run: |
+          # Some precautions.
+          if [[ -z $DEV_REGISTRY_PATH ]] ; then
+            echo "DEV_REGISTRY_PATH is not set!"
+            exit 1
+          fi
+          if [[ -z $WERF_ENV ]] ; then
+            echo "WERF_ENV is not set!"
+            exit 1
+          fi
+
+          # Variables
+          #   1. CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          echo "Registry suffix - ${REGISTRY_SUFFIX}"
+
+          #   2. alpha: [EE] -> alpha , beta: [CE] -> beta
+          RELEASE_CHANNEL=beta
+          echo "Release channel - ${RELEASE_CHANNEL}"
+
+          #   3. Publish prod images to rw registry
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          else
+            DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE=${CI_REGISTRY_IMAGE}/deckhouse/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          fi
+
+          echo "{\"version\": \"$CI_COMMIT_REF_NAME\", \"suspend\": true}" > version.json
+          cat <<EOF >Dockerfile
+          FROM spotify/scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t $DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE
+
+          docker image push ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}
+          echo "Delete local 'release version' image ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE} || true
+
+          echo "Release version image: ${DECKHOUSE_DESTINATION_RELEASE_VERSION_IMAGE}"
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -312,7 +359,7 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const statusSource = 'job';
-            const name = 'Deploy web to test';
+            const name = 'Suspend the beta';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
 

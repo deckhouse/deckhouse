@@ -1,24 +1,38 @@
 {!{ define "checkout_step" }!}
+# <template: checkout_step>
 - name: Checkout sources
   uses: {!{ index (ds "actions") "actions/checkout" }!}
+  {!{ if coll.Has . "pullRequestRefField" -}!}
+  with:
+    ref: ${{ {!{ .pullRequestRefField }!} }}
+  {!{- end }!}
+# </template: checkout_step>
 {!{- end -}!}
 
 {!{ define "checkout_full_step" }!}
+# <template: checkout_full_step>
 - name: Checkout sources
   uses: {!{ index (ds "actions") "actions/checkout" }!}
   with:
     fetch-depth: 0
+  {!{- if coll.Has . "pullRequestRefField" }!}
+    ref: ${{ {!{ .pullRequestRefField }!} }}
+  {!{- end }!}
+# </template: checkout_full_step>
 {!{- end -}!}
 
 {!{ define "checkout_from_event_ref_step" }!}
+# <template: checkout_from_event_ref_step>
 - name: Checkout sources
   uses: {!{ index (ds "actions") "actions/checkout" }!}
   with:
-    ref: ${{ github.event.ref }}
+    ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
     fetch-depth: 0
-{!{- end -}!}
+# </template: checkout_from_event_ref_step>
+{!{- end }!}
 
 {!{ define "login_dev_registry_step" }!}
+# <template: login_dev_registry_step>
 - name: Login to dev registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   with:
@@ -26,9 +40,11 @@
     username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
     password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
     logout: false
+# </template: login_dev_registry_step>
 {!{- end -}!}
 
 {!{ define "login_readonly_registry_step" }!}
+# <template: login_readonly_registry_step>
 - name: Login to readonly registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   with:
@@ -36,9 +52,11 @@
     username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
     password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
     logout: false
+# </template: login_readonly_registry_step>
 {!{- end -}!}
 
 {!{ define "login_rw_registry_step" }!}
+# <template: login_rw_registry_step>
 - name: Login to rw registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   with:
@@ -46,9 +64,11 @@
     username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
     password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
     logout: false
+# </template: login_rw_registry_step>
 {!{- end -}!}
 
 {!{ define "login_flant_registry_step" }!}
+# <template: login_flant_registry_step>
 - name: Login to flant registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   with:
@@ -56,40 +76,50 @@
     username: ${{ secrets.FLANT_REGISTRY_USER }}
     password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
     logout: false
+# </template: login_flant_registry_step>
 {!{- end -}!}
 
 {!{ define "werf_install_step" }!}
+# <template: werf_install_step>
 - name: Install werf CLI
   uses: {!{ index (ds "actions") "werf/actions/install" }!}
   with:
     channel: ${{env.WERF_CHANNEL}}
+# </template: werf_install_step>
 {!{- end -}!}
 
 {!{ define "save_images_tags_json_step" }!}
+# <template: save_images_tags_json_step>
 - name: Save images_tags file
   uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
   with:
     name: images_tags_json_${{env.WERF_ENV}}
     path: modules/images_tags_${{env.WERF_ENV}}.json
+# </template: save_images_tags_json_step>
 {!{- end -}!}
 
 {!{ define "restore_images_tags_json_step" }!}
+# <template: restore_images_tags_json_step>
 - name: Restore images_tags file
   uses: {!{ index (ds "actions") "actions/download-artifact" }!}
   with:
     name: images_tags_json_${{env.WERF_ENV}}
     path: modules
+# </template: restore_images_tags_json_step>
 {!{- end -}!}
 
 {!{ define "save_images_tags_json_to_cache_step" }!}
+# <template: save_images_tags_json_to_cache_step>
 - name: Save images_tags file
   uses: {!{ index (ds "actions") "actions/cache" }!}
   with:
     path: modules/images_tags_${{env.WERF_ENV}}.json
     key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+# </template: save_images_tags_json_to_cache_step>
 {!{- end -}!}
 
 {!{ define "restore_images_tags_json_from_cache_or_fail" }!}
+# <template: restore_images_tags_json_from_cache_or_fail>
 - name: Restore images_tags_json from cache
   id: images-tags-json
   uses: {!{ index (ds "actions") "actions/cache" }!}
@@ -101,4 +131,5 @@
   run: |
     echo images_tags_${WERF_ENV}.json file not found in cache: restart build modules job.
     exit 1
+# </template: restore_images_tags_json_from_cache_or_fail>
 {!{- end -}!}

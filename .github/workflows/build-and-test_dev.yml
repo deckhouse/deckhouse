@@ -5,19 +5,15 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
+  pull_request_target:
+     types:
+      - opened
+      - synchronize
+      - reopened
 
 env:
 
+  # <template: werf_envs>
   # Don't forget to update .gitlab-ci-simple.yml if necessary
   WERF_CHANNEL: "ea"
   WERF_ENV: "FE"
@@ -32,6 +28,7 @@ env:
   BASE_IMAGES_REGISTRY_PATH: "registry.deckhouse.io/base_images/"
 
   FLANT_REGISTRY_PATH: "${{ secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # </template: werf_envs>
 
 
   # command to copy image to our registry - crane copy alpine:3.12.1@sha256:HASHVALUE ${OUR_PRIVATE_REGISTRY}/base_images/alpine:3.12.1@sha256:HASHVALUE
@@ -77,10 +74,117 @@ env:
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-dev
+  group: ${{ github.event.number }}-dev
   cancel-in-progress: true
 
 jobs:
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      - name: Check if allow to run tests
+        id: check
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            // Assume workflow_dispatch is safe to run.
+            // TODO add owner, repo, sha to inputs to check them here.
+            if (context.eventName === 'workflow_dispatch') {
+              core.info(`workflow_dispatch detected, set should_run to 'true'`);
+              return core.setOutput('should_run', 'true');
+            }
+
+            if (!context.payload.pull_request) {
+              return core.setFailed(`Unknown event, no pull request context. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+
+            // Fetch fresh pull request state using sha.
+            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+            const owner = context.payload.pull_request.head.repo.owner.login
+            const repo = context.payload.pull_request.head.repo.name
+            const commit_sha = context.payload.pull_request.head.sha
+            core.info(`List pull request inputs: ${JSON.stringify({ owner, repo, commit_sha })}`);
+            const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha });
+            if (response.status != 200) {
+              return core.setFailed(`Cannot list PRs for commit ${commit_sha}: ${JSON.stringify(response)}`);
+            }
+
+            // No PR found, do not run next jobs.
+            if (!response.data || response.data.length === 0) {
+              return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+
+            const prRepo = context.payload.pull_request.head.repo.full_name;
+            const targetRepo = context.payload.repository.full_name;
+            const isInternal = prRepo === targetRepo;
+            const isDependabot = (context.actor === 'dependabot[bot]');
+            const isChangelog = context.payload.pull_request.head.ref.startsWith('changelog/v');
+            const okToTest = response.data[0].labels.some((l) => l.name === 'ok-to-test');
+            core.info(`PR internal?          ${isInternal}`)
+            core.info(`PR from dependabot?   ${isDependabot}`)
+            core.info(`PR changelog?         ${isChangelog}`)
+            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+
+            if (isInternal && !isDependabot) {
+              // Ignore changelog pull requests.
+              if (isChangelog) {
+                return core.setFailed(`PR#${context.payload.pull_request.number} for changelog is ignored.`);
+              }
+            } else {
+              // External and dependabot pull requests should be labeled with 'ok-to-test'.
+              if (!okToTest) {
+                return core.setFailed(`PR#${context.payload.pull_request.number} without label 'ok-to-test' is ignored.`);
+              }
+            }
+
+      # Checkhout the merge commit
+      - name: Checkout PR merge commit
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+
+      # Detect dangerous changes in external PR.
+      - name: Check for dangerous changes
+        uses: dorny/paths-filter@v2
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          filters: |
+            dangerous:
+              - './.github/**'
+              - './.gitlab/**'
+              - './tools/**'
+              - './testing/**'
+              - './docs/**/js/**'
+              - './docs/**/css/**'
+              - './docs/**/images/**'
+              - './docs/**/assets/**'
+
+      # Stop workflow if external PR contains dangerous changes.
+      - name: Fail workflow on dangerous changes
+        if: steps.changes.outputs.dangerous == 'true'
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setFailed('External PR contains dangerous changes.')
+
+      # Set output.
+      - name: Return PR merge commit ref
+        id: ref
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            const ref = `refs/pull/${ context.issue.number }/merge`
+            core.info(`ref: '${ref}'`)
+            core.setOutput('ref', ref)
+  # </template: pull_request_info>
+
+  # <template: git_info_job>
 
   git_info:
     name: Get git info
@@ -94,60 +198,75 @@ jobs:
     steps:
       - id: git_info
         name: Get tag name and SHA
-        run: |
-          # Detect git tag for release.
-          gitTag=${GITHUB_REF#refs/tags/}
-          if [[ ${GITHUB_REF} == $gitTag ]] ; then
-            gitTag=
-          fi
-          echo "::set-output name=ci_commit_tag::${gitTag}"
-          echo "ci_commit_tag='${gitTag}'"
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+            core.setOutput('ci_pipeline_created_at', new Date().toISOString())
 
-          # Detect git branch.
-          gitBranch=${GITHUB_REF#refs/heads/}
-          if [[ ${GITHUB_REF} == $gitBranch ]] ; then
-            gitBranch=
-          fi
-          echo "::set-output name=ci_commit_branch::${gitBranch}"
-          echo "ci_commit_branch='${gitBranch}'"
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME } = process.env
 
-          # CI_COMMIT_REF_NAME for main werf.yaml
-          commitRefName=
-          [[ -n $gitBranch ]] && commitRefName=$gitBranch
-          [[ -n $gitTag ]] && commitRefName=$gitTag
-          echo "::set-output name=ci_commit_ref_name::${commitRefName}"
-          echo "ci_commit_ref_name='${commitRefName}'"
+            let githubBranch = '';
+            let githubTag = '';
+            let githubSHA = '';
+            let refName = '';
+            if (context.eventName === "workflow_dispatch") {
+              // workflow_dispatch run for pull request should have input 'pull_request_ref'.
+              // Note: value in inputs.pull_request_ref is for pull_request_info job.
+              if (context.payload.inputs.pull_request_ref) {
+                refName       = context.payload.inputs.ci_commit_ref_name
+                githubBranch  = refName
+                githubSHA     = context.payload.inputs.pull_request_sha
+                core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+              } else {
+                refName       = GITHUB_REF_NAME
+                githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+                githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+                githubSHA     = context.sha
+                core.info(`workflow_dispatch event: set git info from context. inputs: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+              }
+            } else {
+              // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
+              const targetRepo = context.payload.repository.full_name;
+              const prRepo = context.payload.pull_request.head.repo.full_name
+              const prRef = context.payload.pull_request.head.ref
 
-          # CI_PIPELINE_CREATED_AT for main werf.yaml
-          pipelineCreatedAt=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
-          echo "::set-output name=ci_pipeline_created_at::${pipelineCreatedAt}"
-          echo "ci_pipeline_created_at='${pipelineCreatedAt}'"
+              refName = (prRepo === targetRepo) ? prRef : `pr${context.issue.number}`
+              githubBranch = refName
+              githubSHA = context.payload.pull_request.head.sha
+              core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+            }
 
-          # Determine sha of commit.
-          # push event
-          githubSha=${GITHUB_SHA}
-          echo "github_sha for push '${githubSha}'"
-          # workflow_dispatch event
-          if [[ -z $githubSha ]] ; then
-            githubSha = $(jq '.head_commit.id' "${GITHUB_EVENT_PATH}")
-            echo "github_sha for workflow_dispatch '${githubSha}'"
-          fi
-          echo "::set-output name=github_sha::$githubSha"
-          echo "github_sha='${githubSha}'"
+            core.info(`output.ci_commit_ref_name: '${refName}'`)
+            core.info(`output.ci_commit_tag:      '${githubTag}'`)
+            core.info(`output.ci_commit_branch:   '${githubBranch}'`)
+            core.info(`output.github_sha:         '${githubSHA}'`)
+
+            core.setOutput('ci_commit_ref_name', refName)
+            core.setOutput(`ci_commit_tag`, githubTag)
+            core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput('github_sha', githubSHA)
+
+  # </template: git_info_job>
 
   build_modules_images_fe:
     name: Build Modules Images FE
     needs:
       - git_info
+      - pull_request_info
 
+    # <template: build_modules_images_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -155,7 +274,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -163,7 +284,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -171,11 +294,14 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
       - name: Build and push modules images
         env:
@@ -198,30 +324,42 @@ jobs:
       #    fi
 
 
+      # <template: save_images_tags_json_step>
       - name: Save images_tags file
         uses: actions/upload-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules/images_tags_${{env.WERF_ENV}}.json
+      # </template: save_images_tags_json_step>
 
+      # <template: save_images_tags_json_to_cache_step>
       - name: Save images_tags file
         uses: actions/cache@v2.1.7
         with:
           path: modules/images_tags_${{env.WERF_ENV}}.json
           key: images_tags_json-${{env.WERF_ENV}}-${{needs.git_info.outputs.github_sha}}
+      # </template: save_images_tags_json_to_cache_step>
+    # </template: build_modules_images_template>
 
 
   go_generate:
     name: Go Generate
     needs:
       - git_info
+      - pull_request_info
 
+    # <template: go_generate_template>
     runs-on: ubuntu-latest
     steps:
 
+      # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -229,6 +367,7 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
       - name: Run go generate
         run: |
@@ -238,23 +377,30 @@ jobs:
       - name: Check generated code
         run: |
           git diff --exit-code
+    # </template: go_generate_template>
 
 
   build_fe:
     name: Build FE
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - go_generate
 
+    # <template: build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -262,7 +408,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -270,7 +418,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_rw_registry_step>
       - name: Login to rw registry
         uses: docker/login-action@v1.10.0
         with:
@@ -278,7 +428,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_rw_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -286,17 +438,22 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
 
       - name: Build and push deckhouse images
         env:
@@ -369,6 +526,7 @@ jobs:
             docker image rmi ${DESTINATION_IMAGE} || true;
             docker image rmi ${DESTINATION_INSTALL_IMAGE} || true;
           fi
+    # </template: build_template>
 
 
   doc_web_build:
@@ -376,15 +534,21 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
+    # <template: doc_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -392,7 +556,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -400,6 +566,7 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
       - name: Run doc web build
         uses: werf/actions/build@v1.2
@@ -409,21 +576,28 @@ jobs:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
           WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+    # </template: doc_web_build_template>
 
   main_web_build:
     name: Main web build
     # Wait for success build of modules.
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
+    # <template: main_web_build_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -431,7 +605,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -439,6 +615,7 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
       - name: Run main web build
         uses: werf/actions/build@v1.2
@@ -448,22 +625,29 @@ jobs:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
           WERF_REPO: ${{env.FLANT_REGISTRY_PATH}}
+    # </template: main_web_build_template>
 
   tests:
     name: Tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -471,7 +655,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -479,12 +665,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -498,22 +687,29 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
 
   matrix_tests:
     name: Matrix tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -521,7 +717,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -529,12 +727,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -548,22 +749,29 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
 
   dhctl_tests:
     name: Dhctl Tests
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -571,7 +779,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -579,12 +789,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -598,22 +811,29 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
 
   golangci_lint:
     name: GolangCI Lint
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -621,7 +841,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -629,12 +851,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -648,22 +873,29 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
 
   openapi_test_cases:
     name: OpenAPI Test Cases
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -671,7 +903,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -679,12 +913,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -698,22 +935,29 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>
 
   web_links_test:
     name: Web links test
     needs:
       - git_info
+      - pull_request_info
       - doc_web_build
       - main_web_build
     continue-on-error: true
+    # <template: web_links_test_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -721,7 +965,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: login_flant_registry_step>
       - name: Login to flant registry
         uses: docker/login-action@v1.10.0
         with:
@@ -729,11 +975,14 @@ jobs:
           username: ${{ secrets.FLANT_REGISTRY_USER }}
           password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_flant_registry_step>
 
+      # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
+      # </template: werf_install_step>
 
       - name: Prepare site structure
         run: |
@@ -801,22 +1050,29 @@ jobs:
           if [[ -n $_TMPDIR ]] ; then
             rm -rf $_TMPDIR
           fi
+    # </template: web_links_test_template>
 
   validators:
     name: Validators
     needs:
       - git_info
+      - pull_request_info
       - build_modules_images_fe
       - build_fe
 
+    # <template: tests_template>
     runs-on: [self-hosted, regular]
     steps:
 
+      # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
 
+      # <template: login_dev_registry_step>
       - name: Login to dev registry
         uses: docker/login-action@v1.10.0
         with:
@@ -824,7 +1080,9 @@ jobs:
           username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
+      # </template: login_dev_registry_step>
 
+      # <template: login_readonly_registry_step>
       - name: Login to readonly registry
         uses: docker/login-action@v1.10.0
         with:
@@ -832,12 +1090,15 @@ jobs:
           username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
+      # </template: login_readonly_registry_step>
 
+      # <template: restore_images_tags_json_step>
       - name: Restore images_tags file
         uses: actions/download-artifact@v2
         with:
           name: images_tags_json_${{env.WERF_ENV}}
           path: modules
+      # </template: restore_images_tags_json_step>
       - name: Run tests
         uses: werf/actions/run@v1.2
         with:
@@ -851,3 +1112,4 @@ jobs:
           CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
           CI_COMMIT_REF_NAME: ${{ needs.git_info.outputs.ci_commit_ref_name }}
           CI_PIPELINE_CREATED_AT: ${{ needs.git_info.outputs.ci_pipeline_created_at }}
+    # </template: tests_template>

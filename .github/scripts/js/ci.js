@@ -419,35 +419,27 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider, defaul
  * @returns {Promise<void|*>}
  */
 module.exports.checkValidationLabels = async ({ github, context, core }) => {
-  // Get first associated PR.
-  const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    commit_sha: context.sha
-  });
-  if (response.status != 200) {
-    return core.setFailed(`Cannot list PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
-  }
-
   // Run all validations by default.
   core.setOutput('run_no_cyrillic', 'true');
   core.setOutput('run_doc_changes', 'true');
   core.setOutput('run_copyright', 'true');
 
-  // No PR found. It can be first push before creating PR.
-  // Assume there are no labels and all validations should run
-  // using commit diff as input for validation scripts.
-  //
-  // context.payload.compare contains a proper url
-  // for one commit and for multiple commits in branch.
-  if (!response.data || response.data.length === 0) {
-    const diff_url = context.payload.compare + '.diff';
-    core.setOutput('diff_url', diff_url);
-    console.log(`diff_url="${diff_url}"`);
+  // This method runs on pull_request_target, so pull_request context is available.
 
-    return console.log(
-      `No pull_request found. Run all validations. event_name=${context.eventName} action=${context.action} ref=${context.ref}`
-    );
+  // Fetch fresh pull request state using sha.
+  // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+  const owner = context.payload.pull_request.head.repo.owner.login
+  const repo = context.payload.pull_request.head.repo.name
+  const commit_sha = context.payload.pull_request.head.sha
+  core.info(`List pull request inputs: ${JSON.stringify({ owner, repo, commit_sha })}`);
+  const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha });
+  if (response.status != 200) {
+    return core.setFailed(`Cannot list PRs for commit ${commit_sha}: ${JSON.stringify(response)}`);
+  }
+
+  // No PR found, do not run validations.
+  if (!response.data || response.data.length === 0) {
+    return core.setFailed(`No pull_request found. event_name=${context.eventName} action=${context.action}`);
   }
 
   const pr = response.data[0];
@@ -459,15 +451,15 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
     let validationName = '';
     if (/no-cyrillic/.test(skipLabel)) {
       validationName = 'no_cyrillic';
-      console.log(`Skip 'no-cyrillic'`);
+      core.info(`Skip 'no-cyrillic'`);
     }
     if (/documentation/.test(skipLabel)) {
       validationName = 'doc_changes';
-      console.log(`Skip 'doc-changes'`);
+      core.info(`Skip 'doc-changes'`);
     }
     if (/copyright/.test(skipLabel)) {
       validationName = 'copyright';
-      console.log(`Skip 'copyright'`);
+      core.info(`Skip 'copyright'`);
     }
 
     if (prHasSkipLabel) {
@@ -477,13 +469,13 @@ module.exports.checkValidationLabels = async ({ github, context, core }) => {
   }
 
   core.setOutput('pr_title', pr.title);
-  console.log(`pr_title='${pr.title}'`);
+  core.info(`pr_title='${pr.title}'`);
 
   core.setOutput('pr_description', pr.body);
-  console.log(`pr_description='${pr.body}'`);
+  core.info(`pr_description='${pr.body}'`);
 
   core.setOutput('diff_url', pr.diff_url);
-  console.log(`diff_url='${pr.diff_url}'`);
+  core.info(`diff_url='${pr.diff_url}'`);
 };
 
 /**
@@ -618,20 +610,22 @@ module.exports.runWorkflowForReleaseIssue = async ({ github, context, core }) =>
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {string} inputs.ref - A git ref to checkout merge commit for PR (e.g. refs/pull/133/merge).
  * @returns {Promise<void>}
  */
-module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => {
+module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }) => {
   const event = context.payload;
   const label = event.label.name;
+  let command = {action: 'workflow_dispatch', workflows:[]};
+
   console.log(`Event label name: '${label}'`);
   console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
-
-  let workflow_id = '';
+  console.log(`Git ref: '${ref}'`);
 
   if (knownLabels.e2e.includes(label) && event.action === 'labeled') {
     for (const provider of knownProviders) {
       if (label.includes(provider)) {
-        workflow_id = `e2e-${provider}.yml`;
+        command.workflows = [`e2e-${provider}.yml`];
         break;
       }
     }
@@ -641,29 +635,90 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
     // prod env is not available for pull request.
     for (const webEnv of ['test', 'stage']) {
       if (label.includes(webEnv)) {
-        workflow_id = `deploy-web-${webEnv}.yml`;
+        command.workflows = [`deploy-web-${webEnv}.yml`];
         break;
       }
     }
   }
 
   if (knownLabels['skip-validation'].includes(label)) {
-    workflow_id = 'validation.yml';
+    command.workflows = ['validation.yml'];
+    command.action = 'rerun';
   }
 
-  if (workflow_id === '') {
+  if (knownLabels['ok-to-test'] === label) {
+    command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
+    command.action = 'rerun';
+  }
+
+  if (command.workflows.length === 0) {
     return console.log(`Workflow for label '${event.label.name}' and action '${event.action}' not found. Ignore it.`);
   }
 
-  console.log(`Label '${label}' is set. Should retry workflow '${workflow_id}'.`);
+  if (command.action === 'rerun') {
+    console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will retry workflows: '${JSON.stringify(command.workflows)}'.`);
+    for (const workflow_id of command.workflows) {
+      await findAndRerunWorkflow({github, context, core, workflow_id});
+    }
+  }
 
+  if (command.action === 'workflow_dispatch') {
+    const workflow_id = command.workflows[0];
+    console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will start workflow '${workflow_id}'.`);
+
+    // workflow_dispatch requires a ref. In PRs from forks, we assign images with `prXXX` tags to
+    // avoid clashes with inner branches.
+    const prNumber = context.payload.pull_request.number
+
+    // Add comment to pull request.
+    console.log(`Add comment to pull request ${prNumber}.`);
+    let response = await github.rest.issues.createComment({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: prNumber,
+      body: `Run workflow "${label}"...`
+    });
+
+    if (response.status < 200 || response.status >= 300) {
+      return core.setFailed(`Cannot start workflow: ${JSON.stringify(response)}`);
+    }
+
+    const targetRepo = context.payload.repository.full_name;
+    const prRepo = context.payload.pull_request.head.repo.full_name;
+    const prRef = context.payload.pull_request.head.ref
+    const inputs = {
+      issue_id: '' + context.payload.pull_request.id,
+      issue_number: '' + prNumber,
+      comment_id: '' + response.data.id,
+      ci_commit_ref_name: (prRepo === targetRepo) ? prRef : `pr${prNumber}`,
+      pull_request_ref: ref,
+      pull_request_sha: context.payload.pull_request.head.sha,
+    }
+    console.log(`Start workflow '${workflow_id}'. Inputs: ${JSON.stringify(inputs)}.`);
+    response = await github.rest.actions.createWorkflowDispatch({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      workflow_id: workflow_id,
+      ref: 'refs/heads/main',
+      inputs: inputs
+    });
+
+    if (response.status > 200 && response.status < 300) {
+      console.log('Workflow started successfully');
+    } else {
+      return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
+    }
+  }
+
+};
+
+const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
   // Retrieve latest workflow run and rerun it.
   let response = await github.rest.actions.listWorkflowRuns({
     owner: context.repo.owner,
     repo: context.repo.repo,
     workflow_id: workflow_id,
-    branch: context.payload.pull_request.head.ref,
-    event: 'push'
+    branch: context.payload.pull_request.head.ref
   });
 
   if (!response.data.workflow_runs || response.data.workflow_runs.length === 0) {
@@ -671,14 +726,25 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
     return core.setFailed(`No runs found for workflow '${workflow_id}'. Just return.`);
   }
 
-  const latestWorkflowRunId = response.data.workflow_runs[0].id;
-  console.log(`Last workflow run id: ${latestWorkflowRunId}`);
+  let lastRun = null;
+  for (const wr of response.data.workflow_runs) {
+    if (wr.head_sha === context.payload.pull_request.head.sha) {
+      lastRun = wr;
+      break;
+    }
+  }
+
+  if (!lastRun) {
+    return core.setFailed(`Workflow run of '${workflow_id}' not found for PR#${context.payload.pull_request.number} and SHA=${context.payload.pull_request.head.sha}.`);
+  }
+
+  console.log(`Found last workflow run of '${workflow_id}'. ID ${lastRun.id}, run number ${lastRun.run_number}, started at ${lastRun.run_started_at}`);
 
   try {
     const response = await github.rest.actions.retryWorkflow({
       owner: context.repo.owner,
       repo: context.repo.repo,
-      run_id: latestWorkflowRunId
+      run_id: lastRun.id
     });
 
     if (response.status > 200 && response.status < 300) {
@@ -689,7 +755,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
   } catch (error) {
     console.log(`Ignore error: ${dumpError(error)}`);
   }
-};
+}
 
 /**
  * Create new "release" issue when new milestone is created.

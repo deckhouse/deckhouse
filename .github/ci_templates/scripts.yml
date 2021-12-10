@@ -1,7 +1,8 @@
 {!{ define "update_comment_on_start" }!}
 {!{- $workflowName := . -}!}
+# <template: update_comment_on_start>
 - name: Update comment on start
-  if: ${{ github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
+  if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
   uses: {!{ index (ds "actions") "actions/github-script" }!}
   with:
     github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -10,14 +11,17 @@
 
       const ci = require('./.github/scripts/js/ci');
       return await ci.updateCommentOnStart({github, context, core, name})
+
+# </template: update_comment_on_start>
 {!{- end -}!}
 
 {!{ define "update_comment_on_finish" }!}
 {!{- $statusSource := index . 0 -}!}
 {!{- $name := index . 1 -}!}
 
+# <template: update_comment_on_finish>
 - name: Update comment on finish
-  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!inputs.issue_number }}
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
   continue-on-error: true
   env:
     NEEDS_CONTEXT: ${{ toJSON(needs) }}
@@ -36,6 +40,7 @@
 
       const ci = require('./.github/scripts/js/ci');
       return await ci.updateCommentOnFinish({github, context, core, statusSource, name, needsContext, jobContext});
+# </template: update_comment_on_finish>
 {!{- end -}!}
 
 {!{/* This job checks if label is set on pr or issue and return should_run output. Also, all labels are returned as JSON. */}!}
@@ -43,6 +48,7 @@
 {!{- $labelType := index . 0 -}!}
 {!{- $labelSubject := index . 1 -}!}
 
+# <template: check_label_job>
 check_label:
   name: Check label
   runs-on: ubuntu-latest
@@ -61,4 +67,5 @@ check_label:
 
           const ci = require('./.github/scripts/js/ci');
           return await ci.checkLabel({github, context, core, labelType, labelSubject});
+# </template: check_label_job>
 {!{- end -}!}
