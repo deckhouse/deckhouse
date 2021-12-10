@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/d8-logo.png"/>
+  <img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/d8-small-logo.png"/>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Platform has passed the CNCF [Certified Kubernetes Conformance Program](https://www.cncf.io/certification/software-conformance/) certification for Kubernetes 1.19, 1.20, 1.21._
+_Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.19, 1.20, and 1.21._
 
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 
@@ -34,18 +34,14 @@ While Deckhouse Platform CE is available free as an Open Source, EE is a commerc
 
 EE brings many additional features that extend the basic functionality provided in CE. They include OpenStack & vSphere integration, Istio service mesh, multitenancy, enterprise-level security, BGP support, instant autoscaling, local DNS caching, and selectable timeframe for the platform's upgrades.
 
+Deckhouse Platform CE is freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/).
+
 # Architecture
 
 Deckhouse Platform follows the upstream version of Kubernetes, using that as a basis to build all of its features and configurations on. The added functionality is implemented via two building blocks:
 
 - [shell-operator](https://github.com/flant/shell-operator) — to create Kubernetes operators *(please check the [KubeCon NA 2020 talk](https://www.youtube.com/watch?v=we0s4ETUBLc) for details)*;
 - [addon-operator](https://github.com/flant/addon-operator) — to pack these operators into modules and manage them.
-
-## Current status
-
-Deckhouse Platform has a vast history of being used internally in Flant and is ready for production. Its beta testing started in May'21 when the first public demo tokens were issued. By the end of Jun'21, it was tested by 300+ engineers, and its source code went public via GitHub. The formal public announcement [was made](https://blog.flant.com/deckhouse-kubernetes-platform/) in the end of Jul'21.
-
-Deckhouse Platform CE is now freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/).
 
 # Trying Deckhouse
 
