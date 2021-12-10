@@ -294,7 +294,8 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 
 	now := time.Now()
 
-	currentReleaseIndex := -1
+	currentDeployedReleaseIndex := -1
+
 	for i, rl := range releases {
 		switch rl.Phase {
 		// "Deployed" shows only Actual (current) release. All previous releases are marked as Outdated
@@ -304,7 +305,7 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 			// pass
 
 		case v1alpha1.PhasePending:
-			if i < currentReleaseIndex {
+			if i < currentDeployedReleaseIndex {
 				// some old release, for example - when downgrade the release channel
 				// mark it as Outdated
 				sp := statusPatch{
@@ -315,7 +316,7 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				continue
 			}
 
-			if i != currentReleaseIndex+1 {
+			if i != currentDeployedReleaseIndex+1 {
 				continue
 			}
 
@@ -326,6 +327,16 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				return nil
 			}
 
+			// mark previous release as outdated
+			currentDeployedRelease := releases[currentDeployedReleaseIndex]
+			sp := statusPatch{
+				Phase:          v1alpha1.PhaseOutdated,
+				Approved:       currentDeployedRelease.StatusApproved,
+				TransitionTime: now,
+			}
+			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentDeployedRelease.Name, object_patch.WithSubresource("/status"))
+
+			// apply patch - update deployment
 			applyRelease(input, rl, now)
 
 			return nil
@@ -335,18 +346,12 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				// last release, don't update
 				return nil
 			}
-			currentReleaseIndex = i
-			sp := statusPatch{
-				Phase:          v1alpha1.PhaseOutdated,
-				Approved:       rl.StatusApproved,
-				TransitionTime: now,
-			}
-			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", rl.Name, object_patch.WithSubresource("/status"))
+			currentDeployedReleaseIndex = i
 		}
 	}
 
 	// self-healing, if deployed release was deleted
-	if currentReleaseIndex == -1 {
+	if currentDeployedReleaseIndex == -1 {
 		// no deployed releases found, deploy first pending release
 		for _, rl := range releases {
 			if rl.Phase == v1alpha1.PhasePending {
