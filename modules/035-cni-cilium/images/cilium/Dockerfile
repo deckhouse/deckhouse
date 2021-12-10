@@ -1,0 +1,1 @@
+FROM quay.io/cilium/cilium@sha256:b79eb15293ecd417d5ba459cbc1359f91ac415b89de7aea805ffa07475364296
