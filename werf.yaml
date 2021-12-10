@@ -340,7 +340,13 @@ ansible:
     args:
       chdir: /deckhouse
 
-  - shell: |
+  - name: "Migrate ee/fe internal packages imports"
+    shell: |
+      find /deckhouse/modules/* -type f -exec sed -i 's/github.com\/deckhouse\/deckhouse\/ee\/modules/github.com\/deckhouse\/deckhouse\/modules/g' {} +
+      find /deckhouse/modules/* -type f -exec sed -i 's/github.com\/deckhouse\/deckhouse\/ee\/fe\/modules/github.com\/deckhouse\/deckhouse\/modules/g' {} +
+
+  - name: "Install GolangCI linter"
+    shell: |
       curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
         | sh -s -- -b $(go env GOPATH)/bin v1.32.2
 
@@ -405,6 +411,9 @@ shell:
   - mkdir /deckhouse /out
 
   setup:
+  # Migrate ee/fe internal packages imports
+  - find /deckhouse/modules/* -type f -exec sed -i 's/github.com\/deckhouse\/deckhouse\/ee\/modules/github.com\/deckhouse\/deckhouse\/modules/g' {} +
+  - find /deckhouse/modules/* -type f -exec sed -i 's/github.com\/deckhouse\/deckhouse\/ee\/fe\/modules/github.com\/deckhouse\/deckhouse\/modules/g' {} +
   - cd /deckhouse
   # Generate hooks imports for particular edition (CE/EE/FE)
   - go generate ./tools/register.go

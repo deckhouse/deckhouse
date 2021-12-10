@@ -6,8 +6,6 @@ kind: VerticalPodAutoscaler
 metadata:
   name: istiod-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
-  finalizers:
-  - istio-finalizer.install.istio.io
 {{ include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "workload-resource-policy.deckhouse.io" "master")) | indent 2 }}
 spec:
   targetRef:
@@ -77,11 +75,8 @@ spec:
 
   {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
-    {{- range $federation := $.Values.istio.internal.federations }}
-    - spiffeBundleUrl: {{ $federation.spiffeEndpoint | quote }}
-    {{- end }}
-    {{- range $multicluster := $.Values.istio.internal.multiclusters }}
-    - spiffeBundleUrl: {{ $multicluster.spiffeEndpoint | quote }}
+    {{- range $metadata := $.Values.istio.internal.remotePublicMetadata }}
+    - pem: {{ $metadata.rootCA | quote }}
     {{- end }}
   {{- end }}
 

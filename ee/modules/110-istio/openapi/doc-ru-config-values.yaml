@@ -1,0 +1,183 @@
+type: object
+properties:
+  tlsMode:
+    description: |
+      Режим прозрачного шифрования трафика между Pod'ами ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
+      - `Off` — pod'ы не будут шифровать исходящие запросы и не будут отклонять реквесты, которые не зашифрованы.
+      - `MutualPermissive` — pod'ы будут шифровать исходящие запросы, но не будут отклонять реквесты, которые не зашифрованы. Режим полезен в переходный момент при переезде на mTLS.
+      - `Mutual` — pod'ы будут шифровать исходящие запросы и строго будут принимать только зашифрованные реквесты.
+      При включении режима `Mutual` перестанут работать классические HTTP-пробы, так как kubelet ничего про mTLS не знает. Но в sidecar c istio предусмотрен специальный порт, куда можно эти пробы направить. Sidecar-injector, который добавляет sidecar-ы в поды, заодно перенаправит ваши пробы на специальный порт.
+      Для шифрования и аутентификации каждый сервис получит собственный индивидуальный ключ, подписанный корневым CA. Этот CA либо генерится при первом запуске модуля, либо указывается явно (см. `ca`).
+      Управлять режимом mTLS можно отдельно для каждого приложения и его клиентских соединений с помощью ресурсов [AuthorizationPolicy](istio-cr.html#authorizationpolicy) и [DestinationRule](istio-cr.html#destinationrule).
+  outboundTrafficPolicyMode:
+    description: |
+      Как поступать с запросами в сторону внешних, то есть, не учтённых в меше сервисов.
+      - `AllowAny` — пропускать.
+      - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
+  federation:
+    description: Параметры федерации с другими кластерами.
+    properties:
+      enabled:
+        description: Обозначить данный кластер как участник федерации (см. [Включение федерации](./#включение-федерации)).
+  multicluster:
+    description: Параметры мультикластерной инсталляции.
+    properties:
+      enabled:
+        description: Обозначить данный кластер как участник мультикластера (см. [Включение мультикластера](./#включение-мультикластера)).
+  alliance:
+    description: Общие настройки для федерации и мультикластера.
+    properties:
+      ingressGateway:
+        description: Параметры для ingressgateway.
+        properties:
+          inlet:
+            description: |
+              Способ публикации ingressgateway.
+              - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB.
+              - `NodePort` — для площадок без LB.
+          serviceAnnotations:
+            description: Дополнительные аннотации для сервиса ingressgateway. Полезно, например, для настройки локального LB в Yandex.Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
+          nodeSelector:
+            description: |
+              Cелектор для DaemonSet'а ingressgateway.
+
+              Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+          tolerations:
+            description: |
+              tolerations для DaemonSet'а ingressgateway.
+
+              Структура, аналогичная `spec.tolerations` Kubernetes pod.
+  tracing:
+    description: Параметры трассировки.
+    properties:
+      enabled:
+        description: Включить отправку трейсов в коллектор и интегрировать их отображение в kiali.
+      collector:
+        description: Параметры отправки трейсов в коллектор.
+        properties:
+          zipkin:
+            description: Параметры протокола zipkin, который использует Istio для отправки трейсов. Jaeger поддерживает этот протокол.
+            properties:
+              address:
+                description: сетевой адрес в формате `<IP of FQDN>:<port>`, по которому доступен zipkin-коллектор.
+      kiali:
+        description: |
+          Настройки отображения span-ов в Kiali.
+
+          Если настройки не предоставлены, kiali не будет отображать трассировку.
+        properties:
+          jaegerURLForUsers:
+            description: Адрес UI jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`. Обязательный параметр.
+          jaegerGRPCEndpoint:
+            description: |
+              Адрес GRPC-интерфейса jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису kiali изнутри кластера для служебных запросов.
+
+              Если не указать, то kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+  sidecar:
+    description: Настройки для перехвата сетевого трафика в istio-sidecar.
+    properties:
+      includeOutboundIPRanges:
+        description: |
+          Трафик в сторону этих диапазонов IP безоговорочно заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/includeOutboundIPRanges`.
+      excludeOutboundIPRanges:
+        description: |
+          Трафик в сторону этих диапазонов IP гарантированно не заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundIPRanges`.
+      excludeInboundPorts:
+        description: |
+          Диапазоны входящих портов, чей трафик гарантированно не заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/excludeInboundPorts`.
+      excludeOutboundPorts:
+        description: |
+          Диапазоны исходящих портов, чей трафик гарантированно не заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного Pod'а с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundPorts`.
+        items:
+          type: string
+          pattern: '^[0-9]{1,5}$'
+  ca:
+    description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS (см. `tlsMode`).
+    properties:
+      cert:
+        description: Корневой или промежуточный сертификат в формате PEM.
+      key:
+        description: Ключ корневого сертификата в формате PEM.
+      chain:
+        description: Цепочка сертификатов в формате PEM на случай  если `cert` — промежуточный сертификат.
+      root:
+        description: Корневой сертификат в формате PEM на  случай если `cert` — промежуточный сертификат.
+  nodeSelector:
+    description: |
+      Опциональный селектор для компонентов istio-operator, metadata-exporter и kiali. Структура, аналогичная `spec.nodeSelector` Kubernetes pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Опциональные tolerations для компонентов istio-operator, metadata-exporter и kiali. Структура, аналогичная  `spec.tolerations` в Kubernetes Pod.
+
+      Если ничего не указано или указано `false` — будет [использоваться автоматика](https://deckhouse.io/ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  https:
+    description: |
+      Тип сертификата используемого для Grafana/Prometheus.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по https и заказывать сертификат с помощью clusterissuer заданном в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по https используя сертификат из namespace `d8-system`.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансер, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой.
+
+          **Важно!** В отличие от остальных модулей, Istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
+      certManager:
+        properties:
+          clusterIssuerName:
+            description: |
+              ClusterIssuer, используемый для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
+      customCertificate:
+        properties:
+          secretName:
+            description: |
+              Имя secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+
+  auth:
+    description: Опции, связанные с аутентификацией или авторизацией в приложении.
+    properties:
+      externalAuthentication:
+        description: |
+          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающей на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+          > Если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/), параметры externalAuthentication настраиваются автоматически.
+        properties:
+          authURL:
+            description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+          authSignInURL:
+            description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
+      password:
+        description: |
+          Пароль для HTTP-авторизации для пользователя admin (генерируется автоматически, но можно менять).
+
+          Используется, если не включен параметр `externalAuthentication`.
+      allowedUserGroups:
+        description: |
+          Массив групп, пользователям которых позволен доступ в Grafana и Prometheus.
+
+          Используется, если включен модуль [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) или параметр `externalAuthentication`.
+
+          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.io/ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider) DexProvider.
+      whitelistSourceRanges:
+        description: Массив CIDR, которым разрешено проходить авторизацию в Grafana и Prometheus.
+      satisfyAny:
+        description: |
+          Разрешает пройти только одну из аутентификаций.
+
+          В комбинации с опцией `whitelistSourceRanges` позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.

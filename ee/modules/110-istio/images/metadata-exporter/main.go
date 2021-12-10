@@ -1,3 +1,8 @@
+/*
+Copyright 2021 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package main
 
 import (
@@ -34,6 +39,8 @@ type spiffeEndpoint struct {
 	Keys              []spiffeKey `json:"keys"`
 }
 
+// TODO import from hooks package
+// Warning! These structs are duplicated in hooks/private/crd
 type AlliancePublicMetadata struct {
 	ClusterUUID string `json:"clusterUUID,omitempty"`
 	AuthnKeyPub string `json:"authnKeyPub,omitempty"`
@@ -41,11 +48,11 @@ type AlliancePublicMetadata struct {
 }
 
 type FederationPrivateMetadata struct {
-	IngressGateways []struct {
+	IngressGateways *[]struct {
 		Address string `json:"address"`
 		Port    uint   `json:"port"`
 	} `json:"ingressGateways"`
-	PublicServices []struct {
+	PublicServices *[]struct {
 		Hostname string `json:"hostname"`
 		Ports    []struct {
 			Name string `json:"name"`
@@ -55,11 +62,11 @@ type FederationPrivateMetadata struct {
 }
 
 type MulticlusterPrivateMetadata struct {
-	IngressGateways []struct {
+	IngressGateways *[]struct {
 		Address string `json:"address"`
 		Port    uint   `json:"port"`
 	} `json:"ingressGateways"`
-	ApiHost     string `json:"apiHost,omitempty"`
+	APIHost     string `json:"apiHost,omitempty"`
 	NetworkName string `json:"networkName,omitempty"`
 }
 
@@ -188,8 +195,8 @@ func renderMulticlusterPrivateMetadataJSON() string {
 		panic("Error reading MULTICLUSTER_NETWORK_NAME from env")
 	}
 
-	pm.ApiHost = os.Getenv("MULTICLUSTER_API_HOST")
-	if len(pm.ApiHost) == 0 {
+	pm.APIHost = os.Getenv("MULTICLUSTER_API_HOST")
+	if len(pm.APIHost) == 0 {
 		panic("Error reading MULTICLUSTER_API_HOST from env")
 	}
 

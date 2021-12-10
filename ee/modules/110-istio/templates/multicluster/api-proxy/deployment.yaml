@@ -71,15 +71,9 @@ spec:
           requests:
 {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | indent 12 }}
         volumeMounts:
-        - name: listen-cert
-          mountPath: /listen-cert/
         - name: remote-public-metadata
           mountPath: /remote/
       volumes:
-      - name: listen-cert
-        secret:
-          defaultMode: 420
-          secretName: api-proxy-listen-cert
       - name: remote-public-metadata
         secret:
           defaultMode: 420

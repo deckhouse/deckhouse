@@ -1,0 +1,358 @@
+type: object
+properties:
+  globalVersion:
+    type: string
+    x-examples: [1.8.5]
+  tlsMode:
+    type: string
+    enum: ["Off", MutualPermissive, Mutual]
+    description: |
+      The mode for transparent encryption of inter-pod traffic ([Mutual TLS](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)).
+      - `Off` — outgoing requests are not encrypted; incoming unencrypted requests are accepted.
+      - `MutualPermissive` — outgoing requests are encrypted; incoming unencrypted requests are accepted. This mode is useful when migrating to mTLS.
+      - `Mutual` — outgoing requests are encrypted; incoming unencrypted requests are rejected (pods accept only encrypted requests).
+      You can manage the mTLS mode separately for each application and for its client connections using the [AuthorizationPolicy](istio-cr.html#authorizationpolicy) and [DestinationRule](istio-cr.html#destinationrule) resources.
+    default: "Off"
+  outboundTrafficPolicyMode:
+    type: string
+    enum: [AllowAny, RegistryOnly]
+    x-examples: ["AllowAny"]
+    description: |
+      How to handle requests directed to external services which aren't registered in service mesh.
+      - `AllowAny` — allow.
+      - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry CR or to organize egressgateway.
+    default: AllowAny
+  federation:
+    type: object
+    description: Parameters for federating with other clusters.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: Designate this cluster as a federation member (see [Enabling federation](./#enabling-federation)).
+        default: false
+        x-examples: [true]
+  multicluster:
+    type: object
+    description: Multicluster parameters.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: Designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-multicluster)).
+        default: false
+        x-examples: [true]
+  alliance:
+    type: object
+    description: Common options both for federation and multicluster.
+    default: {}
+    properties:
+      ingressGateway:
+        type: object
+        description: ingressgateway settings.
+        default: {}
+        properties:
+          inlet:
+            type: string
+            enum: [LoadBalancer, NodePort]
+            x-examples: [LoadBalancer]
+            description: |
+              The method for exposing ingressgateway.
+              - `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
+              - `NodePort` — for installations that do not have the LB.
+            default: LoadBalancer
+          serviceAnnotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex.Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
+            example:
+              yandex.cpi.flant.com/listener-subnet-id: xyz-123
+          nodeSelector:
+            type: object
+            additionalProperties:
+              type: string
+            x-examples: [{"type":"ingress"}]
+            description: |
+              ingressgateway DaemonSet nodeSelector.
+
+              The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+          tolerations:
+            type: array
+            description: |
+              ingressgateway DaemonSet tolerations.
+
+              The same as `spec.tolerations` for the Kubernetes pod.
+            items:
+              type: object
+              properties:
+                effect:
+                  type: string
+                key:
+                  type: string
+                operator:
+                  type: string
+                tolerationSeconds:
+                  type: integer
+                  format: int64
+                value:
+                  type: string
+            x-examples:
+            - [{"operator": "Exists"}]
+  tracing:
+    type: object
+    description: Tracing parameters.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: Turn on or off tracing collection and displaying in kiali.
+        default: false
+      collector:
+        type: object
+        description: Tracing collection settings.
+        default: {}
+        properties:
+          zipkin:
+            type: object
+            description: |
+              Zipkin protocol parameters used by Istio for sending traces. Jaeger supports this protocol.
+
+              If tracing is enabled, this settings section is mandatory.
+            default: {}
+            properties:
+              address:
+                type: string
+                description: Network address of zipkin collector in `<IP of FQDN>:<port>` format.
+                pattern: '[0-9a-zA-Z\.-]+'
+                example: "zipkin.myjaeger.svc:9411"
+      kiali:
+        type: object
+        description: |
+          Span displaying settings for kiali.
+
+          When not configured, kiali won't show any tracing dashboards.
+        default: {}
+        properties:
+          jaegerURLForUsers:
+            type: string
+            description: Jaeger UI address for users. Mandatory parameter if kiali is enabled.
+            example: "https://tracing-service:4443/jaeger"
+          jaegerGRPCEndpoint:
+            type: string
+            description: |
+              Accessible from cluster address of jaeger GRPC interface for system queries by kiali.
+
+              When not configured, kiali will only show external links using the `jaegerURLForUsers` config without interpretationing.
+            example: "http://tracing.myjaeger.svc:16685/"
+        x-examples:
+        - {}
+        - jaegerURLForUsers: https://tracing-service:4443/jaeger
+        - jaegerURLForUsers: https://tracing-service:4443/jaeger
+          jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  sidecar:
+    type: object
+    description: Network settings for traffic capture by istio sidecar.
+    default: {}
+    properties:
+      includeOutboundIPRanges:
+        description: |
+          Traffic to these IP ranges is forcibly routed through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/includeOutboundIPRanges` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        default: ["0.0.0.0/0"]
+        example: ["10.1.1.0/24"]
+        x-examples:
+        - []
+        - ["1.1.1.1/32", "1.2.3.0/24"]
+      excludeOutboundIPRanges:
+        description: |
+          Traffic to these IP ranges is guaranteed not to flow through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        default: []
+        example: ["10.1.1.0/24"]
+        x-examples:
+        - []
+        - ["1.1.1.1/32", "1.2.3.0/24"]
+      excludeInboundPorts:
+        description: |
+          The range of inbound ports whose traffic is guaranteed not to flow through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/excludeInboundPorts` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,5}$'
+        default: []
+        example: ["8080", "8443"]
+        x-examples:
+        - []
+        - ["8080", "8443"]
+      excludeOutboundPorts:
+        description: |
+          The range of outbound ports whose traffic is guaranteed not to flow through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/excludeOutboundPorts` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,5}$'
+        default: []
+        example: ["8080", "8443"]
+        x-examples:
+        - []
+        - ["8080", "8443"]
+  ca:
+    type: object
+    description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+    default: {}
+    properties:
+      cert:
+        type: string
+        description: The root or intermediate certificate in PEM format.
+      key:
+        type: string
+        description: The key to the root certificate in PEM format.
+      chain:
+        type: string
+        description: A certificate chain in PEM format if `cert` is an intermediate certificate.
+      root:
+        type: string
+        description: The root certificate in PEM format if `cert` is an intermediate certificate.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      Optional `nodeSelector` for istio-operator, metadata-exporter and kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      Optional `tolerations` for istio-operator, metadata-exporter and kiali. The same as `spec.tolerations` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/en/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with Grafana/Prometheus.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+
+          **Caution!** Unlike other modules, Istio doesn't support non-secured HTTP (`mode: Disabled`).
+        enum:
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  auth:
+    type: object
+    default: {}
+    description: Options related to authentication or authorization in the application.
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          A set of parameters to enable external authentication (it is based on the Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > The `externalAuthentication` parameters are set automatically if the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            x-examples: ["https://dex.d8.svc.cluster.local/dex/auth", "https://myhost.ru/dex/auth"]
+            description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            x-examples: ["https://myhost.ru/dex/sign_in"]
+            description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      password:
+        type: string
+        format: password
+        description: |
+          The password for http authorization of the `admin` user (it is generated automatically, but you can change it).
+
+          This parameter is used if the `externalAuthentication` is not enabled.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access Grafana & Prometheus.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - [ "1.1.1.1/32" ]
+        description: An array if CIDRs that are allowed to authenticate in Grafana & Prometheus.
+      satisfyAny:
+        type: boolean
+        default: false
+        description: |
+          Enables single authentication.
+
+          If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).

@@ -1,0 +1,120 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      deployDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      ca:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: string
+            x-examples: ["---CERT PEM---"]
+          key:
+            type: string
+            x-examples: ["---KEY PEM---"]
+          chain:
+            type: string
+            x-examples: ["---CHAIN PEM---"]
+          root:
+            type: string
+            x-examples: ["---ROOT PEM---"]
+      federations:
+        type: array
+        default: []
+        x-examples:
+        - [{"name": "aaa", "trustDomain": "bbb", "spiffeEndpoint": "ccc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "publicServices": [{"hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345}], "virtualIP": "3.4.5.6"}]}]
+      multiclusters:
+        type: array
+        default: []
+        x-examples:
+        - [{"name": "aaa", "spiffeEndpoint": "ccc", "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+      remotePublicMetadata:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          properties:
+            name:
+              type: string
+            spiffeEndpoint:
+              type: string
+            enableIngressGateway:
+              type: bool
+            apiHost:
+              type: string
+            networkName:
+              type: string
+            apiJWT:
+              type: string
+            ingressGateways:
+              type: array
+              default: []
+              items:
+                type: object
+                properties:
+                  address:
+                    type: string
+                  port:
+                    type: integer
+            public:
+              type: object
+              default: {}
+              properties:
+                clusterUUID:
+                  type: string
+                authnKeyPub:
+                  type: string
+                rootCA:
+                  type: string
+      remoteAuthnKeypair:
+        type: object
+        default: {}
+        properties:
+          pub:
+            type: string
+            x-examples: ["---PUB KEY---"]
+          priv:
+            type: string
+            x-examples: ["---PRIV KEY---"]
+      supportedVersions:
+        type: array
+        items:
+          type: string
+        default:
+        - 1.10.1
+        x-examples:
+        - ["1.10.1"]
+      globalRevision:
+        type: string
+        x-examples: [v1x10x1] # must be real
+      revisionsToInstall:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - [v1x10x1] # must be real
+      operatorRevisionsToInstall:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - [v1x10x1] # must be real
+      applicationNamespaces:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - ["myns"]
+      multiclustersNeedIngressGateway:
+        type: boolean
+        default: false

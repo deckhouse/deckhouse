@@ -16,3 +16,17 @@ func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+type HTTPMockResponse struct {
+	Response string
+	Code     int
+}
+
+type jwtPayload struct {
+	Iss   string
+	Sub   string
+	Aud   string
+	Scope string
+	Nbf   int64
+	Exp   int64
+}

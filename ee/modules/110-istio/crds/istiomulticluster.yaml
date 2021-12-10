@@ -61,25 +61,22 @@ spec:
                     publicLastFetchTimestamp:
                       type: string
                       format: date-time
-                    apiHost:
-                      type: string
-                    apiHostLastFetchTimestamp:
-                      type: string
-                      format: date-time
-                    networkName:
-                      type: string
-                    networkNameLastFetchTimestamp:
-                      type: string
-                      format: date-time
-                    ingressGateways:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          address:
-                            type: string
-                          port:
-                            type: integer
-                    ingressGatewaysLastFetchTimestamp:
+                    private:
+                      type: object
+                      properties:
+                        apiHost:
+                          type: string
+                        networkName:
+                          type: string
+                        ingressGateways:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              address:
+                                type: string
+                              port:
+                                type: integer
+                    privateLastFetchTimestamp:
                       format: date-time
                       type: string
