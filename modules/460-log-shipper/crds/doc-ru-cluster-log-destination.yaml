@@ -21,7 +21,7 @@ spec:
                         password:
                           description: Закодированный в Base64 пароль для Basic-аутентификации.
                         strategy:
-                          description: Тип аутентификации - `Basic` или Bearer`.
+                          description: Тип аутентификации — `Basic` или Bearer`.
                         token:
                           description: Токен для Bearer-аутентификации.
                         user:
@@ -30,7 +30,7 @@ spec:
                       description: |
                         URL для подключения к Loki.
 
-                        *Важно* Vector автоматически добавляет `/loki/api/v1/push` к URL при отправке данных.
+                        > Vector автоматически добавляет `/loki/api/v1/push` к URL при отправке данных.
                     tls:
                       description: Настройки защищённого TLS соединения.
                       properties:
@@ -40,13 +40,19 @@ spec:
                           description: Конфигурация клиентского сертификата
                           properties:
                             crtFile:
-                              description: Закодированный в Base64 сертификат в формате PEM. keyFile так же необходим.
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также, необходимо указать ключ в параметре `keyFile`.
                             keyFile:
-                              description: Закодированный в Base64 ключ в формате PEM. Если вы добавили ключ, опция crtFile становится обязательной.
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также, необходимо указать сертификат в параметре `crtFile`.
                             keyPass:
                               description: Закодированный в Base64 пароль для ключа.
                         verifyHostname:
-                          description: Проверка валидности сертификата на удалённом хосте.
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
                 elasticsearch:
                   properties:
                     auth:
@@ -54,15 +60,15 @@ spec:
                         strategy:
                           description: Тип аутентификации - `Basic` или `AWS`.
                         password:
-                          description: Закодированный в Base64 пароль для basic аутентификации.
+                          description: Закодированный в Base64 пароль для Basic-аутентификации.
                         awsAccessKey:
-                          description: Закодированный в Base64 AWS ACCESS_KEY.
+                          description: Закодированный в Base64 AWS `ACCESS_KEY`.
                         awsSecretKey:
-                          description: Закодированный в Base64 AWS SECRET_KEY.
+                          description: Закодированный в Base64 AWS `SECRET_KEY`.
                         awsAssumeRole:
                           description: ARN роли в IAM.
                         user:
-                          description: Имя пользователя, используемое при Basic аутентификации.
+                          description: Имя пользователя, используемое при Basic-аутентификации.
                         awsRegion:
                           description: Регион AWS для аутентификации.
                     index:
@@ -70,7 +76,7 @@ spec:
                     pipeline:
                       description: Имя pipeline, который будет применён к данным перед записью в индекс.
                     endpoint:
-                      description: Адрес инстанса elasticsearch.
+                      description: Адрес инстанса Elasticsearch.
                     dataStreamEnabled:
                       description: |
                         Использовать Datastream для хранения логов (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
@@ -83,16 +89,22 @@ spec:
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
-                          description: Конфигурация клиентского сертификата
+                          description: Конфигурация клиентского сертификата.
                           properties:
                             crtFile:
-                              description: Закодированный в Base64 сертификат в формате PEM. keyFile так же необходим.
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также, необходимо указать ключ в параметре `keyFile`.
                             keyFile:
-                              description: Закодированный в Base64 ключ в формате PEM. Если вы добавили ключ, опция crtFile становится обязательной.
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также, необходимо указать сертификат в параметре `crtFile`.
                             keyPass:
                               description: Закодированный в Base64 пароль для ключа.
                         verifyHostname:
-                          description: Проверка валидности сертификата на удалённом хосте.
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
                 logstash:
                   properties:
                     endpoint:
@@ -106,20 +118,28 @@ spec:
                           description: Конфигурация клиентского сертификата
                           properties:
                             crtFile:
-                              description: Закодированный в Base64 сертификат в формате PEM. keyFile так же необходим.
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также, необходимо указать ключ в параметре `keyFile`.
                             keyFile:
-                              description: Закодированный в Base64 ключ в формате PEM. Если вы добавили ключ, опция crtFile становится обязательной.
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также, необходимо указать сертификат в параметре `crtFile`.
                             keyPass:
                               description: Закодированный в Base64 пароль для ключа.
                         verifyHostname:
-                          description: Проверка валидности сертификата на удалённом хосте.
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удалённого хоста.
                         verifyCertificate:
-                          description: Проверка соответствия сертификата и имени удалённого хоста.
+                          description: Проверка действия TLS-сертификата удаленного хоста.
                 extraLabels:
                   description: |
-                    Дополнительные label, которыми будут снабжаться записи логов.
+                    Дополнительные label'ы, которыми будут снабжаться записи логов.
+
                     Вы можете использовать простые шаблоны: `{{ app }}`.
-                    Некоторые ключи заререзвированы:
+
+                    Некоторые ключи зарезервированы:
                     - parsed_data
                     - pod
                     - pod_labels
@@ -129,4 +149,5 @@ spec:
                     - container
                     - node
                     - pod_owner
-                    Больше информации о [путях к полям](https://vector.dev/docs/reference/configuration/field-path-notation/)
+
+                    [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)

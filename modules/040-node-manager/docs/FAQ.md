@@ -331,7 +331,7 @@ After setting up a new CRI for NodeGroup, the node-manager module drains nodes o
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
 node updates or requires manual confirmation.
 
-## How to change CRI for whole cluster?
+## How to change CRI for the whole cluster?
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with patch:
