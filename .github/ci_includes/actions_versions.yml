@@ -8,3 +8,4 @@
 "werf/actions/run": "werf/actions/run@v1.2"
 "werf/actions/build": "werf/actions/build@v1.2"
 "werf/actions/converge": "werf/actions/converge@v1.2"
+"dorny/paths-filter": "dorny/paths-filter@v2"

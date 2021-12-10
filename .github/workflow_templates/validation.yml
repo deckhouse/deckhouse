@@ -1,3 +1,6 @@
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . -}!}
+
 # Run validation script on every push to dev branches.
 #
 # Validation scripts require  PR title, PR description and diff.
@@ -10,30 +13,27 @@
 
 name: Validations
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
+  pull_request_target:
+     types:
+      - opened
+      - synchronize
 
 # Analog of Gitlab's "interruptible: true" behaviour.
 # Note: Concurrency is currently in beta and subject to change.
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency:
-  group: ${{ github.ref }}-validation
+  group: ${{ github.event.number }}-validation
   cancel-in-progress: true
 
 jobs:
+{!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 
   # Get pull request info for validation scripts.
   # Push event has no pull request information, so retrieve it with Rest API.
   discover:
     name: Prepare input for validation scripts
+    needs:
+      - pull_request_info
     runs-on: ubuntu-latest
     outputs:
       run_no_cyrillic: ${{ steps.on_push.outputs.run_no_cyrillic }}
@@ -47,40 +47,42 @@ jobs:
       diff_url: ${{ steps.on_push.outputs.diff_url }}
 
     steps:
-{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
       - id: on_push
         name: Check labels on push
         uses: {!{ index (ds "actions") "actions/github-script" }!}
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.checkValidationLabels({github, context, core});
+            return await ci.checkValidationLabels({ github, context, core });
 
   no_cyrillic_validation:
     name: No Cyrillic Validation
     env:
       VALIDATE_TITLE: ${{ needs.discover.outputs.pr_title }}
       VALIDATE_DESCRIPTION: ${{ needs.discover.outputs.pr_description }}
-{!{ tmpl.Exec "validation_template" "no_cyrillic" | strings.Indent 4 }!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "no_cyrillic") | strings.Indent 4 }!}
 
   doc_validation:
     name: Documentation Validation
-{!{ tmpl.Exec "validation_template" "doc_changes" | strings.Indent 4 }!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
   copyright_validation:
     name: Copyright Validation
-{!{ tmpl.Exec "validation_template" "copyright" | strings.Indent 4 -}!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "copyright") | strings.Indent 4 -}!}
 
 {!{/* Template for validation jobs. CI_COMMIT_REF_NAME and CI_PIPELINE_CREATED_AT are required for werf.yaml */}!}
 {!{ define "validation_template" }!}
-{!{- $type := . }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $type := index . 1 }!}
 needs:
   - discover
+  - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
 runs-on: ubuntu-latest
 steps:
-  {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
   - name: Run check
     env:
