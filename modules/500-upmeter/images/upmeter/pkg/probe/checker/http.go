@@ -41,12 +41,14 @@ func newHTTPChecker(client *http.Client, verifier httpVerifier) check.Checker {
 
 func (c *httpChecker) Check() check.Error {
 	c.req = c.verifier.Request()
+
+	// The request body is closed inside
 	body, err := doRequest(c.client, c.req)
 	if err != nil {
 		return err
 	}
-	err = c.verifier.Verify(body)
-	return err
+
+	return c.verifier.Verify(body)
 }
 
 func (c *httpChecker) BusyWith() string {
@@ -82,7 +84,7 @@ func newGetRequest(endpoint, authToken string) (*http.Request, check.Error) {
 func doRequest(client *http.Client, req *http.Request) ([]byte, check.Error) {
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, check.ErrUnknown("cannot dial %q: %v", req.URL, err)
+		return nil, check.ErrFail("cannot dial %q: %v", req.URL, err)
 	}
 	defer resp.Body.Close()
 
