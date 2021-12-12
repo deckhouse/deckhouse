@@ -111,3 +111,57 @@ CAA record does not match issuer
 ```
 
 In this case, you have to check the `CAA (Certificate Authority Authorization)` DNS record of the domain for which the certificate is intended. For Let's Encrypt certificates, the domain must have the `issue "letsencrypt.org"` CAA record. You can read more about CAA [here](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) and [here](https://letsencrypt.org/docs/caa/).
+
+## Vault integration
+
+You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault
+
+After pki setup and kubernetes auth you have yo create service account and copy it's secret reference:
+
+```bash
+$ kubectl create serviceaccount issuer
+$ ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
+```
+
+Create Issuer:
+```bash
+$ kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vault-issuer
+  namespace: default
+spec:
+  vault:
+    server: http://vault.default.svc.cluster.local:8200 # hashicorp instruction has misstype here
+    path: pki/sign/example-dot-com # configure in pki setup step
+    auth:
+      kubernetes:
+        mountPath: /v1/auth/kubernetes
+        role: issuer
+        secretRef:
+          name: $ISSUER_SECRET_REF
+          key: token
+EOF
+```
+
+
+After this actions you can create a Certificate:
+```bash
+$ kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-com
+  namespace: default
+spec:
+  secretName: example-com-tls
+  issuerRef:
+    name: vault-issuer
+  commonName: www.example.com # allowed domains are set on pki setup
+  dnsNames:
+  - www.example.com
+EOF
+```
+
+and get TLS certificate, which is issued by Vault CA
