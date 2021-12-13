@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/clarketm/json v1.15.7
+	github.com/clarketm/json v1.17.1
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
