@@ -162,7 +162,7 @@ jobs:
       - git_info
       - comment_on_start
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -262,7 +262,7 @@ jobs:
     env:
       WERF_ENV: "EE"
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -362,7 +362,7 @@ jobs:
     env:
       WERF_ENV: "CE"
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -511,7 +511,7 @@ jobs:
     env:
       WERF_ENV: "FE"
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -665,7 +665,7 @@ jobs:
     env:
       WERF_ENV: "EE"
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -819,7 +819,7 @@ jobs:
     env:
       WERF_ENV: "CE"
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -969,7 +969,7 @@ jobs:
     needs:
       - git_info
       - build_modules_images_fe
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1028,7 +1028,7 @@ jobs:
     needs:
       - git_info
       - build_modules_images_fe
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1089,7 +1089,7 @@ jobs:
       - build_fe
     continue-on-error: true
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1160,7 +1160,7 @@ jobs:
       - build_fe
     continue-on-error: true
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1231,7 +1231,7 @@ jobs:
       - build_fe
     continue-on-error: true
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1302,7 +1302,7 @@ jobs:
       - build_fe
     continue-on-error: true
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1373,7 +1373,7 @@ jobs:
       - build_fe
     continue-on-error: true
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1443,7 +1443,7 @@ jobs:
       - doc_web_build
       - main_web_build
     continue-on-error: true
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1567,7 +1567,7 @@ jobs:
       - build_fe
     continue-on-error: true
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -1639,7 +1639,7 @@ jobs:
       - main_web_build
     continue-on-error: true
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Set documentation version
@@ -1705,7 +1705,7 @@ jobs:
       - doc_web_build
     continue-on-error: true
     if: ${{ needs.git_info.outputs.ci_commit_tag != '' }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Set documentation version

@@ -132,7 +132,7 @@ jobs:
     name: Cleanup registry
     needs:
       - git_info
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -190,7 +190,7 @@ jobs:
     name: Cleanup modules registry
     needs:
       - git_info
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources
@@ -248,7 +248,7 @@ jobs:
 
   cleanup_modules_images:
     name: Cleanup modules images
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 
       - name: Checkout sources

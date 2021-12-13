@@ -36,7 +36,7 @@ docker_options: '-w /deckhouse'
   {!{- $args_tmpl := printf "%s_run_args" $args_name }!}
   {!{- $default := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
   {!{- $ctx := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
-runs-on: self-hosted
+runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 2 }!}

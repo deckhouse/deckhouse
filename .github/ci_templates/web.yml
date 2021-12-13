@@ -1,5 +1,5 @@
 {!{- define "doc_web_build_template" -}!}
-runs-on: self-hosted
+runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
@@ -16,7 +16,7 @@ steps:
 {!{- end -}!}
 
 {!{- define "main_web_build_template" -}!}
-runs-on: self-hosted
+runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
@@ -33,7 +33,7 @@ steps:
 {!{- end -}!}
 
 {!{- define "web_links_test_template" -}!}
-runs-on: self-hosted
+runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "checkout_full_step" . | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}

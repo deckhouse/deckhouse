@@ -45,7 +45,7 @@ jobs:
     - git_info
     if: needs.check_label.outputs.should_run == 'true'
     name: Deploy site
-    runs-on: self-hosted
+    runs-on: [self-hosted, regular]
     steps:
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
