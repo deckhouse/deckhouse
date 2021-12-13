@@ -8,7 +8,7 @@ git_info:
     ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
     ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
     github_sha: ${{ steps.git_info.outputs.github_sha }}
-    is_external_pr: ${{ github.event && github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository }}
+    is_external_pr: ${{ steps.git_info.outputs.is_external_pr }}
   steps:
     - id: git_info
       name: Get tag name and SHA
@@ -52,6 +52,10 @@ git_info:
         fi
         echo "::set-output name=github_sha::$githubSha"
         echo "github_sha='${githubSha}'"
+
+        is_external_pr="${{ github.event && github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository }}"
+        echo ":set-output name=is_external_pr::${is_external_pr}"
+        echo "is_external_pr='${is_external_pr}'"
 
 {!{- end -}!}
 
