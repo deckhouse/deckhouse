@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig/v3 v3.2.2
-	github.com/fatih/color v1.9.0
+	github.com/fatih/color v1.13.0
 	github.com/flant/kube-client v0.0.6
 	github.com/flant/logboek v0.3.4
 	github.com/fsnotify/fsnotify v1.5.1
