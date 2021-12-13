@@ -3,6 +3,36 @@
   uses: {!{ index (ds "actions") "actions/checkout" }!}
 {!{- end -}!}
 
+# checkout_pr_merge_commit_step is to use in PR actions
+# - Works with trigger 'pull_request_target', checks out the incoming branch.
+# - Lets external PRs run checks but forbids to change some locations outside of our repo.
+{!{ define "checkout_pr_merge_commit_step" }!}
+- name: Checkout PR merge commit
+  if: github.event.pull_request.head.repo.full_name == github.repository
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    ref: "refs/pull/${{ github.event.number }}/merge"
+- name: Check for forbidden changes
+  if: needs.git_info.outputs.is_external_pr
+  uses: {!{ index (ds "actions") "technote-space/get-diff-action" }!}
+  with:
+    PATTERNS: |
+      ./.github/**
+      ./.gitlab/**
+      ./tools/**
+      ./testing/**
+      ./docs/**/js/**
+      ./docs/**/css/**
+      ./docs/**/images/**
+      ./docs/**/assets/**
+- name: Stop if changes are forbidden
+  if: needs.git_info.outputs.is_external_pr && env.GIT_DIFF_FILTERED
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    script: |
+        core.setFailed('External repo contains forbidden changes.')
+{!{- end -}!}
+
 {!{ define "checkout_full_step" }!}
 - name: Checkout sources
   uses: {!{ index (ds "actions") "actions/checkout" }!}

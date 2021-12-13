@@ -4,19 +4,19 @@
 name: Rerun workflows for pull request
 
 on:
-  pull_request:
-    types: [labeled,unlabeled]
-
+  pull_request_target:
+    types: [ labeled, unlabeled ]
 jobs:
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
     runs-on: ubuntu-latest
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_pr_merge_commit_step" . | strings.Indent 6 }!}
       - name: Rerun workflow
         uses: {!{ index (ds "actions") "actions/github-script" }!}
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.runWorkflowForPullRequest({github, context, core});
+            return await ci.runWorkflowForPullRequest({ github, context, core });
