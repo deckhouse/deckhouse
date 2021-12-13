@@ -133,6 +133,11 @@ jobs:
           echo "::set-output name=is_external_pr::${is_external_pr}"
           echo "is_external_pr='${is_external_pr}'"
 
+          echo "github.repository ${{ github.repository }}"
+          echo "github.event ${{ github.event }}"
+          echo "github.event.pull_request ${{ github.event.pull_request }}"
+          echo "github.event.pull_request.head.repo.full_name ${{ github.event.pull_request.head.repo.full_name }}"
+
   cleanup_registry:
     name: Cleanup registry
     needs:
