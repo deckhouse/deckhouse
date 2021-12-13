@@ -1,0 +1,87 @@
+{{- if .Values.nodeManager.earlyOomEnabled }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: early-oom
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "early-oom" "workload-resource-policy.deckhouse.io" "every-node")) | indent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: early-oom
+  updatePolicy:
+    updateMode: "Auto"
+  {{- end }}
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: early-oom
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | indent 2 }}
+spec:
+{{ include "helm_lib_pdb_daemonset" . | indent 2}}
+  selector:
+    matchLabels:
+      app: early-oom
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: early-oom
+  namespace: d8-cloud-instance-manager
+{{ include "helm_lib_module_labels" (list . (dict "app" "early-oom")) | indent 2 }}
+spec:
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: early-oom
+  template:
+    metadata:
+      labels:
+        app: early-oom
+      name: early-oom
+    spec:
+{{- include "helm_lib_priority_class" (tuple . "system-node-critical") | indent 6 }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") | indent 6 }}
+{{- include "helm_lib_module_pod_security_context_run_as_user_root" . | indent 6 }}
+      containers:
+      - name: oom-killer
+        image: {{ .Values.global.modulesImages.registry }}:{{ .Values.global.modulesImages.tags.common.alpine }}
+        args:
+          - 'sh'
+          - '-c'
+          - |
+            while true; do
+              if [ "$(cat /proc/meminfo | grep 'MemAvailable' | awk '{ print $2 }')" -lt "$MIN_MEMORY_KB" ]; then
+                echo f > /host_proc/sysrq-trigger
+                echo "Kernel OOM killer invoked."
+              fi
+
+              sleep 10
+            done
+        env:
+          - name: 'MIN_MEMORY_KB'
+            value: '500000'
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /host_proc
+            name: proc
+        resources:
+          requests:
+{{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | indent 12 }}
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+            type: Directory
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- end }}

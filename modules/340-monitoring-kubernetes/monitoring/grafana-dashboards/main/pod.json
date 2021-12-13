@@ -1215,14 +1215,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (container) (label_replace(increase(klog_pod_oomkill{namespace=\"$namespace\", pod_name=\"$pod\"}[$__interval_sx4]), \"container\", \"$1\", \"container_name\", \"(.+)\"))",
+          "expr": "sum by (container) (increase(oom_kills:normalized{namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "A"
         },
         {
-          "expr": "sum (label_replace(increase(klog_pod_oomkill{namespace=\"$namespace\", pod_name=\"$pod\"}[$__interval_sx4]), \"container\", \"$1\", \"container_name\", \"(.+)\"))",
+          "expr": "sum (increase(oom_kills:normalized{namespace=\"$namespace\", pod=\"$pod\"}[$__interval_sx4]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",

@@ -1,0 +1,19 @@
+- name: oom-kills
+  rules:
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod) (
+        label_replace(kube_pod_info, "raw_pod_id", "$1$2$3$4$5", "uid", "(.+)-(.+)-(.+)-(.+)-(.+)")
+        * on (raw_pod_id) group_left
+        label_replace(
+          label_replace(ebpf_exporter_oom_kills{global_oom="0"}, "raw_pod_id", "$1", "cgroup_path", ".+-pod(.+).slice"),
+          "raw_pod_id", "$1$2$3$4$5", "raw_pod_id", "(.+)_(.+)_(.+)_(.+)_(.+)"
+        )
+      )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container) (
+        label_replace(kube_pod_container_info, "raw_container_id", "$1", "container_id", "containerd://(.+)")
+        * on (raw_container_id) group_left
+        max by (raw_container_id) (label_replace(ebpf_exporter_oom_kills{global_oom="0"}, "raw_container_id", "$1", "cgroup_path", ".+cri-containerd-(.+).scope"))
+      )
