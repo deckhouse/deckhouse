@@ -16,11 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      # PR from external repo
       - name: Checkout PR merge commit
         if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/checkout@v2.4.0
         with:
           ref: "refs/pull/${{ github.event.number }}/merge"
+
+      # PR from the target repo
+      - name: Checkout sources
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/checkout@v2.4.0
+
       - name: Check for forbidden changes
         if: needs.git_info.outputs.is_external_pr
         uses: technote-space/get-diff-action@v4.0.1
@@ -39,7 +46,7 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
-              core.setFailed('External repo contains forbidden changes.')
+              core.setFailed('External PR contains forbidden changes.')
       - name: Rerun workflow
         uses: actions/github-script@v5.0.0
         with:
