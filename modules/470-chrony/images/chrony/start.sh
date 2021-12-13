@@ -19,6 +19,11 @@ if [ -z "${NTP_SERVERS}" ]; then
   exit 1
 fi
 
+if ss -nlup | grep -q "127.0.0.1:123"; then
+  echo "NTP port on node is used"
+  exit 1
+fi
+
 touch /var/run/chrony/chrony.drift
 chown chrony:chrony -R /var/run/chrony
 chmod 700 /var/run/chrony

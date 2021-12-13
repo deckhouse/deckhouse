@@ -70,14 +70,6 @@ spec:
         - name: ntp
           containerPort: 123
           protocol: UDP
-        readinessProbe:
-          exec:
-            command:
-              - chronyc
-              - tracking
-          initialDelaySeconds: 30
-          periodSeconds: 60
-          timeoutSeconds: 5
         livenessProbe:
           exec:
             command:
