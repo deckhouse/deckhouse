@@ -99,7 +99,7 @@ jobs:
           echo "github_sha='${githubSha}'"
 
           is_external_pr="${{ github.event && github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository }}"
-          echo ":set-output name=is_external_pr::${is_external_pr}"
+          echo "::set-output name=is_external_pr::${is_external_pr}"
           echo "is_external_pr='${is_external_pr}'"
 
   check_label:
