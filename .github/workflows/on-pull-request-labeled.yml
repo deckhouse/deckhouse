@@ -8,20 +8,42 @@
 name: Rerun workflows for pull request
 
 on:
-  pull_request:
+  pull_request_target:
     types: [labeled, unlabeled]
-
 jobs:
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
+
+      - name: Checkout PR merge commit
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/checkout@v2.4.0
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+      - name: Check for forbidden changes
+        if: needs.git_info.outputs.is_external_pr
+        uses: technote-space/get-diff-action@v4.0.1
+        with:
+          PATTERNS: |
+            ./.github/**
+            ./.gitlab/**
+            ./tools/**
+            ./testing/**
+            ./docs/**/js/**
+            ./docs/**/css/**
+            ./docs/**/images/**
+            ./docs/**/assets/**
+      - name: Stop if changes are forbidden
+        if: needs.git_info.outputs.is_external_pr && env.GIT_DIFF_FILTERED
+        uses: actions/github-script@v5.0.0
+        with:
+          script: |
+              core.setFailed('External repo contains forbidden changes.')
       - name: Rerun workflow
         uses: actions/github-script@v5.0.0
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             const ci = require('./.github/scripts/js/ci');
-            return await ci.runWorkflowForPullRequest({github, context, core});
+            return await ci.runWorkflowForPullRequest({ github, context, core });

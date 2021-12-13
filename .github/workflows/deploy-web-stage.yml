@@ -92,6 +92,7 @@ jobs:
       ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
       ci_pipeline_created_at: ${{ steps.git_info.outputs.ci_pipeline_created_at }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
+      is_external_pr: ${{ github.event && github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - id: git_info
         name: Get tag name and SHA

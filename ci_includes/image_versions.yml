@@ -1,0 +1,6 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+{!{ define "image_versions_envs" }!}
+{!{$BASE_IMAGES_REGISTRY_PATH := "registry.deckhouse.io/base_images/" }!}
