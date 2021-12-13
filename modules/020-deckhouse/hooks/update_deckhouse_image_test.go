@@ -241,6 +241,21 @@ var _ = Describe("Modules :: deckhouse :: hooks :: update deckhouse image ::", f
 			})
 		})
 	})
+
+	Context("Single First Release", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deckhousePodYaml + deckhousePatchRelease)
+			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
+			f.RunHook()
+		})
+
+		It("Should update deckhouse deployment", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("DeckhouseRelease", "v1-25-1").Field("status.phase").String()).To(Equal("Deployed"))
+			dep := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(dep.Field("spec.template.spec.containers").Array()[0].Get("image").String()).To(BeEquivalentTo("my.registry.com/deckhouse:v1.25.1"))
+		})
+	})
 })
 
 var (
