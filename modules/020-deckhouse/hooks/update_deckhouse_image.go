@@ -327,15 +327,6 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 				return nil
 			}
 
-			// mark previous release as outdated
-			currentDeployedRelease := releases[currentDeployedReleaseIndex]
-			sp := statusPatch{
-				Phase:          v1alpha1.PhaseOutdated,
-				Approved:       currentDeployedRelease.StatusApproved,
-				TransitionTime: now,
-			}
-			input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentDeployedRelease.Name, object_patch.WithSubresource("/status"))
-
 			// apply patch - update deployment
 			applyRelease(input, rl, now)
 
@@ -343,16 +334,25 @@ func releaseChannelUpdate(input *go_hook.HookInput, releases []deckhouseReleaseU
 
 		case v1alpha1.PhaseDeployed:
 			if i == len(releases)-1 {
-				// last release, don't update
+				// latest release, don't update
 				return nil
 			}
 			currentDeployedReleaseIndex = i
 		}
 	}
 
-	// self-healing, if deployed release was deleted
-	if currentDeployedReleaseIndex == -1 {
-		// no deployed releases found, deploy first pending release
+	if currentDeployedReleaseIndex != -1 {
+		// mark previous release as outdated
+		currentDeployedRelease := releases[currentDeployedReleaseIndex]
+		sp := statusPatch{
+			Phase:          v1alpha1.PhaseOutdated,
+			Approved:       currentDeployedRelease.StatusApproved,
+			TransitionTime: now,
+		}
+		input.PatchCollector.MergePatch(sp, "deckhouse.io/v1alpha1", "DeckhouseRelease", "", currentDeployedRelease.Name, object_patch.WithSubresource("/status"))
+	} else {
+		// self-healing, if deployed release was deleted
+		// no deployed releases found - deploy first pending release
 		for _, rl := range releases {
 			if rl.Phase == v1alpha1.PhasePending {
 				applyRelease(input, rl, now)
