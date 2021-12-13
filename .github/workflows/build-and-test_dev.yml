@@ -5,16 +5,14 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
+  pull_request_target:
+     types:
+      - assigned
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
 
 env:
 
