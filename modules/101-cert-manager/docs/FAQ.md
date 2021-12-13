@@ -114,54 +114,54 @@ In this case, you have to check the `CAA (Certificate Authority Authorization)` 
 
 ## Vault integration
 
-You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault
+You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
 
-After pki setup and kubernetes auth you have yo create service account and copy it's secret reference:
+After configuring PKI and enabling Kubernetes [authorization](../../modules/140-user-authz/), you have to:
+- Create a service account and copy its secret reference:
 
-```bash
-$ kubectl create serviceaccount issuer
-$ ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
-```
+  ```shell
+  kubectl create serviceaccount issuer
+  ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
+  ```
+- Create an Issuer:
 
-Create Issuer:
-```bash
-$ kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: vault-issuer
-  namespace: default
-spec:
-  vault:
-    server: http://vault.default.svc.cluster.local:8200 # hashicorp instruction has misstype here
-    path: pki/sign/example-dot-com # configure in pki setup step
-    auth:
-      kubernetes:
-        mountPath: /v1/auth/kubernetes
-        role: issuer
-        secretRef:
-          name: $ISSUER_SECRET_REF
-          key: token
-EOF
-```
-
-
-After this actions you can create a Certificate:
-```bash
-$ kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: example-com
-  namespace: default
-spec:
-  secretName: example-com-tls
-  issuerRef:
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: Issuer
+  metadata:
     name: vault-issuer
-  commonName: www.example.com # allowed domains are set on pki setup
-  dnsNames:
-  - www.example.com
-EOF
-```
+    namespace: default
+  spec:
+    vault:
+      # HashiCorp instruction has mistype here
+      server: http://vault.default.svc.cluster.local:8200 
+      path: pki/sign/example-dot-com # configure in pki setup step
+      auth:
+        kubernetes:
+          mountPath: /v1/auth/kubernetes
+          role: issuer
+          secretRef:
+            name: $ISSUER_SECRET_REF
+            key: token
+  EOF
+  ```
+- Create a Certificate resource, to get a TLS certificate, which is issued by Vault CA:
 
-and get TLS certificate, which is issued by Vault CA
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: Certificate
+  metadata:
+    name: example-com
+    namespace: default
+  spec:
+    secretName: example-com-tls
+    issuerRef:
+      name: vault-issuer
+    # domains are set on PKI setup
+    commonName: www.example.com 
+    dnsNames:
+    - www.example.com
+  EOF
+  ```

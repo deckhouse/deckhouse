@@ -117,54 +117,55 @@ CAA record does not match issuer
 
 ## Интеграция с Vault
 
-Вы можете использовать [данную инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) для выпуска сертификатов с помощью Vault
+Вы можете использовать [данную инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) для выпуска сертификатов с помощью Vault.
 
-После конфигурации pki и включения kubernetes аутентификации вам нужно создать service account и скопировать ссылку на его секрет:
+После конфигурации PKI и [включения авторизации](../../modules/140-user-authz/) в Kubernetes, вам нужно:
+- Создать service account и скопировать ссылку на его секрет:
 
-```bash
-$ kubectl create serviceaccount issuer
-$ ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
-```
+  ```shell
+  kubectl create serviceaccount issuer
+  ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
+  ```
+- Создать Issuer:
 
-И создать Issuer
-```bash
-$ kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: vault-issuer
-  namespace: default
-spec:
-  vault:
-    server: http://vault.default.svc.cluster.local:8200 # если вы разворачивался vault по вышеуказанной инструкции, обратите внимание - здесь в инструкции опечатка
-    path: pki/sign/example-dot-com # указывается на этапе конфигурации pki
-    auth:
-      kubernetes:
-        mountPath: /v1/auth/kubernetes
-        role: issuer
-        secretRef:
-          name: $ISSUER_SECRET_REF
-          key: token
-EOF
-```
-
-
-После этих действий можно создать сертификат:
-```bash
-$ kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: example-com
-  namespace: default
-spec:
-  secretName: example-com-tls
-  issuerRef:
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: Issuer
+  metadata:
     name: vault-issuer
-  commonName: www.example.com # доступные домены указываются на этапе конфигурации pki в vault
-  dnsNames:
-  - www.example.com
-EOF
-```
+    namespace: default
+  spec:
+    vault:
+      # если Vault разворачивался по вышеуказанной инструкции, в это месте в инструкции опечатка
+      server: http://vault.default.svc.cluster.local:8200
+      # указывается на этапе конфигурации PKI 
+      path: pki/sign/example-dot-com 
+      auth:
+        kubernetes:
+          mountPath: /v1/auth/kubernetes
+          role: issuer
+          secretRef:
+            name: $ISSUER_SECRET_REF
+            key: token
+  EOF
+  ```
+- Создать ресурс Certificate, для получения TLS сертификата подписанного Vault CA:
 
-и получить TLS сертификат, подписанный Vault CA
+  ```shell
+  kubectl apply -f - <<EOF
+  apiVersion: cert-manager.io/v1
+  kind: Certificate
+  metadata:
+    name: example-com
+    namespace: default
+  spec:
+    secretName: example-com-tls
+    issuerRef:
+      name: vault-issuer
+    # домены указываются на этапе конфигурации PKI в Vault
+    commonName: www.example.com 
+    dnsNames:
+    - www.example.com
+  EOF
+  ```
