@@ -608,6 +608,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
   console.log(`Known labels: ${JSON.stringify(knownLabels, null, '  ')}`);
 
   let workflow_id = '';
+  let action = 'workflow_dispatch';
 
   if (knownLabels.e2e.includes(label) && event.action === 'labeled') {
     for (const provider of knownProviders) {
@@ -630,46 +631,90 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core }) => 
 
   if (knownLabels['skip-validation'].includes(label)) {
     workflow_id = 'validation.yml';
+    action = 'rerun';
   }
 
   if (workflow_id === '') {
     return console.log(`Workflow for label '${event.label.name}' and action '${event.action}' not found. Ignore it.`);
   }
 
-  console.log(`Label '${label}' is set. Should retry workflow '${workflow_id}'.`);
+  if (action === 'rerun') {
+    console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will retry workflow '${workflow_id}'.`);
 
-  // Retrieve latest workflow run and rerun it.
-  let response = await github.rest.actions.listWorkflowRuns({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    workflow_id: workflow_id,
-    branch: context.payload.pull_request.head.ref,
-    event: 'push'
-  });
-
-  if (!response.data.workflow_runs || response.data.workflow_runs.length === 0) {
-    console.log(`ListWorkflowRuns response: ${JSON.stringify(response)}`);
-    return core.setFailed(`No runs found for workflow '${workflow_id}'. Just return.`);
-  }
-
-  const latestWorkflowRunId = response.data.workflow_runs[0].id;
-  console.log(`Last workflow run id: ${latestWorkflowRunId}`);
-
-  try {
-    const response = await github.rest.actions.retryWorkflow({
+    // Retrieve latest workflow run and rerun it.
+    let response = await github.rest.actions.listWorkflowRuns({
       owner: context.repo.owner,
       repo: context.repo.repo,
-      run_id: latestWorkflowRunId
+      workflow_id: workflow_id,
+      branch: context.payload.pull_request.head.ref,
+      event: 'push'
+    });
+
+    if (!response.data.workflow_runs || response.data.workflow_runs.length === 0) {
+      console.log(`ListWorkflowRuns response: ${JSON.stringify(response)}`);
+      return core.setFailed(`No runs found for workflow '${workflow_id}'. Just return.`);
+    }
+
+    const latestWorkflowRunId = response.data.workflow_runs[0].id;
+    console.log(`Last workflow run id: ${latestWorkflowRunId}`);
+
+    try {
+      const response = await github.rest.actions.retryWorkflow({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        run_id: latestWorkflowRunId
+      });
+
+      if (response.status > 200 && response.status < 300) {
+        console.log('RetryWorkflow called successfully');
+      } else {
+        console.log(`Error calling RetryWorkflow. Response: ${JSON.stringify(response)}`);
+      }
+    } catch (e) {
+      console.log(`Ignore error: ${JSON.stringify(e)}`);
+    }
+  }
+
+  if (action === 'workflow_dispatch') {
+    console.log(`Label '${label}' was set on PR#${context.payload.pull_request.number}. Will start workflow '${workflow_id}'.`);
+
+    // workflow_dispatch requires a ref.
+    const ref = context.payload.pull_request.head.ref;
+    console.log(`Use ref=${ref}`);
+
+    // Add comment to pull request.
+    console.log(`Add comment to pull request ${context.payload.pull_request.number}.`);
+    let response = await github.rest.issues.createComment({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: context.payload.pull_request.number,
+      body: `Run workflow "${label}"...`
+    });
+
+    if (response.status < 200 || response.status >= 300) {
+      return core.setFailed(`Cannot start workflow: ${JSON.stringify(response)}`);
+    }
+
+    console.log(`Start workflow '${workflow_id}' with ref '${ref}'.`);
+    const issue_id = '' + context.payload.pull_request.id;
+    const issue_number = '' + context.payload.pull_request.number;
+    const comment_id = '' + response.data.id;
+    response = await github.rest.actions.createWorkflowDispatch({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      workflow_id: workflow_id,
+      ref: ref,
+      inputs: { issue_id, issue_number, comment_id }
     });
 
     if (response.status > 200 && response.status < 300) {
-      console.log('RetryWorkflow called successfully');
+      console.log('Workflow started successfully');
     } else {
-      console.log(`Error calling RetryWorkflow. Response: ${JSON.stringify(response)}`);
+      return core.setFailed(`Error calling dispatch. Response: ${JSON.stringify(response)}`);
     }
-  } catch (e) {
-    console.log(`Ignore error: ${JSON.stringify(e)}`);
   }
+
+  console.log(`Action ${action} for workflow ${workflow_id} complete.`);
 };
 
 /**

@@ -4,16 +4,6 @@
 
 name: 'e2e: Yandex.Cloud'
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'release-*'
-      - 'alpha'
-      - 'beta'
-      - 'early-access'
-      - 'stable'
-      - 'rock-solid'
-      - 'changelog/*'
   workflow_dispatch:
     inputs:
       issue_id:
