@@ -1829,7 +1829,7 @@
       }
     }
   ],
-  "refresh": "",
+  "refresh": "30s",
   "schemaVersion": 32,
   "style": "dark",
   "tags": [
