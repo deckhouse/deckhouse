@@ -1,5 +1,11 @@
 type: object
 properties:
+  additionalExternalNetworkIDs:
+    type: array
+    items:
+      type: string
+    default: []
+    description: A list of Network IDs that will be considered `ExternalIP` when listing Node addresses. An optional parameter.
   storageClass:
     type: object
     properties:
