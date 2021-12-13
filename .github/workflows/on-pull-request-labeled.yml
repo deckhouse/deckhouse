@@ -25,7 +25,7 @@ jobs:
 
       # PR from the target repo
       - name: Checkout sources
-        if: github.event.pull_request.head.repo.full_name != github.repository
+        if: ${{ !needs.git_info.outputs.is_external_pr }}
         uses: actions/checkout@v2.4.0
 
       - name: Check for forbidden changes
