@@ -49,10 +49,10 @@ require (
 	helm.sh/helm/v3 v3.5.1
 	k8s.io/api v0.21.4
 	k8s.io/apiextensions-apiserver v0.20.5
-	k8s.io/apimachinery v0.21.4
+	k8s.io/apimachinery v0.23.0
 	k8s.io/apiserver v0.20.5
 	k8s.io/client-go v0.21.4
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	sigs.k8s.io/yaml v1.2.0
 )
 
